@@ -17,7 +17,32 @@ fn player() -> PlayerState {
 fn packet(id: i32, payload: &[u8]) -> PacketInfo {
     let mut body = encode_varint(id);
     body.extend_from_slice(payload);
-    PacketInfo { id, length: body.len() as i32, body }
+    PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
+}
+
+#[test]
+fn foreign_click_resyncs_and_forged_predictions_cannot_create_items() {
+    let shared=shared();
+    for foreign in [false,true] {
+        let mut p=player();p.game_mode=GAME_MODE_SURVIVAL;
+        let stone=blocks::item_named("stone").unwrap();
+        p.inventory.set(36,Some(Stack::new(stone,5)));
+        // Клиент обещает64алмаза вместо взятых5камней. Его хэш не авторитетен.
+        let mut payload=vec![0,0,0,36,0,0,1,0,36,1];
+        payload.extend(encode_varint(blocks::item_named("diamond").unwrap()));
+        payload.extend([64,0,0,0]);
+        let mut packet=packet(CLICK_CONTAINER,&payload);packet.foreign_inventory=foreign;
+        let reaction=handle_client_packet(&packet,&mut p,&shared);
+        assert_eq!(p.inventory.slot(36),None);
+        assert_eq!(p.inventory.cursor(),Some(Stack::new(stone,5)));
+        if foreign {assert!(reaction.inventory);}
+    }
+    // Даже когда непонятное действие ничего не изменило, иностранный клиент
+    // получает полный снимок, а родной путь сохраняет прежнюю реакцию.
+    for foreign in [false,true] {
+        let mut p=player();let mut packet=packet(CLICK_CONTAINER,&[99,0,0,36,0,0,0,0]);packet.foreign_inventory=foreign;
+        assert_eq!(handle_client_packet(&packet,&mut p,&shared).inventory,foreign);
+    }
 }
 
 #[test]
@@ -285,5 +310,100 @@ async fn teleported_minecart_tracker_matches_rail_detector_phases() {
             assert_eq!(tick,expected_tick);
             assert!((vy-expected_vy).abs()<0.001,"{delay}: {vy}");
         }
+    }
+}
+
+
+#[test]
+fn confirmation_rejects_stale_duplicate_and_malformed_acknowledgements() {
+    let shared = shared();
+    let mut p = player();
+    position_body(&mut p, Sync::Absolute);
+    for payload in [encode_varint(p.teleport - 1), vec![], vec![1, 0], vec![255; 6]] {
+        handle_client_packet(&packet(CONFIRM_TELEPORTATION, &payload), &mut p, &shared);
+        assert!(p.awaiting_teleport);
+    }
+    handle_client_packet(&packet(CONFIRM_TELEPORTATION, &encode_varint(p.teleport)), &mut p, &shared);
+    assert!(!p.awaiting_teleport);
+    assert!(!accept_teleport(&packet(CONFIRM_TELEPORTATION, &encode_varint(p.teleport)), &mut p));
+}
+
+#[test]
+fn modern_confirmation_applies_pose_without_counting_a_walk_or_fall() {
+    use mcsa_protocol::teleport::{Confirmation, Pose};
+    let shared = shared();
+    let mut p = player();
+    p.vit.fall = 4.0;
+    position_body(&mut p, Sync::Command);
+    let mut ack = packet(CONFIRM_TELEPORTATION, &encode_varint(p.teleport));
+    ack.teleport = Some(Confirmation { id: p.teleport, pose: Some(Pose { x: 17.5, y: 81.0, z: 10.5, yaw: 47.0, pitch: 0.0 }) });
+    handle_client_packet(&ack, &mut p, &shared);
+    assert_eq!((p.x, p.y, p.z, p.yaw, p.pitch), (17.5, 81.0, 10.5, 47.0, 0.0));
+    assert!(!p.awaiting_teleport && !p.moved_since_tp && p.net.teleported);
+    assert_eq!(p.vit.fall, 4.0);
+    assert!(p.net.hits.is_empty());
+    p.x = 18.0;
+    handle_client_packet(&ack, &mut p, &shared); // повтор уже принятого ответа
+    assert_eq!(p.x, 18.0);
+    position_body(&mut p, Sync::Command);
+    for x in [f64::NAN, f64::INFINITY, 30_000_001.0] {
+        ack.teleport = Some(Confirmation { id: p.teleport, pose: Some(Pose { x, y: 81.0, z: 10.5, yaw: 0.0, pitch: 0.0 }) });
+        handle_client_packet(&ack, &mut p, &shared);
+        assert!(p.awaiting_teleport);
+        assert_eq!(p.x, 18.0);
+    }
+}
+
+#[tokio::test]
+async fn initial_confirmation_waits_for_the_right_id_and_keeps_client_settings() {
+    use mcsa_protocol::{JavaVersion, Negotiated, wire, teleport::{Confirmation, Pose}};
+    use super::super::connection::CryptoStream;
+    use super::super::packet::{frame, compression_threshold, write_bytes};
+    for version in [JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let mut client = CryptoStream::new(client);
+        let mut server = CryptoStream::new(listener.accept().await.unwrap().0);
+        server.protocol = Some(Negotiated { client: version, native: wire::INTERNAL });
+        server.probe_776 = version == JavaVersion::V26_2;
+        client.enable_encryption(&[19; 16]); server.enable_encryption(&[19; 16]);
+        let pose = (version == JavaVersion::V26_3).then_some(Pose { x: 17.5, y: 81.0, z: 10.5, yaw: 47.0, pitch: 0.0 });
+        let mut frames = Vec::new();
+        let mut wrong = vec![0]; wrong.extend(Confirmation { id: 16, pose }.encode(version).unwrap());
+        frame(&mut frames, &wrong, compression_threshold());
+        let mut settings = encode_varint(CLIENT_INFORMATION);
+        settings.extend([5]); settings.extend(b"en_us"); settings.extend([2, 0, 1, 127, 0, 0, 1, 0]);
+        frame(&mut frames, &settings, compression_threshold());
+        let mut correct = vec![0]; correct.extend(Confirmation { id: 17, pose }.encode(version).unwrap());
+        frame(&mut frames, &correct, compression_threshold());
+        write_bytes(&mut client, &frames).await.unwrap();
+        let mut p = player(); p.teleport = 17; p.awaiting_teleport = true;
+        let mut out = Outgoing::new(&mut server);
+        let look = read_confirm_teleportation(&mut out, &mut p).await.unwrap().unwrap();
+        assert_eq!(look.main_hand, 0);
+        assert_eq!(look.skin_parts, 127);
+        assert!(!p.awaiting_teleport);
+        if let Some(pose) = pose { assert_eq!((p.x, p.y, p.z, p.yaw), (pose.x, pose.y, pose.z, pose.yaw)); }
+        else { assert_eq!(p.x, 3.5); }
+    }
+}
+
+#[tokio::test]
+async fn play_login_sends_the_real_online_flag_before_secure_chat() {
+    use mcsa_protocol::{JavaVersion, Negotiated, wire};
+    use super::super::connection::CryptoStream;
+    for online in [false, true] {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let mut client = CryptoStream::new(client);
+        let mut server = CryptoStream::new(listener.accept().await.unwrap().0);
+        server.protocol = Some(Negotiated { client: JavaVersion::V26_3, native: wire::INTERNAL });
+        client.enable_encryption(&[23; 16]); server.enable_encryption(&[23; 16]);
+        let mut out = Outgoing::new(&mut server);
+        send_login(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 7, 10, 10, online).await.unwrap();
+        out.flush().await.unwrap();
+        let received = read_packet(&mut client).await.unwrap();
+        assert_eq!(received.id, 0x32);
+        assert_eq!(&received.body[received.body.len() - 2..], &[u8::from(online), 0]);
     }
 }

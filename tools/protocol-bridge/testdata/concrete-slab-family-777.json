@@ -1,0 +1,3986 @@
+{
+  "source": {
+    "result": "concrete-slab-family-observation-03/result.json",
+    "runner_sha256": "b48051ad9a04521cf8a75bd603d92be29902e23e9e5cbba23d0a8049c6281a72",
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "survival_confirmed_by_packet": true,
+    "gamemode_events": [
+      {
+        "mode": 1,
+        "payload_hex": "033f800000"
+      },
+      {
+        "mode": 0,
+        "payload_hex": "0300000000"
+      }
+    ]
+  },
+  "colors": {
+    "white": {
+      "base": "white_concrete",
+      "slab": "white_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 1693,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    689
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    689
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    689
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "white_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                689
+              ]
+            },
+            {
+              "items": [
+                689
+              ]
+            },
+            {
+              "items": [
+                689
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "white/natural",
+          "replace": false
+        },
+        {
+          "display_id": 1694,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  689
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "white_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                689
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "white/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 347,
+        "entry_offset": 3725,
+        "display_offset": 3728,
+        "display_end": 3734,
+        "input_ids": [
+          689
+        ],
+        "display_type": 5,
+        "display_hex": "05d105020000",
+        "template_hex": "d105020000",
+        "decoded_template": {
+          "item": 721,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:white_concrete_slab",
+          "display_id": 1693,
+          "type": 1
+        },
+        {
+          "name": "minecraft:white_concrete_slab_from_white_concrete_stonecutting",
+          "display_id": 1694,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 1,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "white_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "white_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "white_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "white_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "white_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 1,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "white_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "white_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 2,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "white_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "white_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "white_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 2,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "white_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "white_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 2,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "white_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "white_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "orange": {
+      "base": "orange_concrete",
+      "slab": "orange_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 1027,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    690
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    690
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    690
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "orange_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                690
+              ]
+            },
+            {
+              "items": [
+                690
+              ]
+            },
+            {
+              "items": [
+                690
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "orange/natural",
+          "replace": false
+        },
+        {
+          "display_id": 1028,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  690
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "orange_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                690
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "orange/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 157,
+        "entry_offset": 2180,
+        "display_offset": 2183,
+        "display_end": 2189,
+        "input_ids": [
+          690
+        ],
+        "display_type": 5,
+        "display_hex": "05d205020000",
+        "template_hex": "d205020000",
+        "decoded_template": {
+          "item": 722,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:orange_concrete_slab",
+          "display_id": 1027,
+          "type": 1
+        },
+        {
+          "name": "minecraft:orange_concrete_slab_from_orange_concrete_stonecutting",
+          "display_id": 1028,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 3,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "orange_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "orange_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "orange_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "orange_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "orange_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 3,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "orange_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "orange_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 4,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "orange_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "orange_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "orange_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 4,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "orange_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "orange_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 4,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "orange_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "orange_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "magenta": {
+      "base": "magenta_concrete",
+      "slab": "magenta_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 900,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  691
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "magenta_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                691
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "magenta/natural",
+          "replace": false
+        },
+        {
+          "display_id": 899,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    691
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    691
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    691
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "magenta_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                691
+              ]
+            },
+            {
+              "items": [
+                691
+              ]
+            },
+            {
+              "items": [
+                691
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "magenta/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 143,
+        "entry_offset": 2054,
+        "display_offset": 2057,
+        "display_end": 2063,
+        "input_ids": [
+          691
+        ],
+        "display_type": 5,
+        "display_hex": "05d305020000",
+        "template_hex": "d305020000",
+        "decoded_template": {
+          "item": 723,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:magenta_concrete_slab",
+          "display_id": 899,
+          "type": 1
+        },
+        {
+          "name": "minecraft:magenta_concrete_slab_from_magenta_concrete_stonecutting",
+          "display_id": 900,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 5,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "magenta_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "magenta_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "magenta_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "magenta_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "magenta_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 5,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "magenta_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "magenta_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 6,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "magenta_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "magenta_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "magenta_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 6,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "magenta_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "magenta_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 6,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "magenta_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "magenta_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "light_blue": {
+      "base": "light_blue_concrete",
+      "slab": "light_blue_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 825,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    692
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    692
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    692
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "light_blue_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                692
+              ]
+            },
+            {
+              "items": [
+                692
+              ]
+            },
+            {
+              "items": [
+                692
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "light_blue/natural",
+          "replace": false
+        },
+        {
+          "display_id": 826,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  692
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "light_blue_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                692
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "light_blue/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 137,
+        "entry_offset": 2000,
+        "display_offset": 2003,
+        "display_end": 2009,
+        "input_ids": [
+          692
+        ],
+        "display_type": 5,
+        "display_hex": "05d405020000",
+        "template_hex": "d405020000",
+        "decoded_template": {
+          "item": 724,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:light_blue_concrete_slab",
+          "display_id": 825,
+          "type": 1
+        },
+        {
+          "name": "minecraft:light_blue_concrete_slab_from_light_blue_concrete_stonecutting",
+          "display_id": 826,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 7,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "light_blue_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "light_blue_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "light_blue_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "light_blue_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "light_blue_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 7,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "light_blue_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "light_blue_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 8,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "light_blue_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "light_blue_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "light_blue_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 8,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "light_blue_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "light_blue_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 8,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "light_blue_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "light_blue_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "yellow": {
+      "base": "yellow_concrete",
+      "slab": "yellow_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 1728,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    693
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    693
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    693
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "yellow_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                693
+              ]
+            },
+            {
+              "items": [
+                693
+              ]
+            },
+            {
+              "items": [
+                693
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "yellow/natural",
+          "replace": false
+        },
+        {
+          "display_id": 1729,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  693
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "yellow_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                693
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "yellow/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 349,
+        "entry_offset": 3743,
+        "display_offset": 3746,
+        "display_end": 3752,
+        "input_ids": [
+          693
+        ],
+        "display_type": 5,
+        "display_hex": "05d505020000",
+        "template_hex": "d505020000",
+        "decoded_template": {
+          "item": 725,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:yellow_concrete_slab",
+          "display_id": 1728,
+          "type": 1
+        },
+        {
+          "name": "minecraft:yellow_concrete_slab_from_yellow_concrete_stonecutting",
+          "display_id": 1729,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 9,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "yellow_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "yellow_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "yellow_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "yellow_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "yellow_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 9,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "yellow_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "yellow_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 10,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "yellow_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "yellow_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "yellow_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 10,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "yellow_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "yellow_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 10,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "yellow_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "yellow_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "lime": {
+      "base": "lime_concrete",
+      "slab": "lime_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 874,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    694
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    694
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    694
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "lime_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                694
+              ]
+            },
+            {
+              "items": [
+                694
+              ]
+            },
+            {
+              "items": [
+                694
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "lime/natural",
+          "replace": false
+        },
+        {
+          "display_id": 875,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  694
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "lime_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                694
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "lime/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 141,
+        "entry_offset": 2036,
+        "display_offset": 2039,
+        "display_end": 2045,
+        "input_ids": [
+          694
+        ],
+        "display_type": 5,
+        "display_hex": "05d605020000",
+        "template_hex": "d605020000",
+        "decoded_template": {
+          "item": 726,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:lime_concrete_slab",
+          "display_id": 874,
+          "type": 1
+        },
+        {
+          "name": "minecraft:lime_concrete_slab_from_lime_concrete_stonecutting",
+          "display_id": 875,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 11,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "lime_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "lime_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "lime_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "lime_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "lime_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 11,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "lime_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "lime_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 12,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "lime_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "lime_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "lime_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 12,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "lime_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "lime_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 12,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "lime_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "lime_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "pink": {
+      "base": "pink_concrete",
+      "slab": "pink_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 1085,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    695
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    695
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    695
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "pink_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                695
+              ]
+            },
+            {
+              "items": [
+                695
+              ]
+            },
+            {
+              "items": [
+                695
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "pink/natural",
+          "replace": false
+        },
+        {
+          "display_id": 1086,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  695
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "pink_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                695
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "pink/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 167,
+        "entry_offset": 2265,
+        "display_offset": 2268,
+        "display_end": 2274,
+        "input_ids": [
+          695
+        ],
+        "display_type": 5,
+        "display_hex": "05d705020000",
+        "template_hex": "d705020000",
+        "decoded_template": {
+          "item": 727,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:pink_concrete_slab",
+          "display_id": 1085,
+          "type": 1
+        },
+        {
+          "name": "minecraft:pink_concrete_slab_from_pink_concrete_stonecutting",
+          "display_id": 1086,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 13,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "pink_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "pink_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "pink_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "pink_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "pink_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 13,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "pink_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "pink_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 14,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "pink_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "pink_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "pink_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 14,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "pink_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "pink_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 14,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "pink_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "pink_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "gray": {
+      "base": "gray_concrete",
+      "slab": "gray_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 705,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    696
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    696
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    696
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "gray_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                696
+              ]
+            },
+            {
+              "items": [
+                696
+              ]
+            },
+            {
+              "items": [
+                696
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "gray/natural",
+          "replace": false
+        },
+        {
+          "display_id": 706,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  696
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "gray_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                696
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "gray/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 133,
+        "entry_offset": 1964,
+        "display_offset": 1967,
+        "display_end": 1973,
+        "input_ids": [
+          696
+        ],
+        "display_type": 5,
+        "display_hex": "05d805020000",
+        "template_hex": "d805020000",
+        "decoded_template": {
+          "item": 728,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:gray_concrete_slab",
+          "display_id": 705,
+          "type": 1
+        },
+        {
+          "name": "minecraft:gray_concrete_slab_from_gray_concrete_stonecutting",
+          "display_id": 706,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 15,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "gray_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "gray_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "gray_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "gray_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "gray_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 15,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "gray_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "gray_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 16,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "gray_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "gray_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "gray_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 16,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "gray_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "gray_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 16,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "gray_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "gray_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "light_gray": {
+      "base": "light_gray_concrete",
+      "slab": "light_gray_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 847,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    697
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    697
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    697
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "light_gray_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                697
+              ]
+            },
+            {
+              "items": [
+                697
+              ]
+            },
+            {
+              "items": [
+                697
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "light_gray/natural",
+          "replace": false
+        },
+        {
+          "display_id": 848,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  697
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "light_gray_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                697
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "light_gray/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 139,
+        "entry_offset": 2018,
+        "display_offset": 2021,
+        "display_end": 2027,
+        "input_ids": [
+          697
+        ],
+        "display_type": 5,
+        "display_hex": "05d905020000",
+        "template_hex": "d905020000",
+        "decoded_template": {
+          "item": 729,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:light_gray_concrete_slab",
+          "display_id": 847,
+          "type": 1
+        },
+        {
+          "name": "minecraft:light_gray_concrete_slab_from_light_gray_concrete_stonecutting",
+          "display_id": 848,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 17,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "light_gray_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "light_gray_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "light_gray_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "light_gray_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "light_gray_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 17,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "light_gray_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "light_gray_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 18,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "light_gray_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "light_gray_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "light_gray_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 18,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "light_gray_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "light_gray_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 18,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "light_gray_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "light_gray_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "cyan": {
+      "base": "cyan_concrete",
+      "slab": "cyan_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 380,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    698
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    698
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    698
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "cyan_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                698
+              ]
+            },
+            {
+              "items": [
+                698
+              ]
+            },
+            {
+              "items": [
+                698
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "cyan/natural",
+          "replace": false
+        },
+        {
+          "display_id": 381,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  698
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "cyan_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                698
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "cyan/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 74,
+        "entry_offset": 1468,
+        "display_offset": 1471,
+        "display_end": 1477,
+        "input_ids": [
+          698
+        ],
+        "display_type": 5,
+        "display_hex": "05da05020000",
+        "template_hex": "da05020000",
+        "decoded_template": {
+          "item": 730,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:cyan_concrete_slab",
+          "display_id": 380,
+          "type": 1
+        },
+        {
+          "name": "minecraft:cyan_concrete_slab_from_cyan_concrete_stonecutting",
+          "display_id": 381,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 19,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "cyan_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "cyan_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "cyan_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "cyan_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "cyan_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 19,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "cyan_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "cyan_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 20,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "cyan_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "cyan_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "cyan_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 20,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "cyan_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "cyan_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 20,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "cyan_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "cyan_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "purple": {
+      "base": "purple_concrete",
+      "slab": "purple_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 1246,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  699
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "purple_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                699
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "purple/natural",
+          "replace": false
+        },
+        {
+          "display_id": 1245,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    699
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    699
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    699
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "purple_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                699
+              ]
+            },
+            {
+              "items": [
+                699
+              ]
+            },
+            {
+              "items": [
+                699
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "purple/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 240,
+        "entry_offset": 2849,
+        "display_offset": 2852,
+        "display_end": 2858,
+        "input_ids": [
+          699
+        ],
+        "display_type": 5,
+        "display_hex": "05db05020000",
+        "template_hex": "db05020000",
+        "decoded_template": {
+          "item": 731,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:purple_concrete_slab",
+          "display_id": 1245,
+          "type": 1
+        },
+        {
+          "name": "minecraft:purple_concrete_slab_from_purple_concrete_stonecutting",
+          "display_id": 1246,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 21,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "purple_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "purple_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "purple_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "purple_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "purple_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 21,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "purple_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "purple_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 22,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "purple_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "purple_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "purple_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 22,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "purple_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "purple_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 22,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "purple_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "purple_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "blue": {
+      "base": "blue_concrete",
+      "slab": "blue_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 104,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  700
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "blue_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                700
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "blue/natural",
+          "replace": false
+        },
+        {
+          "display_id": 103,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    700
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    700
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    700
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "blue_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                700
+              ]
+            },
+            {
+              "items": [
+                700
+              ]
+            },
+            {
+              "items": [
+                700
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "blue/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 8,
+        "entry_offset": 938,
+        "display_offset": 941,
+        "display_end": 947,
+        "input_ids": [
+          700
+        ],
+        "display_type": 5,
+        "display_hex": "05dc05020000",
+        "template_hex": "dc05020000",
+        "decoded_template": {
+          "item": 732,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:blue_concrete_slab",
+          "display_id": 103,
+          "type": 1
+        },
+        {
+          "name": "minecraft:blue_concrete_slab_from_blue_concrete_stonecutting",
+          "display_id": 104,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 23,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "blue_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "blue_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 23,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "blue_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "blue_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 24,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "blue_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "blue_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 24,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "blue_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "blue_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 24,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "blue_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "blue_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "brown": {
+      "base": "brown_concrete",
+      "slab": "brown_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 147,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  701
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "brown_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                701
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "brown/natural",
+          "replace": false
+        },
+        {
+          "display_id": 146,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    701
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    701
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    701
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "brown_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                701
+              ]
+            },
+            {
+              "items": [
+                701
+              ]
+            },
+            {
+              "items": [
+                701
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "brown/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 13,
+        "entry_offset": 983,
+        "display_offset": 986,
+        "display_end": 992,
+        "input_ids": [
+          701
+        ],
+        "display_type": 5,
+        "display_hex": "05dd05020000",
+        "template_hex": "dd05020000",
+        "decoded_template": {
+          "item": 733,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:brown_concrete_slab",
+          "display_id": 146,
+          "type": 1
+        },
+        {
+          "name": "minecraft:brown_concrete_slab_from_brown_concrete_stonecutting",
+          "display_id": 147,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 25,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "brown_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "brown_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "brown_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "brown_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "brown_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 25,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "brown_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "brown_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 26,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "brown_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "brown_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "brown_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 26,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "brown_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "brown_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 26,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "brown_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "brown_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "green": {
+      "base": "green_concrete",
+      "slab": "green_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 727,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    702
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    702
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    702
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "green_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                702
+              ]
+            },
+            {
+              "items": [
+                702
+              ]
+            },
+            {
+              "items": [
+                702
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "green/natural",
+          "replace": false
+        },
+        {
+          "display_id": 728,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  702
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "green_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                702
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "green/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 135,
+        "entry_offset": 1982,
+        "display_offset": 1985,
+        "display_end": 1991,
+        "input_ids": [
+          702
+        ],
+        "display_type": 5,
+        "display_hex": "05de05020000",
+        "template_hex": "de05020000",
+        "decoded_template": {
+          "item": 734,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:green_concrete_slab",
+          "display_id": 727,
+          "type": 1
+        },
+        {
+          "name": "minecraft:green_concrete_slab_from_green_concrete_stonecutting",
+          "display_id": 728,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 27,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "green_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "green_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "green_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "green_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "green_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 27,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "green_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "green_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 28,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "green_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "green_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "green_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 28,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "green_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "green_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 28,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "green_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "green_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "red": {
+      "base": "red_concrete",
+      "slab": "red_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 1298,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  703
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "red_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                703
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "red/natural",
+          "replace": false
+        },
+        {
+          "display_id": 1297,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    703
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    703
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    703
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "red_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                703
+              ]
+            },
+            {
+              "items": [
+                703
+              ]
+            },
+            {
+              "items": [
+                703
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "red/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 249,
+        "entry_offset": 2930,
+        "display_offset": 2933,
+        "display_end": 2939,
+        "input_ids": [
+          703
+        ],
+        "display_type": 5,
+        "display_hex": "05df05020000",
+        "template_hex": "df05020000",
+        "decoded_template": {
+          "item": 735,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:red_concrete_slab",
+          "display_id": 1297,
+          "type": 1
+        },
+        {
+          "name": "minecraft:red_concrete_slab_from_red_concrete_stonecutting",
+          "display_id": 1298,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 29,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "red_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "red_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "red_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "red_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "red_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 29,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "red_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "red_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 30,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "red_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "red_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "red_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 30,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "red_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "red_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 30,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "red_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "red_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "black": {
+      "base": "black_concrete",
+      "slab": "black_concrete_slab",
+      "checks": [
+        "matching-color-unlocks-shaped-and-cut-only",
+        "exact-named-1-accepted-selected-entry",
+        "exact-named-3-accepted-selected-entry",
+        "manual-three-same-color-produces-six-with-exact-consumption",
+        "stonecut-one-matching-color-produces-two-total-eight"
+      ],
+      "natural_entries": [
+        {
+          "display_id": 74,
+          "display": {
+            "type": 3,
+            "ingredient": {
+              "type": 6,
+              "set": {
+                "items": [
+                  704
+                ]
+              }
+            },
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "black_concrete_slab",
+                "count": 2
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 1513
+            }
+          },
+          "group_raw": 0,
+          "category": 10,
+          "requirements": [
+            {
+              "items": [
+                704
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "black/natural",
+          "replace": false
+        },
+        {
+          "display_id": 73,
+          "display": {
+            "type": 1,
+            "width": 3,
+            "height": 1,
+            "ingredients": [
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    704
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    704
+                  ]
+                }
+              },
+              {
+                "type": 6,
+                "set": {
+                  "items": [
+                    704
+                  ]
+                }
+              }
+            ],
+            "result": {
+              "type": 5,
+              "stack": {
+                "item": "black_concrete_slab",
+                "count": 6
+              }
+            },
+            "station": {
+              "type": 4,
+              "item": 405
+            }
+          },
+          "group_raw": 22,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                704
+              ]
+            },
+            {
+              "items": [
+                704
+              ]
+            },
+            {
+              "items": [
+                704
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "black/natural",
+          "replace": false
+        }
+      ],
+      "selected_cut": {
+        "packet_payload_sha256": "6d2c42a61b6165cae7a7268a5a964ca488dd04adfdd8ea27e60ec896cb3be506",
+        "packet_payload_length": 3761,
+        "entry_ordinal": 3,
+        "entry_offset": 893,
+        "display_offset": 896,
+        "display_end": 902,
+        "input_ids": [
+          704
+        ],
+        "display_type": 5,
+        "display_hex": "05e005020000",
+        "template_hex": "e005020000",
+        "decoded_template": {
+          "item": 736,
+          "count": 2,
+          "added": 0,
+          "removed": 0
+        },
+        "scope": "Only selected stone\u2192stone_slab display retained; packet remainder discarded",
+        "button_ordinal_for_input": 0
+      },
+      "named_recipes": [
+        {
+          "name": "minecraft:black_concrete_slab",
+          "display_id": 73,
+          "type": 1
+        },
+        {
+          "name": "minecraft:black_concrete_slab_from_black_concrete_stonecutting",
+          "display_id": 74,
+          "type": 3
+        }
+      ],
+      "snapshots": {
+        "craft-ready": {
+          "window": 31,
+          "slot_count": 46,
+          "slots": {
+            "0": {
+              "item": "black_concrete_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "black_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "black_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "black_concrete",
+              "count": 1
+            },
+            "37": {
+              "item": "black_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "craft-taken": {
+          "window": 31,
+          "slot_count": 46,
+          "slots": {
+            "37": {
+              "item": "black_concrete",
+              "count": 1
+            }
+          },
+          "cursor": {
+            "item": "black_concrete_slab",
+            "count": 6
+          }
+        },
+        "cut-ready": {
+          "window": 32,
+          "slot_count": 38,
+          "slots": {
+            "0": {
+              "item": "black_concrete",
+              "count": 1
+            },
+            "1": {
+              "item": "black_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "black_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        },
+        "cut-taken": {
+          "window": 32,
+          "slot_count": 38,
+          "slots": {
+            "30": {
+              "item": "black_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": {
+            "item": "black_concrete_slab",
+            "count": 2
+          }
+        },
+        "stored-total-eight": {
+          "window": 32,
+          "slot_count": 38,
+          "slots": {
+            "29": {
+              "item": "black_concrete_slab",
+              "count": 2
+            },
+            "30": {
+              "item": "black_concrete_slab",
+              "count": 6
+            }
+          },
+          "cursor": null
+        }
+      }
+    }
+  },
+  "negative_cases": {
+    "mixed": {
+      "result": "PASS",
+      "snapshots": {
+        "ready": {
+          "window": 33,
+          "slot_count": 46,
+          "slots": {
+            "1": {
+              "item": "white_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "red_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "white_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "refused": {
+          "window": 33,
+          "slot_count": 46,
+          "slots": {
+            "1": {
+              "item": "white_concrete",
+              "count": 1
+            },
+            "2": {
+              "item": "red_concrete",
+              "count": 1
+            },
+            "3": {
+              "item": "white_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        }
+      }
+    },
+    "vertical": {
+      "result": "PASS",
+      "snapshots": {
+        "ready": {
+          "window": 34,
+          "slot_count": 46,
+          "slots": {
+            "1": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "4": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "7": {
+              "item": "blue_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        },
+        "refused": {
+          "window": 34,
+          "slot_count": 46,
+          "slots": {
+            "1": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "4": {
+              "item": "blue_concrete",
+              "count": 1
+            },
+            "7": {
+              "item": "blue_concrete",
+              "count": 1
+            }
+          },
+          "cursor": null
+        }
+      }
+    }
+  },
+  "limits": [
+    "only selected concrete slab family",
+    "local display/group/button indices not canonical identifiers",
+    "ordinary raw packets, notGUI/fullpacketorder",
+    "one horizontal row percolor; whiteallrows previouslyobserved"
+  ]
+}

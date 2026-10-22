@@ -4,6 +4,7 @@
 use std::{io, net::IpAddr, sync::Arc};
 use tokio::io::{AsyncRead, AsyncWrite};
 use crate::network::{nbt::Compound, packet, varint::encode_varint};
+use crate::network::connection::CryptoStream;
 use super::{Identity, Service};
 
 pub const SHOW: i32 = 0x12;
@@ -102,17 +103,16 @@ pub fn parse(payload: &[u8]) -> io::Result<Click> {
     let password = if id == "mcsheriffanya:exit" { password.unwrap_or_default() } else { password.ok_or_else(invalid)? };
     Ok(Click { id, password, repeat })
 }
-async fn send<W: AsyncWrite + Unpin>(stream: &mut W, id: i32, payload: &[u8]) -> io::Result<()> {
+async fn send<W: AsyncWrite + Unpin>(stream: &mut CryptoStream<W>, id: i32, payload: &[u8]) -> io::Result<()> {
     let mut body = encode_varint(id); body.extend_from_slice(payload);
-    let mut frame = Vec::new(); packet::frame(&mut frame, &body, packet::compression_threshold());
-    packet::write_bytes(stream, &frame).await
+    packet::write_configuration(stream, &body).await
 }
-pub async fn disconnect<W: AsyncWrite + Unpin>(stream: &mut W, reason: &str) -> io::Result<()> {
+pub async fn disconnect<W: AsyncWrite + Unpin>(stream: &mut CryptoStream<W>, reason: &str) -> io::Result<()> {
     send(stream, 2, &crate::network::nbt::text_component(reason)).await
 }
 
 pub async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
-    stream: &mut S, service: &Arc<Service>, identity: &Identity, ip: IpAddr,
+    stream: &mut CryptoStream<S>, service: &Arc<Service>, identity: &Identity, ip: IpAddr,
     ops: &std::sync::Mutex<crate::ops::Ops>, verified_uuid: Option<[u8; 16]>, deadline: tokio::time::Instant,
 ) -> io::Result<bool> {
     let result = tokio::time::timeout_at(deadline, async {

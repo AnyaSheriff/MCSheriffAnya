@@ -99,6 +99,7 @@ mod tests {
                     let path = root.join(format!("matrix-{}-{license}-{account}-{op}.db", std::process::id()));
                     let _ = std::fs::remove_file(&path);
                     let auth = Service::open(&path).unwrap();
+                    let detector = Detector::default();
                     let op_path = path.with_extension("ops.json"); let _ = std::fs::remove_file(&op_path);
                     let mut ops = crate::ops::Ops::open(&op_path);
                     if op { ops.give(&owner, "SheriffAnya", 4); }
@@ -114,12 +115,12 @@ mod tests {
                     let status = match license { "not-premium" => 404, "api-down" => 503, _ => 200 };
                     let response: reqwest::Response = http::Response::builder().status(status)
                         .body(r#"{"id":"16d3c22147764fe380af6f2b651b501b","name":"SheriffAnya"}"#).unwrap().into();
-                    let try_license = auth.premium.decide("SheriffAnya", ip, 100, || profile_response(response, "SheriffAnya")).await;
+                    let try_license = detector.decide("SheriffAnya", ip, 100, || profile_response(response, "SheriffAnya")).await;
                     assert_eq!(try_license, matches!(license, "ok" | "failed-retry"));
                     if license == "failed-retry" {
                         // Тот же переход вызывается после disconnect/hasJoined failure.
-                        auth.premium.failed("SheriffAnya", ip, 100);
-                        assert!(!auth.premium.decide("SheriffAnya", ip, 101, || async { panic!("retry must skip HTTP") }).await);
+                        detector.failed("SheriffAnya", ip, 100);
+                        assert!(!detector.decide("SheriffAnya", ip, 101, || async { panic!("retry must skip HTTP") }).await);
                     }
                     let verified = (license == "ok").then_some(owner);
                     let identity = auth.identity("SheriffAnya", verified);

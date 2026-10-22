@@ -602,9 +602,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
     let mut state: State=serde_json::from_slice(take(bytes,len)?).ok()?;
     if take(bytes,1)?[0]!=0 {
         let id=i32::from_be_bytes(take(bytes,4)?.try_into().ok()?);
-        let extras=Stack::read_extras(id,|n|take(bytes,n))?;
-        let mut stack=Stack::from_stored(id,1);
-        stack.data=extras.and_then(crate::stackdata::intern); state.mouth=Some(stack);
+        let extras=Stack::read_extras_strict(id,|n|take(bytes,n))?;
+        state.mouth=Some(Stack::from_stored_strict(id,1,extras)?);
     }
     Some(state)
 }

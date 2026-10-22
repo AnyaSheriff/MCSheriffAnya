@@ -334,10 +334,8 @@ pub fn read(mob: &mut Mob, bytes: &mut &[u8]) -> Option<()> {
         if take(1)?[0] == 0 { continue; }
         let stored = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let extras = Stack::read_extras(stored, &mut take)?;
-        let mut s = Stack::from_stored(stored, count);
-        if let Some(extras) = extras { s = s.with_extras(extras); }
-        *slot = (count > 0).then_some(s);
+        let extras = Stack::read_extras_strict(stored, &mut take)?;
+        *slot = Some(Stack::from_stored_strict(stored, count, extras)?);
     }
     Some(())
 }

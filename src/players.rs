@@ -305,8 +305,17 @@ pub enum Order {
     },
 }
 
+/// Фактический вход/выход, общий у Java и Bedrock; сетевой ping сюда не попадает.
+#[derive(Clone, Copy, Debug)]
+pub struct Presence {
+    pub online: usize,
+    pub changed: tokio::time::Instant,
+    pub console_until: Option<tokio::time::Instant>,
+}
+
 /// Список игроков на сервере и журнал изменений.
 pub struct Players {
+    presence: tokio::sync::watch::Sender<Presence>,
     pub ui: crate::presentation::State,
     shoulders: HashMap<[u8;16],[i32;2]>,
     members: Vec<Member>,
@@ -343,6 +352,7 @@ impl Players {
     pub fn shoulders(&self, uuid: &[u8;16]) -> [i32;2] { self.shoulders.get(uuid).copied().unwrap_or([-1,-1]) }
     pub fn new() -> Self {
         Self {
+            presence: tokio::sync::watch::channel(Presence { online: 0, changed: tokio::time::Instant::now(), console_until: None }).0,
             ui: Default::default(),
             shoulders: HashMap::new(),
             members: Vec::new(),
@@ -356,6 +366,24 @@ impl Players {
             wakes: HashMap::new(),
             sleepers: HashMap::new(),
         }
+    }
+
+    /// Последняя смена состава сохраняется и если короткий вход/выход
+    /// успел целиком произойти между чтениями такта.
+    pub fn presence(&self) -> tokio::sync::watch::Receiver<Presence> { self.presence.subscribe() }
+
+    /// Только настоящий ввод консоли: не трогаем время последнего ухода,
+    /// а даём пустому серверу минимум30с работы. Все изменения состава и
+    /// этого срока выполняются под одним внешним Players lock.
+    pub fn note_console_command(&self) {
+        let mut presence = *self.presence.borrow();
+        if presence.online != 0 { return; }
+        presence.console_until = Some(tokio::time::Instant::now() + std::time::Duration::from_secs(30));
+        self.presence.send_replace(presence);
+    }
+
+    fn note_presence(&self) {
+        self.presence.send_replace(Presence { online: self.members.len(), changed: tokio::time::Instant::now(), console_until: None });
     }
 
     /// Чёрный ящик, crossbow-shoot: loading_end и заряженная рука вместе.
@@ -393,6 +421,7 @@ impl Players {
         member.entity_id = entity_id;
 
         self.members.push(member.clone());
+        self.note_presence();
         self.changes.push(Change::Joined(member.clone()));
 
         Some((member, others))
@@ -421,6 +450,7 @@ impl Players {
 
         self.ui.leave(uuid);
         self.members.retain(|member| &member.uuid != uuid);
+        self.note_presence();
         self.orders.remove(uuid);
         self.connections.remove(uuid);
         self.gear.remove(uuid);

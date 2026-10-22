@@ -36,16 +36,37 @@ impl std::fmt::Display for AuthProvider {
     }
 }
 
+/// Проверка лицензий в Java offline-mode, независимо от парольной защиты.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(rename_all="lowercase")]
+pub enum OfflineLicenseMode { Cosmetics, Disabled, Invalid }
+impl std::str::FromStr for OfflineLicenseMode {
+    type Err = std::convert::Infallible;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Ok(match value { "cosmetics" => Self::Cosmetics, "disabled" => Self::Disabled, _ => Self::Invalid })
+    }
+}
+impl std::fmt::Display for OfflineLicenseMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self { Self::Cosmetics=>"cosmetics", Self::Disabled=>"disabled", Self::Invalid=>"invalid" })
+    }
+}
+
 /// Настройки.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Неизвестное значение не должно незаметно менять версию существующего мира.
+    #[serde(deserialize_with="read_java_version")]
+    pub java_version: Option<mcsa_protocol::JavaVersion>,
     /// Парольный диалог для Java offline-mode до входа в мир.
     pub auth_enabled: bool,
     /// Поставщик паролей. Неизвестное значение не должно отключать Guard.
     pub auth_provider: AuthProvider,
     /// Пробовать лицензию; неудача разрешает cracked-повторный вход.
     pub auth_premium: bool,
+    /// Имеет приоритет над устаревшим auth-premium.
+    pub offline_license_mode: OfflineLicenseMode,
     /// Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
     /// с клиентом. Нужен только для поиска неполадок.
     pub debug: bool,
@@ -102,6 +123,28 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Ошибка в режиме не должна молча включать обращения к Mojang.
+    pub fn validate(&self) -> std::io::Result<()> {
+        if self.java_version != Some(crate::network::NATIVE_VERSION) {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                format!("config/mcsa.properties: эта сборка поддерживает java-version={}; перенос 26.2/26.3 ещё не завершён", crate::network::VERSION_NAME)));
+        }
+        if self.offline_license_mode == OfflineLicenseMode::Invalid {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: offline-license-mode должен быть cosmetics или disabled"));
+        }
+        Ok(())
+    }
+
+    pub fn verify_license(&self, online_mode: bool) -> bool {
+        online_mode || self.offline_license_mode == OfflineLicenseMode::Cosmetics
+    }
+
+    /// Политика сервера имеет приоритет над источниками в skins.toml.
+    pub fn apply_skin_policy(&self, online_mode: bool, skins: &mut crate::skins::Settings) {
+        skins.mojang &= self.verify_license(online_mode);
+    }
+
     /// Какие проёмы портала в Незер зажигаются.
     pub fn portal_sizes(&self) -> crate::portal::Sizes {
         crate::portal::Sizes {
@@ -116,9 +159,11 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            java_version: Some(crate::network::NATIVE_VERSION),
             auth_enabled: true,
             auth_provider: AuthProvider::Builtin,
             auth_premium: true,
+            offline_license_mode: OfflineLicenseMode::Cosmetics,
             debug: false,
             console_colors: crate::colors::ConsoleColors::Auto,
             tab_tps: true,
@@ -189,9 +234,15 @@ impl Settings {
         }
 
         Settings {
+            java_version: values.get("java-version").map_or(default.java_version, |value| mcsa_protocol::JavaVersion::from_name(value)),
             auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
             auth_provider: take(&values, "auth-provider", default.auth_provider, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
+            // Старые настройки не должны неожиданно включить проверку входа.
+            offline_license_mode: take(&values, "offline-license-mode",
+                if take(&values, "auth-premium", true, path) && take(&values, "auth-enabled", true, path) {
+                    OfflineLicenseMode::Cosmetics
+                } else { OfflineLicenseMode::Disabled }, path),
             debug: take(&values, "debug", default.debug, path),
             console_colors: take(&values, "console-colors", default.console_colors, path),
             tab_tps: take(&values, "tab-tps", default.tab_tps, path),
@@ -226,12 +277,14 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 20] {
+    fn sections(self) -> [(&'static str, String); 22] {
         [
+            ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Сейчас поддерживается 26.1.2; 26.2/26.3 ещё в разработке. Перед сменой версии\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
             ("auth-provider", format!("# builtin — встроенная проверка; guard — подписанный MCSA Guard (Linux x86_64).\nauth-provider={}\n", self.auth_provider)),
-            ("auth-premium", format!("# Проверять лицензию Java; после неудачи повторный вход без лицензии.\n# Действует при auth-enabled=true и online-mode=false.\nauth-premium={}\n", self.auth_premium)),
+            ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
+            ("offline-license-mode", format!("# Только для online-mode=false: cosmetics — проверять лицензию для скинов/плащей;\n# после неудачи можно войти повторно без лицензии. disabled — не проверять\n# лицензию и не искать профили/скины через Mojang. Пароли AuthMe/Guard независимы.\n# Имеет приоритет над auth-premium; действует и при auth-enabled=false.\noffline-license-mode={}\n", self.offline_license_mode)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -345,6 +398,11 @@ send-error-reports={}
     }
 }
 
+fn read_java_version<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<mcsa_protocol::JavaVersion>, D::Error> {
+    let value = String::deserialize(deserializer)?;
+    Ok(mcsa_protocol::JavaVersion::from_name(&value))
+}
+
 /// Шапка файла.
 const HEADER: &str = "# Настройки MCSheriffAnya, которых нет в server.properties.\n";
 
@@ -359,7 +417,12 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
     let text = fs::read_to_string(old).unwrap_or_default();
 
     match toml::from_str::<Settings>(&text) {
-        Ok(settings) => {
+        Ok(mut settings) => {
+            if !text.lines().any(|line| line.trim_start().starts_with("offline_license_mode")) {
+                settings.offline_license_mode = if settings.auth_enabled && settings.auth_premium {
+                    OfflineLicenseMode::Cosmetics
+                } else { OfflineLicenseMode::Disabled };
+            }
             match fs::remove_file(old) {
                 Ok(()) => log_info!("Настройки перенесены: {} → {}", old.display(), path.display()),
                 Err(error) => log_warn!("{} перенесён в {}, но не удалён: {}", old.display(), path.display(), error),
@@ -390,6 +453,69 @@ mod tests {
         assert_eq!(super::Settings::parse("auth-provider=garud\n",path).auth_provider,super::AuthProvider::Invalid);
     }
     use super::*;
+
+    #[test]
+    fn primary_version_never_enables_an_unimplemented_adapter() {
+        let path = Path::new("mcsa.properties");
+        for version in ["26.1.2", "26.2", "26.3", "unknown", ""] {
+            let settings = Settings::parse(&format!("java-version={version}"), path);
+            assert_eq!(settings.validate().is_ok(), version == crate::network::VERSION_NAME);
+            assert_eq!(Settings::parse(&settings.to_file(), path), settings);
+        }
+        assert!(Settings::parse("", path).validate().is_ok());
+    }
+
+    #[test]
+    fn offline_license_policy_and_legacy_migration() {
+        let path = Path::new("mcsa.properties");
+        for (text, expected) in [
+            ("", OfflineLicenseMode::Cosmetics),
+            ("auth-premium=false", OfflineLicenseMode::Disabled),
+            ("auth-enabled=false", OfflineLicenseMode::Disabled),
+            ("auth-premium=true\noffline-license-mode=disabled", OfflineLicenseMode::Disabled),
+            ("auth-enabled=false\nauth-premium=false\noffline-license-mode=cosmetics", OfflineLicenseMode::Cosmetics),
+        ] {
+            let settings = Settings::parse(text, path);
+            assert_eq!(settings.offline_license_mode, expected);
+            assert_eq!(Settings::parse(&settings.to_file(), path), settings);
+            assert!(settings.validate().is_ok());
+            assert_eq!(settings.verify_license(false), expected == OfflineLicenseMode::Cosmetics);
+            assert!(settings.verify_license(true), "online-mode всегда требует лицензию");
+            let mut skins = crate::skins::Settings::default();
+            settings.apply_skin_policy(false, &mut skins);
+            assert_eq!(skins.mojang, expected == OfflineLicenseMode::Cosmetics);
+            assert!(skins.ely, "Ely не проверяет лицензию Mojang");
+            skins.mojang = false;
+            settings.apply_skin_policy(true, &mut skins);
+            assert!(!skins.mojang, "не включать отключённый владельцем источник");
+        }
+        let invalid = Settings::parse("offline-license-mode=disabeld", path);
+        assert!(invalid.validate().is_err());
+        assert!(!invalid.verify_license(false));
+        let protected = Settings::parse("auth-enabled=true\nauth-provider=guard\noffline-license-mode=disabled", path);
+        assert!(protected.auth_enabled);
+        assert_eq!(protected.auth_provider, AuthProvider::Guard);
+    }
+
+    #[test]
+    fn offline_license_mode_survives_config_reload() {
+        let directory = std::env::temp_dir().join(format!("mcsa-offline-mode-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("mcsa.properties");
+        fs::write(&path, "# Старый сервер\nauth-premium=false\n").unwrap();
+        let settings = Settings::load(&path);
+        assert_eq!(settings.offline_license_mode, OfflineLicenseMode::Disabled);
+        let saved = fs::read_to_string(&path).unwrap();
+        assert!(saved.starts_with("# Старый сервер\nauth-premium=false\n"));
+        assert!(saved.contains("offline-license-mode=disabled"));
+        assert_eq!(Settings::load(&path), settings);
+        fs::remove_file(&path).unwrap();
+        fs::write(directory.join("rustcraft.toml"), "auth_premium = false\n").unwrap();
+        let migrated = Settings::load(&path);
+        assert_eq!(migrated.offline_license_mode, OfflineLicenseMode::Disabled);
+        assert_eq!(Settings::load(&path), migrated);
+        fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn console_color_modes_survive_properties_and_legacy_toml() {

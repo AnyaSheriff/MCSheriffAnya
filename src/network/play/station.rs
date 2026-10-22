@@ -78,7 +78,7 @@ pub(super) async fn open_station(
         station: Some(station),
         ender: false,
     });
-    send_window_content(stream, player).await?;
+    send_window_content(stream, player, shared.catalog()).await?;
 
     // Свойства — все сразу, как у оригинала при открытии (у точила их нет).
     let (_, props) = compute(shared, player);
@@ -106,11 +106,11 @@ fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16
     };
 
     match station.kind {
-        Station::Crafting => (crate::crafting::craft(&window.shown[1..10]), Vec::new()),
+        Station::Crafting => (crate::crafting::craft_for_catalog(shared.catalog(), &window.shown[1..10]), Vec::new()),
         Station::Stonecutter => {
             let input = window.shown[0].map(|s|i64::from(s.item));
             if input != station.input_item { station.selected = -1; station.input_item = input; }
-            (crate::stonecutter::result(window.shown[0],station.selected), vec![station.selected as i16])
+            (crate::stonecutter::result_for_catalog(shared.catalog(),window.shown[0],station.selected), vec![station.selected as i16])
         }
         Station::Loom => {
             // Свойство окна: 0 при открытии, -1 при смене ячеек, 0 при узоре-предмете
@@ -250,7 +250,7 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
             }
         }
     } else if mode == 1 && slot >= size as i32 && (slot as usize) < size + window::PLAYER_SLOTS {
-        quick_move_in(player, kind, slot as usize);
+        quick_move_in(shared, player, kind, slot as usize);
     } else if slot == inventory::OUTSIDE || (0..(size + window::PLAYER_SLOTS) as i32).contains(&slot) {
         generic_click(shared, player, kind, slot, button as i8, mode);
     }
@@ -356,7 +356,7 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
 
 /// Shift-щелчок из инвентаря в станок. Не легло в станок — стопка
 /// переходит между рюкзаком и панелью, как у оригинала.
-fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
+fn quick_move_in(shared: &Shared, player: &mut PlayerState, kind: Station, slot: usize) {
     let Some(window) = player.window.as_mut() else {
         return;
     };
@@ -383,7 +383,7 @@ fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
                 false
             }
         }
-        Station::Stonecutter => !crate::stonecutter::choices(stack.item).is_empty() && view.move_some(own,&[0]),
+        Station::Stonecutter => !crate::stonecutter::choices_for_catalog(shared.catalog(),stack.item).is_empty() && view.move_some(own,&[0]),
         Station::Loom => (0..3).find(|&p|crate::loom::may_place(p,&stack)).is_some_and(|p|view.move_some(own,&[p])),
         Station::Cartography => match blocks::item_name(stack.item) {Some("filled_map")=>view.move_some(own,&[0]),Some("paper"|"map"|"glass_pane")=>view.move_some(own,&[1]),_=>false},
         Station::Grindstone if !enchanting::grindable(&stack) => false,
@@ -577,7 +577,7 @@ pub(super) fn button(shared: &Shared, player: &mut PlayerState, window: i32, but
         return false;
     };
     if let Some(station) = open.station.as_ref().filter(|s|matches!(s.kind,Station::Stonecutter|Station::Loom)) {
-        let length=if station.kind==Station::Stonecutter {open.shown[0].map_or(0,|s|crate::stonecutter::choices(s.item).len())} else {crate::loom::choices(open.shown[2]).len()};
+        let length=if station.kind==Station::Stonecutter {open.shown[0].map_or(0,|s|crate::stonecutter::choices_for_catalog(shared.catalog(),s.item).len())} else {crate::loom::choices(open.shown[2]).len()};
         if button>=0 && (button as usize)<length {
             player.window.as_mut().unwrap().station.as_mut().unwrap().selected=button;
             refresh(shared,player,reaction);
@@ -698,6 +698,68 @@ pub(super) fn still_there(shared: &Shared, player: &PlayerState, window: &OpenWi
 
 #[cfg(test)] mod tests {
     use super::*;
+    fn stonecut_fixture(profile: crate::gameplay_catalog::Profile, count: i32) -> (Shared,PlayerState) {
+        let catalog=crate::gameplay_catalog::Catalog::new(profile);
+        let shared=Shared::new(World::in_memory_with_catalog(catalog),World::in_memory_with_catalog(catalog),
+            Default::default(),Default::default(),Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/stonecut-profile-ops.json")),crate::skins::Settings::default());
+        let mut p=PlayerState::new_for_catalog([239;16],"StonecutProfile".into(),None,None,0,0,(0.5,64.0,0.5),catalog);
+        p.game_mode=GAME_MODE_SURVIVAL;
+        p.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![None;2],lectern:false,crafter:false,kind:None,
+            props:Vec::new(),merchant:None,ender:false,
+            station:Some(StationWindow{kind:Station::Stonecutter,pos:(0,64,0),props:Vec::new(),name:None,cost:0,repair_items:0,
+                selected:-1,input_item:None,sound_tick:None})});
+        p.inventory.set(36,Some(Stack::new(blocks::item_named("white_concrete").unwrap(),count)));
+        (shared,p)
+    }
+    fn stonecut_input(p: &PlayerState) -> Option<Stack> { p.window.as_ref().unwrap().shown[0] }
+    #[test]
+    fn profile_stonecut_shift_input_local_selection_and_exact_consumption() {
+        use crate::gameplay_catalog::{Profile,WHITE_SLAB_ITEM};
+        let (shared,mut p)=stonecut_fixture(Profile::Preview26_3,3);
+        quick_move_in(&shared,&mut p,Station::Stonecutter,29);
+        let mut reaction=Reaction::default(); refresh(&shared,&mut p,&mut reaction);
+        assert_eq!(stonecut_input(&p).unwrap().count,3); assert!(p.inventory.slot(36).is_none());
+        let before=p.window.as_ref().unwrap().shown.clone();
+        for invalid in [-1,2,i32::MAX] {button(&shared,&mut p,1,invalid,&mut reaction);assert_eq!(p.window.as_ref().unwrap().shown,before);}
+        assert!(!button(&shared,&mut p,2,0,&mut reaction));
+        assert!(button(&shared,&mut p,1,0,&mut reaction));
+        assert_eq!(p.window.as_ref().unwrap().shown[1],Some(Stack::new(WHITE_SLAB_ITEM,2)));
+        assert!(take_result(&shared,&mut p,0,&mut reaction));
+        assert_eq!(stonecut_input(&p).unwrap().count,2);
+        assert_eq!(p.inventory.cursor(),Some(Stack::new(WHITE_SLAB_ITEM,2)));
+        refresh(&shared,&mut p,&mut reaction);
+        let mut payload=encode_varint(1);payload.extend(encode_varint(0));payload.extend(1_i16.to_be_bytes());
+        payload.push(0);payload.extend(encode_varint(1));payload.extend([0,0]);
+        click(&shared,&mut p,&payload,&mut reaction);
+        assert!(stonecut_input(&p).is_none());
+        let in_bag:i32=p.inventory.slots().iter().flatten().filter(|s|s.item==WHITE_SLAB_ITEM).map(|s|s.count).sum();
+        assert_eq!(in_bag,4);assert_eq!(p.inventory.cursor(),Some(Stack::new(WHITE_SLAB_ITEM,2)));
+        click(&shared,&mut p,&payload,&mut reaction);
+        assert_eq!(p.inventory.slots().iter().flatten().filter(|s|s.item==WHITE_SLAB_ITEM).map(|s|s.count).sum::<i32>(),4);
+    }
+    #[test]
+    fn profile_stonecut_refusal_preserves_inputs_and_switching_clears_selection() {
+        use crate::gameplay_catalog::{Profile,WHITE_SLAB_ITEM};
+        let (shared,mut p)=stonecut_fixture(Profile::Preview26_3,2);
+        quick_move_in(&shared,&mut p,Station::Stonecutter,29);
+        let mut reaction=Reaction::default();refresh(&shared,&mut p,&mut reaction);button(&shared,&mut p,1,0,&mut reaction);
+        let before=p.window.as_ref().unwrap().shown.clone();
+        p.inventory.set_cursor(Some(Stack::new(WHITE_SLAB_ITEM,63)));
+        assert!(!take_result(&shared,&mut p,0,&mut reaction));assert_eq!(p.window.as_ref().unwrap().shown,before);
+        p.inventory.set_cursor(None);
+        for slot in 9..=44 {p.inventory.set(slot,Some(Stack::new(blocks::item_named("stone").unwrap(),64)));}
+        let inventory=p.inventory.clone();assert!(!take_result(&shared,&mut p,1,&mut reaction));
+        assert_eq!(p.inventory,inventory);assert_eq!(p.window.as_ref().unwrap().shown,before);
+        p.window.as_mut().unwrap().shown[0]=Some(Stack::new(blocks::item_named("stone").unwrap(),1));
+        refresh(&shared,&mut p,&mut reaction);
+        assert!(p.window.as_ref().unwrap().shown[1].is_none());
+        assert_eq!(p.window.as_ref().unwrap().station.as_ref().unwrap().selected,-1);
+        let (shared,mut p)=stonecut_fixture(Profile::Java26_1_2,2);
+        p.window.as_mut().unwrap().shown[0]=p.inventory.slot(36);p.inventory.set(36,None);
+        refresh(&shared,&mut p,&mut reaction);button(&shared,&mut p,1,0,&mut reaction);
+        assert!(p.window.as_ref().unwrap().shown[1].is_none());assert_eq!(stonecut_input(&p).unwrap().count,2);
+    }
     #[test] fn cartography_checks_room_for_the_new_map_before_spending() {
         let shared=Shared::new(World::in_memory(),World::in_memory(),Default::default(),Default::default(),Default::default(),
             crate::ops::Ops::open(std::path::Path::new("tmp/cartography-test-ops.json")),crate::skins::Settings::default());

@@ -1,0 +1,1578 @@
+{
+  "source": {
+    "result": "concrete-slab-blocks-observation-02/result.json",
+    "runner_sha256": "406913af1c11edd1f2507cf8da3ddfd6fd6833e70a27814a5c09c25dbd5792fa",
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "survival_confirmed_by_packet": true,
+    "gamemode_events": [
+      {
+        "mode": 1,
+        "payload_hex": "033f800000"
+      },
+      {
+        "mode": 0,
+        "payload_hex": "0300000000"
+      }
+    ]
+  },
+  "colors": {
+    "white": {
+      "name": "white_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18307
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18308
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18309
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18310
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18311
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18312
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18310
+      },
+      "drops": {
+        "2": {
+          "item": 721,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "2": [
+          2.409043791686732,
+          65.34934453515584,
+          0.5699233950348075
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "orange": {
+      "name": "orange_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18313
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18314
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18315
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18316
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18317
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18318
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18316
+      },
+      "drops": {
+        "3": {
+          "item": 722,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "3": [
+          2.5167811501417114,
+          65.19058133584439,
+          0.6982695070279848
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "magenta": {
+      "name": "magenta_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18319
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18320
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18321
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18322
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18323
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18324
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18322
+      },
+      "drops": {
+        "4": {
+          "item": 723,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "4": [
+          2.3886211179373946,
+          65.41567987146547,
+          0.25966823159908636
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "light_blue": {
+      "name": "light_blue_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18325
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18326
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18327
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18328
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18329
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18330
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18328
+      },
+      "drops": {
+        "5": {
+          "item": 724,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "5": [
+          2.4292118894225534,
+          65.3778468199291,
+          0.2644311300603221
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "yellow": {
+      "name": "yellow_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18331
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18332
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18333
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18334
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18335
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18336
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18334
+      },
+      "drops": {
+        "6": {
+          "item": 725,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "6": [
+          2.3881747353020604,
+          65.14105087284523,
+          0.3982427634509977
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "lime": {
+      "name": "lime_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18337
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18338
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18339
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18340
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18341
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18342
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18340
+      },
+      "drops": {
+        "7": {
+          "item": 726,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "7": [
+          2.5132080007054403,
+          65.38161368589329,
+          0.5545079279472147
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "pink": {
+      "name": "pink_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18343
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18344
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18345
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18346
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18347
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18348
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18346
+      },
+      "drops": {
+        "8": {
+          "item": 727,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "8": [
+          2.3153743887587463,
+          65.42672181417954,
+          0.7471156535972685
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "gray": {
+      "name": "gray_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18349
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18350
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18351
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18352
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18353
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18354
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18352
+      },
+      "drops": {
+        "9": {
+          "item": 728,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "9": [
+          2.6234956475294076,
+          65.48884673349099,
+          0.3258378602509238
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "light_gray": {
+      "name": "light_gray_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18355
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18356
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18357
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18358
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18359
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18360
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18358
+      },
+      "drops": {
+        "10": {
+          "item": 729,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "10": [
+          2.262454410140784,
+          65.25341063518255,
+          0.6651579193913632
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "cyan": {
+      "name": "cyan_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18361
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18362
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18363
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18364
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18365
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18366
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18364
+      },
+      "drops": {
+        "11": {
+          "item": 730,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "11": [
+          2.4620559367027965,
+          65.57666991408331,
+          0.4384372745685636
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "purple": {
+      "name": "purple_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18367
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18368
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18369
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18370
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18371
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18372
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18370
+      },
+      "drops": {
+        "12": {
+          "item": 731,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "12": [
+          2.696432131465831,
+          65.54734467680963,
+          0.45071140115266306
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "blue": {
+      "name": "blue_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18373
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18374
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18375
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18376
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18377
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18378
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18376
+      },
+      "drops": {
+        "13": {
+          "item": 732,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "13": [
+          2.462958417587711,
+          65.42068055085176,
+          0.6501118127222463
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "brown": {
+      "name": "brown_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18379
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18380
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18381
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18382
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18383
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18384
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18382
+      },
+      "drops": {
+        "14": {
+          "item": 733,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "14": [
+          2.382300698543615,
+          65.38290247350629,
+          0.6886979950450054
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "green": {
+      "name": "green_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18385
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18386
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18387
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18388
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18389
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18390
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18388
+      },
+      "drops": {
+        "15": {
+          "item": 734,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "15": [
+          2.505411098065144,
+          65.18499710065691,
+          0.5114907176380095
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "red": {
+      "name": "red_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18391
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18392
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18393
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18394
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18395
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18396
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18394
+      },
+      "drops": {
+        "16": {
+          "item": 735,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "16": [
+          2.7170480573347526,
+          65.48917577924784,
+          0.30411292572067344
+        ]
+      },
+      "drop_position_verified": true
+    },
+    "black": {
+      "name": "black_concrete_slab",
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18397
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18398
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18399
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18400
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18401
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 18402
+        }
+      },
+      "checks": [
+        "wire-state-top/true",
+        "wire-state-top/false",
+        "wire-state-bottom/true",
+        "wire-state-bottom/false",
+        "wire-state-double/true",
+        "wire-state-double/false",
+        "ordinary-lower-placement-consumes-one-own-color",
+        "pickaxe-mining-air-and-one-own-color-drop"
+      ],
+      "placed": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 18400
+      },
+      "drops": {
+        "17": {
+          "item": 736,
+          "count": 1
+        }
+      },
+      "tool": {
+        "item": 1052,
+        "count": 1,
+        "damage": 1
+      },
+      "drop_spawns": {
+        "17": [
+          2.4893337287761943,
+          65.1495308008825,
+          0.299580932612476
+        ]
+      },
+      "drop_position_verified": true
+    }
+  },
+  "limits": [
+    "96 explicitly commanded states, not96 ordinary placements",
+    "real lower placement and diamond-pickaxe mining for eachcolor",
+    "item metadata matched by entity and spawn within1.5 oftarget peraxis",
+    "exact random drop coordinates/timing/GUI/completephysics not compared"
+  ]
+}

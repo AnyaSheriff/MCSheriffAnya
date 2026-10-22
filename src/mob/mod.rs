@@ -47,6 +47,7 @@ pub mod spawn;
 pub mod slime;
 pub mod skeleton;
 mod save;
+mod item_storage;
 pub mod tame;
 pub mod wildlife;
 pub mod wolf_armor;
@@ -1320,6 +1321,7 @@ const EPS: f64 = 1.0e-7;
 
 /// Откуда моб видит мир: блоки и загруженные чанки.
 pub trait View {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2) }
     fn block(&self, x: i32, y: i32, z: i32) -> i32;
     fn loaded(&self, chunk_x: i32, chunk_z: i32) -> bool;
 
@@ -1362,6 +1364,7 @@ pub trait View {
 pub struct LavaFloor<'a>(pub &'a dyn View);
 
 impl View for LavaFloor<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() }
     fn block(&self, x: i32, y: i32, z: i32) -> i32 {
         let state = self.0.block(x, y, z);
 
@@ -3041,15 +3044,20 @@ impl Mob {
         self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else if self.kind==Kind::ArmorStand {0} else { DEATH_TICKS }
     }
 
-    /// Запись для файла региона: вид, место, скорость не пишется, здоровье,
-    /// возраст, любовь, признаки, цвет, яйцо.
+    /// Проверяет длины и полную представимость предметного дополнения до записи.
+    pub fn validate_item_storage(&self) -> Result<(), &'static str> {
+        item_storage::validate(self)
+    }
+
+    /// Запись собственного формата; вызывающий проверяет данные до очереди снимков.
     pub fn write(&self, out: &mut Vec<u8>) {
+        self.validate_item_storage().expect("предметы моба проверены до записи");
         let id = if self.kind == Kind::Skeleton && (self.h.water_ticks != 0 || self.h.converting != 0) {
             save::SNOW_SKELETON
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self));
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -3094,7 +3102,7 @@ impl Mob {
         if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self) {
             leash::write_tail(self, out);
         }
     }
@@ -3123,7 +3131,11 @@ impl Mob {
         let flags = take(1)?[0];
         let color = take(1)?[0];
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
+        let carried = if kind == Kind::Enderman {
+            match i32::from_be_bytes(take(4)?.try_into().ok()?) {
+                -1 => None, state if state >= 0 => Some(state), _ => return None,
+            }
+        } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
         let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
@@ -3206,7 +3218,7 @@ impl Mob {
         }
 
         if let Some(tail) = tail {
-            leash::apply_tail(&mut mob, tail);
+            leash::apply_tail_checked(&mut mob, tail)?;
         }
 
         // Снаряд без цели не живёт: прочитанный из файла гаснет.
@@ -3609,8 +3621,51 @@ fn slide(view: &dyn View, at: &mut (f64, f64, f64), half: f64, height: f64, dx: 
     }
 }
 
+// Форма первого нового блока отделена от прежней физики775.
+// [проверить] Геометрия половин по свойству type; обычная физика26.3 ещё
+// не сравнена с официальным сервером. Старые плиты пока сохраняют прежний долг.
+pub(crate) fn catalog_clip(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, delta: f64, axis: usize) -> Option<f64> {
+    use crate::gameplay_catalog::{Profile, SlabHalf};
+    if view.catalog().profile() == Profile::Java26_1_2 { return None; }
+    let low = [min.0, min.1, min.2];
+    let high = [min.0 + 2.0 * half, min.1 + height, min.2 + 2.0 * half];
+    let mut from = low;
+    let mut to = high;
+    from[axis] += delta.min(0.0);
+    to[axis] += delta.max(0.0);
+    let mut allowed = delta;
+    for x in (from[0] - EPS).floor() as i32..=(to[0] + EPS).floor() as i32 {
+        for y in (from[1] - EPS).floor() as i32..=(to[1] + EPS).floor() as i32 {
+            for z in (from[2] - EPS).floor() as i32..=(to[2] + EPS).floor() as i32 {
+                let state = view.block(x, y, z);
+                let origin = [x as f64, y as f64, z as f64];
+                let mut a = origin;
+                let mut b = [a[0] + 1.0, a[1] + 1.0, a[2] + 1.0];
+                // Ящики клетки: ступени — несколько ящиков, прочее — один.
+                let mut cell: Vec<([f64; 3], [f64; 3])> = Vec::new();
+                if let Ok(Some((half, _))) = view.catalog().slab_properties(state) {
+                    match half { SlabHalf::Top => a[1] += 0.5, SlabHalf::Bottom => b[1] -= 0.5, SlabHalf::Double => {} }
+                    cell.push((a, b));
+                } else if let Ok(Some(stair)) = view.catalog().stair_properties(state) {
+                    cell.extend(stair.boxes().into_iter().map(|(from, to)| ([origin[0] + from[0], origin[1] + from[1], origin[2] + from[2]], [origin[0] + to[0], origin[1] + to[1], origin[2] + to[2]])));
+                } else if !solid(state) { continue; } else { cell.push((a, b)); }
+                for (a, b) in cell {
+                    if (0..3).any(|other| other != axis && (high[other] <= a[other] + EPS || low[other] >= b[other] - EPS)) { continue; }
+                    if delta > 0.0 && high[axis] <= a[axis] + EPS {
+                        allowed = allowed.min((a[axis] - high[axis]).max(0.0));
+                    } else if delta < 0.0 && low[axis] >= b[axis] - EPS {
+                        allowed = allowed.max((b[axis] - low[axis]).min(0.0));
+                    }
+                }
+            }
+        }
+    }
+    Some(allowed)
+}
+
 /// Свободный ход по оси вверх/вниз: насколько можно сдвинуться, не входя в блоки.
 pub(crate) fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dy: f64) -> f64 {
+    if let Some(allowed) = catalog_clip(view, min, half, height, dy, 1) { return allowed; }
     if dy == 0.0 {
         return 0.0;
     }
@@ -3661,6 +3716,7 @@ pub(crate) fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
 }
 
 pub(crate) fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dx: f64) -> f64 {
+    if let Some(allowed) = catalog_clip(view, min, half, height, dx, 0) { return allowed; }
     if dx == 0.0 {
         return 0.0;
     }
@@ -3708,6 +3764,7 @@ pub(crate) fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
 }
 
 pub(crate) fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dz: f64) -> f64 {
+    if let Some(allowed) = catalog_clip(view, min, half, height, dz, 2) { return allowed; }
     if dz == 0.0 {
         return 0.0;
     }
@@ -4474,3 +4531,32 @@ mod itemaudit_tests;
 #[cfg(test)]
 #[path = "enchant_loot_tests.rs"]
 mod enchant_loot_tests;
+
+#[cfg(test)]
+mod catalog_collision_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, SlabHalf};
+    struct SlabView { catalog: Catalog, state: i32 }
+    impl View for SlabView {
+        fn catalog(&self) -> Catalog { self.catalog }
+        fn block(&self, x: i32, y: i32, z: i32) -> i32 { if (x,y,z) == (0,0,0) { self.state } else { crate::world::AIR } }
+        fn loaded(&self, _: i32, _: i32) -> bool { true }
+    }
+    #[test]
+    fn preview_slabs_clip_floor_ceiling_and_sides_for_both_water_states() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        for water in [false, true] {
+            for (half, bottom, top) in [(SlabHalf::Bottom, 0.0, 0.5), (SlabHalf::Top, 0.5, 1.0), (SlabHalf::Double, 0.0, 1.0)] {
+                let view = SlabView { catalog, state: catalog.slab_state(half,water).unwrap() };
+                assert!((clip_y(&view,(0.2,2.0,0.2),0.2,0.2,-3.0) - (top-2.0)).abs() < EPS);
+                assert!((clip_y(&view,(0.2,-1.0,0.2),0.2,0.2,3.0) - (bottom+0.8)).abs() < EPS);
+                assert!((clip_x(&view,(-1.0,bottom+0.05,0.2),0.2,0.2,2.0)-0.6).abs() < EPS);
+                assert!((clip_z(&view,(0.2,bottom+0.05,-1.0),0.2,0.2,2.0)-0.6).abs() < EPS);
+                if half == SlabHalf::Bottom { assert_eq!(clip_x(&view,(-1.0,0.6,0.2),0.2,0.2,2.0),2.0); }
+                if half == SlabHalf::Top { assert_eq!(clip_x(&view,(-1.0,0.1,0.2),0.2,0.2,2.0),2.0); }
+            }
+        }
+        let base = SlabView { catalog: Catalog::new(Profile::Java26_1_2), state: catalog.slab_state(SlabHalf::Bottom,false).unwrap() };
+        assert_eq!(catalog_clip(&base,(0.2,2.0,0.2),0.2,0.2,-3.0,1),None);
+    }
+}

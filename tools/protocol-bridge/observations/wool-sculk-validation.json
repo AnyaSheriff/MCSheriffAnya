@@ -1,0 +1,1839 @@
+{
+  "schema": 1,
+  "result": "PASS",
+  "scope": "white only; sourceplace/break and two authored occlusion lines",
+  "comparison": {
+    "file": "wool-sculk-final-comparison-01.json",
+    "sha256": "555c114f310d890022425b6046a6945d6e1342e4a29099acb0476aa9733ac52b",
+    "case_count": 36,
+    "comparer_sha256": "ad6d431b302fea23ef7ae6d06848538f499f4c5a6056b75e4a0370029740fc5b"
+  },
+  "records": {
+    "official": {
+      "directory": "wool-sculk-official-01",
+      "result_sha256": "3fd7ff72097dc05f0eef4bea8b579d43af9450356e00d8424bc36a89211429dc",
+      "server_log_sha256": "35e1d622cb7436604e1dfcbcad51c8322cc1665b41b1b1dda6f459b859242578",
+      "query_proof_sha256": "4dd933d25fca286676b01b60bb8b1ce98174fdf27a860d005165ed1a9e65c796",
+      "verified_query_count": 138,
+      "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+      "binary_sha256": null,
+      "runner_sha256": "e3876434bb21ea53bdb67c4cb8292ff1cd036aa29364dfe71fff0f0f91c82727",
+      "helper_sha256": {
+        "probe_gameplay.py": "79d573ed6688c9575466493c6f5fe33386a55ff41fa5c485465f7e7f7e5fbdb8",
+        "probe_white_concrete_slab.py": "f9895658905dc91183780cc58f6a7ba45ac601fb53dc6e3a7805e688abd9cf05",
+        "generate_tables.py": "2b428e4ba2db910b5057c2e9a1e6317263704994c62c9b1c6fd76cd6a16c7602",
+        "smoke.py": "dd57d7b615de376f1b4dfe8339bebf214ce960269e2390dc95b16dba273b3be3",
+        "observe.py": "c6a94cc034c681b518d0686152c06ec649d6794bce7c4d528aa3a6e4aa67df2c"
+      },
+      "pins": {
+        "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+        "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+        "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+        "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+      },
+      "controls": [
+        {
+          "label": "emission/stone/place",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "emission/stone/break",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "emission/full-wool/place",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "emission/full-wool/break",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/air",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/stone",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/full-wool",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/no-event",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/air",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/stone",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/full-wool",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/no-event",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        }
+      ],
+      "survival_mode_events": [
+        {
+          "mode": 1.0,
+          "payload_hex": "033f800000"
+        },
+        {
+          "mode": 0.0,
+          "payload_hex": "0300000000"
+        }
+      ],
+      "cleanup": {
+        "server_exit": 0,
+        "group_gone": true,
+        "port_free": true
+      }
+    },
+    "core": {
+      "directory": "wool-sculk-core-02",
+      "result_sha256": "541f607b81ba920f3b1f1a6bc7aa8d944ab6d23934d2ebce2c45c8cedd2a6e27",
+      "server_log_sha256": "82b13dd57b2e721821de338e5169b4b279418297b7ff4abdfaa8a3790e408ffd",
+      "query_proof_sha256": "f8d9fcff1bd838b86992dccfa7493a82c792d496981e1da5deb55b4454e35063",
+      "verified_query_count": 138,
+      "jar_sha1": null,
+      "binary_sha256": "f0b022197c48b72e5c8c6e342b3c7606b1917fcb2fc214cbec35d3e9b71e7026",
+      "runner_sha256": "e3876434bb21ea53bdb67c4cb8292ff1cd036aa29364dfe71fff0f0f91c82727",
+      "helper_sha256": {
+        "probe_gameplay.py": "79d573ed6688c9575466493c6f5fe33386a55ff41fa5c485465f7e7f7e5fbdb8",
+        "probe_white_concrete_slab.py": "f9895658905dc91183780cc58f6a7ba45ac601fb53dc6e3a7805e688abd9cf05",
+        "generate_tables.py": "2b428e4ba2db910b5057c2e9a1e6317263704994c62c9b1c6fd76cd6a16c7602",
+        "smoke.py": "dd57d7b615de376f1b4dfe8339bebf214ce960269e2390dc95b16dba273b3be3",
+        "observe.py": "c6a94cc034c681b518d0686152c06ec649d6794bce7c4d528aa3a6e4aa67df2c"
+      },
+      "pins": {
+        "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+        "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+        "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+        "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+      },
+      "controls": [
+        {
+          "label": "emission/stone/place",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "emission/stone/break",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "emission/full-wool/place",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "emission/full-wool/break",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/air",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/stone",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/full-wool",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/upper/no-event",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/air",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/stone",
+          "expected_active": true,
+          "observed_active": true,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/full-wool",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        },
+        {
+          "label": "occlusion/lower/no-event",
+          "expected_active": false,
+          "observed_active": false,
+          "matched": true
+        }
+      ],
+      "survival_mode_events": [
+        {
+          "mode": 1.0,
+          "payload_hex": "033f800000"
+        },
+        {
+          "mode": 0.0,
+          "payload_hex": "0300000000"
+        }
+      ],
+      "cleanup": {
+        "server_exit": 0,
+        "group_gone": true,
+        "port_free": true
+      }
+    }
+  },
+  "cases": [
+    {
+      "label": "emission/stone/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "air",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "stone",
+          "block": "stone"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "stone",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/stone/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "stone",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "stone",
+          "block": "stone"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "air",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/full-wool/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "air",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "full-wool",
+          "block": "white_wool"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/full-wool/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "full-wool",
+          "block": "white_wool"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "air",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/bottom-false/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "air",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "bottom-false",
+          "half": "bottom",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/bottom-false/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=bottom,waterlogged=false]",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "bottom-false",
+          "half": "bottom",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "air",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/bottom-true/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "water",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "bottom-true",
+          "half": "bottom",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/bottom-true/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=bottom,waterlogged=true]",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "bottom-true",
+          "half": "bottom",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "water",
+          "properties": {
+            "level": "0"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/top-false/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "air",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "top-false",
+          "half": "top",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/top-false/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=top,waterlogged=false]",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "top-false",
+          "half": "top",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "air",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/top-true/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "water",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "top-true",
+          "half": "top",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/top-true/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=top,waterlogged=true]",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "top-true",
+          "half": "top",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "water",
+          "properties": {
+            "level": "0"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/double-false/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=bottom,waterlogged=false]",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "double-false",
+          "half": "double",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/double-false/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=double,waterlogged=false]",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "double-false",
+          "half": "double",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "air",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "label": "emission/double-true/place",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=bottom,waterlogged=true]",
+        "observation_seconds": 3.5,
+        "geometry": null,
+        "material": {
+          "label": "double-true",
+          "half": "double",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      }
+    },
+    {
+      "label": "emission/double-true/break",
+      "equal": true,
+      "observation": {
+        "kind": "emission",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "white_wool_slab[type=double,waterlogged=true]",
+        "observation_seconds": 5.5,
+        "geometry": null,
+        "material": {
+          "label": "double-true",
+          "half": "double",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "barrier": null,
+        "final_source": {
+          "name": "water",
+          "properties": {
+            "level": "0"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/air",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "air",
+          "block": "air"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/stone",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "stone",
+          "block": "stone"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/full-wool",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "full-wool",
+          "block": "white_wool"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/bottom-false",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "bottom-false",
+          "half": "bottom",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/bottom-true",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "bottom-true",
+          "half": "bottom",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/top-false",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "top-false",
+          "half": "top",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/top-true",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "top-true",
+          "half": "top",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/double-false",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "double-false",
+          "half": "double",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/double-true",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "double-true",
+          "half": "double",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/no-event",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": false,
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "upper",
+          "source": [
+            2,
+            65,
+            0
+          ],
+          "sensor": [
+            6,
+            66,
+            0
+          ],
+          "barrier": [
+            3,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.75
+        },
+        "material": null,
+        "barrier": {
+          "label": "no-event",
+          "block": "air"
+        },
+        "final_source": null
+      }
+    },
+    {
+      "label": "occlusion/lower/air",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "air",
+          "block": "air"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/stone",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "stone",
+          "block": "stone"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/full-wool",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": false,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "full-wool",
+          "block": "white_wool"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/bottom-false",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "bottom-false",
+          "half": "bottom",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/bottom-true",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "bottom-true",
+          "half": "bottom",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/top-false",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "top-false",
+          "half": "top",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/top-true",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "top-true",
+          "half": "top",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/double-false",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "double-false",
+          "half": "double",
+          "wet": false,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/double-true",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": true,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "double-true",
+          "half": "double",
+          "wet": true,
+          "block": "white_wool_slab"
+        },
+        "final_source": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/no-event",
+      "equal": true,
+      "observation": {
+        "kind": "occlusion",
+        "active": false,
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "initial": "lever[powered=false]",
+        "observation_seconds": 3.5,
+        "geometry": {
+          "name": "lower",
+          "source": [
+            2,
+            64,
+            0
+          ],
+          "sensor": [
+            6,
+            65,
+            0
+          ],
+          "barrier": [
+            5,
+            65,
+            0
+          ],
+          "center_intersection_y": 65.25
+        },
+        "material": null,
+        "barrier": {
+          "label": "no-event",
+          "block": "air"
+        },
+        "final_source": null
+      }
+    }
+  ],
+  "limits": [
+    "white wool selected actions only",
+    "no frequency/calibration/event-origin/shapealgorithm/timing/packet-format parity claim",
+    "fire/steps/landings/all16ordinary not observed"
+  ],
+  "retained_failures": [
+    "wool-sculk-core-01:5successfulcases then catalog execute-if-block query failed"
+  ],
+  "historical_discovery": "wool-sculk-selected.json remains firstdiscovery evidence, not overwritten",
+  "independent_review": {
+    "cases_per_side": 36,
+    "successful_server_query_tokens_per_side": 138,
+    "review_sha256": "cfbd6e660f3ee1909248dec7ba9d0be2717c82fd539a1f0cb7def4063a3f6f06",
+    "source_inputs_unchanged": true
+  },
+  "comparer_negative_controls": {
+    "actual_core_baseline_cases": 36,
+    "rejected_mutations": 9,
+    "wrong_expected_core_hash_rejected": true,
+    "sha256": "6c3781390cd6594e4f4b4e29c9bddd7a482f3268f148bfdf20a68fc7a4229217",
+    "scope": "Offline validation of actual core evidence; not additional official observations"
+  }
+}

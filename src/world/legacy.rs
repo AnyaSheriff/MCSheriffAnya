@@ -333,6 +333,18 @@ fn read_region(path: &Path) -> io::Result<Vec<(usize, region::Stored)>> {
     Ok(found)
 }
 
+/// Неперенесённый старый регион нельзя затереть новой генерацией.
+/// Если .mcs уже есть, сохраняется прежнее правило: он имеет приоритет.
+/// Ошибка проверки файлов тоже требует отказа, а не генерации.
+pub(super) fn pending_region(directory: &Path, chunk_x: i32, chunk_z: i32) -> io::Result<bool> {
+    let region_x = chunk_x.div_euclid(region::REGION_SIZE);
+    let region_z = chunk_z.div_euclid(region::REGION_SIZE);
+    if directory.join(format!("r.{region_x}.{region_z}.mcs")).try_exists()? {
+        return Ok(false);
+    }
+    directory.join(format!("r.{region_x}.{region_z}.rcw")).try_exists()
+}
+
 /// Что вышло из переноса одного региона.
 struct Moved {
     chunks: usize,
@@ -350,7 +362,20 @@ fn migrate_region(directory: &Path, old: &Path, region_x: i32, region_z: i32) ->
     let mut moved = Moved { chunks: 0, aside: 0, before: fs::metadata(old)?.len(), after: 0 };
     let mut kept: Vec<(usize, Vec<u8>, Chunk)> = Vec::new();
 
-    for (slot, stored) in read_region(old)? {
+    let records = read_region(old)?;
+    // Проверяем все целые записи до corrupt-copy и временного .mcs:
+    // незнакомая раскладка не означает, что чанк можно выбросить.
+    for (slot, stored) in &records {
+        if let region::Stored::Found(bytes) = stored
+            && let Some(&version) = bytes.first()
+            && ![CHUNK_VERSION_WIDE, CHUNK_VERSION_FLAT_BIOMES, LEGACY_VERSION].contains(&version)
+        {
+            return Err(io::Error::new(io::ErrorKind::Unsupported,
+                format!("раскладка старого чанка {version} на месте {slot} не поддержана; регион оставлен без переноса")));
+        }
+    }
+
+    for (slot, stored) in records {
         let chunk_x = region_x * region::REGION_SIZE + (slot % region::REGION_SIZE as usize) as i32;
         let chunk_z = region_z * region::REGION_SIZE + (slot / region::REGION_SIZE as usize) as i32;
 
@@ -769,13 +794,84 @@ mod tests {
         assert_eq!(region::read(&directory, 2, 0).unwrap(), None);
     }
 
+    /// Незнакомая версия запрещает перенос всего региона до любых записей,
+    /// даже если перед ней попались хороший и повреждённый чанки.
+    #[test]
+    fn unsupported_legacy_layout_keeps_the_entire_region_untouched() {
+        let directory = directory("unsupported-layout");
+        let old = directory.join("r.-1.2.rcw");
+        for version in [0, CHUNK_VERSION, u8::MAX] {
+            write_rcw(&old, &[
+                (0, Chunk::flat().to_legacy_bytes(), false),
+                (1, vec![LEGACY_VERSION, 1, 255], false),
+                (2, vec![version], false),
+            ]);
+            let before = fs::read(&old).unwrap();
+            let error = match migrate_region(&directory, &old, -1, 2) {
+                Err(error) => error,
+                Ok(_) => panic!("неизвестный регион перенесён"),
+            };
+            assert_eq!(error.kind(), io::ErrorKind::Unsupported);
+            assert_eq!(fs::read(&old).unwrap(), before);
+            assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
+            assert_eq!(migrate(&directory), 0);
+            assert_eq!(fs::read(&old).unwrap(), before);
+            assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    /// Неудачный перенос не должен превращаться в новый .mcs при ensure
+    /// или при асинхронной загрузке чанков после World::open.
+    #[test]
+    fn opening_an_unsupported_legacy_region_cannot_regenerate_it() {
+        let path = directory("unsupported-world");
+        // Настоящий заголовок мира нужен до добавления старого региона:
+        // иначе startup guard остановит пробу раньше чтения .rcw.
+        let mut initial = World::open(&path, Some(1), WorldKind::Flat).unwrap();
+        initial.save_all();
+        drop(initial);
+        let regions = path.join(REGIONS);
+        fs::create_dir_all(&regions).unwrap();
+        let old = regions.join("r.-1.2.rcw");
+        write_rcw(&old, &[(0, vec![u8::MAX], false)]);
+        let before = fs::read(&old).unwrap();
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).unwrap();
+        for (x,z) in [(-32,64),(-1,95)] {
+            assert!(!world.ensure(x,z));
+            let ready = world.source().take(x,z);
+            world.accept(x,z,ready);
+            assert!(!world.has_chunk(x,z));
+            assert!(!world.set_block(x*CHUNK_SIZE,MIN_Y,z*CHUNK_SIZE,1));
+        }
+        assert!(world.take_new_chunks().is_empty());
+        world.save_all();
+        assert_eq!(fs::read(&old).unwrap(),before);
+        assert_eq!(fs::read_dir(&regions).unwrap().count(),1);
+        drop(world);
+        fs::remove_dir_all(path).unwrap();
+    }
+
+    /// Приоритет уже существующего .mcs сохранён, включая пустые места.
+    #[test]
+    fn pending_legacy_guard_preserves_existing_mcs_priority() {
+        let directory = directory("pending-priority");
+        write_rcw(&directory.join("r.-1.2.rcw"), &[(0, vec![u8::MAX], false)]);
+        assert!(pending_region(&directory,-32,64).unwrap());
+        assert!(pending_region(&directory,-1,95).unwrap());
+        assert!(!pending_region(&directory,0,64).unwrap());
+        region::write(&directory,-32,64,&Chunk::new().to_bytes()).unwrap();
+        assert!(!pending_region(&directory,-1,95).unwrap());
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     /// Не вышло отложить испорченное — старый файл остаётся нетронутым, а
     /// нового нет.
     #[test]
     fn a_failed_migration_keeps_the_old_file() {
         let directory = directory("failed");
 
-        write_rcw(&directory.join("r.0.0.rcw"), &[(0, Chunk::flat().to_legacy_bytes(), false), (1, vec![9, 9], false)]);
+        write_rcw(&directory.join("r.0.0.rcw"), &[(0, Chunk::flat().to_legacy_bytes(), false), (1, vec![LEGACY_VERSION, 1, 255], false)]);
 
         // На месте папки отложенного — файл: отложить нечем.
         fs::write(directory.join("corrupt"), "занято").unwrap();

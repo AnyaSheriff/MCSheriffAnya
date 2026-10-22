@@ -1,0 +1,1626 @@
+{
+ "source": "official 26.3 server, tools/protocol-bridge/probe_poplar_777.py (recipe_book_add, declare_recipes, /loot, /give)",
+ "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+ "crafting": [
+  {
+   "result": "poplar_wood",
+   "count": 3,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "poplar_log"
+    ],
+    [
+     "poplar_log"
+    ],
+    [
+     "poplar_log"
+    ],
+    [
+     "poplar_log"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "stripped_poplar_wood",
+   "count": 3,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "poplar_planks",
+   "count": 4,
+   "shaped": false,
+   "width": null,
+   "height": null,
+   "cells": [
+    {
+     "tag": "minecraft:poplar_logs"
+    }
+   ],
+   "category": 0
+  },
+  {
+   "result": "poplar_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    null,
+    null,
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    null,
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "poplar_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "poplar_fence",
+   "count": 3,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    [
+     "stick"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "stick"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "poplar_fence_gate",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "stick"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "stick"
+    ],
+    [
+     "stick"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "stick"
+    ]
+   ],
+   "category": 1
+  },
+  {
+   "result": "poplar_door",
+   "count": 3,
+   "shaped": true,
+   "width": 2,
+   "height": 3,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 1
+  },
+  {
+   "result": "poplar_trapdoor",
+   "count": 2,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 1
+  },
+  {
+   "result": "poplar_button",
+   "count": 1,
+   "shaped": false,
+   "width": null,
+   "height": null,
+   "cells": [
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 1
+  },
+  {
+   "result": "poplar_pressure_plate",
+   "count": 1,
+   "shaped": true,
+   "width": 2,
+   "height": 1,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 1
+  },
+  {
+   "result": "poplar_sign",
+   "count": 3,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    null,
+    [
+     "stick"
+    ],
+    null
+   ],
+   "category": 3
+  },
+  {
+   "result": "poplar_hanging_sign",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "iron_chain"
+    ],
+    null,
+    [
+     "iron_chain"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "poplar_shelf",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    null,
+    null,
+    null,
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ],
+    [
+     "stripped_poplar_log"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "poplar_boat",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "poplar_planks"
+    ],
+    null,
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ],
+    [
+     "poplar_planks"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "poplar_chest_boat",
+   "count": 1,
+   "shaped": false,
+   "width": null,
+   "height": null,
+   "cells": [
+    [
+     "chest"
+    ],
+    [
+     "poplar_boat"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "polished_sulfur",
+   "count": 4,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "chiseled_sulfur",
+   "count": 1,
+   "shaped": true,
+   "width": 1,
+   "height": 2,
+   "cells": [
+    [
+     "sulfur_slab"
+    ],
+    [
+     "sulfur_slab"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "sulfur_bricks",
+   "count": 4,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "sulfur_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "sulfur_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "sulfur"
+    ],
+    null,
+    null,
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    null,
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "sulfur_wall",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "polished_sulfur_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "polished_sulfur_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "polished_sulfur"
+    ],
+    null,
+    null,
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    null,
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "polished_sulfur_wall",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ],
+    [
+     "polished_sulfur"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "sulfur_brick_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "sulfur_brick_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "sulfur_bricks"
+    ],
+    null,
+    null,
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    null,
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "sulfur_brick_wall",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ],
+    [
+     "sulfur_bricks"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "potent_sulfur",
+   "count": 1,
+   "shaped": false,
+   "width": null,
+   "height": null,
+   "cells": [
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ],
+    [
+     "sulfur"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "polished_cinnabar",
+   "count": 4,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "chiseled_cinnabar",
+   "count": 1,
+   "shaped": true,
+   "width": 1,
+   "height": 2,
+   "cells": [
+    [
+     "cinnabar_slab"
+    ],
+    [
+     "cinnabar_slab"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "cinnabar_bricks",
+   "count": 4,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "cinnabar_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "cinnabar_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "cinnabar"
+    ],
+    null,
+    null,
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    null,
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "cinnabar_wall",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ],
+    [
+     "cinnabar"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "polished_cinnabar_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "polished_cinnabar_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "polished_cinnabar"
+    ],
+    null,
+    null,
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    null,
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "polished_cinnabar_wall",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ],
+    [
+     "polished_cinnabar"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "cinnabar_brick_slab",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "cinnabar_brick_stairs",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 3,
+   "cells": [
+    [
+     "cinnabar_bricks"
+    ],
+    null,
+    null,
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    null,
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ]
+   ],
+   "category": 0
+  },
+  {
+   "result": "cinnabar_brick_wall",
+   "count": 6,
+   "shaped": true,
+   "width": 3,
+   "height": 2,
+   "cells": [
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ],
+    [
+     "cinnabar_bricks"
+    ]
+   ],
+   "category": 3
+  },
+  {
+   "result": "sulfur",
+   "count": 1,
+   "shaped": true,
+   "width": 2,
+   "height": 2,
+   "cells": [
+    [
+     "sulfur_spike"
+    ],
+    [
+     "sulfur_spike"
+    ],
+    [
+     "sulfur_spike"
+    ],
+    [
+     "sulfur_spike"
+    ]
+   ],
+   "category": 0
+  }
+ ],
+ "stonecutting": [
+  [
+   "cinnabar",
+   "chiseled_cinnabar",
+   1
+  ],
+  [
+   "sulfur",
+   "chiseled_sulfur",
+   1
+  ],
+  [
+   "cinnabar_bricks",
+   "cinnabar_brick_slab",
+   2
+  ],
+  [
+   "cinnabar",
+   "cinnabar_brick_slab",
+   2
+  ],
+  [
+   "polished_cinnabar",
+   "cinnabar_brick_slab",
+   2
+  ],
+  [
+   "cinnabar_bricks",
+   "cinnabar_brick_stairs",
+   1
+  ],
+  [
+   "cinnabar",
+   "cinnabar_brick_stairs",
+   1
+  ],
+  [
+   "polished_cinnabar",
+   "cinnabar_brick_stairs",
+   1
+  ],
+  [
+   "cinnabar_bricks",
+   "cinnabar_brick_wall",
+   1
+  ],
+  [
+   "cinnabar",
+   "cinnabar_brick_wall",
+   1
+  ],
+  [
+   "polished_cinnabar",
+   "cinnabar_brick_wall",
+   1
+  ],
+  [
+   "cinnabar",
+   "cinnabar_bricks",
+   1
+  ],
+  [
+   "polished_cinnabar",
+   "cinnabar_bricks",
+   1
+  ],
+  [
+   "cinnabar",
+   "cinnabar_slab",
+   2
+  ],
+  [
+   "cinnabar",
+   "cinnabar_stairs",
+   1
+  ],
+  [
+   "cinnabar",
+   "cinnabar_wall",
+   1
+  ],
+  [
+   "cinnabar",
+   "polished_cinnabar",
+   1
+  ],
+  [
+   "cinnabar",
+   "polished_cinnabar_slab",
+   2
+  ],
+  [
+   "polished_cinnabar",
+   "polished_cinnabar_slab",
+   2
+  ],
+  [
+   "cinnabar",
+   "polished_cinnabar_stairs",
+   1
+  ],
+  [
+   "polished_cinnabar",
+   "polished_cinnabar_stairs",
+   1
+  ],
+  [
+   "cinnabar",
+   "polished_cinnabar_wall",
+   1
+  ],
+  [
+   "polished_cinnabar",
+   "polished_cinnabar_wall",
+   1
+  ],
+  [
+   "sulfur",
+   "polished_sulfur",
+   1
+  ],
+  [
+   "polished_sulfur",
+   "polished_sulfur_slab",
+   2
+  ],
+  [
+   "sulfur",
+   "polished_sulfur_slab",
+   2
+  ],
+  [
+   "polished_sulfur",
+   "polished_sulfur_stairs",
+   1
+  ],
+  [
+   "sulfur",
+   "polished_sulfur_stairs",
+   1
+  ],
+  [
+   "polished_sulfur",
+   "polished_sulfur_wall",
+   1
+  ],
+  [
+   "sulfur",
+   "polished_sulfur_wall",
+   1
+  ],
+  [
+   "polished_sulfur",
+   "sulfur_brick_slab",
+   2
+  ],
+  [
+   "sulfur_bricks",
+   "sulfur_brick_slab",
+   2
+  ],
+  [
+   "sulfur",
+   "sulfur_brick_slab",
+   2
+  ],
+  [
+   "polished_sulfur",
+   "sulfur_brick_stairs",
+   1
+  ],
+  [
+   "sulfur_bricks",
+   "sulfur_brick_stairs",
+   1
+  ],
+  [
+   "sulfur",
+   "sulfur_brick_stairs",
+   1
+  ],
+  [
+   "polished_sulfur",
+   "sulfur_brick_wall",
+   1
+  ],
+  [
+   "sulfur_bricks",
+   "sulfur_brick_wall",
+   1
+  ],
+  [
+   "sulfur",
+   "sulfur_brick_wall",
+   1
+  ],
+  [
+   "polished_sulfur",
+   "sulfur_bricks",
+   1
+  ],
+  [
+   "sulfur",
+   "sulfur_bricks",
+   1
+  ],
+  [
+   "sulfur",
+   "sulfur_slab",
+   2
+  ],
+  [
+   "sulfur",
+   "sulfur_stairs",
+   1
+  ],
+  [
+   "sulfur",
+   "sulfur_wall",
+   1
+  ]
+ ],
+ "drops": {
+  "poplar_log": [
+   [
+    "poplar_log",
+    1
+   ]
+  ],
+  "stripped_poplar_log": [
+   [
+    "stripped_poplar_log",
+    1
+   ]
+  ],
+  "poplar_wood": [
+   [
+    "poplar_wood",
+    1
+   ]
+  ],
+  "stripped_poplar_wood": [
+   [
+    "stripped_poplar_wood",
+    1
+   ]
+  ],
+  "poplar_planks": [
+   [
+    "poplar_planks",
+    1
+   ]
+  ],
+  "poplar_stairs": [
+   [
+    "poplar_stairs",
+    1
+   ]
+  ],
+  "poplar_fence": [
+   [
+    "poplar_fence",
+    1
+   ]
+  ],
+  "poplar_fence_gate": [
+   [
+    "poplar_fence_gate",
+    1
+   ]
+  ],
+  "poplar_trapdoor": [
+   [
+    "poplar_trapdoor",
+    1
+   ]
+  ],
+  "poplar_button": [
+   [
+    "poplar_button",
+    1
+   ]
+  ],
+  "poplar_pressure_plate": [
+   [
+    "poplar_pressure_plate",
+    1
+   ]
+  ],
+  "poplar_sign": [
+   [
+    "poplar_sign",
+    1
+   ]
+  ],
+  "poplar_hanging_sign": [
+   [
+    "poplar_hanging_sign",
+    1
+   ]
+  ],
+  "poplar_shelf": [
+   [
+    "poplar_shelf",
+    1
+   ]
+  ],
+  "poplar_sapling": [
+   [
+    "poplar_sapling",
+    1
+   ]
+  ],
+  "potted_poplar_sapling": [
+   [
+    "flower_pot",
+    1
+   ],
+   [
+    "poplar_sapling",
+    1
+   ]
+  ],
+  "poplar_slab": [
+   [
+    "poplar_slab",
+    1
+   ]
+  ],
+  "poplar_slab_double": [
+   [
+    "poplar_slab",
+    2
+   ]
+  ],
+  "poplar_door": [
+   [
+    "poplar_door",
+    1
+   ]
+  ],
+  "poplar_door_upper": [],
+  "poplar_wall_sign": [
+   [
+    "poplar_sign",
+    1
+   ]
+  ],
+  "poplar_wall_hanging_sign": [
+   [
+    "poplar_hanging_sign",
+    1
+   ]
+  ],
+  "sulfur": [
+   [
+    "sulfur",
+    1
+   ]
+  ],
+  "polished_sulfur": [
+   [
+    "polished_sulfur",
+    1
+   ]
+  ],
+  "chiseled_sulfur": [
+   [
+    "chiseled_sulfur",
+    1
+   ]
+  ],
+  "sulfur_bricks": [
+   [
+    "sulfur_bricks",
+    1
+   ]
+  ],
+  "sulfur_slab": [
+   [
+    "sulfur_slab",
+    1
+   ]
+  ],
+  "sulfur_slab_double": [
+   [
+    "sulfur_slab",
+    2
+   ]
+  ],
+  "sulfur_stairs": [
+   [
+    "sulfur_stairs",
+    1
+   ]
+  ],
+  "sulfur_wall": [
+   [
+    "sulfur_wall",
+    1
+   ]
+  ],
+  "polished_sulfur_slab": [
+   [
+    "polished_sulfur_slab",
+    1
+   ]
+  ],
+  "polished_sulfur_slab_double": [
+   [
+    "polished_sulfur_slab",
+    2
+   ]
+  ],
+  "polished_sulfur_stairs": [
+   [
+    "polished_sulfur_stairs",
+    1
+   ]
+  ],
+  "polished_sulfur_wall": [
+   [
+    "polished_sulfur_wall",
+    1
+   ]
+  ],
+  "sulfur_brick_slab": [
+   [
+    "sulfur_brick_slab",
+    1
+   ]
+  ],
+  "sulfur_brick_slab_double": [
+   [
+    "sulfur_brick_slab",
+    2
+   ]
+  ],
+  "sulfur_brick_stairs": [
+   [
+    "sulfur_brick_stairs",
+    1
+   ]
+  ],
+  "sulfur_brick_wall": [
+   [
+    "sulfur_brick_wall",
+    1
+   ]
+  ],
+  "potent_sulfur": [
+   [
+    "potent_sulfur",
+    1
+   ]
+  ],
+  "sulfur_spike": [
+   [
+    "sulfur_spike",
+    1
+   ]
+  ],
+  "cinnabar": [
+   [
+    "cinnabar",
+    1
+   ]
+  ],
+  "polished_cinnabar": [
+   [
+    "polished_cinnabar",
+    1
+   ]
+  ],
+  "chiseled_cinnabar": [
+   [
+    "chiseled_cinnabar",
+    1
+   ]
+  ],
+  "cinnabar_bricks": [
+   [
+    "cinnabar_bricks",
+    1
+   ]
+  ],
+  "cinnabar_slab": [
+   [
+    "cinnabar_slab",
+    1
+   ]
+  ],
+  "cinnabar_slab_double": [
+   [
+    "cinnabar_slab",
+    2
+   ]
+  ],
+  "cinnabar_stairs": [
+   [
+    "cinnabar_stairs",
+    1
+   ]
+  ],
+  "cinnabar_wall": [
+   [
+    "cinnabar_wall",
+    1
+   ]
+  ],
+  "polished_cinnabar_slab": [
+   [
+    "polished_cinnabar_slab",
+    1
+   ]
+  ],
+  "polished_cinnabar_slab_double": [
+   [
+    "polished_cinnabar_slab",
+    2
+   ]
+  ],
+  "polished_cinnabar_stairs": [
+   [
+    "polished_cinnabar_stairs",
+    1
+   ]
+  ],
+  "polished_cinnabar_wall": [
+   [
+    "polished_cinnabar_wall",
+    1
+   ]
+  ],
+  "cinnabar_brick_slab": [
+   [
+    "cinnabar_brick_slab",
+    1
+   ]
+  ],
+  "cinnabar_brick_slab_double": [
+   [
+    "cinnabar_brick_slab",
+    2
+   ]
+  ],
+  "cinnabar_brick_stairs": [
+   [
+    "cinnabar_brick_stairs",
+    1
+   ]
+  ],
+  "cinnabar_brick_wall": [
+   [
+    "cinnabar_brick_wall",
+    1
+   ]
+  ]
+ },
+ "stacks_not_64": {
+  "poplar_sign": 16,
+  "poplar_hanging_sign": 16,
+  "poplar_boat": 1,
+  "poplar_chest_boat": 1
+ },
+ "leaves3000": {
+  "leaves3000/yellow_poplar_leaves": {
+   "poplar_sapling": 166,
+   "stick": 100
+  },
+  "leaves3000/orange_poplar_leaves": {
+   "stick": 96,
+   "poplar_sapling": 175
+  },
+  "leaves3000/red_poplar_leaves": {
+   "poplar_sapling": 158,
+   "stick": 96
+  },
+  "leaves3000/oak_leaves": {
+   "oak_sapling": 161,
+   "stick": 84,
+   "apple": 18
+  }
+ }
+}

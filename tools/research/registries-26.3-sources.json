@@ -1,0 +1,255 @@
+[
+  {
+    "title": "Dimension type",
+    "file": "dimension-type.wiki",
+    "revision": {
+      "revid": 3650747,
+      "parentid": 3650460,
+      "timestamp": "2026-06-27T20:33:17Z"
+    },
+    "sha256": "c25596edf46bc2dc813931d3152ad5f51cfa2ffb6b7603dba02cf7742c4eb2b2",
+    "url": "https://minecraft.wiki/w/Dimension_type?oldid=3650747"
+  },
+  {
+    "title": "Biome definition (Java Edition)",
+    "file": "biome-definition-(java-edition).wiki",
+    "revision": {
+      "revid": 3848210,
+      "parentid": 3848197,
+      "timestamp": "2026-10-17T18:01:22Z"
+    },
+    "sha256": "4bb38a5cced25a6f2b7f7a75068a7b986b9090fe3d120af39f28d12babb1276a",
+    "url": "https://minecraft.wiki/w/Biome_definition_%28Java_Edition%29?oldid=3848210"
+  },
+  {
+    "title": "Mob variant definitions",
+    "file": "mob-variant-definitions.wiki",
+    "revision": {
+      "revid": 3840640,
+      "parentid": 3840610,
+      "timestamp": "2026-10-13T19:32:37Z"
+    },
+    "sha256": "a3c224c4f1c86ab5d2ce949475fd75c5bcf167516fa157672f3a063e5e65fc95",
+    "url": "https://minecraft.wiki/w/Mob_variant_definitions?oldid=3840640"
+  },
+  {
+    "title": "World clock",
+    "file": "world-clock.wiki",
+    "revision": {
+      "revid": 3840761,
+      "parentid": 3813550,
+      "timestamp": "2026-10-13T20:38:00Z"
+    },
+    "sha256": "0cdcc6887ce7a2d6b2487c9f59166f3377b18ef0af1a7fdb9060fab277fd478e",
+    "url": "https://minecraft.wiki/w/World_clock?oldid=3840761"
+  },
+  {
+    "title": "Timeline",
+    "file": "timeline.wiki",
+    "revision": {
+      "revid": 3595196,
+      "parentid": 3494697,
+      "timestamp": "2026-05-26T17:14:01Z"
+    },
+    "sha256": "d807f73d94bbc56b1efb3ed7ff9b43b9f0c5262b547290e254e4cad0154d508c",
+    "url": "https://minecraft.wiki/w/Timeline?oldid=3595196"
+  },
+  {
+    "title": "Environment attribute",
+    "file": "environment-attribute.wiki",
+    "revision": {
+      "revid": 3816364,
+      "parentid": 3778474,
+      "timestamp": "2026-10-03T11:08:58Z"
+    },
+    "sha256": "d037dea6e0e66d8ad35919a8e963e4ceef0a8b37ca0904bc72e74cdff2376eed",
+    "url": "https://minecraft.wiki/w/Environment_attribute?oldid=3816364"
+  },
+  {
+    "title": "Enchantment definition",
+    "file": "enchantment-definition.wiki",
+    "revision": {
+      "revid": 3843772,
+      "parentid": 3842772,
+      "timestamp": "2026-10-15T05:24:49Z"
+    },
+    "sha256": "c91010fe776c08869e94f226b6fe177e3232146ba2c2a4e1d658a8039d61fbd9",
+    "url": "https://minecraft.wiki/w/Enchantment_definition?oldid=3843772"
+  },
+  {
+    "title": "Instrument definition",
+    "file": "instrument-definition.wiki",
+    "revision": {
+      "revid": 3778776,
+      "parentid": 3778703,
+      "timestamp": "2026-09-15T19:52:12Z"
+    },
+    "sha256": "b949e9321ea6d0c2e8ab588a4b3950d43521ba4eb7f9cac9cc211b4efe620c06",
+    "url": "https://minecraft.wiki/w/Instrument_definition?oldid=3778776"
+  },
+  {
+    "title": "Armor trim definition",
+    "file": "armor-trim-definition.wiki",
+    "revision": {
+      "revid": 3791545,
+      "parentid": 3791486,
+      "timestamp": "2026-09-24T10:44:19Z"
+    },
+    "sha256": "b5a76e58c5947f840f4212bbb0aa435c19476e2b4124f867355ac9ead15b9fe1",
+    "url": "https://minecraft.wiki/w/Armor_trim_definition?oldid=3791545"
+  },
+  {
+    "title": "Chat type",
+    "file": "chat-type.wiki",
+    "revision": {
+      "revid": 3259141,
+      "parentid": 3032067,
+      "timestamp": "2025-11-09T14:23:43Z"
+    },
+    "sha256": "bd515745ff4d3de2fe27d3feb992b206b368aa359c5a2fbc4f09773fe70ad229",
+    "url": "https://minecraft.wiki/w/Chat_type?oldid=3259141"
+  },
+  {
+    "title": "Jukebox song definition",
+    "file": "jukebox-song-definition.wiki",
+    "revision": {
+      "revid": 3775431,
+      "parentid": 3736873,
+      "timestamp": "2026-09-14T16:22:51Z"
+    },
+    "sha256": "610da83e190ef6c810060a1353b678f19abba717cdf61c7597f4245a001187c4",
+    "url": "https://minecraft.wiki/w/Jukebox_song_definition?oldid=3775431"
+  },
+  {
+    "title": "Damage type",
+    "file": "damage-type.wiki",
+    "revision": {
+      "revid": 3751198,
+      "parentid": 3751194,
+      "timestamp": "2026-08-31T04:01:09Z"
+    },
+    "sha256": "9e034f18445e30f8bfc53ce32cc27a51bc80ed33b9feb7312aba4dd556021df3",
+    "url": "https://minecraft.wiki/w/Damage_type?oldid=3751198"
+  },
+  {
+    "title": "Banner pattern definition",
+    "file": "banner-pattern-definition.wiki",
+    "revision": {
+      "revid": 3650912,
+      "parentid": 3591246,
+      "timestamp": "2026-06-27T23:38:10Z"
+    },
+    "sha256": "179d6d5b69d1fae6d5ebb23983d0c52af2933b22bb359445eb2d56c59929d956",
+    "url": "https://minecraft.wiki/w/Banner_pattern_definition?oldid=3650912"
+  },
+  {
+    "title": "Painting variant definition",
+    "file": "painting-variant-definition.wiki",
+    "revision": {
+      "revid": 3066226,
+      "parentid": 3020347,
+      "timestamp": "2025-07-17T22:34:14Z"
+    },
+    "sha256": "9c3fa8e4d2c12b33ac169740bdc7f293ad84d2b60e1c41d87d2dab15f6392386",
+    "url": "https://minecraft.wiki/w/Painting_variant_definition?oldid=3066226"
+  },
+  {
+    "title": "Block transformer definition",
+    "file": "block-transformer-definition.wiki",
+    "revision": {
+      "revid": 3845159,
+      "parentid": 3778540,
+      "timestamp": "2026-10-15T19:24:49Z"
+    },
+    "sha256": "8fb769d22c8ce81ff6856dac7e98aa9832a8a3be569e5683fef32b6fda9f9f03",
+    "url": "https://minecraft.wiki/w/Block_transformer_definition?oldid=3845159"
+  },
+  {
+    "title": "Java Edition 26.3 Snapshot 10",
+    "file": "java-edition-26.3-snapshot-10.wiki",
+    "revision": {
+      "revid": 3799210,
+      "parentid": 3789252,
+      "timestamp": "2026-09-27T18:33:54Z"
+    },
+    "sha256": "483c5c6531cc43f452832637c87aa6cb649178510a7015ad570ee80ede7b210a",
+    "url": "https://minecraft.wiki/w/Java_Edition_26.3_Snapshot_10?oldid=3799210"
+  },
+  {
+    "title": "Block state provider",
+    "file": "block-state-provider.wiki",
+    "revision": {
+      "revid": 3828513,
+      "parentid": 3822003,
+      "timestamp": "2026-10-08T16:30:49Z"
+    },
+    "sha256": "01a353e60ec0eec59fa4fdbe5cdd5ab8315fa16e666d349ee4c3c05419945c00",
+    "url": "https://minecraft.wiki/w/Block_state_provider?oldid=3828513"
+  },
+  {
+    "title": "Block predicate",
+    "file": "block-predicate.wiki",
+    "revision": {
+      "revid": 3840614,
+      "parentid": 3800662,
+      "timestamp": "2026-10-13T19:27:09Z"
+    },
+    "sha256": "a4b99ea59fcfed42b091e10f93e6e7a53823ab39dcba87548f2b7678656d3641",
+    "url": "https://minecraft.wiki/w/Block_predicate?oldid=3840614"
+  },
+  {
+    "title": "Template:Nbt inherit/block_state",
+    "file": "template:nbt-inherit-block_state.wiki",
+    "revision": {
+      "revid": 2697580,
+      "parentid": 2556974,
+      "timestamp": "2024-09-26T17:27:32Z"
+    },
+    "sha256": "2091a1c3413ca611cc52c8ca28197852dba9c0e7ab51b5be294053a541cf552e",
+    "url": "https://minecraft.wiki/w/Template%3ANbt_inherit/block_state?oldid=2697580"
+  },
+  {
+    "title": "Template:Nbt inherit/block state/template",
+    "file": "template:nbt-inherit-block-state-template.wiki",
+    "revision": {
+      "revid": 2697581,
+      "parentid": 2556979,
+      "timestamp": "2024-09-26T17:27:51Z"
+    },
+    "sha256": "ae49234723c52021139c2b8c9599c57e972791ba9169f3580bb174accb485889",
+    "url": "https://minecraft.wiki/w/Template%3ANbt_inherit/block_state/template?oldid=2697581"
+  },
+  {
+    "title": "Custom world generation/block state",
+    "file": "custom-world-generation-block-state.wiki",
+    "revision": {
+      "revid": 3780297,
+      "parentid": 3704626,
+      "timestamp": "2026-09-16T18:42:11Z"
+    },
+    "sha256": "63e9db14a2a98699c638e5c3df25a9c65d7241f460fa7cbf8048b5786103df1d",
+    "url": "https://minecraft.wiki/w/Custom_world_generation/block_state?oldid=3780297"
+  },
+  {
+    "title": "Music Disc",
+    "file": "music-disc.wiki",
+    "revision": {
+      "revid": 3835244,
+      "parentid": 3835075,
+      "timestamp": "2026-10-11T17:52:30Z"
+    },
+    "sha256": "be82f3f1035f869c135530e29c26a1342597f25922e7c36abf1944ffdf526416",
+    "url": "https://minecraft.wiki/w/Music_Disc?oldid=3835244"
+  },
+  {
+    "title": "Decorated pot pattern definition",
+    "file": "decorated-pot-pattern-definition.wiki",
+    "revision": {
+      "revid": 3826756,
+      "parentid": 3777196,
+      "timestamp": "2026-10-07T14:43:43Z"
+    },
+    "sha256": "caf2d3ae8b252bed9f8e6faec8dd55f340c0dfd51d2c6cacc653abdd103103f3",
+    "url": "https://minecraft.wiki/w/Decorated_pot_pattern_definition?oldid=3826756"
+  }
+]

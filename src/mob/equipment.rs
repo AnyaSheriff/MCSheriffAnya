@@ -193,9 +193,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<Gear> {
             let raw = i32::from_be_bytes(take(4)?.try_into().ok()?);
             let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
             if count <= 0 { return None; }
-            let mut stack = Stack::from_stored(raw, count);
-            if let Some(data) = Stack::read_extras(raw, &mut take)? { stack = stack.with_extras(data); }
-            *slot = Some(stack);
+            let extras = Stack::read_extras_strict(raw, &mut take)?;
+            *slot = Some(Stack::from_stored_strict(raw, count, extras)?);
         }
     }
     Some(gear)

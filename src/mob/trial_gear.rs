@@ -38,9 +38,8 @@ pub fn read(bytes:&mut &[u8])->Option<Gear> {
     for slot in &mut gear {
         if take(1)?[0]!=0 {
             let item=i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let extra=Stack::read_extras(item,&mut take)?;
-            let mut stack=Stack::from_stored(item,1);if let Some(data)=extra {stack=stack.with_extras(data);}
-            *slot=Some(stack);
+            let extra=Stack::read_extras_strict(item,&mut take)?;
+            *slot=Some(Stack::from_stored_strict(item,1,extra)?);
         }
     }
     Some(gear)

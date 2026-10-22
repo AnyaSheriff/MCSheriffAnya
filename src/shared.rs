@@ -28,7 +28,9 @@ pub type Place = (f64, f64, f64);
 /// или поздно застынет вместе с тактом — а за ними встанет весь сервер
 /// (так и было: вход игрока брал игроков раньше мира).
 pub struct Shared {
+    catalog: crate::gameplay_catalog::Catalog,
     pub auth: Option<std::sync::Arc<crate::auth::Service>>,
+    pub premium: crate::auth::premium::Detector,
     /// Миры измерений по порядку `Dimension::ALL`: блоки, такты, события.
     worlds: [Mutex<World>; 3],
 
@@ -178,6 +180,8 @@ pub struct Shared {
 }
 
 impl Shared {
+    pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
+
     /// Мир этого измерения.
     pub fn world_in(&self, dimension: Dimension) -> &Mutex<World> {
         &self.worlds[dimension.index()]
@@ -209,7 +213,8 @@ impl Shared {
         ops: Ops,
         skin_settings: crate::skins::Settings,
     ) -> Self {
-        Self::with_end(world, nether, World::in_memory(), playerdata, skins, properties, ops, skin_settings)
+        let world_catalog = world.catalog();
+        Self::with_end(world, nether, World::in_memory_with_catalog(world_catalog), playerdata, skins, properties, ops, skin_settings)
     }
 
     /// Заводит общее состояние сервера.
@@ -224,12 +229,16 @@ impl Shared {
         ops: Ops,
         skin_settings: crate::skins::Settings,
     ) -> Self {
+        let catalog = world.catalog();
+        assert_eq!(catalog, nether.catalog(), "измерения должны иметь один каталог");
+        assert_eq!(catalog, end.catalog(), "измерения должны иметь один каталог");
         let difficulty = std::sync::atomic::AtomicU8::new(properties.difficulty);
         let maps = Arc::new(Mutex::new(crate::maps::Maps::default()));
         let (mut world, mut nether, mut end) = (world, nether, end);
         for world in [&mut world, &mut nether, &mut end] { world.maps = Arc::clone(&maps); }
 
         Self {
+            catalog,
             difficulty,
             limited_crafting: std::sync::atomic::AtomicBool::new(false),
             keep_inventory: std::sync::atomic::AtomicBool::new(false),
@@ -263,6 +272,7 @@ impl Shared {
             maps,
             riding: Mutex::new(crate::riding::Riding::new()),
             auth: None,
+            premium: crate::auth::premium::Detector::default(),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             publication: Mutex::new(()),

@@ -306,10 +306,14 @@ struct Named {
 
 
 impl Bag {
-    pub fn new(inventory: Inventory) -> Bag {
+    pub fn new(mut inventory: Inventory) -> Bag {
+        // Playerdata v10 хранит курсор отдельно от слотов. У Bag курсор свой:
+        // переносим его ровно один раз, в общей Inventory копии не оставляем.
+        let cursor = inventory.cursor();
+        inventory.set_cursor(None);
         let mut bag = Bag {
             inventory,
-            cursor: None,
+            cursor,
             creative_output: None,
             window: None,
             layout: Vec::new(),
@@ -342,6 +346,7 @@ impl Bag {
             }
         }
 
+        if bag.cursor.is_some() { bag.renumber(Place::Cursor); }
         bag
     }
 
@@ -414,11 +419,9 @@ impl Bag {
     pub fn inventory_with_cursor(&self) -> Inventory {
         let mut inventory = self.inventory.clone();
 
-        if let Some(stack) = self.cursor {
-            // Не влезло — в файле этого не будет; при выходе лишнее
-            // бросается на землю (`put_cursor_back`).
-            inventory.put(stack);
-        }
+        // Не вталкиваем в слоты: они могут быть полностью заняты. v10
+        // сохраняет курсор с количеством и компонентами отдельным хвостом.
+        inventory.set_cursor(self.cursor);
 
         inventory
     }
@@ -583,7 +586,7 @@ impl Bag {
     }
 
     /// Всё, что BDS шлёт игроку при входе и сразу после Container Open: рюкзак,
-    /// броня, окно интерфейса (пустое, 54 ячейки), вторая рука и Player
+    /// броня, окно интерфейса (54 ячейки, включая курсор), вторая рука и Player
     /// Hotbar с выбранной ячейкой.
     pub fn open_sync_packets(&self) -> Vec<Vec<u8>> {
         let mut packets = self.content_packets();
@@ -591,8 +594,9 @@ impl Bag {
 
         ui.varint(WINDOW_UI).varint(UI_SLOTS as u32);
 
-        for _ in 0..UI_SLOTS {
-            ui.zigzag32(0);
+        for slot in 0..UI_SLOTS {
+            if slot == 0 { write_item(&mut ui, self.cursor, self.id(Place::Cursor)); }
+            else { ui.zigzag32(0); }
         }
 
         ui.u8(super::containers::WINDOW_CONTAINER).u8(0).zigzag32(0);

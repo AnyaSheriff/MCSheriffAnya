@@ -1,0 +1,434 @@
+{
+  "scope": "selected ordinary raw777 recipebook unlock/autofill, noGUI",
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "selected_entries": [
+    {
+      "display_id": 1693,
+      "display": {
+        "type": 1,
+        "width": 3,
+        "height": 1,
+        "ingredients": [
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          },
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          },
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          }
+        ],
+        "result": {
+          "type": 5,
+          "stack": {
+            "item": "white_concrete_slab",
+            "count": 6
+          }
+        },
+        "station": {
+          "type": 4,
+          "item": 405
+        }
+      },
+      "group_raw": 22,
+      "category": 0,
+      "requirements": [
+        {
+          "items": [
+            689
+          ]
+        },
+        {
+          "items": [
+            689
+          ]
+        },
+        {
+          "items": [
+            689
+          ]
+        }
+      ],
+      "flags": 3,
+      "stage": "natural-one-concrete",
+      "replace": false
+    },
+    {
+      "display_id": 1694,
+      "display": {
+        "type": 3,
+        "ingredient": {
+          "type": 6,
+          "set": {
+            "items": [
+              689
+            ]
+          }
+        },
+        "result": {
+          "type": 5,
+          "stack": {
+            "item": "white_concrete_slab",
+            "count": 2
+          }
+        },
+        "station": {
+          "type": 4,
+          "item": 1513
+        }
+      },
+      "group_raw": 0,
+      "category": 10,
+      "requirements": [
+        {
+          "items": [
+            689
+          ]
+        }
+      ],
+      "flags": 3,
+      "stage": "natural-one-concrete",
+      "replace": false
+    },
+    {
+      "display_id": 1693,
+      "display": {
+        "type": 1,
+        "width": 3,
+        "height": 1,
+        "ingredients": [
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          },
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          },
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          }
+        ],
+        "result": {
+          "type": 5,
+          "stack": {
+            "item": "white_concrete_slab",
+            "count": 6
+          }
+        },
+        "station": {
+          "type": 4,
+          "item": 405
+        }
+      },
+      "group_raw": 22,
+      "category": 0,
+      "requirements": [
+        {
+          "items": [
+            689
+          ]
+        },
+        {
+          "items": [
+            689
+          ]
+        },
+        {
+          "items": [
+            689
+          ]
+        }
+      ],
+      "flags": 3,
+      "stage": "named-take-give",
+      "replace": false
+    }
+  ],
+  "selected_ghosts": [
+    {
+      "window": 1,
+      "display": {
+        "type": 1,
+        "width": 3,
+        "height": 1,
+        "ingredients": [
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          },
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          },
+          {
+            "type": 6,
+            "set": {
+              "items": [
+                689
+              ]
+            }
+          }
+        ],
+        "result": {
+          "type": 5,
+          "stack": {
+            "item": "white_concrete_slab",
+            "count": 6
+          }
+        },
+        "station": {
+          "type": 4,
+          "item": 405
+        }
+      },
+      "stage": "insufficient-one"
+    }
+  ],
+  "requests": [
+    {
+      "window": 1,
+      "display_id": 1693,
+      "make_all": false,
+      "stage": "insufficient-one"
+    },
+    {
+      "window": 1,
+      "display_id": 1693,
+      "make_all": false,
+      "stage": "autofill-once"
+    },
+    {
+      "window": 1,
+      "display_id": 1693,
+      "make_all": false,
+      "stage": "autofill-repeat"
+    },
+    {
+      "window": 1,
+      "display_id": 1693,
+      "make_all": true,
+      "stage": "autofill-all"
+    }
+  ],
+  "checks": [
+    "one-white-concrete-unlocks-selected-shaped-slab-display",
+    "named-recipe-reaward-same-session-display-id",
+    "insufficient-input-produces-selected-ghost-without-loss",
+    "ordinary-autofill-centers-row-one-each-with-six-left",
+    "repeated-normal-autofill-increments-one-to-two",
+    "make-all-increments-two-to-three-from-nine-inputs",
+    "three-takes-consume-nine-and-produce-eighteen"
+  ],
+  "result": "PASS",
+  "server_exit": 0,
+  "group_gone": true,
+  "port_free": true,
+  "runner_sha256": "4149a7c7094448d3baa5ee189c35482f839766312d59c4fabf9221494ab5fde5",
+  "snapshots": {
+    "opened-one-input": {
+      "window": 1,
+      "slots": {
+        "37": {
+          "item": "white_concrete",
+          "count": 1
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "insufficient-one": {
+      "window": 1,
+      "slots": {
+        "37": {
+          "item": "white_concrete",
+          "count": 1
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "autofill-once": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 6
+        },
+        "4": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "5": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "37": {
+          "item": "white_concrete",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "autofill-repeat": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 6
+        },
+        "4": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "5": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "37": {
+          "item": "white_concrete",
+          "count": 3
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "autofill-all": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 6
+        },
+        "4": {
+          "item": "white_concrete",
+          "count": 3
+        },
+        "5": {
+          "item": "white_concrete",
+          "count": 3
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 3
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "first-result": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 6
+        },
+        "4": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "5": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 2
+        }
+      },
+      "cursor": {
+        "item": "white_concrete_slab",
+        "count": 6
+      },
+      "slot_count": 46
+    },
+    "second-result": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 6
+        },
+        "4": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "5": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 1
+        }
+      },
+      "cursor": {
+        "item": "white_concrete_slab",
+        "count": 12
+      },
+      "slot_count": 46
+    },
+    "third-result": {
+      "window": 1,
+      "slots": {},
+      "cursor": {
+        "item": "white_concrete_slab",
+        "count": 18
+      },
+      "slot_count": 46
+    }
+  },
+  "limits": [
+    "display IDs are recorded connection IDs, not canonical server recipe identities",
+    "group number is observed metadata, not required cross-server identity",
+    "stonecutter display observed but no actual stonecutter craft",
+    "not GUI or full packet-order parity"
+  ],
+  "source": "recipe777-book-observation-05, original retained outside repo"
+}

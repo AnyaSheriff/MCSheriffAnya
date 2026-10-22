@@ -693,6 +693,18 @@ pub struct Plan {
 }
 
 impl Ticking {
+    /// Пауза по реальному времени не входит в TPS и длительность разгона.
+    /// Сам freeze, оставшиеся step и sprint при этом не меняются.
+    pub fn resumed_after_idle(&mut self, paused: Duration) {
+        self.last_start = None;
+        if let Some(sprint) = &mut self.sprint {
+            let now = Instant::now();
+            let started_pause = now.checked_sub(paused).unwrap_or(now);
+            sprint.started = if sprint.started >= started_pause { now }
+                else { sprint.started.checked_add(paused).unwrap_or(now) };
+        }
+    }
+
     pub fn metrics(&self) -> (f32, f32) {
         let mspt = self.spent.iter().sum::<f32>() / self.spent.len().max(1) as f32;
         let elapsed = if self.intervals.is_empty() { mspt } else { self.intervals.iter().sum::<f32>() / self.intervals.len() as f32 };
@@ -2751,6 +2763,10 @@ fn loot_answer(single: &str, multiple: &str, stacks: &[crate::inventory::Stack])
 /// Английские шаблоны ответов (языковая таблица en_us 26.1 из
 /// minecraft-data) — для консоли, журнала и Bedrock.
 const TEMPLATES: &[(&str, &str)] = &[
+    ("argument.entity.options.limit.toosmall", "Limit must be at least 1"),
+    ("commands.data.entity.query", "%s has the following entity data: %s"),
+    ("argument.nbtpath.nothing_found", "Found no elements matching %s"),
+    ("commands.generic.permission", "You do not have permission to use this command"),
     ("argument.block.id.invalid", "Unknown block type '%s'"),
     ("argument.dimension.invalid", "Unknown dimension '%s'"),
     ("argument.double.big", "Double must not be more than %s: found %s"),
@@ -2874,6 +2890,38 @@ const TEMPLATES: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_resume_preserves_freeze_steps_sprint_and_resets_wall_metrics() {
+        let now = Instant::now();
+        let mut ticking = Ticking {
+            frozen: true, step_left: 7,
+            sprint: Some(Sprint { left: 123, done: 17, started: now - Duration::from_secs(10) }),
+            last_start: Some(now - Duration::from_secs(10)),
+            ..Default::default()
+        };
+        let started = ticking.sprint.as_ref().unwrap().started;
+        ticking.resumed_after_idle(Duration::from_secs(5));
+        assert!(ticking.frozen);
+        assert_eq!(ticking.step_left,7);
+        let sprint = ticking.sprint.as_ref().unwrap();
+        assert_eq!((sprint.left,sprint.done),(123,17));
+        assert_eq!(sprint.started,started + Duration::from_secs(5));
+        assert!(ticking.last_start.is_none());
+        ticking.note_start(Instant::now());
+        assert!(ticking.intervals.is_empty(),"пауза не попала в TPS");
+    }
+
+    #[test]
+    fn sprint_started_during_idle_does_not_get_future_start_time() {
+        let mut ticking = Ticking {
+            sprint: Some(Sprint { left: 11, done: 0, started: Instant::now() }),
+            ..Default::default()
+        };
+        ticking.resumed_after_idle(Duration::from_secs(300));
+        assert!(ticking.sprint.as_ref().unwrap().started <= Instant::now());
+        assert_eq!(ticking.sprint.as_ref().unwrap().left,11);
+    }
 
     #[test]
     fn numbers_are_rounded_half_up_like_java() {

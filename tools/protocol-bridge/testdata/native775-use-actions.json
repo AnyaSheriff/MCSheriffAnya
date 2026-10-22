@@ -1,0 +1,22 @@
+{
+  "protocol": 775,
+  "statuses": {
+    "release_use": 5,
+    "jab": 7
+  },
+  "provenance": {
+    "scope": "Существующие собственные сценарии native775; не наблюдение777 и не предположение смещения.",
+    "sources": [
+      {
+        "file": "tools/blackbox/bot.js",
+        "line": 892,
+        "sha256": "4e3ff5920289351e64ccd232b96e0697d92a3088bd9857e83e16157ebd7e1f26"
+      },
+      {
+        "file": "tools/blackbox/combat-table-check.js",
+        "line": 219,
+        "sha256": "49c7313c181f01b64339208e28daf67e2af3bf064e3fd0f00fa16bad6426b36a"
+      }
+    ]
+  }
+}

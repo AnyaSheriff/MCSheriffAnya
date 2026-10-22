@@ -44,6 +44,9 @@ pub struct ServerProperties {
     /// Порог сжатия пакетов, `network-compression-threshold`: пакеты не
     /// короче него идут сжатыми; −1 (или любое отрицательное) — без сжатия.
     pub compression_threshold: i32,
+
+    /// Пауза без игроков через столько секунд; 0 и отрицательные отключают.
+    pub pause_when_empty_seconds: i32,
 }
 
 /// Обычная сложность: с неё молния зажигает огонь (вики, Lightning).
@@ -75,6 +78,7 @@ impl Default for ServerProperties {
             world_kind: WorldKind::Normal,
             difficulty: 1,
             compression_threshold: 256,
+            pause_when_empty_seconds: 300,
         }
     }
 }
@@ -134,11 +138,18 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         level_seed,
         world_kind,
         difficulty: values.get("difficulty").and_then(|value| difficulty_of(value)).unwrap_or(defaults.difficulty),
+        pause_when_empty_seconds: empty_pause(&values, defaults.pause_when_empty_seconds),
         compression_threshold: values
             .get("network-compression-threshold")
             .and_then(|value| value.trim().parse::<i32>().ok())
             .map_or(defaults.compression_threshold, |value| value.max(-1)),
     })
+}
+
+/// Стандартное поле: существующие60с сохраняем, непонятное заменяем значением по умолчанию.
+fn empty_pause(values: &HashMap<String, String>, default: i32) -> i32 {
+    values.get("pause-when-empty-seconds")
+        .and_then(|value| value.trim().parse::<i32>().ok()).unwrap_or(default)
 }
 
 /// Тип мира.
@@ -294,7 +305,7 @@ const DEFAULT_PROPERTIES: &[(&str, &str)] = &[
     ("network-compression-threshold", "256"),
     ("online-mode", "true"),
     ("op-permission-level", "4"),
-    ("pause-when-empty-seconds", "60"),
+    ("pause-when-empty-seconds", "300"),
     ("player-idle-timeout", "0"),
     ("prevent-proxy-connections", "false"),
     ("query.port", "25565"),
@@ -330,6 +341,7 @@ const HONOURED: &[&str] = &[
     "server-port",
     "view-distance",
     "simulation-distance",
+    "pause-when-empty-seconds",
     "level-seed",
     "level-type",
 ];
@@ -346,7 +358,7 @@ fn create_default_properties(path: &Path) -> io::Result<()> {
     let mut content = format!(
         "{}\n\
          #{}\n\
-         #Названия и значения по умолчанию — как у оригинального сервера.\n\
+         #Названия настроек — как у оригинального сервера; пауза без игроков по умолчанию 300 с.\n\
          {}\n\
          #Остальные лежат для вида: поведения за ними ещё нет.\n\
          {}\n",
@@ -502,6 +514,33 @@ fn boolean(values: &HashMap<String, String>, key: &str, default: bool) -> bool {
 mod tests {
     use super::*;
 
+    #[test]
+    fn empty_pause_default_existing_and_disabled_values() {
+        let default = ServerProperties::default().pause_when_empty_seconds;
+        assert_eq!(default, 300);
+        assert_eq!(empty_pause(&parse_properties(""), default), 300);
+        assert_eq!(empty_pause(&parse_properties("pause-when-empty-seconds=60"), default), 60);
+        for value in [0, -1, i32::MIN, 1, i32::MAX] {
+            assert_eq!(empty_pause(&parse_properties(&format!("pause-when-empty-seconds={value}")), default), value);
+        }
+        for value in ["no", "1.5", "2147483648"] {
+            assert_eq!(empty_pause(&parse_properties(&format!("pause-when-empty-seconds={value}")), default), 300);
+        }
+        assert_eq!(DEFAULT_PROPERTIES.iter().find(|(key,_)| *key == "pause-when-empty-seconds").map(|(_,v)| *v), Some("300"));
+    }
+
+    #[test]
+    fn empty_pause_loader_keeps_existing_60_second_setting() {
+        let directory = std::env::temp_dir().join(format!("mcsa-idle-props-{}",std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("server.properties");
+        fs::write(&path,"pause-when-empty-seconds=60\n").unwrap();
+        let properties = load_server_properties(path.to_str().unwrap()).unwrap();
+        assert_eq!(properties.pause_when_empty_seconds,60);
+        assert!(fs::read_to_string(&path).unwrap().contains("pause-when-empty-seconds=60"));
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     /// Сложность читается словом и числом; непонятное — не сложность.
     #[test]
     fn difficulty_is_read_by_name_and_number() {
@@ -611,6 +650,7 @@ mod tests {
         assert_eq!(properties.server_port, 25565);
         assert_eq!(properties.view_distance, 10);
         assert_eq!(properties.simulation_distance, 10);
+        assert_eq!(properties.pause_when_empty_seconds, 300);
     }
 
     /// Настройки, которые сервер слушается, есть и в самом файле: иначе

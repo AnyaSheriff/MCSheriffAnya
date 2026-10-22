@@ -805,6 +805,11 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     })
 }
 
+#[cfg(test)]
+pub(super) async fn send_compatibility_probe(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    send_mob(stream, mob).await.map(|_| ())
+}
+
 /// Номер полосы босса иссушителя — его собственный UUID.
 fn boss_uuid(entity_id: i32) -> [u8; 16] {
     crate::items::uuid_for(entity_id)
@@ -1422,9 +1427,9 @@ pub(super) async fn send_particles(
 
     if let Some(block) = block {
         if particle == 47 {
-            // «item»: данные — предмет (число, номер, без компонентов).
-            body.extend_from_slice(&encode_varint(1));
+            // ItemStackTemplate: номер ПЕРЕД числом; подтверждено официальной пробой.
             body.extend_from_slice(&encode_varint(block));
+            body.extend_from_slice(&encode_varint(1));
             body.extend_from_slice(&encode_varint(0));
             body.extend_from_slice(&encode_varint(0));
         } else {

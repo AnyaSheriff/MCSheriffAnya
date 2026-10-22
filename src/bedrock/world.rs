@@ -423,7 +423,10 @@ impl BedrockWorld {
         // измерение, место, поворот, режим игры, инвентарь. Впервые зашедший
         // появляется в точке появления обычного мира в творческом режиме,
         // как игрок Java.
-        let saved = crate::playerdata::load(&shared.playerdata, &identity.uuid);
+        let saved = match crate::playerdata::load_checked_for_catalog(&shared.playerdata, &identity.uuid, shared.catalog()) {
+            Ok(saved) => saved,
+            Err(error) => { log_warn!("Вход Bedrock остановлен: {}", error); return None; }
+        };
         let dimension = saved.as_ref().map(|data| data.dimension).unwrap_or_default();
         let world_spawn = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").spawn_position();
         let spawn = saved.as_ref().map_or(world_spawn, |data| (data.x, data.y, data.z));
@@ -616,7 +619,7 @@ impl BedrockWorld {
         let mut body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
         body.restore_respawn(saved.as_ref().and_then(|data| data.respawn));
         let mut player = BedrockWorld {
-            progress: crate::progress::Progress::load(&identity.uuid),
+            progress: crate::progress::Progress::load_for_catalog(&identity.uuid, shared.catalog()),
             shared,
             dimension,
             identity,
@@ -3923,7 +3926,7 @@ impl BedrockWorld {
             return;
         }
 
-        match crate::playerdata::save(&self.shared.playerdata, &self.identity.uuid, &data) {
+        match crate::playerdata::save_for_catalog(&self.shared.playerdata, &self.identity.uuid, &data, self.shared.catalog()) {
             Ok(()) => self.saved = Some(data),
             Err(error) => log_warn!("Bedrock: файл игрока {} не записан: {}", self.identity.name, error),
         }

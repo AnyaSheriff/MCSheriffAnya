@@ -1,0 +1,375 @@
+{
+  "scope": "ordinary raw777 crafter redstone pulses and selected slots, noGUI",
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "actions": [
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        0
+      ],
+      "sequence": 1
+    },
+    {
+      "action": "click",
+      "window": 1,
+      "slot": 0
+    },
+    {
+      "action": "click",
+      "window": 1,
+      "slot": 0
+    },
+    {
+      "action": "pulse",
+      "label": "first",
+      "power_at": [
+        3,
+        64,
+        0
+      ]
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        -1
+      ],
+      "sequence": 2
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        0
+      ],
+      "sequence": 3
+    },
+    {
+      "action": "pulse",
+      "label": "second",
+      "power_at": [
+        3,
+        64,
+        0
+      ]
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        -1
+      ],
+      "sequence": 4
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        0
+      ],
+      "sequence": 5
+    },
+    {
+      "action": "pulse",
+      "label": "empty-third",
+      "power_at": [
+        3,
+        64,
+        0
+      ]
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        -1
+      ],
+      "sequence": 6
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        0
+      ],
+      "sequence": 7
+    },
+    {
+      "action": "pulse",
+      "label": "invalid-vertical",
+      "power_at": [
+        3,
+        64,
+        0
+      ]
+    },
+    {
+      "action": "open",
+      "at": [
+        2,
+        64,
+        -1
+      ],
+      "sequence": 8
+    }
+  ],
+  "checks": [
+    "opened-crafter-inputs-two-each-and-result-preview-six",
+    "ordinary-input-click-clears-and-restores-preview-without-consumption",
+    "real-first-pulse-consumes-one-each-and-chest-receives-six",
+    "real-second-pulse-empties-inputs-and-total-output-twelve",
+    "empty-third-pulse-produces-nothing",
+    "invalid-vertical-pulse-preserves-inputs-and-produces-nothing"
+  ],
+  "result": "PASS",
+  "server_exit": 0,
+  "group_gone": true,
+  "port_free": true,
+  "runner_sha256": "589f3df39088234727c822e6cc02c1cdc480000d4c48c114f713eb63e15413f0",
+  "snapshots": {
+    "initial-horizontal-two": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "1": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "2": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "45": {
+          "item": "white_concrete_slab",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "disrupted-by-click": {
+      "window": 1,
+      "slots": {
+        "1": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "2": {
+          "item": "white_concrete",
+          "count": 2
+        }
+      },
+      "cursor": {
+        "item": "white_concrete",
+        "count": 2
+      },
+      "slot_count": 46
+    },
+    "restored-by-click": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "1": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "2": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "45": {
+          "item": "white_concrete_slab",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "first-pulse-live": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "1": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "2": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "45": {
+          "item": "white_concrete_slab",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "first-output-six": {
+      "window": 2,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 63
+    },
+    "reopened-one-each": {
+      "window": 3,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "1": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "2": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "45": {
+          "item": "white_concrete_slab",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "second-pulse-live": {
+      "window": 3,
+      "slots": {},
+      "cursor": null,
+      "slot_count": 46
+    },
+    "second-output-twelve": {
+      "window": 4,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 12
+        }
+      },
+      "cursor": null,
+      "slot_count": 63
+    },
+    "empty-third-live": {
+      "window": 5,
+      "slots": {},
+      "cursor": null,
+      "slot_count": 46
+    },
+    "empty-third-no-extra": {
+      "window": 6,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 12
+        }
+      },
+      "cursor": null,
+      "slot_count": 63
+    },
+    "vertical-before": {
+      "window": 7,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "3": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 1
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "vertical-after": {
+      "window": 7,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "3": {
+          "item": "white_concrete",
+          "count": 1
+        },
+        "6": {
+          "item": "white_concrete",
+          "count": 1
+        }
+      },
+      "cursor": null,
+      "slot_count": 46
+    },
+    "vertical-no-extra": {
+      "window": 8,
+      "slots": {
+        "0": {
+          "item": "white_concrete_slab",
+          "count": 12
+        }
+      },
+      "cursor": null,
+      "slot_count": 63
+    }
+  },
+  "source": "autocraft777-observation-02, original retained outside repo",
+  "setup": {
+    "crafter": [
+      2,
+      64,
+      0
+    ],
+    "orientation": "north_up",
+    "output_chest": [
+      2,
+      64,
+      -1
+    ],
+    "power_block": [
+      3,
+      64,
+      0
+    ],
+    "input_fill": "ordinary item replace block container slots, verified by opened window"
+  },
+  "limits": [
+    "ordinary raw packets, not GUI",
+    "redstone settle wait is not a measured delay-parity claim",
+    "only selected own crafter/chest slots retained",
+    "other orientations/disabled slots/remainders/dropped output not covered"
+  ],
+  "selected_open_window": {
+    "window_id": 1,
+    "menu_type": 7,
+    "payload_hex": "01070a0800097472616e736c6174650011636f6e7461696e65722e6372616674657200",
+    "scope": "first ordinary official777 crafter OpenScreen, selected menu/title only"
+  }
+}

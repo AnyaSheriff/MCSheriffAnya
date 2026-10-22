@@ -1,0 +1,38 @@
+{
+  "mapped": 636,
+  "skipped": [
+    {
+      "legacy": "0:0",
+      "name": "minecraft:air"
+    },
+    {
+      "legacy": "31:1",
+      "name": "minecraft:grass"
+    },
+    {
+      "legacy": "208:0",
+      "name": "minecraft:grass_path"
+    },
+    {
+      "legacy": "323:0",
+      "name": "minecraft:sign"
+    },
+    {
+      "legacy": "351:1",
+      "name": "minecraft:rose_red"
+    },
+    {
+      "legacy": "351:2",
+      "name": "minecraft:cactus_green"
+    },
+    {
+      "legacy": "351:11",
+      "name": "minecraft:dandelion_yellow"
+    },
+    {
+      "legacy": "383:0",
+      "name": "minecraft:pig_spawn_egg"
+    }
+  ],
+  "core_items_sha256": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e"
+}

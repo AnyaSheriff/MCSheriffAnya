@@ -19,7 +19,7 @@ fn progress(player: &PlayerState, shared: &Shared, state: i32) -> f32 {
     use crate::survival::EffectKind;
     let tool = player.inventory.held();
     let underwater = vitals::eyes_in_water(&shared.world_in(player.dimension).lock().expect("мир"), player);
-    crate::mining::progress(state, tool, crate::mining::Conditions {
+    crate::mining::progress_with_catalog(shared.catalog(), state, tool, crate::mining::Conditions {
         haste: player.vit.effect_level(EffectKind::Haste),
         fatigue: player.vit.effect_level(EffectKind::MiningFatigue),
         underwater,
@@ -305,4 +305,46 @@ mod tests {
         dig(&shared, &mut player, 2);
         assert_eq!(player.inventory.held(), Some(tool));
     }
+
+    #[test]
+    fn observed_777_cancel_translation_clears_pending_native_mining() {
+        use mcsa_protocol::{Direction,JavaVersion,State};
+        let fixture:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/actual777-player-action-observations.json")).unwrap();
+        let case=fixture["observations"].as_array().unwrap().iter().find(|v|v["case"]=="cancel").unwrap();
+        let packets:Vec<Vec<u8>>=case["actions"].as_array().unwrap().iter().map(|event| {
+            let mut body=encode_varint(PLAYER_ACTION);
+            body.extend(event["payload_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+                .map(|pair|u8::from_str_radix(std::str::from_utf8(pair).unwrap(),16).unwrap()));
+            body
+        }).collect();
+        assert_eq!(packets.len(),2);assert_eq!(packets[1][1],2);
+        let apply=|body:Vec<u8>,player:&mut PlayerState,shared:&Shared| {
+            handle_client_packet(&PacketInfo {id:PLAYER_ACTION,length:body.len() as i32,body,teleport:None,
+                foreign_inventory:false,legacy_inventory:None},player,shared)
+        };
+        for untranslated in [false,true] {
+            let (shared,mut player)=setup("obsidian",None);
+            player.x=0.5;player.y=65.;player.z=0.5;
+            let obsidian=blocks::state_by_name("obsidian").unwrap();
+            shared.world_in(player.dimension).lock().unwrap().set_block_silently(2,65,0,obsidian);
+            let mapped=mcsa_protocol::wire::translate(State::Play,Direction::Serverbound,
+                JavaVersion::V26_3,JavaVersion::V26_1_2,&packets[0]).unwrap();
+            apply(mapped.into_owned(),&mut player,&shared);
+            assert!(!player.mining.unwrap().cancelled);
+            // Создаём pending ранним родным FINISH, чтобы CANCEL имел
+            // различимый эффект. Это проверка нашего ядра, не timer-parity.
+            let mut early=packets[0].clone();early[1]=2;
+            apply(early,&mut player,&shared);assert!(player.delayed.is_some());
+            let cancel=if untranslated { packets[1].clone() } else {
+                mcsa_protocol::wire::translate(State::Play,Direction::Serverbound,
+                    JavaVersion::V26_3,JavaVersion::V26_1_2,&packets[1]).unwrap().into_owned()
+            };
+            apply(cancel,&mut player,&shared);
+            assert_eq!(player.mining.unwrap().cancelled,!untranslated);
+            assert_eq!(player.delayed.is_none(),!untranslated,
+                "непереведённый777CANCEL2 — родной FINISH2, он не должен пройти контроль");
+            assert_eq!(shared.world_in(player.dimension).lock().unwrap().get_block(2,65,0),obsidian);
+        }
+    }
+
 }

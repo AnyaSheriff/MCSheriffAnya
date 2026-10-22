@@ -254,9 +254,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
     let cargo=if take(1)?[0]!=0 {
         let id=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
         if count<=0 || count>16 {return None;}
-        let data=Stack::read_extras(id,&mut take)?;
-        let stack=Stack::from_stored(id,count);
-        Some(if let Some(data)=data {stack.with_extras(data)} else {stack})
+        let data=Stack::read_extras_strict(id,&mut take)?;
+        Some(Stack::from_stored_strict(id,count,data)?)
     }else{None};
     Some(State{lifetime,outside,heart,home,harness,oxidation,waxed,oxidize_at,cargo,..State::default()})
 }

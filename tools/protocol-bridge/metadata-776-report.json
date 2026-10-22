@@ -1,0 +1,527 @@
+{
+  "protocol": 776,
+  "sources": {
+    "old_entities": {
+      "file": "58d24389309b26db59454cf8b7813ad688beeb55/data/pc/26.1/entities.json",
+      "sha256": "e65d88a15fac5fc090cb2555c8cddaa80d9daf8c554d252680cec60a1d6eefc3",
+      "bytes": 88062
+    },
+    "entities": {
+      "file": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json",
+      "sha256": "6ea2d04f7f78ea56fa3db8453dd62c4b6021b5eef01994e24e3e3e5f6c28295d",
+      "bytes": 88789
+    },
+    "protocol": {
+      "file": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json",
+      "sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c",
+      "bytes": 339684
+    },
+    "observation": {
+      "file": "verification-protocol776-ordinary-entities-02/entities/result.json",
+      "sha256": "ba43741cda1d2df28bebc4271a27f3cd908b355116e5b8f41cb5afe1e9e6c38b",
+      "bytes": 7350
+    },
+    "observation_items": {
+      "file": "testdata/item-lifecycle-26.2-observation.json",
+      "sha256": "9a535140f183e9e646329e93167285ad09e108c85edc499ed948e52e6b1f5895",
+      "bytes": 3749
+    }
+  },
+  "layouts": [
+    {
+      "name": "cow",
+      "native_id": 30,
+      "protocol776_id": 30,
+      "fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "age_locked",
+        "variant",
+        "sound_variant"
+      ],
+      "serializers": [
+        0,
+        1,
+        6,
+        8,
+        8,
+        8,
+        20,
+        1,
+        0,
+        3,
+        17,
+        8,
+        1,
+        1,
+        11,
+        0,
+        8,
+        8,
+        23,
+        24
+      ],
+      "old_fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "age_locked",
+        "variant",
+        "sound_variant"
+      ],
+      "evidence": "pinned layout + own metadata packets"
+    },
+    {
+      "name": "item",
+      "native_id": 71,
+      "protocol776_id": 71,
+      "fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "item"
+      ],
+      "serializers": [
+        0,
+        1,
+        6,
+        8,
+        8,
+        8,
+        20,
+        1,
+        7
+      ],
+      "old_fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "item"
+      ],
+      "evidence": "pinned layout + ordinary item lifecycle packets"
+    },
+    {
+      "name": "magma_cube",
+      "native_id": 80,
+      "protocol776_id": 80,
+      "fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "age_locked",
+        "size"
+      ],
+      "serializers": [
+        0,
+        1,
+        6,
+        8,
+        8,
+        8,
+        20,
+        1,
+        0,
+        3,
+        17,
+        8,
+        1,
+        1,
+        11,
+        0,
+        8,
+        8,
+        1
+      ],
+      "old_fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "size"
+      ],
+      "evidence": "pinned layout + own metadata packets"
+    },
+    {
+      "name": "slime",
+      "native_id": 117,
+      "protocol776_id": 117,
+      "fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "age_locked",
+        "size"
+      ],
+      "serializers": [
+        0,
+        1,
+        6,
+        8,
+        8,
+        8,
+        20,
+        1,
+        0,
+        3,
+        17,
+        8,
+        1,
+        1,
+        11,
+        0,
+        8,
+        8,
+        1
+      ],
+      "old_fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "size"
+      ],
+      "evidence": "pinned layout + own metadata packets"
+    },
+    {
+      "name": "player",
+      "native_id": 155,
+      "protocol776_id": 156,
+      "fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "player_main_hand",
+        "player_mode_customisation",
+        "player_absorption",
+        "score",
+        "shoulder_parrot_left",
+        "shoulder_parrot_right"
+      ],
+      "serializers": [
+        0,
+        1,
+        6,
+        8,
+        8,
+        8,
+        20,
+        1,
+        0,
+        3,
+        17,
+        8,
+        1,
+        1,
+        11,
+        42,
+        0,
+        3,
+        1,
+        19,
+        19
+      ],
+      "old_fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "player_main_hand",
+        "player_mode_customisation",
+        "player_absorption",
+        "score",
+        "shoulder_parrot_left",
+        "shoulder_parrot_right"
+      ],
+      "evidence": "pinned layout + own775 encoder; synthetic test only"
+    }
+  ],
+  "observed_entities": [
+    {
+      "type": "cow",
+      "id": 2,
+      "metadata_fields": {
+        "2": {
+          "serializer": 6,
+          "value": "MCSA cow"
+        },
+        "3": {
+          "serializer": 8,
+          "value": 1
+        },
+        "5": {
+          "serializer": 8,
+          "value": 1
+        },
+        "9": {
+          "serializer": 3,
+          "value": 10.0
+        },
+        "15": {
+          "serializer": 0,
+          "value": 1
+        },
+        "16": {
+          "serializer": 8,
+          "value": 1
+        }
+      },
+      "packets": [
+        {
+          "name": "entity_metadata",
+          "body": "63020206010800084d43534120636f770308010508010903412000000f0001100801ff"
+        },
+        {
+          "name": "entity_metadata",
+          "body": "63020206010800084d43534120636f770308010508010903412000000f0001100801ff"
+        }
+      ]
+    },
+    {
+      "type": "slime",
+      "id": 3,
+      "metadata_fields": {
+        "5": {
+          "serializer": 8,
+          "value": 1
+        },
+        "9": {
+          "serializer": 3,
+          "value": 16.0
+        },
+        "15": {
+          "serializer": 0,
+          "value": 1
+        },
+        "18": {
+          "serializer": 1,
+          "value": 4
+        }
+      },
+      "packets": [
+        {
+          "name": "entity_metadata",
+          "body": "63030508010903418000000f0001120104ff"
+        },
+        {
+          "name": "entity_metadata",
+          "body": "63030508010903418000000f0001120104ff"
+        }
+      ]
+    },
+    {
+      "type": "magma_cube",
+      "id": 4,
+      "metadata_fields": {
+        "5": {
+          "serializer": 8,
+          "value": 1
+        },
+        "9": {
+          "serializer": 3,
+          "value": 9.0
+        },
+        "15": {
+          "serializer": 0,
+          "value": 1
+        },
+        "18": {
+          "serializer": 1,
+          "value": 3
+        }
+      },
+      "packets": [
+        {
+          "name": "entity_metadata",
+          "body": "63040508010903411000000f0001120103ff"
+        },
+        {
+          "name": "entity_metadata",
+          "body": "63040508010903411000000f0001120103ff"
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "id": 2,
+      "metadata_fields": {
+        "5": {
+          "serializer": 8,
+          "value": 1
+        },
+        "8": {
+          "serializer": 7,
+          "value": {
+            "item": 1,
+            "count": 3
+          },
+          "slot_hex": "03010000"
+        }
+      },
+      "packets": [
+        {
+          "name": "entity_metadata",
+          "body": "6302050801080703010000ff",
+          "decoded": {
+            "entity": 2,
+            "fields": {
+              "5": {
+                "serializer": 8,
+                "value": 1
+              },
+              "8": {
+                "serializer": 7,
+                "value": {
+                  "item": 1,
+                  "count": 3
+                },
+                "slot_hex": "03010000"
+              }
+            }
+          }
+        },
+        {
+          "name": "entity_metadata",
+          "body": "6302050801080703010000ff",
+          "decoded": {
+            "entity": 2,
+            "fields": {
+              "5": {
+                "serializer": 8,
+                "value": 1
+              },
+              "8": {
+                "serializer": 7,
+                "value": {
+                  "item": 1,
+                  "count": 3
+                },
+                "slot_hex": "03010000"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "player is schema-based only; item zero-velocity spawn/metadata/collect/destroy are observed",
+    "nonempty particles/complex unknown serializers refused for776",
+    "public wire/Tracker/admission remains closed",
+    "fields absent from775 fail MissingField, never silently dropped"
+  ],
+  "generated_sha256": "230f2ed36b95ba1800f9608731e307e8a4f23edbde82043638893a12899c383d"
+}

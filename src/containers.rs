@@ -654,7 +654,7 @@ pub fn contents_of(stack: &Stack) -> Vec<Option<Stack>> {
 
     for content in &stack.extras().contents {
         if let Some(place) = slots.get_mut(usize::from(content.slot)) {
-            let mut item = Stack::new(content.item, content.count);
+            let mut item = Stack::from_stored(content.item, content.count);
 
             item.data = content.data;
             *place = Some(item);
@@ -672,7 +672,7 @@ pub fn with_contents(stack: Stack, slots: &[Option<Stack>]) -> Stack {
         .iter()
         .enumerate()
         .filter_map(|(slot, found)| {
-            found.map(|found| crate::stackdata::Content { slot: slot as u8, item: found.item, count: found.count, data: found.data })
+            found.map(|found| crate::stackdata::Content { slot: slot as u8, item: found.stored_item(), count: found.count, data: found.data })
         })
         .collect();
 

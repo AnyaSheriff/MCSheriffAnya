@@ -1,0 +1,90 @@
+{
+  "old": {
+    "version": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "effects": [],
+    "attribute_updates": [
+      {
+        "name": "movement_speed",
+        "value": 0.25,
+        "packets": [
+          {
+            "name": "entity_update_attributes",
+            "body": "83010101163fd000000000000000"
+          }
+        ]
+      },
+      {
+        "name": "max_health",
+        "value": 30,
+        "packets": [
+          {
+            "name": "entity_update_attributes",
+            "body": "8301010113403e00000000000000"
+          }
+        ]
+      },
+      {
+        "name": "scale",
+        "value": 1.25,
+        "packets": [
+          {
+            "name": "entity_update_attributes",
+            "body": "83010101193ff400000000000000"
+          }
+        ]
+      }
+    ],
+    "sounds": [
+      {
+        "name": "sound_effect",
+        "body": "75001c6d696e6563726166743a656e746974792e6974656d2e7069636b7570000000000000fffffe20000000003f8000003f800000daef183f810217fd"
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "version": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "effects": [],
+    "attribute_updates": [
+      {
+        "name": "movement_speed",
+        "value": 0.25,
+        "packets": [
+          {
+            "name": "entity_update_attributes",
+            "body": "860101011a3fd000000000000000"
+          }
+        ]
+      },
+      {
+        "name": "max_health",
+        "value": 30,
+        "packets": [
+          {
+            "name": "entity_update_attributes",
+            "body": "8601010117403e00000000000000"
+          }
+        ]
+      },
+      {
+        "name": "scale",
+        "value": 1.25,
+        "packets": [
+          {
+            "name": "entity_update_attributes",
+            "body": "860101011e3ff400000000000000"
+          }
+        ]
+      }
+    ],
+    "sounds": [
+      {
+        "name": "sound_effect",
+        "body": "77001c6d696e6563726166743a656e746974792e6974656d2e7069636b7570000000000000fffffe20000000003f8000003f8000009bc6dbfcac4ae2b1"
+      }
+    ],
+    "exit_code": 0
+  }
+}

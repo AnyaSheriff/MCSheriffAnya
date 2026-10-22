@@ -1,0 +1,17 @@
+{
+  "commit": "201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b",
+  "files": [
+    {
+      "file": "biomes.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12/biomes.json",
+      "bytes": 17138,
+      "sha256": "4f2d115963d3157fd44638ae88d873b9133dcfa6ebb9994507ee53e9c5eae3d4"
+    },
+    {
+      "file": "entities.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12/entities.json",
+      "bytes": 21101,
+      "sha256": "aaa21a6072a6a058aff18ccf7d288668a0abd86c3c206ab5e115370867af778c"
+    }
+  ]
+}

@@ -217,9 +217,9 @@ pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
     }
 
     // Список отсортирован по номеру предмета, поэтому поиск двоичный.
-    let index = BLOCK_STATES
-        .binary_search_by_key(&item, |(item_id, _, _)| *item_id)
-        .ok()?;
+    let Ok(index) = BLOCK_STATES.binary_search_by_key(&item, |(item_id, _, _)| *item_id) else {
+        return crate::poplar::block_for_item(item);
+    };
 
     let (_, state, name) = BLOCK_STATES[index];
 
@@ -252,19 +252,25 @@ pub fn item_for_block(name: &str) -> Option<i32> {
         return item_named(seeds);
     }
 
-    BLOCK_STATES
+    let found = BLOCK_STATES
         .iter()
         .find(|(_, _, block)| *block == name)
-        .map(|(item, _, _)| *item)
+        .map(|(item, _, _)| *item);
+    #[cfg(not(seedmap_core))]
+    if found.is_none() { return crate::poplar::row_named(name).filter(|row| row.has_item()).map(|row| row.item); }
+    found
 }
 
 /// Правило установки для блока — если оно уже выяснено.
 pub fn orientation(name: &str) -> Option<&'static Orientation> {
     // Список отсортирован по имени блока, поэтому поиск двоичный.
-    ORIENTED
+    let found = ORIENTED
         .binary_search_by_key(&name, |block| block.name)
         .ok()
-        .map(|index| &ORIENTED[index])
+        .map(|index| &ORIENTED[index]);
+    #[cfg(not(seedmap_core))]
+    if found.is_none() && name.contains("poplar") { return crate::poplar::orientation(name); }
+    found
 }
 
 /// Правило установки для блока с таким состоянием — если оно выяснено.
@@ -286,10 +292,13 @@ pub fn block_at_state(state: i32) -> Option<&'static str> {
 /// к выпуску, а имена нет.
 /// Номер блока по имени — не состояния, а самого блока.
 pub fn block_id(name: &str) -> Option<i32> {
-    BLOCK_IDS
+    let found = BLOCK_IDS
         .binary_search_by_key(&name, |(block, _)| *block)
         .ok()
-        .map(|at| BLOCK_IDS[at].1)
+        .map(|at| BLOCK_IDS[at].1);
+    #[cfg(not(seedmap_core))]
+    if found.is_none() { return crate::poplar::row_named(name).map(|row| row.block); }
+    found
 }
 
 /// Все названия предметов — для подсказок.
@@ -298,18 +307,24 @@ pub fn item_names() -> impl Iterator<Item = &'static str> {
 }
 
 pub fn item_named(name: &str) -> Option<i32> {
-    ITEM_NAMES
+    let found = ITEM_NAMES
         .iter()
         .find(|(_, item)| *item == name)
-        .map(|(number, _)| *number)
+        .map(|(number, _)| *number);
+    #[cfg(not(seedmap_core))]
+    if found.is_none() { return crate::poplar::row_named(name).filter(|row| row.has_item()).map(|row| row.item); }
+    found
 }
 
 /// Имя предмета по номеру.
 pub fn item_name(item: i32) -> Option<&'static str> {
-    ITEM_NAMES
+    let found = ITEM_NAMES
         .binary_search_by_key(&item, |(number, _)| *number)
         .ok()
-        .map(|index| ITEM_NAMES[index].1)
+        .map(|index| ITEM_NAMES[index].1);
+    #[cfg(not(seedmap_core))]
+    if found.is_none() { return crate::poplar::name_of_item(item); }
+    found
 }
 
 /// Состояние блока по умолчанию — то, которое и надо ставить.
@@ -318,10 +333,13 @@ pub fn item_name(item: i32) -> Option<&'static str> {
 /// первым идёт значение «да», и первым состоянием дёрна оказывается
 /// заснеженный, хотя обычный дёрн — следующий за ним.
 pub fn state_by_name(name: &str) -> Option<i32> {
-    DEFAULT_STATES
+    let found = DEFAULT_STATES
         .binary_search_by_key(&name, |(block, _)| *block)
         .ok()
-        .map(|index| DEFAULT_STATES[index].1)
+        .map(|index| DEFAULT_STATES[index].1);
+    #[cfg(not(seedmap_core))]
+    if found.is_none() { return crate::poplar::row_named(name).map(|row| row.default_state); }
+    found
 }
 
 /// Состояние блока из записи как в командах: `minecraft:lever[face=floor,powered=true]`.
@@ -362,11 +380,26 @@ pub fn state_from_text(text: &str) -> Option<i32> {
 /// Нужен там, где состояние считается от начала промежутка: у воды и лавы
 /// это уровень — от нуля (источник) и дальше.
 pub fn states_of(name: &str) -> Option<(i32, i32)> {
-    BLOCK_NAMES
+    let found = BLOCK_NAMES
         .iter()
         .find(|(_, _, block)| *block == name)
-        .map(|(low, high, _)| (*low, *high))
+        .map(|(low, high, _)| (*low, *high));
+    #[cfg(not(seedmap_core))]
+    if found.is_none() { return crate::poplar::row_named(name).map(|row| (row.first_state, row.last_state)); }
+    found
 }
+
+/// Тополь 26.3: таблицы по состоянию берутся у дубового двойника (src/poplar.rs).
+#[cfg(not(seedmap_core))]
+fn twin(state: i32) -> i32 { crate::poplar::twin_state(state) }
+#[cfg(seedmap_core)]
+fn twin(state: i32) -> i32 { state }
+
+/// Цельные блоки каталога 26.3 (сера, киноварь) ведут себя как камень.
+#[cfg(not(seedmap_core))]
+fn catalog_opaque(state: i32) -> bool { crate::gameplay_catalog::opaque_state(state) }
+#[cfg(seedmap_core)]
+fn catalog_opaque(_state: i32) -> bool { false }
 
 /// Проводит ли блок сигнал редстоуна.
 ///
@@ -374,6 +407,8 @@ pub fn states_of(name: &str) -> Option<(i32, i32)> {
 /// запитать, и через него провод соединяется с проводом этажом выше или ниже.
 /// Стекло, листва, плиты и ступени не проводят.
 pub fn conductive(state: i32) -> bool {
+    if catalog_opaque(state) { return true; }
+    let state = twin(state);
     CONDUCTIVE
         .partition_point(|(low, _)| *low <= state)
         .checked_sub(1)
@@ -393,7 +428,7 @@ pub fn full_cube(state: i32) -> bool {
     // а не полный куб. Свеча/капельник не служат сплошной опорой.
     if block_at_state(state).is_some_and(|n| matches!(n, "candle" | "cake" | "candle_cake" | "pointed_dripstone" | "scaffolding" | "powder_snow" | "flower_pot")
         || n.ends_with("_candle") || n.ends_with("_candle_cake") || n.starts_with("potted_")) { return false; }
-    if in_ranges(FULL_CUBES, state) {
+    if in_ranges(FULL_CUBES, twin(state)) || catalog_opaque(state) {
         return true;
     }
 
@@ -430,7 +465,7 @@ pub fn solid_top(state: i32) -> bool {
 /// Есть ли у блока ящик, с которым можно столкнуться: у травы, факела и воды
 /// его нет вовсе.
 pub fn has_box(state: i32) -> bool {
-    !in_ranges(EMPTY_BOX, state)
+    !in_ranges(EMPTY_BOX, twin(state))
 }
 
 /// Нижняя плита: занимает только нижнюю половину блока.
@@ -630,6 +665,8 @@ pub fn can_break_at_all(item: i32) -> bool {
 /// Обычно 64, но у некоторых меньше: инструменты и доспехи кладутся по
 /// одному, вёдра и снежки — по шестнадцать. В таблице лежат только они.
 pub fn stack_size(item: i32) -> i32 {
+    #[cfg(not(seedmap_core))]
+    if let Some(size) = crate::poplar::stack_size(item) { return size; }
     SMALL_STACKS
         .iter()
         .find(|(low, high, _)| (*low..=*high).contains(&item))
@@ -653,11 +690,16 @@ pub fn drop_of(state: i32, tool: Option<i32>) -> Option<i32> {
     // Номер 0 — это воздух: в таблице так записаны блоки, у которых
     // выпадение зависит от случая (сухой куст, грибные блоки, стебли).
     // Предмета «воздух» не бывает, поэтому это «ничего».
-    DROPS
+    let own = twin(state);
+    let item = DROPS
         .iter()
-        .find(|(low, high, _)| (*low..=*high).contains(&state))
+        .find(|(low, high, _)| (*low..=*high).contains(&own))
         .map(|(_, _, item)| *item)
-        .filter(|item| *item != 0)
+        .filter(|item| *item != 0)?;
+    // Тополь выпадает собой, а не дубовым предметом.
+    #[cfg(not(seedmap_core))]
+    if own != state { return Some(crate::poplar::retarget_item(item)); }
+    Some(item)
 }
 
 /// Что и сколько выпадает из блока — с долей случая.
@@ -796,6 +838,7 @@ fn three_throws(luck: f32, chance: f32) -> i32 {
 ///
 /// Блока в таблице нет — значит, годится что угодно, хоть рука.
 fn tool_suits(state: i32, tool: Option<i32>) -> bool {
+    let state = twin(state);
     let Some((_, _, suitable)) = HARVEST_TOOLS
         .iter()
         .find(|(low, high, _)| (*low..=*high).contains(&state))
@@ -817,11 +860,12 @@ pub fn blast_resistance(state: i32) -> f32 {
     use std::cmp::Ordering;
 
     let table = crate::hardness_table::RESISTANCE;
+    let table_state = twin(state);
     let own = table
         .binary_search_by(|(low, high, _)| {
-            if *high < state {
+            if *high < table_state {
                 Ordering::Less
-            } else if *low > state {
+            } else if *low > table_state {
                 Ordering::Greater
             } else {
                 Ordering::Equal
@@ -862,7 +906,7 @@ pub fn explosion_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack>
     let shears = item_named("shears");
     let tool = HARVEST_TOOLS
         .iter()
-        .find(|(low, high, _)| (*low..=*high).contains(&state))
+        .find(|(low, high, _)| (*low..=*high).contains(&twin(state)))
         .and_then(|(_, _, suitable)| suitable.iter().copied().find(|tool| Some(*tool) != shears));
 
     drops_by_luck(state, tool, luck)

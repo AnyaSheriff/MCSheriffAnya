@@ -18,6 +18,9 @@
 // терять постройки при падении не хочется.
 
 mod codec;
+pub mod profile;
+pub(crate) mod startup;
+pub(crate) mod snapshot;
 mod spawn_search;
 #[cfg(test)]
 #[allow(dead_code)]
@@ -574,6 +577,10 @@ impl Chunk {
     /// Считает собственный свет чанка по его нынешним блокам.
     fn light_up(&mut self) {
         self.light = Some((self.revision, Arc::new(light::chunk_light(&self.sections))));
+    }
+
+    fn light_up_with_catalog(&mut self, catalog: crate::gameplay_catalog::Catalog) {
+        self.light = Some((self.revision, Arc::new(light::chunk_light_with_catalog(&self.sections, catalog))));
     }
 
     /// Собственный свет, если он не устарел.
@@ -1207,7 +1214,8 @@ const REGIONS: &str = "region";
 /// Четвёртая версия — палитры с битовыми номерами (codec.rs); файл региона
 /// `.mcs` сжимает её ещё и zstd. Первые три версии писались в `.rcw`, их
 /// читает только перенос мира (legacy.rs).
-const CHUNK_VERSION: u8 = 4;
+// Пятая версия допускает дополнение предметов моба; четвёртая читается без потерь.
+const CHUNK_VERSION: u8 = 5;
 
 /// Вторая версия: состояния по два байта, биом один на столбец клетки 4×4.
 /// Такие чанки читаются, их биом растягивается на всю высоту.
@@ -1221,6 +1229,7 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    catalog: crate::gameplay_catalog::Catalog,
     pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
     pub fire_tick: bool,
     pub fire_difficulty: u8,
@@ -1539,10 +1548,19 @@ fn chunk_in_limits(chunk_x: i32, chunk_z: i32) -> bool {
 }
 
 impl World {
+    /// Каталог принадлежит миру, а не версии подключившегося клиента.
+    pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
+
     /// Пустой мир без файла на диске — только для проверок.
     #[cfg(test)]
     pub fn in_memory() -> Self {
+        Self::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    #[cfg(test)]
+    pub fn in_memory_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
         Self {
+            catalog,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1702,6 +1720,7 @@ impl World {
         log_info!("Тип мира: {}", kind.name());
 
         let mut world = Self {
+            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1840,6 +1859,14 @@ impl World {
         self.save(true);
     }
 
+    /// Перед паузой — полный снимок без ожидания диска под замком мира.
+    /// Не теряем мобов из чанков, принятых асинхронно после последнего такта:
+    /// они ещё в loaded_mobs, а в Items попадут только при возобновлении.
+    pub fn save_before_idle(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs(mobs);
+        self.save_with_flush(true, false);
+    }
+
     /// Записывает мир, если с прошлой записи прошла секунда; иначе ничего не
     /// делает — изменения и так уйдут с ближайшей общей записью в такте.
     ///
@@ -1855,6 +1882,10 @@ impl World {
     }
 
     fn save(&mut self, everything: bool) {
+        self.save_with_flush(everything, everything);
+    }
+
+    fn save_with_flush(&mut self, everything: bool, flush: bool) {
         if self.path.as_os_str().is_empty() {
             self.dirty.clear();
             self.fresh.clear();
@@ -1885,6 +1916,12 @@ impl World {
                 continue;
             };
 
+            if let Err(error) = chunk.validate_catalog(self.catalog) {
+                log_error!("Чанк {} {} не записан: {}", chunk_x, chunk_z, error);
+                self.dirty.insert((chunk_x, chunk_z));
+                continue;
+            }
+
             by_region
                 .entry(region::region_of(chunk_x, chunk_z))
                 .or_default()
@@ -1911,7 +1948,8 @@ impl World {
         self.save_level();
 
         // При остановке — дождаться, пока всё ляжет на диск.
-        if everything {
+        // Пауза только ставит снимки в очередь, чтобы не задерживать вход.
+        if flush {
             writer::flush();
         }
     }
@@ -2002,7 +2040,7 @@ impl World {
 
         // Номер состояния, не влезающий в хранение, — ошибка того, кто его
         // прислал; падать из-за неё под замком мира нельзя.
-        if Packed::try_from(state).is_err() {
+        if Packed::try_from(state).is_err() || self.catalog.name(crate::gameplay_catalog::Kind::State, state).is_err() {
             log_warn!("Мир: состояние {} в {} {} {} не поставлено — такого номера нет", state, x, y, z);
             return false;
         }
@@ -2112,9 +2150,29 @@ impl World {
     /// заменяется тем, кто в нём сейчас стоит. Чанк без мобов, у которого их
     /// и не было, не трогается — не переписывается зря.
     pub fn store_mobs(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs_inner(mobs, false);
+    }
+
+    /// Во время паузы не переписываем одинаковые записи мобов каждую секунду.
+    /// Сравниваем только сохраняемые поля; обычный активный такт этой работы
+    /// не делает. Сериализация целого чанка для сравнения не нужна.
+    pub fn store_mobs_if_changed(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs_inner(mobs, true);
+    }
+
+    fn store_mobs_inner(&mut self, mobs: &[crate::mob::Mob], only_if_changed: bool) {
         let mut by_chunk: HashMap<(i32, i32), Vec<crate::mob::Mob>> = HashMap::new();
 
-        for mob in mobs.iter().filter(|mob| !mob.is_dead() && mob.persistent) {
+        // Общая защита нужна и сохранению при stop/save-all: ещё не
+        // установленные мобы остаются в loaded_mobs до следующего такта.
+        // Текущий Items важнее старого снимка при совпадении UUID, даже если
+        // моб уже мёртв или перестал сохраняться: не воскрешаем старую копию.
+        let mut seen = std::collections::HashSet::new();
+        for mob in mobs.iter().chain(self.loaded_mobs.iter()) {
+            // Записи с диска до установки имеют entity_id0. Их временный
+            // UUID не считаем доказательством общей личности: сохраняем все.
+            let identified = mob.entity_id != 0;
+            if (identified && !seen.insert(mob.uuid)) || mob.is_dead() || !mob.persistent { continue; }
             let (x, z) = mob.chunk();
 
             by_chunk.entry((x, z)).or_default().push(mob.clone());
@@ -2125,8 +2183,20 @@ impl World {
         for (key, chunk) in &mut self.chunks {
             let now = by_chunk.remove(key).unwrap_or_default();
 
-            if now.is_empty() && chunk.mobs.is_empty() {
-                continue;
+            if now.is_empty() && chunk.mobs.is_empty() { continue; }
+            if only_if_changed && now.len() == chunk.mobs.len() {
+                let records = |mobs: &[crate::mob::Mob]| -> Option<Vec<Vec<u8>>> {
+                    let mut records = Vec::with_capacity(mobs.len());
+                    for mob in mobs {
+                        mob.validate_item_storage().ok()?;
+                        let mut record = Vec::new(); mob.write(&mut record);
+                        records.push(record);
+                    }
+                    records.sort_unstable();
+                    Some(records)
+                };
+                if let (Some(now), Some(previous)) = (records(&now), records(&chunk.mobs))
+                    && now == previous { continue; }
             }
 
             chunk.mobs = now;
@@ -3070,6 +3140,7 @@ impl World {
         self.chunks.get(&(chunk_x, chunk_z))?;
 
         Some(light::LightJob {
+            catalog: self.catalog,
             chunks: std::array::from_fn(|slot| {
                 let place = (chunk_x + slot as i32 % 3 - 1, chunk_z + slot as i32 / 3 - 1);
                 let chunk = self.chunks.get(&place)?;
@@ -3166,6 +3237,7 @@ impl World {
     /// замок мира нельзя, иначе встанет такт.
     pub fn source(&self) -> ChunkSource {
         ChunkSource {
+            catalog: self.catalog,
             path: self.path.clone(),
             generator: Arc::clone(&self.generator),
             epoch: self.unload_epoch,
@@ -3369,7 +3441,7 @@ impl World {
             return false;
         }
 
-        match take_chunk(&self.path, &self.generator, chunk_x, chunk_z) {
+        match take_chunk(&self.path, &self.generator, self.catalog, chunk_x, chunk_z) {
             Taken::Loaded { chunk, from_disk, wake } => {
                 self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
                 true
@@ -3694,7 +3766,7 @@ impl World {
         // исполняется прежний (вики, Tick, 18w10c).
         // Прежний такт был заведён для другой жидкости (раздатчик забрал
         // источник ведром): он пропадёт вместе с ней, и новый не ждёт его.
-        let fluid = fluid_type(self.get_block(x, y, z));
+        let fluid = fluid_type(self.get_block(x, y, z), self.catalog);
 
         if self.waits_ahead((x, y, z), TickKind::Fluid)
             && self
@@ -3738,7 +3810,7 @@ impl World {
         let order = self.next_order;
         self.next_order += 1;
 
-        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2)) } else { 0 };
+        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2), self.catalog) } else { 0 };
 
         self.waiting.insert((place, kind), WaitingTick { due, order, priority, fluid });
         self.scheduled.push(Reverse(Scheduled {
@@ -3761,7 +3833,7 @@ impl World {
             let (x, y, z) = (x + dx, y + dy, z + dz);
             let state = self.get_block(x, y, z);
 
-            if !wet(state) {
+            if !wet(state, self.catalog) {
                 continue;
             }
 
@@ -3780,7 +3852,7 @@ impl World {
     pub fn fluid_tick_holds(&self, place: (i32, i32, i32)) -> bool {
         self.waiting
             .get(&(place, TickKind::Fluid))
-            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2)))
+            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2), self.catalog))
     }
 
     /// Двигает время мира на такт вперёд и отдаёт места, которым пора, —
@@ -4521,8 +4593,9 @@ enum Taken {
 /// «Нет на диске» и «не читается» — разные вещи. Нет — складываем. Запись
 /// испорчена — сперва откладываем её байты в сторону (`set_aside`), и только
 /// потом складываем чанк заново: он ляжет на её место. Диск не ответил —
-/// не делаем ничего, чанк попробуют прочитать снова.
-fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) -> Taken {
+/// не делаем ничего, чанк попробуют прочитать снова. Неподдержанные раскладка
+/// или состояние каталога тоже дают отказ, без corrupt-copy и новой генерации.
+fn take_chunk(path: &Path, generator: &Generator, catalog: crate::gameplay_catalog::Catalog, chunk_x: i32, chunk_z: i32) -> Taken {
     if !chunk_in_limits(chunk_x, chunk_z) {
         log_debug!("Мир: чанк {} {} за пределами мира", chunk_x, chunk_z);
         return Taken::Unavailable;
@@ -4542,17 +4615,31 @@ fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) ->
     let directory = path.join(REGIONS);
 
     let (raw, why) = match region::read_stored(&directory, chunk_x, chunk_z) {
-        Ok(region::Stored::Missing) => return generated(),
-        Ok(region::Stored::Found(bytes)) => match Chunk::from_bytes(&bytes) {
+        Ok(region::Stored::Missing) => match legacy::pending_region(&directory, chunk_x, chunk_z) {
+            Ok(false) => return generated(),
+            Ok(true) => {
+                log_error!("Чанк {} {} не загружен: старый регион не перенесён, новая генерация запрещена", chunk_x, chunk_z);
+                return Taken::Unavailable;
+            }
+            Err(error) => {
+                log_error!("Не удалось проверить старый регион чанка {} {}: {} — новая генерация запрещена", chunk_x, chunk_z, error);
+                return Taken::Unavailable;
+            }
+        },
+        Ok(region::Stored::Found(bytes)) => match Chunk::decode_for_load_with_catalog(&bytes, catalog) {
             // Свет на диске не хранится: он считается заново по блокам.
-            Some(mut chunk) => {
-                chunk.light_up();
+            Ok(mut chunk) => {
+                chunk.light_up_with_catalog(catalog);
 
                 let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
                 return Taken::Loaded { chunk, from_disk: true, wake };
             }
-            None => (bytes, "содержимое чанка не разбирается"),
+            Err(codec::DecodeError::Damaged) => (bytes, "содержимое чанка не разбирается"),
+            Err(incompatible) => {
+                log_error!("Чанк {} {} не поддержан ({}): загрузка остановлена, исходная запись не изменена", chunk_x, chunk_z, incompatible);
+                return Taken::Unavailable;
+            }
         },
         Ok(region::Stored::Damaged { raw, why }) => (raw, why),
         Err(e) => {
@@ -4626,6 +4713,7 @@ pub struct ReadyChunk {
 /// Живёт отдельно от мира нарочно: пока чанк читается с диска или
 /// складывается заново, замок мира держать нельзя — такт не должен ждать.
 pub struct ChunkSource {
+    catalog: crate::gameplay_catalog::Catalog,
     path: PathBuf,
     generator: Arc<Generator>,
 
@@ -4637,7 +4725,7 @@ impl ChunkSource {
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
         ReadyChunk {
-            taken: take_chunk(&self.path, &self.generator, chunk_x, chunk_z),
+            taken: take_chunk(&self.path, &self.generator, self.catalog, chunk_x, chunk_z),
             epoch: self.epoch,
         }
     }
@@ -5849,25 +5937,24 @@ const AROUND: [(i32, i32, i32); 7] = [(0, 0, 0), (0, 1, 0), (0, -1, 0), (-1, 0, 
 /// Какая жидкость в блоке — для такта жидкости: 0 — никакой, 1 — источник
 /// воды (и залитый водой блок), 2 — текущая вода, 3 — источник лавы,
 /// 4 — текущая лава.
-fn fluid_type(state: i32) -> u8 {
+fn fluid_type(state: i32, catalog: crate::gameplay_catalog::Catalog) -> u8 {
     match fluids::fluid_at(state) {
         Some((fluids::Kind::Water, fluids::SOURCE)) => 1,
         Some((fluids::Kind::Water, _)) => 2,
         Some((fluids::Kind::Lava, fluids::SOURCE)) => 3,
         Some((fluids::Kind::Lava, _)) => 4,
-        None if wet(state) => 1,
+        None if wet(state, catalog) => 1,
         None => 0,
     }
 }
 
 /// Есть ли в блоке жидкость: вода, лава или залитый водой блок.
-fn wet(state: i32) -> bool {
+fn wet(state: i32, catalog: crate::gameplay_catalog::Catalog) -> bool {
     if state == AIR {
         return false;
     }
 
-    fluids::fluid_at(state).is_some()
-        || crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "waterlogged")) == Some("true")
+    fluids::source_at_with_catalog(state, catalog).is_some()
 }
 
 /// Ключ чанка по мировым координатам блока.
@@ -5991,6 +6078,117 @@ mod mushroom_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_snapshot_preserves_live_and_not_yet_installed_chunk_mobs() {
+        let mut world = World::in_memory();
+        world.ensure(0,0);
+        let mut live = crate::mob::Mob::new(10,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        live.persistent = true;
+        let mut loaded = crate::mob::Mob::new(11,crate::mob::Kind::Pig,(1.5,64.0,0.5));
+        loaded.persistent = true;
+        let ids = [live.uuid,loaded.uuid];
+        world.queue_water_hatch(loaded);
+        let clock = world.clock();
+        world.save_before_idle(&[live]);
+        let stored = &world.chunks.get(&(0,0)).unwrap().mobs;
+        assert_eq!(stored.len(),2);
+        for id in ids { assert!(stored.iter().any(|m| m.uuid == id)); }
+        assert_eq!(world.loaded_mobs.len(),1,"очередь остаётся для первого такта после входа");
+        assert_eq!(world.clock(),clock,"снимок не делает игровой такт");
+    }
+
+    #[test]
+    fn idle_stop_save_all_preserves_pending_mobs_and_maintenance_updates_only_changes() {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-idle-mobs-save-{}",std::process::id()));
+        assert!(!path.exists(),"папка только этой проверки");
+        let mut world = World::open(&path,Some(1),WorldKind::Flat).unwrap();
+        world.ensure(0,0);
+        let mut pending = crate::mob::Mob::new(21,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        pending.persistent = true;
+        let read_pending = |mob: crate::mob::Mob| {
+            let mut bytes = Vec::new(); mob.write(&mut bytes);
+            crate::mob::Mob::read(&mut bytes.as_slice()).unwrap()
+        };
+        let pending = read_pending(pending);
+        let second = read_pending(crate::mob::Mob::new(24,crate::mob::Kind::Sheep,(2.5,64.0,0.5)));
+        assert_eq!((pending.entity_id,second.entity_id),(0,0),"дисковые мобы ещё не установлены в runtime");
+        world.queue_water_hatch(pending); world.queue_water_hatch(second);
+        let mut live = crate::mob::Mob::new(22,crate::mob::Kind::Pig,(1.5,64.0,0.5));
+        live.persistent = true;
+        // Тот же путь, что main::stop и команда save-all: только Items в аргументе.
+        world.store_mobs(&[live.clone()]);
+        world.save_all();
+        assert_eq!(world.loaded_mobs.len(),2,"сохранение не запускает мобов");
+        live.vitals.health = 4.0; // как изменение моба консольной командой
+        world.store_mobs_if_changed(&[live.clone()]);
+        assert!(world.dirty.contains(&(0,0)));
+        world.save_if_needed();
+        world.store_mobs_if_changed(&[live.clone()]);
+        assert!(!world.dirty.contains(&(0,0)),"одинаковое не переписывается в паузе");
+        drop(world);
+        let mut reopened = World::open(&path,None,WorldKind::Flat).unwrap();
+        reopened.ensure(0,0);
+        let loaded = reopened.take_loaded_mobs();
+        assert_eq!(loaded.len(),3,"оба анонимных pending-моба и текущий Items сохранены");
+        assert!(loaded.iter().any(|mob| mob.kind == crate::mob::Kind::Cow));
+        assert!(loaded.iter().any(|mob| mob.kind == crate::mob::Kind::Sheep));
+        assert_eq!(loaded.iter().find(|mob| mob.kind == crate::mob::Kind::Pig).unwrap().vitals.health,4.0);
+        drop(reopened);
+        fs::remove_dir_all(path).unwrap();
+    }
+
+    #[test]
+    fn idle_pending_mob_merge_prefers_live_and_does_not_duplicate_or_resurrect() {
+        let mut world = World::in_memory(); world.ensure(0,0);
+        let mut live = crate::mob::Mob::new(23,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        live.persistent = true;
+        world.queue_water_hatch(live.clone());
+        live.vitals.health = 4.0;
+        world.store_mobs_if_changed(&[live.clone()]);
+        let stored = &world.chunks.get(&(0,0)).unwrap().mobs;
+        assert_eq!(stored.len(),1); assert_eq!(stored[0].vitals.health,4.0);
+        live.die();
+        world.store_mobs_if_changed(&[live]);
+        assert!(world.chunks.get(&(0,0)).unwrap().mobs.is_empty());
+        assert_eq!(world.loaded_mobs.len(),1,"очередь ещё не потреблена тактом");
+    }
+
+    #[test]
+    fn idle_uninstalled_mobs_are_not_merged_even_with_synthetic_equal_uuid() {
+        let mut world = World::in_memory(); world.ensure(0,0);
+        for kind in [crate::mob::Kind::Cow,crate::mob::Kind::Sheep] {
+            let mut pending = crate::mob::Mob::new(0,kind,(0.5,64.0,0.5));
+            pending.uuid = [0x42;16]; // намеренное совпадение, не свойство чтения диска
+            world.queue_water_hatch(pending);
+        }
+        world.store_mobs(&[]);
+        assert_eq!(world.chunks.get(&(0,0)).unwrap().mobs.len(),2);
+        assert_eq!(world.loaded_mobs.len(),2);
+    }
+
+    #[test]
+    fn idle_snapshot_keeps_failed_chunk_write_for_retry() {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-idle-save-retry-{}",std::process::id()));
+        assert!(!path.exists(),"новая папка только этой проверки");
+        let mut world = World::open(&path,Some(1),WorldKind::Flat).unwrap();
+        world.ensure(0,0);
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        world.set_block(0,64,0,stone);
+        let region = region::path_for(&path.join(REGIONS),0,0);
+        fs::create_dir_all(&region).unwrap(); // запись намеренно невозможна
+        world.save_before_idle(&[]);
+        assert!(writer::waiting(&path.join(REGIONS),0,0).is_some(),"снимок не потерян при ошибке диска");
+        fs::remove_dir(&region).unwrap();
+        writer::flush();
+        assert!(writer::waiting(&path.join(REGIONS),0,0).is_none());
+        drop(world);
+        let mut reopened = World::open(&path,None,WorldKind::Flat).unwrap();
+        reopened.ensure(0,0);
+        assert_eq!(reopened.get_block(0,64,0),stone);
+        drop(reopened);
+        fs::remove_dir_all(path).unwrap();
+    }
 
     #[test]
     fn trial_presence_matches_places_after_changes_and_unload() {
@@ -7489,7 +7687,7 @@ mod speed {
         // WORLD=<папка мира> — брать сохранённые чанки оттуда (например, мир
         // тестового сервера), а не свежую генерацию.
         let path = std::env::var("WORLD").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir().join("mcsheriffanya-no-such-world"));
-        let source = ChunkSource { path, generator, epoch: 0 };
+        let source = ChunkSource { path, generator, catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), epoch: 0 };
 
         for dx in -2..=2 {
             for dz in -2..=2 {
@@ -8182,3 +8380,9 @@ mod structures_audit;
 
 #[cfg(test)]
 mod structure_fix_tests;
+
+#[cfg(test)]
+mod incompatible_load_tests;
+
+#[cfg(test)]
+mod catalog_tests;

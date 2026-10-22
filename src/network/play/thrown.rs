@@ -164,7 +164,7 @@ pub(super) async fn send_launch(stream: &mut Outgoing<'_>, shared: &Shared, play
     send_item(stream, flying).await?;
 
     if flying.owner == player.entity_id && flying.age <= 1 && !flying.is_fireball() {
-        send_container_content(stream, player).await?;
+        send_container_content(stream, player, shared.catalog()).await?;
     }
 
     let mut body = encode_varint(ENTITY_POSITION);

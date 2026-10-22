@@ -28,6 +28,7 @@ use std::sync::{Arc, OnceLock};
 
 use super::{Packed, SECTIONS, SECTION_BLOCKS, WORLD_HEIGHT};
 use crate::blocks_table::LIGHT;
+use crate::gameplay_catalog::{Catalog, Profile};
 
 /// Самый яркий свет.
 pub const FULL: u8 = 15;
@@ -77,6 +78,21 @@ fn table() -> &'static [u16] {
         }
 
         table
+    })
+}
+
+// Отдельная таблица preview: неизменяемая база775 не расширяется.
+fn table_for(catalog: Catalog) -> &'static [u16] {
+    if catalog.profile() == Profile::Java26_1_2 { return table(); }
+    static PREVIEW: OnceLock<Vec<u16>> = OnceLock::new();
+    PREVIEW.get_or_init(|| {
+        let mut values = table().to_vec();
+        // Все состояния каталога (плиты, ступени, сера, тополь), не только белая плита.
+        for state in crate::gameplay_catalog::entries().flat_map(|row| row.first_state..=row.last_state) {
+            let (emit, filter, faces) = catalog.light_properties(state).expect("состояние preview");
+            values[state as usize] = emit as u16 | (filter as u16) << 4 | (faces as u16) << 8;
+        }
+        values
     })
 }
 
@@ -258,6 +274,10 @@ impl ChunkLight {
 /// За краями чанка считается пустота, в которую свет уходит без следа:
 /// то, что придёт от соседей, добавит сшивка (`LightJob`).
 pub fn chunk_light(sections: &[Option<Arc<[Packed]>>]) -> ChunkLight {
+    chunk_light_with_catalog(sections, Catalog::new(Profile::Java26_1_2))
+}
+
+pub fn chunk_light_with_catalog(sections: &[Option<Arc<[Packed]>>], catalog: Catalog) -> ChunkLight {
     let Some(top) = sections.iter().rposition(Option::is_some) else {
         return ChunkLight::open_sky();
     };
@@ -267,7 +287,7 @@ pub fn chunk_light(sections: &[Option<Arc<[Packed]>>]) -> ChunkLight {
     // только небо.
     let layers = ((top + 2) * 16).min(LAYERS);
     let cells = layers * LAYER;
-    let table = table();
+    let table = table_for(catalog);
 
     let mut props = vec![0u16; cells];
     let mut sky = vec![0u8; cells];
@@ -438,6 +458,7 @@ pub struct Recounted {
 /// соседей (тех, что есть в памяти). Блоки не копируются — секции общие
 /// с миром, и правка в мире заводит себе новую копию секции.
 pub struct LightJob {
+    pub catalog: Catalog,
     /// Чанки 3×3 по порядку: сначала по X, потом по Z; середина — наш.
     pub chunks: [Option<LightInput>; 9],
 }
@@ -671,7 +692,7 @@ impl LightJob {
             own[slot] = Some(match &input.light {
                 Some(light) => Arc::clone(light),
                 None => {
-                    let light = Arc::new(chunk_light(&input.sections));
+                    let light = Arc::new(chunk_light_with_catalog(&input.sections, self.catalog));
 
                     recounted.push(Recounted {
                         place: input.place,
@@ -695,7 +716,7 @@ impl LightJob {
                     Some((&input.sections[..], light.sections(sky)))
                 }),
                 edited: std::mem::take(&mut edited),
-                table: table(),
+                table: table_for(self.catalog),
                 sky,
                 queue: std::mem::take(&mut queue),
             };
@@ -727,7 +748,7 @@ impl LightJob {
             own[slot] = Some(match &input.light {
                 Some(light) => Arc::clone(light),
                 None => {
-                    let light = Arc::new(chunk_light(&input.sections));
+                    let light = Arc::new(chunk_light_with_catalog(&input.sections, self.catalog));
 
                     recounted.push(Recounted {
                         place: input.place,
@@ -749,7 +770,7 @@ impl LightJob {
                     Some((&input.sections[..], light.sections(sky)))
                 }),
                 edited: vec![None; 9 * SECTION_COUNT],
-                table: table(),
+                table: table_for(self.catalog),
                 sky,
                 queue: Vec::new(),
             };
@@ -794,7 +815,7 @@ mod tests {
                 }
                 chunk
             });
-            let job = || LightJob { chunks: std::array::from_fn(|slot| {
+            let job = || LightJob { catalog: Catalog::new(Profile::Java26_1_2), chunks: std::array::from_fn(|slot| {
                 if slot != CENTER && (slot+seed as usize).is_multiple_of(4) { return None; }
                 Some(LightInput { place: (slot as i32%3,slot as i32/3), revision: seed as u32,
                     sections: chunks[slot].sections.clone(),
@@ -1209,6 +1230,7 @@ mod tests {
         }
 
         let job = LightJob {
+            catalog: Catalog::new(Profile::Java26_1_2),
             chunks: std::array::from_fn(|slot| {
                 let chunk = &chunks[slot];
 
@@ -1292,6 +1314,40 @@ mod tests {
                         assert_eq!(got, expected, "{} свет в {x} {layer} {z}", if sky { "небесный" } else { "блочный" });
                     }
                 }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod catalog_light_tests {
+    use super::*;
+    #[test]
+    fn preview_bottom_slab_roof_blocks_actual_sky_propagation() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let slab = catalog.slab_state(crate::gameplay_catalog::SlabHalf::Bottom,false).unwrap();
+        let mut chunk = crate::world::Chunk::new();
+        for x in 0..16 { for z in 0..16 { chunk.set(x,67,z,slab); } }
+        let enabled = chunk_light_with_catalog(&chunk.sections,catalog);
+        let disabled = chunk_light(&chunk.sections);
+        assert_eq!(enabled.at(8,67,8).0,15);
+        assert_eq!(enabled.at(8,64,8).0,0);
+        assert_eq!(disabled.at(8,64,8).0,15);
+    }
+
+    #[test]
+    fn preview_uses_slab_face_occlusion_without_changing_base_table() {
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        let stone = crate::blocks::orientation("stone_slab").unwrap();
+        for water in [false,true] {
+            for (half, name) in [(crate::gameplay_catalog::SlabHalf::Top,"top"),(crate::gameplay_catalog::SlabHalf::Bottom,"bottom"),(crate::gameplay_catalog::SlabHalf::Double,"double")] {
+                let state = preview.slab_state(half,water).unwrap();
+                let equivalent = stone.state(&[("type",name),("waterlogged","false")]).unwrap();
+                assert_eq!(closed(table_for(preview)[state as usize]),closed(table()[equivalent as usize]));
+                assert_eq!(emitted(table_for(preview)[state as usize]),0);
+                assert_eq!(filtered(table_for(preview)[state as usize]),0);
+                assert_eq!(table_for(base)[state as usize],0);
             }
         }
     }

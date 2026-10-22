@@ -36,6 +36,7 @@ const CUSTOM_PAYLOAD: i32 = 0x01;
 const BRAND: &str = "MCSheriffAnya";
 
 /// Clientbound Registry Data — данные реестров.
+#[cfg(test)]
 const REGISTRY_DATA: i32 = 0x07;
 
 /// Clientbound Finish Configuration — сервер сообщает, что фаза Configuration
@@ -79,7 +80,7 @@ const CORE_PACK_VERSION: &str = "26.1.2";
 /// значения у каждого вида свои и в википедии не перечислены, поэтому здесь
 /// они одинаковые: на поведение клиента это пока не влияет — смертей и голода
 /// на сервере ещё нет, а важен лишь сам факт, что запись есть.
-const DAMAGE_TYPES: [&str; 51] = [
+pub(super) const DAMAGE_TYPES: [&str; 51] = [
     "minecraft:arrow",
     "minecraft:bad_respawn_point",
     "minecraft:cactus",
@@ -389,7 +390,7 @@ fn packet_name(packet_id: i32) -> &'static str {
 pub async fn read_login_acknowledged(stream: &mut Connection) -> io::Result<()> {
     let packet = read_packet(stream).await?;
 
-    if packet.id != 0x03 {
+    if packet.id != 0x03 || (stream.probe_776_enabled() && !packet.payload().is_empty()) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
@@ -459,6 +460,8 @@ pub async fn read_known_packs(
 
     loop {
         let packet = read_packet(stream).await?;
+        #[cfg(test)]
+        if stream.probe_776_enabled() { validate_probe_config_packet(&packet, false)?; }
 
         log_debug!(
             "Configuration: пакет клиента 0x{:02X} ({}) — длина тела {} байт",
@@ -475,6 +478,8 @@ pub async fn read_known_packs(
             continue;
         }
 
+        #[cfg(test)]
+        if stream.probe_776_enabled() { validate_probe_known_packs(packet.payload())?; }
         let (_, mut offset) = decode_varint(&packet.body)?;
         let (count, read) = decode_varint(&packet.body[offset..])?;
         offset += read;
@@ -500,7 +505,7 @@ pub async fn read_known_packs(
 ///
 /// Формат пакета: Identifier реестра, VarInt количество записей, далее для
 /// каждой записи — Identifier записи, Boolean «есть данные» и, если true,
-/// NBT-компаунд с содержимым записи. В одном пакете передаётся ровно один
+/// NBT с содержимым записи (compound или, например, список block_transformer). В одном пакете передаётся ровно один
 /// реестр: клиент разбирает один реестр и падает с "packet was larger than
 /// I expected", если в пакете остались байты.
 ///
@@ -515,55 +520,62 @@ pub async fn read_known_packs(
 /// Раньше они шли без содержимого, и клиент брал его из своего набора
 /// ресурсов; тогда войти мог только клиент ровно такой же версии.
 pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
-    let mut body = encode_varint(REGISTRY_DATA);
-
-    body.extend_from_slice(&encode_string("minecraft:damage_type"));
-    body.extend_from_slice(&encode_varint(DAMAGE_TYPES.len() as i32));
-
-    for damage_type in DAMAGE_TYPES {
-        body.extend_from_slice(&encode_string(damage_type));
-        body.push(0x01); // данные записи присутствуют
-
-        let entry = Compound::new()
-            .string("message_id", message_id(damage_type))
-            .string("scaling", "when_caused_by_living_non_player")
-            .float("exhaustion", 0.1);
-
-        body.extend_from_slice(&entry.encode_network());
+    // Сначала собираем весь набор: неизвестная запись/версия не должна
+    // оставлять клиенту половину реестров перед ошибкой.
+    let registries = registry_bundle(stream.client_version())?;
+    let mut entries = 0;
+    for registry in registries {
+        entries += registry.entries.len();
+        super::packet::write_registry(stream, &registry).await?;
     }
-
-    write_body(stream, body).await?;
-
-    // Реестры, которые клиент требует непустыми. Каждый реестр идёт отдельным
-    // пакетом: клиент разбирает из пакета ровно один реестр и считает ошибкой,
-    // если в пакете остались непрочитанные байты.
-    //
-    let mut entries = DAMAGE_TYPES.len();
-
-    for (registry, registry_entries) in REQUIRED_REGISTRIES {
-        write_body(stream, registry_body(registry, registry_entries)).await?;
-
-        entries += registry_entries.len();
-    }
-
     Ok(entries)
 }
 
-pub(crate) fn registry_body(registry: &str, entries: &[&str]) -> Vec<u8> {
-    let mut body = encode_varint(REGISTRY_DATA);
-    body.extend_from_slice(&encode_string(registry));
-    body.extend_from_slice(&encode_varint(entries.len() as i32));
-    for entry in entries {
-        body.extend_from_slice(&encode_string(&entry_id(entry)));
-        match registries::entry(registry, entry) {
-            Some(contents) => {
-                body.push(0x01);
-                body.extend_from_slice(&contents.encode_network());
-            }
-            None => body.push(0x00),
-        }
+fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
+    use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
     }
-    body
+    let damage = DAMAGE_TYPES.iter().map(|name| Entry {
+        name: (*name).into(),
+        data: Some(Compound::new().string("message_id", message_id(name))
+            .string("scaling", "when_caused_by_living_non_player").float("exhaustion", 0.1).encode_network()),
+    }).collect();
+    let mut registries = vec![Registry { version, name: "minecraft:damage_type".into(), entries: damage }];
+    for (name, entries) in REQUIRED_REGISTRIES {
+        let mut registry = prepare_registry(version, name, entries)?;
+        if matches!(version, JavaVersion::V26_2 | JavaVersion::V26_3) && name == "minecraft:jukebox_song" {
+            registry.entries.extend(prepare_registry(version, name, &["bounce"])?.entries);
+        }
+        registries.push(registry);
+    }
+    if version == JavaVersion::V26_3 {
+        let entries = ["axe", "hoe", "shovel"].into_iter().map(|name| Entry {
+            name: entry_id(name), data: Some(registries::block_transformer(name).expect("известный инструмент")),
+        }).collect();
+        registries.push(Registry { version, name: "minecraft:block_transformer".into(), entries });
+        let patterns: Vec<&str> = crate::blocks::item_names().filter_map(|n| n.strip_suffix("_pottery_sherd")).collect();
+        registries.push(prepare_registry(version, "minecraft:decorated_pot_pattern", &patterns)?);
+    }
+    Ok(registries)
+}
+
+fn prepare_registry(version: mcsa_protocol::JavaVersion, registry: &str, entries: &[&str]) -> io::Result<mcsa_protocol::registry::Registry> {
+    use mcsa_protocol::registry::{Entry, Registry};
+    let entries = entries.iter().map(|name| {
+        let contents = if version == mcsa_protocol::wire::INTERNAL { registries::entry(registry, name) }
+            else { registries::entry_for(version, registry, name) };
+        let contents = contents.ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData,
+            format!("Нет определения реестра {registry}/{name} для Java{}", version.name())))?;
+        Ok(Entry { name: entry_id(name), data: Some(contents.encode_network()) })
+    }).collect::<io::Result<Vec<_>>>()?;
+    Ok(Registry { version, name: registry.into(), entries })
+}
+
+#[cfg(test)]
+pub(crate) fn registry_body(registry: &str, entries: &[&str]) -> Vec<u8> {
+    prepare_registry(mcsa_protocol::wire::INTERNAL, registry, entries).expect("записи известны")
+        .encode().expect("корректный NBT")
 }
 
 /// Идентификатор записи реестра: имена оригинала записаны в таблицах без
@@ -595,6 +607,10 @@ fn message_id(damage_type: &str) -> &str {
 /// Списки записей пустые: клиенту достаточно самого факта существования тега,
 /// а числовые ID записей зависят от порядка записей в реестре.
 pub async fn send_update_tags(stream: &mut Connection) -> io::Result<()> {
+    write_body(stream, update_tags_body()).await
+}
+
+fn update_tags_body() -> Vec<u8> {
     /// Теги реестра minecraft:damage_type.
     const DAMAGE_TYPE_TAGS: [&str; 3] = [
         "minecraft:bypasses_shield",
@@ -650,7 +666,7 @@ pub async fn send_update_tags(stream: &mut Connection) -> io::Result<()> {
         }
     }
 
-    write_body(stream, body).await
+    body
 }
 
 /// Отправляет Finish Configuration (clientbound, packet_id = 0x03, тело пустое).
@@ -681,6 +697,8 @@ pub async fn read_and_log_configuration_packets(
     loop {
         match read_packet(stream).await {
             Ok(packet) => {
+                #[cfg(test)]
+                if stream.probe_776_enabled() { validate_probe_config_packet(&packet, true)?; }
                 log_debug!(
                     "Configuration: пакет клиента 0x{:02X} ({}) — длина тела {} байт",
                     packet.id,
@@ -808,8 +826,236 @@ pub fn read_look(payload: &[u8]) -> Option<ClientLook> {
 }
 
 #[cfg(test)]
+fn probe_invalid() -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, "Некорректный пакет Configuration776")
+}
+
+#[cfg(test)]
+fn probe_uint(body: &[u8], offset: &mut usize, maximum: i32) -> io::Result<i32> {
+    let (value, size) = decode_varint(body.get(*offset..).ok_or_else(probe_invalid)?)?;
+    if !(0..=maximum).contains(&value) { return Err(probe_invalid()); }
+    *offset += size;
+    Ok(value)
+}
+
+#[cfg(test)]
+fn probe_byte(body: &[u8], offset: &mut usize, maximum: u8) -> io::Result<()> {
+    let value = *body.get(*offset).ok_or_else(probe_invalid)?;
+    if value > maximum { return Err(probe_invalid()); }
+    *offset += 1;
+    Ok(())
+}
+
+#[cfg(test)]
+fn validate_probe_settings(body: &[u8]) -> io::Result<()> {
+    let mut offset = 0;
+    let locale = decode_string(body, &mut offset)?;
+    if locale.len() > 16 { return Err(probe_invalid()); }
+    probe_byte(body, &mut offset, 127)?; // положительная дальность i8
+    probe_uint(body, &mut offset, 2)?;
+    probe_byte(body, &mut offset, 1)?;
+    probe_byte(body, &mut offset, 127)?;
+    probe_uint(body, &mut offset, 1)?;
+    for _ in 0..2 { probe_byte(body, &mut offset, 1)?; }
+    probe_uint(body, &mut offset, 2)?;
+    if offset != body.len() { return Err(probe_invalid()); }
+    Ok(())
+}
+
+#[cfg(test)]
+fn validate_probe_known_packs(body: &[u8]) -> io::Result<()> {
+    let mut offset = 0;
+    let count = probe_uint(body, &mut offset, 1)?;
+    if count == 1 {
+        let namespace = decode_string(body, &mut offset)?;
+        let id = decode_string(body, &mut offset)?;
+        let version = decode_string(body, &mut offset)?;
+        if (namespace.as_str(), id.as_str(), version.as_str()) != ("minecraft", "core", "26.2") {
+            return Err(probe_invalid());
+        }
+    }
+    if offset != body.len() { return Err(probe_invalid()); }
+    Ok(())
+}
+
+#[cfg(test)]
+fn validate_probe_config_packet(packet: &super::packet::PacketInfo, finishing: bool) -> io::Result<()> {
+    match packet.id {
+        0 => validate_probe_settings(packet.payload()),
+        2 => {
+            let mut offset = 0;
+            let channel = decode_string(packet.payload(), &mut offset)?;
+            if channel.len() > 32767 { return Err(probe_invalid()); }
+            Ok(())
+        }
+        3 if finishing && packet.payload().is_empty() => Ok(()),
+        4 if packet.payload().len() == 8 => Ok(()),
+        5 if packet.payload().len() == 4 => Ok(()),
+        7 if !finishing => Ok(()), // точный offered tuple проверяется отдельно
+        _ => Err(probe_invalid()),
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn client_registry_profiles_keep_ids_and_reject_missing_definitions() {
+        use mcsa_protocol::{JavaVersion, registry::Registry};
+        let old = registry_bundle(JavaVersion::V26_1_2).unwrap();
+        let new = registry_bundle(JavaVersion::V26_3).unwrap();
+        assert_eq!(old.len(), 25);
+        assert_eq!(new.len(), 27);
+        assert_eq!(new[26].name, "minecraft:decorated_pot_pattern");
+        assert_eq!(new[26].entries.len(), 23);
+        let transformer = &new[25];
+        assert_eq!(transformer.name, "minecraft:block_transformer");
+        assert!(transformer.entries.iter().all(|e| e.data.as_ref().unwrap()[0] == 9));
+        let body = transformer.encode().unwrap();
+        assert_eq!(Registry::decode(transformer.version, &body[1..]).unwrap(), *transformer);
+        for (old, new) in old.iter().zip(&new) {
+            assert_eq!(old.name, new.name);
+            assert_eq!(old.entries.iter().map(|e| &e.name).collect::<Vec<_>>(), new.entries[..old.entries.len()].iter().map(|e| &e.name).collect::<Vec<_>>());
+            assert!(new.entries.iter().all(|e| e.data.is_some()), "без зависимости от Known Packs");
+            for registry in [old, new] {
+                let bytes = registry.encode().unwrap();
+                assert_eq!(bytes[0], REGISTRY_DATA as u8);
+                assert_eq!(Registry::decode(registry.version, &bytes[1..]).unwrap(), *registry);
+            }
+            if old.name == "minecraft:worldgen/biome" {
+                for (old, new) in old.entries.iter().zip(&new.entries) {
+                    let old = old.data.as_ref().unwrap(); let new = new.data.as_ref().unwrap();
+                    for field in [b"spawners".as_slice(), b"spawn_costs"] {
+                        assert!(old.windows(field.len()).any(|w| w == field));
+                        assert!(!new.windows(field.len()).any(|w| w == field));
+                    }
+                }
+            } else if old.name == "minecraft:trim_material" {
+                for entry in &new.entries {
+                    let data = entry.data.as_ref().unwrap();
+                    assert!(data.windows(10).any(|w| w == b"palette_id"));
+                    assert!(!data.windows(10).any(|w| w == b"asset_name"));
+                    assert!(data.windows(15).any(|w| w == b"minecraft:trim/"));
+                }
+            } else if old.name == "minecraft:jukebox_song" {
+                assert_eq!(new.entries.len(), old.entries.len() + 1);
+                assert_eq!(old.entries, new.entries[..old.entries.len()]);
+                assert_eq!(new.entries.last().unwrap().name, "minecraft:bounce");
+            } else if old.name == "minecraft:dimension_type" {
+                for entry in &new.entries {
+                    let data = entry.data.as_ref().unwrap();
+                    assert!(!data.windows(11).any(|w| w == b"#minecraft:"));
+                    assert!(data.windows(b"minecraft:netherrack".len()).any(|w| w == b"minecraft:netherrack"));
+                }
+            } else { assert_eq!(old.entries, new.entries); }
+        }
+        assert!(registry_bundle(JavaVersion::V1_12_2).is_err());
+        assert!(prepare_registry(JavaVersion::V26_3, "minecraft:unknown", &["x"]).is_err());
+    }
+
+    /// Проверка наших данных, не доказательство принятия официальным клиентом776.
+    #[test]
+    fn registry_776_keeps_native_ids_and_appends_required_bounce_song() {
+        use mcsa_protocol::{JavaVersion, registry::Registry};
+        let old = registry_bundle(JavaVersion::V26_1_2).unwrap();
+        let middle = registry_bundle(JavaVersion::V26_2).unwrap();
+        let new = registry_bundle(JavaVersion::V26_3).unwrap();
+        assert_eq!(middle.len(), 25);
+        for ((old, middle), new) in old.iter().zip(&middle).zip(&new) {
+            assert_eq!(old.name, middle.name);
+            assert_eq!(old.entries.iter().map(|entry| &entry.name).collect::<Vec<_>>(),
+                middle.entries.iter().take(old.entries.len()).map(|entry| &entry.name).collect::<Vec<_>>());
+            assert!(middle.entries.iter().all(|entry| entry.data.is_some()));
+            let expected = if matches!(old.name.as_str(), "minecraft:dimension_type" | "minecraft:jukebox_song") {
+                &new.entries
+            } else { &old.entries };
+            if old.name == "minecraft:jukebox_song" {
+                assert_eq!(middle.entries.len(), old.entries.len() + 1);
+                assert_eq!(middle.entries.last().unwrap().name, "minecraft:bounce");
+                assert_eq!(&middle.entries[..old.entries.len()], old.entries.as_slice());
+            }
+            assert_eq!(&middle.entries, expected, "{}", old.name);
+            let body = middle.encode().unwrap();
+            assert_eq!(body[0], 7);
+            assert_eq!(Registry::decode(JavaVersion::V26_2, &body[1..]).unwrap(), *middle);
+        }
+    }
+
+    /// Только собственные Configuration-кадры. Public wire/admission776 остаются закрыты.
+    #[test]
+    #[ignore = "экспорт собственных Configuration776 для первого настоящего клиентского ACK"]
+    fn export_registry_client_probe_776() {
+        use mcsa_protocol::JavaVersion;
+        let mut known = encode_varint(KNOWN_PACKS);
+        known.extend(encode_varint(1));
+        for text in ["minecraft", "core", "26.2"] { known.extend(encode_string(text)); }
+        let mut bodies = vec![brand_body(), known];
+        for registry in registry_bundle(JavaVersion::V26_2).unwrap() {
+            bodies.push(registry.encode().unwrap());
+        }
+        // Все непустые ссылки принадлежат нашим неизменённым dynamic banner IDs.
+        bodies.push(update_tags_body());
+        bodies.push(encode_varint(FINISH_CONFIGURATION));
+        assert_eq!(bodies.len(), 29);
+        let bodies: Vec<String> = bodies.iter().map(|body|
+            body.iter().map(|byte| format!("{byte:02x}")).collect()).collect();
+        std::fs::create_dir_all("tmp").unwrap();
+        std::fs::write("tmp/registry-client-26.2.json", serde_json::to_vec_pretty(&bodies).unwrap()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn prepared_registries_cross_encrypted_transport_and_require_the_client_version() {
+        use mcsa_protocol::{JavaVersion, Negotiated, registry::Registry};
+        use super::super::{connection::CryptoStream, packet::write_registry};
+        let (left, right) = tokio::io::duplex(1024 * 1024);
+        let mut left = CryptoStream::new(left); let mut right = CryptoStream::new(right);
+        left.protocol = Some(Negotiated { client: JavaVersion::V26_3, native: mcsa_protocol::wire::INTERNAL });
+        left.enable_encryption(&[41; 16]); right.enable_encryption(&[41; 16]);
+        let old = registry_bundle(JavaVersion::V26_1_2).unwrap().remove(0);
+        assert!(write_registry(&mut left, &old).await.is_err());
+        let expected = registry_bundle(JavaVersion::V26_3).unwrap();
+        for registry in &expected { write_registry(&mut left, registry).await.unwrap(); }
+        for registry in &expected {
+            let packet = read_packet(&mut right).await.unwrap();
+            assert_eq!(packet.id, REGISTRY_DATA);
+            assert_eq!(Registry::decode(JavaVersion::V26_3, packet.payload()).unwrap(), *registry);
+        }
+        // Ни один байт неверной версии не попал в поток перед первым реестром.
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(10), read_packet(&mut right)).await.is_err());
+    }
+
+    /// Записывает ТОЛЬКО наши определения для проверки обычным клиентом,
+    /// не содержимое официального JAR/датапака. См. probe_registry_client.py.
+    #[tokio::test]
+    #[ignore = "экспорт собственных Configuration-пакетов для живого клиентского теста"]
+    async fn export_registry_client_probe() {
+        use mcsa_protocol::{JavaVersion, Negotiated};
+        use super::super::connection::CryptoStream;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let peer = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let mut peer = CryptoStream::new(peer);
+        let mut stream = CryptoStream::new(listener.accept().await.unwrap().0);
+        stream.protocol = Some(Negotiated { client: JavaVersion::V26_3, native: mcsa_protocol::wire::INTERNAL });
+        let reader = tokio::spawn(async move {
+            let mut bodies = Vec::new();
+            loop {
+                let packet = read_packet(&mut peer).await.unwrap();
+                let done = packet.id == FINISH_CONFIGURATION;
+                bodies.push(packet.body.iter().map(|b| format!("{b:02x}")).collect::<String>());
+                if done { return bodies; }
+            }
+        });
+        send_brand(&mut stream).await.unwrap();
+        send_known_packs(&mut stream).await.unwrap();
+        send_registry_data(&mut stream).await.unwrap();
+        send_update_tags(&mut stream).await.unwrap();
+        send_finish_configuration(&mut stream).await.unwrap();
+        let bodies = reader.await.unwrap();
+        assert_eq!(bodies.len(), 31);
+        std::fs::create_dir_all("tmp").unwrap();
+        std::fs::write("tmp/registry-client-26.3.json", serde_json::to_vec_pretty(&bodies).unwrap()).unwrap();
+    }
 
     /// minecraft:brand: номер пакета, имя канала, строка с названием.
     #[test]
@@ -930,3 +1176,7 @@ mod tests {
         assert_eq!(read_look(&[]), None);
     }
 }
+
+#[cfg(test)]
+#[path = "configuration_776_tests.rs"]
+mod probe_776_tests;

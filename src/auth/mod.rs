@@ -48,7 +48,6 @@ pub struct Service {
     state: Mutex<State>,
     operation: Mutex<()>,
     guard: Option<guard::Guard>,
-    pub premium: premium::Detector,
 }
 
 #[derive(Clone)]
@@ -81,7 +80,7 @@ impl Service {
         }
         // Создание файла проверяет доступность записи до первого подключения.
         store.save(&db)?;
-        Ok(Self { state: Mutex::new(State { store, db, limits: Limits::default(), sessions: HashMap::new() }), operation:Mutex::new(()), guard, premium: premium::Detector::default() })
+        Ok(Self { state: Mutex::new(State { store, db, limits: Limits::default(), sessions: HashMap::new() }), operation:Mutex::new(()), guard })
     }
     pub fn identity(&self, name: &str, verified_uuid: Option<[u8; 16]>) -> Identity {
         let state = self.state.lock().expect("auth");

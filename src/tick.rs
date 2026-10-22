@@ -9,6 +9,8 @@
 // каждом такте отдаёт те, которым пора. Поэтому стоящая вода ничего не стоит:
 // пока её никто не трогает, проверять нечего.
 
+mod idle;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -170,6 +172,7 @@ async fn run(shared: Arc<Shared>) {
     // начинаем сетку заново, иначе после долгой заминки мир мчался бы
     // рывком.
     let mut next = tokio::time::Instant::now();
+    let mut presence = shared.players.lock().expect("игроки").presence();
     let mut ticks: u64 = 0;
     let mut phases = PhaseStats::default();
     let mut mob_rng = crate::mob::Rng::new(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |passed| passed.as_nanos() as u64));
@@ -178,8 +181,12 @@ async fn run(shared: Arc<Shared>) {
     let mut morning_due = false;
 
     loop {
-        tokio::time::sleep_until(next).await;
-
+        // Пауза пустого сервера сильнее freeze/step/sprint: их счётчики ждут
+        // входа игрока; функции и плагины тоже не тикают в пустом мире.
+        if let Some(paused) = idle::wait_tick(&shared, &mut presence, next).await {
+            next = tokio::time::Instant::now();
+            shared.world_cmd.ticking.lock().expect("такт").resumed_after_idle(paused);
+        }
         let behind = tokio::time::Instant::now().saturating_duration_since(next);
 
         if behind > CATCH_UP_LIMIT {
@@ -615,6 +622,20 @@ impl PhaseStats {
     }
 }
 
+/// Событие шага (частота 1) отдельно от приземления: у ковра ноги на y+1/16,
+/// прежнее y-0.2 попадает в подложку. Мох не меняет прежний выбор подложки.
+fn quiet_step_at(world: &World, at: redstone::sculk_family::Point) -> bool {
+    let x = at.0.floor() as i32; let z = at.2.floor() as i32;
+    let feet = world.get_block(x, at.1.floor() as i32, z);
+    // Допуск только для выбранной высоты контакта, не модель физики опоры.
+    let carpet_contact = (at.1 - (at.1.floor() + 1.0 / 16.0)).abs() <= 1.0e-5;
+    if carpet_contact && blocks::block_at_state(feet).is_some_and(|name| name.ends_with("_carpet") && redstone::sculk_family::quiet_block(name)) {
+        return true;
+    }
+    let below = world.get_block(x, (at.1 - 0.2).floor() as i32, z);
+    redstone::sculk_family::quiet_step_state(world.catalog(), below)
+}
+
 /// Снимки для скалка: UUID переживает выход и смену измерения; шаги берутся
 /// из движения, а не из звуков. [проверить] порог шага настоящего клиента.
 fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
@@ -647,7 +668,9 @@ fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
             if unsettled > 0 || distance > 8.0 { continue; }
             let cell = (player.at.0.floor() as i32, (player.at.1 - 0.2).floor() as i32, player.at.2.floor() as i32);
             let floor = blocks::block_at_state(world.get_block(cell.0, cell.1, cell.2)).unwrap_or("air");
-            if sculk_family::quiet_block(floor) || player.sneaking { continue; }
+            let quiet = if ground && was_ground { quiet_step_at(world, player.at) }
+                else { sculk_family::quiet_block(floor) };
+            if quiet || player.sneaking { continue; }
             let walked = walked + distance * 0.6;
             if ground && (!was_ground || walked >= 1.0) {
                 redstone::game_event_from(world, player.at, if was_ground { 1 } else { 2 }, Some(player.id), false);
@@ -669,9 +692,15 @@ fn sculk_finish(shared: &Shared, dimension: Dimension, world: &mut World, ticks:
             redstone::sculk_family::feed(world, charge.catalyst, charge.at, charge.amount);
         }
         for event in std::mem::take(&mut items.vibrations) {
-            // Шаги и приземления мобов на шерсти так же тихи, как у игроков.
+            // Событие шага моба использует ту же политику; обычной проверки мобов не было.
+            // Приземление (частота 2) остаётся на прежнем пути без обобщения шага.
             let floor = world.get_block(event.at.0.floor() as i32, (event.at.1 - 0.2).floor() as i32, event.at.2.floor() as i32);
-            if matches!(event.frequency, 1 | 2) && blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block) { continue; }
+            let quiet = match event.frequency {
+                1 => quiet_step_at(world, event.at),
+                2 => blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block),
+                _ => false,
+            };
+            if quiet { continue; }
             redstone::game_event_from(world, event.at, event.frequency, event.source, event.projectile);
         }
     }
@@ -951,6 +980,7 @@ fn step_frames(shared: &Shared, dimension: Dimension, world: &mut World) {
 pub struct MobView<'a>(pub &'a World);
 
 impl crate::mob::View for MobView<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() }
     fn biome(&self, x: i32, y: i32, z: i32) -> &'static str { self.0.mob_biome(x,y,z) }
     fn griefing(&self) -> bool { self.0.wildlife_griefing }
     fn raining(&self) -> bool { !self.0.is_nether() && !self.0.is_end() && self.0.weather.is_raining() }
@@ -2570,6 +2600,9 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Посев — несколько стопок (farming.rs), прочее — одна.
         let stacks = match crate::farming::harvest(world, state, 0) {
             Some(stacks) => stacks,
+            // Блоки каталога 26.3 (шип серы): выпадение по каталогу мира, без инструмента.
+            None if matches!(world.catalog().block_entry(state), Ok(Some(_))) =>
+                world.catalog().drops_by_luck(state, None, luck).ok().flatten().into_iter().collect(),
             None => blocks::world_drops(state, luck).into_iter().collect(),
         };
 
@@ -3099,7 +3132,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     let wanted = {
         let view = |x, y, z| world.get_block(x, y, z);
 
-        fluids::in_world(world.is_nether(), || fluids::update((x, y, z), &view))
+        fluids::in_world(world.is_nether(), || fluids::update_with_catalog((x, y, z), &view, world.catalog()))
     };
 
     if let Some(state) = wanted {
@@ -3120,7 +3153,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     let targets = {
         let view = |x, y, z| world.get_block(x, y, z);
 
-        fluids::in_world(world.is_nether(), || fluids::spreading((x, y, z), &view))
+        fluids::in_world(world.is_nether(), || fluids::spreading_with_catalog((x, y, z), &view, world.catalog()))
     };
 
     for ((tx, ty, tz), state) in targets {
@@ -3922,3 +3955,7 @@ mod tests {
         assert!(quiet.items_in(overworld).lock().unwrap().mobs().is_empty(), "правило выключено — никого");
     }
 }
+
+#[cfg(test)]
+#[path = "tick/sculk_step_tests.rs"]
+mod sculk_step_tests;

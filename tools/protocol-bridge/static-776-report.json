@@ -1,0 +1,434 @@
+{
+  "counts": {
+    "Block": {
+      "775": 1168,
+      "776": 1196,
+      "777": 1286
+    },
+    "BlockState": {
+      "775": 29873,
+      "776": 32366,
+      "777": 35723
+    },
+    "Component": {
+      "775": 110,
+      "776": 111,
+      "777": 122
+    },
+    "Entity": {
+      "775": 157,
+      "776": 158,
+      "777": 161
+    },
+    "Item": {
+      "775": 1506,
+      "776": 1537,
+      "777": 1658
+    },
+    "Particle": {
+      "775": 117,
+      "776": 125,
+      "777": 128
+    }
+  },
+  "examples": [
+    {
+      "ids": {
+        "775": null,
+        "776": 998,
+        "777": 1088
+      },
+      "name": "sulfur",
+      "registry": "Block"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 1052,
+        "777": 1140
+      },
+      "name": "sulfur_cube_bucket",
+      "registry": "Item"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 1342,
+        "777": 1463
+      },
+      "name": "music_disc_bounce",
+      "registry": "Item"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 130,
+        "777": 133
+      },
+      "name": "sulfur_cube",
+      "registry": "Entity"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 78,
+        "777": 80
+      },
+      "name": "sulfur_cube_content",
+      "registry": "Component"
+    },
+    {
+      "ids": {
+        "775": 45,
+        "776": 45,
+        "777": null
+      },
+      "name": "map_color",
+      "registry": "Component"
+    },
+    {
+      "ids": {
+        "775": 40,
+        "776": 40,
+        "777": null
+      },
+      "name": "swing_animation",
+      "registry": "Component"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 124,
+        "777": 127
+      },
+      "name": "sulfur_cube_goo",
+      "registry": "Particle"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 115,
+        "777": 118
+      },
+      "name": "trial_spawner_detection",
+      "registry": "Particle"
+    },
+    {
+      "ids": {
+        "775": 108,
+        "776": null,
+        "777": null
+      },
+      "name": "trial_spawner_detected_player",
+      "registry": "Particle"
+    },
+    {
+      "ids": {
+        "775": null,
+        "776": 25926,
+        "777": 29283
+      },
+      "name": "cinnabar",
+      "registry": "BlockState"
+    }
+  ],
+  "format": 1,
+  "missing_target_sentinel": 65535,
+  "new_unique_arrays": 24,
+  "raw_static_u16_bytes": 285990,
+  "routes": [
+    {
+      "from": 775,
+      "mapped": 1506,
+      "raw_u16_bytes": 3012,
+      "registry": "Item",
+      "reused_existing_array": false,
+      "source_count": 1506,
+      "symbol": "ITEM_775_TO_776",
+      "to": 776
+    },
+    {
+      "from": 776,
+      "mapped": 1506,
+      "raw_u16_bytes": 3074,
+      "registry": "Item",
+      "reused_existing_array": false,
+      "source_count": 1537,
+      "symbol": "ITEM_776_TO_775",
+      "to": 775
+    },
+    {
+      "from": 776,
+      "mapped": 1537,
+      "raw_u16_bytes": 3074,
+      "registry": "Item",
+      "reused_existing_array": false,
+      "source_count": 1537,
+      "symbol": "ITEM_776_TO_777",
+      "to": 777
+    },
+    {
+      "from": 777,
+      "mapped": 1537,
+      "raw_u16_bytes": 3316,
+      "registry": "Item",
+      "reused_existing_array": false,
+      "source_count": 1658,
+      "symbol": "ITEM_777_TO_776",
+      "to": 776
+    },
+    {
+      "from": 775,
+      "mapped": 1168,
+      "raw_u16_bytes": 2336,
+      "registry": "Block",
+      "reused_existing_array": false,
+      "source_count": 1168,
+      "symbol": "BLOCK_775_TO_776",
+      "to": 776
+    },
+    {
+      "from": 776,
+      "mapped": 1168,
+      "raw_u16_bytes": 2392,
+      "registry": "Block",
+      "reused_existing_array": false,
+      "source_count": 1196,
+      "symbol": "BLOCK_776_TO_775",
+      "to": 775
+    },
+    {
+      "from": 776,
+      "mapped": 1196,
+      "raw_u16_bytes": 2392,
+      "registry": "Block",
+      "reused_existing_array": false,
+      "source_count": 1196,
+      "symbol": "BLOCK_776_TO_777",
+      "to": 777
+    },
+    {
+      "from": 777,
+      "mapped": 1196,
+      "raw_u16_bytes": 2572,
+      "registry": "Block",
+      "reused_existing_array": false,
+      "source_count": 1286,
+      "symbol": "BLOCK_777_TO_776",
+      "to": 776
+    },
+    {
+      "from": 775,
+      "mapped": 29873,
+      "raw_u16_bytes": 59746,
+      "registry": "BlockState",
+      "reused_existing_array": false,
+      "source_count": 29873,
+      "symbol": "BLOCKSTATE_775_TO_776",
+      "to": 776
+    },
+    {
+      "from": 776,
+      "mapped": 29873,
+      "raw_u16_bytes": 64732,
+      "registry": "BlockState",
+      "reused_existing_array": false,
+      "source_count": 32366,
+      "symbol": "BLOCKSTATE_776_TO_775",
+      "to": 775
+    },
+    {
+      "from": 776,
+      "mapped": 32366,
+      "raw_u16_bytes": 64732,
+      "registry": "BlockState",
+      "reused_existing_array": false,
+      "source_count": 32366,
+      "symbol": "BLOCKSTATE_776_TO_777",
+      "to": 777
+    },
+    {
+      "from": 777,
+      "mapped": 32366,
+      "raw_u16_bytes": 71446,
+      "registry": "BlockState",
+      "reused_existing_array": false,
+      "source_count": 35723,
+      "symbol": "BLOCKSTATE_777_TO_776",
+      "to": 776
+    },
+    {
+      "from": 775,
+      "mapped": 157,
+      "raw_u16_bytes": 314,
+      "registry": "Entity",
+      "reused_existing_array": false,
+      "source_count": 157,
+      "symbol": "ENTITY_775_TO_776",
+      "to": 776
+    },
+    {
+      "from": 776,
+      "mapped": 157,
+      "raw_u16_bytes": 316,
+      "registry": "Entity",
+      "reused_existing_array": false,
+      "source_count": 158,
+      "symbol": "ENTITY_776_TO_775",
+      "to": 775
+    },
+    {
+      "from": 776,
+      "mapped": 158,
+      "raw_u16_bytes": 316,
+      "registry": "Entity",
+      "reused_existing_array": false,
+      "source_count": 158,
+      "symbol": "ENTITY_776_TO_777",
+      "to": 777
+    },
+    {
+      "from": 777,
+      "mapped": 158,
+      "raw_u16_bytes": 322,
+      "registry": "Entity",
+      "reused_existing_array": false,
+      "source_count": 161,
+      "symbol": "ENTITY_777_TO_776",
+      "to": 776
+    },
+    {
+      "from": 775,
+      "mapped": 110,
+      "raw_u16_bytes": 220,
+      "registry": "Component",
+      "reused_existing_array": false,
+      "source_count": 110,
+      "symbol": "COMPONENT_775_TO_776",
+      "to": 776
+    },
+    {
+      "from": 776,
+      "mapped": 110,
+      "raw_u16_bytes": 222,
+      "registry": "Component",
+      "reused_existing_array": false,
+      "source_count": 111,
+      "symbol": "COMPONENT_776_TO_775",
+      "to": 775
+    },
+    {
+      "from": 776,
+      "mapped": 109,
+      "raw_u16_bytes": 222,
+      "registry": "Component",
+      "reused_existing_array": false,
+      "source_count": 111,
+      "symbol": "COMPONENT_776_TO_777",
+      "to": 777
+    },
+    {
+      "from": 777,
+      "mapped": 109,
+      "raw_u16_bytes": 244,
+      "registry": "Component",
+      "reused_existing_array": false,
+      "source_count": 122,
+      "symbol": "COMPONENT_777_TO_776",
+      "to": 776
+    },
+    {
+      "from": 775,
+      "mapped": 115,
+      "raw_u16_bytes": 234,
+      "registry": "Particle",
+      "reused_existing_array": false,
+      "source_count": 117,
+      "symbol": "PARTICLE_775_TO_776",
+      "to": 776
+    },
+    {
+      "from": 776,
+      "mapped": 115,
+      "raw_u16_bytes": 250,
+      "registry": "Particle",
+      "reused_existing_array": false,
+      "source_count": 125,
+      "symbol": "PARTICLE_776_TO_775",
+      "to": 775
+    },
+    {
+      "from": 776,
+      "mapped": 125,
+      "raw_u16_bytes": 250,
+      "registry": "Particle",
+      "reused_existing_array": false,
+      "source_count": 125,
+      "symbol": "PARTICLE_776_TO_777",
+      "to": 777
+    },
+    {
+      "from": 777,
+      "mapped": 125,
+      "raw_u16_bytes": 256,
+      "registry": "Particle",
+      "reused_existing_array": false,
+      "source_count": 128,
+      "symbol": "PARTICLE_777_TO_776",
+      "to": 776
+    }
+  ],
+  "rust_source_sha256": "d0ab5a4b414c26bee747217e1dbcf76da6dd665008b7cb87d6b7e082ddceca8d",
+  "scope": "Candidate static IDs only; Attribute uses separate observed mapping; existing775↔777 tables unchanged; packet codecs/admission not enabled.",
+  "source_presence": "dense_count verified; reject holes/maxID>=65535 before generation",
+  "sources": {
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/blocks.json": {
+      "bytes": 888788,
+      "sha256": "91f493ed14a8ff06bbfc7835313b1f1148c2fea6ea0c0affae48ad2b42350ddd"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json": {
+      "bytes": 88789,
+      "sha256": "6ea2d04f7f78ea56fa3db8453dd62c4b6021b5eef01994e24e3e3e5f6c28295d"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/items.json": {
+      "bytes": 193004,
+      "sha256": "a0b334b6e8f9583f8d2ae07fb65c201022ee06b1e8a43beb556140e9d8ef2743"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json": {
+      "bytes": 339684,
+      "sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/blocks.json": {
+      "bytes": 976252,
+      "sha256": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/entities.json": {
+      "bytes": 90138,
+      "sha256": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/items.json": {
+      "bytes": 207286,
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/protocol.json": {
+      "bytes": 347504,
+      "sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727"
+    },
+    "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/23303d2350177f2084f94cd38e5d7c8e54dfc8d3/data/pc/26.1/protocol.json": {
+      "bytes": 337869,
+      "sha256": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3"
+    },
+    "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/58d24389309b26db59454cf8b7813ad688beeb55/data/pc/26.1/entities.json": {
+      "bytes": 88062,
+      "sha256": "e65d88a15fac5fc090cb2555c8cddaa80d9daf8c554d252680cec60a1d6eefc3"
+    },
+    "tools/data/blocks.json": {
+      "bytes": 860277,
+      "sha256": "573e172619f3c1ca64e15d07799ab646e1fd9ad19d759d9ceca65ac4fc7440a9"
+    },
+    "tools/data/items.json": {
+      "bytes": 189396,
+      "sha256": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e"
+    }
+  }
+}

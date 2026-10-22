@@ -929,6 +929,9 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
         let multiplier = f32::from_be_bytes(take(4)?.try_into().ok()?);
         let reward_exp = take(1)?[0] != 0;
 
+        // Только нулевые item/count вместе означают отсутствие второго входа.
+        if v[0] <= 0 || v[1] <= 0 || v[4] <= 0 || v[5] <= 0
+            || v[2] < 0 || v[3] < 0 || (v[2] == 0) != (v[3] == 0) { return None; }
         offers.push(Offer {
             buy: Stack::new(v[0], v[1]),
             buy_b: (v[3] > 0).then(|| Stack::new(v[2], v[3])),
@@ -1194,5 +1197,34 @@ mod tests {
             assert!((3..=6).contains(&reward(&mut rng, false)));
             assert!((8..=11).contains(&reward(&mut rng, true)));
         }
+    }
+}
+
+#[cfg(test)]
+mod strict_offer_storage_tests {
+    use super::*;
+    #[test]
+    fn raw_trade_counts_refuse_invalid_present_stacks_and_inconsistent_optional_input() {
+        let stone = crate::blocks::item_named("stone").unwrap();
+        let mut state = State::new();
+        state.offers.push(Offer { buy: Stack::new(stone, 3), buy_b: None, sell: Stack::new(stone, 2),
+            uses: 0, max_uses: 12, xp: 1, reward_exp: true, multiplier: 0.05, special: 0, demand: 0 });
+        let mut valid = Vec::new(); write(&state, &mut valid);
+        let mut needle = Vec::new();
+        for value in [stone, 3, 0, 0, stone, 2] { needle.extend(value.to_be_bytes()); }
+        let offsets: Vec<_> = valid.windows(needle.len()).enumerate().filter_map(|(i,b)| (b == needle).then_some(i)).collect();
+        assert_eq!(offsets.len(), 1);
+        let at = offsets[0];
+        let back = read(&mut valid.as_slice()).unwrap();
+        assert_eq!(back.offers[0].buy, state.offers[0].buy);
+        assert_eq!(back.offers[0].buy_b, None);
+        assert_eq!(back.offers[0].sell, state.offers[0].sell);
+        for (field, value) in [(1,0), (1,-1), (5,0), (5,-1), (2,stone), (3,-1), (3,1)] {
+            let mut bad = valid.clone(); bad[at+field*4..at+field*4+4].copy_from_slice(&value.to_be_bytes());
+            assert!(read(&mut bad.as_slice()).is_none(), "поле{field}, значение{value}");
+        }
+        state.offers[0].buy_b = Some(Stack::new(stone, 1));
+        let mut two_inputs = Vec::new(); write(&state, &mut two_inputs);
+        assert_eq!(read(&mut two_inputs.as_slice()).unwrap().offers[0].buy_b, state.offers[0].buy_b);
     }
 }

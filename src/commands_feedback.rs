@@ -34,9 +34,9 @@ pub(crate) fn setblock(changed: bool, x: i32, y: i32, z: i32) -> Answer {
 /// tmp/bb/cmd-attribute.md:30: количество, название с show_item и имя игрока.
 /// [проверить] редкость, особые названия и компоненты предмета при наведении
 /// требуют отдельных записей; здесь подтверждён обычный незачарованный меч.
-pub(crate) fn give(stack: Stack, targets: &[([u8; 16], String)]) -> Answer {
-    let name = crate::blocks::item_name(stack.item).unwrap_or("air");
-    let kind = if crate::blocks::state_by_name(name).is_some() { "block" } else { "item" };
+pub(crate) fn give(catalog: crate::gameplay_catalog::Catalog, stack: Stack, targets: &[([u8; 16], String)]) -> Answer {
+    let name = catalog.name(crate::gameplay_catalog::Kind::Item, stack.item).unwrap_or("air");
+    let kind = if catalog.default_state(name).ok().flatten().is_some() { "block" } else { "item" };
     let label = obj(vec![
         ("text", s("")),
         ("extra", Tag::List(vec![translate(&format!("{}.minecraft.{}", kind, name), vec![])])),
@@ -82,7 +82,7 @@ mod tests {
         use crate::network::nbt::Compound;
         let uuid = [0; 16];
         let stack = Stack::new(crate::blocks::item_named("diamond_sword").unwrap(), 1);
-        let answer = give(stack, &[(uuid, "blackbox".to_string())]);
+        let answer = give(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), stack, &[(uuid, "blackbox".to_string())]);
         let item = Compound::new()
             .compounds("with", vec![Compound::new()
                 .compounds("extra", vec![Compound::new().string("translate", "item.minecraft.diamond_sword")])

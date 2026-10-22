@@ -1,0 +1,69 @@
+{
+  "pull_request": "https://github.com/PrismarineJS/minecraft-data/pull/1301",
+  "merged": false,
+  "commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+  "files": [
+    {
+      "file": "version.json",
+      "bytes": 104,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/version.json",
+      "sha256": "0d08bd2b5bce95b84405b8d39d259a365663789d22e968bdbdad9a2d4b2cc45f"
+    },
+    {
+      "file": "protocol.json",
+      "bytes": 347504,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/protocol.json",
+      "sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727"
+    },
+    {
+      "file": "blocks.json",
+      "bytes": 976252,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/blocks.json",
+      "sha256": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873"
+    },
+    {
+      "file": "items.json",
+      "bytes": 207286,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/items.json",
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+    },
+    {
+      "file": "entities.json",
+      "bytes": 90138,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/entities.json",
+      "sha256": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+    },
+    {
+      "file": "foods.json",
+      "bytes": 9319,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/foods.json",
+      "sha256": "77da85a0f07aed8a2b1997d6d7b28d32f36d93f6fec703c1442494665218ed9e"
+    },
+    {
+      "file": "recipes.json",
+      "bytes": 412775,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/recipes.json",
+      "sha256": "173c3b7cfbf1cc9e2a189fe5a3384c22a536d8b90a659850da336739eca38a6d"
+    },
+    {
+      "file": "blockCollisionShapes.json",
+      "bytes": 1864249,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/blockCollisionShapes.json",
+      "sha256": "3dcb8f07c528975a50c27c091351678d22ef64ceb64b08a71c83839924d6047e"
+    }
+  ],
+  "baseline_files": [
+    {
+      "file": "protocol-26.1.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/23303d2350177f2084f94cd38e5d7c8e54dfc8d3/data/pc/26.1/protocol.json",
+      "bytes": 337869,
+      "sha256": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3"
+    },
+    {
+      "file": "entities-26.1.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/58d24389309b26db59454cf8b7813ad688beeb55/data/pc/26.1/entities.json",
+      "bytes": 88062,
+      "sha256": "e65d88a15fac5fc090cb2555c8cddaa80d9daf8c554d252680cec60a1d6eefc3"
+    }
+  ]
+}

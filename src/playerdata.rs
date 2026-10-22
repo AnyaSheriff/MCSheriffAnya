@@ -16,7 +16,11 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::inventory::Inventory;
+use crate::gameplay_catalog::{Catalog, Profile, StackError, StackLocation, StackProblem};
+#[cfg(test)]
 use crate::{log_info, log_warn};
+
+mod cursor;
 
 /// Подпись файла игрока: по ней сервер понимает, что файл его.
 const MAGIC: &[u8; 4] = b"MCPD";
@@ -43,7 +47,13 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// с пустым эндер-сундуком.
 /// Версия 8 — после эндер-сундука сущности попугаев на плечах.
 // Версия 9 — общий полученный опыт отдельно от очков шкалы (anvil-rename-repair).
-const FORMAT_VERSION: u32 = 9;
+/// Версия 10 — отдельный ограниченный хвост курсора после общего опыта.
+/// Старое ядро v9 не читает v10: обратный переход требует резервной копии.
+/// Версия 11 — новые полные записи мобов внутри переносимых ульев;
+/// старые читатели должны отвергнуть файл до изменения инвентаря.
+pub(crate) const FORMAT_VERSION: u32 = 11;
+const CURSOR_VERSION: u32 = 10;
+const TOTAL_EXPERIENCE_VERSION: u32 = 9;
 const SHOULDERS_VERSION: u32 = 8;
 const ENDER_VERSION: u32 = 7;
 
@@ -264,47 +274,117 @@ pub fn path_for(directory: &Path, uuid: &[u8; 16]) -> PathBuf {
     directory.join(format!("{}.mcrw", name))
 }
 
-/// Читает данные игрока.
-///
-/// None означает, что файла нет или он не читается: тогда игрок заходит как
-/// в первый раз. Ронять сервер из-за испорченного файла незачем — терять
-/// при этом нечего, кроме положения одного игрока.
-pub fn load(directory: &Path, uuid: &[u8; 16]) -> Option<PlayerData> {
-    let path = path_for(directory, uuid);
+/// Причина отказа, которую нельзя заменить входом с пустыми данными.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LoadError { UnsupportedLayout(u32), InvalidData, ReadFailure(io::ErrorKind), IncompatibleInventory(StackError) }
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self { Self::UnsupportedLayout(version) => write!(f,
+            "раскладка файла игрока {version} не поддержана; вход остановлен без изменения сохранения"),
+            Self::InvalidData => write!(f, "файл игрока повреждён или не может быть прочитан без потери данных"),
+            Self::ReadFailure(kind) => write!(f, "ошибка чтения файла игрока: {kind:?}"),
+            Self::IncompatibleInventory(error) => write!(f, "несовместимые предметы игрока: {error}"),
+        }
+    }
+}
+impl std::error::Error for LoadError {}
 
+/// Missing остаётся новым игроком; неподдержанный заголовок требует отказа.
+/// Прежняя политика damaged/IO здесь намеренно не расширяется: этот срез
+/// различает только известные версии раскладки и не распознаёт профиль мира.
+#[cfg(test)]
+pub fn load_checked(directory: &Path, uuid: &[u8; 16]) -> Result<Option<PlayerData>, LoadError> {
+    let path = path_for(directory, uuid);
     let bytes = match fs::read(&path) {
         Ok(bytes) => bytes,
-        // Файла нет — игрок на сервере впервые.
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return None,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(e) => {
             log_warn!("Не удалось прочитать данные игрока ({}): {}", path.display(), e);
-            return None;
+            return Ok(None);
         }
     };
-
+    check_layout(&bytes)?;
     match parse(&bytes) {
         Some(data) => {
-            log_info!(
-                "Положение игрока прочитано из {}: {:.2} {:.2} {:.2}",
-                path.display(),
-                data.x,
-                data.y,
-                data.z
-            );
-            Some(data)
+            log_info!("Положение игрока прочитано из {}: {:.2} {:.2} {:.2}",
+                path.display(), data.x, data.y, data.z);
+            Ok(Some(data))
         }
         None => {
-            log_warn!(
-                "Файл игрока {} не читается, игрок зайдёт как в первый раз",
-                path.display()
-            );
-            None
+            log_warn!("Файл игрока {} не читается, игрок зайдёт как в первый раз", path.display());
+            Ok(None)
         }
     }
 }
 
+/// Только отсутствующий файл означает нового игрока. Любая другая ошибка
+/// останавливает вход и не даёт заменить сохранение пустыми данными.
+pub fn load_checked_for_catalog(directory: &Path, uuid: &[u8; 16], catalog: Catalog) -> Result<Option<PlayerData>, LoadError> {
+    let bytes = match fs::read(path_for(directory, uuid)) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(LoadError::ReadFailure(error.kind())),
+    };
+    check_layout(&bytes)?;
+    let data = parse_with_catalog(&bytes, Some(Catalog::new(Profile::Preview26_3))).ok_or(LoadError::InvalidData)?;
+    validate_player(&data, catalog).map_err(LoadError::IncompatibleInventory)?;
+    Ok(Some(data))
+}
+
+fn validate_player(data: &PlayerData, catalog: Catalog) -> Result<(), StackError> {
+    catalog.validate_inventory(&data.inventory)?;
+    if data.ender.len() != ENDER_SLOTS {
+        return Err(StackError { path: Vec::new(), problem: StackProblem::MalformedEncoding });
+    }
+    for (slot, stack) in data.ender.iter().enumerate() {
+        if let Some(stack) = stack {
+            catalog.validate_stack(stack).map_err(|mut error| { error.path.insert(0, StackLocation::Ender(slot)); error })?;
+        }
+    }
+    // Плечи содержат собственные записи Mob, а не доверенные произвольные bytes.
+    // Старые Parrot записи читаются прежним декодером без обратной перезаписи.
+    for (slot, stored) in data.shoulders.iter().enumerate() {
+        let Some(stored) = stored else { continue; };
+        let location = StackLocation::Shoulder(slot);
+        let malformed = || StackError { path: vec![location.clone()], problem: StackProblem::MalformedEncoding };
+        let mut rest = stored.as_slice();
+        let mob = crate::mob::Mob::read(&mut rest).ok_or_else(malformed)?;
+        if !rest.is_empty() || mob.kind != crate::mob::Kind::Parrot { return Err(malformed()); }
+        mob.validate_item_storage().map_err(|_| malformed())?;
+        catalog.validate_mob(&mob).map_err(|mut error| { error.path.insert(0, location); error })?;
+    }
+    Ok(())
+}
+
+fn check_layout(bytes: &[u8]) -> Result<(), LoadError> {
+    // Полного известного заголовка достаточно для несовместимости даже
+    // при обрезанном теле. Чужая подпись/обрезанный заголовок пока damaged.
+    if bytes.get(..4) == Some(MAGIC.as_slice())
+        && let Some(version) = take::<4>(bytes, 4).map(u32::from_be_bytes)
+        && !(OLD_FORMAT_VERSION..=FORMAT_VERSION).contains(&version) {
+        return Err(LoadError::UnsupportedLayout(version));
+    }
+    Ok(())
+}
+
+// Прежний Option helper сохранён только для unit fixtures. Runtime callers
+// обязаны обрабатывать LoadError через load_checked.
+#[cfg(test)]
+pub fn load(directory: &Path, uuid: &[u8; 16]) -> Option<PlayerData> {
+    load_checked(directory, uuid).ok().flatten()
+}
+
 /// Разбирает содержимое файла. None — файл не наш, другой версии или обрезан.
+#[cfg(test)]
 fn parse(bytes: &[u8]) -> Option<PlayerData> {
+    parse_with_catalog(bytes, None)
+}
+
+fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerData> {
+    let read_inventory = |bytes: &[u8]| match catalog {
+        Some(catalog) => Inventory::from_bytes_for_catalog(bytes, catalog).ok(),
+        None => Inventory::from_bytes(bytes),
+    };
     if bytes.len() < SIZE || &bytes[..4] != MAGIC {
         return None;
     }
@@ -315,21 +395,23 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
     // второй — без измерения; в третьей измерение — последний байт.
     let mut ender = empty_ender();
     let mut shoulders = [None,None];
-    let (inventory, dimension, vitals, respawn) = match version {
+    let mut saved_cursor = None;
+    let (mut inventory, dimension, vitals, respawn) = match version {
         OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
-        INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
+        INVENTORY_VERSION => (read_inventory(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
         DIMENSION_VERSION => {
             let (last, inventory) = bytes.get(SIZE..)?.split_last()?;
             let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
 
-            (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
+            (read_inventory(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | CURSOR_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
+            if version >= CURSOR_VERSION { saved_cursor = match catalog { Some(catalog) => cursor::take_for_catalog(catalog, &mut tail)?, None => cursor::take(&mut tail)? }; }
             let mut respawn = None;
             let mut seed = 0;
 
-            let total = if version >= FORMAT_VERSION {
+            let total = if version >= TOTAL_EXPERIENCE_VERSION {
                 let (rest, bytes) = tail.split_at(tail.len().checked_sub(4)?);
                 let total = i32::from_be_bytes(bytes.try_into().ok()?);
                 if total < 0 { return None; }
@@ -350,6 +432,13 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
                 let (rest, stored) = rest.split_at(rest.len().checked_sub(length)?);
 
                 ender = read_ender(stored)?;
+                if let Some(catalog) = catalog {
+                    // Старый read_ender ограничивает число; сверяем исходные bytes.
+                    let mut roundtrip = Vec::new();
+                    write_ender(&ender, &mut roundtrip);
+                    if roundtrip.get(..roundtrip.len().checked_sub(4)?)? != stored { return None; }
+                    for stack in ender.iter().flatten() { catalog.validate_stack(stack).ok()?; }
+                }
                 tail = rest;
             }
 
@@ -373,11 +462,12 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
             let mut vitals = SavedVitals { xp_seed: seed, ..SavedVitals::read(vitals)? };
             if let Some(total) = total { vitals.experience_total = total; }
 
-            (Inventory::from_bytes(inventory)?, dimension, vitals, respawn)
+            (read_inventory(inventory)?, dimension, vitals, respawn)
         }
         _ => return None,
     };
 
+    inventory.set_cursor(saved_cursor);
     Some(PlayerData {
         shoulders,
         x: f64::from_be_bytes(take(bytes, 8)?),
@@ -404,6 +494,7 @@ fn take<const N: usize>(bytes: &[u8], offset: usize) -> Option<[u8; N]> {
 /// Пишем во временный файл и переименовываем — так же, как сохраняется мир:
 /// если сервер упадёт посреди записи, на диске останется прежний целый файл,
 /// а не половина нового.
+#[cfg(test)]
 pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<()> {
     let path = path_for(directory, uuid);
     let out = encode(data)?;
@@ -412,7 +503,26 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     fs::rename(&temporary, &path)
 }
 
+/// Проверяет всё дерево до открытия временного файла.
+pub fn save_for_catalog(directory: &Path, uuid: &[u8; 16], data: &PlayerData, catalog: Catalog) -> io::Result<()> {
+    let out = encode_for_catalog(data, catalog)?;
+    let path = path_for(directory, uuid);
+    let temporary = path.with_extension("tmp");
+    fs::write(&temporary, out)?;
+    fs::rename(temporary, path)
+}
+
+fn encode_for_catalog(data: &PlayerData, catalog: Catalog) -> io::Result<Vec<u8>> {
+    validate_player(data, catalog).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    encode_inner(data, catalog)
+}
+
+#[cfg(test)]
 fn encode(data: &PlayerData) -> io::Result<Vec<u8>> {
+    encode_inner(data, Catalog::new(Profile::Java26_1_2))
+}
+
+fn encode_inner(data: &PlayerData, catalog: Catalog) -> io::Result<Vec<u8>> {
     let mut out = Vec::with_capacity(SIZE);
 
     out.extend_from_slice(MAGIC);
@@ -433,6 +543,11 @@ fn encode(data: &PlayerData) -> io::Result<Vec<u8>> {
     out.extend_from_slice(&shoulders);
     out.extend_from_slice(&(shoulders.len() as u32).to_be_bytes());
     out.extend_from_slice(&data.vitals.experience_total.to_be_bytes());
+    if catalog.profile() == Profile::Java26_1_2 {
+        cursor::append(data.inventory.cursor(), &mut out)?;
+    } else {
+        cursor::append_for_catalog(catalog, data.inventory.cursor(), &mut out)?;
+    }
 
     Ok(out)
 }
@@ -470,6 +585,67 @@ mod tests {
         }
     }
 
+    fn strip_cursor_tail(bytes: &mut Vec<u8>) {
+        let mut tail = bytes.as_slice();
+        cursor::take(&mut tail).expect("хвост курсора v10");
+        let length = tail.len();
+        bytes.truncate(length);
+        bytes[4..8].copy_from_slice(&TOTAL_EXPERIENCE_VERSION.to_be_bytes());
+    }
+
+    #[test]
+    fn cursor_encoding_failure_preserves_previous_player_file() {
+        let directory = test_directory("cursor-write-error");
+        let uuid = [234; 16];
+        let data = sample();
+        save(&directory, &uuid, &data).unwrap();
+        let original = fs::read(path_for(&directory, &uuid)).unwrap();
+        let invalid = crate::inventory::Stack::new(crate::blocks::item_named("diamond").unwrap(), 65);
+        let mut wrong = data.clone();
+        wrong.inventory.set_cursor(Some(invalid));
+        assert_eq!(save(&directory, &uuid, &wrong).unwrap_err().kind(), io::ErrorKind::InvalidData);
+        assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+        let oversized = crate::inventory::Stack::new(crate::blocks::item_named("diamond").unwrap(), 1)
+            .with_extras(crate::stackdata::Data { name: Some("a".repeat(65536)), ..Default::default() });
+        wrong.inventory.set_cursor(Some(oversized));
+        assert_eq!(save(&directory, &uuid, &wrong).unwrap_err().kind(), io::ErrorKind::InvalidData);
+        assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+        assert_eq!(load(&directory, &uuid), Some(data));
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn cursor_modifier_limit_never_replaces_the_file_with_truncated_components() {
+        let directory = test_directory("cursor-modifier-loss");
+        let uuid = [235; 16];
+        let data = sample();
+        save(&directory, &uuid, &data).unwrap();
+        let original = fs::read(path_for(&directory, &uuid)).unwrap();
+        let modifier_stack = |id: &str| {
+            // Этот вход допускает длинный id; cursor writer не должен
+            // превращать его в более короткий, даже если весь payload мал.
+            let spec = format!("diamond[attribute_modifiers=[{{type:attack_damage,id:\"{id}\",amount:2,operation:add_value,slot:mainhand}}]]");
+            let (_, extras) = crate::stackdata::parse_item_spec(&spec).unwrap();
+            crate::inventory::Stack::new(crate::blocks::item_named("diamond").unwrap(), 7).with_extras(extras)
+        };
+        for id in [format!("mcsa:{}", "a".repeat(251)), format!("mcsa:{}я", "a".repeat(249))] {
+            assert_eq!(id.len(), 256);
+            let mut invalid = data.clone();
+            invalid.inventory.set_cursor(Some(modifier_stack(&id)));
+            assert_eq!(save(&directory, &uuid, &invalid).unwrap_err().kind(), io::ErrorKind::InvalidData);
+            assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+            assert_eq!(load(&directory, &uuid), Some(data.clone()));
+        }
+        for id in [format!("mcsa:{}", "a".repeat(250)), format!("mcsa:{}я", "a".repeat(248))] {
+            assert_eq!(id.len(), 255);
+            let mut valid = data.clone();
+            valid.inventory.set_cursor(Some(modifier_stack(&id)));
+            save(&directory, &uuid, &valid).unwrap();
+            assert_eq!(load(&directory, &uuid), Some(valid));
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     #[test]
     fn earned_experience_survives_level_spending_and_version_eight_is_readable() {
         // anvil-rename-repair: опыт шкалы и общий опыт теперь независимы.
@@ -478,6 +654,7 @@ mod tests {
         data.vitals.experience_total = 0;
         let mut bytes = encode(&data).unwrap();
         assert_eq!(parse(&bytes), Some(data.clone()));
+        strip_cursor_tail(&mut bytes);
         bytes.truncate(bytes.len() - 4);
         bytes[4..8].copy_from_slice(&SHOULDERS_VERSION.to_be_bytes());
         data.vitals.experience_total = data.vitals.experience;
@@ -509,6 +686,7 @@ mod tests {
 
         // Прежняя версия (6): тот же файл без хвоста эндер-сундука.
         let mut old = fs::read(path_for(&directory, &[8; 16])).expect("прочитать");
+        strip_cursor_tail(&mut old);
         old.truncate(old.len() - 4); // общий опыт версии 9
         let tail = u32::from_be_bytes(old[old.len() - 4..].try_into().expect("длина")) as usize;
 
@@ -528,6 +706,7 @@ mod tests {
         parrot.small.variant=4; parrot.tame.owner=Some(uuid);
         let mut stored=Vec::new(); parrot.write(&mut stored); data.shoulders[0]=Some(stored);
         let mut old=encode(&data).unwrap(); assert_eq!(parse(&old),Some(data.clone()));
+        strip_cursor_tail(&mut old);
         old.truncate(old.len() - 4);
         let length=u32::from_be_bytes(old[old.len()-4..].try_into().unwrap()) as usize;
         old.truncate(old.len()-4-length); old[4..8].copy_from_slice(&ENDER_VERSION.to_be_bytes());
@@ -535,8 +714,158 @@ mod tests {
         assert_eq!(parse(&old),Some(data));
     }
 
+    fn shoulder_bytes(kind: crate::mob::Kind, stack: Option<crate::inventory::Stack>) -> Vec<u8> {
+        let mut mob = crate::mob::Mob::new(1, kind, (0.0, 1.0, 0.0));
+        if let Some(stack) = stack { mob.equipment = Some([Some(stack), None, None, None, None, None]); }
+        let mut stored = Vec::new(); mob.write(&mut stored); stored
+    }
+
+    #[test]
+    fn shoulder_catalog_checks_nested_gear_on_real_load_and_save_without_replacing_bytes() {
+        use crate::{inventory::Stack, gameplay_catalog::WHITE_SLAB_ITEM};
+        let directory = test_directory("shoulder-catalog"); let uuid = [215; 16];
+        let native = Catalog::new(Profile::Java26_1_2); let preview = Catalog::new(Profile::Preview26_3);
+        let path = path_for(&directory, &uuid);
+        for slot in 0..2 {
+            let clean = sample(); save_for_catalog(&directory, &uuid, &clean, native).unwrap();
+            let original = fs::read(&path).unwrap();
+            let inner = crate::stackdata::Content { slot: 0, item: WHITE_SLAB_ITEM, count: 1, data: None };
+            let gear = Stack::new(crate::blocks::item_named("shulker_box").unwrap(), 1).with_extras(crate::stackdata::Data { contents: vec![inner], ..Default::default() });
+            let mut data = sample(); data.shoulders[slot] = Some(shoulder_bytes(crate::mob::Kind::Parrot, Some(gear)));
+            assert!(save_for_catalog(&directory, &uuid, &data, native).is_err());
+            assert_eq!(fs::read(&path).unwrap(), original);
+            assert!(!path.with_extension("tmp").exists());
+            save_for_catalog(&directory, &uuid, &data, preview).unwrap();
+            let preview_bytes = fs::read(&path).unwrap();
+            assert_eq!(load_checked_for_catalog(&directory, &uuid, preview), Ok(Some(data.clone())));
+            let error = load_checked_for_catalog(&directory, &uuid, native).unwrap_err();
+            assert!(matches!(error, LoadError::IncompatibleInventory(StackError { path, .. }) if path == [StackLocation::Shoulder(slot), StackLocation::MobEquipment(0), StackLocation::Container(0)]));
+            assert_eq!(fs::read(&path).unwrap(), preview_bytes);
+            data.shoulders[slot] = Some(shoulder_bytes(crate::mob::Kind::Parrot, Some(Stack::new(999_999, 1))));
+            for catalog in [native, preview] { assert!(save_for_catalog(&directory, &uuid, &data, catalog).is_err()); }
+            assert_eq!(fs::read(&path).unwrap(), preview_bytes);
+            // Подготовка неподходящего файла намеренно обходит production-писатель.
+            fs::write(&path, encode_inner(&data, preview).unwrap()).unwrap();
+            let invalid_bytes = fs::read(&path).unwrap();
+            for catalog in [native, preview] { assert!(load_checked_for_catalog(&directory, &uuid, catalog).is_err()); }
+            assert_eq!(fs::read(&path).unwrap(), invalid_bytes);
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn malformed_shoulders_never_become_empty_or_overwrite_previous_player() {
+        use crate::{inventory::Stack, mob::{Mob, Kind}};
+        let directory = test_directory("shoulder-malformed"); let uuid = [216; 16];
+        let native = Catalog::new(Profile::Java26_1_2); let path = path_for(&directory, &uuid);
+        let valid = shoulder_bytes(Kind::Parrot, None);
+        let mut trailing = valid.clone(); trailing.push(0);
+        let mut truncated = valid.clone(); truncated.pop();
+        let mut annex_parrot = Mob::new(2, Kind::Parrot, (0.0, 1.0, 0.0));
+        annex_parrot.h.trial_gear = Some([Some(Stack::new(1, 2)), None, None]);
+        let mut unknown_schema = Vec::new(); annex_parrot.write(&mut unknown_schema);
+        // Annex: u32 длина, schema1, mask16, полная стопка и две пустых.
+        let annex = [0, 0, 0, 13, 1, 16, 1, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0];
+        assert!(unknown_schema.ends_with(&annex));
+        let schema = unknown_schema.len() - 13; unknown_schema[schema] = 2;
+        let malformed = [Vec::new(), truncated, trailing, shoulder_bytes(Kind::Cow, None), unknown_schema];
+        for (case, shoulder) in malformed.into_iter().enumerate() {
+            save_for_catalog(&directory, &uuid, &sample(), native).unwrap();
+            let original = fs::read(&path).unwrap();
+            let mut invalid = sample(); invalid.shoulders[case % 2] = Some(shoulder);
+            assert!(save_for_catalog(&directory, &uuid, &invalid, native).is_err());
+            assert_eq!(fs::read(&path).unwrap(), original);
+            fs::write(&path, encode_inner(&invalid, native).unwrap()).unwrap();
+            let before = fs::read(&path).unwrap();
+            assert!(load_checked_for_catalog(&directory, &uuid, native).is_err());
+            assert_eq!(fs::read(&path).unwrap(), before);
+        }
+        // Текущий простой Parrot использует прежнюю раскладку без annex.
+        let mut old = sample(); old.shoulders[0] = Some(valid);
+        let mut bytes = encode_inner(&old, native).unwrap(); bytes[4..8].copy_from_slice(&10u32.to_be_bytes());
+        fs::write(&path, &bytes).unwrap();
+        assert_eq!(load_checked_for_catalog(&directory, &uuid, native), Ok(Some(old)));
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     /// Старые раскладки строим напрямую: новый писатель не должен менять
     /// проверку совместимости при добавлении очередного хвоста файла.
+    #[test]
+    fn explicit_catalog_player_file_preserves_preview_items_and_refuses_downgrade() {
+        use crate::gameplay_catalog::slabs;
+        use crate::inventory::Stack;
+        let directory = test_directory("catalog_preview");
+        let uuid = [43; 16];
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        for row in slabs() {
+            let mut data = sample();
+            let slab = Stack::new(row.item, 37).with_extras(crate::stackdata::Data { name: Some(row.name.into()), ..Default::default() });
+            data.inventory.set_for_catalog(crate::inventory::FIRST_HOTBAR as usize, Some(slab), preview).unwrap();
+            data.inventory.set_cursor(Some(slab.with_count(11)));
+            data.ender[26] = Some(slab.with_count(23));
+            save_for_catalog(&directory, &uuid, &data, preview).unwrap();
+            let original = fs::read(path_for(&directory, &uuid)).unwrap();
+            assert_eq!(load_checked_for_catalog(&directory, &uuid, preview), Ok(Some(data.clone())), "{}", row.name);
+            assert!(matches!(load_checked_for_catalog(&directory, &uuid, base), Err(LoadError::IncompatibleInventory(_))));
+            assert!(save_for_catalog(&directory, &uuid, &data, base).is_err());
+            assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+            assert!(!path_for(&directory, &uuid).with_extension("tmp").exists());
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn explicit_player_reader_never_turns_existing_corruption_into_new_player() {
+        let directory = test_directory("catalog_corrupt");
+        let uuid = [44; 16];
+        let catalog = Catalog::new(Profile::Java26_1_2);
+        assert_eq!(load_checked_for_catalog(&directory, &uuid, catalog), Ok(None));
+        fs::write(path_for(&directory, &uuid), b"MCPD").unwrap();
+        assert_eq!(load_checked_for_catalog(&directory, &uuid, catalog), Err(LoadError::InvalidData));
+        let mut data = sample();
+        data.ender[0] = Some(crate::inventory::Stack::new(crate::blocks::item_named("stone").unwrap(), 65));
+        let original = fs::read(path_for(&directory, &uuid)).unwrap();
+        assert!(save_for_catalog(&directory, &uuid, &data, catalog).is_err());
+        assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn frozen_version_ten_cursor_and_empty_cursor_remain_readable_after_version_eleven() {
+        // Зафиксированный v10: слот36 stone5, выбран3, курсор stone7,
+        // seed77, experience1234/total4321. Не создаётся текущим encode().
+        const V10_HEX: &str = "4d4350440000000a40290000000000004050400000000000c00a00000000000042b40000c14000000000000103012400000001000000050041a000000000001440a00000000000000000012c0000000000000000000004d20000004d0000000000000000000000000000000000000000000000015b6e756c6c2c6e756c6c5d0000000b000010e101000000010000000700000009";
+        let original: Vec<u8> = V10_HEX.as_bytes().as_chunks::<2>().0.iter().map(|pair| {
+            u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()
+        }).collect();
+        let mut expected = sample();
+        expected.inventory.select(3);
+        expected.inventory.set(36, Some(crate::inventory::Stack::new(1, 5)));
+        expected.vitals.xp_seed = 77;
+        expected.vitals.experience = 1234;
+        expected.vitals.experience_total = 4321;
+        for cursor in [Some(crate::inventory::Stack::new(1, 7)), None] {
+            let mut bytes = original.clone();
+            if cursor.is_none() { bytes.truncate(bytes.len() - 13); bytes.extend([0, 0, 0, 0, 1]); }
+            expected.inventory.set_cursor(cursor);
+            assert_eq!(check_layout(&bytes), Ok(()));
+            assert_eq!(parse(&bytes), Some(expected.clone()));
+            assert_eq!(parse_with_catalog(&bytes, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()));
+            let rewritten = encode(&expected).unwrap();
+            assert_eq!(u32::from_be_bytes(rewritten[4..8].try_into().unwrap()), 11);
+            assert_eq!(parse(&rewritten), Some(expected.clone()));
+            assert_eq!(parse_with_catalog(&rewritten, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()));
+            // Старый курсор обязателен и в10, и в11: обрезка не превращается в None.
+            let mut damaged = bytes; damaged.pop();
+            assert!(parse(&damaged).is_none());
+        }
+        let mut future = original;
+        future[4..8].copy_from_slice(&12u32.to_be_bytes());
+        assert_eq!(check_layout(&future), Err(LoadError::UnsupportedLayout(12)));
+    }
+
     #[test]
     fn all_legacy_versions_preserve_their_saved_fields() {
         let mut data = sample();
@@ -545,11 +874,11 @@ mod tests {
         data.inventory.set(crate::inventory::FIRST_HOTBAR, Some(crate::inventory::Stack::new(stone, 12)));
         data.inventory.select(3);
         data.dimension = crate::dimension::Dimension::Nether;
-        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, experience_total: 1234, xp_seed: -77 };
+        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, experience_total: 6543, xp_seed: -77 };
         data.respawn = Some(crate::bed::RespawnPoint { dimension: crate::dimension::Dimension::Nether, pos: (3, 70, -9), yaw: -90.0, forced: false });
         data.ender[26] = Some(crate::inventory::Stack::new(stone, 64));
 
-        for version in OLD_FORMAT_VERSION..=ENDER_VERSION {
+        for version in OLD_FORMAT_VERSION..=TOTAL_EXPERIENCE_VERSION {
             let mut bytes = Vec::new();
             let mut expected = sample();
 
@@ -572,7 +901,7 @@ mod tests {
             }
             if version >= VITALS_VERSION {
                 data.vitals.write(&mut bytes);
-                expected.vitals = SavedVitals { xp_seed: 0, ..data.vitals };
+                expected.vitals = SavedVitals { xp_seed: 0, experience_total: data.vitals.experience, ..data.vitals };
             }
             if version >= XP_SEED_VERSION {
                 bytes.extend_from_slice(&data.vitals.xp_seed.to_be_bytes());
@@ -587,6 +916,17 @@ mod tests {
                 expected.ender = data.ender.clone();
             }
 
+            if version >= SHOULDERS_VERSION {
+                let shoulders = serde_json::to_vec(&data.shoulders).unwrap();
+                bytes.extend_from_slice(&shoulders);
+                bytes.extend_from_slice(&(shoulders.len() as u32).to_be_bytes());
+                expected.shoulders = data.shoulders.clone();
+            }
+            if version >= TOTAL_EXPERIENCE_VERSION {
+                bytes.extend_from_slice(&data.vitals.experience_total.to_be_bytes());
+                expected.vitals.experience_total = data.vitals.experience_total;
+            }
+            assert_eq!(parse_with_catalog(&bytes, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()), "строгая версия {version}");
             assert_eq!(parse(&bytes), Some(expected), "версия {version}");
         }
     }
@@ -763,6 +1103,7 @@ mod tests {
 
         let path = path_for(&directory, &[12; 16]);
         let mut bytes = fs::read(&path).expect("прочитать");
+        strip_cursor_tail(&mut bytes);
 
         bytes.truncate(bytes.len() - 4); // общий опыт версии 9
         // Сначала убираем попугаев и длину их записи, добавленные в версии 8.
@@ -827,3 +1168,7 @@ mod tests {
         assert_eq!(SavedVitals::read(&bytes[1..]), None);
     }
 }
+
+#[cfg(test)]
+#[path = "playerdata/incompatible_tests.rs"]
+mod incompatible_tests;

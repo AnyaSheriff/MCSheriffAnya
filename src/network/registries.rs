@@ -13,6 +13,9 @@
 // ключ перевода показывается как есть, отключения не происходит.
 
 use crate::network::nbt::Compound;
+#[path = "registry_transformers.rs"]
+mod transformers;
+pub use transformers::block_transformer;
 
 /// Звук в виде вложенной записи: `{sound_id: "..."}`.
 ///
@@ -107,8 +110,20 @@ pub fn jukebox_song(name: &str) -> Option<(f32, u8)> {
 /// Содержимое одной записи реестра. Возвращает None, если такой записи
 /// у нас нет — тогда отправлять её нельзя.
 pub fn entry(registry: &str, name: &str) -> Option<Compound> {
+    entry_for(mcsa_protocol::wire::INTERNAL, registry, name)
+}
+
+/// Собственные определения для версии клиента; состав и порядок реестров
+/// сохраняются. Изменения форматов: tools/research/registries-26.3.md.
+pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str) -> Option<Compound> {
+    if !matches!(version, mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) { return None; }
     let out = match registry {
         "minecraft:chat_type" => super::chat_types::entry(name)?,
+        "minecraft:decorated_pot_pattern" if version == mcsa_protocol::JavaVersion::V26_3 => {
+            crate::blocks::item_named(&format!("{name}_pottery_sherd"))?;
+            // Wiki Decorated pot pattern definition oldid3826756.
+            Compound::new().string("asset_id", &format!("minecraft:{name}_pottery_pattern"))
+        }
         "minecraft:cat_variant" => {
             // У кота нет поля модели.
             variant("cat", name, None)
@@ -209,8 +224,10 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
             out.empty_list("spawn_conditions")
         }
         // Материал отделки брони: имя набора картинок и название в подсказке.
-        "minecraft:trim_material" => Compound::new()
-            .string("asset_name", name)
+        "minecraft:trim_material" => (if version == mcsa_protocol::JavaVersion::V26_3 {
+                // Wiki Armor trim definition oldid3791545: "palette_id" с26.3.
+                Compound::new().string("palette_id", &format!("minecraft:trim/{name}"))
+            } else { Compound::new().string("asset_name", name) })
             .compound(
                 "description",
                 translate(&format!("trim_material.minecraft.{}", name)),
@@ -232,7 +249,10 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
             .float("use_duration", 7.0)
             .float("range", 256.0),
         "minecraft:jukebox_song" => {
-            let (_, length, comparator) = JUKEBOX_SONGS.iter().find(|(id, _, _)| *id == name)?;
+            let (length, comparator) = if matches!(version, mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) && name == "bounce" {
+                // Wiki Music Disc: Bounce 3:54, comparator8. Добавлена в26.2.
+                (234.0, 8)
+            } else { jukebox_song(name)? };
 
             Compound::new()
                 .compound("sound_event", sound(&format!("minecraft:music_disc.{}", name)))
@@ -240,8 +260,8 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                     "description",
                     translate(&format!("jukebox_song.minecraft.{}", name)),
                 )
-                .float("length_in_seconds", *length)
-                .int("comparator_output", *comparator)
+                .float("length_in_seconds", length)
+                .int("comparator_output", i32::from(comparator))
         }
         // Зачарование: клиент читает название и пределы, зачаровывать он не
         // будет. Действия (`effects`) считает сервер, поэтому их нет.
@@ -264,11 +284,11 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
             .string("asset_id", &format!("minecraft:{}", name))
             .string("translation_key", &format!("block.minecraft.banner.{}", name)),
         "minecraft:dimension_type" => match name {
-            "the_nether" => nether_type(),
-            "the_end" => end_type(),
-            _ => dimension_type(),
+            "the_nether" => nether_type(version),
+            "the_end" => end_type(version),
+            _ => dimension_type(version),
         },
-        "minecraft:worldgen/biome" => biome(name),
+        "minecraft:worldgen/biome" => biome(name, version),
         // У мировых часов нет ни одного поля: игра различает их только по имени.
         "minecraft:world_clock" => Compound::new(),
         "minecraft:timeline" => match name {
@@ -467,10 +487,23 @@ fn moon_timeline() -> Compound {
         )
 }
 
+/// С26.2 список ID допустим вместо тега (Wiki Dimension type oldid3650747).
+/// Клиент26.3 действительно разрешает ссылку на тег: без UpdateTags она
+/// отвергается. Явный список совпадает с нашей логикой src/fire.rs.
+fn infiniburn(out: Compound, version: mcsa_protocol::JavaVersion, dimension: &str) -> Compound {
+    // [проверить] Принятие собственного списка клиентом776: отдельный Finish Configuration ACK.
+    if matches!(version, mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) {
+        let blocks: &[&str] = if dimension == "end" {
+            &["minecraft:netherrack", "minecraft:magma_block", "minecraft:bedrock"]
+        } else { &["minecraft:netherrack", "minecraft:magma_block"] };
+        out.strings("infiniburn", blocks)
+    } else { out.string("infiniburn", &format!("#minecraft:infiniburn_{dimension}")) }
+}
+
 /// Обычный мир: высота, освещение и всё, от чего зависит расчёт света
 /// и координат. Значения — ванильные, из таблицы на вики.
-fn dimension_type() -> Compound {
-    Compound::new()
+fn dimension_type(version: mcsa_protocol::JavaVersion) -> Compound {
+    let out = Compound::new()
         .boolean("has_skylight", true)
         .boolean("has_ceiling", false)
         .boolean("has_ender_dragon_fight", false)
@@ -482,8 +515,8 @@ fn dimension_type() -> Compound {
         .int("logical_height", 384)
         // Предел света для спавна монстров: спавна у нас нет, годится число.
         .int("monster_spawn_light_level", 7)
-        .int("monster_spawn_block_light_limit", 0)
-        .string("infiniburn", "#minecraft:infiniburn_overworld")
+        .int("monster_spawn_block_light_limit", 0);
+    infiniburn(out, version, "overworld")
         .string("skybox", "overworld")
         .string("cardinal_light", "default")
         // Свойства среды: без них небо чёрное. Значение по умолчанию
@@ -508,8 +541,8 @@ fn dimension_type() -> Compound {
 /// стоит (вики, Dimension type). Высота — та же сетка −64..320, что у
 /// обычного мира: так у всех измерений общий формат чанков, а сам Незер
 /// заполнен от 0 до 127 — это и есть его логическая высота.
-fn nether_type() -> Compound {
-    Compound::new()
+fn nether_type(version: mcsa_protocol::JavaVersion) -> Compound {
+    let out = Compound::new()
         .boolean("has_skylight", false)
         .boolean("has_ceiling", true)
         .boolean("has_ender_dragon_fight", false)
@@ -520,8 +553,8 @@ fn nether_type() -> Compound {
         .int("height", 384)
         .int("logical_height", 128)
         .int("monster_spawn_light_level", 7)
-        .int("monster_spawn_block_light_limit", 15)
-        .string("infiniburn", "#minecraft:infiniburn_nether")
+        .int("monster_spawn_block_light_limit", 15);
+    infiniburn(out, version, "nether")
         .string("skybox", "none")
         .string("cardinal_light", "nether")
         .compound(
@@ -538,8 +571,8 @@ fn nether_type() -> Compound {
 /// измерений, а заполнен он от 0 до 255 — логическая высота 256.
 /// Небесный свет в Энде есть (has_skylight: true), поэтому острова
 /// освещены сверху, а пустота под ними — нет только по падению света.
-fn end_type() -> Compound {
-    Compound::new()
+fn end_type(version: mcsa_protocol::JavaVersion) -> Compound {
+    let out = Compound::new()
         .boolean("has_skylight", true)
         .boolean("has_ceiling", false)
         .boolean("has_ender_dragon_fight", true)
@@ -550,8 +583,8 @@ fn end_type() -> Compound {
         .int("height", 384)
         .int("logical_height", 256)
         .int("monster_spawn_light_level", 15)
-        .int("monster_spawn_block_light_limit", 0)
-        .string("infiniburn", "#minecraft:infiniburn_end")
+        .int("monster_spawn_block_light_limit", 0);
+    infiniburn(out, version, "end")
         .string("skybox", "end")
         .string("cardinal_light", "default")
         .compound("attributes", Compound::new())
@@ -561,8 +594,8 @@ fn end_type() -> Compound {
 /// Биом Энда: пять биомов различаются только для генерации, клиенту
 /// нужен один и тот же вид — туман `#181318`, вода как у всех, осадков нет
 /// (вики, The End → Biomes; [проверить] цвет тумана у краёв).
-fn end_biome() -> Compound {
-    Compound::new()
+fn end_biome(version: mcsa_protocol::JavaVersion) -> Compound {
+    let out = Compound::new()
         .boolean("has_precipitation", false)
         .float("temperature", 0.5)
         .float("downfall", 0.5)
@@ -575,9 +608,8 @@ fn end_biome() -> Compound {
         )
         .compound("effects", Compound::new().string("water_color", "#3f76e4"))
         .empty_list("carvers")
-        .empty_list("features")
-        .compound("spawners", Compound::new())
-        .compound("spawn_costs", Compound::new())
+        .empty_list("features");
+    spawn_fields(out, version)
 }
 
 /// Биом: то, что о нём должен знать клиент.
@@ -587,15 +619,15 @@ fn end_biome() -> Compound {
 /// в пустыне и саванне не бывает дождя.
 ///
 /// Списки генерации пустые: мир складывает сервер, а не клиент.
-fn biome(name: &str) -> Compound {
+fn biome(name: &str, version: mcsa_protocol::JavaVersion) -> Compound {
     use crate::world::terrain::Biome;
 
     if let Some(biome) = Biome::NETHER.iter().find(|biome| biome.name() == name) {
-        return nether_biome(*biome);
+        return nether_biome(*biome, version);
     }
 
     if Biome::END.iter().any(|biome| biome.name() == name) {
-        return end_biome();
+        return end_biome(version);
     }
 
     // Осенний лес во всём, кроме цвета, — обычный лес.
@@ -653,20 +685,19 @@ fn biome(name: &str) -> Compound {
         compound = compound.string("temperature_modifier", "frozen");
     }
 
-    compound
+    let out = compound
         .float("downfall", downfall)
         .compound("attributes", attributes)
         .compound("effects", effects)
         .empty_list("carvers")
-        .empty_list("features")
-        .compound("spawners", Compound::new())
-        .compound("spawn_costs", Compound::new())
+        .empty_list("features");
+    spawn_fields(out, version)
 }
 
 /// Биом Незера: жарко и сухо, неба нет — только свой туман и пылинки
 /// в воздухе (споры, пепел). Числа — со страниц биомов на вики (Data
 /// values, Java Edition); цвет воды у всех обычный.
-fn nether_biome(biome: crate::world::terrain::Biome) -> Compound {
+fn nether_biome(biome: crate::world::terrain::Biome, version: mcsa_protocol::JavaVersion) -> Compound {
     use crate::world::terrain::Biome;
 
     let (fog, particle, probability) = match biome {
@@ -688,16 +719,23 @@ fn nether_biome(biome: crate::world::terrain::Biome) -> Compound {
         );
     }
 
-    Compound::new()
+    let out = Compound::new()
         .boolean("has_precipitation", false)
         .float("temperature", 2.0)
         .float("downfall", 0.0)
         .compound("attributes", attributes)
         .compound("effects", Compound::new().string("water_color", "#3f76e4"))
         .empty_list("carvers")
-        .empty_list("features")
-        .compound("spawners", Compound::new())
-        .compound("spawn_costs", Compound::new())
+        .empty_list("features");
+    spawn_fields(out, version)
+}
+
+/// Biome definition oldid3848210: «Removed ... spawners ... spawn_costs»
+/// в26.3snap4. В775/776 сохраняем прежние байты; генерацию/спавн ведёт сервер.
+fn spawn_fields(out: Compound, version: mcsa_protocol::JavaVersion) -> Compound {
+    if matches!(version, mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2) {
+        out.compound("spawners", Compound::new()).compound("spawn_costs", Compound::new())
+    } else { out }
 }
 
 /// Как биом выглядит: небо, туман, вода, трава и листва.

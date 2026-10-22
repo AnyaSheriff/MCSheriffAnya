@@ -1,0 +1,9 @@
+{
+  "url": "https://minecraft.wiki/api.php?action=parse&oldid=3848030&prop=wikitext&format=json&formatversion=2",
+  "revision": {
+    "revid": 3848030,
+    "parentid": 3843558,
+    "timestamp": "2026-10-17T16:32:47Z"
+  },
+  "sha256": "da5f42c76d5cf93b4d2c7a487b8207cf1c7bd54922350276a082e607d2bcd861"
+}
