@@ -1656,6 +1656,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             if items.mobs().iter().find(|m| m.entity_id==id).is_none_or(|m| m.is_dead() || (crate::mob::land::llama(m.kind) && m.land.rider.is_none())) { riding.clear_vehicle(id); }
         }
     }
+    {
+        // Сломанная подушка сбрасывает седока.
+        let mut riding=shared.riding.lock().expect("седоки");
+        for mob in items.mobs().iter().filter(|m| m.kind==crate::mob::Kind::Cushion && m.is_dead()) { riding.clear_vehicle(mob.entity_id); }
+    }
     crate::mob::arthropod::step(&mut items, world, crate::mob::arthropod::Rules {
         griefing: shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed),
         drops: shared.block_drops.load(std::sync::atomic::Ordering::Relaxed),

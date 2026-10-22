@@ -17,12 +17,12 @@ fn iname(id: i32) -> &'static str { PREVIEW.name(Kind::Item, id).unwrap() }
 #[test]
 fn ids_are_appended_after_minerals_and_match_the_pinned_777_tables() {
     // 23 блока дерева + полочный гриб, красный куст и две лодки (plants_tests ниже).
-    assert_eq!(POPLAR.len(), 27);
+    assert_eq!(POPLAR.len(), 61); // 27 + соломенная кровать, 16 подушек, 16 карт, пластинка (furnish_tests)
     let last = &MINERALS[MINERALS.len() - 1];
     assert_eq!(POPLAR[0].block, last.block + 1);
     assert_eq!(POPLAR[0].first_state, last.last_state + 1);
     let mut next_item = last.item + 1;
-    for (index, row) in POPLAR.iter().enumerate().filter(|(_, row)| !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
+    for (index, row) in POPLAR.iter().enumerate().filter(|(_, row)| !matches!(row.form, BlockForm::Plant | BlockForm::Boat | BlockForm::Item) && row.name != "straw_bed") {
         assert_eq!(row.family, SlabFamily::Poplar);
         if index > 0 { assert_eq!((row.block, row.first_state), (POPLAR[index - 1].block + 1, POPLAR[index - 1].last_state + 1)); }
         if row.has_item() { assert_eq!(row.item, next_item); next_item += 1; } else { assert_eq!(row.item, -1); }
@@ -76,7 +76,7 @@ fn every_state_translates_to_the_wire_and_back_only_in_the_preview_profile() {
 fn poplar_behaves_like_its_oak_twin_in_every_table() {
     let pickaxe = item("diamond_pickaxe");
     let axe = item("diamond_axe");
-    for row in POPLAR.iter().filter(|row| !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
+    for row in POPLAR.iter().filter(|row| !matches!(row.form, BlockForm::Plant | BlockForm::Boat | BlockForm::Item)) {
         for state in row.first_state..=row.last_state {
             let twin = crate::poplar::twin_state(state);
             assert_eq!(PREVIEW.mining_properties(state), Ok(crate::mining::properties(twin)), "{}", row.name);
@@ -175,7 +175,8 @@ fn crafting_recipes_match_the_official_server() {
         checked += 1;
     }
     // 14 рецептов дерева тополя, две лодки и 27 рецептов серы/киновари.
-    assert_eq!(crate::crafting::poplar_recipes().len(), 16);
+    // + соломенная кровать и 16 подушек (furnish_tests).
+    assert_eq!(crate::crafting::poplar_recipes().len(), 16 + 17);
     assert_eq!(checked, 16 + crate::crafting::mineral_recipes().len());
 }
 
@@ -255,7 +256,7 @@ fn click(face: i32) -> crate::placing::Click { crate::placing::Click { face, cur
 #[test]
 fn every_poplar_item_is_placed_by_the_ordinary_path() {
     let player = (30.5, 64.0, 30.5);
-    for row in POPLAR.iter().filter(|row| row.has_item() && !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
+    for row in POPLAR.iter().filter(|row| row.has_item() && !matches!(row.form, BlockForm::Plant | BlockForm::Boat | BlockForm::Item)) {
         let mut world = preview_world();
         let (name, default_state) = PREVIEW.block_for_item(row.item).unwrap().unwrap();
         assert_eq!(name, row.name);

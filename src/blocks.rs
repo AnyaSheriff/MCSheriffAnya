@@ -269,7 +269,7 @@ pub fn orientation(name: &str) -> Option<&'static Orientation> {
         .ok()
         .map(|index| &ORIENTED[index]);
     #[cfg(not(seedmap_core))]
-    if found.is_none() && (name.contains("poplar") || name == "shelf_mushroom") { return crate::poplar::orientation(name); }
+    if found.is_none() && (name.contains("poplar") || name == "shelf_mushroom" || name == "straw_bed") { return crate::poplar::orientation(name); }
     found
 }
 

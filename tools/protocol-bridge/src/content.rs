@@ -11,7 +11,7 @@ pub enum SlabFamily { Concrete, Wool, Mineral, Poplar }
 /// «мощная сера» (5 состояний), серный шип (20 состояний) и «Wood» — прочие блоки тополя,
 /// у которых есть дубовый двойник с теми же свойствами (`input_name`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike, Wood, Plant, Boat }
+pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike, Wood, Plant, Boat, Item }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SlabDescriptor {
@@ -151,7 +151,7 @@ pub static MINERALS: [SlabDescriptor; 28] = [
 /// blocks.json/items.json. `input_name`/`input_item` — дубовый двойник (те же свойства и порядок
 /// состояний, поэтому таблицы твёрдости, света и формы берутся по смещению от него); `item: -1` —
 /// у блока нет предмета (настенные таблички, горшок с саженцем). Лодки — предметы без блока (`BlockForm::Boat`); их сущности — `entity_ids`.
-pub static POPLAR: [SlabDescriptor; 27] = [
+pub static POPLAR: [SlabDescriptor; 61] = [
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_planks", item: 1598, block: 1260, first_state: 35118, last_state: 35118, default_state: 35118, wire_item: 72, wire_block: 23, wire_first_state: 27, input_name: "oak_planks", input_item: 36 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Stairs, name: "poplar_stairs", item: 1599, block: 1261, first_state: 35119, last_state: 35198, default_state: 35130, wire_item: 524, wire_block: 574, wire_first_state: 14139, input_name: "oak_stairs", input_item: 442 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Slab, name: "poplar_slab", item: 1600, block: 1262, first_state: 35199, last_state: 35204, default_state: 35202, wire_item: 350, wire_block: 662, wire_first_state: 15231, input_name: "oak_slab", input_item: 271 },
@@ -182,6 +182,42 @@ pub static POPLAR: [SlabDescriptor; 27] = [
     // Лодки тополя: предметы без блока (block -1, пустой диапазон состояний).
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Boat, name: "poplar_boat", item: 1620, block: -1, first_state: 35707, last_state: 35706, default_state: -1, wire_item: 993, wire_block: 0, wire_first_state: 0, input_name: "poplar_planks", input_item: 1598 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Boat, name: "poplar_chest_boat", item: 1621, block: -1, first_state: 35707, last_state: 35706, default_state: -1, wire_item: 994, wire_block: 0, wire_first_state: 0, input_name: "poplar_boat", input_item: 1620 },
+    // Мебель 26.3: соломенная кровать (двойник white_bed: те же свойства и порядок состояний), подушки,
+    // карты строений и пластинка Bounce. Предметы без блока — `BlockForm::Item` (пустой диапазон состояний).
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "straw_bed", item: 1622, block: 1285, first_state: 35707, last_state: 35722, default_state: 35710, wire_item: 1235, wire_block: 135, wire_first_state: 2286, input_name: "white_bed", input_item: 1087 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "white_cushion", item: 1623, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1170, wire_block: 0, wire_first_state: 0, input_name: "white_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "orange_cushion", item: 1624, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1171, wire_block: 0, wire_first_state: 0, input_name: "orange_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "magenta_cushion", item: 1625, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1172, wire_block: 0, wire_first_state: 0, input_name: "magenta_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "light_blue_cushion", item: 1626, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1173, wire_block: 0, wire_first_state: 0, input_name: "light_blue_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "yellow_cushion", item: 1627, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1174, wire_block: 0, wire_first_state: 0, input_name: "yellow_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "lime_cushion", item: 1628, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1175, wire_block: 0, wire_first_state: 0, input_name: "lime_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "pink_cushion", item: 1629, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1176, wire_block: 0, wire_first_state: 0, input_name: "pink_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "gray_cushion", item: 1630, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1177, wire_block: 0, wire_first_state: 0, input_name: "gray_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "light_gray_cushion", item: 1631, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1178, wire_block: 0, wire_first_state: 0, input_name: "light_gray_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "cyan_cushion", item: 1632, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1179, wire_block: 0, wire_first_state: 0, input_name: "cyan_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "purple_cushion", item: 1633, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1180, wire_block: 0, wire_first_state: 0, input_name: "purple_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "blue_cushion", item: 1634, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1181, wire_block: 0, wire_first_state: 0, input_name: "blue_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "brown_cushion", item: 1635, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1182, wire_block: 0, wire_first_state: 0, input_name: "brown_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "green_cushion", item: 1636, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1183, wire_block: 0, wire_first_state: 0, input_name: "green_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "red_cushion", item: 1637, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1184, wire_block: 0, wire_first_state: 0, input_name: "red_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "black_cushion", item: 1638, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1185, wire_block: 0, wire_first_state: 0, input_name: "black_wool_slab", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "ocean_monument_map", item: 1639, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1239, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "woodland_mansion_map", item: 1640, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1240, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "buried_trial_chambers_map", item: 1641, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1241, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "jungle_pyramid_map", item: 1642, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1242, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "swamp_hut_map", item: 1643, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1243, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "desert_village_map", item: 1644, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1244, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "plains_village_map", item: 1645, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1245, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "savanna_village_map", item: 1646, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1246, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "snowy_village_map", item: 1647, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1247, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "taiga_village_map", item: 1648, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1248, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "buried_treasure_map", item: 1649, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1249, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "buried_ancient_city_map", item: 1650, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1250, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "buried_mineshaft_map", item: 1651, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1251, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "desert_pyramid_map", item: 1652, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1252, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "abandoned_camp_map", item: 1653, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1253, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "warm_ocean_ruins_map", item: 1654, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1254, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "music_disc_bounce", item: 1655, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1463, wire_block: 0, wire_first_state: 0, input_name: "music_disc_pigstep", input_item: 0 },
 ];
 
 /// Сущности лодок тополя: (внутренний номер после 775, номер в 777 по pinned entities.json).
@@ -190,6 +226,8 @@ pub const fn entity_ids_of(name: &str) -> Option<(u32, u32)> {
     match name.as_bytes() {
         b"poplar_boat" => Some((157, 106)),
         b"poplar_chest_boat" => Some((158, 107)),
+        // Сущность подушки (цвет — в metadata): привязана к строке белой подушки.
+        b"white_cushion" => Some((159, 33)),
         _ => None,
     }
 }
@@ -249,7 +287,7 @@ impl ContentCodec {
     /// (те же 14 полей, [проверить] сверкой с 777). None — это не сущность расширения.
     pub fn entity_layout_base(self, id: u32) -> Option<&'static str> {
         if !self.white_slab { return None; }
-        match id { 157 => Some("oak_boat"), 158 => Some("oak_chest_boat"), _ => None }
+        match id { 157 => Some("oak_boat"), 158 => Some("oak_chest_boat"), 159 => Some("cushion"), _ => None }
     }
     /// Только граница внутреннего packet builder: раскладка775 содержит
     /// canonical content. К настоящему входному Slot775 это неприменимо.

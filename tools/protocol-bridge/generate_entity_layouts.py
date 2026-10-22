@@ -25,6 +25,9 @@ def main():
         keys = [v['metadataKeys'],by_name[v['name']]['metadataKeys']]
         assert all(len(k)==len(set(k)) and len(k)<255 for k in keys)
         text += '    ('+json.dumps(v['name'])+', &'+json.dumps(keys[0])+', &'+json.dumps(keys[1])+'),\n'
+    extra = by_name['cushion']['metadataKeys']  # 26.3: сущность подушки (нет в 775)
+    text += '    // 26.3: сущность подушки (нет в 775); добавляется генератором после обычных строк.\n'
+    text += '    ("cushion", &'+json.dumps(extra[:8])+', &'+json.dumps(extra)+'),\n'
     text += '];\n'
     for name in ['player','falling_block']:
         text += 'pub(crate) const '+name.upper()+': u32 = '+str(next(v['id'] for v in old if v['name']==name))+';\n'

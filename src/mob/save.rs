@@ -116,6 +116,7 @@ save_kinds! {
     HappyGhast => 109,
     CopperGolem => 110,
     ArmorStand => 111,
+    Cushion => 112,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;

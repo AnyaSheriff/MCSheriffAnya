@@ -280,7 +280,7 @@ pub fn mineral_recipes() -> &'static [(u8, Recipe)] {
                 BlockForm::Full if row.name == "sulfur" => (true, 2, 2, 1, vec![x; 4]),
                 BlockForm::Full => (true, 2, 2, 4, vec![x; 4]),
                 BlockForm::Spike => continue,
-                BlockForm::Wood | BlockForm::Plant | BlockForm::Boat => unreachable!("в MINERALS нет блоков тополя"),
+                BlockForm::Wood | BlockForm::Plant | BlockForm::Boat | BlockForm::Item => unreachable!("в MINERALS нет блоков тополя"),
             };
             all.push((index as u8, Recipe { shaped, width, height, result: row.item, count, cells: Box::leak(cells.into_boxed_slice()) }));
         }
@@ -329,7 +329,17 @@ pub fn poplar_recipes() -> &'static [PoplarRecipe] {
             // Лодки: пять досок буквой «U» в 3×2 (наблюдение 26.3, как у дубовой лодки); с сундуком — лодка + сундук.
             ("poplar_boat", true, 3, 2, 1, vec![p, empty, p, p, p, p], 16, 3),
             ("poplar_chest_boat", false, 2, 1, 1, vec![one("chest"), one("poplar_boat")], 17, 3),
+            // Соломенная кровать: три стога сена в ряд → 4 (наблюдение 26.3, probe_furnish_777.py; без группы, категория 3).
+            ("straw_bed", true, 3, 1, 4, vec![one("hay_block"); 3], 0, 3),
         ];
+        let mut table = table;
+        // Подушки: три плиты шерсти своего цвета в ряд → 1 (наблюдение 26.3; группа общая, категория 3).
+        // [проверить] перекраска подушки красителем: рецепт в книге не снят (вики: «dyed by combining with dye»).
+        for color in ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"] {
+            let wool_slab = crate::gameplay_catalog::WOOL_SLABS.iter().find(|row| row.name == format!("{color}_wool_slab")).expect("плита шерсти").item;
+            let (name, slab): (&'static str, &'static [i32]) = (Box::leak(format!("{color}_cushion").into_boxed_str()), Box::leak(Box::new([wool_slab])));
+            table.push((name, true, 3, 1, 1, vec![slab; 3], 18, 3));
+        }
         table.into_iter().map(|(name, shaped, width, height, count, cells, group, category)| {
             let row = POPLAR.iter().position(|row| row.name == name).expect("строка тополя") as u8;
             PoplarRecipe { row, recipe: Recipe { shaped, width, height, result: item(name), count, cells: Box::leak(cells.into_boxed_slice()) }, group, category }

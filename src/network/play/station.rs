@@ -320,7 +320,7 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
         Station::Grindstone => inputs.iter().flatten().all(enchanting::grindable),
         Station::Crafting | Station::Anvil | Station::Stonecutter => true,
         Station::Loom => inputs.iter().enumerate().all(|(p,s)| s.is_none_or(|s|crate::loom::may_place(p,&s))),
-        Station::Cartography => inputs.iter().enumerate().all(|(p,s)|s.is_none_or(|s| if p==0 {blocks::item_name(s.item)==Some("filled_map")} else {matches!(blocks::item_name(s.item),Some("paper"|"map"|"glass_pane"))})),
+        Station::Cartography => inputs.iter().enumerate().all(|(p,s)|s.is_none_or(|s| if p==0 {blocks::item_name(s.item).is_some_and(|n|n=="filled_map"||crate::maps::is_structure_map(n))} else {matches!(blocks::item_name(s.item),Some("paper"|"map"|"glass_pane"))})),
         Station::Smithing => inputs.iter().enumerate().all(|(place, stack)| stack.is_none_or(|stack| smithing::may_place(place, &stack))),
     };
 
@@ -385,7 +385,7 @@ fn quick_move_in(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
         }
         Station::Stonecutter => !crate::stonecutter::choices_for_catalog(shared.catalog(),stack.item).is_empty() && view.move_some(own,&[0]),
         Station::Loom => (0..3).find(|&p|crate::loom::may_place(p,&stack)).is_some_and(|p|view.move_some(own,&[p])),
-        Station::Cartography => match blocks::item_name(stack.item) {Some("filled_map")=>view.move_some(own,&[0]),Some("paper"|"map"|"glass_pane")=>view.move_some(own,&[1]),_=>false},
+        Station::Cartography => match blocks::item_name(stack.item) {Some(n) if n=="filled_map"||crate::maps::is_structure_map(n)=>view.move_some(own,&[0]),Some("paper"|"map"|"glass_pane")=>view.move_some(own,&[1]),_=>false},
         Station::Grindstone if !enchanting::grindable(&stack) => false,
         Station::Anvil | Station::Grindstone => view.move_some(own, &[0, 1]),
         // В ту ячейку, куда предмет годится (шаблон, основа, добавка).

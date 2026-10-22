@@ -57,7 +57,11 @@ impl Slab {
             Self::ConcreteStairs(index) => crate::gameplay_catalog::CONCRETE_STAIRS[index].input_name,
             Self::WoolStairs(index) => crate::gameplay_catalog::WOOL_STAIRS[index].input_name,
             Self::Mineral(index) => crate::gameplay_catalog::MINERALS[index].input_name,
-            Self::Poplar(index) => crate::gameplay_catalog::POPLAR[usize::from(crafting::poplar_recipes()[index].row)].input_name,
+            Self::Poplar(index) => {
+                let row = &crate::gameplay_catalog::POPLAR[usize::from(crafting::poplar_recipes()[index].row)];
+                // Соломенной кровати двойник — белая кровать, а рецепт открывает стог сена.
+                if row.name == "straw_bed" { "hay_block" } else { row.input_name }
+            }
         }
     }
     /// Категория книги: у серы стенки — «разное» (3), остальное — строительные блоки (0); у тополя снята.

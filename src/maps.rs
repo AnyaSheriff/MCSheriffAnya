@@ -45,7 +45,9 @@ impl Maps {
         let id = input.extras().map_id?;
         let map = self.maps.get(&id)?;
         let name = blocks::item_name(material.item)?;
-        if blocks::item_name(input.item) != Some("filled_map") { return None; }
+        // Карты строений 26.3 — отдельные предметы: копируются (карта + пустая карта), но не увеличиваются
+        // (у них есть `destination`); стекло — как у обычной [проверить].
+        if !blocks::item_name(input.item).is_some_and(|n| n == "filled_map" || is_structure_map(n)) { return None; }
         match name {
             "map" => Some(input.with_count(2)),
             "paper" if !map.locked && map.scale < 4 && map.destination.is_none() => {
@@ -269,6 +271,36 @@ pub fn explorer_kind(name: &str) -> Option<(&'static str, &'static str, u8, i32)
         _ => None,
     }
 }
+/// Карты строений 26.3: «<строение>_map» — отдельные предметы (вики, Explorer Map: с 26.3 snapshot 7
+/// карты исследователя — уникальные предметы, а не общая filled_map).
+/// Столбцы: предмет, постройка локатора, подпись, масштаб, значок. Значки: 8 особняк, 9 монумент,
+/// 26 красный крест, 27–31 деревни (пустыня, равнины, саванна, снег, тайга), 32 храм джунглей,
+/// 33 хижина ведьмы, 34 испытательные камеры. [проверить] значки и масштаб для карт без значка в 1.21
+/// (пирамида пустыни, шахта, древний город, руины тёплого океана, заброшенный лагерь) и масштаб всех.
+pub const STRUCTURE_MAPS: [(&str, &str, &str, u8, i32); 16] = [
+    ("ocean_monument_map", "monument", "Ocean Monument Map", 2, 9),
+    ("woodland_mansion_map", "mansion", "Woodland Mansion Map", 2, 8),
+    ("buried_trial_chambers_map", "trial_chambers", "Buried Trial Chambers Map", 2, 34),
+    ("jungle_pyramid_map", "jungle_pyramid", "Jungle Pyramid Map", 2, 32),
+    ("swamp_hut_map", "swamp_hut", "Swamp Hut Map", 2, 33),
+    ("desert_village_map", "village_desert", "Desert Village Map", 2, 27),
+    ("plains_village_map", "village_plains", "Plains Village Map", 2, 28),
+    ("savanna_village_map", "village_savanna", "Savanna Village Map", 2, 29),
+    ("snowy_village_map", "village_snowy", "Snowy Village Map", 2, 30),
+    ("taiga_village_map", "village_taiga", "Taiga Village Map", 2, 31),
+    ("buried_treasure_map", "buried_treasure", "Buried Treasure Map", 1, 26),
+    ("buried_ancient_city_map", "ancient_city", "Buried Ancient City Map", 2, 26),
+    ("buried_mineshaft_map", "mineshaft", "Buried Mineshaft Map", 2, 26),
+    ("desert_pyramid_map", "desert_pyramid", "Desert Pyramid Map", 2, 26),
+    // Заброшенных лагерей в нашей генерации нет: локатор вернёт None, карта останется без привязки [проверить].
+    ("abandoned_camp_map", "abandoned_camp", "Abandoned Camp Map", 2, 26),
+    ("warm_ocean_ruins_map", "ocean_ruin_warm", "Warm Ocean Ruins Map", 2, 26),
+];
+
+pub fn is_structure_map(name: &str) -> bool {
+    STRUCTURE_MAPS.iter().any(|row| row.0 == name)
+}
+
 pub fn pending_explorer(name: &str) -> Option<crate::inventory::Stack> {
     let (_, title, _, _) = explorer_kind(name)?;
     Some(crate::inventory::Stack::new(blocks::item_named("filled_map")?,1)
@@ -276,8 +308,11 @@ pub fn pending_explorer(name: &str) -> Option<crate::inventory::Stack> {
 }
 pub fn resolve_explorer(stack: &mut crate::inventory::Stack, maps: &mut Maps, world: &World, at:(i32,i32)) -> bool {
     let mut data=stack.extras();
-    if data.map_id.is_some() || blocks::item_name(stack.item)!=Some("filled_map") {return false;}
-    let Some((structure,_,scale,icon))=data.name.as_deref().and_then(explorer_kind) else {return false;};
+    if data.map_id.is_some() {return false;}
+    // Предмет карты строения 26.3 привязывается сам (остаётся своим предметом); старая filled_map — по подписи.
+    let item=blocks::item_name(stack.item);
+    let own=item.and_then(|n| STRUCTURE_MAPS.iter().find(|row| row.0==n)).map(|row| (row.1,row.2,row.3,row.4));
+    let Some((structure,_,scale,icon))=own.or_else(|| if item==Some("filled_map") {data.name.as_deref().and_then(explorer_kind)} else {None}) else {return false;};
     let rings=if structure=="mansion" {100*crate::world::mansion::SPACING/27} else {6};
     let Some((cx,cz))=world.nearest_structure(structure,at.0.div_euclid(16),at.1.div_euclid(16),rings) else {return false;};
     let offset=if structure=="buried_treasure" {9} else {8};

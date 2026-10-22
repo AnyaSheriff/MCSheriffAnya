@@ -270,6 +270,8 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     match mob.kind {
         Kind::ArmorStand => {},
+        // Подушка 26.3: цвет в metadata с индексом 8 (minecraft-data 26.3, entities.json); тип — [проверить].
+        Kind::Cushion => out.push((8, TYPE_INT, encode_varint(i32::from(mob.color)))),
         Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
             let s = &mob.land;
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));

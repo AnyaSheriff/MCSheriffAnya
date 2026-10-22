@@ -306,6 +306,8 @@ pub fn landing_multiplier(name: &str) -> f32 {
         "hay_block" | "honey_block" => 0.2,
         // Слизь подкидывает вместо удара, если не красться.
         "slime_block" => 0.0,
+        // Соломенная кровать не подпрыгивает и урон от падения не смягчает (вики, Straw Bed).
+        "straw_bed" => 1.0,
         name if name.ends_with("_bed") => 0.5,
         _ => 1.0,
     }

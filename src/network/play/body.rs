@@ -219,7 +219,7 @@ impl Body {
                         }
                         done.block_used = true;
                     } else { done.block_used = sleep::use_anchor(&mut world, shared, p, at, face, held, 0).is_some(); }
-                } else if crate::bed::beds_work(p.dimension) && let Some(head) = crate::bed::head_of(&world, at) {
+                } else if crate::bed::beds_work(p.dimension) && !crate::bed::is_straw(state) && let Some(head) = crate::bed::head_of(&world, at) {
                     // Точка кровати общая; анимация сна Bedrock [проверить].
                     if crate::bed::bed_in_reach(&world, head, (p.x, p.y, p.z)) && !crate::bed::bed_obstructed(&world, head) {
                         p.respawn = Some(crate::bed::RespawnPoint { dimension: p.dimension, pos: head, yaw: p.yaw, forced: false });

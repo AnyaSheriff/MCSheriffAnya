@@ -61,7 +61,7 @@ fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Other, properties: SPIKE_PROPERTIES,
         },
-        BlockForm::Full | BlockForm::Wood | BlockForm::Plant | BlockForm::Boat => Orientation {
+        BlockForm::Full | BlockForm::Wood | BlockForm::Plant | BlockForm::Boat | BlockForm::Item => Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Other, properties: &[],
         },

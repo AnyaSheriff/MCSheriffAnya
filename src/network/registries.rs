@@ -250,8 +250,8 @@ pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str
             .float("range", 256.0),
         "minecraft:jukebox_song" => {
             let (length, comparator) = if matches!(version, mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) && name == "bounce" {
-                // Wiki Music Disc: Bounce 3:54, comparator8. Добавлена в26.2.
-                (234.0, 8)
+                // Wiki Music Disc: Bounce 3:54, сигнал сравнителя 7 (раньше здесь стояло 8 — перечитано по вики 26.3). Добавлена в 26.2.
+                (234.0, 7)
             } else { jukebox_song(name)? };
 
             Compound::new()

@@ -39,7 +39,7 @@ const SHELF_PROPERTIES: &[Property] = &[
 /// Первые состояния дубовых двойников, по порядку строк `POPLAR`.
 fn twin_firsts() -> &'static [i32] {
     static FIRSTS: std::sync::OnceLock<Vec<i32>> = std::sync::OnceLock::new();
-    FIRSTS.get_or_init(|| POPLAR.iter().map(|row| if row.form == BlockForm::Boat { 0 } else { blocks::states_of(row.input_name).expect("дубовый двойник").0 }).collect())
+    FIRSTS.get_or_init(|| POPLAR.iter().map(|row| if matches!(row.form, BlockForm::Boat | BlockForm::Item) { 0 } else { blocks::states_of(row.input_name).expect("дубовый двойник").0 }).collect())
 }
 
 /// Дубовое состояние с тем же смещением; для остальных состояний — без изменений.
@@ -68,6 +68,8 @@ pub fn retarget_item(item: i32) -> i32 {
 pub fn drop_item(state: i32, twin_item: i32) -> i32 {
     match row_of_state(state) {
         Some(row) if row.form == BlockForm::Plant => row.item,
+        // Соломенная кровать выпадает собой, а не белой (вики, Straw Bed: «Breaking one drops itself»).
+        Some(row) if row.name == "straw_bed" => row.item,
         _ => retarget_item(twin_item),
     }
 }
@@ -88,7 +90,7 @@ pub fn orientation(name: &str) -> Option<&'static Orientation> {
         if row.name == "shelf_mushroom" {
             return Some(Orientation { name: row.name, min: row.first_state, max: row.last_state, family: Family::Other, properties: SHELF_PROPERTIES });
         }
-        if matches!(row.form, BlockForm::Plant | BlockForm::Boat) { return None; }
+        if matches!(row.form, BlockForm::Plant | BlockForm::Boat | BlockForm::Item) { return None; }
         blocks::orientation(row.input_name).map(|twin| Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: twin.family, properties: twin.properties,
@@ -108,6 +110,9 @@ pub fn stack_size(item: i32) -> Option<i32> {
     match row.form {
         BlockForm::Boat => return Some(1),
         BlockForm::Plant => return Some(64),
+        // Наблюдение официального 26.3 (probe_furnish_777.py): кровать и подушки по 16, карты по 64, пластинка 1.
+        BlockForm::Item => return Some(if row.name.ends_with("_cushion") { 16 } else if row.name.ends_with("_map") { 64 } else { 1 }),
+        _ if row.name == "straw_bed" => return Some(16),
         _ => {}
     }
     let twin = blocks::item_named(row.input_name)?;
@@ -120,7 +125,7 @@ mod tests {
 
     #[test]
     fn every_poplar_state_has_a_twin_with_the_same_properties() {
-        for row in POPLAR.iter().filter(|row| !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
+        for row in POPLAR.iter().filter(|row| !matches!(row.form, BlockForm::Plant | BlockForm::Boat | BlockForm::Item)) {
             let (first, last) = blocks::states_of(row.input_name).expect("двойник");
             assert_eq!(last - first, row.last_state - row.first_state, "{}", row.name);
             for state in row.first_state..=row.last_state {

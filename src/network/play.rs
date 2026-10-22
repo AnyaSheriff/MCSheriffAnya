@@ -8482,9 +8482,19 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     }
 
     if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > REACH * REACH
-        || (player.game_mode == GAME_MODE_ADVENTURE && !crate::mob::horse::equine(mob.kind))
+        || (player.game_mode == GAME_MODE_ADVENTURE && !crate::mob::horse::equine(mob.kind) && mob.kind != crate::mob::Kind::Cushion)
         || mob.is_dead()
     {
+        return true;
+    }
+
+    // Подушка: использование — сесть (вики, Cushion: «Right-click to sit»). Высота сиденья — [проверить].
+    if items.mobs()[index].kind==crate::mob::Kind::Cushion {
+        let (id,at)={let m=&items.mobs()[index]; (m.entity_id,(m.x,m.y+0.1,m.z))};
+        if !player.sneaking && player.ride.vehicle.is_none() && !player.vit.dead
+            && shared.riding.lock().expect("учёт седоков").mount(player.entity_id,id,1) {
+            player.set_position(at.0,at.1,at.2);
+        }
         return true;
     }
 
@@ -9717,11 +9727,15 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     }
 
     if let Some(name)=player.inventory.held().and_then(|s|blocks::item_name(s.item))
-        && matches!(name,"painting"|"armor_stand") {
+        && (matches!(name,"painting"|"armor_stand") || name.ends_with("_cushion")) {
         let clicked=(clicked_x,clicked_y,clicked_z);
         let mut world=shared.world_in(player.dimension).lock().expect("мир");
         let mut items=shared.items_in(player.dimension).lock().expect("сущности");
-        let placed=if name=="painting" {crate::painting::place(&mut world,&mut items,shared,clicked,face as u8)} else {
+        let placed=if name=="painting" {crate::painting::place(&mut world,&mut items,shared,clicked,face as u8)} else if let Some(color)=crate::mob::cushion::color_of_item(name) {
+            // Подушка ставится на верх блока; сбоку — на опору под соседней клеткой, снизу — нельзя.
+            let (nx,ny,nz)=offset_towards(clicked_x,clicked_y,clicked_z,face);
+            match face { 1=>crate::mob::cushion::place(&mut world,&mut items,shared,clicked,color), 0=>false, _=>crate::mob::cushion::place(&mut world,&mut items,shared,(nx,ny-1,nz),color) }
+        } else {
 crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.yaw)
         };
         if placed && name=="painting" {
@@ -10171,7 +10185,7 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     if bundle_use::start(shared,player,hand,*shared.ticks.borrow()) {
         let mut answer=answer; answer.inventory=true; return Some(answer);
     }
-    if maps::fill(shared, player, hand).is_some() {
+    if maps::fill(shared, player, hand).is_some() || maps::resolve_held(shared, player, hand).is_some() {
         let mut answer = answer;
         answer.inventory = true;
         return Some(answer);

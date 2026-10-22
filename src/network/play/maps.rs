@@ -26,6 +26,21 @@ pub(super) fn fill(shared:&Shared,player:&mut PlayerState,hand:i32)->Option<()> 
     Some(())
 }
 
+/// Использование непривязанной карты строения 26.3: она сразу находит ближайшее строение
+/// (вики, Explorer Map). `None` — это не такая карта или строения нет (карта остаётся как есть).
+/// [проверить] у официального сервера: удаляется ли карта, если строение не найдено.
+pub(super) fn resolve_held(shared:&Shared,player:&mut PlayerState,hand:i32)->Option<()> {
+    if !matches!(hand, 0 | 1) || player.game_mode==GAME_MODE_SPECTATOR || player.vit.dead { return None; }
+    let slot=if hand==1 {inventory::OFFHAND} else {player.inventory.selected_slot()};
+    let mut stack=player.inventory.slot(slot).filter(|s|blocks::item_name(s.item).is_some_and(crate::maps::is_structure_map)&&s.extras().map_id.is_none())?;
+    let world=shared.world_in(player.dimension).lock().expect("мир");
+    let mut maps=shared.maps.lock().expect("карты");
+    if player.dimension!=crate::dimension::Dimension::Overworld || !crate::maps::resolve_explorer(&mut stack,&mut maps,&world,(player.x.floor() as i32,player.z.floor() as i32)) { return None; }
+    if let Err(e)=maps.save(){log_warn!("Карта не записана: {}",e);}
+    player.inventory.set(slot,Some(stack));
+    Some(())
+}
+
 pub(super) async fn send_ticks(stream:&mut Outgoing<'_>,shared:&Shared,player:&mut PlayerState)->io::Result<()> {
     let tick = *shared.ticks.borrow();
     // Чёрный ящик, map-fill: новая карта уходит сразу (в такт взятия), без
