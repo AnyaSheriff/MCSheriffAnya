@@ -4562,9 +4562,9 @@ fn is_copper_of(name: &str, stage: &str) -> bool {
 }
 
 /// Породы дерева: из них складываются имена досок, лестниц, дверей и прочего.
-const WOODS: [&str; 12] = [
+const WOODS: [&str; 13] = [
     "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "pale_oak", "mangrove", "cherry",
-    "bamboo", "crimson", "warped",
+    "bamboo", "crimson", "warped", "poplar",
 ];
 
 /// Что из дерева. Деревянные кнопки сюда не входят: в Java они звучат
@@ -5052,6 +5052,48 @@ mod tests {
             .expect("блок есть в таблице")
             .state(values)
             .expect("свойства подходят")
+    }
+
+    /// Тополь 26.3: дверь, люк, калитка и кнопка ведут себя как дубовые (повороты, питание, возврат кнопки).
+    #[test]
+    fn poplar_doors_trapdoors_gates_and_buttons_work_like_oak() {
+        let mut world = World::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3));
+        for x in -8..=24 { for z in -8..=8 { world.set_block_silently(x, 0, z, STONE); } }
+        let open = |world: &World, pos: Pos| {
+            let at = world.get_block(pos.0, pos.1, pos.2);
+            blocks::orientation_of(at).and_then(|rule| rule.value(at, "open")).map(str::to_owned)
+        };
+        let power = blocks::state_by_name("redstone_block").unwrap();
+
+        let lower = state("poplar_door", &[("half", "lower"), ("facing", "east")]);
+        let upper = state("poplar_door", &[("half", "upper"), ("facing", "east")]);
+        put(&mut world, (1, 1, 0), lower);
+        put(&mut world, (1, 2, 0), upper);
+        put(&mut world, (1, 1, 1), power);
+        run(&mut world, 4);
+        assert_eq!(open(&world, (1, 1, 0)).as_deref(), Some("true"), "дверь открылась от сигнала");
+        assert_eq!(open(&world, (1, 2, 0)).as_deref(), Some("true"));
+
+        put(&mut world, (4, 1, 0), state("poplar_trapdoor", &[("facing", "north"), ("half", "bottom")]));
+        put(&mut world, (4, 1, 1), power);
+        run(&mut world, 4);
+        assert_eq!(open(&world, (4, 1, 0)).as_deref(), Some("true"), "люк открылся");
+
+        put(&mut world, (7, 1, 0), state("poplar_fence_gate", &[("facing", "north")]));
+        put(&mut world, (7, 1, 1), power);
+        run(&mut world, 4);
+        assert_eq!(open(&world, (7, 1, 0)).as_deref(), Some("true"), "калитка открылась");
+
+        // Кнопка: щелчок включает, через 30 тактов она отпускает (как деревянная дубовая).
+        put(&mut world, (10, 1, 0), state("poplar_button", &[("face", "floor"), ("facing", "north")]));
+        assert!(use_block(&mut world, (10, 1, 0)));
+        let powered = |world: &World| {
+            let at = world.get_block(10, 1, 0);
+            blocks::orientation_of(at).and_then(|rule| rule.value(at, "powered")).map(str::to_owned)
+        };
+        assert_eq!(powered(&world).as_deref(), Some("true"));
+        run(&mut world, 35);
+        assert_eq!(powered(&world).as_deref(), Some("false"));
     }
 
     #[test]

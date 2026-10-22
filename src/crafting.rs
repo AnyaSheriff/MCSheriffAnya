@@ -195,7 +195,7 @@ impl Recipe {
 
 /// Идентичность рецепта сервера: сетевые display ID принадлежат книге отдельно.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8), ConcreteStairs(u8), WoolStairs(u8), Mineral(u8) }
+pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8), ConcreteStairs(u8), WoolStairs(u8), Mineral(u8), Poplar(u8) }
 
 impl RecipeId {
     pub fn concrete_slab(index: usize) -> Option<Self> {
@@ -280,11 +280,70 @@ pub fn mineral_recipes() -> &'static [(u8, Recipe)] {
                 BlockForm::Full if row.name == "sulfur" => (true, 2, 2, 1, vec![x; 4]),
                 BlockForm::Full => (true, 2, 2, 4, vec![x; 4]),
                 BlockForm::Spike => continue,
+                BlockForm::Wood => unreachable!("в MINERALS нет блоков тополя"),
             };
             all.push((index as u8, Recipe { shaped, width, height, result: row.item, count, cells: Box::leak(cells.into_boxed_slice()) }));
         }
         all
     })
+}
+
+/// Рецепт тополя с метаданными книги рецептов.
+pub struct PoplarRecipe { pub row: u8, pub recipe: Recipe, pub group: u8, pub category: u8 }
+
+/// Рецепты тополя 26.3: снято с официального сервера (`probe_poplar_777.py`, recipe_book_add):
+/// доски — из любого ствола тополя (тег poplar_logs) 1→4; древесина 2×2 → 3 (и обтёсанная);
+/// ступени 6→4, плита 3→6, забор 3→ (доски/палка) 3, калитка 1, дверь 2×3 → 3, люк 2×3 → 2,
+/// кнопка 1, нажимная плита 2→1, табличка 3 (шесть досок и палка), подвесная 6 (две цепи и шесть
+/// обтёсанных брёвен), полка 6 (обтёсанные брёвна, ряды 1 и 3). Лодки (poplar_boat, poplar_chest_boat)
+/// требуют сущности лодки: [проверить] вне этого среза. Группа/категория: категории сняты,
+/// номера групп локальные (общая группа с дубом не выставляется, как у прежних записей).
+pub fn poplar_recipes() -> &'static [PoplarRecipe] {
+    use crate::gameplay_catalog::POPLAR;
+    static ALL: std::sync::OnceLock<Vec<PoplarRecipe>> = std::sync::OnceLock::new();
+    ALL.get_or_init(|| {
+        let item = |name: &str| crate::blocks::item_named(name).unwrap_or_else(|| panic!("нет предмета {name}"));
+        let one = |name: &str| -> &'static [i32] { Box::leak(Box::new([item(name)])) };
+        let (planks, stick, chain) = (one("poplar_planks"), one("stick"), one("iron_chain"));
+        let (log, stripped) = (one("poplar_log"), one("stripped_poplar_log"));
+        let any_log: &'static [i32] = Box::leak(Box::new([item("poplar_log"), item("poplar_wood"), item("stripped_poplar_log"), item("stripped_poplar_wood")]));
+        let empty: &'static [i32] = &[];
+        let (p, s, c, k) = (planks, stick, chain, stripped);
+        // (результат, форма: shaped, ширина, высота, количество, клетки, группа, категория)
+        type Row = (&'static str, bool, u8, u8, i32, Vec<&'static [i32]>, u8, u8);
+        let table: Vec<Row> = vec![
+            ("poplar_planks", false, 1, 1, 4, vec![any_log], 8, 0),
+            ("poplar_wood", true, 2, 2, 3, vec![log; 4], 15, 0),
+            ("stripped_poplar_wood", true, 2, 2, 3, vec![stripped; 4], 15, 0),
+            ("poplar_stairs", true, 3, 3, 4, vec![p, empty, empty, p, p, empty, p, p, p], 13, 0),
+            ("poplar_slab", true, 3, 1, 6, vec![p; 3], 12, 0),
+            ("poplar_fence", true, 3, 2, 3, vec![p, s, p, p, s, p], 5, 3),
+            ("poplar_fence_gate", true, 3, 2, 1, vec![s, p, s, s, p, s], 6, 1),
+            ("poplar_door", true, 2, 3, 3, vec![p; 6], 4, 1),
+            ("poplar_trapdoor", true, 3, 2, 2, vec![p; 6], 14, 1),
+            ("poplar_button", false, 1, 1, 1, vec![p], 2, 1),
+            ("poplar_pressure_plate", true, 2, 1, 1, vec![p; 2], 9, 1),
+            ("poplar_sign", true, 3, 3, 3, vec![p, p, p, p, p, p, empty, s, empty], 11, 3),
+            ("poplar_hanging_sign", true, 3, 3, 6, vec![c, empty, c, k, k, k, k, k, k], 7, 3),
+            ("poplar_shelf", true, 3, 3, 6, vec![k, k, k, empty, empty, empty, k, k, k], 10, 3),
+        ];
+        table.into_iter().map(|(name, shaped, width, height, count, cells, group, category)| {
+            let row = POPLAR.iter().position(|row| row.name == name).expect("строка тополя") as u8;
+            PoplarRecipe { row, recipe: Recipe { shaped, width, height, result: item(name), count, cells: Box::leak(cells.into_boxed_slice()) }, group, category }
+        }).collect()
+    })
+}
+
+/// Доски тополя годятся везде, где рецепт принимает любые доски (тег planks): подменяем их дубовыми,
+/// ищем прежний рецепт, и принимаем лишь если все доски тополя легли в клетки-теги.
+fn poplar_planks_swap(slots: &[Option<Stack>]) -> Option<(usize, Vec<Option<Stack>>)> {
+    let (planks, oak) = (crate::blocks::item_named("poplar_planks")?, crate::blocks::item_named("oak_planks")?);
+    let used = slots.iter().flatten().filter(|stack| stack.item == planks).count();
+    if used == 0 { return None; }
+    let swapped: Vec<Option<Stack>> = slots.iter().map(|slot| slot.map(|mut stack| { if stack.item == planks { stack.item = oak; } stack })).collect();
+    let index = recipe_index(&swapped)?;
+    let tag_cells = recipes()[index].cells.iter().filter(|cell| cell.len() >= 12 && cell.contains(&oak)).count();
+    (used <= tag_cells).then_some((index, swapped))
 }
 
 pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
@@ -295,6 +354,7 @@ pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeI
         RecipeId::ConcreteStairs(index) => concrete_stairs_recipes().get(usize::from(index)),
         RecipeId::WoolStairs(index) => wool_stairs_recipes().get(usize::from(index)),
         RecipeId::Mineral(index) => mineral_recipes().iter().find(|(row, _)| *row == index).map(|(_, recipe)| recipe),
+        RecipeId::Poplar(index) => poplar_recipes().get(usize::from(index)).map(|entry| &entry.recipe),
         _ => concrete_slab_recipes().get(id.slab_index()?),
     }
 }
@@ -318,6 +378,10 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
         if let Some((row, _)) = mineral_recipes().iter().find(|(_, recipe)| recipe.matches(&grid)) {
             return Some(RecipeId::Mineral(*row));
         }
+        if let Some(index) = poplar_recipes().iter().position(|entry| entry.recipe.matches(&grid)) {
+            return Some(RecipeId::Poplar(index as u8));
+        }
+        if let Some((index, _)) = poplar_planks_swap(slots) { return Some(RecipeId::Native(index)); }
     }
     recipe_index(slots).map(RecipeId::Native)
 }
@@ -326,6 +390,7 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
 pub fn catalog_recipes() -> impl Iterator<Item = &'static Recipe> {
     concrete_slab_recipes().iter().chain(wool_slab_recipes()).chain(concrete_stairs_recipes()).chain(wool_stairs_recipes())
         .chain(mineral_recipes().iter().map(|(_, recipe)| recipe))
+        .chain(poplar_recipes().iter().map(|entry| &entry.recipe))
 }
 
 /// Каталог основного профиля общий для верстака, книги и автокрафтера.
@@ -335,6 +400,9 @@ pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Opt
         && let Some(grid) = Grid::new(slots)
         && let Some(recipe) = catalog_recipes().find(|recipe| recipe.matches(&grid))
     { return Some(Stack::new(recipe.result, recipe.count)); }
+    if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && let Some((_, swapped)) = poplar_planks_swap(slots)
+    { return craft(&swapped); }
     craft(slots)
 }
 

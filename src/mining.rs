@@ -10,6 +10,8 @@ mod drops;
 pub use drops::{block_drops, experience};
 
 pub fn properties(state: i32) -> (f32, &'static str, &'static [i32]) {
+    // Тополь 26.3 берёт твёрдость и инструменты у дубового двойника (src/poplar.rs).
+    let state = crate::poplar::twin_state(state);
     let table = crate::hardness_table::MINING;
     let index = table.partition_point(|&(_, high, ..)| high < state);
     table.get(index).filter(|&&(low, ..)| low <= state)
@@ -25,7 +27,12 @@ pub fn harvests(state: i32, tool: Option<Stack>) -> bool {
 }
 
 pub fn harvests_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>) -> bool {
-    let Ok((_, _, tools)) = catalog.mining_properties(state) else { return false; };
+    let tools = match catalog.mining_properties(state) {
+        Ok((_, _, tools)) => tools,
+        // Тополь существует только в профиле Preview; в обычном нет и его состояний.
+        Err(_) if crate::poplar::row_of_state(state).is_some() => properties(state).2,
+        Err(_) => return false,
+    };
     tools.is_empty() || tool.is_some_and(|stack| tools.contains(&stack.item))
 }
 
@@ -75,7 +82,7 @@ pub fn progress(state: i32, tool: Option<Stack>, env: Conditions) -> f32 {
 pub fn progress_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>, env: Conditions) -> f32 {
     let (hardness, _, _) = properties_with_catalog(catalog, state);
     if hardness < 0.0 { return 0.0; }
-    if crate::hardness_table::INSTANT.iter().any(|&(low, high)| (low..=high).contains(&state)) || hardness == 0.0 { return 1.0; }
+    if crate::hardness_table::INSTANT.iter().any(|&(low, high)| (low..=high).contains(&crate::poplar::twin_state(state))) || hardness == 0.0 { return 1.0; }
     let mut speed = tool_speed(catalog, state, tool);
     if speed > 1.0 { speed += env.efficiency; }
     speed *= 1.0 + 0.2 * env.haste.max(0) as f32;
@@ -107,6 +114,8 @@ pub fn wear_with_catalog(catalog: Catalog, state: i32, tool: Stack) -> i32 {
 /// (листва, Silk Touch и Fortune) остаются в прежнем обработчике.
 pub fn block_drops_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>, mut roll: impl FnMut() -> f32) -> Vec<Stack> {
     match catalog.block_entry(state) {
+        // Тополь идёт общим путём (листва, Silk Touch, Fortune), как дубовые двойники.
+        Ok(Some(_)) if crate::poplar::row_of_state(state).is_some() => block_drops(state, tool, roll),
         Ok(Some(_)) => catalog.drops_by_luck(state, tool.map(|stack| stack.item), roll()).ok().flatten().into_iter().collect(),
         Ok(None) => block_drops(state, tool, roll),
         Err(_) => Vec::new(),

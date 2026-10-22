@@ -23,11 +23,24 @@ fn table() -> &'static [State] {
 }
 
 pub(super) fn name(state: i32) -> Option<&'static str> {
-    table().get(state as usize).and_then(|entry| entry.name)
+    match table().get(state as usize) {
+        Some(entry) => entry.name,
+        // Тополь 26.3 лежит за таблицей 775 (src/poplar.rs).
+        #[cfg(not(seedmap_core))]
+        None => crate::poplar::row_of_state(state).map(|row| row.name),
+        #[cfg(seedmap_core)]
+        None => None,
+    }
 }
 
 pub(super) fn orientation(state: i32) -> Option<&'static Orientation> {
-    table().get(state as usize).and_then(|entry| entry.orientation)
+    match table().get(state as usize) {
+        Some(entry) => entry.orientation,
+        #[cfg(not(seedmap_core))]
+        None => crate::poplar::orientation_of(state),
+        #[cfg(seedmap_core)]
+        None => None,
+    }
 }
 
 #[cfg(test)]
@@ -36,7 +49,9 @@ mod tests {
 
     #[test]
     fn direct_tables_match_binary_search_for_every_state() {
-        for state in (-2..=i32::from(u16::MAX) + 1).chain([i32::MIN, i32::MAX]) {
+        // Тополь (за таблицей 775) проверяется в poplar::tests.
+        let poplar = crate::gameplay_catalog::POPLAR[0].first_state..=crate::gameplay_catalog::POPLAR[crate::gameplay_catalog::POPLAR.len() - 1].last_state;
+        for state in (-2..=i32::from(u16::MAX) + 1).chain([i32::MIN, i32::MAX]).filter(|state| !poplar.contains(state)) {
             let old = BLOCK_NAMES.partition_point(|(low, _, _)| *low <= state)
                 .checked_sub(1).and_then(|index| {
                     let (low, high, name) = BLOCK_NAMES[index];

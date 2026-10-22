@@ -93,7 +93,10 @@ pub fn mineral_recipes() -> &'static [Recipe] {
                 }
             }
         }
-        all.sort_by_key(|r| (crate::gameplay_catalog::MINERALS.iter().find(|row| row.item == r.output).map_or("", |row| row.name), r.input));
+        // Официальный порядок — по имени рецепта «<результат>_from_<вход>_stonecutting»
+        // (наблюдение probe_poplar_777.py: declare_recipes).
+        let name = |item: i32| crate::gameplay_catalog::MINERALS.iter().find(|row| row.item == item).map_or("", |row| row.name);
+        all.sort_by_key(|r| format!("{}_from_{}_stonecutting", name(r.output), name(r.input)));
         all
     })
 }

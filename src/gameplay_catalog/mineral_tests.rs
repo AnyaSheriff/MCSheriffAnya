@@ -14,7 +14,7 @@ fn ids_are_appended_without_gaps_and_match_the_pinned_777_tables() {
     assert_eq!(MINERALS[0].item, WOOL_STAIRS[15].item + 1);
     assert_eq!(MINERALS[0].block, WOOL_STAIRS[15].block + 1);
     assert_eq!(MINERALS[0].first_state, WOOL_STAIRS[15].last_state + 1);
-    let counts = |form| match form { BlockForm::Full => 1, BlockForm::Slab => 6, BlockForm::Stairs => 80, BlockForm::Wall => 324, BlockForm::PotentSulfur => 5, BlockForm::Spike => 20 };
+    let counts = |form| match form { BlockForm::Full => 1, BlockForm::Slab => 6, BlockForm::Stairs => 80, BlockForm::Wall => 324, BlockForm::PotentSulfur => 5, BlockForm::Spike => 20, BlockForm::Wood => unreachable!("тополь — в poplar_tests") };
     for (index, row) in MINERALS.iter().enumerate() {
         assert_eq!(row.family, SlabFamily::Mineral);
         assert_eq!(row.state_count(), counts(row.form), "{}", row.name);

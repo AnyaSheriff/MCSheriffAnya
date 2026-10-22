@@ -12,7 +12,7 @@ use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
 mod runtime;
 mod stack_validation;
 #[allow(unused_imports)]
-pub use mcsa_protocol::content::{BlockForm, SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, CONCRETE_STAIRS, WOOL_STAIRS, MINERALS, slabs, stairs, minerals, entries};
+pub use mcsa_protocol::content::{BlockForm, SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, CONCRETE_STAIRS, WOOL_STAIRS, MINERALS, POPLAR, slabs, stairs, minerals, poplar, entries};
 mod mob_validation;
 mod hive_validation;
 
@@ -188,7 +188,7 @@ impl Catalog {
 
     fn entry_id(kind: Kind, id: i32) -> Option<&'static SlabDescriptor> {
         entries().find(|row| match kind {
-            Kind::Item => row.item == id,
+            Kind::Item => row.has_item() && row.item == id,
             Kind::Block => row.block == id,
             Kind::State => (row.first_state..=row.last_state).contains(&id),
         })
@@ -223,6 +223,10 @@ impl Catalog {
     pub fn waterlogged(self, state: i32) -> Result<Option<bool>, Error> {
         if let Some((_, wet)) = self.slab_properties(state)? { return Ok(Some(wet)); }
         if let Some(stair) = self.stair_properties(state)? { return Ok(Some(stair.waterlogged)); }
+        // Тополь: свойства дубового двойника (src/poplar.rs), в том числе у забора, люка и листвы.
+        if self.block_entry(state)?.is_some_and(|row| row.family == SlabFamily::Poplar) {
+            return Ok(crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "waterlogged")).map(|value| value == "true"));
+        }
         // Стенка и шип: порядок свойств как у стенки из камня / капельника, значит и смещение то же.
         let Some(equivalent) = self.base_equivalent(state)? else { return Ok(None); };
         Ok(crate::blocks::orientation_of(equivalent).and_then(|rule| rule.value(equivalent, "waterlogged")).map(|value| value == "true"))
@@ -254,7 +258,7 @@ impl Catalog {
     }
 
     pub fn item_named(self, name: &str) -> Result<Option<i32>, Error> {
-        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some(row.item)); }
+        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(row.has_item().then_some(row.item)); }
         Ok(crate::blocks::item_named(name))
     }
 
@@ -265,7 +269,8 @@ impl Catalog {
 
     pub fn stack_size(self, item: i32) -> Result<i32, Error> {
         self.name(Kind::Item, item)?;
-        Ok(if Self::entry_id(Kind::Item, item).is_some() { 64 } else { crate::blocks::stack_size(item) })
+        // У тополя размер стопки как у дубового двойника (таблички по 16); у остального каталога — 64.
+        Ok(if Self::entry_id(Kind::Item, item).is_some_and(|row| row.family != SlabFamily::Poplar) { 64 } else { crate::blocks::stack_size(item) })
     }
 
     pub fn slab_state(self, half: SlabHalf, waterlogged: bool) -> Result<i32, Error> {
@@ -304,7 +309,7 @@ impl Catalog {
     pub fn decode_client_id(self, kind: Kind, id: u32, client: JavaVersion) -> Result<i32, Error> {
         let extension = if client == JavaVersion::V26_3 {
             entries().find_map(|row| match kind {
-                Kind::Item if id == row.wire_item => Some(row.item),
+                Kind::Item if row.has_item() && id == row.wire_item => Some(row.item),
                 Kind::Block if id == row.wire_block => Some(row.block),
                 Kind::State if (row.wire_first_state..row.wire_first_state + row.state_count()).contains(&id) => Some(row.first_state + (id - row.wire_first_state) as i32),
                 _ => None,
@@ -327,3 +332,6 @@ mod stairs_tests;
 
 #[cfg(test)]
 mod mineral_tests;
+
+#[cfg(test)]
+mod poplar_tests;

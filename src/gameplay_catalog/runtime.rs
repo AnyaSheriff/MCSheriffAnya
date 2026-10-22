@@ -37,6 +37,10 @@ const SPIKE_PROPERTIES: &[Property] = &[
 fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
     static ORIENTATIONS: std::sync::OnceLock<Vec<Orientation>> = std::sync::OnceLock::new();
     let rows = ORIENTATIONS.get_or_init(|| entries().map(|row| match row.form {
+        // Тополь: правила дубового двойника под своим именем (src/poplar.rs); без свойств — пустое правило.
+        _ if row.family == SlabFamily::Poplar => crate::poplar::orientation(row.name).map_or(
+            Orientation { name: row.name, min: row.first_state, max: row.last_state, family: Family::Other, properties: &[] },
+            |rule| Orientation { name: rule.name, min: rule.min, max: rule.max, family: rule.family, properties: rule.properties }),
         BlockForm::Slab => Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Slab, properties: SLAB_PROPERTIES,
@@ -57,7 +61,7 @@ fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Other, properties: SPIKE_PROPERTIES,
         },
-        BlockForm::Full => Orientation {
+        BlockForm::Full | BlockForm::Wood => Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Other, properties: &[],
         },
@@ -76,7 +80,7 @@ impl Catalog {
     }
 
     pub fn item_for_block(self, name: &str) -> Result<Option<i32>, Error> {
-        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some(row.item)); }
+        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(row.has_item().then_some(row.item)); }
         Ok(crate::blocks::item_for_block(name))
     }
 
@@ -94,6 +98,8 @@ impl Catalog {
         if let Some(row) = Self::entry_named(name) {
             self.extension_named(row.name)?;
             // Цельный блок без свойств ведёт себя как камень: правила установки у него нет.
+            // У тополя правило есть ровно там, где оно есть у дубового двойника.
+            if row.family == SlabFamily::Poplar { return Ok(crate::blocks::orientation(name)); }
             return Ok((row.form != BlockForm::Full).then(|| slab_orientation(row)));
         }
         Ok(crate::blocks::orientation(name))
@@ -131,6 +137,8 @@ impl Catalog {
     pub fn mining_properties(self, state: i32) -> Result<(f32, &'static str, &'static [i32]), Error> {
         if let Some(row) = self.block_entry(state)? {
             return Ok(match row.family {
+                // Тополь: твёрдость, материал и инструменты дубового двойника.
+                SlabFamily::Poplar => crate::mining::properties(state),
                 SlabFamily::Concrete => (1.8, "mineable/pickaxe", SLAB_TOOLS),
                 SlabFamily::Wool => (0.8, "wool", &[]),
                 // Вики, Sulfur Spike: шип выпадает от любого инструмента; остальное — от любой кирки.
@@ -143,8 +151,10 @@ impl Catalog {
 
     pub fn blast_resistance(self, state: i32) -> Result<f32, Error> {
         if let Some(row) = self.block_entry(state)? {
+            if row.family == SlabFamily::Poplar { return Ok(crate::blocks::blast_resistance(state)); }
             let own: f32 = match row.family {
                 SlabFamily::Concrete => 1.8, SlabFamily::Wool => 0.8,
+                SlabFamily::Poplar => unreachable!("тополь разобран выше"),
                 SlabFamily::Mineral if row.form == BlockForm::Spike => 3.0,
                 SlabFamily::Mineral => 6.0,
             };
@@ -161,6 +171,12 @@ impl Catalog {
     /// emit/filter из JSON; маска граней берётся из формы плиты соответствующей половины.
     pub fn light_properties(self, state: i32) -> Result<(u8, u8, u8), Error> {
         self.name(Kind::State, state)?;
+        if self.block_entry(state)?.is_some_and(|row| row.family == SlabFamily::Poplar) {
+            // Свет, непрозрачность и грани — у дубового двойника как есть.
+            let row = crate::blocks_table::LIGHT.iter().find(|&&(low, high, ..)| (low..=high).contains(&crate::poplar::twin_state(state)));
+            let (_, _, emit, filter, faces) = row.copied().unwrap_or((0, 0, 0, 0, 0));
+            return Ok((emit, filter, faces));
+        }
         let equivalent = if let Some((half, _)) = self.slab_properties(state)? {
             let orientation = crate::blocks::orientation("stone_slab").expect("базовая каменная плита");
             orientation.state(&[("type", match half { SlabHalf::Top => "top", SlabHalf::Bottom => "bottom", SlabHalf::Double => "double" }), ("waterlogged", "false")]).expect("состояние базовой плиты")
@@ -189,6 +205,9 @@ impl Catalog {
     #[cfg(not(seedmap_core))]
     pub fn explosion_drops(self, state: i32, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
         self.name(Kind::State, state)?;
+        if self.block_entry(state)?.is_some_and(|row| row.family == SlabFamily::Poplar) {
+            return Ok(crate::blocks::explosion_drops(state, luck));
+        }
         if self.block_entry(state)?.is_some() {
             let (_, _, tools) = self.mining_properties(state)?;
             let shears = crate::blocks::item_named("shears");
@@ -200,6 +219,10 @@ impl Catalog {
     #[cfg(not(seedmap_core))]
     pub fn drops_by_luck(self, state: i32, tool: Option<i32>, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
         self.name(Kind::State, state)?;
+        if self.block_entry(state)?.is_some_and(|row| row.family == SlabFamily::Poplar) {
+            // Тополь: выпадение по имени и таблицам дубового двойника (двойная плита — две, дверь — нижняя половина).
+            return Ok(crate::blocks::drops_by_luck(state, tool, luck));
+        }
         if let Some(row) = self.block_entry(state)? {
             let count = match self.slab_properties(state)? { Some((SlabHalf::Double, _)) => 2, _ => 1 };
             // Бетон и сера требуют кирку; наблюдённая шерстяная плита и шип выпадают и рукой.
@@ -207,6 +230,7 @@ impl Catalog {
                 SlabFamily::Concrete => tool.is_some_and(|tool| SLAB_TOOLS.contains(&tool)),
                 SlabFamily::Wool => true,
                 SlabFamily::Mineral => row.form == BlockForm::Spike || tool.is_some_and(|tool| SLAB_TOOLS.contains(&tool)),
+                SlabFamily::Poplar => unreachable!("тополь разобран выше"),
             };
             return Ok(harvests.then(|| crate::inventory::Stack::new(row.item, count)));
         }

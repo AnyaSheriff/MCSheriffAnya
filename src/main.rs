@@ -36,6 +36,7 @@ mod compost;
 mod scaffolding;
 mod dripstone;
 mod sulfur_spike;
+mod poplar;
 mod entity;
 mod player;
 mod fluids;

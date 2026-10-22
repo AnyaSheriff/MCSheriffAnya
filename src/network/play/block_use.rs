@@ -300,15 +300,22 @@ mod tests {
 
     #[test]
     fn every_potted_plant_can_be_inserted_and_retrieved() {
-        let mut w = World::in_memory();
-        for state in 0..=u16::MAX as i32 {
-            let Some(n) = blocks::block_at_state(state) else { continue; };
-            let Some(plant) = plant_item(n) else { continue; };
-            put(&mut w, "flower_pot");
-            assert!(use_it(&mut w, Some(plant), false, 0.5).unwrap().spend, "{plant}");
-            assert_eq!(w.get_block(0, 10, 0), state);
-            assert_eq!(use_it(&mut w, None, false, 0.5).unwrap().give, stack(plant));
-            assert_eq!(blocks::block_at_state(w.get_block(0, 10, 0)), Some("flower_pot"));
+        // Обычный мир не знает тополя; профиль Preview проверяет и его горшок.
+        for preview in [false, true] {
+            let mut w = if preview { World::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3)) } else { World::in_memory() };
+            let mut poplar = 0;
+            for state in 0..=u16::MAX as i32 {
+                let Some(n) = blocks::block_at_state(state) else { continue; };
+                if !preview && n.contains("poplar") { continue; }
+                let Some(plant) = plant_item(n) else { continue; };
+                poplar += usize::from(n.contains("poplar"));
+                put(&mut w, "flower_pot");
+                assert!(use_it(&mut w, Some(plant), false, 0.5).unwrap().spend, "{plant}");
+                assert_eq!(w.get_block(0, 10, 0), state);
+                assert_eq!(use_it(&mut w, None, false, 0.5).unwrap().give, stack(plant));
+                assert_eq!(blocks::block_at_state(w.get_block(0, 10, 0)), Some("flower_pot"));
+            }
+            assert_eq!(poplar, usize::from(preview));
         }
     }
     #[test]

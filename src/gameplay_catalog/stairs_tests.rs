@@ -25,7 +25,7 @@ fn identities_follow_slabs_and_match_selected_json() {
         assert_eq!(block["maxStateId"].as_u64(), Some(u64::from(row.wire_first_state) + 79));
         assert_eq!(row.last_state - row.first_state, 79);
         assert_eq!(block["defaultState"].as_u64().unwrap() - block["minStateId"].as_u64().unwrap(), (row.default_state - row.first_state) as u64);
-        let (hardness, material) = match row.family { SlabFamily::Concrete => (1.8, "mineable/pickaxe"), SlabFamily::Wool => (0.8, "wool"), SlabFamily::Mineral => unreachable!("сера проверяется в mineral_tests") };
+        let (hardness, material) = match row.family { SlabFamily::Concrete => (1.8, "mineable/pickaxe"), SlabFamily::Wool => (0.8, "wool"), SlabFamily::Mineral | SlabFamily::Poplar => unreachable!("сера и тополь проверяются в своих тестах") };
         assert_eq!(block["hardness"], hardness);
         assert_eq!(block["resistance"], hardness);
         assert_eq!(block["material"], material);
@@ -55,7 +55,7 @@ fn all_2560_states_have_properties_mining_drops_wire_and_native_refusal() {
             let (hardness, own) = match row.family {
                 SlabFamily::Concrete => (1.8, "mineable/pickaxe"),
                 SlabFamily::Wool => (0.8, "wool"),
-                SlabFamily::Mineral => unreachable!("сера проверяется в mineral_tests"),
+                SlabFamily::Mineral | SlabFamily::Poplar => unreachable!("сера и тополь проверяются в своих тестах"),
             };
             let (h, tool, _) = PREVIEW.mining_properties(state).unwrap();
             assert_eq!((h, tool), (hardness, own));

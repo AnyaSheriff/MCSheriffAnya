@@ -5,12 +5,13 @@ use crate::{JavaVersion, ids::{self, RegistryKind}};
 /// Неизменяемые внутренние идентичности; существующие строки нельзя перенумеровывать.
 /// Источники: selected concrete-slabs-26.3.json / wool-slabs-26.3.json; не игровое наблюдение.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum SlabFamily { Concrete, Wool, Mineral }
+pub enum SlabFamily { Concrete, Wool, Mineral, Poplar }
 
 /// Форма блока каталога: плита (6 состояний), ступени (80), цельный блок (1), стенка (324),
-/// «мощная сера» (5 состояний) и серный шип (20 состояний).
+/// «мощная сера» (5 состояний), серный шип (20 состояний) и «Wood» — прочие блоки тополя,
+/// у которых есть дубовый двойник с теми же свойствами (`input_name`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike }
+pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike, Wood }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SlabDescriptor {
@@ -146,7 +147,39 @@ pub static MINERALS: [SlabDescriptor; 28] = [
     SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "cinnabar_brick_wall", item: 1597, block: 1259, first_state: 34794, last_state: 35117, default_state: 34797, wire_item: 51, wire_block: 1113, wire_first_state: 30192, input_name: "cinnabar_bricks", input_item: 1588 },
 ];
 
+/// Тополь 26.3: 23 блока (предметы с 1598, блоки с 1260, состояния с 35118). Номера 777 — из pinned
+/// blocks.json/items.json. `input_name`/`input_item` — дубовый двойник (те же свойства и порядок
+/// состояний, поэтому таблицы твёрдости, света и формы берутся по смещению от него); `item: -1` —
+/// у блока нет предмета (настенные таблички, горшок с саженцем). Лодки — не блоки, вне каталога.
+pub static POPLAR: [SlabDescriptor; 23] = [
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_planks", item: 1598, block: 1260, first_state: 35118, last_state: 35118, default_state: 35118, wire_item: 72, wire_block: 23, wire_first_state: 27, input_name: "oak_planks", input_item: 36 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Stairs, name: "poplar_stairs", item: 1599, block: 1261, first_state: 35119, last_state: 35198, default_state: 35130, wire_item: 524, wire_block: 574, wire_first_state: 14139, input_name: "oak_stairs", input_item: 442 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Slab, name: "poplar_slab", item: 1600, block: 1262, first_state: 35199, last_state: 35204, default_state: 35202, wire_item: 350, wire_block: 662, wire_first_state: 15231, input_name: "oak_slab", input_item: 271 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_fence", item: 1601, block: 1263, first_state: 35205, last_state: 35236, default_state: 35236, wire_item: 426, wire_block: 700, wire_first_state: 15907, input_name: "oak_fence", input_item: 345 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_fence_gate", item: 1602, block: 1264, first_state: 35237, last_state: 35268, default_state: 35244, wire_item: 941, wire_block: 690, wire_first_state: 15587, input_name: "oak_fence_gate", input_item: 822 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_door", item: 1603, block: 1265, first_state: 35269, last_state: 35332, default_state: 35280, wire_item: 898, wire_block: 710, wire_first_state: 16483, input_name: "oak_door", input_item: 781 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_trapdoor", item: 1604, block: 1266, first_state: 35333, last_state: 35396, default_state: 35348, wire_item: 920, wire_block: 374, wire_first_state: 9360, input_name: "oak_trapdoor", input_item: 802 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_button", item: 1605, block: 1267, first_state: 35397, last_state: 35420, default_state: 35406, wire_item: 867, wire_block: 504, wire_first_state: 12634, input_name: "oak_button", input_item: 752 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_pressure_plate", item: 1606, block: 1268, first_state: 35421, last_state: 35422, default_state: 35422, wire_item: 884, wire_block: 318, wire_first_state: 8547, input_name: "oak_pressure_plate", input_item: 768 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_sign", item: 1607, block: 1269, first_state: 35423, last_state: 35454, default_state: 35440, wire_item: 1111, wire_block: 263, wire_first_state: 7179, input_name: "oak_sign", input_item: 989 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_wall_sign", item: -1, block: 1270, first_state: 35455, last_state: 35462, default_state: 35456, wire_item: 0, wire_block: 278, wire_first_state: 7487, input_name: "oak_wall_sign", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_hanging_sign", item: 1608, block: 1271, first_state: 35463, last_state: 35526, default_state: 35512, wire_item: 1124, wire_block: 291, wire_first_state: 8207, input_name: "oak_hanging_sign", input_item: 1001 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_wall_hanging_sign", item: -1, block: 1272, first_state: 35527, last_state: 35534, default_state: 35528, wire_item: 0, wire_block: 302, wire_first_state: 8407, input_name: "oak_wall_hanging_sign", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_shelf", item: 1609, block: 1273, first_state: 35535, last_state: 35598, default_state: 35544, wire_item: 385, wire_block: 233, wire_first_state: 4732, input_name: "oak_shelf", input_item: 314 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_log", item: 1610, block: 1274, first_state: 35599, last_state: 35601, default_state: 35600, wire_item: 172, wire_block: 60, wire_first_state: 166, input_name: "oak_log", input_item: 134 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_wood", item: 1611, block: 1275, first_state: 35602, last_state: 35604, default_state: 35603, wire_item: 212, wire_block: 83, wire_first_state: 234, input_name: "oak_wood", input_item: 171 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "stripped_poplar_log", item: 1612, block: 1276, first_state: 35605, last_state: 35607, default_state: 35606, wire_item: 187, wire_block: 73, wire_first_state: 204, input_name: "stripped_oak_log", input_item: 148 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "stripped_poplar_wood", item: 1613, block: 1277, first_state: 35608, last_state: 35610, default_state: 35609, wire_item: 199, wire_block: 93, wire_first_state: 264, input_name: "stripped_oak_wood", input_item: 159 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_sapling", item: 1614, block: 1278, first_state: 35611, last_state: 35612, default_state: 35611, wire_item: 86, wire_block: 35, wire_first_state: 86, input_name: "oak_sapling", input_item: 49 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "potted_poplar_sapling", item: -1, block: 1279, first_state: 35613, last_state: 35613, default_state: 35613, wire_item: 0, wire_block: 472, wire_first_state: 12381, input_name: "potted_oak_sapling", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "orange_poplar_leaves", item: 1615, block: 1280, first_state: 35614, last_state: 35641, default_state: 35641, wire_item: 225, wire_block: 104, wire_first_state: 547, input_name: "oak_leaves", input_item: 182 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "red_poplar_leaves", item: 1616, block: 1281, first_state: 35642, last_state: 35669, default_state: 35669, wire_item: 224, wire_block: 103, wire_first_state: 519, input_name: "oak_leaves", input_item: 182 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "yellow_poplar_leaves", item: 1617, block: 1282, first_state: 35670, last_state: 35697, default_state: 35697, wire_item: 226, wire_block: 105, wire_first_state: 575, input_name: "oak_leaves", input_item: 182 },
+];
+
 impl SlabDescriptor {
+    /// Есть ли у строки предмет (у настенных табличек и горшка его нет).
+    pub const fn has_item(&self) -> bool { self.item >= 0 }
     /// Сколько состояний у блока: 6 у плиты, 80 у ступеней.
     pub const fn state_count(&self) -> u32 { (self.last_state - self.first_state + 1) as u32 }
 }
@@ -167,9 +200,14 @@ pub fn minerals() -> impl Iterator<Item = &'static SlabDescriptor> {
     MINERALS.iter()
 }
 
-/// Все объекты каталога: плиты, затем ступени, затем сера и киноварь.
+/// Все объекты каталога: плиты, ступени, сера и киноварь, затем тополь.
 pub fn entries() -> impl Iterator<Item = &'static SlabDescriptor> {
-    slabs().chain(stairs()).chain(minerals())
+    slabs().chain(stairs()).chain(minerals()).chain(poplar())
+}
+
+/// Тополь (дерево, листва, саженец, таблички, полка).
+pub fn poplar() -> impl Iterator<Item = &'static SlabDescriptor> {
+    POPLAR.iter()
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -203,6 +241,7 @@ impl ContentCodec {
     fn extension(kind: RegistryKind, space: IdSpace, id: u32) -> Option<(u32, u32, u32)> {
         entries().find_map(|row| {
             let (first, last, wire) = match kind {
+                RegistryKind::Item if !row.has_item() => return None,
                 RegistryKind::Item => (row.item as u32, row.item as u32, row.wire_item),
                 RegistryKind::Block => (row.block as u32, row.block as u32, row.wire_block),
                 RegistryKind::BlockState => (row.first_state as u32, row.last_state as u32, row.wire_first_state),
@@ -240,8 +279,9 @@ mod tests {
     fn extension_is_canonical_and_never_an_alias_for_wire775() {
         let codec = ContentCodec::white_slab_preview();
         for row in entries() {
-            for (kind, first, last, wire) in [(RegistryKind::Item,row.item as u32,row.item as u32,row.wire_item),
-                (RegistryKind::Block,row.block as u32,row.block as u32,row.wire_block),(RegistryKind::BlockState,row.first_state as u32,row.last_state as u32,row.wire_first_state)] {
+            let kinds = [(RegistryKind::Item,row.item as u32,row.item as u32,row.wire_item),
+                (RegistryKind::Block,row.block as u32,row.block as u32,row.wire_block),(RegistryKind::BlockState,row.first_state as u32,row.last_state as u32,row.wire_first_state)];
+            for (kind, first, last, wire) in kinds.into_iter().filter(|(kind, ..)| *kind != RegistryKind::Item || row.has_item()) {
                 for id in first..=last {
                     let target = wire + id - first;
                     assert_eq!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_3),id),Ok(target));

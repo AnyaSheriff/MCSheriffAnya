@@ -10,7 +10,7 @@ pub fn flammability(name: &str) -> (u32, u32) {
     if name.ends_with("_wool") { return (30, 60); }
     if name.ends_with("_carpet") { return (60, 20); }
     if name.ends_with("_log") || name.ends_with("_wood") || matches!(name, "bamboo_block" | "stripped_bamboo_block") { return (5, 5); }
-    if name.ends_with("_planks") || ((name.ends_with("_slab") || name.ends_with("_stairs") || name.ends_with("_fence") || name.ends_with("_fence_gate")) && ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "bamboo"].iter().any(|w| name.starts_with(w))) { return (5, 20); }
+    if name.ends_with("_planks") || ((name.ends_with("_slab") || name.ends_with("_stairs") || name.ends_with("_fence") || name.ends_with("_fence_gate")) && ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "bamboo", "poplar"].iter().any(|w| name.starts_with(w))) { return (5, 20); }
     match name {
         "bookshelf" | "lectern" | "chiseled_bookshelf" => (30, 20),
         "tnt" => (15, 100),

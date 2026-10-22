@@ -92,10 +92,10 @@ fn every_slab_property_pair_has_exact_selected_candidate_state() {
 #[test]
 fn unknown_ids_never_inherit_default_stack_size_or_wrap_into_valid_state() {
     for catalog in [OLD_CATALOG, PREVIEW] {
-        for id in [-1, i32::MIN, i32::MAX, MINERALS.last().unwrap().item + 1] {
+        for id in [-1, i32::MIN, i32::MAX, POPLAR.last().unwrap().item + 1] {
             assert!(matches!(catalog.stack_size(id), Err(Error::UnknownInternal { .. })));
         }
-        for id in [-1, i32::MIN, i32::MAX, MINERALS.last().unwrap().last_state + 1, 65535] {
+        for id in [-1, i32::MIN, i32::MAX, POPLAR.last().unwrap().last_state + 1, 65535] {
             assert!(matches!(catalog.name(Kind::State, id), Err(Error::UnknownInternal { .. })));
         }
         assert!(catalog.decode_client_id(Kind::Item, u32::MAX, NEW).is_err());
@@ -230,7 +230,7 @@ fn concrete_family_selected_metadata_and_all_96_states_stay_distinct() {
     }
     assert_eq!(states.len(),96);
     assert_eq!(PREVIEW.slab_entry(WHITE_SLAB_FIRST_STATE-1),Ok(None));
-    assert!(PREVIEW.slab_entry(MINERALS.last().unwrap().last_state+1).is_err());
+    assert!(PREVIEW.slab_entry(POPLAR.last().unwrap().last_state+1).is_err());
     assert_eq!(PREVIEW.slab_entry(WOOL_SLABS.last().unwrap().last_state+1),Ok(None), "дальше идут ступени, не плиты");
 }
 

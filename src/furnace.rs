@@ -76,7 +76,7 @@ fn item(name: &str) -> Option<i32> {
 /// Деревья Обычного мира: из них — уголь и топливо (вики, Smelting:
 /// «Input must be an Overworld log or wood»; Template:Smelting table:
 /// «Overworld Planks…»). Незерские стволы не горят.
-const WOODS: [&str; 10] = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "bamboo"];
+const WOODS: [&str; 11] = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "bamboo", "poplar"];
 
 /// Цвета красителей — для глазурованной терракоты, шерсти и ковров.
 const COLORS: [&str; 16] = [

@@ -87,7 +87,8 @@ fn table_for(catalog: Catalog) -> &'static [u16] {
     static PREVIEW: OnceLock<Vec<u16>> = OnceLock::new();
     PREVIEW.get_or_init(|| {
         let mut values = table().to_vec();
-        for state in crate::gameplay_catalog::WHITE_SLAB_FIRST_STATE..=crate::gameplay_catalog::WHITE_SLAB_LAST_STATE {
+        // Все состояния каталога (плиты, ступени, сера, тополь), не только белая плита.
+        for state in crate::gameplay_catalog::entries().flat_map(|row| row.first_state..=row.last_state) {
             let (emit, filter, faces) = catalog.light_properties(state).expect("состояние preview");
             values[state as usize] = emit as u16 | (filter as u16) << 4 | (faces as u16) << 8;
         }
