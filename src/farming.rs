@@ -1217,6 +1217,26 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<Vec<St
             world.note_level_event(x, y, z, BONE_MEAL_EVENT, 3);
             grass_bloom(world, pos);
         }
+        // Полочный гриб 26.3: мука делает маленький большим; у большого она не тратится
+        // (официальный сервер 26.3, раздатчик с костной мукой: age 0 → 1, мука ушла; age 1 — мука осталась).
+        "shelf_mushroom" if value(state, "age") == Some("0") => {
+            grow_to(world, pos, with(state, "age", 1));
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
+        // Красный куст 26.3: один новый куст на случайном из четырёх соседних по горизонтали мест
+        // (воздух над подходящей почвой); равномерно по 80 пробам. Нет места — мука не тратится.
+        // [проверить] соседи по вертикали и заменяемые блоки вроде травы: в пробе вверх/вниз не росло.
+        "red_shrub" => {
+            let shrub = state_of("red_shrub");
+            let free: Vec<(i32, i32)> = [(1, 0), (-1, 0), (0, 1), (0, -1)].into_iter()
+                .map(|(dx, dz)| (x + dx, z + dz))
+                .filter(|&(nx, nz)| world.get_block(nx, y, nz) == AIR && crate::plants::can_place(world, shrub, nx, y, nz))
+                .collect();
+            if free.is_empty() { return None; }
+            let (nx, nz) = free[roll(world, free.len() as i32) as usize];
+            world.set_block(nx, y, nz, shrub);
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
         _ => return bonemeal::apply(world, pos),
     }
 

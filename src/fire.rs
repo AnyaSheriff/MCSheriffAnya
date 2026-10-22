@@ -18,7 +18,7 @@ pub fn flammability(name: &str) -> (u32, u32) {
         "coal_block" => (5, 5),
         "vine" | "glow_lichen" => (15, 100),
         "bamboo" | "scaffolding" => (60, 60),
-        "short_grass" | "tall_grass" | "fern" | "large_fern" | "dead_bush" | "sweet_berry_bush" | "dandelion" | "poppy" | "blue_orchid" | "allium" | "azure_bluet" | "oxeye_daisy" | "cornflower" | "lily_of_the_valley" | "wither_rose" | "sunflower" | "lilac" | "rose_bush" | "peony" | "pink_petals" => (60, 100),
+        "short_grass" | "tall_grass" | "fern" | "large_fern" | "dead_bush" | "red_shrub" | "shelf_mushroom" | "sweet_berry_bush" | "dandelion" | "poppy" | "blue_orchid" | "allium" | "azure_bluet" | "oxeye_daisy" | "cornflower" | "lily_of_the_valley" | "wither_rose" | "sunflower" | "lilac" | "rose_bush" | "peony" | "pink_petals" => (60, 100),
         n if n.ends_with("_tulip") => (60, 100),
         "dried_kelp_block" => (30, 60),
         _ => (0, 0),

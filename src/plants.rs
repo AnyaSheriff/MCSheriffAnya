@@ -38,6 +38,8 @@ enum Needs {
     Underwater,
     /// Бамбук держит всю цепочку над собой (вики, Bamboo).
     Bamboo,
+    /// Полочный гриб 26.3 держится на боку полного блока позади себя (вики, Shelf Mushroom).
+    Attached,
 }
 
 /// Правило для блока с этим именем; None — блок держится сам.
@@ -48,7 +50,8 @@ fn needs(name: &str) -> Option<Needs> {
         | "lily_of_the_valley" | "wither_rose" | "torchflower" | "golden_dandelion" | "sunflower" | "lilac"
         | "rose_bush" | "peony" | "pitcher_plant" | "sweet_berry_bush" | "bush" | "firefly_bush" | "pink_petals"
         | "wildflowers" | "leaf_litter" | "open_eyeblossom" | "closed_eyeblossom" | "azalea" | "flowering_azalea"
-        | "pale_moss_carpet" => Needs::Soil,
+        | "pale_moss_carpet" | "red_shrub" => Needs::Soil,
+        "shelf_mushroom" => Needs::Attached,
         "bamboo" | "bamboo_sapling" => Needs::Bamboo,
         name if name.ends_with("_sapling") => Needs::Soil,
         "dead_bush" | "short_dry_grass" | "tall_dry_grass" => Needs::DrySoil,
@@ -110,6 +113,14 @@ pub fn survives(world: &World, state: i32, x: i32, y: i32, z: i32) -> bool {
         return false;
     }
 
+    // Полочный гриб: опора позади (против facing); [проверить] «любой блок с полной боковой гранью» = полный куб.
+    if name == "shelf_mushroom" {
+        let (dx, dz) = match blocks::orientation_of(state).and_then(|rule| rule.value(state, "facing")) {
+            Some("south") => (0, -1), Some("west") => (1, 0), Some("east") => (-1, 0), _ => (0, 1),
+        };
+        return blocks::full_cube(world.get_block(x + dx, y, z + dz));
+    }
+
     ground_ok(world, name, world.get_block(x, y - 1, z), x, y, z)
 }
 
@@ -152,6 +163,7 @@ fn ground_ok(world: &World, name: &str, below_state: i32, x: i32, y: i32, z: i32
         Needs::NetherSoil => {
             soil(below) || matches!(below, "crimson_nylium" | "warped_nylium" | "soul_soil" | "mycelium")
         }
+        Needs::Attached => true,
         Needs::Underwater => {
             below == "kelp" || below == "kelp_plant" || (blocks::solid_top(below_state) && below != "magma_block")
         }
@@ -252,6 +264,7 @@ pub fn washed_away(name: &str) -> bool {
             !matches!(name, "azalea" | "flowering_azalea" | "pale_moss_carpet" | "leaf_litter")
         }
         Some(Needs::Solid) => name != "snow",
+        Some(Needs::Attached) => true,
         Some(Needs::Bamboo) => name == "bamboo_sapling",
         _ => false,
     }

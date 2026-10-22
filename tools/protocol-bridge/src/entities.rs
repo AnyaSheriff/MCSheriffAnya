@@ -56,7 +56,11 @@ impl Tracker {
         match name {
             "spawn_entity" => {
                 let id = input.uint()?; input.take(16)?;
-                let kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, input.uint()?)?;
+                let raw = input.uint()?;
+                let kind = match context.items.content.entity_layout_base(raw).filter(|_| from == wire::INTERNAL) {
+                    Some(base) => entity_layouts::LAYOUTS.iter().position(|entry| entry.0 == base).expect("раскладка лодки") as u32,
+                    None => ids::translate(RegistryKind::Entity, from, wire::INTERNAL, raw)?,
+                };
                 if !self.entities.contains_key(&id) && self.entities.len() >= 65_536 { return Err(wire::Error::TooLarge); }
                 if probe_776 && kind != probe_776_item_kind() { return Err(wire::Error::PayloadUnavailable("unverified 26.2 spawned entity")); }
                 spawn = Some((id, kind));
@@ -133,7 +137,9 @@ pub(crate) fn spawn(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion
 pub(crate) fn spawn_with_content(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, content: crate::content::ContentCodec) -> Result<(), wire::Error> {
     uint(out, input.uint()?); out.extend(input.take(16)?);
     let kind = input.uint()?;
-    uint(out, ids::translate(RegistryKind::Entity, from, to, kind)?);
+    let extension = content.entity_layout_base(kind).filter(|_| from == wire::INTERNAL);
+    uint(out, if extension.is_some() { content.packet_id(RegistryKind::Entity, from, to, kind)? }
+        else { ids::translate(RegistryKind::Entity, from, to, kind)? });
     for _ in 0..3 {
         let bytes = input.take(8)?;
         if !f64::from_be_bytes(bytes.try_into().map_err(|_| wire::Error::Invalid)?).is_finite() { return Err(wire::Error::Invalid); }
@@ -148,7 +154,7 @@ pub(crate) fn spawn_with_content(input: &mut Cursor<'_>, out: &mut Vec<u8>, from
     }
     out.extend(input.take(3)?); // pitch/yaw/headYaw
     let data = input.varint()?;
-    let old_kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, kind)?;
+    let old_kind = if extension.is_some() { u32::MAX } else { ids::translate(RegistryKind::Entity, from, wire::INTERNAL, kind)? };
     uint(out, if old_kind == entity_layouts::FALLING_BLOCK {
         content.packet_id(RegistryKind::BlockState, from, to, u32::try_from(data).map_err(|_| wire::Error::Invalid)?)?
     } else { data as u32 }); // направление либо динамический entityId, не ID контента

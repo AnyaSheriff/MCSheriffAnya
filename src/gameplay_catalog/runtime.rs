@@ -61,7 +61,7 @@ fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Other, properties: SPIKE_PROPERTIES,
         },
-        BlockForm::Full | BlockForm::Wood => Orientation {
+        BlockForm::Full | BlockForm::Wood | BlockForm::Plant | BlockForm::Boat => Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Other, properties: &[],
         },
@@ -175,6 +175,8 @@ impl Catalog {
             // Свет, непрозрачность и грани — у дубового двойника как есть.
             let row = crate::blocks_table::LIGHT.iter().find(|&&(low, high, ..)| (low..=high).contains(&crate::poplar::twin_state(state)));
             let (_, _, emit, filter, faces) = row.copied().unwrap_or((0, 0, 0, 0, 0));
+            // Полочный гриб светит на 1 (blocks.json 777, emitLight), красный гриб-двойник — нет.
+            let emit = if crate::poplar::row_of_state(state).is_some_and(|row| row.name == "shelf_mushroom") { 1 } else { emit };
             return Ok((emit, filter, faces));
         }
         let equivalent = if let Some((half, _)) = self.slab_properties(state)? {
@@ -221,7 +223,11 @@ impl Catalog {
         self.name(Kind::State, state)?;
         if self.block_entry(state)?.is_some_and(|row| row.family == SlabFamily::Poplar) {
             // Тополь: выпадение по имени и таблицам дубового двойника (двойная плита — две, дверь — нижняя половина).
-            return Ok(crate::blocks::drops_by_luck(state, tool, luck));
+            let mut stack = crate::blocks::drops_by_luck(state, tool, luck);
+            // Вики, Shelf Mushroom: «a large one drops 2» (age=1).
+            if let Some(stack) = stack.as_mut() && crate::poplar::row_of_state(state).is_some_and(|row| row.name == "shelf_mushroom")
+                && crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "age")) == Some("1") { stack.count = 2; }
+            return Ok(stack);
         }
         if let Some(row) = self.block_entry(state)? {
             let count = match self.slab_properties(state)? { Some((SlabHalf::Double, _)) => 2, _ => 1 };

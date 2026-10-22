@@ -514,6 +514,12 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
         // Настенная табличка смотрит от стены — в сторону грани, по которой
         // щёлкнули; стоящая поворачивается по взгляду игрока на 16 румбов
         // (вики, Sign: «rotation … 0 … 15»; рыскание + 180).
+        // Полочный гриб (26.3): прикрепляется к боку блока, facing — от опоры к игроку (грань щелчка).
+        // [проверить] щелчок по верху/низу: оригинал может подбирать сторону сам; здесь — состояние по умолчанию.
+        Family::Other if orientation.name == "shelf_mushroom" => {
+            let facing = match click.face { 2 => "north", 3 => "south", 4 => "west", 5 => "east", _ => return None };
+            orientation.state(&[("facing", facing)])
+        }
         Family::Other if orientation.name.ends_with("_wall_sign") => {
             let facing = match click.face {
                 2 => "north",

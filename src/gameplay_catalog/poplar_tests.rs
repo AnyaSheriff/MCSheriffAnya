@@ -16,12 +16,13 @@ fn iname(id: i32) -> &'static str { PREVIEW.name(Kind::Item, id).unwrap() }
 
 #[test]
 fn ids_are_appended_after_minerals_and_match_the_pinned_777_tables() {
-    assert_eq!(POPLAR.len(), 23);
+    // 23 блока дерева + полочный гриб, красный куст и две лодки (plants_tests ниже).
+    assert_eq!(POPLAR.len(), 27);
     let last = &MINERALS[MINERALS.len() - 1];
     assert_eq!(POPLAR[0].block, last.block + 1);
     assert_eq!(POPLAR[0].first_state, last.last_state + 1);
     let mut next_item = last.item + 1;
-    for (index, row) in POPLAR.iter().enumerate() {
+    for (index, row) in POPLAR.iter().enumerate().filter(|(_, row)| !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
         assert_eq!(row.family, SlabFamily::Poplar);
         if index > 0 { assert_eq!((row.block, row.first_state), (POPLAR[index - 1].block + 1, POPLAR[index - 1].last_state + 1)); }
         if row.has_item() { assert_eq!(row.item, next_item); next_item += 1; } else { assert_eq!(row.item, -1); }
@@ -38,7 +39,7 @@ fn ids_are_appended_after_minerals_and_match_the_pinned_777_tables() {
     let (Ok(blocks_json), Ok(items_json)) = (std::fs::read_to_string(candidate.join("blocks.json")), std::fs::read_to_string(candidate.join("items.json"))) else { return; };
     let blocks_json: Vec<serde_json::Value> = serde_json::from_str(&blocks_json).unwrap();
     let items_json: Vec<serde_json::Value> = serde_json::from_str(&items_json).unwrap();
-    for row in &POPLAR {
+    for row in POPLAR.iter().filter(|row| row.has_block()) {
         let block = blocks_json.iter().find(|b| b["name"] == row.name).unwrap();
         assert_eq!(block["id"].as_u64(), Some(u64::from(row.wire_block)), "{}", row.name);
         assert_eq!(block["minStateId"].as_u64(), Some(u64::from(row.wire_first_state)), "{}", row.name);
@@ -47,6 +48,9 @@ fn ids_are_appended_after_minerals_and_match_the_pinned_777_tables() {
         if row.has_item() {
             assert_eq!(items_json.iter().find(|i| i["name"] == row.name).unwrap()["id"].as_u64(), Some(u64::from(row.wire_item)));
         }
+    }
+    for row in POPLAR.iter().filter(|row| row.form == BlockForm::Boat) {
+        assert_eq!(items_json.iter().find(|i| i["name"] == row.name).unwrap()["id"].as_u64(), Some(u64::from(row.wire_item)));
     }
 }
 
@@ -72,7 +76,7 @@ fn every_state_translates_to_the_wire_and_back_only_in_the_preview_profile() {
 fn poplar_behaves_like_its_oak_twin_in_every_table() {
     let pickaxe = item("diamond_pickaxe");
     let axe = item("diamond_axe");
-    for row in &POPLAR {
+    for row in POPLAR.iter().filter(|row| !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
         for state in row.first_state..=row.last_state {
             let twin = crate::poplar::twin_state(state);
             assert_eq!(PREVIEW.mining_properties(state), Ok(crate::mining::properties(twin)), "{}", row.name);
@@ -145,7 +149,6 @@ fn crafting_recipes_match_the_official_server() {
     let mut checked = 0;
     for entry in observed["crafting"].as_array().unwrap() {
         let result = entry["result"].as_str().unwrap();
-        if result.ends_with("_boat") { continue; } // лодки: сущность лодки вне среза [проверить]
         let wanted_cells: Vec<Option<Vec<String>>> = entry["cells"].as_array().unwrap().iter().map(|cell| if cell.is_null() { None } else { names_of(cell) }).collect();
         let (shaped, width, height) = (entry["shaped"].as_bool().unwrap(), entry["width"].as_u64().unwrap_or(0) as u8, entry["height"].as_u64().unwrap_or(0) as u8);
         let (ours, count): (&crate::crafting::Recipe, i32) = if let Some(found) = crate::crafting::poplar_recipes().iter().find(|e| iname(e.recipe.result) == result) {
@@ -171,9 +174,9 @@ fn crafting_recipes_match_the_official_server() {
         }
         checked += 1;
     }
-    // 14 рецептов тополя без лодок (один из 16 — доски по тегу) и 27 рецептов серы/киновари.
-    assert_eq!(crate::crafting::poplar_recipes().len(), 14);
-    assert_eq!(checked, 14 + crate::crafting::mineral_recipes().len());
+    // 14 рецептов дерева тополя, две лодки и 27 рецептов серы/киновари.
+    assert_eq!(crate::crafting::poplar_recipes().len(), 16);
+    assert_eq!(checked, 16 + crate::crafting::mineral_recipes().len());
 }
 
 #[test]
@@ -252,7 +255,7 @@ fn click(face: i32) -> crate::placing::Click { crate::placing::Click { face, cur
 #[test]
 fn every_poplar_item_is_placed_by_the_ordinary_path() {
     let player = (30.5, 64.0, 30.5);
-    for row in POPLAR.iter().filter(|row| row.has_item()) {
+    for row in POPLAR.iter().filter(|row| row.has_item() && !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
         let mut world = preview_world();
         let (name, default_state) = PREVIEW.block_for_item(row.item).unwrap().unwrap();
         assert_eq!(name, row.name);
@@ -337,4 +340,233 @@ fn poplar_leaves_decay_without_a_log_and_stay_next_to_a_poplar_log() {
     world.set_block_silently(1, 64, 0, near);
     crate::farming::random_tick(&mut world, (1, 64, 0), near);
     assert_eq!(blocks::block_at_state(world.get_block(1, 64, 0)), Some("red_poplar_leaves"), "у ствола листва держится");
+}
+
+// ---------------------------------------------------------------------------
+// Растения 26.3 (полочный гриб, красный куст), лодки и дерево из саженца тополя.
+// Наблюдение официального сервера 26.3: RCON-команды, крафтер, раздатчик с костной мукой, регионы мира.
+// ---------------------------------------------------------------------------
+
+fn plant_world() -> crate::world::World {
+    let mut world = crate::world::World::in_memory_with_catalog(PREVIEW);
+    let (dirt, grass) = (blocks::state_by_name("dirt").unwrap(), blocks::state_by_name("grass_block").unwrap());
+    for x in -6..=6 { for z in -6..=6 { world.set_block_silently(x, 63, z, if (x + z) % 2 == 0 { grass } else { dirt }); } }
+    world
+}
+
+#[test]
+fn plants_and_boats_have_the_pinned_777_ids_and_no_native_identity() {
+    let shelf = POPLAR.iter().find(|row| row.name == "shelf_mushroom").unwrap();
+    let shrub = POPLAR.iter().find(|row| row.name == "red_shrub").unwrap();
+    assert_eq!((shelf.item, shelf.block, shelf.first_state, shelf.last_state), (1618, 1283, 35698, 35705));
+    assert_eq!((shrub.item, shrub.block, shrub.first_state, shrub.last_state), (1619, 1284, 35706, 35706));
+    assert_eq!((shelf.wire_item, shelf.wire_block, shelf.wire_first_state), (319, 447, 11227));
+    assert_eq!((shrub.wire_item, shrub.wire_block, shrub.wire_first_state), (241, 144, 2367));
+    let boats: Vec<_> = POPLAR.iter().filter(|row| row.form == BlockForm::Boat).collect();
+    assert_eq!(boats.iter().map(|row| (row.name, row.item, row.wire_item)).collect::<Vec<_>>(), [("poplar_boat", 1620, 993), ("poplar_chest_boat", 1621, 994)]);
+    for row in &boats {
+        assert!(!row.has_block());
+        assert_eq!(PREVIEW.item_named(row.name), Ok(Some(row.item)));
+        assert_eq!(PREVIEW.to_client(Kind::Item, row.item, JavaVersion::V26_3), Ok(row.wire_item));
+        assert_eq!(PREVIEW.decode_client_id(Kind::Item, row.wire_item, JavaVersion::V26_3), Ok(row.item));
+        assert!(NATIVE.item_named(row.name).is_err());
+        assert!(PREVIEW.to_client(Kind::Item, row.item, JavaVersion::V26_1_2).is_err());
+        assert_eq!(PREVIEW.stack_size(row.item), Ok(1));
+        assert_eq!(crate::blocks::block_id(row.name), None);
+        assert_eq!(crate::blocks::state_by_name(row.name), None);
+    }
+    for (name, wire) in [("shelf_mushroom", 11227), ("red_shrub", 2367)] {
+        let state = blocks::state_by_name(name).unwrap();
+        assert_eq!(PREVIEW.to_client(Kind::State, state, JavaVersion::V26_3), Ok(wire));
+        assert_eq!(PREVIEW.stack_size(blocks::item_named(name).unwrap()), Ok(64));
+    }
+    // Свойства полочного гриба: age × facing; состояние 777 — смещение от 11227.
+    for state in shelf.first_state..=shelf.last_state {
+        let rule = blocks::orientation_of(state).unwrap();
+        let (age, facing) = (rule.value(state, "age").unwrap(), rule.value(state, "facing").unwrap());
+        assert_eq!(rule.state(&[("age", age), ("facing", facing)]), Some(state));
+        assert_eq!(PREVIEW.to_client(Kind::State, state, JavaVersion::V26_3), Ok(11227 + (state - shelf.first_state) as u32));
+    }
+    // Сущности лодок: внутренние 157/158 ↔ 106/107 в 777, только в профиле Preview.
+    use mcsa_protocol::{content::{ContentCodec, IdSpace}, ids::RegistryKind};
+    let codec = ContentCodec::white_slab_preview();
+    for (internal, wire) in [(157, 106), (158, 107)] {
+        assert_eq!(codec.map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_3), internal), Ok(wire));
+        assert_eq!(codec.map(RegistryKind::Entity, IdSpace::Wire(JavaVersion::V26_3), IdSpace::Canonical, wire), Ok(internal));
+        assert!(codec.map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_1_2), internal).is_err());
+        assert!(ContentCodec::default().map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_3), internal).is_err());
+    }
+    assert_eq!(crate::minecart::Kind::from_name("poplar_boat").map(|kind| kind.java_type()), Some(157));
+    assert_eq!(crate::minecart::Kind::from_name("poplar_chest_boat").map(|kind| (kind.java_type(), kind.slots())), Some((158, 27)));
+}
+
+#[test]
+fn poplar_boats_are_crafted_and_come_back_as_their_own_items() {
+    let planks = item("poplar_planks");
+    let grid = |cells: [Option<Stack>; 9]| cells.to_vec();
+    let p = Some(Stack::new(planks, 1));
+    let boat = crate::crafting::craft_for_catalog(PREVIEW, &grid([p, None, p, p, p, p, None, None, None]));
+    assert_eq!(boat.map(|stack| (iname(stack.item), stack.count)), Some(("poplar_boat", 1)));
+    let chest = Some(Stack::new(item("chest"), 1));
+    let chest_boat = crate::crafting::craft_for_catalog(PREVIEW, &grid([chest, Some(Stack::new(item("poplar_boat"), 1)), None, None, None, None, None, None, None]));
+    assert_eq!(chest_boat.map(|stack| iname(stack.item)), Some("poplar_chest_boat"));
+    // В обычном профиле такого рецепта нет.
+    assert!(crate::crafting::craft_for_catalog(NATIVE, &grid([p, None, p, p, p, p, None, None, None])).is_none_or(|stack| blocks::item_name(stack.item) != Some("poplar_boat")));
+    // Лодка выпадает предметом тополя (имя сущности = имя предмета).
+    for name in ["poplar_boat", "poplar_chest_boat"] {
+        let kind = crate::minecart::Kind::from_name(name).unwrap();
+        assert!(kind.is_boat());
+        assert_eq!(blocks::item_named(kind.name()), Some(item(name)));
+    }
+}
+
+#[test]
+fn shelf_mushroom_sticks_to_a_side_drops_itself_and_grows_with_bone_meal() {
+    let mut world = plant_world();
+    let stone = blocks::state_by_name("stone").unwrap();
+    world.set_block_silently(0, 64, 0, stone);
+    let (name, default_state) = PREVIEW.block_for_item(item("shelf_mushroom")).unwrap().unwrap();
+    for (face, facing, at) in [(2, "north", (0, 64, -1)), (3, "south", (0, 64, 1)), (4, "west", (-1, 64, 0)), (5, "east", (1, 64, 0))] {
+        let result = crate::placing::place(&mut world, name, default_state, (0, 64, 0), &click(face), (30.5, 64.0, 30.5));
+        assert!(matches!(result, crate::placing::Placement::Placed), "{facing}: {result:?}");
+        let state = world.get_block(at.0, at.1, at.2);
+        let rule = blocks::orientation_of(state).unwrap();
+        assert_eq!((rule.value(state, "facing"), rule.value(state, "age")), (Some(facing), Some("0")));
+        assert!(crate::plants::survives(&world, state, at.0, at.1, at.2), "{facing}");
+    }
+    // Без опоры гриб не стоит: сняли камень — все четыре ломаются при проверке.
+    world.set_block_silently(0, 64, 0, 0);
+    for at in [(0, 64, -1), (0, 64, 1), (-1, 64, 0), (1, 64, 0)] {
+        let state = world.get_block(at.0, at.1, at.2);
+        assert!(!crate::plants::survives(&world, state, at.0, at.1, at.2));
+        assert!(crate::plants::check(&mut world, at.0, at.1, at.2, false));
+        assert_eq!(world.get_block(at.0, at.1, at.2), 0);
+    }
+    // Маленький и большой выпадают собой (1 и 2), рукой и любым инструментом; мука делает большим один раз.
+    let small = blocks::state_by_name("shelf_mushroom").unwrap();
+    let rule = blocks::orientation("shelf_mushroom").unwrap();
+    let large = rule.state(&[("age", "1"), ("facing", "north")]).unwrap();
+    for (state, count) in [(small, 1), (large, 2)] {
+        let drop = PREVIEW.drops_by_luck(state, None, 0.5).unwrap().unwrap();
+        assert_eq!((iname(drop.item), drop.count), ("shelf_mushroom", count));
+        assert_eq!(PREVIEW.mining_properties(state).unwrap().0, 0.0);
+        assert_eq!(PREVIEW.light_properties(state).unwrap().0, 1, "светит на 1 как бурый гриб");
+    }
+    world.set_block_silently(0, 64, 0, stone);
+    let result = crate::placing::place(&mut world, name, default_state, (0, 64, 0), &click(5), (30.5, 64.0, 30.5));
+    assert!(matches!(result, crate::placing::Placement::Placed));
+    assert!(crate::farming::bone_meal(&mut world, (1, 64, 0)).is_some());
+    let grown = world.get_block(1, 64, 0);
+    assert_eq!(blocks::orientation_of(grown).and_then(|rule| rule.value(grown, "age")), Some("1"));
+    assert_eq!(blocks::orientation_of(grown).and_then(|rule| rule.value(grown, "facing")), Some("east"));
+    assert!(crate::farming::bone_meal(&mut world, (1, 64, 0)).is_none(), "у большого мука не тратится");
+}
+
+#[test]
+fn red_shrub_needs_soil_and_bone_meal_plants_one_neighbour() {
+    let mut world = plant_world();
+    let shrub = blocks::state_by_name("red_shrub").unwrap();
+    // Почва: дёрн и земля — да; камень, песок — нет.
+    for (below, ok) in [("grass_block", true), ("dirt", true), ("podzol", true), ("moss_block", true), ("mud", true), ("stone", false), ("sand", false)] {
+        world.set_block_silently(0, 63, 0, blocks::state_by_name(below).unwrap());
+        assert_eq!(crate::plants::can_place(&world, shrub, 0, 64, 0), ok, "{below}");
+    }
+    world.set_block_silently(0, 63, 0, blocks::state_by_name("grass_block").unwrap());
+    world.set_block_silently(0, 64, 0, shrub);
+    // Мука: ровно один новый куст на одном из четырёх горизонтальных соседей, куст-источник остаётся.
+    let mut seen = std::collections::BTreeSet::new();
+    for _ in 0..60 {
+        for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] { world.set_block_silently(dx, 64, dz, 0); }
+        assert!(crate::farming::bone_meal(&mut world, (0, 64, 0)).is_some());
+        let grown: Vec<_> = [(1, 0), (-1, 0), (0, 1), (0, -1)].into_iter().filter(|&(dx, dz)| world.get_block(dx, 64, dz) == shrub).collect();
+        assert_eq!(grown.len(), 1);
+        seen.insert(grown[0]);
+    }
+    assert_eq!(seen.len(), 4, "все четыре стороны достижимы");
+    // Нет подходящего места (кругом камень над почвой или нет почвы): мука не тратится.
+    let stone = blocks::state_by_name("stone").unwrap();
+    for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] { world.set_block_silently(dx, 64, dz, stone); }
+    assert!(crate::farming::bone_meal(&mut world, (0, 64, 0)).is_none());
+    // Куст заменяется любым блоком без выпадения (тег replaceable) и горит.
+    assert!(blocks::replaceable(shrub));
+    assert_eq!(crate::compost::chance("red_shrub"), Some(30));
+    assert_eq!(crate::compost::chance("shelf_mushroom"), Some(65));
+    let drop = PREVIEW.drops_by_luck(shrub, None, 0.5).unwrap().unwrap();
+    assert_eq!((iname(drop.item), drop.count), ("red_shrub", 1));
+}
+
+#[test]
+fn mushroom_soups_accept_any_two_mushrooms_including_shelf() {
+    let (bowl, shelf, red, brown) = (item("bowl"), item("shelf_mushroom"), item("red_mushroom"), item("brown_mushroom"));
+    let s = |id| Some(Stack::new(id, 1));
+    let craft = |cells: &[Option<Stack>]| {
+        let mut grid = vec![None; 9];
+        for (index, cell) in cells.iter().enumerate() { grid[index] = *cell; }
+        crate::crafting::craft_for_catalog(PREVIEW, &grid).map(|stack| iname(stack.item))
+    };
+    // Наблюдение 26.3 (крафтер): суп из миски и любых двух грибов, три гриба или один — нет.
+    for pair in [(shelf, red), (shelf, brown), (shelf, shelf), (red, red), (brown, brown), (red, brown)] {
+        assert_eq!(craft(&[s(bowl), s(pair.0), s(pair.1)]), Some("mushroom_stew"), "{pair:?}");
+    }
+    assert_eq!(craft(&[s(bowl), s(shelf)]), None);
+    assert_eq!(craft(&[s(bowl), s(red), s(red), s(brown)]), None);
+    let flower = item("dandelion");
+    for pair in [(shelf, red), (shelf, shelf), (brown, brown)] {
+        assert_eq!(craft(&[s(pair.0), s(pair.1), s(bowl), s(flower)]), Some("suspicious_stew"), "{pair:?}");
+    }
+    assert_eq!(craft(&[s(shelf), s(bowl), s(flower)]), None);
+    let rabbit = [s(item("cooked_rabbit")), s(item("carrot")), s(item("baked_potato")), s(bowl)];
+    for mushroom in [shelf, red, brown] {
+        let mut cells = rabbit.to_vec();
+        cells.push(s(mushroom));
+        assert_eq!(craft(&cells), Some("rabbit_stew"));
+    }
+    // В профиле 775 полочного гриба нет, а старые рецепты прежние.
+    assert_eq!(crate::crafting::craft_for_catalog(NATIVE, &[s(bowl), s(red), s(brown), None, None, None, None, None, None]).map(|stack| blocks::item_name(stack.item)), Some(Some("mushroom_stew")));
+}
+
+#[test]
+fn poplar_saplings_grow_into_the_measured_tree() {
+    use std::collections::BTreeMap;
+    let sapling = blocks::state_by_name("poplar_sapling").unwrap();
+    let stage1 = blocks::orientation("poplar_sapling").unwrap().state(&[("stage", "1")]).unwrap();
+    assert_ne!(sapling, stage1);
+    let mut heights = BTreeMap::new();
+    let (mut colours, mut leaf_total, mut with_ring, mut ring_lengths) = (BTreeMap::new(), 0usize, 0usize, BTreeMap::new());
+    let trees = 400;
+    for index in 0..trees {
+        let mut world = crate::world::World::in_memory_with_catalog(PREVIEW);
+        // Мир в памяти начинает с одного и того же семени: каждое дерево получает свою часть потока случайных чисел.
+        for _ in 0..=index * 3 { world.random_bits(); }
+        for x in -12..=12 { for z in -12..=12 { world.set_block_silently(x, 63, z, blocks::state_by_name("grass_block").unwrap()); } }
+        world.set_block_silently(0, 64, 0, stage1);
+        assert!(crate::farming::grow_tree(&mut world, (0, 64, 0), stage1));
+        let top = (64..90).take_while(|&y| blocks::block_at_state(world.get_block(0, y, 0)) == Some("poplar_log")).last().unwrap();
+        *heights.entry(top - 63).or_insert(0) += 1;
+        let (mut leaves, mut names, mut y_min, mut y_max) = (0, std::collections::BTreeSet::new(), 99, 0);
+        let mut ring_max = 0;
+        for x in -12..=12 { for z in -12..=12 { for y in 64..95 {
+            let name = blocks::block_at_state(world.get_block(x, y, z)).unwrap_or("");
+            if name.ends_with("_poplar_leaves") { leaves += 1; names.insert(name); y_min = y_min.min(y); y_max = y_max.max(y); }
+            // Ветки: брёвна вне оси ствола, на высоте «макушка − 3 … − 1» верхнего кольца.
+            if name == "poplar_log" && (x != 0 || z != 0) && y >= top - 3 { ring_max = ring_max.max(x.abs() + z.abs()); }
+        } } }
+        assert_eq!(names.len(), 1, "один цвет листвы на дерево");
+        *colours.entry(*names.iter().next().unwrap()).or_insert(0) += 1;
+        // Листва от «макушка − 4» до «макушка + 2»; кольцо веток под ней.
+        assert!(y_min == top - 4 && (top + 1..=top + 2).contains(&y_max), "слои листвы {y_min}..{y_max} при макушке {top}");
+        leaf_total += leaves;
+        if ring_max > 0 { with_ring += 1; *ring_lengths.entry(ring_max).or_insert(0) += 1; }
+        // Нижнее кольцо: хотя бы одна ветка на «макушка − 4».
+        assert!([(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dz)| blocks::block_at_state(world.get_block(*dx, top - 4, *dz)) == Some("poplar_log")));
+    }
+    assert_eq!(heights.keys().copied().collect::<Vec<_>>(), [7, 8, 9, 10, 11], "{heights:?}");
+    assert!(heights.values().all(|&n| (40..=120).contains(&n)), "ствол 7–11 примерно поровну: {heights:?}");
+    let mean = leaf_total as f64 / trees as f64;
+    assert!((190.0..280.0).contains(&mean), "листьев на дерево {mean} (замер: среднее около 235)");
+    assert_eq!(colours.len(), 3, "{colours:?}");
+    assert!(colours["yellow_poplar_leaves"] > colours["red_poplar_leaves"].max(colours["orange_poplar_leaves"]) * 8 / 10);
+    // Верхнее кольцо есть примерно у 55 % (замер 36 из 63): длины 1…3.
+    let share = with_ring as f64 / trees as f64;
+    assert!((0.4..0.7).contains(&share), "доля деревьев с верхним кольцом {share} {ring_lengths:?}");
 }

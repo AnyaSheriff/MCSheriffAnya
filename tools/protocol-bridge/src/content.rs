@@ -11,7 +11,7 @@ pub enum SlabFamily { Concrete, Wool, Mineral, Poplar }
 /// «мощная сера» (5 состояний), серный шип (20 состояний) и «Wood» — прочие блоки тополя,
 /// у которых есть дубовый двойник с теми же свойствами (`input_name`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike, Wood }
+pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike, Wood, Plant, Boat }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SlabDescriptor {
@@ -150,8 +150,8 @@ pub static MINERALS: [SlabDescriptor; 28] = [
 /// Тополь 26.3: 23 блока (предметы с 1598, блоки с 1260, состояния с 35118). Номера 777 — из pinned
 /// blocks.json/items.json. `input_name`/`input_item` — дубовый двойник (те же свойства и порядок
 /// состояний, поэтому таблицы твёрдости, света и формы берутся по смещению от него); `item: -1` —
-/// у блока нет предмета (настенные таблички, горшок с саженцем). Лодки — не блоки, вне каталога.
-pub static POPLAR: [SlabDescriptor; 23] = [
+/// у блока нет предмета (настенные таблички, горшок с саженцем). Лодки — предметы без блока (`BlockForm::Boat`); их сущности — `entity_ids`.
+pub static POPLAR: [SlabDescriptor; 27] = [
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_planks", item: 1598, block: 1260, first_state: 35118, last_state: 35118, default_state: 35118, wire_item: 72, wire_block: 23, wire_first_state: 27, input_name: "oak_planks", input_item: 36 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Stairs, name: "poplar_stairs", item: 1599, block: 1261, first_state: 35119, last_state: 35198, default_state: 35130, wire_item: 524, wire_block: 574, wire_first_state: 14139, input_name: "oak_stairs", input_item: 442 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Slab, name: "poplar_slab", item: 1600, block: 1262, first_state: 35199, last_state: 35204, default_state: 35202, wire_item: 350, wire_block: 662, wire_first_state: 15231, input_name: "oak_slab", input_item: 271 },
@@ -175,11 +175,32 @@ pub static POPLAR: [SlabDescriptor; 23] = [
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "orange_poplar_leaves", item: 1615, block: 1280, first_state: 35614, last_state: 35641, default_state: 35641, wire_item: 225, wire_block: 104, wire_first_state: 547, input_name: "oak_leaves", input_item: 182 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "red_poplar_leaves", item: 1616, block: 1281, first_state: 35642, last_state: 35669, default_state: 35669, wire_item: 224, wire_block: 103, wire_first_state: 519, input_name: "oak_leaves", input_item: 182 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "yellow_poplar_leaves", item: 1617, block: 1282, first_state: 35670, last_state: 35697, default_state: 35697, wire_item: 226, wire_block: 105, wire_first_state: 575, input_name: "oak_leaves", input_item: 182 },
+    // Растения 26.3 без дубового двойника: таблицы состояний берутся у красного гриба (одно состояние).
+    // Состояния полочного гриба: age (0, 1) × facing (north, south, west, east); по умолчанию age=0, north.
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Plant, name: "shelf_mushroom", item: 1618, block: 1283, first_state: 35698, last_state: 35705, default_state: 35698, wire_item: 319, wire_block: 447, wire_first_state: 11227, input_name: "red_mushroom", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Plant, name: "red_shrub", item: 1619, block: 1284, first_state: 35706, last_state: 35706, default_state: 35706, wire_item: 241, wire_block: 144, wire_first_state: 2367, input_name: "red_mushroom", input_item: 0 },
+    // Лодки тополя: предметы без блока (block -1, пустой диапазон состояний).
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Boat, name: "poplar_boat", item: 1620, block: -1, first_state: 35707, last_state: 35706, default_state: -1, wire_item: 993, wire_block: 0, wire_first_state: 0, input_name: "poplar_planks", input_item: 1598 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Boat, name: "poplar_chest_boat", item: 1621, block: -1, first_state: 35707, last_state: 35706, default_state: -1, wire_item: 994, wire_block: 0, wire_first_state: 0, input_name: "poplar_boat", input_item: 1620 },
 ];
+
+/// Сущности лодок тополя: (внутренний номер после 775, номер в 777 по pinned entities.json).
+/// Внутренние номера идут сразу за последним видом сущности 775 (156).
+pub const fn entity_ids_of(name: &str) -> Option<(u32, u32)> {
+    match name.as_bytes() {
+        b"poplar_boat" => Some((157, 106)),
+        b"poplar_chest_boat" => Some((158, 107)),
+        _ => None,
+    }
+}
+
+fn entity_ids(row: &SlabDescriptor) -> Option<(u32, u32)> { entity_ids_of(row.name) }
 
 impl SlabDescriptor {
     /// Есть ли у строки предмет (у настенных табличек и горшка его нет).
     pub const fn has_item(&self) -> bool { self.item >= 0 }
+    /// Есть ли у строки блок (у лодок его нет).
+    pub const fn has_block(&self) -> bool { self.block >= 0 }
     /// Сколько состояний у блока: 6 у плиты, 80 у ступеней.
     pub const fn state_count(&self) -> u32 { (self.last_state - self.first_state + 1) as u32 }
 }
@@ -224,6 +245,12 @@ pub enum Error {
 
 impl ContentCodec {
     pub const fn is_preview(self) -> bool { self.white_slab }
+    /// Лодка тополя во внутреннем пространстве: раскладка metadata — как у дубовой лодки
+    /// (те же 14 полей, [проверить] сверкой с 777). None — это не сущность расширения.
+    pub fn entity_layout_base(self, id: u32) -> Option<&'static str> {
+        if !self.white_slab { return None; }
+        match id { 157 => Some("oak_boat"), 158 => Some("oak_chest_boat"), _ => None }
+    }
     /// Только граница внутреннего packet builder: раскладка775 содержит
     /// canonical content. К настоящему входному Slot775 это неприменимо.
     pub(crate) fn packet_space(self, version: JavaVersion) -> IdSpace {
@@ -243,8 +270,11 @@ impl ContentCodec {
             let (first, last, wire) = match kind {
                 RegistryKind::Item if !row.has_item() => return None,
                 RegistryKind::Item => (row.item as u32, row.item as u32, row.wire_item),
+                RegistryKind::Block if !row.has_block() => return None,
                 RegistryKind::Block => (row.block as u32, row.block as u32, row.wire_block),
+                RegistryKind::BlockState if row.state_count() == 0 => return None,
                 RegistryKind::BlockState => (row.first_state as u32, row.last_state as u32, row.wire_first_state),
+                RegistryKind::Entity => { let (canonical, wire) = entity_ids(row)?; (canonical, canonical, wire) }
                 _ => return None,
             };
             match space {
@@ -281,7 +311,11 @@ mod tests {
         for row in entries() {
             let kinds = [(RegistryKind::Item,row.item as u32,row.item as u32,row.wire_item),
                 (RegistryKind::Block,row.block as u32,row.block as u32,row.wire_block),(RegistryKind::BlockState,row.first_state as u32,row.last_state as u32,row.wire_first_state)];
-            for (kind, first, last, wire) in kinds.into_iter().filter(|(kind, ..)| *kind != RegistryKind::Item || row.has_item()) {
+            for (kind, first, last, wire) in kinds.into_iter().filter(|(kind, ..)| match kind {
+                RegistryKind::Item => row.has_item(),
+                RegistryKind::Block => row.has_block(),
+                _ => row.state_count() > 0,
+            }) {
                 for id in first..=last {
                     let target = wire + id - first;
                     assert_eq!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_3),id),Ok(target));

@@ -257,7 +257,7 @@ pub fn item_for_block(name: &str) -> Option<i32> {
         .find(|(_, _, block)| *block == name)
         .map(|(item, _, _)| *item);
     #[cfg(not(seedmap_core))]
-    if found.is_none() { return crate::poplar::row_named(name).filter(|row| row.has_item()).map(|row| row.item); }
+    if found.is_none() { return crate::poplar::block_row_named(name).filter(|row| row.has_item()).map(|row| row.item); }
     found
 }
 
@@ -269,7 +269,7 @@ pub fn orientation(name: &str) -> Option<&'static Orientation> {
         .ok()
         .map(|index| &ORIENTED[index]);
     #[cfg(not(seedmap_core))]
-    if found.is_none() && name.contains("poplar") { return crate::poplar::orientation(name); }
+    if found.is_none() && (name.contains("poplar") || name == "shelf_mushroom") { return crate::poplar::orientation(name); }
     found
 }
 
@@ -297,7 +297,7 @@ pub fn block_id(name: &str) -> Option<i32> {
         .ok()
         .map(|at| BLOCK_IDS[at].1);
     #[cfg(not(seedmap_core))]
-    if found.is_none() { return crate::poplar::row_named(name).map(|row| row.block); }
+    if found.is_none() { return crate::poplar::block_row_named(name).map(|row| row.block); }
     found
 }
 
@@ -338,7 +338,7 @@ pub fn state_by_name(name: &str) -> Option<i32> {
         .ok()
         .map(|index| DEFAULT_STATES[index].1);
     #[cfg(not(seedmap_core))]
-    if found.is_none() { return crate::poplar::row_named(name).map(|row| row.default_state); }
+    if found.is_none() { return crate::poplar::block_row_named(name).map(|row| row.default_state); }
     found
 }
 
@@ -385,7 +385,7 @@ pub fn states_of(name: &str) -> Option<(i32, i32)> {
         .find(|(_, _, block)| *block == name)
         .map(|(low, high, _)| (*low, *high));
     #[cfg(not(seedmap_core))]
-    if found.is_none() { return crate::poplar::row_named(name).map(|row| (row.first_state, row.last_state)); }
+    if found.is_none() { return crate::poplar::block_row_named(name).map(|row| (row.first_state, row.last_state)); }
     found
 }
 
@@ -539,6 +539,8 @@ pub fn replaceable(state: i32) -> bool {
         "short_grass",
         "fern",
         "dead_bush",
+        // Красный куст (26.3) заменяется как трава (вики, Red Shrub: тег replaceable).
+        "red_shrub",
         "bush",
         "short_dry_grass",
         "tall_dry_grass",
@@ -698,7 +700,7 @@ pub fn drop_of(state: i32, tool: Option<i32>) -> Option<i32> {
         .filter(|item| *item != 0)?;
     // Тополь выпадает собой, а не дубовым предметом.
     #[cfg(not(seedmap_core))]
-    if own != state { return Some(crate::poplar::retarget_item(item)); }
+    if own != state { return Some(crate::poplar::drop_item(state, item)); }
     Some(item)
 }
 

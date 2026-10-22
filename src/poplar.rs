@@ -6,8 +6,8 @@
 // у дубового двойника со смещением, а имя и правила установки — свои. Так поведение,
 // завязанное на имя («_door», «_log», «_leaves»), работает для тополя без отдельной копии кода.
 // Источник набора блоков — вики 26.3 (Poplar); значения проверены наблюдением `probe_poplar_777.py`.
-use crate::blocks::{self, Orientation};
-use crate::gameplay_catalog::{SlabDescriptor, POPLAR};
+use crate::blocks::{self, Family, Orientation, Property};
+use crate::gameplay_catalog::{BlockForm, SlabDescriptor, POPLAR};
 
 /// Первое состояние тополя: всё, что меньше, быстро отсекается.
 fn first_state() -> i32 { POPLAR[0].first_state }
@@ -25,10 +25,21 @@ pub fn row_named(name: &str) -> Option<&'static SlabDescriptor> {
     POPLAR.iter().find(|row| row.name == name)
 }
 
+/// То же, но только блоки (у лодок блока нет).
+pub fn block_row_named(name: &str) -> Option<&'static SlabDescriptor> {
+    row_named(name).filter(|row| row.has_block())
+}
+
+/// Свойства полочного гриба 26.3 (blocks.json 777): age 0–1, facing north/south/west/east.
+const SHELF_PROPERTIES: &[Property] = &[
+    Property { name: "age", values: &["0", "1"], default: "0" },
+    Property { name: "facing", values: &["north", "south", "west", "east"], default: "north" },
+];
+
 /// Первые состояния дубовых двойников, по порядку строк `POPLAR`.
 fn twin_firsts() -> &'static [i32] {
     static FIRSTS: std::sync::OnceLock<Vec<i32>> = std::sync::OnceLock::new();
-    FIRSTS.get_or_init(|| POPLAR.iter().map(|row| blocks::states_of(row.input_name).expect("дубовый двойник").0).collect())
+    FIRSTS.get_or_init(|| POPLAR.iter().map(|row| if row.form == BlockForm::Boat { 0 } else { blocks::states_of(row.input_name).expect("дубовый двойник").0 }).collect())
 }
 
 /// Дубовое состояние с тем же смещением; для остальных состояний — без изменений.
@@ -36,7 +47,9 @@ pub fn twin_state(state: i32) -> i32 {
     match row_of_state(state) {
         Some(row) => {
             let index = POPLAR.iter().position(|candidate| std::ptr::eq(candidate, row)).expect("строка");
-            twin_firsts()[index] + (state - row.first_state)
+            // Растения без дубового двойника делят одно состояние красного гриба.
+            let offset = if row.form == BlockForm::Plant { 0 } else { state - row.first_state };
+            twin_firsts()[index] + offset
         }
         None => state,
     }
@@ -51,19 +64,31 @@ pub fn retarget_item(item: i32) -> i32 {
     row_named(&poplar).filter(|row| row.has_item()).map_or(item, |row| row.item)
 }
 
+/// Предмет выпадения блока каталога: растения 26.3 выпадают собой, остальное — как дубовый двойник.
+pub fn drop_item(state: i32, twin_item: i32) -> i32 {
+    match row_of_state(state) {
+        Some(row) if row.form == BlockForm::Plant => row.item,
+        _ => retarget_item(twin_item),
+    }
+}
+
 pub fn name_of_item(item: i32) -> Option<&'static str> {
     POPLAR.iter().find(|row| row.has_item() && row.item == item).map(|row| row.name)
 }
 
 /// Блок для предмета тополя: имя и состояние по умолчанию.
 pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
-    POPLAR.iter().find(|row| row.has_item() && row.item == item).map(|row| (row.name, row.default_state))
+    POPLAR.iter().find(|row| row.has_item() && row.has_block() && row.item == item).map(|row| (row.name, row.default_state))
 }
 
 /// Правила установки тополя: свойства дубового двойника под своим именем и номерами состояний.
 pub fn orientation(name: &str) -> Option<&'static Orientation> {
     static RULES: std::sync::OnceLock<Vec<Option<Orientation>>> = std::sync::OnceLock::new();
     let rules = RULES.get_or_init(|| POPLAR.iter().map(|row| {
+        if row.name == "shelf_mushroom" {
+            return Some(Orientation { name: row.name, min: row.first_state, max: row.last_state, family: Family::Other, properties: SHELF_PROPERTIES });
+        }
+        if matches!(row.form, BlockForm::Plant | BlockForm::Boat) { return None; }
         blocks::orientation(row.input_name).map(|twin| Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: twin.family, properties: twin.properties,
@@ -80,6 +105,11 @@ pub fn orientation_of(state: i32) -> Option<&'static Orientation> {
 /// Предмет таблички тополя несёт по 16 штук в стопке, остальные — по 64 (как у дубовых).
 pub fn stack_size(item: i32) -> Option<i32> {
     let row = POPLAR.iter().find(|row| row.has_item() && row.item == item)?;
+    match row.form {
+        BlockForm::Boat => return Some(1),
+        BlockForm::Plant => return Some(64),
+        _ => {}
+    }
     let twin = blocks::item_named(row.input_name)?;
     Some(blocks::stack_size(twin))
 }
@@ -90,7 +120,7 @@ mod tests {
 
     #[test]
     fn every_poplar_state_has_a_twin_with_the_same_properties() {
-        for row in &POPLAR {
+        for row in POPLAR.iter().filter(|row| !matches!(row.form, BlockForm::Plant | BlockForm::Boat)) {
             let (first, last) = blocks::states_of(row.input_name).expect("двойник");
             assert_eq!(last - first, row.last_state - row.first_state, "{}", row.name);
             for state in row.first_state..=row.last_state {

@@ -22,7 +22,7 @@ pub const HEIGHT: f64 = 0.5625_f32 as f64;
 
 /// Виды: имя (оно же предмет), номер вида сущности Java (minecraft-data
 /// 26.1, entities.json), с сундуком ли.
-pub const BOATS: [(&str, i32, bool); 20] = [
+pub const BOATS: [(&str, i32, bool); 22] = [
     ("oak_boat", 89, false),
     ("oak_chest_boat", 90, true),
     ("spruce_boat", 125, false),
@@ -43,6 +43,10 @@ pub const BOATS: [(&str, i32, bool); 20] = [
     ("pale_oak_chest_boat", 95, true),
     ("bamboo_raft", 9, false),
     ("bamboo_chest_raft", 8, true),
+    // 26.3, только профиль Preview: внутренние номера 157/158 за последним видом 775;
+    // клиенту 777 уходят 106/107 через ContentCodec (mcsa-protocol, content.rs).
+    ("poplar_boat", 157, false),
+    ("poplar_chest_boat", 158, true),
 ];
 
 /// Все виды лодок — для подсказок в командах.
@@ -524,6 +528,6 @@ mod tests {
             assert!(kind.java_type() >= 0);
         }
 
-        assert_eq!(boat_kinds().count(), 20);
+        assert_eq!(boat_kinds().count(), 22);
     }
 }

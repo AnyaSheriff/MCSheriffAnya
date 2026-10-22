@@ -813,7 +813,9 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_mob(kind, rest, source, shared);
     }
 
-    let Some(kind) = crate::minecart::Kind::from_name(name) else {
+    // Лодки тополя есть только в профиле Preview26_3: в 775 у клиента нет такого вида сущности.
+    let Some(kind) = crate::minecart::Kind::from_name(name).filter(|kind| kind.name() != "poplar_boat" && kind.name() != "poplar_chest_boat"
+        || shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3) else {
         return Answer::saying(format!("Пока призываются только вагонетки, предметы, рамки, молния, животные (cow, pig, sheep, chicken), враждебные (zombie, skeleton, creeper, spider), кристалл и дракон Края, а не {}", name));
     };
     let (place, data) = match rest {

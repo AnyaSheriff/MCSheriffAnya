@@ -124,3 +124,23 @@ fn optional_block_state_uses_zero_for_absence_and_direct_ids_otherwise() {
         assert_eq!(cb(&[0x65,1,16,15,new,255],NEW,OLD,context).unwrap(),[0x63,1,16,15,old,255]);
     }
 }
+
+#[test]
+fn poplar_boats_spawn_with_wire_kinds_only_with_the_preview_content() {
+    let data=records(); let entity=&data["old"]["entities"][2];
+    let spawn=bytes(entity["packets"][0]["body"].as_str().unwrap());
+    let mut input=Cursor::new(&spawn); input.uint().unwrap(); input.uint().unwrap(); input.take(16).unwrap();
+    let at=spawn.len()-input.remaining();
+    let old_kind=input.uint().unwrap(); assert!(old_kind<128,"вид занимает один байт");
+    let preview=wire::Context { items: items::Context { content: crate::content::ContentCodec::white_slab_preview(), ..Default::default() }, ..context() };
+    for (internal,wire_kind) in [(157u8,106u8),(158,107)] {
+        let mut patched=spawn[..at].to_vec(); uint(&mut patched,u32::from(internal)); patched.extend_from_slice(&spawn[at+1..]);
+        let mut tracker=Tracker::default();
+        let out=tracker.translate(OLD,NEW,&patched,preview.clone()).unwrap();
+        let mut output=Cursor::new(&out); output.uint().unwrap(); output.uint().unwrap(); output.take(16).unwrap();
+        assert_eq!(output.uint().unwrap(),u32::from(wire_kind));
+        assert_eq!(tracker.entities.len(),1);
+        // Без предварительного профиля такого вида нет.
+        assert!(Tracker::default().translate(OLD,NEW,&patched,context()).is_err());
+    }
+}

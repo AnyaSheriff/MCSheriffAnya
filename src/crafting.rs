@@ -280,7 +280,7 @@ pub fn mineral_recipes() -> &'static [(u8, Recipe)] {
                 BlockForm::Full if row.name == "sulfur" => (true, 2, 2, 1, vec![x; 4]),
                 BlockForm::Full => (true, 2, 2, 4, vec![x; 4]),
                 BlockForm::Spike => continue,
-                BlockForm::Wood => unreachable!("в MINERALS нет блоков тополя"),
+                BlockForm::Wood | BlockForm::Plant | BlockForm::Boat => unreachable!("в MINERALS нет блоков тополя"),
             };
             all.push((index as u8, Recipe { shaped, width, height, result: row.item, count, cells: Box::leak(cells.into_boxed_slice()) }));
         }
@@ -295,8 +295,8 @@ pub struct PoplarRecipe { pub row: u8, pub recipe: Recipe, pub group: u8, pub ca
 /// доски — из любого ствола тополя (тег poplar_logs) 1→4; древесина 2×2 → 3 (и обтёсанная);
 /// ступени 6→4, плита 3→6, забор 3→ (доски/палка) 3, калитка 1, дверь 2×3 → 3, люк 2×3 → 2,
 /// кнопка 1, нажимная плита 2→1, табличка 3 (шесть досок и палка), подвесная 6 (две цепи и шесть
-/// обтёсанных брёвен), полка 6 (обтёсанные брёвна, ряды 1 и 3). Лодки (poplar_boat, poplar_chest_boat)
-/// требуют сущности лодки: [проверить] вне этого среза. Группа/категория: категории сняты,
+/// обтёсанных брёвен), полка 6 (обтёсанные брёвна, ряды 1 и 3). Лодки (poplar_boat, poplar_chest_boat) — в конце
+/// таблицы (сущности: minecart/boat.rs). Группа/категория: категории сняты,
 /// номера групп локальные (общая группа с дубом не выставляется, как у прежних записей).
 pub fn poplar_recipes() -> &'static [PoplarRecipe] {
     use crate::gameplay_catalog::POPLAR;
@@ -326,12 +326,38 @@ pub fn poplar_recipes() -> &'static [PoplarRecipe] {
             ("poplar_sign", true, 3, 3, 3, vec![p, p, p, p, p, p, empty, s, empty], 11, 3),
             ("poplar_hanging_sign", true, 3, 3, 6, vec![c, empty, c, k, k, k, k, k, k], 7, 3),
             ("poplar_shelf", true, 3, 3, 6, vec![k, k, k, empty, empty, empty, k, k, k], 10, 3),
+            // Лодки: пять досок буквой «U» в 3×2 (наблюдение 26.3, как у дубовой лодки); с сундуком — лодка + сундук.
+            ("poplar_boat", true, 3, 2, 1, vec![p, empty, p, p, p, p], 16, 3),
+            ("poplar_chest_boat", false, 2, 1, 1, vec![one("chest"), one("poplar_boat")], 17, 3),
         ];
         table.into_iter().map(|(name, shaped, width, height, count, cells, group, category)| {
             let row = POPLAR.iter().position(|row| row.name == name).expect("строка тополя") as u8;
             PoplarRecipe { row, recipe: Recipe { shaped, width, height, result: item(name), count, cells: Box::leak(cells.into_boxed_slice()) }, group, category }
         }).collect()
     })
+}
+
+/// Грибные супы 26.3: вместо «бурый + красный» годятся любые два гриба из трёх (бурый, красный, полочный),
+/// в кроличье рагу — любой один. Снято с официального сервера 26.3 крафтером: миска + любые 2 гриба —
+/// грибной суп; миска + цветок + любые 2 гриба — подозрительный суп; один полочный гриб в рагу — рагу;
+/// миска и один гриб, три гриба — рецепта нет. Сводится к прежнему рецепту подменой: первый гриб бурый,
+/// второй красный. Возвращает подменённую сетку только если она изменилась.
+fn mushroom_swap(slots: &[Option<Stack>]) -> Option<Vec<Option<Stack>>> {
+    let (shelf, brown, red) = (crate::blocks::item_named("shelf_mushroom")?, crate::blocks::item_named("brown_mushroom")?, crate::blocks::item_named("red_mushroom")?);
+    let at: Vec<usize> = (0..slots.len()).filter(|&index| slots[index].is_some_and(|stack| [shelf, brown, red].contains(&stack.item))).collect();
+    if at.is_empty() || at.len() > 2 { return None; }
+    let mut swapped = slots.to_vec();
+    for (order, &index) in at.iter().enumerate() {
+        if let Some(stack) = swapped[index].as_mut() { stack.item = if order == 0 { brown } else { red }; }
+    }
+    (swapped != slots).then_some(swapped)
+}
+
+/// Результат грибного супа после подмены гриба (только суп: другие рецепты с грибом подменой не получаем).
+fn mushroom_soup(slots: &[Option<Stack>]) -> Option<(Vec<Option<Stack>>, Stack)> {
+    let swapped = mushroom_swap(slots)?;
+    let result = craft(&swapped)?;
+    matches!(crate::blocks::item_name(result.item), Some("mushroom_stew" | "suspicious_stew" | "rabbit_stew")).then_some((swapped, result))
 }
 
 /// Доски тополя годятся везде, где рецепт принимает любые доски (тег planks): подменяем их дубовыми,
@@ -382,6 +408,7 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
             return Some(RecipeId::Poplar(index as u8));
         }
         if let Some((index, _)) = poplar_planks_swap(slots) { return Some(RecipeId::Native(index)); }
+        if let Some((swapped, _)) = mushroom_soup(slots) && let Some(index) = recipe_index(&swapped) { return Some(RecipeId::Native(index)); }
     }
     recipe_index(slots).map(RecipeId::Native)
 }
@@ -403,6 +430,10 @@ pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Opt
     if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
         && let Some((_, swapped)) = poplar_planks_swap(slots)
     { return craft(&swapped); }
+    if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && craft(slots).is_none()
+        && let Some((_, result)) = mushroom_soup(slots)
+    { return Some(result); }
     craft(slots)
 }
 

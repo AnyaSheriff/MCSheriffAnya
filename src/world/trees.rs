@@ -80,6 +80,9 @@ pub enum Shape {
     TallMangrove,
     /// Дерево с азалией: короткий ствол, крона раздувается кверху.
     Azalea,
+    /// Тополь 26.3: прямой ствол 7–11, кольцо коротких ветвей на четыре блока ниже макушки,
+    /// у кроны бывает второе кольцо; крона — стопка дисков, один цвет листвы на дерево.
+    Poplar,
     /// Огромный коричневый гриб: ножка и плоская шляпка.
     BrownMushroom,
     /// Огромный красный гриб: ножка и шляпка-купол.
@@ -161,6 +164,7 @@ impl Tree {
             Shape::Mangrove => self.mangrove(&mut random, &mut blocks, false),
             Shape::TallMangrove => self.mangrove(&mut random, &mut blocks, true),
             Shape::Azalea => self.azalea(&mut random, &mut blocks),
+            Shape::Poplar => self.poplar(&mut random, &mut blocks),
             Shape::BrownMushroom => self.brown_mushroom(&mut blocks),
             Shape::RedMushroom => self.red_mushroom(&mut blocks),
         }
@@ -180,6 +184,60 @@ impl Tree {
             }
         }
         blocks
+    }
+
+    /// Тополь 26.3. Форма снята с деревьев, выращенных из саженцев на официальном сервере 26.3
+    /// (63 дерева, плюс 120 первой пробы; слои листвы сверяются таблицей `POPLAR_LEAF_PERMILLE`):
+    /// ствол 7–11 равномерно; на высоте «макушка − 4» кольцо веток длиной 1 (каждая из четырёх сторон
+    /// с вероятностью около 0,7, но хотя бы одна); число n = 0…3 задаёт радиус кроны R = 4 + n, при n > 0
+    /// на высоте «макушка − 3 + s» (s = 1 или 2) второе кольцо из четырёх веток длиной n. Листва — слои
+    /// от «макушка − 4» до «макушка + s»: радиусы 2, R − 1, R, [R при s = 2,] R − 1 (R − 2…), …;
+    /// внутри слоя клетка ставится с замеренной вероятностью по квадрату расстояния от оси.
+    /// [проверить] связь n с s и ветвями проверена на 63 деревьях; естественные деревья леса не мерялись.
+    fn poplar(&self, random: &mut Random, blocks: &mut Vec<TreeBlock>) {
+        let top = self.trunk;
+        trunk(blocks, 0, 0, 1, top);
+
+        // Нижнее кольцо веток.
+        let mut present = [false; 4];
+        for side in &mut present { *side = fraction(random) < 0.7; }
+        if !present.contains(&true) { present[roll(random, 4) as usize] = true; }
+        let mut arms: Vec<(i32, i32, i32)> = Vec::new();
+        for (index, (step_x, step_z)) in CARDINAL.iter().enumerate() {
+            if present[index] { arms.push((*step_x, top - 4, *step_z)); }
+        }
+
+        // Длина верхних веток и сдвиг кроны.
+        let pick = fraction(random);
+        let n = if pick < 46.0 / 120.0 { 0 } else if pick < 96.0 / 120.0 { 1 } else if pick < 109.0 / 120.0 { 2 } else { 3 };
+        let shift = 1 + roll(random, 2);
+        let radius = 4 + n;
+        if n > 0 {
+            for (step_x, step_z) in CARDINAL {
+                for step in 1..=n { arms.push((step_x * step, top - 3 + shift, step_z * step)); }
+            }
+        }
+        for (x, y, z) in &arms {
+            blocks.push((*x, *y, *z, Part::Log(if *z == 0 { Axis::X } else { Axis::Z })));
+        }
+
+        let layers: Vec<(i32, i32)> = if shift == 1 {
+            vec![(-4, 2), (-3, radius - 1), (-2, radius), (-1, radius - 1), (0, radius - 2), (1, radius - 3)]
+        } else {
+            vec![(-4, 2), (-3, radius - 1), (-2, radius), (-1, radius), (0, radius - 1), (1, radius - 2), (2, radius - 3)]
+        };
+        for (dy, layer_radius) in layers {
+            let table = POPLAR_LEAF_PERMILLE[(layer_radius.clamp(1, 7) - 1) as usize];
+            for dx in -layer_radius - 1..=layer_radius + 1 {
+                for dz in -layer_radius - 1..=layer_radius + 1 {
+                    let y = top + dy;
+                    // Ствол занимает ось до макушки, ветки — свои клетки.
+                    if (dx == 0 && dz == 0 && dy <= 0) || arms.contains(&(dx, y, dz)) { continue; }
+                    let chance = table.iter().find(|(square, _)| *square == dx * dx + dz * dz).map_or(0, |(_, permille)| *permille);
+                    if chance > 0 && fraction(random) * 1000.0 < f64::from(chance) { blocks.push((dx, y, dz, Part::Leaves)); }
+                }
+            }
+        }
     }
 
     /// Дуб. Над макушкой крест, на уровне макушки слой 3×3, ниже — слои
@@ -1188,6 +1246,20 @@ const fn species(log: &'static str, leaves: &'static str, shape: Shape, low: i32
     Species { tree: Tree { log, leaves, trunk: low, shape, bees: false, heart: false }, spread, extra }
 }
 
+
+/// Вероятность листа (в тысячных) по квадрату расстояния от оси ствола для слоя радиуса 1…7 (индекс = радиус − 1).
+/// Снято с деревьев, выращенных из саженцев на официальном сервере 26.3 (63 дерева): внутри диска листва
+/// почти сплошная, у края — около половины клеток, на самих осях — чаще.
+const POPLAR_LEAF_PERMILLE: [&[(i32, u16)]; 7] = [
+    &[(0, 1000), (1, 815), (2, 500)],
+    &[(0, 1000), (1, 1000), (2, 955), (4, 851), (5, 463), (8, 205)],
+    &[(0, 1000), (1, 1000), (2, 1000), (4, 1000), (5, 911), (8, 449), (9, 832), (10, 450), (13, 166)],
+    &[(0, 1000), (1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 928), (9, 1000), (10, 905), (13, 426), (16, 854), (17, 421)],
+    &[(0, 1000), (1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 1000), (9, 1000), (10, 1000), (13, 935), (16, 1000), (17, 914), (18, 458), (20, 428), (25, 306), (26, 435)],
+    &[(1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 1000), (9, 1000), (10, 1000), (13, 1000), (16, 1000), (17, 1000), (18, 944), (20, 931), (25, 602), (26, 875), (29, 417), (36, 806), (37, 403)],
+    &[(1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 1000), (9, 1000), (10, 1000), (13, 1000), (16, 1000), (17, 1000), (18, 1000), (20, 1000), (25, 938), (26, 1000), (29, 875), (32, 438), (34, 312), (36, 1000), (37, 1000), (40, 438), (49, 875), (50, 292)],
+];
+
 // Высоты — по замеру: у каждой породы указан замеренный разброс и среднее.
 
 /// 5–6, среднее 5.52.
@@ -1228,6 +1300,8 @@ const TALL_MANGROVE: Species = species("mangrove_log", "mangrove_leaves", Shape:
 /// 2–5, среднее 3.88. Растёт над пышными пещерами (src/world/cave_biomes.rs),
 /// в лесах её не выбирают.
 const AZALEA: Species = species("oak_log", "azalea_leaves", Shape::Azalea, 3, 3, 1);
+/// 7–11 равномерно (замер 183 деревьев, 26.3); цвет листвы выбирает `from_sapling`.
+const POPLAR: Species = species("poplar_log", "yellow_poplar_leaves", Shape::Poplar, 7, 5, 1);
 /// 4–8, среднее 5.2.
 const BROWN_MUSHROOM: Species = species(
     "mushroom_stem[up=false,down=false]",
@@ -1411,11 +1485,18 @@ pub fn from_sapling(name: &str, wide: bool, seed: i64) -> Option<Tree> {
         ("cherry_sapling", _) => CHERRY,
         ("mangrove_propagule", _) => if pick < 0.15 { TALL_MANGROVE } else { MANGROVE },
         ("azalea" | "flowering_azalea", _) => AZALEA,
+        ("poplar_sapling", _) => POPLAR,
         _ => return None,
     };
     let trunk = species.tree.trunk + roll(&mut random, species.spread) + roll(&mut random, species.extra);
+    // Тополь: один из трёх цветов листвы на дерево (63 дерева: жёлтых 23, красных 18, оранжевых 22;
+    // с первой пробой 79 / 52 / 52). [проверить] точные доли.
+    let leaves = if name != "poplar_sapling" { species.tree.leaves } else {
+        let colour = fraction(&mut random);
+        if colour < 0.43 { "yellow_poplar_leaves" } else if colour < 0.715 { "red_poplar_leaves" } else { "orange_poplar_leaves" }
+    };
 
-    Some(Tree { trunk, ..species.tree })
+    Some(Tree { trunk, leaves, ..species.tree })
 }
 
 /// Может ли в этом месте вообще стоять ствол.
@@ -1454,7 +1535,7 @@ mod tests {
     use std::collections::HashMap;
 
     /// Все породы — для проверок и профилей.
-    const ALL: [(&str, Species); 21] = [
+    const ALL: [(&str, Species); 22] = [
         ("дуб", OAK),
         ("большой дуб", FANCY_OAK),
         ("болотный дуб", SWAMP_OAK),
@@ -1474,6 +1555,7 @@ mod tests {
         ("мангр", MANGROVE),
         ("высокий мангр", TALL_MANGROVE),
         ("азалия", AZALEA),
+        ("тополь", POPLAR),
         ("коричневый гриб", BROWN_MUSHROOM),
         ("красный гриб", RED_MUSHROOM),
     ];
@@ -1654,6 +1736,7 @@ mod tests {
             Shape::Azalea => &[Trunk(3.88), Layer(0, 2.0), Widest(6.0), Share("branch", 1.0), Share("rooted_dirt", 1.0)],
             Shape::RedMushroom => &[Trunk(5.0), Layer(1, 1.0), Layer(0, 2.0), Layer(-1, 2.0), Layer(-2, 2.0), Highest(1)],
             Shape::BrownMushroom => &[Trunk(5.2), Layer(1, 3.0), Highest(1), Lowest(1)],
+            Shape::Poplar => &[Trunk(9.0)],
             Shape::Swamp => &[],
         }
     }
