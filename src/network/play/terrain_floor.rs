@@ -31,6 +31,10 @@ fn shape(catalog: Catalog, state: i32) -> Option<Option<(f64, f64)>> {
             SlabHalf::Double => (0.0, 1.0),
         }));
     }
+    // Цельные блоки серы и киновари — полный куб (стенки, шипы и прочее — вне этого среза).
+    if catalog.block_entry(state).ok().flatten().is_some_and(|row| matches!(row.form, crate::gameplay_catalog::BlockForm::Full | crate::gameplay_catalog::BlockForm::PotentSulfur)) {
+        return Some(Some((0.0, 1.0)));
+    }
     let name = blocks::block_at_state(state)?;
     if matches!(name, "air" | "cave_air" | "void_air") { return Some(None); }
     if name == "stone" { return Some(Some((0.0, 1.0))); }

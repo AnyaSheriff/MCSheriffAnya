@@ -5,11 +5,12 @@ use crate::{JavaVersion, ids::{self, RegistryKind}};
 /// Неизменяемые внутренние идентичности; существующие строки нельзя перенумеровывать.
 /// Источники: selected concrete-slabs-26.3.json / wool-slabs-26.3.json; не игровое наблюдение.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum SlabFamily { Concrete, Wool }
+pub enum SlabFamily { Concrete, Wool, Mineral }
 
-/// Форма блока каталога: плита (6 состояний) или ступени (80 состояний).
+/// Форма блока каталога: плита (6 состояний), ступени (80), цельный блок (1), стенка (324),
+/// «мощная сера» (5 состояний) и серный шип (20 состояний).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BlockForm { Slab, Stairs }
+pub enum BlockForm { Slab, Stairs, Full, Wall, PotentSulfur, Spike }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SlabDescriptor {
@@ -112,6 +113,39 @@ pub static WOOL_STAIRS: [SlabDescriptor; 16] = [
     SlabDescriptor { family: SlabFamily::Wool, form: BlockForm::Stairs, name: "black_wool_stairs", item: 1569, block: 1231, first_state: 32545, last_state: 32624, default_state: 32556, wire_item: 281, wire_block: 182, wire_first_state: 3625, input_name: "black_wool", input_item: 228 },
 ];
 
+/// Сера и киноварь 26.2: 28 объектов, дописаны после ступеней (предметы с 1570, блоки с 1232, состояния с 32625).
+/// Номера 777 и состояния — из pinned blocks.json/items.json; `input_*` — ингредиент ручного рецепта.
+pub static MINERALS: [SlabDescriptor; 28] = [
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "sulfur", item: 1570, block: 1232, first_state: 32625, last_state: 32625, default_state: 32625, wire_item: 26, wire_block: 1088, wire_first_state: 28044, input_name: "sulfur_spike", input_item: 1584 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "polished_sulfur", item: 1571, block: 1233, first_state: 32626, last_state: 32626, default_state: 32626, wire_item: 31, wire_block: 1093, wire_first_state: 28460, input_name: "sulfur", input_item: 1570 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "chiseled_sulfur", item: 1572, block: 1234, first_state: 32627, last_state: 32627, default_state: 32627, wire_item: 39, wire_block: 1101, wire_first_state: 29282, input_name: "sulfur_slab", input_item: 1574 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "sulfur_bricks", item: 1573, block: 1235, first_state: 32628, last_state: 32628, default_state: 32628, wire_item: 35, wire_block: 1097, wire_first_state: 28871, input_name: "polished_sulfur", input_item: 1571 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Slab, name: "sulfur_slab", item: 1574, block: 1236, first_state: 32629, last_state: 32634, default_state: 32632, wire_item: 28, wire_block: 1090, wire_first_state: 28050, input_name: "sulfur", input_item: 1570 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Stairs, name: "sulfur_stairs", item: 1575, block: 1237, first_state: 32635, last_state: 32714, default_state: 32646, wire_item: 29, wire_block: 1091, wire_first_state: 28056, input_name: "sulfur", input_item: 1570 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "sulfur_wall", item: 1576, block: 1238, first_state: 32715, last_state: 33038, default_state: 32718, wire_item: 30, wire_block: 1092, wire_first_state: 28136, input_name: "sulfur", input_item: 1570 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Slab, name: "polished_sulfur_slab", item: 1577, block: 1239, first_state: 33039, last_state: 33044, default_state: 33042, wire_item: 32, wire_block: 1094, wire_first_state: 28461, input_name: "polished_sulfur", input_item: 1571 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Stairs, name: "polished_sulfur_stairs", item: 1578, block: 1240, first_state: 33045, last_state: 33124, default_state: 33056, wire_item: 33, wire_block: 1095, wire_first_state: 28467, input_name: "polished_sulfur", input_item: 1571 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "polished_sulfur_wall", item: 1579, block: 1241, first_state: 33125, last_state: 33448, default_state: 33128, wire_item: 34, wire_block: 1096, wire_first_state: 28547, input_name: "polished_sulfur", input_item: 1571 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Slab, name: "sulfur_brick_slab", item: 1580, block: 1242, first_state: 33449, last_state: 33454, default_state: 33452, wire_item: 36, wire_block: 1098, wire_first_state: 28872, input_name: "sulfur_bricks", input_item: 1573 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Stairs, name: "sulfur_brick_stairs", item: 1581, block: 1243, first_state: 33455, last_state: 33534, default_state: 33466, wire_item: 37, wire_block: 1099, wire_first_state: 28878, input_name: "sulfur_bricks", input_item: 1573 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "sulfur_brick_wall", item: 1582, block: 1244, first_state: 33535, last_state: 33858, default_state: 33538, wire_item: 38, wire_block: 1100, wire_first_state: 28958, input_name: "sulfur_bricks", input_item: 1573 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::PotentSulfur, name: "potent_sulfur", item: 1583, block: 1245, first_state: 33859, last_state: 33863, default_state: 33859, wire_item: 27, wire_block: 1089, wire_first_state: 28045, input_name: "sulfur", input_item: 1570 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Spike, name: "sulfur_spike", item: 1584, block: 1246, first_state: 33864, last_state: 33883, default_state: 33869, wire_item: 1572, wire_block: 1224, wire_first_state: 33586, input_name: "", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "cinnabar", item: 1585, block: 1247, first_state: 33884, last_state: 33884, default_state: 33884, wire_item: 40, wire_block: 1102, wire_first_state: 29283, input_name: "", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "polished_cinnabar", item: 1586, block: 1248, first_state: 33885, last_state: 33885, default_state: 33885, wire_item: 44, wire_block: 1106, wire_first_state: 29694, input_name: "cinnabar", input_item: 1585 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "chiseled_cinnabar", item: 1587, block: 1249, first_state: 33886, last_state: 33886, default_state: 33886, wire_item: 52, wire_block: 1114, wire_first_state: 30516, input_name: "cinnabar_slab", input_item: 1589 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Full, name: "cinnabar_bricks", item: 1588, block: 1250, first_state: 33887, last_state: 33887, default_state: 33887, wire_item: 48, wire_block: 1110, wire_first_state: 30105, input_name: "polished_cinnabar", input_item: 1586 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Slab, name: "cinnabar_slab", item: 1589, block: 1251, first_state: 33888, last_state: 33893, default_state: 33891, wire_item: 41, wire_block: 1103, wire_first_state: 29284, input_name: "cinnabar", input_item: 1585 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Stairs, name: "cinnabar_stairs", item: 1590, block: 1252, first_state: 33894, last_state: 33973, default_state: 33905, wire_item: 42, wire_block: 1104, wire_first_state: 29290, input_name: "cinnabar", input_item: 1585 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "cinnabar_wall", item: 1591, block: 1253, first_state: 33974, last_state: 34297, default_state: 33977, wire_item: 43, wire_block: 1105, wire_first_state: 29370, input_name: "cinnabar", input_item: 1585 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Slab, name: "polished_cinnabar_slab", item: 1592, block: 1254, first_state: 34298, last_state: 34303, default_state: 34301, wire_item: 45, wire_block: 1107, wire_first_state: 29695, input_name: "polished_cinnabar", input_item: 1586 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Stairs, name: "polished_cinnabar_stairs", item: 1593, block: 1255, first_state: 34304, last_state: 34383, default_state: 34315, wire_item: 46, wire_block: 1108, wire_first_state: 29701, input_name: "polished_cinnabar", input_item: 1586 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "polished_cinnabar_wall", item: 1594, block: 1256, first_state: 34384, last_state: 34707, default_state: 34387, wire_item: 47, wire_block: 1109, wire_first_state: 29781, input_name: "polished_cinnabar", input_item: 1586 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Slab, name: "cinnabar_brick_slab", item: 1595, block: 1257, first_state: 34708, last_state: 34713, default_state: 34711, wire_item: 49, wire_block: 1111, wire_first_state: 30106, input_name: "cinnabar_bricks", input_item: 1588 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Stairs, name: "cinnabar_brick_stairs", item: 1596, block: 1258, first_state: 34714, last_state: 34793, default_state: 34725, wire_item: 50, wire_block: 1112, wire_first_state: 30112, input_name: "cinnabar_bricks", input_item: 1588 },
+    SlabDescriptor { family: SlabFamily::Mineral, form: BlockForm::Wall, name: "cinnabar_brick_wall", item: 1597, block: 1259, first_state: 34794, last_state: 35117, default_state: 34797, wire_item: 51, wire_block: 1113, wire_first_state: 30192, input_name: "cinnabar_bricks", input_item: 1588 },
+];
+
 impl SlabDescriptor {
     /// Сколько состояний у блока: 6 у плиты, 80 у ступеней.
     pub const fn state_count(&self) -> u32 { (self.last_state - self.first_state + 1) as u32 }
@@ -128,9 +162,14 @@ pub fn stairs() -> impl Iterator<Item = &'static SlabDescriptor> {
     CONCRETE_STAIRS.iter().chain(WOOL_STAIRS.iter())
 }
 
-/// Все объекты каталога: плиты, затем ступени.
+/// Сера и киноварь (плиты, ступени, стенки, цельные блоки, мощная сера, шип).
+pub fn minerals() -> impl Iterator<Item = &'static SlabDescriptor> {
+    MINERALS.iter()
+}
+
+/// Все объекты каталога: плиты, затем ступени, затем сера и киноварь.
 pub fn entries() -> impl Iterator<Item = &'static SlabDescriptor> {
-    slabs().chain(stairs())
+    slabs().chain(stairs()).chain(minerals())
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

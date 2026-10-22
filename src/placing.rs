@@ -846,7 +846,7 @@ fn neighbour_values(
     if orientation.family.connects_to_sides() {
         for (index, (name, dx, dz)) in SIDES.into_iter().enumerate() {
             let neighbour = world.get_block(x + dx, y, z + dz);
-            let value = side_value(orientation, neighbour);
+            let value = side_value(orientation, world.catalog(), neighbour);
 
             joined[index] = value != "none" && value != "false";
             values.push((name, value));
@@ -878,8 +878,8 @@ fn neighbour_values(
                 _ => [[0, -1], [0, 1]],
             };
 
-        let in_wall = is_wall(world.get_block(x + first_x, y, z + first_z))
-            || is_wall(world.get_block(x + second_x, y, z + second_z));
+        let in_wall = is_wall(world.catalog(), world.get_block(x + first_x, y, z + first_z))
+            || is_wall(world.catalog(), world.get_block(x + second_x, y, z + second_z));
 
         values.push(("in_wall", yes_no(in_wall)));
     }
@@ -935,12 +935,12 @@ fn stairs_shape(orientation: &Orientation, world: &World, at: (i32, i32, i32), s
 ///
 /// У забора и панели это просто «да/нет», а у стенки три степени: «нет»,
 /// «низко» и «высоко». От степени зависит, докуда дотягивается её бок.
-fn side_value(orientation: &Orientation, neighbour: i32) -> &'static str {
+fn side_value(orientation: &Orientation, catalog: crate::gameplay_catalog::Catalog, neighbour: i32) -> &'static str {
     if orientation.family == Family::Wall {
-        return wall_side(neighbour);
+        return wall_side(catalog, neighbour);
     }
 
-    yes_no(joins(orientation, neighbour))
+    yes_no(joins(orientation, catalog, neighbour))
 }
 
 /// Дотягивается ли стенка до соседа и на какую высоту.
@@ -948,9 +948,16 @@ fn side_value(orientation: &Orientation, neighbour: i32) -> &'static str {
 /// Во всю высоту — до другой стенки, до панели и до полного куба: у них бок
 /// твёрдый во весь блок. Пониже — до всего остального твёрдого. А до забора
 /// не дотягивается вовсе: забор в стенку не вставляется.
-fn wall_side(neighbour: i32) -> &'static str {
+fn wall_side(catalog: crate::gameplay_catalog::Catalog, neighbour: i32) -> &'static str {
     if neighbour == world::AIR || !blocks::has_box(neighbour) {
         return "none";
+    }
+
+    // Блоки каталога (сера, киноварь и прочее): стенка и цельный блок держат стенку во всю
+    // высоту, плиты, ступени и шипы — пониже (как у одноимённых форм прежних блоков).
+    if let Ok(Some(row)) = catalog.block_entry(neighbour) {
+        use crate::gameplay_catalog::BlockForm;
+        return if matches!(row.form, BlockForm::Wall | BlockForm::Full | BlockForm::PotentSulfur) { "tall" } else { "low" };
     }
 
     let Some(name) = blocks::block_at_state(neighbour) else {
@@ -977,9 +984,14 @@ fn wall_side(neighbour: i32) -> &'static str {
 ///
 /// Исключения два: забор из незерской породы не срастается с обычным — это
 /// разные породы дерева, — и забор не срастается со стенкой.
-fn joins(orientation: &Orientation, neighbour: i32) -> bool {
+fn joins(orientation: &Orientation, catalog: crate::gameplay_catalog::Catalog, neighbour: i32) -> bool {
     if neighbour == world::AIR || !blocks::has_box(neighbour) {
         return false;
+    }
+
+    // Блоки каталога твёрдые; забор и панель не срастаются только со стенкой каталога.
+    if let Ok(Some(row)) = catalog.block_entry(neighbour) {
+        return !(orientation.family == Family::Fence && row.form == crate::gameplay_catalog::BlockForm::Wall);
     }
 
     let Some(name) = blocks::block_at_state(neighbour) else {
@@ -1014,8 +1026,8 @@ fn family_of(name: &str) -> Option<Family> {
 
 /// Стенка ли это: стенки отличаются от прочих соединяющихся блоков тем,
 /// что у них есть столб.
-fn is_wall(state: i32) -> bool {
-    blocks::orientation_of(state).is_some_and(|orientation| orientation.family == Family::Wall)
+fn is_wall(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    catalog.orientation_of(state).ok().flatten().is_some_and(|orientation| orientation.family == Family::Wall)
 }
 
 /// «Да» или «нет» значением свойства — у признаков порядок такой.

@@ -14,7 +14,26 @@ const STAIR_PROPERTIES: &[Property] = &[
     Property { name: "waterlogged", values: &["true", "false"], default: "false" },
 ];
 
-/// Правило свойств строки каталога (плита или ступени).
+const WALL_PROPERTIES: &[Property] = &[
+    Property { name: "east", values: &["none", "low", "tall"], default: "none" },
+    Property { name: "north", values: &["none", "low", "tall"], default: "none" },
+    Property { name: "south", values: &["none", "low", "tall"], default: "none" },
+    Property { name: "up", values: &["true", "false"], default: "true" },
+    Property { name: "waterlogged", values: &["true", "false"], default: "false" },
+    Property { name: "west", values: &["none", "low", "tall"], default: "none" },
+];
+
+const POTENT_PROPERTIES: &[Property] = &[
+    Property { name: "potent_sulfur_state", values: &["dry", "wet", "dormant", "erupting", "continuous"], default: "dry" },
+];
+
+const SPIKE_PROPERTIES: &[Property] = &[
+    Property { name: "thickness", values: &["tip_merge", "tip", "frustum", "middle", "base"], default: "tip" },
+    Property { name: "vertical_direction", values: &["up", "down"], default: "up" },
+    Property { name: "waterlogged", values: &["true", "false"], default: "false" },
+];
+
+/// Правило свойств строки каталога (плита, ступени, стенка, шип; цельный блок — без свойств).
 fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
     static ORIENTATIONS: std::sync::OnceLock<Vec<Orientation>> = std::sync::OnceLock::new();
     let rows = ORIENTATIONS.get_or_init(|| entries().map(|row| match row.form {
@@ -25,6 +44,22 @@ fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
         BlockForm::Stairs => Orientation {
             name: row.name, min: row.first_state, max: row.last_state,
             family: Family::Stairs, properties: STAIR_PROPERTIES,
+        },
+        BlockForm::Wall => Orientation {
+            name: row.name, min: row.first_state, max: row.last_state,
+            family: Family::Wall, properties: WALL_PROPERTIES,
+        },
+        BlockForm::PotentSulfur => Orientation {
+            name: row.name, min: row.first_state, max: row.last_state,
+            family: Family::Other, properties: POTENT_PROPERTIES,
+        },
+        BlockForm::Spike => Orientation {
+            name: row.name, min: row.first_state, max: row.last_state,
+            family: Family::Other, properties: SPIKE_PROPERTIES,
+        },
+        BlockForm::Full => Orientation {
+            name: row.name, min: row.first_state, max: row.last_state,
+            family: Family::Other, properties: &[],
         },
     }).collect());
     &rows[entries().position(|candidate| candidate == row).expect("объект каталога")]
@@ -56,7 +91,11 @@ impl Catalog {
     }
 
     pub fn orientation(self, name: &str) -> Result<Option<&'static Orientation>, Error> {
-        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some(slab_orientation(row))); }
+        if let Some(row) = Self::entry_named(name) {
+            self.extension_named(row.name)?;
+            // Цельный блок без свойств ведёт себя как камень: правила установки у него нет.
+            return Ok((row.form != BlockForm::Full).then(|| slab_orientation(row)));
+        }
         Ok(crate::blocks::orientation(name))
     }
 
@@ -94,6 +133,9 @@ impl Catalog {
             return Ok(match row.family {
                 SlabFamily::Concrete => (1.8, "mineable/pickaxe", SLAB_TOOLS),
                 SlabFamily::Wool => (0.8, "wool", &[]),
+                // Вики, Sulfur Spike: шип выпадает от любого инструмента; остальное — от любой кирки.
+                SlabFamily::Mineral if row.form == BlockForm::Spike => (1.5, "mineable/pickaxe", &[]),
+                SlabFamily::Mineral => (1.5, "mineable/pickaxe", SLAB_TOOLS),
             });
         }
         Ok(crate::mining::properties(state))
@@ -101,8 +143,12 @@ impl Catalog {
 
     pub fn blast_resistance(self, state: i32) -> Result<f32, Error> {
         if let Some(row) = self.block_entry(state)? {
-            let own: f32 = match row.family { SlabFamily::Concrete => 1.8, SlabFamily::Wool => 0.8 };
-            let wet = self.waterlogged(state)?.expect("состояние каталога");
+            let own: f32 = match row.family {
+                SlabFamily::Concrete => 1.8, SlabFamily::Wool => 0.8,
+                SlabFamily::Mineral if row.form == BlockForm::Spike => 3.0,
+                SlabFamily::Mineral => 6.0,
+            };
+            let wet = self.waterlogged(state)?.unwrap_or(false);
             // Как в blocks::blast_resistance: вода защищает водонаполненную клетку.
             return Ok(if wet {
                 let water = crate::blocks::state_by_name("water").map_or(own, crate::blocks::blast_resistance);
@@ -122,6 +168,16 @@ impl Catalog {
             // Грани света ступеней берутся у базовых ступеней с теми же свойствами.
             let orientation = crate::blocks::orientation("oak_stairs").expect("базовые ступени");
             orientation.state(&[("facing", stair.facing_name()), ("half", if stair.top { "top" } else { "bottom" }), ("shape", stair.shape_name()), ("waterlogged", "false")]).expect("состояние базовых ступеней")
+        } else if let Some(equivalent) = self.base_equivalent(state)? {
+            // Стенка и шип: грани света берутся у стенки из камня / капельника с теми же свойствами.
+            let rule = crate::blocks::orientation_of(equivalent).expect("базовый блок");
+            rule.with(equivalent, "waterlogged", "false").expect("без воды")
+        } else if self.block_entry(state)?.is_some_and(|row| matches!(row.form, BlockForm::Full | BlockForm::PotentSulfur)) {
+            // Цельный непрозрачный куб, как камень: свет не пропускает.
+            let (emit, filter, faces) = crate::blocks_table::LIGHT.iter()
+                .find(|&&(low, high, ..)| (low..=high).contains(&crate::blocks::state_by_name("stone").expect("камень")))
+                .map_or((0, 0, 0), |&(_, _, emit, filter, faces)| (emit, filter, faces));
+            return Ok((emit, filter, faces));
         } else { state };
         let row = crate::blocks_table::LIGHT.iter().find(|&&(low, high, ..)| (low..=high).contains(&equivalent));
         let (_, _, emit, filter, faces) = row.copied().unwrap_or((0, 0, 0, 0, 0));
@@ -146,10 +202,11 @@ impl Catalog {
         self.name(Kind::State, state)?;
         if let Some(row) = self.block_entry(state)? {
             let count = match self.slab_properties(state)? { Some((SlabHalf::Double, _)) => 2, _ => 1 };
-            // Бетон требует кирку; наблюдённая шерстяная плита выпадает и рукой.
+            // Бетон и сера требуют кирку; наблюдённая шерстяная плита и шип выпадают и рукой.
             let harvests = match row.family {
                 SlabFamily::Concrete => tool.is_some_and(|tool| SLAB_TOOLS.contains(&tool)),
                 SlabFamily::Wool => true,
+                SlabFamily::Mineral => row.form == BlockForm::Spike || tool.is_some_and(|tool| SLAB_TOOLS.contains(&tool)),
             };
             return Ok(harvests.then(|| crate::inventory::Stack::new(row.item, count)));
         }

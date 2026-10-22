@@ -35,6 +35,7 @@ mod copper;
 mod compost;
 mod scaffolding;
 mod dripstone;
+mod sulfur_spike;
 mod entity;
 mod player;
 mod fluids;

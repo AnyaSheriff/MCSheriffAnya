@@ -19,6 +19,7 @@ const CONCRETE_SLAB_GROUP: u8 = 1;
 const WOOL_SLAB_GROUP: u8 = 2;
 const CONCRETE_STAIRS_GROUP: u8 = 3;
 const WOOL_STAIRS_GROUP: u8 = 4;
+const MINERAL_GROUP: u8 = 5;
 #[cfg(test)]
 const WHITE_SLAB_CUT_KEY: &str = "minecraft:white_concrete_slab_from_white_concrete_stonecutting";
 
@@ -47,7 +48,7 @@ enum Display {
     Stonecutting { input: i32, result: i32, count: i32 },
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Slab { Concrete(usize), Wool(usize), ConcreteStairs(usize), WoolStairs(usize) }
+enum Slab { Concrete(usize), Wool(usize), ConcreteStairs(usize), WoolStairs(usize), Mineral(usize) }
 impl Slab {
     fn input_name(self) -> &'static str {
         match self {
@@ -55,12 +56,14 @@ impl Slab {
             Self::Wool(index) => crate::gameplay_catalog::WOOL_SLABS[index].input_name,
             Self::ConcreteStairs(index) => crate::gameplay_catalog::CONCRETE_STAIRS[index].input_name,
             Self::WoolStairs(index) => crate::gameplay_catalog::WOOL_STAIRS[index].input_name,
+            Self::Mineral(index) => crate::gameplay_catalog::MINERALS[index].input_name,
         }
     }
     fn group(self) -> u8 {
         match self {
             Self::Concrete(_) => CONCRETE_SLAB_GROUP, Self::Wool(_) => WOOL_SLAB_GROUP,
             Self::ConcreteStairs(_) => CONCRETE_STAIRS_GROUP, Self::WoolStairs(_) => WOOL_STAIRS_GROUP,
+            Self::Mineral(_) => MINERAL_GROUP,
         }
     }
 }
@@ -149,6 +152,24 @@ fn entries_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [E
                 key: format!("minecraft:{}", row.name),
                 display: Display::Crafting(crafting::recipe_for_catalog(catalog, id).expect("рецепт профиля")),
                 recipe_id: Some(id), slab: Some(Slab::WoolStairs(index)),
+            });
+        }
+        // Сера и киноварь: сперва рецепты верстака (по строкам таблицы), затем камнерез.
+        for (row_index, recipe) in crafting::mineral_recipes() {
+            let row = &crate::gameplay_catalog::MINERALS[usize::from(*row_index)];
+            extended.push(Entry {
+                key: format!("minecraft:{}", row.name),
+                display: Display::Crafting(recipe),
+                recipe_id: Some(crafting::RecipeId::Mineral(*row_index)), slab: Some(Slab::Mineral(usize::from(*row_index))),
+            });
+        }
+        for cut in crate::stonecutter::mineral_recipes() {
+            let find = |item: i32| crate::gameplay_catalog::MINERALS.iter().position(|row| row.item == item).expect("строка серы");
+            let (input, output) = (find(cut.input), find(cut.output));
+            extended.push(Entry {
+                key: format!("minecraft:{}_from_{}_stonecutting", crate::gameplay_catalog::MINERALS[output].name, crate::gameplay_catalog::MINERALS[input].name),
+                display: Display::Stonecutting { input: cut.input, result: cut.output, count: cut.count },
+                recipe_id: None, slab: Some(Slab::Mineral(output)),
             });
         }
         extended
@@ -298,6 +319,7 @@ impl Book {
                 stairs_start() + 2 * usize::from(index),
             crafting::RecipeId::WoolStairs(index) if usize::from(index) < crate::gameplay_catalog::WOOL_STAIRS.len() =>
                 stairs_start() + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + usize::from(index),
+            crafting::RecipeId::Mineral(_) => return self.entries().iter().find(|entry| entry.recipe_id == Some(id)),
             _ => entries().len() + 2 * id.slab_index()?,
         };
         let entry = self.entries().get(position)?;
@@ -611,7 +633,7 @@ mod tests {
     fn profile_extension_preserves_every_native_display_and_is_inert_in_base() {
         let base = entries(); let extended = entries_for_catalog(preview());
         assert_eq!(extended.len(), base.len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + crate::gameplay_catalog::WOOL_SLABS.len()
-            + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + crate::gameplay_catalog::WOOL_STAIRS.len());
+            + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + crate::gameplay_catalog::WOOL_STAIRS.len() + crate::crafting::mineral_recipes().len() + crate::stonecutter::mineral_recipes().len());
         for (id, native) in base.iter().enumerate() {
             assert_eq!(native.key, extended[id].key);
             assert_eq!(entry_body(id, native, false), entry_body(id, &extended[id], false));
@@ -738,7 +760,7 @@ mod tests {
         let base_len = entries().len();
         let wool_start = base_len + 2 * CONCRETE_SLABS.len();
         let all = entries_for_catalog(preview());
-        assert_eq!(all.len(), wool_start + WOOL_SLABS.len() + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + crate::gameplay_catalog::WOOL_STAIRS.len());
+        assert_eq!(all.len(), wool_start + WOOL_SLABS.len() + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + crate::gameplay_catalog::WOOL_STAIRS.len() + crate::crafting::mineral_recipes().len() + crate::stonecutter::mineral_recipes().len());
         for (index, base) in entries().iter().enumerate() {
             assert_eq!(all[index].key, base.key);
             assert_eq!(entry_body(index, &all[index], false), entry_body(index, base, false));
@@ -835,7 +857,7 @@ mod tests {
         assert_eq!(entry_body(0, cut, true), expected);
         // Шерсть: только shaped, своя группа; камнерезной записи нет.
         let wool = start + 2 * CONCRETE_STAIRS.len();
-        assert_eq!(all.len(), wool + WOOL_STAIRS.len());
+        assert_eq!(all.len(), wool + WOOL_STAIRS.len() + crate::crafting::mineral_recipes().len() + crate::stonecutter::mineral_recipes().len());
         for (index, row) in WOOL_STAIRS.iter().enumerate() {
             assert_eq!(all[wool + index].key, format!("minecraft:{}", row.name));
             assert_eq!(all[wool + index].slab.unwrap().group(), WOOL_STAIRS_GROUP);

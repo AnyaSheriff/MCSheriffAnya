@@ -446,6 +446,7 @@ mod tests {
                         assert_eq!(world.container(0, 70, 0).unwrap().slots, before);
                         assert!(world.take_ejected().is_empty());
                     }
+                    SlabFamily::Mineral => unreachable!("slabs() не содержит серу"),
                     SlabFamily::Wool => {
                         // Оставшиеся две соседние клетки — прежний рецепт ковра,
                         // а не ещё одна плита: его нельзя запрещать новым семейством.

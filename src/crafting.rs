@@ -195,7 +195,7 @@ impl Recipe {
 
 /// Идентичность рецепта сервера: сетевые display ID принадлежат книге отдельно.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8), ConcreteStairs(u8), WoolStairs(u8) }
+pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8), ConcreteStairs(u8), WoolStairs(u8), Mineral(u8) }
 
 impl RecipeId {
     pub fn concrete_slab(index: usize) -> Option<Self> {
@@ -255,6 +255,38 @@ pub fn wool_stairs_recipes() -> &'static [Recipe] {
     stairs_recipes(&crate::gameplay_catalog::WOOL_STAIRS, &CELLS, &RECIPES)
 }
 
+/// Рецепты серы и киновари 26.3 (разбор рецептов pinned recipes.json 777 + вики Sulfur/Cinnabar):
+/// сера — 2×2 шипа → 1; мощная сера — 9 серы без формы; плита 3→6; ступени «X.. / XX. / XXX» 6→4;
+/// стенка 2 ряда по 3 → 6; полированный 2×2 → 4; кирпичи 2×2 полированных → 4;
+/// резной — две плиты столбиком → 1. У киновари и шипа рецепта крафта нет.
+/// Возвращает пары (индекс строки MINERALS, рецепт).
+pub fn mineral_recipes() -> &'static [(u8, Recipe)] {
+    static ALL: std::sync::OnceLock<Vec<(u8, Recipe)>> = std::sync::OnceLock::new();
+    ALL.get_or_init(|| {
+        use crate::gameplay_catalog::{BlockForm, MINERALS};
+        let leak = |item: i32| -> &'static [i32] { Box::leak(Box::new([item])) };
+        let mut all = Vec::new();
+        for (index, row) in MINERALS.iter().enumerate() {
+            if row.input_name.is_empty() { continue; }
+            let x = leak(row.input_item);
+            let empty: &'static [i32] = &[];
+            let (shaped, width, height, count, cells): (bool, u8, u8, i32, Vec<&'static [i32]>) = match row.form {
+                BlockForm::PotentSulfur => (false, 9, 1, 1, vec![x; 9]),
+                BlockForm::Slab => (true, 3, 1, 6, vec![x; 3]),
+                BlockForm::Stairs => (true, 3, 3, 4, vec![x, empty, empty, x, x, empty, x, x, x]),
+                BlockForm::Wall => (true, 3, 2, 6, vec![x; 6]),
+                BlockForm::Full if row.name.starts_with("chiseled_") => (true, 1, 2, 1, vec![x; 2]),
+                // Сера из шипов — один блок; полированные и кирпичи — по 4.
+                BlockForm::Full if row.name == "sulfur" => (true, 2, 2, 1, vec![x; 4]),
+                BlockForm::Full => (true, 2, 2, 4, vec![x; 4]),
+                BlockForm::Spike => continue,
+            };
+            all.push((index as u8, Recipe { shaped, width, height, result: row.item, count, cells: Box::leak(cells.into_boxed_slice()) }));
+        }
+        all
+    })
+}
+
 pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
     if let RecipeId::Native(index) = id { return recipes().get(index); }
     if catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3 { return None; }
@@ -262,6 +294,7 @@ pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeI
         RecipeId::WoolSlab(index) => wool_slab_recipes().get(usize::from(index)),
         RecipeId::ConcreteStairs(index) => concrete_stairs_recipes().get(usize::from(index)),
         RecipeId::WoolStairs(index) => wool_stairs_recipes().get(usize::from(index)),
+        RecipeId::Mineral(index) => mineral_recipes().iter().find(|(row, _)| *row == index).map(|(_, recipe)| recipe),
         _ => concrete_slab_recipes().get(id.slab_index()?),
     }
 }
@@ -282,13 +315,17 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
         if let Some(index) = wool_stairs_recipes().iter().position(|recipe| recipe.matches(&grid)) {
             return Some(RecipeId::WoolStairs(index as u8));
         }
+        if let Some((row, _)) = mineral_recipes().iter().find(|(_, recipe)| recipe.matches(&grid)) {
+            return Some(RecipeId::Mineral(*row));
+        }
     }
     recipe_index(slots).map(RecipeId::Native)
 }
 
-/// Рецепты каталога 26.3: плиты, затем ступени.
+/// Рецепты каталога 26.3: плиты, ступени, затем сера и киноварь.
 pub fn catalog_recipes() -> impl Iterator<Item = &'static Recipe> {
     concrete_slab_recipes().iter().chain(wool_slab_recipes()).chain(concrete_stairs_recipes()).chain(wool_stairs_recipes())
+        .chain(mineral_recipes().iter().map(|(_, recipe)| recipe))
 }
 
 /// Каталог основного профиля общий для верстака, книги и автокрафтера.

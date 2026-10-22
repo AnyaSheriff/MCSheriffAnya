@@ -12,7 +12,7 @@ use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
 mod runtime;
 mod stack_validation;
 #[allow(unused_imports)]
-pub use mcsa_protocol::content::{BlockForm, SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, CONCRETE_STAIRS, WOOL_STAIRS, slabs, stairs, entries};
+pub use mcsa_protocol::content::{BlockForm, SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, CONCRETE_STAIRS, WOOL_STAIRS, MINERALS, slabs, stairs, minerals, entries};
 mod mob_validation;
 mod hive_validation;
 
@@ -125,6 +125,16 @@ impl StairState {
     }
 }
 
+/// Цельный непрозрачный куб каталога (сера, киноварь и их кирпичи, мощная сера): ведёт себя как камень.
+/// Состояния каталога существуют только в профиле Preview26_3, поэтому проверка по номеру безопасна.
+pub fn is_spike(state: i32) -> bool { crate::sulfur_spike::is_spike(state) }
+
+pub fn opaque_state(state: i32) -> bool {
+    // Все объекты серы лежат после ступеней: быстрый отказ для обычных блоков.
+    state >= MINERALS[0].first_state
+        && MINERALS.iter().any(|row| matches!(row.form, BlockForm::Full | BlockForm::PotentSulfur) && (row.first_state..=row.last_state).contains(&state))
+}
+
 /// Маленькое значение принадлежит серверу/миру и передаётся явно.
 /// Здесь нет изменяемого глобального выбранного профиля или копии движка мира.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -212,7 +222,23 @@ impl Catalog {
     /// Налита ли вода в клетку: плиты и ступени каталога.
     pub fn waterlogged(self, state: i32) -> Result<Option<bool>, Error> {
         if let Some((_, wet)) = self.slab_properties(state)? { return Ok(Some(wet)); }
-        Ok(self.stair_properties(state)?.map(|stair| stair.waterlogged))
+        if let Some(stair) = self.stair_properties(state)? { return Ok(Some(stair.waterlogged)); }
+        // Стенка и шип: порядок свойств как у стенки из камня / капельника, значит и смещение то же.
+        let Some(equivalent) = self.base_equivalent(state)? else { return Ok(None); };
+        Ok(crate::blocks::orientation_of(equivalent).and_then(|rule| rule.value(equivalent, "waterlogged")).map(|value| value == "true"))
+    }
+
+    /// Состояние базового блока с тем же порядком свойств: стенки — `cobblestone_wall`,
+    /// шипы — `pointed_dripstone` (у серы свойства те же и в том же порядке, смещения равны).
+    /// Нужно только там, где свойства или форма берутся у уже изученного базового блока.
+    pub fn base_equivalent(self, state: i32) -> Result<Option<i32>, Error> {
+        let Some(row) = self.block_entry(state)? else { return Ok(None); };
+        let base = match row.form {
+            BlockForm::Wall => "cobblestone_wall",
+            BlockForm::Spike => "pointed_dripstone",
+            _ => return Ok(None),
+        };
+        Ok(crate::blocks::states_of(base).map(|(first, _)| first + (state - row.first_state)))
     }
 
     /// Проверяет существование и доступность ДО выдачи предмета или записи мира.
@@ -298,3 +324,6 @@ mod tests;
 
 #[cfg(test)]
 mod stairs_tests;
+
+#[cfg(test)]
+mod mineral_tests;

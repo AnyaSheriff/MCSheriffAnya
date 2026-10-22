@@ -368,12 +368,19 @@ pub fn states_of(name: &str) -> Option<(i32, i32)> {
         .map(|(low, high, _)| (*low, *high))
 }
 
+/// Цельные блоки каталога 26.3 (сера, киноварь) ведут себя как камень.
+#[cfg(not(seedmap_core))]
+fn catalog_opaque(state: i32) -> bool { crate::gameplay_catalog::opaque_state(state) }
+#[cfg(seedmap_core)]
+fn catalog_opaque(_state: i32) -> bool { false }
+
 /// Проводит ли блок сигнал редстоуна.
 ///
 /// Проводят полные непрозрачные кубы: камень, земля, доски. Такой блок можно
 /// запитать, и через него провод соединяется с проводом этажом выше или ниже.
 /// Стекло, листва, плиты и ступени не проводят.
 pub fn conductive(state: i32) -> bool {
+    if catalog_opaque(state) { return true; }
     CONDUCTIVE
         .partition_point(|(low, _)| *low <= state)
         .checked_sub(1)
@@ -393,7 +400,7 @@ pub fn full_cube(state: i32) -> bool {
     // а не полный куб. Свеча/капельник не служат сплошной опорой.
     if block_at_state(state).is_some_and(|n| matches!(n, "candle" | "cake" | "candle_cake" | "pointed_dripstone" | "scaffolding" | "powder_snow" | "flower_pot")
         || n.ends_with("_candle") || n.ends_with("_candle_cake") || n.starts_with("potted_")) { return false; }
-    if in_ranges(FULL_CUBES, state) {
+    if in_ranges(FULL_CUBES, state) || catalog_opaque(state) {
         return true;
     }
 

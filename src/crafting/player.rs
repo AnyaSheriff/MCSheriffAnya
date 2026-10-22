@@ -161,6 +161,7 @@ mod catalog_tests {
             let id = match row.family {
                 SlabFamily::Concrete => RecipeId::concrete_slab(index % 16).unwrap(),
                 SlabFamily::Wool => RecipeId::WoolSlab((index % 16) as u8),
+                SlabFamily::Mineral => unreachable!("slabs() не содержит серу"),
             };
             let recipe = recipe_for_catalog(preview, id).unwrap();
             assert_eq!(recipe.result, row.item);

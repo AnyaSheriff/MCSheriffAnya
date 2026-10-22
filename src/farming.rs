@@ -102,6 +102,7 @@ fn ticks_randomly(state: u16) -> bool {
     TABLE.get_or_init(|| {
         (0..=u16::MAX as i32)
             .map(|state| {
+                if crate::sulfur_spike::is_spike(state) { return true; }
                 let Some(name) = blocks::block_at_state(state) else {
                     return false;
                 };
@@ -248,6 +249,10 @@ fn tickable_sections(world: &mut World, cx: i32, cz: i32) -> Option<u32> {
 
 /// Ход одного блока по случайному такту.
 pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
+    if crate::sulfur_spike::is_spike(state) {
+        crate::sulfur_spike::random_tick(world, pos, state);
+        return;
+    }
     let name = name_of(state);
 
     if crate::copper::ticks_randomly(state) {

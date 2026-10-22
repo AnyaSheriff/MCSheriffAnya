@@ -2600,6 +2600,9 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Посев — несколько стопок (farming.rs), прочее — одна.
         let stacks = match crate::farming::harvest(world, state, 0) {
             Some(stacks) => stacks,
+            // Блоки каталога 26.3 (шип серы): выпадение по каталогу мира, без инструмента.
+            None if matches!(world.catalog().block_entry(state), Ok(Some(_))) =>
+                world.catalog().drops_by_luck(state, None, luck).ok().flatten().into_iter().collect(),
             None => blocks::world_drops(state, luck).into_iter().collect(),
         };
 
