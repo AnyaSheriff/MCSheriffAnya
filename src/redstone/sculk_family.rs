@@ -118,7 +118,7 @@ pub fn quiet_block(name: &str) -> bool {
 /// Только испускание событий установки/разрушения. Шаги, приземления и
 /// перекрытие луча здесь не определяются: для плит это отдельные наблюдения.
 pub fn quiet_state(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
-    if let Ok(Some(row)) = catalog.slab_entry(state) {
+    if let Ok(Some(row)) = catalog.block_entry(state) {
         return row.family == crate::gameplay_catalog::SlabFamily::Wool;
     }
     catalog.name(crate::gameplay_catalog::Kind::State, state).ok().is_some_and(quiet_block)
@@ -127,9 +127,9 @@ pub fn quiet_state(catalog: crate::gameplay_catalog::Catalog, state: i32) -> boo
 /// Только событие шага (частота 1): обычная проверка 777 сухой белой плиты.
 /// TODO: мокрые плиты и приземление не наблюдались; прежняя политика сохранена.
 pub fn quiet_step_state(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
-    if let Ok(Some(row)) = catalog.slab_entry(state) {
+    if let Ok(Some(row)) = catalog.block_entry(state) {
         return row.family == crate::gameplay_catalog::SlabFamily::Wool
-            && matches!(catalog.slab_properties(state), Ok(Some((_, false))));
+            && matches!(catalog.waterlogged(state), Ok(Some(false)));
     }
     blocks::block_at_state(state).is_some_and(quiet_block)
 }

@@ -1,0 +1,426 @@
+{
+ "scope": "Выбранные поля pinned blocks.json/items.json 777 (sha256 blocks 776312e5..., items f0d0e447...). Не игровое наблюдение.",
+ "entries": [
+  {
+   "name": "white_concrete_stairs",
+   "item777": 705,
+   "block777": {
+    "id": 784,
+    "minStateId": 17027,
+    "maxStateId": 17106,
+    "defaultState": 17038,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "orange_concrete_stairs",
+   "item777": 706,
+   "block777": {
+    "id": 785,
+    "minStateId": 17107,
+    "maxStateId": 17186,
+    "defaultState": 17118,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "magenta_concrete_stairs",
+   "item777": 707,
+   "block777": {
+    "id": 786,
+    "minStateId": 17187,
+    "maxStateId": 17266,
+    "defaultState": 17198,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "light_blue_concrete_stairs",
+   "item777": 708,
+   "block777": {
+    "id": 787,
+    "minStateId": 17267,
+    "maxStateId": 17346,
+    "defaultState": 17278,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "yellow_concrete_stairs",
+   "item777": 709,
+   "block777": {
+    "id": 788,
+    "minStateId": 17347,
+    "maxStateId": 17426,
+    "defaultState": 17358,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "lime_concrete_stairs",
+   "item777": 710,
+   "block777": {
+    "id": 789,
+    "minStateId": 17427,
+    "maxStateId": 17506,
+    "defaultState": 17438,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "pink_concrete_stairs",
+   "item777": 711,
+   "block777": {
+    "id": 790,
+    "minStateId": 17507,
+    "maxStateId": 17586,
+    "defaultState": 17518,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "gray_concrete_stairs",
+   "item777": 712,
+   "block777": {
+    "id": 791,
+    "minStateId": 17587,
+    "maxStateId": 17666,
+    "defaultState": 17598,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "light_gray_concrete_stairs",
+   "item777": 713,
+   "block777": {
+    "id": 792,
+    "minStateId": 17667,
+    "maxStateId": 17746,
+    "defaultState": 17678,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "cyan_concrete_stairs",
+   "item777": 714,
+   "block777": {
+    "id": 793,
+    "minStateId": 17747,
+    "maxStateId": 17826,
+    "defaultState": 17758,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "purple_concrete_stairs",
+   "item777": 715,
+   "block777": {
+    "id": 794,
+    "minStateId": 17827,
+    "maxStateId": 17906,
+    "defaultState": 17838,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "blue_concrete_stairs",
+   "item777": 716,
+   "block777": {
+    "id": 795,
+    "minStateId": 17907,
+    "maxStateId": 17986,
+    "defaultState": 17918,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "brown_concrete_stairs",
+   "item777": 717,
+   "block777": {
+    "id": 796,
+    "minStateId": 17987,
+    "maxStateId": 18066,
+    "defaultState": 17998,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "green_concrete_stairs",
+   "item777": 718,
+   "block777": {
+    "id": 797,
+    "minStateId": 18067,
+    "maxStateId": 18146,
+    "defaultState": 18078,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "red_concrete_stairs",
+   "item777": 719,
+   "block777": {
+    "id": 798,
+    "minStateId": 18147,
+    "maxStateId": 18226,
+    "defaultState": 18158,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "black_concrete_stairs",
+   "item777": 720,
+   "block777": {
+    "id": 799,
+    "minStateId": 18227,
+    "maxStateId": 18306,
+    "defaultState": 18238,
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "material": "mineable/pickaxe"
+   }
+  },
+  {
+   "name": "white_wool_stairs",
+   "item777": 266,
+   "block777": {
+    "id": 167,
+    "minStateId": 2425,
+    "maxStateId": 2504,
+    "defaultState": 2436,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "orange_wool_stairs",
+   "item777": 267,
+   "block777": {
+    "id": 168,
+    "minStateId": 2505,
+    "maxStateId": 2584,
+    "defaultState": 2516,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "magenta_wool_stairs",
+   "item777": 268,
+   "block777": {
+    "id": 169,
+    "minStateId": 2585,
+    "maxStateId": 2664,
+    "defaultState": 2596,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "light_blue_wool_stairs",
+   "item777": 269,
+   "block777": {
+    "id": 170,
+    "minStateId": 2665,
+    "maxStateId": 2744,
+    "defaultState": 2676,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "yellow_wool_stairs",
+   "item777": 270,
+   "block777": {
+    "id": 171,
+    "minStateId": 2745,
+    "maxStateId": 2824,
+    "defaultState": 2756,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "lime_wool_stairs",
+   "item777": 271,
+   "block777": {
+    "id": 172,
+    "minStateId": 2825,
+    "maxStateId": 2904,
+    "defaultState": 2836,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "pink_wool_stairs",
+   "item777": 272,
+   "block777": {
+    "id": 173,
+    "minStateId": 2905,
+    "maxStateId": 2984,
+    "defaultState": 2916,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "gray_wool_stairs",
+   "item777": 273,
+   "block777": {
+    "id": 174,
+    "minStateId": 2985,
+    "maxStateId": 3064,
+    "defaultState": 2996,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "light_gray_wool_stairs",
+   "item777": 274,
+   "block777": {
+    "id": 175,
+    "minStateId": 3065,
+    "maxStateId": 3144,
+    "defaultState": 3076,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "cyan_wool_stairs",
+   "item777": 275,
+   "block777": {
+    "id": 176,
+    "minStateId": 3145,
+    "maxStateId": 3224,
+    "defaultState": 3156,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "purple_wool_stairs",
+   "item777": 276,
+   "block777": {
+    "id": 177,
+    "minStateId": 3225,
+    "maxStateId": 3304,
+    "defaultState": 3236,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "blue_wool_stairs",
+   "item777": 277,
+   "block777": {
+    "id": 178,
+    "minStateId": 3305,
+    "maxStateId": 3384,
+    "defaultState": 3316,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "brown_wool_stairs",
+   "item777": 278,
+   "block777": {
+    "id": 179,
+    "minStateId": 3385,
+    "maxStateId": 3464,
+    "defaultState": 3396,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "green_wool_stairs",
+   "item777": 279,
+   "block777": {
+    "id": 180,
+    "minStateId": 3465,
+    "maxStateId": 3544,
+    "defaultState": 3476,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "red_wool_stairs",
+   "item777": 280,
+   "block777": {
+    "id": 181,
+    "minStateId": 3545,
+    "maxStateId": 3624,
+    "defaultState": 3556,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  },
+  {
+   "name": "black_wool_stairs",
+   "item777": 281,
+   "block777": {
+    "id": 182,
+    "minStateId": 3625,
+    "maxStateId": 3704,
+    "defaultState": 3636,
+    "hardness": 0.8,
+    "resistance": 0.8,
+    "material": "wool"
+   }
+  }
+ ],
+ "recipes_observed_official_26_3": {
+  "shaped": "X.. / XX. / XXX, 6 своего блока -> 4 ступеней; зеркальная форма тоже принимается",
+  "concrete_stonecutting": "1 блок -> 1 ступени, имя <c>_concrete_stairs_from_<c>_concrete_stonecutting",
+  "wool_stonecutting": "нет"
+ }
+}

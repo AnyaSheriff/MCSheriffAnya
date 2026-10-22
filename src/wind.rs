@@ -64,6 +64,9 @@ fn boxes_with_catalog(state: i32, catalog: crate::gameplay_catalog::Catalog) -> 
         let (low, high) = match half { SlabHalf::Top => (0.5, 1.0), SlabHalf::Bottom => (0.0, 0.5), SlabHalf::Double => (0.0, 1.0) };
         return vec![((0.0, low, 0.0), (1.0, high, 1.0))];
     }
+    if let Ok(Some(stair)) = catalog.stair_properties(state) {
+        return stair.boxes().into_iter().map(|(from, to)| ((from[0], from[1], from[2]), (to[0], to[1], to[2]))).collect();
+    }
     boxes(state)
 }
 

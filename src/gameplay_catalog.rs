@@ -11,7 +11,8 @@ use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
 
 mod runtime;
 mod stack_validation;
-pub use mcsa_protocol::content::{SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, slabs};
+#[allow(unused_imports)]
+pub use mcsa_protocol::content::{BlockForm, SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, CONCRETE_STAIRS, WOOL_STAIRS, slabs, stairs, entries};
 mod mob_validation;
 mod hive_validation;
 
@@ -67,6 +68,63 @@ impl SlabHalf {
     }
 }
 
+/// Четыре стороны горизонта в порядке значений facing блока 777.
+pub const STAIR_FACINGS: [&str; 4] = ["north", "south", "west", "east"];
+pub const STAIR_SHAPES: [&str; 5] = ["straight", "inner_left", "inner_right", "outer_left", "outer_right"];
+
+/// Свойства ступеней: индексы в порядке значений блока 777.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StairState { pub facing: u8, pub top: bool, pub shape: u8, pub waterlogged: bool }
+
+impl StairState {
+    pub fn from_offset(offset: u8) -> Self {
+        let wet = offset.is_multiple_of(2);
+        let rest = offset / 2;
+        let shape = rest % 5;
+        let rest = rest / 5;
+        Self { facing: rest / 2, top: rest.is_multiple_of(2), shape, waterlogged: wet }
+    }
+    pub fn offset(self) -> u8 {
+        (((self.facing * 2 + u8::from(!self.top)) * 5 + self.shape) * 2) + u8::from(!self.waterlogged)
+    }
+    pub fn facing_name(self) -> &'static str { STAIR_FACINGS[usize::from(self.facing)] }
+    pub fn shape_name(self) -> &'static str { STAIR_SHAPES[usize::from(self.shape)] }
+}
+
+impl StairState {
+    /// Ящики столкновений ступеней внутри клетки: (от, до) по x, y, z.
+    /// Нижняя половина — плита; верхняя ступень смотрит в сторону facing; угол по shape.
+    /// [проверить] геометрию физикой клиента; форма следует вики (Stairs): прямая — полблока,
+    /// внешний угол — четверть, внутренний — три четверти верхнего уровня.
+    pub fn boxes(self) -> Vec<([f64; 3], [f64; 3])> {
+        let (base, step) = if self.top { ((0.5, 1.0), (0.0, 0.5)) } else { ((0.0, 0.5), (0.5, 1.0)) };
+        // Половины клетки по (x, z): north — z 0..0.5, south — z 0.5..1, west — x 0..0.5, east — x 0.5..1.
+        let half = |side: &str| -> ([f64; 2], [f64; 2]) {
+            match side { "north" => ([0.0, 1.0], [0.0, 0.5]), "south" => ([0.0, 1.0], [0.5, 1.0]), "west" => ([0.0, 0.5], [0.0, 1.0]), _ => ([0.5, 1.0], [0.0, 1.0]) }
+        };
+        let facing = self.facing_name();
+        // Слева от взгляда — против часовой стрелки сверху.
+        let left = match facing { "north" => "west", "west" => "south", "south" => "east", _ => "north" };
+        let right = match left { "north" => "south", "south" => "north", "west" => "east", _ => "west" };
+        let back = match facing { "north" => "south", "south" => "north", "west" => "east", _ => "west" };
+        let quarter = |a: &str, b: &str| -> ([f64; 2], [f64; 2]) {
+            let (ax, az) = half(a); let (bx, bz) = half(b);
+            ([ax[0].max(bx[0]), ax[1].min(bx[1])], [az[0].max(bz[0]), az[1].min(bz[1])])
+        };
+        let mut parts = vec![half(facing)];
+        match self.shape_name() {
+            "outer_left" => parts = vec![quarter(facing, left)],
+            "outer_right" => parts = vec![quarter(facing, right)],
+            "inner_left" => parts.push(quarter(left, back)),
+            "inner_right" => parts.push(quarter(right, back)),
+            _ => {}
+        }
+        let mut boxes = vec![([0.0, base.0, 0.0], [1.0, base.1, 1.0])];
+        boxes.extend(parts.into_iter().map(|(x, z)| ([x[0], step.0, z[0]], [x[1], step.1, z[1]])));
+        boxes
+    }
+}
+
 /// Маленькое значение принадлежит серверу/миру и передаётся явно.
 /// Здесь нет изменяемого глобального выбранного профиля или копии движка мира.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -93,11 +151,11 @@ impl Catalog {
         std::borrow::Cow::Borrowed(PREVIEW.get_or_init(|| {
             use aws_lc_rs::digest;
             let mut hash = digest::Context::new(&digest::SHA256);
-            for value in ["mcsa-catalog-v1", base, "type:top,bottom,double", "waterlogged:true,false"] {
+            for value in ["mcsa-catalog-v1", base, "type:top,bottom,double", "waterlogged:true,false", "stairs:facing,half,shape,waterlogged"] {
                 hash.update(&(value.len() as u64).to_be_bytes());
                 hash.update(value.as_bytes());
             }
-            for row in slabs() {
+            for row in entries() {
                 hash.update(&(row.name.len() as u64).to_be_bytes());
                 hash.update(row.name.as_bytes());
                 for value in [row.item, row.block, row.first_state, row.last_state, row.default_state] { hash.update(&value.to_be_bytes()); }
@@ -116,19 +174,45 @@ impl Catalog {
 
     fn extension(self) -> Result<(), Error> { self.extension_named(WHITE_SLAB_NAME) }
 
-    fn entry_named(name: &str) -> Option<&'static SlabDescriptor> { slabs().find(|row| row.name == name) }
+    fn entry_named(name: &str) -> Option<&'static SlabDescriptor> { entries().find(|row| row.name == name) }
 
     fn entry_id(kind: Kind, id: i32) -> Option<&'static SlabDescriptor> {
-        slabs().find(|row| match kind {
+        entries().find(|row| match kind {
             Kind::Item => row.item == id,
             Kind::Block => row.block == id,
             Kind::State => (row.first_state..=row.last_state).contains(&id),
         })
     }
 
+    /// Только плиты: ступени проходят через `block_entry`/`stair_properties`.
     pub fn slab_entry(self, state: i32) -> Result<Option<&'static SlabDescriptor>, Error> {
+        Ok(self.block_entry(state)?.filter(|row| row.form == BlockForm::Slab))
+    }
+
+    /// Любой объект каталога (плита или ступени) по внутреннему состоянию.
+    pub fn block_entry(self, state: i32) -> Result<Option<&'static SlabDescriptor>, Error> {
         self.name(Kind::State, state)?;
         Ok(Self::entry_id(Kind::State, state))
+    }
+
+    /// Свойства ступеней каталога: (facing, half, shape, waterlogged) по порядку значений
+    /// блока 777. Номер состояния = ((facing*2+half)*5+shape)*2+(не waterlogged).
+    pub fn stair_properties(self, state: i32) -> Result<Option<StairState>, Error> {
+        let Some(row) = self.block_entry(state)?.filter(|row| row.form == BlockForm::Stairs) else { return Ok(None); };
+        Ok(Some(StairState::from_offset((state - row.first_state) as u8)))
+    }
+
+    /// Состояние ступеней каталога по свойствам; None, если строка не ступени.
+    pub fn stair_state_for(self, row: &SlabDescriptor, value: StairState) -> Result<i32, Error> {
+        self.extension_named(row.name)?;
+        if row.form != BlockForm::Stairs { return Err(Error::UnknownInternal { kind: Kind::State, id: row.first_state }); }
+        Ok(row.first_state + i32::from(value.offset()))
+    }
+
+    /// Налита ли вода в клетку: плиты и ступени каталога.
+    pub fn waterlogged(self, state: i32) -> Result<Option<bool>, Error> {
+        if let Some((_, wet)) = self.slab_properties(state)? { return Ok(Some(wet)); }
+        Ok(self.stair_properties(state)?.map(|stair| stair.waterlogged))
     }
 
     /// Проверяет существование и доступность ДО выдачи предмета или записи мира.
@@ -193,10 +277,10 @@ impl Catalog {
 
     pub fn decode_client_id(self, kind: Kind, id: u32, client: JavaVersion) -> Result<i32, Error> {
         let extension = if client == JavaVersion::V26_3 {
-            slabs().find_map(|row| match kind {
+            entries().find_map(|row| match kind {
                 Kind::Item if id == row.wire_item => Some(row.item),
                 Kind::Block if id == row.wire_block => Some(row.block),
-                Kind::State if (row.wire_first_state..row.wire_first_state + 6).contains(&id) => Some(row.first_state + (id - row.wire_first_state) as i32),
+                Kind::State if (row.wire_first_state..row.wire_first_state + row.state_count()).contains(&id) => Some(row.first_state + (id - row.wire_first_state) as i32),
                 _ => None,
             })
         } else { None };
@@ -211,3 +295,6 @@ impl Catalog {
 #[cfg(test)]
 #[path = "gameplay_catalog/tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod stairs_tests;

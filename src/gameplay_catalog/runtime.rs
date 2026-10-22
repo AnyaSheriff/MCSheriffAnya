@@ -7,13 +7,27 @@ const SLAB_PROPERTIES: &[Property] = &[
     Property { name: "waterlogged", values: &["true", "false"], default: "false" },
 ];
 
+const STAIR_PROPERTIES: &[Property] = &[
+    Property { name: "facing", values: &["north", "south", "west", "east"], default: "north" },
+    Property { name: "half", values: &["top", "bottom"], default: "bottom" },
+    Property { name: "shape", values: &["straight", "inner_left", "inner_right", "outer_left", "outer_right"], default: "straight" },
+    Property { name: "waterlogged", values: &["true", "false"], default: "false" },
+];
+
+/// Правило свойств строки каталога (плита или ступени).
 fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
     static ORIENTATIONS: std::sync::OnceLock<Vec<Orientation>> = std::sync::OnceLock::new();
-    let rows = ORIENTATIONS.get_or_init(|| slabs().map(|row| Orientation {
-        name: row.name, min: row.first_state, max: row.last_state,
-        family: Family::Slab, properties: SLAB_PROPERTIES,
+    let rows = ORIENTATIONS.get_or_init(|| entries().map(|row| match row.form {
+        BlockForm::Slab => Orientation {
+            name: row.name, min: row.first_state, max: row.last_state,
+            family: Family::Slab, properties: SLAB_PROPERTIES,
+        },
+        BlockForm::Stairs => Orientation {
+            name: row.name, min: row.first_state, max: row.last_state,
+            family: Family::Stairs, properties: STAIR_PROPERTIES,
+        },
     }).collect());
-    &rows[slabs().position(|candidate| candidate == row).expect("плита каталога")]
+    &rows[entries().position(|candidate| candidate == row).expect("объект каталога")]
 }
 
 // Внутренние775 ID, не номера инструментов из клиентского JSON777.
@@ -76,7 +90,7 @@ impl Catalog {
 
     /// Твёрдость и инструменты — выбранный pinned JSON, не предположение по имени.
     pub fn mining_properties(self, state: i32) -> Result<(f32, &'static str, &'static [i32]), Error> {
-        if let Some(row) = self.slab_entry(state)? {
+        if let Some(row) = self.block_entry(state)? {
             return Ok(match row.family {
                 SlabFamily::Concrete => (1.8, "mineable/pickaxe", SLAB_TOOLS),
                 SlabFamily::Wool => (0.8, "wool", &[]),
@@ -86,9 +100,9 @@ impl Catalog {
     }
 
     pub fn blast_resistance(self, state: i32) -> Result<f32, Error> {
-        if let Some(row) = self.slab_entry(state)? {
+        if let Some(row) = self.block_entry(state)? {
             let own: f32 = match row.family { SlabFamily::Concrete => 1.8, SlabFamily::Wool => 0.8 };
-            let wet = self.slab_properties(state)?.expect("состояние плиты").1;
+            let wet = self.waterlogged(state)?.expect("состояние каталога");
             // Как в blocks::blast_resistance: вода защищает водонаполненную клетку.
             return Ok(if wet {
                 let water = crate::blocks::state_by_name("water").map_or(own, crate::blocks::blast_resistance);
@@ -104,6 +118,10 @@ impl Catalog {
         let equivalent = if let Some((half, _)) = self.slab_properties(state)? {
             let orientation = crate::blocks::orientation("stone_slab").expect("базовая каменная плита");
             orientation.state(&[("type", match half { SlabHalf::Top => "top", SlabHalf::Bottom => "bottom", SlabHalf::Double => "double" }), ("waterlogged", "false")]).expect("состояние базовой плиты")
+        } else if let Some(stair) = self.stair_properties(state)? {
+            // Грани света ступеней берутся у базовых ступеней с теми же свойствами.
+            let orientation = crate::blocks::orientation("oak_stairs").expect("базовые ступени");
+            orientation.state(&[("facing", stair.facing_name()), ("half", if stair.top { "top" } else { "bottom" }), ("shape", stair.shape_name()), ("waterlogged", "false")]).expect("состояние базовых ступеней")
         } else { state };
         let row = crate::blocks_table::LIGHT.iter().find(|&&(low, high, ..)| (low..=high).contains(&equivalent));
         let (_, _, emit, filter, faces) = row.copied().unwrap_or((0, 0, 0, 0, 0));
@@ -115,7 +133,7 @@ impl Catalog {
     #[cfg(not(seedmap_core))]
     pub fn explosion_drops(self, state: i32, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
         self.name(Kind::State, state)?;
-        if self.slab_entry(state)?.is_some() {
+        if self.block_entry(state)?.is_some() {
             let (_, _, tools) = self.mining_properties(state)?;
             let shears = crate::blocks::item_named("shears");
             let tool = tools.iter().copied().find(|tool| Some(*tool) != shears);
@@ -126,14 +144,14 @@ impl Catalog {
     #[cfg(not(seedmap_core))]
     pub fn drops_by_luck(self, state: i32, tool: Option<i32>, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
         self.name(Kind::State, state)?;
-        if let Some(row) = self.slab_entry(state)? {
-            let (half, _) = self.slab_properties(state)?.expect("состояние плиты");
+        if let Some(row) = self.block_entry(state)? {
+            let count = match self.slab_properties(state)? { Some((SlabHalf::Double, _)) => 2, _ => 1 };
             // Бетон требует кирку; наблюдённая шерстяная плита выпадает и рукой.
             let harvests = match row.family {
                 SlabFamily::Concrete => tool.is_some_and(|tool| SLAB_TOOLS.contains(&tool)),
                 SlabFamily::Wool => true,
             };
-            return Ok(harvests.then(|| crate::inventory::Stack::new(row.item, if half == SlabHalf::Double { 2 } else { 1 })));
+            return Ok(harvests.then(|| crate::inventory::Stack::new(row.item, count)));
         }
         Ok(crate::blocks::drops_by_luck(state, tool, luck))
     }

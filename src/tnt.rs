@@ -851,7 +851,7 @@ fn ray_blocked(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> boo
         let state = world.get_block(at[0], at[1], at[2]);
         // Базовый проход считает занятой целую клетку с ящиком. Для новых
         // плит каждая разрешённая форма имеет объём; правило старых блоков сохранено.
-        let has_box = match world.catalog().slab_entry(state) {
+        let has_box = match world.catalog().block_entry(state) {
             Ok(Some(_)) => true,
             Ok(None) => blocks::has_box(state),
             Err(_) => true,

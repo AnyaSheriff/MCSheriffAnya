@@ -196,7 +196,7 @@ pub fn source_at(state: i32) -> Option<(Kind, i32)> {
 
 /// Вода первого нового блока разрешается только выбранным каталогом мира.
 pub fn source_at_with_catalog(state: i32, catalog: crate::gameplay_catalog::Catalog) -> Option<(Kind, i32)> {
-    if let Ok(Some((_, wet))) = catalog.slab_properties(state) {
+    if let Ok(Some(wet)) = catalog.waterlogged(state) {
         return wet.then_some((Kind::Water, SOURCE));
     }
     source_at(state)

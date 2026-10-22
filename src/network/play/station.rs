@@ -721,7 +721,7 @@ pub(super) fn still_there(shared: &Shared, player: &PlayerState, window: &OpenWi
         let mut reaction=Reaction::default(); refresh(&shared,&mut p,&mut reaction);
         assert_eq!(stonecut_input(&p).unwrap().count,3); assert!(p.inventory.slot(36).is_none());
         let before=p.window.as_ref().unwrap().shown.clone();
-        for invalid in [-1,1,i32::MAX] {button(&shared,&mut p,1,invalid,&mut reaction);assert_eq!(p.window.as_ref().unwrap().shown,before);}
+        for invalid in [-1,2,i32::MAX] {button(&shared,&mut p,1,invalid,&mut reaction);assert_eq!(p.window.as_ref().unwrap().shown,before);}
         assert!(!button(&shared,&mut p,2,0,&mut reaction));
         assert!(button(&shared,&mut p,1,0,&mut reaction));
         assert_eq!(p.window.as_ref().unwrap().shown[1],Some(Stack::new(WHITE_SLAB_ITEM,2)));

@@ -3638,16 +3638,24 @@ pub(crate) fn catalog_clip(view: &dyn View, min: (f64, f64, f64), half: f64, hei
         for y in (from[1] - EPS).floor() as i32..=(to[1] + EPS).floor() as i32 {
             for z in (from[2] - EPS).floor() as i32..=(to[2] + EPS).floor() as i32 {
                 let state = view.block(x, y, z);
-                let mut a = [x as f64, y as f64, z as f64];
+                let origin = [x as f64, y as f64, z as f64];
+                let mut a = origin;
                 let mut b = [a[0] + 1.0, a[1] + 1.0, a[2] + 1.0];
+                // Ящики клетки: ступени — несколько ящиков, прочее — один.
+                let mut cell: Vec<([f64; 3], [f64; 3])> = Vec::new();
                 if let Ok(Some((half, _))) = view.catalog().slab_properties(state) {
                     match half { SlabHalf::Top => a[1] += 0.5, SlabHalf::Bottom => b[1] -= 0.5, SlabHalf::Double => {} }
-                } else if !solid(state) { continue; }
-                if (0..3).any(|other| other != axis && (high[other] <= a[other] + EPS || low[other] >= b[other] - EPS)) { continue; }
-                if delta > 0.0 && high[axis] <= a[axis] + EPS {
-                    allowed = allowed.min((a[axis] - high[axis]).max(0.0));
-                } else if delta < 0.0 && low[axis] >= b[axis] - EPS {
-                    allowed = allowed.max((b[axis] - low[axis]).min(0.0));
+                    cell.push((a, b));
+                } else if let Ok(Some(stair)) = view.catalog().stair_properties(state) {
+                    cell.extend(stair.boxes().into_iter().map(|(from, to)| ([origin[0] + from[0], origin[1] + from[1], origin[2] + from[2]], [origin[0] + to[0], origin[1] + to[1], origin[2] + to[2]])));
+                } else if !solid(state) { continue; } else { cell.push((a, b)); }
+                for (a, b) in cell {
+                    if (0..3).any(|other| other != axis && (high[other] <= a[other] + EPS || low[other] >= b[other] - EPS)) { continue; }
+                    if delta > 0.0 && high[axis] <= a[axis] + EPS {
+                        allowed = allowed.min((a[axis] - high[axis]).max(0.0));
+                    } else if delta < 0.0 && low[axis] >= b[axis] - EPS {
+                        allowed = allowed.max((b[axis] - low[axis]).min(0.0));
+                    }
                 }
             }
         }

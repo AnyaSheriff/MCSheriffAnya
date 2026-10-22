@@ -17,6 +17,8 @@ pub const CLIENT_SETTINGS: i32 = 0x2e;
 // OptVarInt: локальная группа0 (raw1); official raw22 не является стабильным ID.
 const CONCRETE_SLAB_GROUP: u8 = 1;
 const WOOL_SLAB_GROUP: u8 = 2;
+const CONCRETE_STAIRS_GROUP: u8 = 3;
+const WOOL_STAIRS_GROUP: u8 = 4;
 #[cfg(test)]
 const WHITE_SLAB_CUT_KEY: &str = "minecraft:white_concrete_slab_from_white_concrete_stonecutting";
 
@@ -45,15 +47,22 @@ enum Display {
     Stonecutting { input: i32, result: i32, count: i32 },
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Slab { Concrete(usize), Wool(usize) }
+enum Slab { Concrete(usize), Wool(usize), ConcreteStairs(usize), WoolStairs(usize) }
 impl Slab {
     fn input_name(self) -> &'static str {
         match self {
             Self::Concrete(index) => crate::gameplay_catalog::CONCRETE_SLABS[index].input_name,
             Self::Wool(index) => crate::gameplay_catalog::WOOL_SLABS[index].input_name,
+            Self::ConcreteStairs(index) => crate::gameplay_catalog::CONCRETE_STAIRS[index].input_name,
+            Self::WoolStairs(index) => crate::gameplay_catalog::WOOL_STAIRS[index].input_name,
         }
     }
-    fn group(self) -> u8 { match self { Self::Concrete(_) => CONCRETE_SLAB_GROUP, Self::Wool(_) => WOOL_SLAB_GROUP } }
+    fn group(self) -> u8 {
+        match self {
+            Self::Concrete(_) => CONCRETE_SLAB_GROUP, Self::Wool(_) => WOOL_SLAB_GROUP,
+            Self::ConcreteStairs(_) => CONCRETE_STAIRS_GROUP, Self::WoolStairs(_) => WOOL_STAIRS_GROUP,
+        }
+    }
 }
 #[derive(Clone)]
 struct Entry { key: String, display: Display, recipe_id: Option<crafting::RecipeId>, slab: Option<Slab> }
@@ -89,6 +98,11 @@ fn entries() -> &'static [Entry] {
     })
 }
 
+/// Первая позиция ступеней в расширенном списке: после прежних записей, пар бетонных плит и шерстяных плит.
+fn stairs_start() -> usize {
+    entries().len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + crate::gameplay_catalog::WOOL_SLABS.len()
+}
+
 fn entries_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [Entry] {
     if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return entries(); }
     static PREVIEW: OnceLock<Vec<Entry>> = OnceLock::new();
@@ -113,6 +127,28 @@ fn entries_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [E
                 key: format!("minecraft:{}", row.name),
                 display: Display::Crafting(crafting::recipe_for_catalog(catalog, id).expect("рецепт профиля")),
                 recipe_id: Some(id), slab: Some(Slab::Wool(index)),
+            });
+        }
+        // Ступени 26.3 дописаны после плит: бетон — пара shaped+камнерез (1→1), шерсть — только shaped.
+        for (index, row) in crate::gameplay_catalog::CONCRETE_STAIRS.iter().enumerate() {
+            let id = crafting::RecipeId::ConcreteStairs(index as u8);
+            extended.push(Entry {
+                key: format!("minecraft:{}", row.name),
+                display: Display::Crafting(crafting::recipe_for_catalog(catalog, id).expect("рецепт профиля")),
+                recipe_id: Some(id), slab: Some(Slab::ConcreteStairs(index)),
+            });
+            extended.push(Entry {
+                key: format!("minecraft:{}_from_{}_stonecutting", row.name, row.input_name),
+                display: Display::Stonecutting { input: row.input_item, result: row.item, count: 1 },
+                recipe_id: None, slab: Some(Slab::ConcreteStairs(index)),
+            });
+        }
+        for (index, row) in crate::gameplay_catalog::WOOL_STAIRS.iter().enumerate() {
+            let id = crafting::RecipeId::WoolStairs(index as u8);
+            extended.push(Entry {
+                key: format!("minecraft:{}", row.name),
+                display: Display::Crafting(crafting::recipe_for_catalog(catalog, id).expect("рецепт профиля")),
+                recipe_id: Some(id), slab: Some(Slab::WoolStairs(index)),
             });
         }
         extended
@@ -258,6 +294,10 @@ impl Book {
             crafting::RecipeId::Native(index) => index,
             crafting::RecipeId::WoolSlab(index) if usize::from(index) < crate::gameplay_catalog::WOOL_SLABS.len() =>
                 entries().len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + usize::from(index),
+            crafting::RecipeId::ConcreteStairs(index) if usize::from(index) < crate::gameplay_catalog::CONCRETE_STAIRS.len() =>
+                stairs_start() + 2 * usize::from(index),
+            crafting::RecipeId::WoolStairs(index) if usize::from(index) < crate::gameplay_catalog::WOOL_STAIRS.len() =>
+                stairs_start() + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + usize::from(index),
             _ => entries().len() + 2 * id.slab_index()?,
         };
         let entry = self.entries().get(position)?;
@@ -369,7 +409,8 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
             }
             body.extend(encode_varint(recipe.cells.len() as i32));
             for cell in recipe.cells {
-                if entry.slab.is_some() { ingredient_set(&mut body, cell); }
+                // Пустая клетка ступеней — слот типа 0, как в наблюдении 777.
+                if entry.slab.is_some() && !cell.is_empty() { ingredient_set(&mut body, cell); }
                 else { slot(&mut body, cell); }
             }
             stack(&mut body, recipe.result, recipe.count);
@@ -482,9 +523,9 @@ pub fn ghost(window: i32, recipe: &crafting::Recipe) -> Vec<u8> {
     body.extend(encode_varint(i32::from(recipe.shaped)));
     if recipe.shaped { body.extend(encode_varint(i32::from(recipe.width))); body.extend(encode_varint(i32::from(recipe.height))); }
     body.extend(encode_varint(recipe.cells.len() as i32));
-    let slab = crafting::concrete_slab_recipes().iter().chain(crafting::wool_slab_recipes()).any(|known| std::ptr::eq(known, recipe));
+    let slab = crafting::catalog_recipes().any(|known| std::ptr::eq(known, recipe));
     for cell in recipe.cells {
-        if slab { ingredient_set(&mut body, cell); }
+        if slab && !cell.is_empty() { ingredient_set(&mut body, cell); }
         else { slot(&mut body, cell); }
     }
     stack(&mut body, recipe.result, recipe.count); slot(&mut body, &[blocks::item_named("crafting_table").unwrap()]); body
@@ -569,7 +610,8 @@ mod tests {
     #[test]
     fn profile_extension_preserves_every_native_display_and_is_inert_in_base() {
         let base = entries(); let extended = entries_for_catalog(preview());
-        assert_eq!(extended.len(), base.len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + crate::gameplay_catalog::WOOL_SLABS.len());
+        assert_eq!(extended.len(), base.len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + crate::gameplay_catalog::WOOL_SLABS.len()
+            + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + crate::gameplay_catalog::WOOL_STAIRS.len());
         for (id, native) in base.iter().enumerate() {
             assert_eq!(native.key, extended[id].key);
             assert_eq!(entry_body(id, native, false), entry_body(id, &extended[id], false));
@@ -666,7 +708,7 @@ mod tests {
             let mut book = Book::for_catalog(preview());
             book.scan(&[row.input_name], 1, false);
             let known_family = all.iter().filter(|entry| entry.slab.is_some() && book.known.contains(&entry.key)).count();
-            assert_eq!(known_family, 2, "{} открывает только свою пару", row.name);
+            assert_eq!(known_family, 4, "{} открывает только свои плиту и ступени (по паре shaped+камнерез)", row.name);
             assert!(book.knows_recipe(id));
             assert_eq!(book.crafting_display(shaped as i32).unwrap().result, row.item);
             assert!(book.crafting_display(cut as i32).is_none());
@@ -696,7 +738,7 @@ mod tests {
         let base_len = entries().len();
         let wool_start = base_len + 2 * CONCRETE_SLABS.len();
         let all = entries_for_catalog(preview());
-        assert_eq!(all.len(), wool_start + WOOL_SLABS.len());
+        assert_eq!(all.len(), wool_start + WOOL_SLABS.len() + 2 * crate::gameplay_catalog::CONCRETE_STAIRS.len() + crate::gameplay_catalog::WOOL_STAIRS.len());
         for (index, base) in entries().iter().enumerate() {
             assert_eq!(all[index].key, base.key);
             assert_eq!(entry_body(index, &all[index], false), entry_body(index, base, false));
@@ -712,8 +754,9 @@ mod tests {
             assert!(book.crafting_display(display as i32).is_none(), "неизвестный display закрыт");
             book.scan(&[row.input_name], 1, false);
             let known_slabs: Vec<_> = all.iter().filter(|entry| entry.slab.is_some() && book.known.contains(&entry.key)).collect();
-            assert_eq!(known_slabs.len(), 1, "{} открывает только свою shaped плиту", row.input_name);
+            assert_eq!(known_slabs.len(), 2, "{} открывает только свои shaped плиту и ступени", row.input_name);
             assert_eq!(known_slabs[0].key, format!("minecraft:{}", row.name));
+            assert_eq!(known_slabs[1].key, format!("minecraft:{}", row.input_name.replace("_wool", "_wool_stairs")));
             assert!(book.knows_recipe(id));
             assert_eq!(book.crafting_display(display as i32).unwrap().result, row.item);
             assert_eq!(book.entry_for_recipe(id).unwrap().slab, Some(Slab::Wool(index)));
@@ -764,4 +807,52 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn stairs_entries_follow_observed_26_3_displays_and_unlocks() {
+        use crate::gameplay_catalog::{CONCRETE_STAIRS, WOOL_STAIRS};
+        let all = entries_for_catalog(preview());
+        let start = stairs_start();
+        // Бетон: shaped 3x3 (6 непустых клеток, 3 пустых слота типа 0) и камнерез 1 -> 1.
+        let shaped = &all[start];
+        assert_eq!(shaped.key, "minecraft:white_concrete_stairs");
+        let mut expected = vec![0, 1, 3, 3, 9];
+        for cell in 0..9 {
+            if matches!(cell, 1 | 2 | 5) { expected.push(0); } else { expected.extend([6, 2]); expected.extend(encode_varint(615)); }
+        }
+        stack(&mut expected, CONCRETE_STAIRS[0].item, 4);
+        slot(&mut expected, &[blocks::item_named("crafting_table").unwrap()]);
+        expected.extend([CONCRETE_STAIRS_GROUP, 0, 1, 6]);
+        for _ in 0..6 { expected.push(2); expected.extend(encode_varint(615)); }
+        expected.push(3);
+        assert_eq!(entry_body(0, shaped, true), expected);
+        let cut = &all[start + 1];
+        assert_eq!(cut.key, "minecraft:white_concrete_stairs_from_white_concrete_stonecutting");
+        let mut expected = vec![0, 3, 6, 2]; expected.extend(encode_varint(615));
+        stack(&mut expected, CONCRETE_STAIRS[0].item, 1);
+        slot(&mut expected, &[blocks::item_named("stonecutter").unwrap()]);
+        expected.extend([0, 10, 1, 1, 2]); expected.extend(encode_varint(615)); expected.push(3);
+        assert_eq!(entry_body(0, cut, true), expected);
+        // Шерсть: только shaped, своя группа; камнерезной записи нет.
+        let wool = start + 2 * CONCRETE_STAIRS.len();
+        assert_eq!(all.len(), wool + WOOL_STAIRS.len());
+        for (index, row) in WOOL_STAIRS.iter().enumerate() {
+            assert_eq!(all[wool + index].key, format!("minecraft:{}", row.name));
+            assert_eq!(all[wool + index].slab.unwrap().group(), WOOL_STAIRS_GROUP);
+            let id = crafting::RecipeId::WoolStairs(index as u8);
+            let mut book = Book::for_catalog(preview());
+            book.scan(&[row.input_name], 1, false);
+            assert!(book.knows_recipe(id) && book.entry_for_recipe(id).unwrap().key == all[wool + index].key);
+            assert!(!book.learn_named(&[format!("minecraft:{}_from_{}_stonecutting", row.name, row.input_name)]));
+            assert_eq!(book.crafting_display((wool + index) as i32).unwrap().result, row.item);
+        }
+        for (index, row) in CONCRETE_STAIRS.iter().enumerate() {
+            let id = crafting::RecipeId::ConcreteStairs(index as u8);
+            let mut book = Book::for_catalog(preview());
+            book.scan(&[row.input_name], 1, false);
+            assert!(book.knows_recipe(id));
+            assert!(book.known.contains(&all[start + 2 * index + 1].key));
+            assert!(Book::for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2)).entry_for_recipe(id).is_none());
+        }
+    }
 }

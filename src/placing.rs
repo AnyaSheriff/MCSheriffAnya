@@ -181,7 +181,7 @@ pub fn place_tagged(
         .unwrap_or(default_state);
 
     // Наблюдение777: одиночная бетонная плита сохраняет воду в клетке.
-    let state = if matches!(catalog.slab_entry(state), Ok(Some(_)))
+    let state = if matches!(catalog.block_entry(state), Ok(Some(_)))
         && fluids::fluid_at(world.get_block(x, y, z)).is_some_and(|(kind, _)| kind == fluids::Kind::Water)
     {
         orientation.and_then(|rule| rule.with(state, "waterlogged", "true")).unwrap_or(state)
@@ -344,7 +344,7 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
     // Крючок растяжки, сломанный игроком, звучит «detach».
     crate::redstone::hook_broken_by_player(world, (x, y, z), broken);
 
-    let fluid_left = if world.catalog().slab_properties(broken).ok().flatten().is_some_and(|(_, wet)| wet) {
+    let fluid_left = if world.catalog().waterlogged(broken).ok().flatten().unwrap_or(false) {
         fluids::state_of(fluids::Kind::Water, fluids::SOURCE)
     } else { crate::vegetation::fluid_left(broken) };
     world.set_block(x, y, z, fluid_left);
@@ -853,6 +853,11 @@ fn neighbour_values(
         }
     }
 
+    // Форма ступеней зависит от соседних ступеней в горизонтали.
+    if orientation.family == Family::Stairs {
+        values.push(("shape", stairs_shape(orientation, world, (x, y, z), state)));
+    }
+
     // Столб у стенки есть у одиночной стенки и у поворотов, а пропадает, когда
     // стенка тянется в одну сторону или стоит на перекрёстке: там её бок и так
     // занимает весь блок, и столб был бы лишним.
@@ -880,6 +885,50 @@ fn neighbour_values(
     }
 
     values
+}
+
+/// Смещение соседа по стороне света (север — минус Z).
+fn side_offset(side: &str) -> (i32, i32) {
+    match side { "north" => (0, -1), "south" => (0, 1), "west" => (-1, 0), _ => (1, 0) }
+}
+
+/// Против часовой стрелки при взгляде сверху: север → запад → юг → восток.
+fn counter_clockwise(side: &str) -> &'static str {
+    match side { "north" => "west", "west" => "south", "south" => "east", _ => "north" }
+}
+
+/// Поворот и половина ступеней в клетке рядом; None — там не ступени.
+/// Ступени бывают и прежние, и из каталога: соседей спрашиваем у каталога мира.
+fn stairs_at(world: &World, (x, y, z): (i32, i32, i32), side: &str) -> Option<(&'static str, &'static str)> {
+    let (dx, dz) = side_offset(side);
+    let neighbour = world.get_block(x + dx, y, z + dz);
+    let rule = world.catalog().orientation_of(neighbour).ok().flatten()?;
+    if rule.family != Family::Stairs { return None; }
+    Some((rule.value(neighbour, "facing")?, rule.value(neighbour, "half")?))
+}
+
+/// Форма ступеней по соседям. Правило совпало с официальным сервером 26.3 на
+/// 1280 расстановках (512 пар и 768 троек, testdata stairs-shape-26.3.json):
+/// сперва смотрим вперёд (внешний угол), потом назад (внутренний). Угол не
+/// образуется, если по другую сторону от соседа стоят такие же ступени, как наши.
+fn stairs_shape(orientation: &Orientation, world: &World, at: (i32, i32, i32), state: i32) -> &'static str {
+    let (Some(facing), Some(half)) = (orientation.value(state, "facing"), orientation.value(state, "half")) else {
+        return "straight";
+    };
+    let perpendicular = |a: &str, b: &str| matches!(a, "north" | "south") != matches!(b, "north" | "south");
+    // Можно ли ступеням принять форму: на стороне `side` нет ступеней с тем же поворотом и половиной.
+    let can_take = |side: &str| stairs_at(world, at, side).is_none_or(|(other, other_half)| other != facing || other_half != half);
+    if let Some((front, front_half)) = stairs_at(world, at, facing)
+        && front_half == half && perpendicular(front, facing) && can_take(opposite_direction(front))
+    {
+        return if front == counter_clockwise(facing) { "outer_left" } else { "outer_right" };
+    }
+    if let Some((back, back_half)) = stairs_at(world, at, opposite_direction(facing))
+        && back_half == half && perpendicular(back, facing) && can_take(back)
+    {
+        return if back == counter_clockwise(facing) { "inner_left" } else { "inner_right" };
+    }
+    "straight"
 }
 
 /// Насколько блок срастается с соседом — значением свойства.
@@ -987,14 +1036,17 @@ pub fn refresh_neighbours(world: &mut World, x: i32, y: i32, z: i32) {
         let (nx, ny, nz) = (x + dx, y + dy, z + dz);
         let state = world.get_block(nx, ny, nz);
 
-        let Some(name) = blocks::block_at_state(state) else {
-            continue;
-        };
-        let Some(orientation) = blocks::orientation(name) else {
+        // Ступени и блоки каталога: правило берётся у каталога мира.
+        let Some(orientation) = world.catalog().orientation_of(state).ok().flatten() else {
             continue;
         };
 
-        if !orientation.family.connects_to_sides() && orientation.family != Family::Gate {
+        // Ступени пересчитывают форму только от горизонтальных соседей.
+        let stairs = orientation.family == Family::Stairs;
+        if stairs && dy != 0 {
+            continue;
+        }
+        if !stairs && !orientation.family.connects_to_sides() && orientation.family != Family::Gate {
             continue;
         }
 
@@ -1806,6 +1858,91 @@ mod catalog_sculk_emission_tests {
                 &Click { face: 1, cursor_y: 0.5, yaw: 0.0, pitch: 0.0 }, (2.5, 64.0, 3.5)), Placement::Merged);
             assert_eq!(merged.get_block(TARGET.0, TARGET.1, TARGET.2), catalog.slab_state_for(row, SlabHalf::Double, false).unwrap());
             assert!(merged.redstone.sculk.events.is_empty());
+        }
+    }
+}
+
+#[cfg(test)]
+mod stairs_shape_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, CONCRETE_STAIRS, WOOL_STAIRS};
+
+    const SIDES: [&str; 4] = ["north", "south", "west", "east"];
+    const CENTER: (i32, i32, i32) = (8, 70, 8);
+
+    fn put(world: &mut World, side: &str, name: &str, facing: &str, half: &str) {
+        let (dx, dz) = side_offset(side);
+        let state = world.catalog().state_from_text(&format!("{name}[facing={facing},half={half}]")).unwrap().unwrap();
+        world.set_block_silently(CENTER.0 + dx, CENTER.1, CENTER.2 + dz, state);
+    }
+
+    /// Форма центральных ступеней из официального 26.3: все 1280 расстановок совпадают.
+    #[test]
+    fn shape_rule_matches_all_1280_official_arrangements() {
+        let table: std::collections::BTreeMap<String, String> = serde_json::from_str(include_str!("gameplay_catalog/stairs-shape-26.3.json")).unwrap();
+        assert_eq!(table.len(), 1280);
+        let mut world = World::in_memory_with_catalog(Catalog::new(Profile::Preview26_3));
+        let rule = world.catalog().orientation("white_wool_stairs").unwrap().unwrap();
+        for (key, expected) in &table {
+            for side in SIDES {
+                let (dx, dz) = side_offset(side);
+                world.set_block_silently(CENTER.0 + dx, CENTER.1, CENTER.2 + dz, world::AIR);
+            }
+            let parts: Vec<&str> = key.split(',').collect();
+            let (facing, half) = if parts[0] == "P" {
+                put(&mut world, parts[3], parts[6], parts[2], parts[5]);
+                (parts[1], parts[4])
+            } else {
+                put(&mut world, parts[2], "white_wool_stairs", parts[3], "bottom");
+                put(&mut world, parts[4], "white_wool_stairs", parts[5], "bottom");
+                (parts[1], "bottom")
+            };
+            let own = rule.state(&[("facing", facing), ("half", half)]).unwrap();
+            assert_eq!(stairs_shape(rule, &world, CENTER, own), expected, "{key}");
+        }
+    }
+
+    #[test]
+    fn placing_and_breaking_neighbours_reshapes_catalog_stairs() {
+        let mut world = World::in_memory_with_catalog(Catalog::new(Profile::Preview26_3));
+        for x in 6..=10 { for z in 6..=10 { world.set_block_silently(x, 69, z, blocks::state_by_name("stone").unwrap()); } }
+        let catalog = world.catalog();
+        let click = Click { face: 1, cursor_y: 0.5, yaw: 0.0, pitch: 0.0 };
+        // Игрок смотрит на юг (yaw 0): ступени смотрят на юг. Вторые ступени справа от первых смотрят на запад — получится угол.
+        for row in [&CONCRETE_STAIRS[3], &WOOL_STAIRS[5]] {
+            let first = place(&mut world, row.name, row.default_state, (8, 69, 8), &click, (8.5, 71.0, 6.5));
+            assert_eq!(first, Placement::Placed);
+            let state = world.get_block(8, 70, 8);
+            let rule = catalog.orientation_of(state).unwrap().unwrap();
+            assert_eq!((rule.value(state, "facing"), rule.value(state, "shape")), (Some("south"), Some("straight")));
+            // Ступени-сосед спереди (юг), повёрнутые на запад: у первых появляется внешний угол.
+            let side = catalog.state_from_text(&format!("{}[facing=west,half=bottom]", row.name)).unwrap().unwrap();
+            world.set_block(8, 70, 9, side);
+            refresh_neighbours(&mut world, 8, 70, 9);
+            let state = world.get_block(8, 70, 8);
+            assert_eq!(rule.value(state, "shape"), Some("outer_right"), "{}", row.name);
+            // Убрали соседа - форма снова прямая.
+            world.set_block(8, 70, 9, world::AIR);
+            refresh_neighbours(&mut world, 8, 70, 9);
+            assert_eq!(rule.value(world.get_block(8, 70, 8), "shape"), Some("straight"));
+            world.set_block(8, 70, 8, world::AIR);
+        }
+    }
+
+    #[test]
+    fn stairs_in_water_keep_it_and_wool_ones_are_quiet() {
+        for row in [&CONCRETE_STAIRS[0], &WOOL_STAIRS[0]] {
+            let mut world = World::in_memory_with_catalog(Catalog::new(Profile::Preview26_3));
+            let catalog = world.catalog();
+            world.set_block_silently(0, 63, 0, blocks::state_by_name("stone").unwrap());
+            world.set_block_silently(0, 64, 0, fluids::state_of(fluids::Kind::Water, fluids::SOURCE));
+            let click = Click { face: 1, cursor_y: 0.5, yaw: 0.0, pitch: 0.0 };
+            assert_eq!(place(&mut world, row.name, row.default_state, (0, 63, 0), &click, (3.5, 64.0, 3.5)), Placement::Placed);
+            let state = world.get_block(0, 64, 0);
+            assert_eq!(catalog.waterlogged(state), Ok(Some(true)), "{}", row.name);
+            assert_eq!(crate::redstone::sculk_family::quiet_state(catalog, state), row.family == crate::gameplay_catalog::SlabFamily::Wool);
+            assert_eq!(break_block(&mut world, 0, 64, 0), Some(state));
+            assert_eq!(world.get_block(0, 64, 0), fluids::state_of(fluids::Kind::Water, fluids::SOURCE));
         }
     }
 }

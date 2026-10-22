@@ -195,7 +195,7 @@ impl Recipe {
 
 /// Идентичность рецепта сервера: сетевые display ID принадлежат книге отдельно.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8) }
+pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8), ConcreteStairs(u8), WoolStairs(u8) }
 
 impl RecipeId {
     pub fn concrete_slab(index: usize) -> Option<Self> {
@@ -231,11 +231,37 @@ pub fn wool_slab_recipes() -> &'static [Recipe] {
     slab_recipes(&crate::gameplay_catalog::WOOL_SLABS, &CELLS, &RECIPES)
 }
 
+/// Ступени 26.3: «X.. / XX. / XXX» из шести блоков своего цвета дают 4 ступени
+/// (наблюдение официального 26.3: обе зеркальные формы принимаются).
+fn stairs_recipes(rows: &'static [crate::gameplay_catalog::SlabDescriptor], cells: &'static std::sync::OnceLock<Vec<[&'static [i32]; 9]>>, recipes: &'static std::sync::OnceLock<Vec<Recipe>>) -> &'static [Recipe] {
+    let cells = cells.get_or_init(|| rows.iter().map(|row| {
+        let x: &'static [i32] = std::slice::from_ref(&row.input_item);
+        [x, &[], &[], x, x, &[], x, x, x]
+    }).collect());
+    recipes.get_or_init(|| rows.iter().zip(cells).map(|(row, cells)| Recipe {
+        shaped: true, width: 3, height: 3, result: row.item, count: 4, cells,
+    }).collect())
+}
+
+pub fn concrete_stairs_recipes() -> &'static [Recipe] {
+    static CELLS: std::sync::OnceLock<Vec<[&'static [i32]; 9]>> = std::sync::OnceLock::new();
+    static RECIPES: std::sync::OnceLock<Vec<Recipe>> = std::sync::OnceLock::new();
+    stairs_recipes(&crate::gameplay_catalog::CONCRETE_STAIRS, &CELLS, &RECIPES)
+}
+
+pub fn wool_stairs_recipes() -> &'static [Recipe] {
+    static CELLS: std::sync::OnceLock<Vec<[&'static [i32]; 9]>> = std::sync::OnceLock::new();
+    static RECIPES: std::sync::OnceLock<Vec<Recipe>> = std::sync::OnceLock::new();
+    stairs_recipes(&crate::gameplay_catalog::WOOL_STAIRS, &CELLS, &RECIPES)
+}
+
 pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
     if let RecipeId::Native(index) = id { return recipes().get(index); }
     if catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3 { return None; }
     match id {
         RecipeId::WoolSlab(index) => wool_slab_recipes().get(usize::from(index)),
+        RecipeId::ConcreteStairs(index) => concrete_stairs_recipes().get(usize::from(index)),
+        RecipeId::WoolStairs(index) => wool_stairs_recipes().get(usize::from(index)),
         _ => concrete_slab_recipes().get(id.slab_index()?),
     }
 }
@@ -250,8 +276,19 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
         if let Some(index) = wool_slab_recipes().iter().position(|recipe| recipe.matches(&grid)) {
             return Some(RecipeId::WoolSlab(index as u8));
         }
+        if let Some(index) = concrete_stairs_recipes().iter().position(|recipe| recipe.matches(&grid)) {
+            return Some(RecipeId::ConcreteStairs(index as u8));
+        }
+        if let Some(index) = wool_stairs_recipes().iter().position(|recipe| recipe.matches(&grid)) {
+            return Some(RecipeId::WoolStairs(index as u8));
+        }
     }
     recipe_index(slots).map(RecipeId::Native)
+}
+
+/// Рецепты каталога 26.3: плиты, затем ступени.
+pub fn catalog_recipes() -> impl Iterator<Item = &'static Recipe> {
+    concrete_slab_recipes().iter().chain(wool_slab_recipes()).chain(concrete_stairs_recipes()).chain(wool_stairs_recipes())
 }
 
 /// Каталог основного профиля общий для верстака, книги и автокрафтера.
@@ -259,7 +296,7 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
 pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<Stack> {
     if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
         && let Some(grid) = Grid::new(slots)
-        && let Some(recipe) = concrete_slab_recipes().iter().chain(wool_slab_recipes()).find(|recipe| recipe.matches(&grid))
+        && let Some(recipe) = catalog_recipes().find(|recipe| recipe.matches(&grid))
     { return Some(Stack::new(recipe.result, recipe.count)); }
     craft(slots)
 }

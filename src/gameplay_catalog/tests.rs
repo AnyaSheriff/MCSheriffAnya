@@ -92,10 +92,10 @@ fn every_slab_property_pair_has_exact_selected_candidate_state() {
 #[test]
 fn unknown_ids_never_inherit_default_stack_size_or_wrap_into_valid_state() {
     for catalog in [OLD_CATALOG, PREVIEW] {
-        for id in [-1, i32::MIN, i32::MAX, WOOL_SLABS.last().unwrap().item + 1] {
+        for id in [-1, i32::MIN, i32::MAX, WOOL_STAIRS.last().unwrap().item + 1] {
             assert!(matches!(catalog.stack_size(id), Err(Error::UnknownInternal { .. })));
         }
-        for id in [-1, i32::MIN, i32::MAX, WOOL_SLABS.last().unwrap().last_state + 1, 65535] {
+        for id in [-1, i32::MIN, i32::MAX, WOOL_STAIRS.last().unwrap().last_state + 1, 65535] {
             assert!(matches!(catalog.name(Kind::State, id), Err(Error::UnknownInternal { .. })));
         }
         assert!(catalog.decode_client_id(Kind::Item, u32::MAX, NEW).is_err());
@@ -230,7 +230,8 @@ fn concrete_family_selected_metadata_and_all_96_states_stay_distinct() {
     }
     assert_eq!(states.len(),96);
     assert_eq!(PREVIEW.slab_entry(WHITE_SLAB_FIRST_STATE-1),Ok(None));
-    assert!(PREVIEW.slab_entry(WOOL_SLABS.last().unwrap().last_state+1).is_err());
+    assert!(PREVIEW.slab_entry(WOOL_STAIRS.last().unwrap().last_state+1).is_err());
+    assert_eq!(PREVIEW.slab_entry(WOOL_SLABS.last().unwrap().last_state+1),Ok(None), "дальше идут ступени, не плиты");
 }
 
 #[test]
@@ -303,7 +304,7 @@ fn wool_metadata_allocates_only_append_ids_and_maps_all_96_selected_states() {
     assert_eq!(WOOL_SLABS[0].block, CONCRETE_SLABS[15].block + 1);
     assert_eq!(WOOL_SLABS[0].first_state, CONCRETE_SLABS[15].last_state + 1);
     assert_eq!(PREVIEW.slab_entry(WOOL_SLABS[0].first_state - 1), Ok(Some(&CONCRETE_SLABS[15])));
-    assert!(PREVIEW.slab_entry(WOOL_SLABS[15].last_state + 1).is_err());
+    assert_eq!(PREVIEW.slab_entry(WOOL_SLABS[15].last_state + 1), Ok(None));
     assert_eq!(crate::world::profile::current_profile().gameplay_version, "26.1.2");
 }
 

@@ -106,7 +106,7 @@ pub fn wear_with_catalog(catalog: Catalog, state: i32, tool: Stack) -> i32 {
 /// Бетонные плиты используют общий расчёт инструмента; особые старые выпадения
 /// (листва, Silk Touch и Fortune) остаются в прежнем обработчике.
 pub fn block_drops_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>, mut roll: impl FnMut() -> f32) -> Vec<Stack> {
-    match catalog.slab_entry(state) {
+    match catalog.block_entry(state) {
         Ok(Some(_)) => catalog.drops_by_luck(state, tool.map(|stack| stack.item), roll()).ok().flatten().into_iter().collect(),
         Ok(None) => block_drops(state, tool, roll),
         Err(_) => Vec::new(),
