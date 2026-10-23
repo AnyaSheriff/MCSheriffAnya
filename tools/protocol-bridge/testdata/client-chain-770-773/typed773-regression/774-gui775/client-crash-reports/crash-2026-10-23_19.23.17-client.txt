@@ -1,0 +1,77 @@
+---- Minecraft Crash Report ----
+// I let you down. Sorry :(
+
+Time: 2026-10-23 19:23:17
+Description: Initializing game
+
+java.lang.IllegalStateException: Failed to initialize GLFW, errors: GLFW error during init: [0x1000E]X11: Failed to open display :99
+	at com.mojang.blaze3d.platform.GLX._initGlfw(SourceFile:63)
+	at com.mojang.blaze3d.systems.RenderSystem.initBackendSystem(SourceFile:201)
+	at gfj.<init>(SourceFile:501)
+	at net.minecraft.client.main.Main.main(SourceFile:234)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at com.mojang.blaze3d.platform.GLX._initGlfw(SourceFile:63)
+	at com.mojang.blaze3d.systems.RenderSystem.initBackendSystem(SourceFile:201)
+	at gfj.<init>(SourceFile:501)
+
+-- Initialization --
+Details:
+	Modules: 
+Stacktrace:
+	at net.minecraft.client.main.Main.main(SourceFile:234)
+
+-- System Details --
+Details:
+	Minecraft Version: 1.21.11
+	Minecraft Version ID: 1.21.11
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 50213344 bytes (47 MiB) / 262144000 bytes (250 MiB) up to 1073741824 bytes (1024 MiB)
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 11883.22
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 4962.70
+	Space in storage for jna.tmpdir (MiB): available: 7868.23, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7868.23, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): ERR
+	Space in storage for java.io.tmpdir (MiB): available: 7868.23, total: 7952.55
+	Space in storage for workdir (MiB): available: 7868.23, total: 7952.55
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 
+	Launched Version: 1.21.11
+	Launcher name: mcsa-probe
+	Backend library: LWJGL version 3.3.3+5
+	Backend API: Unknown
+	Window size: <not initialized>
+	GFLW Platform: <error>
+	Render Extensions: ERR
+	GL debug messages: <no renderer available>
+	Is Modded: Probably not. Client jar signature and brand is untouched
+	Universe: 404
+	Type: Client (map_client.txt)
+	Locale: en
+	System encoding: UTF-8
+	File encoding: UTF-8
+	CPU: 12x AMD Ryzen 5 3600 6-Core Processor

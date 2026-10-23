@@ -1,0 +1,123 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.lwjgl.system.MemoryUtil (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-26.2/libraries/org/lwjgl/lwjgl/3.4.1/lwjgl-3.4.1-unsafe.jar)
+WARNING: Please consider reporting this to the maintainers of class org.lwjgl.system.MemoryUtil
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[19:32:15] [Datafixer Bootstrap #0/INFO]: 295 Datafixer optimizations took 346 milliseconds
+[19:32:18] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[19:32:18] [Render thread/INFO]: Setting user: McsaProbe
+[19:32:18] [Render thread/INFO]: Backend library: LWJGL version 3.4.1+2
+Failed to create /home/lenox/.cache/mesa_shader_cache for shader cache (Read-only file system)---disabling.
+[19:32:18] [Render thread/INFO]: Using graphics backend OpenGL, using drivers: 4.6 (Core Profile) Mesa 26.2.5-arch1.1
+[19:32:18] [Render thread/INFO]: Using graphics device: llvmpipe (LLVM 23.1.3, 256 bits) (Mesa)
+[19:32:18] [Render thread/INFO]: Using graphics device extensions: GL_ARB_multi_draw_indirect, GL_ARB_buffer_storage, GL_ARB_shader_draw_parameters, GL_ARB_base_instance, GL_KHR_debug, GL_ARB_draw_indirect, GL_ARB_clip_control, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access, GL_EXT_texture_filter_anisotropic
+[19:32:18] [Download-2/ERROR]: Failed to fetch user properties
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:70)
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:173)
+	at net.minecraft.client.Minecraft.lambda$new$1(Minecraft.java:438)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: MinecraftClientHttpException[type=HTTP_ERROR, status=401, response=ErrorResponse[path=/player/attributes, error=null, errorMessage=null, details=null]]
+	at com.mojang.authlib.minecraft.client.MinecraftClient.buildHttpException(MinecraftClient.java:170)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readServiceResponse(MinecraftClient.java:147)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.getWithEtag(MinecraftClient.java:81)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.get(MinecraftClient.java:65)
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:123)
+	... 5 more
+[19:32:18] [Render thread/INFO]: Reloading ResourceManager: vanilla
+[19:32:19] [Worker-Main-11/INFO]: Found unifont_all_no_pua-17.0.01.hex, loading
+[19:32:19] [Worker-Main-9/INFO]: Found unifont_pua-17.0.01.hex, loading
+[19:32:19] [Download-1/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[19:32:19] [Download-1/ERROR]: Failed to fetch Realms feature flags
+com.mojang.realmsclient.exception.RealmsServiceException: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+	at com.mojang.realmsclient.client.RealmsClient.execute(RealmsClient.java:528)
+	at com.mojang.realmsclient.client.RealmsClient.fetchFeatureFlags(RealmsClient.java:187)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:32:19] [Worker-Main-4/INFO]: Found unifont_jp_patch-17.0.01.hex, loading
+[19:32:20] [Render thread/INFO]: OpenAL initialized on device No Output
+[19:32:20] [Render thread/INFO]: Sound engine started
+[19:32:20] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 128x128x0 minecraft:textures/atlas/decorated_pot.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 2048x1024x0 minecraft:textures/atlas/armor_trims.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/shield_patterns.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 2048x2048x4 minecraft:textures/atlas/blocks.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/chest.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 256x128x0 minecraft:textures/atlas/celestials.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/banner_patterns.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/items.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 1024x1024x0 minecraft:textures/atlas/gui.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 128x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[19:32:20] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/shulker_boxes.png-atlas
+[19:32:21] [Render thread/INFO]: Connecting to 127.0.0.1, 26034
+[19:32:21] [Download-2/ERROR]: Failed to retrieve profile key pair
+MinecraftClientHttpException[type=HTTP_ERROR, status=401, response=ErrorResponse[path=/player/certificates, error=null, errorMessage=null, details=null]]
+	at com.mojang.authlib.minecraft.client.MinecraftClient.buildHttpException(MinecraftClient.java:170)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readServiceResponse(MinecraftClient.java:147)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.post(MinecraftClient.java:89)
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.getKeyPair(YggdrasilUserApiService.java:62)
+	at net.minecraft.client.multiplayer.AccountProfileKeyPairManager.fetchProfileKeyPair(AccountProfileKeyPairManager.java:128)
+	at net.minecraft.client.multiplayer.AccountProfileKeyPairManager.lambda$readOrFetchProfileKeyPair$0(AccountProfileKeyPairManager.java:77)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:32:23] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 2 reached during a single frame. New capacity will be 4.
+[19:32:23] [Render thread/INFO]: [System] [CHAT] McsaProbe зашёл на сервер
+[19:32:23] [Render thread/INFO]: Loaded 0 advancements
+[19:32:23] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 4 reached during a single frame. New capacity will be 8.
+[19:32:24] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[19:32:24] [Render thread/INFO]: Resizing Chunk Sections UBO, capacity limit of 2 reached during a single frame. New capacity will be 8.
+[19:32:25] [Render thread/INFO]: Resizing Chunk Sections UBO, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[19:32:39] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_49
+[19:32:40] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_50
+[19:32:40] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_51
+[19:32:40] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_52
+[19:32:40] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_53
+[19:32:45] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_54
+[19:32:45] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_55
+[19:32:46] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_56
+[19:32:46] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_57
+[19:32:46] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_58
+[19:32:46] [Render thread/ERROR]: Couldn't load advancements: [minecraft:story/iron_tools, minecraft:story/mine_diamond, minecraft:story/shiny_gear, minecraft:story/enchant_item]
+[19:32:46] [Render thread/INFO]: Loaded 0 advancements
+[19:32:46] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/shiny_gear
+[19:32:46] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/enchant_item
+[19:32:46] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/mine_diamond
+[19:32:46] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/iron_tools
+[19:32:46] [Render thread/INFO]: [System] [CHAT] McsaProbe has made the advancement [Isn't It Iron Pick]
+[19:32:48] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_CANCEL_RETAINED
+[19:32:48] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_59
+[19:32:48] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_60
+[19:32:48] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_61
+[19:32:49] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_62
+[19:32:49] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_63
+[19:32:50] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_64
+[19:32:50] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_65
+[19:32:50] [Render thread/ERROR]: Couldn't load advancements: [minecraft:story/mine_stone, minecraft:story/upgrade_tools, minecraft:story/smelt_iron]
+[19:32:50] [Render thread/INFO]: Loaded 0 advancements
+[19:32:50] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/upgrade_tools
+[19:32:50] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/mine_stone
+[19:32:50] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/smelt_iron
+[19:32:50] [Render thread/INFO]: [System] [CHAT] McsaProbe has made the advancement [Stone Age]
+[19:32:50] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_66
+[19:32:51] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_67
+[19:32:51] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_68
+[19:32:51] [Render thread/ERROR]: Couldn't load advancements: [minecraft:story/obtain_armor, minecraft:story/lava_bucket, minecraft:story/deflect_arrow, minecraft:story/form_obsidian]
+[19:32:51] [Render thread/INFO]: Loaded 0 advancements
+[19:32:51] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/obtain_armor
+[19:32:51] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/form_obsidian
+[19:32:51] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/smelt_iron
+[19:32:51] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/lava_bucket
+[19:32:51] [Render thread/WARN]: Server informed client about progress for unknown advancement minecraft:story/deflect_arrow
+[19:32:52] [Render thread/INFO]: [System] [CHAT] McsaProbe has made the advancement [Acquire Hardware]
+[19:32:52] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_69
+[19:32:53] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_70
+[19:32:53] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_71
+[19:32:55] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_72
+[19:32:55] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_ACTION_BARRIER_73

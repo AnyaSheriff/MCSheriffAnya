@@ -52,7 +52,7 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
         // payload-actions-bees775 и774-client775-v6: тип сущности перед compound.
         // Общий JSON этого VarInt не содержит; принимаем только пчелу ядра.
         let bee=crate::entity_layouts::LAYOUTS.iter().position(|row|row.0=="bee").ok_or(Error::Invalid)? as u32;
-        let wire_id=|space|match space {IdSpace::Wire(version @ (JavaVersion::V1_21_11|JavaVersion::V26_2))=>crate::ids::translate(RegistryKind::Entity,JavaVersion::V26_1_2,version,bee).map(Some).map_err(Error::Id),_=>Ok(None)};
+        let wire_id=|space|match space {IdSpace::Wire(version @ (JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2))=>crate::ids::translate(RegistryKind::Entity,JavaVersion::V26_1_2,version,bee).map(Some).map_err(Error::Id),_=>Ok(None)};
         let source_type=wire_id(spaces.0)?;let target_type=wire_id(spaces.1)?;
         let count=input.count(3)?;let mut out=Vec::new();uint(&mut out,count as u32);
         for _ in 0..count {
@@ -111,5 +111,5 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
 }
 
 pub(crate) fn supported_pair(from:JavaVersion,to:JavaVersion)->bool{
-    matches!(from,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+    matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
 }

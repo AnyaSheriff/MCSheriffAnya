@@ -1,0 +1,130 @@
+{
+  "scope": "Typed adjacent773/774 foundation; public admission CLOSED; no live checklist claimed",
+  "common_component_definitions": 96,
+  "equal_envelopes": [
+    "Slot",
+    "UntrustedSlot",
+    "UntrustedSlotComponent"
+  ],
+  "missing_components": [
+    "attack_range",
+    "damage_type",
+    "kinetic_weapon",
+    "minimum_attack_charge",
+    "piercing_weapon",
+    "swing_animation",
+    "use_effects",
+    "zombie_nautilus/variant"
+  ],
+  "missing_entities": [
+    "camel_husk",
+    "nautilus",
+    "parched",
+    "zombie_nautilus"
+  ],
+  "changed_metadata": {
+    "bee": {
+      "older": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "remaining_anger_time"
+      ],
+      "newer": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "anger_end_time"
+      ]
+    },
+    "wolf": {
+      "older": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "owneruuid",
+        "interested",
+        "collar_color",
+        "remaining_anger_time",
+        "variant",
+        "sound_variant"
+      ],
+      "newer": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "owneruuid",
+        "interested",
+        "collar_color",
+        "anger_end_time",
+        "variant",
+        "sound_variant"
+      ]
+    }
+  },
+  "semantic_blockers": [
+    "remaining_anger_time/anger_end_time: refuse missing fields; semantics unverified",
+    "Attribute IDs below774 remain closed pending correction of pinned JSON omission",
+    "Bee NBT entity prefix below774 unobserved; component77 refused"
+  ]
+}

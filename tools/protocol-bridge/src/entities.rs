@@ -198,7 +198,8 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
             .map(|entry| entry.1).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
         JavaVersion::V26_3 => Ok(new),
         JavaVersion::V1_21_11 => crate::generated_payload_774::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
-        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+        JavaVersion::V1_21_9 => crate::generated_payload_773::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
+        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
 }
 
@@ -226,7 +227,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         if target_index.is_none() && substitute.is_none() && !(to==JavaVersion::V1_21_11 && matches!(*field,"age_locked"|"sound_variant"|"villager_finalized")) { return Err(failure(Error::MissingField(field))); }
         out.push(target_index.unwrap_or(0) as u8);
         let raw_serializer = input.uint()?;
-        let serializer = if from==JavaVersion::V1_21_11 {u32::from(*crate::generated_payload_774::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else {raw_serializer};
+        let serializer = if from==JavaVersion::V1_21_9 {u32::from(*crate::generated_payload_773::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_11 {u32::from(*crate::generated_payload_774::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else {raw_serializer};
         if has_776 {
             // Пять наблюдённых типов сохраняют строгую проверку serializer
             // поля; прочие раскладки закреплены JSON, значения разбираются
@@ -237,7 +238,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if serializer != expected { return Err(failure(Error::Serializer(serializer))); }
             }
         }
-        let target_serializer=if to==JavaVersion::V1_21_11 {*crate::generated_payload_774::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else {serializer};
+        let target_serializer=if to==JavaVersion::V1_21_9 {*crate::generated_payload_773::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_11 {*crate::generated_payload_774::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else {serializer};
         if target_serializer==u32::from(u16::MAX) && target_index.is_some(){return Err(failure(Error::Serializer(serializer)));}
         uint(out, target_serializer);
         match serializer {
@@ -316,7 +317,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if present { let name = input.string()?; uint(out,name.len() as u32); out.extend(name.as_bytes()); out.extend(input.take(8)?); }
             }
             34 => registry_id(input,out,context,"minecraft:painting_variant",true)?,
-            41 if has_776 || from==JavaVersion::V1_21_11 || to==JavaVersion::V1_21_11 => {
+            41 if has_776 || matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11) || matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {
                 let start = input.rest;
                 crate::profile::read(input)?;
                 out.extend(&start[..start.len() - input.rest.len()]);

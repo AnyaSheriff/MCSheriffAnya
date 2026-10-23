@@ -16,6 +16,12 @@ pub const STEPS: [Step; 4] = [
 ];
 
 impl Step {
+    /// Первый Play-шаг773↔774; остальные требуют собственных codec.
+    pub fn translate_play(self, direction: Direction, from: JavaVersion, body: &[u8], context: wire::Context) -> Result<Vec<u8>, wire::Error> {
+        if self != STEPS[0] { return Err(wire::Error::UnsupportedVersion(self.older)); }
+        crate::client_773::translate_play(direction, from, body, context)
+    }
+
     /// Каждый шаг проверяет свою схему и типизированный payload; допуск отдельно.
     pub fn translate_control(self, state: State, direction: Direction, from: JavaVersion, body: &[u8]) -> Result<Vec<u8>, wire::Error> {
         if !STEPS.contains(&self) {return Err(wire::Error::UnsupportedVersion(self.older));}
