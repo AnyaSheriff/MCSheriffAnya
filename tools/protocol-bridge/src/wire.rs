@@ -87,7 +87,7 @@ pub(crate) fn translate_inner(
     if context.items.content.is_native_view() && (from != JavaVersion::V26_1_2 || to != JavaVersion::V26_1_2 || state != State::Play || direction != Direction::Clientbound) {
         return Err(Error::PayloadUnavailable("775 view is clientbound only"));
     }
-    if context.items.content.is_preview() && !context.items.content.is_native_view() && (probe_776 || !matches!((from,to),
+    if context.items.content.is_preview() && !context.items.content.is_native_view() && (!probe_776 && !matches!((from,to),
         (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2))) {
         return Err(Error::PayloadUnavailable("preview content requires explicit canonical/777 route"));
     }
@@ -252,7 +252,7 @@ pub(crate) fn translate_inner(
             let context = context.chunk.ok_or(Error::MissingChunkContext)?;
             let payload = cursor.take(cursor.remaining())?;
             out.extend(if probe_776 {
-                crate::chunk::translate_776_bounded(from, to, payload, context)
+                crate::chunk::translate_776_content(from, to, payload, context, content)
             } else { crate::chunk::translate_with_content(from, to, payload, context, content) }.map_err(Error::Chunk)?);
         }
         (State::Play, Direction::Clientbound, "tile_entity_data") => {
@@ -476,7 +476,7 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "keep_alive" | "ping" | "system_chat" | "tab_complete" | "kick_disconnect" |
             "recipe_book_settings" | "recipe_book_add" | "recipe_book_remove" |
             "advancements" | "select_advancement_tab" | "entity_update_attributes" |
-            "block_change" | "multi_block_change" | "sound_effect" | "entity_sound_effect" |
+            "block_change" | "block_action" | "tile_entity_data" | "multi_block_change" | "sound_effect" | "entity_sound_effect" |
             "playerlist_header"),
         _ => false,
     }

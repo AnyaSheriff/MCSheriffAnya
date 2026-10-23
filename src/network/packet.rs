@@ -226,7 +226,7 @@ pub(super) async fn read_play_packet_routed<S: AsyncRead + Unpin>(stream: &mut S
 }
 
 pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
-    if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
+    if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(cfg!(test) && probe_776 && version == JavaVersion::V26_2) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
     }
     if probe_776 && (!cfg!(test) || version != JavaVersion::V26_2) {
@@ -404,7 +404,7 @@ impl<'a> Outgoing<'a> {
 
     async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
         context.items = item_context(if self.version == JavaVersion::V26_1_2 { self.content.native_view() } else { self.content });
-        if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
+        if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !self.probe_776 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
         }
         // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же

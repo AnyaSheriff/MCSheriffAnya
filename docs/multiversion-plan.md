@@ -14,4 +14,4 @@
 13. Validate profile-bound saves, explicit backed-up upgrades, and refusal of unsupported downgrade before listeners open.
 14. Publish a client × primary readiness matrix with raw evidence; never infer full support from packet IDs or one successful login.
 
-Step 1 status: partial private gameplay evidence for776 on primary775; 774/776 remain closed on both primaries because the required full gameplay matrix is unproven.
+Step 1 status: private776 traces on both primaries now prove dynamic light14→0, mixed777 PvP in both directions, placement, death/respawn and chest transfers. Chest-area relog fails on776 block entities; mining enums, all774 gameplay, dimensions/recipes, restart and authentication remain unproven. All four admission cells stay closed. See [continuation and trace matrix](../tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md).

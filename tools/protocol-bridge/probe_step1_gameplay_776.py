@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Одна частная сессия776/775: выбранные игровые действия, без public admission."""
+"""Частная сессия776 на основных775/777: выбранные действия, без public admission."""
 import argparse
 import hashlib
+import io
 import json
 import re
 from pathlib import Path
@@ -17,6 +18,7 @@ from probe_full_login_777 import Probe
 from probe_gameplay import connect
 from probe_light import LightClient
 from smoke import varint
+from probe_white_concrete_slab import slot, uint, inputs, pack_position
 
 
 class GameplayProbe(Probe):
@@ -34,14 +36,23 @@ class GameplayProbe(Probe):
         self.light_headers = []
         self.spawns = []
         self.sent = []
+        self.health_events = []
+        self.window = None
+        self.menu = None
+        self.slots = {}
+        self.cursor = None
+        self.revision = 0
 
     def send(self, name, payload=b''):
-        if name in {'attack', 'use_entity', 'client_command', 'window_click', 'block_place', 'teleport_confirm'}:
+        if name in {'attack', 'use_entity', 'client_command', 'window_click', 'close_window', 'block_place', 'block_dig', 'teleport_confirm'}:
             self.sent.append({'name': name, 'id': self.outgoing[name], 'hex': payload.hex()})
         super().send(name, payload)
 
     def confirm_teleport(self, teleport, values):
-        self.send('teleport_confirm', varint(teleport))
+        body = varint(teleport)
+        if self.version == 777:
+            body += struct.pack('>dddff', *values)
+        self.send('teleport_confirm', body)
         self.acks.append(teleport)
 
     def observe_packet(self, name, payload):
@@ -49,12 +60,32 @@ class GameplayProbe(Probe):
         row = {'name': name, 'bytes': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()}
         if name in {'login', 'position', 'spawn_entity', 'entity_metadata', 'update_health',
                     'death_combat_event', 'respawn', 'set_slot', 'set_player_inventory',
-                    'window_items', 'block_change', 'acknowledge_player_digging'}:
+                    'window_items', 'set_cursor_item', 'open_window', 'close_window', 'block_action',
+                    'block_change', 'acknowledge_player_digging'}:
             row['hex'] = payload.hex()
         self.raw.append(row)
+        data = io.BytesIO(payload)
+        if name == 'update_health':
+            self.health_events.append(struct.unpack('>f', payload[:4])[0])
+        elif name == 'open_window':
+            self.window, self.menu = uint(data), uint(data)
+            self.slots, self.cursor = {}, None
+        elif name == 'window_items':
+            window, revision, size = uint(data), uint(data), uint(data)
+            entries = {i: slot(data) for i in range(size)}
+            cursor = slot(data)
+            if window == self.window:
+                self.slots, self.cursor, self.revision = entries, cursor, revision
+        elif name == 'set_slot':
+            window, revision = uint(data), uint(data)
+            index = struct.unpack('>h', data.read(2))[0]
+            value = slot(data)
+            if window == self.window:
+                self.slots[index], self.revision = value, revision
+        elif name == 'set_cursor_item':
+            self.cursor = slot(data)
         LightClient.observe_packet(self, name, payload)
         if name == 'spawn_entity':
-            import io
             from smoke import read_varint
             data = io.BytesIO(payload)
             entity = read_varint(data.read)
@@ -67,19 +98,34 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('test-binary', 'protocol', 'native-protocol', 'cache', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--scenario', choices=('all', 'lifecycle', 'relog-light'), default='all')
+    parser.add_argument('--scenario', choices=('all', 'lifecycle', 'relog-light', 'mining-denial'), default='all')
+    parser.add_argument('--primary', type=int, choices=(775,777), default=775)
+    parser.add_argument('--peer', type=int, choices=(775,777), default=775)
+    parser.add_argument('--peer-protocol', type=Path)
     args = parser.parse_args()
     assert not args.output.exists(), 'preserve earlier evidence'
     assert hashlib.sha256(args.protocol.read_bytes()).hexdigest() == PROTOCOL_SHA
     protocols = {776: json.loads(args.protocol.read_text()), 775: json.loads(args.native_protocol.read_text())}
+    if args.peer == 777:
+        assert args.peer_protocol
+        assert args.peer_protocol.name == 'protocol.json'
+        peer_tables = inputs(args.peer_protocol.parent)
+        protocols[777] = peer_tables['protocol.json']
     items = {v['name']: v['id'] for v in table(args.cache, 'items')}
     entity_item = next(v['id'] for v in table(args.cache, 'entities') if v['name'] == 'item')
     native_entities = re.findall(r'\("([^"]+)",', (Path(__file__).resolve().parent / 'src/entity_layouts.rs').read_text())
     native_item = native_entities.index('item')
+    player_wire = {775: native_entities.index('player'),
+                   776: next(v['id'] for v in table(args.cache, 'entities') if v['name'] == 'player')}
+    item_wire = {775: native_item, 776: entity_item}
+    if args.peer == 777:
+        peer_entities = {v['name']: v['id'] for v in peer_tables['entities.json']}
+        player_wire[777], item_wire[777] = peer_entities['player'], peer_entities['item']
     with socket.socket() as check:
+        check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         check.bind(('127.0.0.1', PORT))
     args.output.mkdir(parents=True)
-    report = {'primary': 775, 'client': 776, 'peer': 775 if args.scenario == 'all' else None, 'public_admission': False,
+    report = {'primary': args.primary, 'client': 776, 'peer': args.peer if args.scenario == 'all' else None, 'public_admission': False,
               'checks': [], 'commands': [], 'status': 'failed', 'scenario': args.scenario,
               'runner_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               'binary_sha256': hashlib.sha256(args.test_binary.read_bytes()).hexdigest()}
@@ -88,10 +134,13 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mcsa-step1-gameplay-') as directory:
         root = Path(directory)
         (root / 'mcsa-gameplay-probe.marker').touch()
+        if args.primary == 777:
+            (root / 'mcsa-catalog-preview263.marker').touch()
+        test = 'serve_java_26_2_primary_26_3_probe' if args.primary == 777 else 'serve_java_26_2_probe'
         with (args.output / 'server.log').open('w') as log:
             try:
                 server = subprocess.Popen([str(args.test_binary.resolve()), '--ignored', '--exact',
-                    'gameplay_probe::serve_java_26_2_probe', '--nocapture'], cwd=root,
+                    'gameplay_probe::' + test, '--nocapture'], cwd=root,
                     stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True, start_new_session=True)
                 deadline = time.monotonic() + 30
                 while 'MCSA gameplay probe ready' not in (args.output / 'server.log').read_text():
@@ -100,7 +149,7 @@ def main():
 
                 def login(name, version):
                     probe = connect(PORT, protocols[version],
-                        lambda s, p: GameplayProbe(s, p, entity_item if version == 776 else native_item, version),
+                        lambda s, p: GameplayProbe(s, p, item_wire[version], version),
                         version=version, username=name)
                     clients.append(probe)
                     probe.pump(20, lambda _: probe.position is not None and 'window_items' in probe.seen)
@@ -131,29 +180,38 @@ def main():
                 peer = None
                 for text in ['gamerule doMobSpawning false', 'fill -4 64 -4 5 64 4 stone',
                              'fill -4 65 -4 5 68 4 air', 'tp McsaProbe 0.5 65 0.5',
-                             'gamemode survival McsaProbe', 'clear McsaProbe']:
+                             'gamemode survival McsaProbe', 'clear McsaProbe', 'gamerule naturalRegeneration false']:
                     command(text)
                 client.grounded_fixture = True
+                if args.scenario == 'mining-denial':
+                    command('setblock 2 65 0 stone')
+                    # [проверить] Семантика enum776 не доказана: записываем отказ,
+                    # не выдавая отправку неподтверждённого нуля за успешную добычу.
+                    client.send('block_dig', varint(0) + pack_position((2, 65, 0)) + bytes([1, 1]))
+                    client.pump(5.)
+                    raise AssertionError('unverified776 mining action unexpectedly accepted')
                 if args.scenario == 'all':
-                    peer = login('McsaPeer', 775)
+                    peer = login('McsaPeer', args.peer)
                     command('tp McsaPeer 0.5 65 1.5')
                     command('gamemode survival McsaPeer')
                     peer.grounded_fixture = True
                     pump(1.)
-                    assert [peer.entity, 156] in client.spawns, client.spawns
-                    assert [client.entity, 155] in peer.spawns, peer.spawns
-                    report['checks'].append('mixed775-player-spawns-metadata-movement')
+                    assert [peer.entity, player_wire[776]] in client.spawns, client.spawns
+                    assert [client.entity, player_wire[args.peer]] in peer.spawns, peer.spawns
+                    report['checks'].append(f'mixed{args.peer}-player-spawns-metadata-movement')
+                    before = len(peer.health_events)
                     client.send('attack', varint(peer.entity))
                     client.pump(.3)
                     peer.pump(5, lambda _: peer.health is not None and 0 < peer.health < 20)
-                    assert peer.health is not None and 0 < peer.health < 20, peer.health
-                    report['pvp_776_to_775'] = peer.health
+                    assert any(0 < h < 20 for h in peer.health_events[before:]), peer.health_events
+                    report[f'pvp_776_to_{args.peer}'] = peer.health_events[before:]
+                    before = len(client.health_events)
                     peer.send('attack', varint(client.entity))
                     peer.pump(.3)
                     client.pump(5, lambda _: client.health is not None and 0 < client.health < 20)
-                    assert client.health is not None and 0 < client.health < 20, client.health
-                    report['pvp_775_to_776'] = client.health
-                    report['checks'].append('mixed775-pvp-both-directions-health-decreases')
+                    assert any(0 < h < 20 for h in client.health_events[before:]), client.health_events
+                    report[f'pvp_{args.peer}_to_776'] = client.health_events[before:]
+                    report['checks'].append(f'mixed{args.peer}-pvp-both-directions-health-decreases')
                 if args.scenario != 'relog-light':
                     command('give McsaProbe stone 2')
                     client.send('held_item_slot', struct.pack('>h', 0))
@@ -181,6 +239,31 @@ def main():
                     assert client.inventory.get(36) is None
                     assert client.inventory.get(37) == {'item': items['diamond'], 'count': 3}, client.inventory
                     report['checks'].append('authoritative-inventory-pickup-deposit')
+                    command('setblock 2 65 0 chest')
+                    client.place((2, 65, 0), 1, (.5, .5, .5))
+                    client.pump(5, lambda _: client.window is not None and len(client.slots) == 63)
+                    assert client.window is not None and client.menu == 2 and len(client.slots) == 63, (client.window, client.menu, client.slots)
+                    window = client.window
+                    def click(index):
+                        client.send('window_click', varint(window) + varint(-1) + struct.pack('>hb', index, 0) + bytes([0, 0, 0]))
+                        pump(.5)
+                    click(55)
+                    assert client.cursor == {'item': items['diamond'], 'count': 3}, client.cursor
+                    click(0)
+                    assert client.cursor is None and client.slots[0] == {'item': items['diamond'], 'count': 3}, client.slots
+                    client.send('close_window', varint(window))
+                    pump(.5)
+                    client.window = None
+                    client.place((2, 65, 0), 1, (.5, .5, .5))
+                    client.pump(5, lambda _: client.window is not None and client.slots.get(0) is not None)
+                    assert client.slots.get(0) == {'item': items['diamond'], 'count': 3}, client.slots
+                    window = client.window
+                    click(0)
+                    click(55)
+                    client.send('close_window', varint(client.window))
+                    pump(.5)
+                    assert client.cursor is None
+                    report['checks'].append('chest-open-deposit-close-reopen-withdraw-close')
                 else:
                     command('give McsaProbe diamond 3')
                 client.sock.close()
@@ -190,17 +273,22 @@ def main():
                 assert client.inventory.get(expected_slot) == {'item': items['diamond'], 'count': 3}, client.inventory
                 report['checks'].append('relogin-preserves-authoritative-inventory')
                 command('setblock -16 64 -16 stone')
+                start = len(client.lights)
                 command('setblock -16 65 -16 torch')
                 pump(1.)
-                assert any(v['chunk'] == [-1, -1] and v['torch_cell_level'] == 14 for v in client.lights), [(v['chunk'], v['torch_cell_level']) for v in client.lights]
-                report['checks'].append('light-masks-arrays-and-torch-level14')
+                assert any(v['source_packet'] == 'update_light' and v['torch_cell_level'] == 14 for v in client.lights[start:]), [(v['chunk'], v['torch_cell_level']) for v in client.lights[start:]]
+                start = len(client.lights)
+                command('setblock -16 65 -16 air')
+                pump(1.)
+                assert any(v['source_packet'] == 'update_light' and v['torch_cell_level'] == 0 for v in client.lights[start:])
+                report['checks'].append('dynamic-light-update-torch14-removal0-masks-arrays')
                 report['status'] = 'pass'
             except BaseException as error:
                 report['error'] = f'{type(error).__name__}: {error}'
                 raise
             finally:
                 report['sessions'] = [{'version': c.version, 'records': c.raw, 'sent': c.sent, 'acks': c.acks,
-                                       'lights': c.lights, 'inventory': c.inventory} for c in clients]
+                                       'lights': c.lights, 'inventory': c.inventory, 'health_events': c.health_events} for c in clients]
                 for c in clients:
                     c.sock.close()
                 if server is not None:

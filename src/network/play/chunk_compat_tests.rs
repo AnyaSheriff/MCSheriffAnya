@@ -1,5 +1,46 @@
 //! Проверка настоящего builder чанков через сетевую границу перевода.
 use super::*;
+
+#[tokio::test]
+async fn changed_torch_light_crosses_chunk_edge_and_removal_clears_all_client_masks() {
+    use mcsa_protocol::{JavaVersion as V, light::Light, wire};
+    let mut world = World::in_memory();
+    // Факел у границы: проверяем и источник, и свет в соседнем чанке.
+    world.set_block(15, 64, 0, blocks::state_by_name("stone").unwrap());
+    world.set_block(16, 64, 0, blocks::state_by_name("stone").unwrap());
+    for (state, levels) in [(blocks::state_by_name("torch").unwrap(), [14, 13]), (0, [0, 0])] {
+        world.set_block(15, 65, 0, state);
+        for (x, expected) in levels.into_iter().enumerate() {
+            let (light, recounted) = world.light_job(x as i32, 0).unwrap().finish();
+            world.store_light(recounted);
+            let mut out = Outgoing::capture();
+            send_light_update(&mut out, x as i32, 0, &light).await.unwrap();
+            let (size, offset) = decode_varint(out.queued()).unwrap();
+            let body = &out.queued()[offset..];
+            assert_eq!(body.len(), size as usize);
+            for version in [V::V26_1_2, V::V26_2, V::V26_3] {
+                let mapped = if version == V::V26_2 {
+                    mcsa_protocol::probe_776::clientbound(&mut Default::default(), body, wire::Context::default()).unwrap()
+                } else { wire::translate(mcsa_protocol::State::Play, mcsa_protocol::Direction::Clientbound, V::V26_1_2, version, body).unwrap() };
+                let (_, id_size) = decode_varint(&mapped).unwrap();
+                // Оба положительных номера чанка занимают по одному VarInt.
+                assert_eq!(&mapped[id_size..id_size + 2], &[x as u8, 0]);
+                let decoded = Light::decode(version, &mapped[id_size + 2..]).unwrap();
+                let bit = 9usize;
+                let present = decoded.block.get(bit / 8).copied().unwrap_or(0) & (1 << (bit % 8)) != 0;
+                let actual = if present {
+                    let index: usize = (0..bit).map(|b| usize::from(decoded.block[b / 8] & (1 << (b % 8)) != 0)).sum();
+                    let cell = 256 + if x == 0 { 15 } else { 0 };
+                    (decoded.block_arrays[index][cell / 2] >> ((cell % 2) * 4)) & 15
+                } else {
+                    assert_ne!(decoded.empty_block[bit / 8] & (1 << (bit % 8)), 0);
+                    0
+                };
+                assert_eq!(actual, expected, "{version:?}, chunk{x}");
+            }
+        }
+    }
+}
 use mcsa_protocol::{JavaVersion, Negotiated, wire};
 use crate::network::connection::CryptoStream;
 

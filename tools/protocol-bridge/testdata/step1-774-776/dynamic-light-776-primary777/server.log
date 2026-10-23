@@ -1,0 +1,11 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[15:02:55] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+MCSA probe connection: Тестовый каталог требует клиента26.3
+[15:02:56] [Server thread/INFO]: Останавливаю сервер
+[15:02:56] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_26_2_primary_26_3_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2988 filtered out; finished in 0.65s
+

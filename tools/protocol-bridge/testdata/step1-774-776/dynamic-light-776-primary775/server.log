@@ -1,0 +1,14 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[14:59:39] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[14:59:39] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[14:59:39] [Server thread/INFO]: McsaProbe[/127.0.0.1:41006 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[14:59:39] [Server thread/INFO]: Останавливаю сервер
+[14:59:39] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+MCSA probe connection: Connection reset by peer (os error 104)
+[14:59:39] [Server thread/INFO]: McsaProbe вышел
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2987 filtered out; finished in 0.87s
+

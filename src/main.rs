@@ -615,7 +615,9 @@ async fn handle_connection_inner(
             } else { mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION) };
             // Только отдельный тестовый бинарник может исследовать ещё закрытый маршрут.
             #[cfg(test)]
-            let negotiated = if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3) && handshake.protocol_version==777 {
+            let negotiated = if (shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3)
+                || (_probe_776 && addr.ip().is_loopback() && !properties.online_mode && !shared.settings.auth_enabled && shared.auth.is_none()))
+                && handshake.protocol_version==777 {
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_3,native:network::NATIVE_VERSION})
             } else if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V1_12_2) && handshake.protocol_version==340 {
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})

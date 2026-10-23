@@ -705,7 +705,8 @@ pub async fn play_session(
     verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
     if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
-        && !matches!(socket.client_version(), mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3) {
+        && !matches!(socket.client_version(), mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3)
+        && !socket.probe_776_enabled() {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
     }
     socket.content = shared.catalog().content_codec();
@@ -4244,8 +4245,18 @@ async fn send_pending_world_events(
     // сделанное после метки уйдёт со следующей.
     let mut pending = std::mem::take(&mut player.pending_changes);
     let mut entities = std::mem::take(&mut player.pending_entities);
+    let mut light_chunks = std::collections::BTreeSet::new();
 
     for event in &events {
+        if let WorldEvent::Change(change) = event && !change.direct {
+            // Свет распространяется на 15 блоков: затронуты и соседние чанки.
+            for dx in -1..=1 { for dz in -1..=1 {
+                let at = ((change.x >> 4) + dx, (change.z >> 4) + dz);
+                let here = player.chunk();
+                if (at.0 - here.0).abs() <= player.view
+                    && (at.1 - here.1).abs() <= player.view { light_chunks.insert(at); }
+            }}
+        }
         match event {
             WorldEvent::Change(change) if change.direct => {
                 send_block_update(stream, change.x, change.y, change.z, change.state).await?;
@@ -4597,6 +4608,18 @@ async fn send_pending_world_events(
 
     player.pending_changes = pending;
     player.pending_entities = entities;
+
+    for (x, z) in light_chunks {
+        let job = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").light_job(x, z);
+        let Some(job) = job else { continue; };
+        let (light, recounted) = tokio::task::spawn_blocking(move || job.finish()).await.map_err(io::Error::other)?;
+        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").store_light(recounted);
+        if stream.legacy_view()?.is_some() {
+            send_chunk(stream, shared.world_in(player.dimension), x, z, &light).await?;
+        } else {
+            send_light_update(stream, x, z, &light).await?;
+        }
+    }
 
     Ok(lagged)
 }
@@ -5990,6 +6013,17 @@ fn push_single_value_container(out: &mut Vec<u8>, global_id: i32) {
     out.push(0);
     out.extend_from_slice(&encode_varint(global_id));
 }
+
+/// После изменения блока отправляет полный пересчитанный свет чанка.
+async fn send_light_update(stream: &mut Outgoing<'_>, x: i32, z: i32, light: &ChunkLight) -> io::Result<()> {
+    let mut body = encode_varint(0x30); // Закреплённый protocol-26.1.json: update_light.
+    body.extend(encode_varint(x));
+    body.extend(encode_varint(z));
+    // Полная маска также очищает прежний свет после удаления источника/крыши.
+    push_light(&mut body, Some(world::SECTIONS as usize - 1), light);
+    write_body(stream, body).await
+}
+
 
 /// Добавляет данные освещения чанка (`top` — номер самой высокой непустой
 /// секции среди секций мира, `None` — чанк пуст).
