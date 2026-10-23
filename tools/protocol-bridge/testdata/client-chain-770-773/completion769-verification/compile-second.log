@@ -1,0 +1,88 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge)
+warning: constant `ITEM_NAMES` is never used
+   --> tools/protocol-bridge/src/generated_payload_769.rs:154:18
+    |
+154 | pub(crate) const ITEM_NAMES: &[&str] = &["air", "stone", "granite", "polished_granite", "diorite", "polished_diorite", "andesite", ...
+    |                  ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mcsa-protocol` (lib) generated 1 warning
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv16)
+warning: `mcsa-protocol` (lib test) generated 1 warning (1 duplicate)
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:119:65
+    |
+119 |     if !matches!(version, mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_p...
+    |                                                                 ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:205:101
+    |
+205 | ...n,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion:...
+    |                                            ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:507:63
+    |
+507 |     if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_pro...
+    |                                                               ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:513:64
+    |
+513 |     if !matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5|mcsa_protocol::JavaVersion::V1_21_6|mcsa_protoc...
+    |                                                                ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:624:63
+    |
+624 |     if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5|mcsa_protocol::JavaVersion::V1_21_6|mcsa_protoco...
+    |                                                               ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:710:63
+    |
+710 |     if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5|mcsa_protocol::JavaVersion::V1_21_6|mcsa_protoco...
+    |                                                               ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:743:63
+    |
+743 |     if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5|mcsa_protocol::JavaVersion::V1_21_6|mcsa_protoco...
+    |                                                               ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+   --> src/network/registries.rs:776:64
+    |
+776 |     if matches!(version, mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_pr...
+    |                                                                ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+  --> src/network/connection.rs:37:80
+   |
+37 | ...   { matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_2...
+   |                                                                              ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `mcsheriffanya` (bin "mcsheriffanya") due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+error[E0433]: cannot find type `JavaVersion` in this scope
+  --> src/network/connection.rs:35:98
+   |
+35 | ...),mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::...
+   |                                            ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+  --> src/network/gameplay_probe.rs:53:151
+   |
+53 | ...n,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::...
+   |                                            ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error[E0433]: cannot find type `JavaVersion` in this scope
+  --> src/network/gameplay_probe.rs:72:88
+   |
+72 | ...   let result = if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_2...
+   |                                                                              ^^^^^^^^^^^ use of undeclared type `JavaVersion`
+
+error: could not compile `mcsheriffanya` (bin "mcsheriffanya" test) due to 11 previous errors

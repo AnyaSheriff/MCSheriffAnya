@@ -13,9 +13,9 @@ pub fn translate(from: JavaVersion, to: JavaVersion, kind: u32, data: &[u8]) -> 
 }
 
 pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,data:&[u8],content:crate::content::ContentCodec)->Result<Option<(u32,Vec<u8>)>,Error>{
-    if matches!(to,JavaVersion::V1_21_5|JavaVersion::V1_21_6) || matches!(from,JavaVersion::V1_21_5|JavaVersion::V1_21_6) {
+    if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) || matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) {
         if [from,to].iter().any(|v|matches!(v,JavaVersion::V1_12_2)){return Err(Error::UnsupportedVersion);}
-        let canonical=if matches!(from,JavaVersion::V1_21_5|JavaVersion::V1_21_6) && kind>=40 {kind+1}else{kind};
+        let canonical=if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) && kind>=40 {kind+1}else{kind};
         if registry::nbt_length(data).map_err(Error::Nbt)? != data.len(){return Err(Error::Invalid);}
         if canonical==48 {
             if !matches!(data,[0]|[10,0]){return Err(Error::UnsupportedData);}
@@ -24,8 +24,8 @@ pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,da
             validate(canonical,data)?;
         }
         let data=item_data::rewrite(canonical,data,from,to,content)?;
-        if matches!(to,JavaVersion::V1_21_5|JavaVersion::V1_21_6) && matches!(canonical,40|48){return Ok(None);}
-        return Ok(Some((if matches!(to,JavaVersion::V1_21_5|JavaVersion::V1_21_6) && canonical>40 {canonical-1}else{canonical},data)));
+        if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) && matches!(canonical,40|48){return Ok(None);}
+        return Ok(Some((if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) && canonical>40 {canonical-1}else{canonical},data)));
     }
     if to==JavaVersion::V1_21_8 || from==JavaVersion::V1_21_8 {
         let canonical=if from==JavaVersion::V1_21_8 && kind>=40 {kind+1}else{kind};
@@ -36,8 +36,8 @@ pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,da
     // Кровать удалена уже в26.2 (minecraft.wiki/w/Java_Edition_26.2).
     // Наблюдённые775/777 имена и порядок проверяются отдельно клиентом776;
     // новые типы вне OBSERVED этим не разрешаются.
-    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
-    if matches!(from, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) || matches!(to, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {
+    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
+    if matches!(from, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) || matches!(to, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {
         if !matches!((from,to),(JavaVersion::V26_1_2,JavaVersion::V1_21_11)|(JavaVersion::V1_21_11,JavaVersion::V26_1_2)|(JavaVersion::V26_1_2,JavaVersion::V1_21_6) | (JavaVersion::V26_1_2,JavaVersion::V1_21_8)|(JavaVersion::V1_21_6,JavaVersion::V26_1_2) | (JavaVersion::V1_21_8,JavaVersion::V26_1_2)|(JavaVersion::V26_1_2,JavaVersion::V1_21_9)|(JavaVersion::V1_21_9,JavaVersion::V26_1_2)) { return Err(Error::UnsupportedVersion); }
         if kind==48 { if !matches!(data,[0]|[10,0]) { return Err(Error::UnsupportedData); } return Ok(Some((kind,data.to_vec()))); }
         if !crate::block_entity_ids::OBSERVED.iter().any(|r|r.0==kind){return Err(Error::UnknownType(kind));}

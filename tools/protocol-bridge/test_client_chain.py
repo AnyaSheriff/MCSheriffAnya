@@ -58,7 +58,7 @@ class ClientChainSourcesTests(unittest.TestCase):
     def test_adjacent_report_keeps_schema_changes_separate_from_admission(self):
         report = json.loads((HERE/'client-chain-report.json').read_text())
         self.assertIn('admission CLOSED',report['scope'])
-        self.assertEqual(list(report['edges']),['773-774','772-773','771-772','770-771'])
+        self.assertEqual(list(report['edges']),['773-774','772-773','771-772','770-771','769-770'])
         rows = report['edges']['773-774']['packets']
         for name in ['window_items','entity_metadata','recipe_book_add']:
             row = next(r for r in rows if r['direction']=='toClient' and r['name']==name)

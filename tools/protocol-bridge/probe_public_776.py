@@ -19,6 +19,9 @@ from smoke import frame, handshake, read_varint, send
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('binary','protocol','cache','output'):p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--protocol769',type=Path)
+    p.add_argument('--cache769',type=Path)
+    p.add_argument('--admit769',action='store_true')
     p.add_argument('--protocol770',type=Path)
     p.add_argument('--cache770',type=Path)
     p.add_argument('--admit770',action='store_true')
@@ -41,6 +44,12 @@ def main():
     protocol=json.loads(a.protocol.read_text())
     item=next(r['id'] for r in table(a.cache,'entities') if r['name']=='item')
     protocols={776:protocol};items={776:item}
+    if a.admit769:
+        assert a.protocol769 and a.cache769 and 769 not in a.closed_clients
+        locks=json.loads((Path(__file__).parent/'client-chain-sources.json').read_text())['versions']['769']['files']
+        assert hashlib.sha256(a.protocol769.read_bytes()).hexdigest()==locks['protocol']['sha256']
+        protocols[769]=json.loads(a.protocol769.read_text())
+        items[769]=next(r['id'] for r in table(a.cache769,'entities') if r['name']=='item')
     if a.admit770:
         assert a.protocol770 and a.cache770 and 770 not in a.closed_clients
         assert hashlib.sha256(a.protocol770.read_bytes()).hexdigest()=='8695c1cd011af37d214cc2139fc9bf6e7b445ce45305fbfa28c93f47563cb988'
@@ -87,7 +96,7 @@ def main():
                         deadline=time.monotonic()+120
                         while 'Готово (' not in path.read_text():
                             assert server.poll() is None and time.monotonic()<deadline,path.read_text()[-2000:];time.sleep(.1)
-                        for version in (*([770] if a.admit770 else []),*([771] if a.admit771 else []),*([772] if a.admit772 else []),*([773] if a.admit773 else []),774,776,*a.closed_clients):
+                        for version in (*([769] if a.admit769 else []),*([770] if a.admit770 else []),*([771] if a.admit771 else []),*([772] if a.admit772 else []),*([773] if a.admit773 else []),774,776,*a.closed_clients):
                             row=dict(primary=primary,client=version)
                             with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                 handshake(sock,version,port,1);send(sock,b'\0')

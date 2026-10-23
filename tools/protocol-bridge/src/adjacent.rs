@@ -1,4 +1,4 @@
-//! Четыре отдельных ограниченных шага старых клиентов. Это не полный Play.
+//! Пять отдельных ограниченных шага старых клиентов. Это не полный Play.
 //! [проверить] Предметы/metadata/чанки/реестры и живой checklist каждого основного.
 use crate::{Direction, JavaVersion, State, chain, wire};
 
@@ -8,16 +8,18 @@ pub struct Step {
     pub newer: JavaVersion,
 }
 
-pub const STEPS: [Step; 4] = [
+pub const STEPS: [Step; 5] = [
     Step {older:JavaVersion::V1_21_9, newer:JavaVersion::V1_21_11},
     Step {older:JavaVersion::V1_21_8, newer:JavaVersion::V1_21_9},
     Step {older:JavaVersion::V1_21_6, newer:JavaVersion::V1_21_8},
     Step {older:JavaVersion::V1_21_5, newer:JavaVersion::V1_21_6},
+    Step {older:JavaVersion::V1_21_4, newer:JavaVersion::V1_21_5},
 ];
 
 impl Step {
     /// Первый Play-шаг773↔774; остальные требуют собственных codec.
     pub fn translate_play(self, direction: Direction, from: JavaVersion, body: &[u8], context: wire::Context) -> Result<Vec<u8>, wire::Error> {
+        if self == STEPS[4] {return crate::client_769::translate_play(direction,from,body,context);}
         if self == STEPS[3] {return crate::client_770::translate_play(direction,from,body,context);}
         if self == STEPS[2] {return crate::client_771::translate_play(direction,from,body,context);}
         if self == STEPS[1] {return crate::client_772::translate_play(direction,from,body,context);}

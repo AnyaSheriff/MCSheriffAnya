@@ -1,0 +1,786 @@
+{
+  "status": "pass",
+  "protocol": 777,
+  "commands": [
+    {
+      "command": "forceload add -16 -16",
+      "result": "Marked chunk [-1, -1] in minecraft:overworld to be force loaded"
+    },
+    {
+      "command": "fill -16 64 -16 -1 64 -1 stone",
+      "result": "Successfully filled 256 block(s)"
+    },
+    {
+      "command": "fill -16 66 -16 -1 66 -1 stone",
+      "result": "Successfully filled 256 block(s)"
+    },
+    {
+      "command": "setblock -16 65 -16 minecraft:furnace",
+      "result": "Changed the block at -16, 65, -16"
+    },
+    {
+      "command": "setblock -15 65 -16 minecraft:chest",
+      "result": "Changed the block at -15, 65, -16"
+    },
+    {
+      "command": "setblock -14 65 -16 minecraft:trapped_chest",
+      "result": "Changed the block at -14, 65, -16"
+    },
+    {
+      "command": "setblock -13 65 -16 minecraft:ender_chest",
+      "result": "Changed the block at -13, 65, -16"
+    },
+    {
+      "command": "setblock -12 65 -16 minecraft:jukebox",
+      "result": "Changed the block at -12, 65, -16"
+    },
+    {
+      "command": "setblock -11 65 -16 minecraft:dispenser",
+      "result": "Changed the block at -11, 65, -16"
+    },
+    {
+      "command": "setblock -10 65 -16 minecraft:dropper",
+      "result": "Changed the block at -10, 65, -16"
+    },
+    {
+      "command": "setblock -9 65 -16 minecraft:oak_sign{front_text:{messages:[\"MCSA probe\",\"\",\"\",\"\"]}}",
+      "result": "Changed the block at -9, 65, -16"
+    },
+    {
+      "command": "setblock -8 65 -16 minecraft:oak_hanging_sign[attached=true]",
+      "result": "Changed the block at -8, 65, -16"
+    },
+    {
+      "command": "setblock -7 65 -16 minecraft:spawner",
+      "result": "Changed the block at -7, 65, -16"
+    },
+    {
+      "command": "setblock -6 65 -16 minecraft:piston",
+      "result": "Changed the block at -6, 65, -16"
+    },
+    {
+      "command": "setblock -5 65 -16 minecraft:brewing_stand",
+      "result": "Changed the block at -5, 65, -16"
+    },
+    {
+      "command": "setblock -4 65 -16 minecraft:enchanting_table",
+      "result": "Changed the block at -4, 65, -16"
+    },
+    {
+      "command": "setblock -3 65 -16 minecraft:end_portal",
+      "result": "Changed the block at -3, 65, -16"
+    },
+    {
+      "command": "setblock -2 65 -16 minecraft:beacon",
+      "result": "Changed the block at -2, 65, -16"
+    },
+    {
+      "command": "setblock -1 65 -16 minecraft:skeleton_skull",
+      "result": "Changed the block at -1, 65, -16"
+    },
+    {
+      "command": "setblock -16 65 -15 minecraft:daylight_detector",
+      "result": "Changed the block at -16, 65, -15"
+    },
+    {
+      "command": "setblock -15 65 -15 minecraft:hopper",
+      "result": "Changed the block at -15, 65, -15"
+    },
+    {
+      "command": "setblock -14 65 -15 minecraft:comparator",
+      "result": "Changed the block at -14, 65, -15"
+    },
+    {
+      "command": "setblock -13 65 -15 minecraft:white_banner",
+      "result": "Changed the block at -13, 65, -15"
+    },
+    {
+      "command": "setblock -12 65 -15 minecraft:structure_block",
+      "result": "Changed the block at -12, 65, -15"
+    },
+    {
+      "command": "setblock -11 65 -15 minecraft:end_gateway",
+      "result": "Changed the block at -11, 65, -15"
+    },
+    {
+      "command": "setblock -10 65 -15 minecraft:command_block",
+      "result": "Changed the block at -10, 65, -15"
+    },
+    {
+      "command": "setblock -9 65 -15 minecraft:shulker_box",
+      "result": "Changed the block at -9, 65, -15"
+    },
+    {
+      "command": "setblock -8 65 -15 minecraft:white_bed",
+      "result": "Changed the block at -8, 65, -15"
+    },
+    {
+      "command": "setblock -7 65 -15 minecraft:conduit",
+      "result": "Changed the block at -7, 65, -15"
+    },
+    {
+      "command": "setblock -6 65 -15 minecraft:barrel",
+      "result": "Changed the block at -6, 65, -15"
+    },
+    {
+      "command": "setblock -5 65 -15 minecraft:smoker",
+      "result": "Changed the block at -5, 65, -15"
+    },
+    {
+      "command": "setblock -4 65 -15 minecraft:blast_furnace",
+      "result": "Changed the block at -4, 65, -15"
+    },
+    {
+      "command": "setblock -3 65 -15 minecraft:lectern",
+      "result": "Changed the block at -3, 65, -15"
+    },
+    {
+      "command": "setblock -2 65 -15 minecraft:bell",
+      "result": "Changed the block at -2, 65, -15"
+    },
+    {
+      "command": "setblock -1 65 -15 minecraft:jigsaw",
+      "result": "Changed the block at -1, 65, -15"
+    },
+    {
+      "command": "setblock -16 65 -14 minecraft:campfire",
+      "result": "Changed the block at -16, 65, -14"
+    },
+    {
+      "command": "setblock -15 65 -14 minecraft:beehive",
+      "result": "Changed the block at -15, 65, -14"
+    },
+    {
+      "command": "setblock -14 65 -14 minecraft:sculk_sensor",
+      "result": "Changed the block at -14, 65, -14"
+    },
+    {
+      "command": "setblock -13 65 -14 minecraft:calibrated_sculk_sensor",
+      "result": "Changed the block at -13, 65, -14"
+    },
+    {
+      "command": "setblock -12 65 -14 minecraft:sculk_catalyst",
+      "result": "Changed the block at -12, 65, -14"
+    },
+    {
+      "command": "setblock -11 65 -14 minecraft:sculk_shrieker",
+      "result": "Changed the block at -11, 65, -14"
+    },
+    {
+      "command": "setblock -10 65 -14 minecraft:chiseled_bookshelf",
+      "result": "Changed the block at -10, 65, -14"
+    },
+    {
+      "command": "setblock -9 65 -14 minecraft:oak_shelf",
+      "result": "Changed the block at -9, 65, -14"
+    },
+    {
+      "command": "setblock -8 65 -14 minecraft:suspicious_sand",
+      "result": "Changed the block at -8, 65, -14"
+    },
+    {
+      "command": "setblock -7 65 -14 minecraft:decorated_pot",
+      "result": "Changed the block at -7, 65, -14"
+    },
+    {
+      "command": "setblock -6 65 -14 minecraft:crafter",
+      "result": "Changed the block at -6, 65, -14"
+    },
+    {
+      "command": "setblock -5 65 -14 minecraft:trial_spawner",
+      "result": "Changed the block at -5, 65, -14"
+    },
+    {
+      "command": "setblock -4 65 -14 minecraft:vault",
+      "result": "Changed the block at -4, 65, -14"
+    },
+    {
+      "command": "execute if block -8 65 -15 white_bed run say MCSA_BED_PRESENT",
+      "result": ""
+    }
+  ],
+  "runner_sha256": "671063f91212427936c9a77fc6a6cfaf8c95882a197c450f10f25e593446774f",
+  "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+  "ports": [
+    26190,
+    26191
+  ],
+  "pid": 35,
+  "entities": [
+    {
+      "block": "suspicious_sand",
+      "kind": 40,
+      "position": [
+        -8,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "oak_shelf",
+      "kind": 39,
+      "position": [
+        -9,
+        65,
+        -14
+      ],
+      "nbt": {
+        "align_items_to_bottom": 0,
+        "Items": []
+      },
+      "nbt_hex": "0a010015616c69676e5f6974656d735f746f5f626f74746f6d000900054974656d73000000000000"
+    },
+    {
+      "block": "white_banner",
+      "kind": 20,
+      "position": [
+        -13,
+        65,
+        -15
+      ],
+      "nbt": {
+        "components": {}
+      },
+      "nbt_hex": "0a0a000a636f6d706f6e656e74730000"
+    },
+    {
+      "block": "chiseled_bookshelf",
+      "kind": 38,
+      "position": [
+        -10,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "shulker_box",
+      "kind": 24,
+      "position": [
+        -9,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "calibrated_sculk_sensor",
+      "kind": 35,
+      "position": [
+        -13,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "enchanting_table",
+      "kind": 13,
+      "position": [
+        -4,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "sculk_sensor",
+      "kind": 34,
+      "position": [
+        -14,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "furnace",
+      "kind": 0,
+      "position": [
+        -16,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "jigsaw",
+      "kind": 31,
+      "position": [
+        -1,
+        65,
+        -15
+      ],
+      "nbt": {
+        "joint": "rollable",
+        "name": "minecraft:empty",
+        "pool": "minecraft:empty",
+        "final_state": "minecraft:air",
+        "placement_priority": 0,
+        "selection_priority": 0,
+        "target": "minecraft:empty"
+      },
+      "nbt_hex": "0a0800056a6f696e740008726f6c6c61626c650800046e616d65000f6d696e6563726166743a656d707479080004706f6f6c000f6d696e6563726166743a656d70747908000b66696e616c5f7374617465000d6d696e6563726166743a616972030012706c6163656d656e745f7072696f726974790000000003001273656c656374696f6e5f7072696f7269747900000000080006746172676574000f6d696e6563726166743a656d70747900"
+    },
+    {
+      "block": "bell",
+      "kind": 30,
+      "position": [
+        -2,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "lectern",
+      "kind": 29,
+      "position": [
+        -3,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "blast_furnace",
+      "kind": 28,
+      "position": [
+        -4,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "smoker",
+      "kind": 27,
+      "position": [
+        -5,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "dispenser",
+      "kind": 5,
+      "position": [
+        -11,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "daylight_detector",
+      "kind": 17,
+      "position": [
+        -16,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "end_portal",
+      "kind": 14,
+      "position": [
+        -3,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "skeleton_skull",
+      "kind": 16,
+      "position": [
+        -1,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "comparator",
+      "kind": 19,
+      "position": [
+        -14,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "spawner",
+      "kind": 9,
+      "position": [
+        -7,
+        65,
+        -16
+      ],
+      "nbt": {
+        "MaxNearbyEntities": 6,
+        "RequiredPlayerRange": 16,
+        "SpawnCount": 4,
+        "MaxSpawnDelay": 800,
+        "SpawnRange": 4,
+        "Delay": 20,
+        "MinSpawnDelay": 200
+      },
+      "nbt_hex": "0a0200114d61784e6561726279456e74697469657300060200135265717569726564506c6179657252616e6765001002000a537061776e436f756e74000402000d4d6178537061776e44656c6179032002000a537061776e52616e6765000402000544656c6179001402000d4d696e537061776e44656c617900c800"
+    },
+    {
+      "block": "command_block",
+      "kind": 23,
+      "position": [
+        -10,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "structure_block",
+      "kind": 21,
+      "position": [
+        -12,
+        65,
+        -15
+      ],
+      "nbt": {
+        "metadata": "",
+        "mirror": "NONE",
+        "ignoreEntities": 1,
+        "powered": 0,
+        "seed": 0,
+        "author": "",
+        "rotation": "NONE",
+        "posX": 0,
+        "mode": "LOAD",
+        "posY": 1,
+        "sizeX": 0,
+        "posZ": 0,
+        "integrity": 1.0,
+        "showair": 0,
+        "name": "",
+        "strict": 0,
+        "sizeY": 0,
+        "sizeZ": 0,
+        "showboundingbox": 1
+      },
+      "nbt_hex": "0a0800086d6574616461746100000800066d6972726f7200044e4f4e4501000e69676e6f7265456e74697469657301010007706f776572656400040004736565640000000000000000080006617574686f720000080008726f746174696f6e00044e4f4e45030004706f7358000000000800046d6f646500044c4f4144030004706f73590000000103000573697a655800000000030004706f735a00000000050009696e746567726974793f80000001000773686f77616972000800046e616d6500000100067374726963740003000573697a65590000000003000573697a655a0000000001000f73686f77626f756e64696e67626f780100"
+    },
+    {
+      "block": "oak_sign",
+      "kind": 7,
+      "position": [
+        -9,
+        65,
+        -16
+      ],
+      "nbt": {
+        "back_text": {
+          "has_glowing_text": 0,
+          "color": "black",
+          "messages": [
+            "",
+            "",
+            "",
+            ""
+          ]
+        },
+        "is_waxed": 0,
+        "front_text": {
+          "has_glowing_text": 0,
+          "color": "black",
+          "messages": [
+            "MCSA probe",
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      "nbt_hex": "0a0a00096261636b5f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000001000869735f7761786564000a000a66726f6e745f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d657373616765730800000004000a4d4353412070726f62650000000000000000"
+    },
+    {
+      "block": "brewing_stand",
+      "kind": 12,
+      "position": [
+        -5,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "chest",
+      "kind": 1,
+      "position": [
+        -15,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "trapped_chest",
+      "kind": 2,
+      "position": [
+        -14,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "jukebox",
+      "kind": 4,
+      "position": [
+        -12,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "ender_chest",
+      "kind": 3,
+      "position": [
+        -13,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "oak_hanging_sign",
+      "kind": 8,
+      "position": [
+        -8,
+        65,
+        -16
+      ],
+      "nbt": {
+        "back_text": {
+          "has_glowing_text": 0,
+          "color": "black",
+          "messages": [
+            "",
+            "",
+            "",
+            ""
+          ]
+        },
+        "is_waxed": 0,
+        "front_text": {
+          "has_glowing_text": 0,
+          "color": "black",
+          "messages": [
+            "",
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      "nbt_hex": "0a0a00096261636b5f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000001000869735f7761786564000a000a66726f6e745f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000000"
+    },
+    {
+      "block": "conduit",
+      "kind": 25,
+      "position": [
+        -7,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "barrel",
+      "kind": 26,
+      "position": [
+        -6,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "dropper",
+      "kind": 6,
+      "position": [
+        -10,
+        65,
+        -16
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "hopper",
+      "kind": 18,
+      "position": [
+        -15,
+        65,
+        -15
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "beacon",
+      "kind": 15,
+      "position": [
+        -2,
+        65,
+        -16
+      ],
+      "nbt": {
+        "Levels": 0
+      },
+      "nbt_hex": "0a0300064c6576656c730000000000"
+    },
+    {
+      "block": "decorated_pot",
+      "kind": 41,
+      "position": [
+        -7,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "end_gateway",
+      "kind": 22,
+      "position": [
+        -11,
+        65,
+        -15
+      ],
+      "nbt": {
+        "Age": 32
+      },
+      "nbt_hex": "0a040003416765000000000000002000"
+    },
+    {
+      "block": "beehive",
+      "kind": 33,
+      "position": [
+        -15,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "sculk_shrieker",
+      "kind": 37,
+      "position": [
+        -11,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "sculk_catalyst",
+      "kind": 36,
+      "position": [
+        -12,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    },
+    {
+      "block": "campfire",
+      "kind": 32,
+      "position": [
+        -16,
+        65,
+        -14
+      ],
+      "nbt": {
+        "Items": []
+      },
+      "nbt_hex": "0a0900054974656d73000000000000"
+    },
+    {
+      "block": "vault",
+      "kind": 44,
+      "position": [
+        -4,
+        65,
+        -14
+      ],
+      "nbt": {
+        "shared_data": {}
+      },
+      "nbt_hex": "0a0a000b7368617265645f646174610000"
+    },
+    {
+      "block": "trial_spawner",
+      "kind": 43,
+      "position": [
+        -5,
+        65,
+        -14
+      ],
+      "nbt": {
+        "spawn_data": {
+          "entity": {}
+        }
+      },
+      "nbt_hex": "0a0a000a737061776e5f646174610a0006656e74697479000000"
+    },
+    {
+      "block": "crafter",
+      "kind": 42,
+      "position": [
+        -6,
+        65,
+        -14
+      ],
+      "nbt": null,
+      "nbt_hex": "00"
+    }
+  ],
+  "missing": [
+    "piston",
+    "white_bed"
+  ],
+  "server_exit": 143
+}

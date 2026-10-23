@@ -36,20 +36,20 @@ def main():
     p.add_argument('--collect-only', action='store_true')
     p.add_argument('--block-entities', action='store_true')
     p.add_argument('--payloads',type=Path)
-    p.add_argument('--client',type=int,choices=(770,771,772,773,774,776),default=776)
+    p.add_argument('--client',type=int,choices=(769,770,771,772,773,774,776),default=776)
     a = p.parse_args()
-    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '8695c1cd011af37d214cc2139fc9bf6e7b445ce45305fbfa28c93f47563cb988' if a.client==770 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if a.client==771 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if a.client==772 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if a.client in (770,771,772,773) else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
+    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else 'e324c6be98f732a10ddc23539d95b35ad7918b0e2dcc2debf2331c8937564443' if a.client==769 else '8695c1cd011af37d214cc2139fc9bf6e7b445ce45305fbfa28c93f47563cb988' if a.client==770 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if a.client==771 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if a.client==772 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if a.client in (769,770,771,772,773) else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocol = json.loads(a.protocol.read_text())
-    items={r['name']:r['id'] for r in table(a.protocol.parent if a.client in (770,771,772,773,774) else a.protocol.resolve().parents[4],'items')}
-    arrow=next(r['id'] for r in table(a.protocol.parent if a.client in (770,771,772,773,774) else a.protocol.resolve().parents[4],'entities') if r['name']=='arrow')
+    items={r['name']:r['id'] for r in table(a.protocol.parent if a.client in (769,770,771,772,773,774) else a.protocol.resolve().parents[4],'items')}
+    arrow=next(r['id'] for r in table(a.protocol.parent if a.client in (769,770,771,772,773,774) else a.protocol.resolve().parents[4],'entities') if r['name']=='arrow')
     hands=dict(mainhand=None,offhand=None)
-    statue_states={number:key for key,number in states(table(a.protocol.parent if a.client in (770,771,772,773,774) else a.protocol.resolve().parents[4],'blocks')).items() if key[0]=='copper_golem_statue'}
-    if a.client in (770,771,772):
+    statue_states={number:key for key,number in states(table(a.protocol.parent if a.client in (769,770,771,772,773,774) else a.protocol.resolve().parents[4],'blocks')).items() if key[0]=='copper_golem_statue'}
+    if a.client in (769,770,771,772):
         poses={'cut_copper':'standing','exposed_cut_copper':'sitting','weathered_cut_copper':'running','oxidized_cut_copper':'star'}
         statue_states={number:('copper_golem_statue',(('copper_golem_pose',poses[key[0]]),)) for key,number in states(table(a.protocol.parent,'blocks')).items() if key[0] in poses}
     names = {phase: {d: {v:k for k,v in mapping(protocol, phase, d).items()}
                     for d in ('toClient','toServer')} for phase in ('configuration','play')}
-    port, relay_port = (26127,26133) if a.client==770 else (26128,26134) if a.client==771 else (26028,26034)
+    port, relay_port = (26126,26132) if a.client==769 else (26127,26133) if a.client==770 else (26128,26134) if a.client==771 else (26028,26034)
     for number in (port, relay_port):
         with socket.socket() as check:
             check.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
@@ -138,7 +138,7 @@ def main():
                 report['screenshots'].append(dict(file=path.name,sha256=sha))
 
             try:
-                test='serve_java_1_21_5_probe' if a.client==770 else 'serve_java_1_21_6_probe' if a.client==771 else 'serve_java_1_21_8_probe' if a.client==772 else 'serve_java_1_21_9_probe' if a.client in (770,771,772,773) else 'serve_java_1_21_11_probe' if a.client in (770,771,772,773,774) else ('serve_java_26_2_primary_26_3_probe' if a.primary==777 else 'serve_java_26_2_probe')
+                test='serve_java_1_21_4_probe' if a.client==769 else 'serve_java_1_21_5_probe' if a.client==770 else 'serve_java_1_21_6_probe' if a.client==771 else 'serve_java_1_21_8_probe' if a.client==772 else 'serve_java_1_21_9_probe' if a.client in (769,770,771,772,773) else 'serve_java_1_21_11_probe' if a.client in (769,770,771,772,773,774) else ('serve_java_26_2_primary_26_3_probe' if a.primary==777 else 'serve_java_26_2_probe')
                 server=subprocess.Popen([str(a.test_binary.resolve()),'--ignored','--exact','gameplay_probe::'+test,'--nocapture'],
                     cwd=core,stdin=subprocess.PIPE,stdout=slog,stderr=subprocess.STDOUT,text=True,start_new_session=True)
                 wait(lambda:'MCSA gameplay probe ready' in (a.output/'server.log').read_text(),120)
@@ -155,7 +155,7 @@ def main():
                     report['authored_blocks']=[b for b in BLOCKS if b!='piston']+['copper_golem_statue']
                 listener=socket.socket();listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 listener.bind(('127.0.0.1',relay_port));listener.listen(1);listener.settimeout(120)
-                client=launch(a.client_dir.resolve(),game,relay_port,clog,version='1.21.5' if a.client==770 else '1.21.6' if a.client==771 else '1.21.8' if a.client==772 else '1.21.10' if a.client==773 else '1.21.11' if a.client==774 else '26.2',gui_scale=2,pause_on_lost_focus=False)
+                client=launch(a.client_dir.resolve(),game,relay_port,clog,version='1.21.4' if a.client==769 else '1.21.5' if a.client==770 else '1.21.6' if a.client==771 else '1.21.8' if a.client==772 else '1.21.10' if a.client==773 else '1.21.11' if a.client==774 else '26.2',gui_scale=2,pause_on_lost_focus=False)
                 peer,_=listener.accept(); peers.append(peer)
                 backend=socket.create_connection(('127.0.0.1',port),timeout=10);peers.append(backend)
                 for _ in range(2): send(backend,frame(FrameDeadline(peer,30)))
@@ -258,16 +258,16 @@ def main():
                     wait(arrow_spawned)
                 report['checks'].append(dict(case=stage,statuses=actions(stage),arrow_spawn=not a.collect_only))
                 stage='jab-setup'
-                if a.client in (770,771,772,773):
+                if a.client in (769,770,771,772,773):
                     command('item replace entity McsaProbe weapon.mainhand with iron_sword')
                     command('kill @e[type=cow]')
                     command('summon cow 2.5 64 0.5 {NoAI:1b}')
                 else:
                     command('item replace entity McsaProbe weapon.mainhand with iron_spear')
-                if a.client not in (770,771,772,773):command('enchant McsaProbe lunge 1')
+                if a.client not in (769,770,771,772,773):command('enchant McsaProbe lunge 1')
                 time.sleep(1)
                 stage='jab';gui(client,'click','1')
-                if a.client in (770,771,772,773):
+                if a.client in (769,770,771,772,773):
                     wait(lambda:any(r['stage']=='jab' and r['name']=='use_entity' and r['direction']=='toServer' for r in report['packets']))
                     report['attack_equivalent']=f'{a.client} iron sword: ordinary use_entity attack, authoritative weapon wear and target health'
                     command('data get entity @e[type=cow,limit=1] Health')
@@ -276,7 +276,7 @@ def main():
                 report['checks'].append(dict(case=stage,statuses=actions(stage),authoritative_hands=dict(hands)))
                 shot('finished-actions')
                 expected={'cancel':[0,1],'drop-one':[4],'drop-stack':[3],'swap':[6],'release':[5],'jab':[7]}
-                if a.client in (770,771,772,773):
+                if a.client in (769,770,771,772,773):
                     expected['jab']=[]
                     raw=[r for r in report['packets'] if r['stage']=='jab' and r['name']=='entity_metadata' and r['direction']=='toClient']
                     health=[]

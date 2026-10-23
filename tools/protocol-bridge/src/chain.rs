@@ -1,12 +1,13 @@
-//! Соседние переходы770↔771↔772↔773↔774↔775↔776↔777. Путь не открывает допуск.
+//! Соседние переходы769↔770↔771↔772↔773↔774↔775↔776↔777. Путь не открывает допуск.
 //! Пока полная цепь проверяет только перечисленные управляющие пакеты без
 //! ID содержимого. Остальные требуют отдельных кодеков и возвращают отказ.
 use crate::{Direction, JavaVersion, State, ids::RegistryKind, wire::{self, Cursor, uint}};
 
-const VERSIONS: [JavaVersion; 8] = [JavaVersion::V1_21_5, JavaVersion::V1_21_6, JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3];
+const VERSIONS: [JavaVersion; 9] = [JavaVersion::V1_21_4, JavaVersion::V1_21_5, JavaVersion::V1_21_6, JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3];
 
 pub(crate) fn neighbor(version: JavaVersion) -> JavaVersion {
     match version {
+        JavaVersion::V1_21_4 => JavaVersion::V1_21_5,
         JavaVersion::V1_21_5 => JavaVersion::V1_21_6,
         JavaVersion::V1_21_6 => JavaVersion::V1_21_8,
         JavaVersion::V1_21_8 => JavaVersion::V1_21_9,

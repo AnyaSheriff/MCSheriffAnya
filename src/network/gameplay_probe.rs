@@ -50,7 +50,7 @@ async fn serve(version: mcsa_protocol::JavaVersion, port: u16) {
     let mut shared=Shared::new(world,World::in_memory_with_catalog(catalog),PathBuf::from("world/playerdata"),PathBuf::from("skins"),properties.clone(),
         ops::Ops::open(Path::new("config/ops.json")),skins::Settings {mojang:false,ely:false,..Default::default()});
     //776 — только клиент; игровые правила задаёт каталог основного сервера.
-    shared.settings.java_version=Some(if preview { mcsa_protocol::JavaVersion::V26_3 } else if matches!(version,mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) { network::NATIVE_VERSION } else { version });
+    shared.settings.java_version=Some(if preview { mcsa_protocol::JavaVersion::V26_3 } else if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) { network::NATIVE_VERSION } else { version });
     shared.settings.auth_enabled=false;shared.settings.auth_premium=false;shared.settings.prefetch_chunks=0;
     // Только изолированная проба; публичный допуск не меняется.
     if Path::new("mcsa-password-probe.marker").is_file() {
@@ -69,7 +69,7 @@ async fn serve(version: mcsa_protocol::JavaVersion, port: u16) {
             let (socket,addr)=accepted.unwrap();socket.set_nodelay(true).unwrap();
             let shared=Arc::clone(&shared);let properties=Arc::clone(&properties);
             tasks.spawn(async move {
-                let result = if matches!(version,mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) {
+                let result = if matches!(version,mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) {
                     handle_connection_inner(socket, addr, properties, shared, true).await
                 } else { handle_connection(socket, addr, properties, shared).await };
                 if let Err(error) = result { eprintln!("MCSA probe connection: {error}"); }
@@ -96,3 +96,7 @@ async fn serve_java_1_21_6_probe() { serve(mcsa_protocol::JavaVersion::V1_21_6,2
 #[tokio::test]
 #[ignore="частная сессия770; только внешняя проба"]
 async fn serve_java_1_21_5_probe() { serve(mcsa_protocol::JavaVersion::V1_21_5,26127).await; }
+
+#[tokio::test]
+#[ignore="частная сессия769; только внешняя проба"]
+async fn serve_java_1_21_4_probe() { serve(mcsa_protocol::JavaVersion::V1_21_4,26126).await; }

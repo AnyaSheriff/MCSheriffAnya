@@ -23,11 +23,13 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersi
             for _ in 0..n {
                 uint(&mut out,ids::translate(RegistryKind::Attribute,from,to,input.uint()?).map_err(Error::Id)?);
                 string(input,&mut out)?;finite(input,&mut out)?;
-                uint(&mut out,input.count(2)? as u32);uint(&mut out,input.count(10)? as u32);
-                let display=if from==JavaVersion::V1_21_5 {0}else{input.count(2)?};
-                if to!=JavaVersion::V1_21_5 {uint(&mut out,display as u32);}
-                if display==2 {let text=input.nbt()?;plain_text(text)?;if to!=JavaVersion::V1_21_5 {out.extend(text);}}
+                uint(&mut out,input.count(2)? as u32);let slot=input.count(if from==JavaVersion::V1_21_4 {9}else{10})?;uint(&mut out,if to==JavaVersion::V1_21_4 && slot==10 {9}else{slot as u32});
+                let display=if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) {0}else{input.count(2)?};
+                if !matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) {uint(&mut out,display as u32);}
+                if display==2 {let text=input.nbt()?;plain_text(text)?;if !matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) {out.extend(text);}}
             }
+            if from==JavaVersion::V1_21_4 {input.boolean()?;}
+            if to==JavaVersion::V1_21_4 {out.push(1);}
         }
         18=>{
             out.push(u8::from(input.boolean()?));let n=input.count(256)?;uint(&mut out,n as u32);let mut seen=BTreeSet::new();

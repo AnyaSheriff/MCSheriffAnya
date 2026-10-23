@@ -47,7 +47,7 @@ pub(crate) fn translate_776_fixture(payload: &[u8], context: Context) -> Result<
 }
 
 pub(crate) fn translate_776_content(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context, content: crate::content::ContentCodec) -> Result<Vec<u8>, Error> {
-    if from != JavaVersion::V26_1_2 || !matches!(to, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_2) { return Err(Error::UnsupportedVersion(to)); }
+    if from != JavaVersion::V26_1_2 || !matches!(to, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_2) { return Err(Error::UnsupportedVersion(to)); }
     translate_inner(from, to, payload, context, content)
 }
 
@@ -62,6 +62,7 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
     input.take(8)?; // signed X/Z, unchanged in these versions
     let count = input.count(6)?;
     let mut seen_maps = BTreeSet::new();
+    let mut old_heightmaps=vec![10];
     let bits = (32 - height.leading_zeros()) as usize;
     for _ in 0..count {
         let kind = input.count(5)?;
@@ -70,6 +71,10 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
         let per_word = 64 / bits;
         if words != 256usize.div_ceil(per_word) { return Err(Error::Invalid); }
         let bytes = input.take(words * 8)?;
+        if to==JavaVersion::V1_21_4 {
+            let name=["WORLD_SURFACE_WG","WORLD_SURFACE","OCEAN_FLOOR_WG","OCEAN_FLOOR","MOTION_BLOCKING","MOTION_BLOCKING_NO_LEAVES"][kind];
+            old_heightmaps.push(12);old_heightmaps.extend((name.len() as u16).to_be_bytes());old_heightmaps.extend(name.as_bytes());old_heightmaps.extend((words as i32).to_be_bytes());old_heightmaps.extend(bytes);
+        }
         for (word_index, &word) in bytes.as_chunks::<8>().0.iter().enumerate() {
             let word = u64::from_be_bytes(word);
             for cell in 0..per_word.min(256 - word_index * per_word) {
@@ -119,7 +124,7 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
         }
     }
     let sections = chunk_sections::encode_with_content(to, &sections, context.shared_biome_count, content.output_space(to), content).map_err(Error::Sections)?;
-    let mut out = payload[..header_length].to_vec();
+    let mut out = if to==JavaVersion::V1_21_4 {let mut out=payload[..8].to_vec();old_heightmaps.push(0);out.extend(old_heightmaps);out}else{payload[..header_length].to_vec()};
     uint(&mut out, sections.len() as u32); out.extend(sections);
     uint(&mut out, entities.len() as u32);
     for ((y, xz), (kind, data)) in entities {

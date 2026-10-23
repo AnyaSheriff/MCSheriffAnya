@@ -24,7 +24,7 @@ fn block_bits(version: JavaVersion) -> Result<u8, Error> {
     // 776:300 авторских состояний, direct width15 по обычному MapChunk.
     // Полный chunk/admission этим низкоуровневым helper не включается.
     match version {
-        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(15),
+        JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(15),
         JavaVersion::V26_3 => Ok(16),
         JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
     }
@@ -47,11 +47,11 @@ pub fn decode_with_content(version: JavaVersion, bytes: &[u8], sections: usize, 
     for _ in 0..sections {
         let blocks_present = u16::from_be_bytes(input.take(2)?.try_into().map_err(|_| Error::Invalid)?);
         // 774-client775-v6: клиент принял секции только с одним счётчиком.
-        let fluids_present = if matches!(version,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {0} else {u16::from_be_bytes(input.take(2)?.try_into().map_err(|_| Error::Invalid)?)};
+        let fluids_present = if matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {0} else {u16::from_be_bytes(input.take(2)?.try_into().map_err(|_| Error::Invalid)?)};
         if blocks_present > 4096 || fluids_present > 4096 { return Err(Error::Invalid); }
-        let blocks = input.palette(4096, 4, 8, direct)?;
+        let blocks = input.palette(4096, 4, 8, direct,version==JavaVersion::V1_21_4)?;
         for &id in &blocks { content.map(RegistryKind::BlockState, space, space, id).map_err(content_error)?; }
-        let biomes = input.palette(64, 1, 3, bits(biome_count))?;
+        let biomes = input.palette(64, 1, 3, bits(biome_count),version==JavaVersion::V1_21_4)?;
         if biomes.iter().any(|id| *id >= biome_count) { return Err(Error::Invalid); }
         out.push(Section { blocks_present, fluids_present, blocks, biomes });
     }
@@ -84,26 +84,27 @@ pub fn encode_with_content(version: JavaVersion, sections: &[Section], biome_cou
             if id >= (1u32 << direct) { return Err(Error::Invalid); }
         }
         if section.biomes.iter().any(|id| *id >= biome_count) { return Err(Error::Invalid); }
-        out.extend(section.blocks_present.to_be_bytes()); if !matches!(version,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {out.extend(section.fluids_present.to_be_bytes());}
-        palette(&mut out, &section.blocks, 4, 8, direct);
-        palette(&mut out, &section.biomes, 1, 3, bits(biome_count));
+        out.extend(section.blocks_present.to_be_bytes()); if !matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {out.extend(section.fluids_present.to_be_bytes());}
+        palette(&mut out, &section.blocks, 4, 8, direct,version==JavaVersion::V1_21_4);
+        palette(&mut out, &section.biomes, 1, 3, bits(biome_count),version==JavaVersion::V1_21_4);
     }
     Ok(out)
 }
 
-fn palette(out: &mut Vec<u8>, values: &[u32], minimum: u8, maximum: u8, direct: u8) {
+fn palette(out: &mut Vec<u8>, values: &[u32], minimum: u8, maximum: u8, direct: u8, lengths:bool) {
     let mut ids = BTreeMap::new(); let mut entries = Vec::new();
     for &id in values {
         if let std::collections::btree_map::Entry::Vacant(entry) = ids.entry(id) {
             entry.insert(entries.len() as u32); entries.push(id);
         }
     }
-    if entries.len() == 1 { out.push(0); uint(out, entries[0]); return; }
+    if entries.len() == 1 { out.push(0); uint(out, entries[0]); if lengths {uint(out,0);} return; }
     let width = bits(entries.len() as u32).max(minimum);
     let indirect = width <= maximum;
     let width = if indirect { width } else { direct };
     out.push(width);
     if indirect { uint(out, entries.len() as u32); for id in entries { uint(out, id); } }
+    if lengths {uint(out,values.len().div_ceil(64 / usize::from(width)) as u32);}
     for group in values.chunks(64 / usize::from(width)) {
         let mut word = 0u64;
         for (index, id) in group.iter().enumerate() {
@@ -129,9 +130,9 @@ impl<'a> Cursor<'a> {
         }
         Err(Error::Invalid)
     }
-    fn palette(&mut self, count: usize, minimum: u8, maximum: u8, direct: u8) -> Result<Vec<u32>, Error> {
+    fn palette(&mut self, count: usize, minimum: u8, maximum: u8, direct: u8, lengths:bool) -> Result<Vec<u32>, Error> {
         let width = self.take(1)?[0];
-        if width == 0 { return Ok(vec![self.uint()?; count]); }
+        if width == 0 {let id=self.uint()?;if lengths && self.uint()?!=0 {return Err(Error::Invalid);}return Ok(vec![id;count]);}
         let indirect = (minimum..=maximum).contains(&width);
         if !indirect && (width != direct || width <= maximum) { return Err(Error::Invalid); }
         let mut entries = Vec::new();
@@ -141,6 +142,7 @@ impl<'a> Cursor<'a> {
             for _ in 0..size { entries.push(self.uint()?); }
         }
         let per_word = 64 / usize::from(width);
+        if lengths && self.uint()? as usize!=count.div_ceil(per_word) {return Err(Error::Invalid);}
         let bytes = self.take(count.div_ceil(per_word) * 8)?;
         let mask = (1u64 << width) - 1;
         let mut values = Vec::with_capacity(count);

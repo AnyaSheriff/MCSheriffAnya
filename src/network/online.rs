@@ -370,7 +370,7 @@ mod tests {
         use mcsa_protocol::{JavaVersion, Negotiated};
         let auth = auth();
         // Один и тот же RSA/session-service путь для774/775/776/777, без Mojang аккаунта.
-        for version in [JavaVersion::V1_21_5, JavaVersion::V1_21_6, JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
+        for version in [JavaVersion::V1_21_4, JavaVersion::V1_21_5, JavaVersion::V1_21_6, JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
             let (server, client) = tokio::io::duplex(7);
             let mut server = CryptoStream::new(server);
             let mut client = CryptoStream::new(client);

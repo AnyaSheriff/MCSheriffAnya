@@ -168,3 +168,7 @@ Final verification:3152 Rust PASS (2908 core +3 startup +230 protocol +11 seedma
 ## 770 chat-login follow-up, 771–776 retained
 
 770 now uses isolated frozen chat-login limbo on both primaries and is publicly admitted after registration/wrong-password/relogin proof, including the opaque1.21.5 GUI.771–776 keep their Configuration dialogs and the unchanged checklist. No older gameplay profile or new admission gate.769 remains closed because its adjacent adapter/Play/live checklist are unfinished. [Current evidence and final verification](../client-chain-770-773/CONTINUED.md#770-chat-login-admission).
+
+## 769 follow-up, 770-776 retained
+
+769 now completes the unchanged770 checklist on both primaries,including opaque1.21.4 payload/GUI evidence and isolated chat-login registration/wrong-password/relogin,and is publicly admitted. All50 fresh770–774/776 regression sessions pass. No old gameplay profile or new gate; unsupported older routes retain the Russian refusal.3205 Rust(102ignored),237 Python,clean Clippy/release and public28/28. [Evidence,hashes and retained limitations](../client-chain-770-773/CONTINUED.md#769-admission-and-770-776-regression).

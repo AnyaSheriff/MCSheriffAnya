@@ -81,7 +81,7 @@ fn tables_and_paths_never_authorize_opaque_or_gameplay_payloads() {
             assert!(step.translate_control(State::Play,Direction::Serverbound,from,&vec![0;8*1024*1024+1]).is_err());
             assert!(step.translate_control(State::Play,Direction::Serverbound,JavaVersion::V1_12_2,&[0]).is_err());
             if step!=STEPS[0] && step!=STEPS[1] && step!=STEPS[2] {assert_eq!(ids::translate(K::Attribute,from,to,0),Ok(0));}
-            if from.protocol() < 770 {assert!(crate::items::decode(from,&[0],false,Default::default()).is_err());}
+            if from.protocol() < 769 {assert!(crate::items::decode(from,&[0],false,Default::default()).is_err());}
             assert!(wire::translate(State::Play,Direction::Serverbound,from,to,&[0]).is_err());
         }
     }

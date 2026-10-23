@@ -65,7 +65,7 @@ pub(crate) fn content_id(context: Context, kind: RegistryKind, from: IdSpace, to
 
 // Таблица ID сама по себе не разрешает payload этой версии.
 fn supported_payload(version: JavaVersion) -> Result<(), Error> {
-    if matches!(version, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Ok(()) }
+    if matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Ok(()) }
     else { Err(Error::UnsupportedVersion(version)) }
 }
 
@@ -118,8 +118,9 @@ pub(crate) fn encode_packet_template(version: JavaVersion, stack: &Stack, contex
 }
 
 fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool, source: IdSpace) -> Result<(Option<Stack>, usize), Error> {
-    let template = template && !matches!(version, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11);
+    let template = template && !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11);
     supported_form(version, untrusted)?;
+    let untrusted=untrusted && version!=JavaVersion::V1_21_4;
     if bytes.len() > LIMIT { return Err(Error::TooLarge); }
     let mut input = Reader(bytes);
     let template_id = if template { Some(input.uint()?) } else { None };
@@ -169,14 +170,15 @@ pub fn encode_canonical_template(stack: &Stack, context: Context) -> Result<Vec<
 }
 
 fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool, target: IdSpace) -> Result<Vec<u8>, Error> {
-    let template = template && !matches!(version, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11);
+    let template = template && !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11);
     supported_form(version, untrusted)?;
+    let untrusted=untrusted && version!=JavaVersion::V1_21_4;
     let Some(stack) = stack else { return Ok(vec![0]); };
     if !(1..=127).contains(&stack.count) || stack.item == 0 || stack.added.len() > 256 || stack.removed.len() > 256 { return Err(Error::Invalid); }
     let mut out = Vec::new();
     let item = content_id(context, RegistryKind::Item, IdSpace::Canonical, target, stack.item)?;
     for value in if template { [item, stack.count] } else { [stack.count, item] } { uint(&mut out, value); }
-    let visible=|kind:u32| !matches!(version,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || !matches!(id(RegistryKind::Component,JavaVersion::V26_1_2,version,kind),Err(Error::Id(crate::ids::IdTranslationError::MissingTarget(_))));
+    let visible=|kind:u32| !matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || !matches!(id(RegistryKind::Component,JavaVersion::V26_1_2,version,kind),Err(Error::Id(crate::ids::IdTranslationError::MissingTarget(_))));
     uint(&mut out, stack.added.iter().filter(|c|visible(c.kind)).count() as u32); uint(&mut out, stack.removed.iter().filter(|&&k|visible(k)).count() as u32);
     let mut seen = BTreeSet::new();
     for component in &stack.added {
@@ -218,27 +220,35 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
         && !matches!(kind,25|49|50|75) {
         return Err(Error::UnsupportedComponent(kind));
     }
+    if matches!(kind,4|13|42|44) && (from==JavaVersion::V1_21_4 || to==JavaVersion::V1_21_4) {
+        let start=input.0;
+        component_data(kind,input,context)?;
+        let mut out=start[..start.len()-input.0.len()].to_vec();
+        if from==JavaVersion::V1_21_4 {input.boolean()?;}
+        if to==JavaVersion::V1_21_4 {out.push(1);}
+        return Ok(out);
+    }
     if matches!(kind,53|56|57|59|61|66|68|69|72|74|76|77|86|88|89|90|104) {
         if !crate::component_776::supported_pair(from,to) {return Err(Error::UnsupportedComponent(kind));}
         return crate::component_776::remap(kind,input,context,spaces);
     }
     // В776 эти два компонента наблюдены отдельно. В777 swing_animation
     // удалён, а collar payload здесь ещё не открываем по одному совпавшему ID.
-    if matches!(kind,40|84) && matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
-        && matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) {
+    if matches!(kind,40|84) && matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+        && matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) {
         let start=input.0;
         if kind==40 { input.count(2)?; input.uint()?; } else { input.count(15)?; }
         return Ok(start[..start.len()-input.0.len()].to_vec());
     }
-    if kind==32 && (from==JavaVersion::V1_21_5 || to==JavaVersion::V1_21_5) {
+    if kind==32 && (matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) || matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5)) {
         return crate::component_776::equippable_770(input,from,to,context,spaces);
     }
-    if kind == 70 && matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
-        && matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) {
+    if kind == 70 && matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+        && matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) {
         let start = input.0;
         let mut cursor = crate::wire::Cursor::new(start);
         let mut out=Vec::new();
-        if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {
+        if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {
             let begin=cursor.rest;
             if cursor.boolean().map_err(|_|Error::Invalid)? {cursor.string().map_err(|_|Error::Invalid)?;}
             if cursor.boolean().map_err(|_|Error::Invalid)? {cursor.take(16).map_err(|_|Error::Invalid)?;}
@@ -246,7 +256,7 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
             out.push(0);out.extend(&begin[..begin.len()-cursor.rest.len()]);out.extend([0;4]);
         } else {
             crate::profile::read(&mut cursor).map_err(|_| Error::Invalid)?;
-            if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {
+            if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {
                 let mut source=crate::wire::Cursor::new(start);
                 let complete=source.count(1).map_err(|_|Error::Invalid)?;
                 if complete==0 {

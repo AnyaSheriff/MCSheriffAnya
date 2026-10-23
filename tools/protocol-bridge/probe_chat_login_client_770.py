@@ -25,8 +25,9 @@ def main():
     p=argparse.ArgumentParser()
     for name in ('test-binary','client-dir','output'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--primary',type=int,choices=(775,777),required=True)
+    p.add_argument("--client",type=int,choices=(769,770),default=770)
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
-    report=dict(client=770,primary=a.primary,status='failed',checks=[],binary_sha256=hashlib.sha256(a.test_binary.read_bytes()).hexdigest())
+    report=dict(client=a.client,primary=a.primary,status='failed',checks=[],binary_sha256=hashlib.sha256(a.test_binary.read_bytes()).hexdigest())
     password=secrets.token_hex(16);wrong=secrets.token_hex(16)
     client=server=None
     with tempfile.TemporaryDirectory(prefix='mcsa-chat770-gui-') as folder:
@@ -36,14 +37,14 @@ def main():
         server_path=a.output/'server.log'
         with server_path.open('w') as log:
             try:
-                server=subprocess.Popen([str(a.test_binary.resolve()),'--ignored','--exact','gameplay_probe::serve_java_1_21_5_probe','--nocapture'],
+                server=subprocess.Popen([str(a.test_binary.resolve()),'--ignored','--exact',('gameplay_probe::serve_java_1_21_4_probe' if a.client==769 else 'gameplay_probe::serve_java_1_21_5_probe'),'--nocapture'],
                     cwd=core,stdin=subprocess.PIPE,stdout=log,stderr=subprocess.STDOUT,text=True)
                 wait(lambda:'MCSA gameplay probe ready' in server_path.read_text())
                 for index in (0,1):
                     game=root/f'game{index}';game.mkdir()
                     client_path=a.output/f'client{index}.log'
                     with client_path.open('w') as clog:
-                        client=launch(a.client_dir.resolve(),game,26127,clog,version='1.21.5',gui_scale=2,pause_on_lost_focus=False)
+                        client=launch(a.client_dir.resolve(),game,(26126 if a.client==769 else 26127),clog,version='1.21.4' if a.client==769 else '1.21.5',gui_scale=2,pause_on_lost_focus=False)
                         wait(lambda:('/register' if index==0 else '/login') in client_path.read_text())
                         time.sleep(2)
                         assert server_path.read_text().count('вошёл с номером сущности')==index

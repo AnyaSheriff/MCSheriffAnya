@@ -30,7 +30,7 @@ def decode(payload, version):
     for _ in range(4):
         count = read_varint(data.read)
         assert count <= 40
-        if version in (770,771,772, 773, 774, 775, 776):
+        if version in (769,770,771,772, 773, 774, 775, 776):
             words = [int.from_bytes(data.read(8), 'big') for _ in range(count)]
             mask = sum(word << (i * 64) for i, word in enumerate(words))
         else:
@@ -86,9 +86,13 @@ class LightClient(Client):
         if name == 'map_chunk' and struct.unpack('>ii', payload[:8]) == (-1, -1):
             self.chunk_ready = True
             data = io.BytesIO(payload[8:])
-            for _ in range(read_varint(data.read)):
-                read_varint(data.read)
-                data.read(read_varint(data.read) * 8)
+            if self.version==769:
+                from probe_block_entities import nbt
+                nbt(data)
+            else:
+                for _ in range(read_varint(data.read)):
+                    read_varint(data.read)
+                    data.read(read_varint(data.read) * 8)
             sections = data.read(read_varint(data.read))
             if self.expected_section is not None:
                 from probe_776_payloads import authored_section

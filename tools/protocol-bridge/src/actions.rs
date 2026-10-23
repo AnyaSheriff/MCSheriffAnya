@@ -57,9 +57,15 @@ fn sound(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{
     if id!=0{return Err(Error::PayloadUnavailable("static sound registry"));}
     uint(out,0);string(input,out)?;let fixed=input.boolean()?;out.push(u8::from(fixed));if fixed{floats(input,out,1,false)?;}Ok(())
 }
-fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,content:crate::content::ContentCodec)->Result<(),Error>{
+fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:crate::items::Context)->Result<(),Error>{
+    if from==JavaVersion::V1_21_4 {
+        let (_,size)=crate::items::decode_packet_slot(from,input.rest,false,context).map_err(Error::Item)?;
+        input.take(size)?;
+        // Старый полный Slot не является хэшем; ядро сверяет авторитетный контейнер.
+        out.push(0);return Ok(());
+    }
     let present=input.boolean()?;out.push(u8::from(present));if !present{return Ok(());}
-    let item=content.packet_id(RegistryKind::Item,from,to,input.uint()?)?;if item==0{return Err(Error::Invalid);}uint(out,item);
+    let item=context.content.packet_id(RegistryKind::Item,from,to,input.uint()?)?;if item==0{return Err(Error::Invalid);}uint(out,item);
     let count=input.count(127)?;if count==0{return Err(Error::Invalid);}uint(out,count as u32);
     let mut seen=BTreeSet::new();
     let n=input.count(256)?;uint(out,n as u32);
@@ -76,9 +82,9 @@ fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVer
 }
 #[cfg(test)]
 pub(crate) fn click(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion)->Result<(),Error>{
-    click_with_content(input,out,from,to,crate::content::ContentCodec::default())
+    click_with_context(input,out,from,to,crate::items::Context::default())
 }
-pub(crate) fn click_with_content(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,content:crate::content::ContentCodec)->Result<(),Error>{
+pub(crate) fn click_with_context(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:crate::items::Context)->Result<(),Error>{
     uint(out,input.uint()?);
     // Официальные775/777 принимают revision=-1 и возвращают полный снимок
     // (probe_inventory_modes.py). Сохраняем signed VarInt без смены смысла.
@@ -86,9 +92,9 @@ pub(crate) fn click_with_content(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Jav
     let n=input.count(128)?;uint(out,n as u32);let mut seen=BTreeSet::new();
     for _ in 0..n {
         let slot=input.take(2)?;let number=i16::from_be_bytes(slot.try_into().map_err(|_|Error::Invalid)?);
-        if number<0 || !seen.insert(number){return Err(Error::Invalid);}out.extend(slot);prediction(input,out,from,to,content)?;
+        if number<0 || !seen.insert(number){return Err(Error::Invalid);}out.extend(slot);prediction(input,out,from,to,context)?;
     }
-    prediction(input,out,from,to,content)
+    prediction(input,out,from,to,context)
 }
 pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context)->Result<(),Error>{
     match name {
@@ -118,7 +124,7 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
         }
         "explosion"=>{
             floats(input,out,3,true)?;let mut discarded=Vec::new();
-            let older_to=matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8);let older_from=matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8);
+            let older_to=matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8);let older_from=matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8);
             if !older_from {floats(input,if older_to{&mut discarded}else{out},1,false)?;}else if !older_to {out.extend(0f32.to_be_bytes());}
             if !older_from {let count=input.take(4)?;if i32::from_be_bytes(count.try_into().map_err(|_|Error::Invalid)?)<0{return Err(Error::Invalid);}
             if !older_to {out.extend(count);}}else if !older_to {out.extend(0i32.to_be_bytes());}

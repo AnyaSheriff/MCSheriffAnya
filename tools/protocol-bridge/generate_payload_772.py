@@ -13,12 +13,13 @@ def generate(docs,baseline,client=772):
     a=old['protocol']['types'];b=newer['protocol']['types']
     shared=a['SlotComponent'][1][1]['type'][1]['fields'];target=b['SlotComponent'][1][1]['type'][1]['fields']
     changed={k for k in shared if shared[k]!=target.get(k)}
-    assert changed==({'entity_data','block_entity_data','profile','lodestone_tracker','equippable','attribute_modifiers'} if client==770 else {'entity_data','block_entity_data','profile','lodestone_tracker'})
-    assert all(a[k]==b[k] for k in ['Slot','UntrustedSlot','UntrustedSlotComponent'])
+    assert changed==({'attribute_modifiers','block_entity_data','can_break','can_place_on','consumable','dyed_color','enchantments','entity_data','equippable','hide_additional_tooltip','hide_tooltip','instrument','jukebox_playable','lodestone_tracker','lore','profile','stored_enchantments','tool','trim','unbreakable'} if client==769 else {'entity_data','block_entity_data','profile','lodestone_tracker','equippable','attribute_modifiers'} if client==770 else {'entity_data','block_entity_data','profile','lodestone_tracker'})
+    assert all(a[k]==b[k] for k in (['Slot'] if client==769 else ['Slot','UntrustedSlot','UntrustedSlotComponent']))
     text=f'// Закреплённые JSON{client}; generate_payload_{client}.py. Это не живое доказательство.\n'
     canonical=mapper(baseline['protocol']['types']['entityMetadataEntry'][1][1]['type']);serializers=mapper(a['entityMetadataEntry'][1][1]['type'])
     for name,x,y in [('SERIALIZERS_FROM',serializers,canonical),('SERIALIZERS_TO',canonical,serializers)]:text+=f'pub(crate) const {name}: &[u16] = &{list(direct_mapping(x,y))};\n'
     lookup={r['name']:r for r in old['entities']}
+    if client==769:lookup['splash_potion']=lookup['potion']
     text+='pub(crate) const LAYOUTS: &[(u32, &[&str])] = &[\n'
     for r in baseline['entities']:
         if r['name'] in lookup:text+=f'({r["id"]}, &{json.dumps(lookup[r["name"]]["metadataKeys"])}),\n'
@@ -26,6 +27,11 @@ def generate(docs,baseline,client=772):
     text+='pub(crate) const ITEM_NAMES: &[&str] = &'+json.dumps([r['name'] for r in old['items']])+';\n'
     # Явные визуальные замены; серверные предметы/состояния не меняются.
     def replacement(name):
+        if name in ('blue_egg','brown_egg'):return 'egg'
+        if name in ('test_block','test_instance_block'):return 'stone'
+        if name in ('wildflowers','leaf_litter','cactus_flower'):return 'dandelion'
+        if name in ('bush','firefly_bush'):return 'fern'
+        if name in ('short_dry_grass','tall_dry_grass'):return 'dead_bush'
         if name in ('golden_dandelion','potted_golden_dandelion'):return name.replace('golden_','')
         if name=='dried_ghast':return 'soul_sand'
         if name=='happy_ghast_spawn_egg':return 'ghast_spawn_egg'
@@ -57,8 +63,10 @@ def generate(docs,baseline,client=772):
     text+='pub(crate) const ITEM_VIEWS: &[(u32,u32)] = &'+str(itemviews)+';\n'
     canonical={r['name']:r['id'] for r in baseline['entities']};lowentities={r['name']:r['id'] for r in old['entities']}
     views={'nautilus':'squid','zombie_nautilus':'squid','camel_husk':'camel','parched':'skeleton','copper_golem':'iron_golem','mannequin':'armor_stand'}
-    if client==770:views['happy_ghast']='ghast'
-    text+='pub(crate) const ENTITY_VIEWS: &[(u32,u32,u32)] = &'+str([(canonical[n],canonical[t],lowentities[t]) for n,t in views.items()])+';\n'
+    if client<=770:views['happy_ghast']='ghast'
+    entityviews=[(canonical[n],canonical[t],lowentities[t]) for n,t in views.items()]
+    if client==769:entityviews.extend((canonical[n],canonical['splash_potion'],lowentities['potion']) for n in ['splash_potion','lingering_potion'])
+    text+='pub(crate) const ENTITY_VIEWS: &[(u32,u32,u32)] = &'+str(entityviews)+';\n'
     lowblocks={r['name']:r for r in old['blocks']};lowstates=block_states(old['blocks']);highstates=block_states(baseline['blocks']);stateviews=[];blockviews=[]
     for r in baseline['blocks']:
         if r['name'] not in lowblocks:
@@ -71,6 +79,7 @@ def generate(docs,baseline,client=772):
         # Статуи: четыре позы имеют четыре явно разных медных вида.
         if 'copper_golem_statue' in name:
             sub={'standing':'cut_copper','sitting':'exposed_cut_copper','running':'weathered_cut_copper','star':'oxidized_cut_copper'}[oldprops['copper_golem_pose']];newprops={}
+        if client==769 and name=='creaking_heart':newprops['active']='true' if oldprops['creaking_heart_state']=='awake' else 'false'
         key=(sub,tuple(sorted(newprops.items())))
         if key not in lowstates:
             # Прежняя замена состояния dry_vegetation уже закреплена774.
@@ -83,21 +92,23 @@ def generate(docs,baseline,client=772):
     highitems={r['name']:r['id'] for r in baseline['items']};highblocks={r['name']:r['id'] for r in baseline['blocks']}
     text+='pub(crate) const INPUT_ITEMS: &[(u32,u32)] = &'+str([(lowitems['chain'],highitems['iron_chain'])])+';\n'
     text+='pub(crate) const INPUT_BLOCKS: &[(u32,u32)] = &'+str([(lowblocks['chain']['id'],highblocks['iron_chain'])])+';\n'
-    text+='pub(crate) const INPUT_STATES: &[(u32,u32)] = &'+str([(number,highstates[('iron_chain',props)]) for (name,props),number in lowstates.items() if name=='chain'])+';\n'
+    text+='pub(crate) const INPUT_STATES: &[(u32,u32)] = &'+str(sorted([(number,highstates[('iron_chain',props)]) for (name,props),number in lowstates.items() if name=='chain'] + ([(number,highstates[(name,tuple(sorted({**{k:v for k,v in props if k!='active'},'creaking_heart_state':'awake' if dict(props)['active']=='true' else 'dormant'}.items())))]) for (name,props),number in lowstates.items() if name=='creaking_heart'] if client==769 else [])))+';\n'
     assert all(rows==sorted(rows) for rows in [itemviews,blockviews,stateviews])
     text+='pub(crate) const REMOVED_BE_VIEWS: &[(u32,u32)] = &'+str([(40,lowblocks['bookshelf']['defaultState']),(48,lowblocks['cut_copper']['defaultState'])])+';\n'
     text+='pub(crate) const BLOCK_VIEWS: &[(u32,u32)] = &'+str(blockviews)+';\n'
     text+='pub(crate) const STATE_VIEWS: &[(u32,u32)] = &'+str(stateviews)+';\n'
     lowparticles=mapper(a['Particle'][1][0]['type']);highparticles=mapper(baseline['protocol']['types']['Particle'][1][0]['type'])
     particleviews={'copper_fire_flame':'flame','pause_mob_growth':'smoke','reset_mob_growth':'happy_villager'}
+    if client==769:particleviews.update(tinted_leaves='happy_villager',firefly='end_rod')
     assert set(particleviews)==highparticles.keys()-lowparticles.keys()
     text+='pub(crate) const PARTICLE_VIEWS: &[(u32,u32)] = &'+str([(highparticles[n],lowparticles[t]) for n,t in particleviews.items()])+';\n'
     report={'client':client,'changed_components':sorted(changed),'item_views':policies,'item_count':len(itemviews),'block_count':len(blockviews),'state_count':len(stateviews),'entity_views':views,'particle_views':particleviews,'live_admission':'separate checklist required'}
+    if client==769:report['entity_aliases']={'splash_potion':'potion','lingering_potion':'potion'}
     return text,json.dumps(report,indent=2)+'\n'
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--client',type=int,choices=(770,771,772),default=772);p.add_argument('--cache',type=Path,required=True);p.add_argument('--cache774',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True);p.add_argument('--check',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--client',type=int,choices=(769,770,771,772),default=772);p.add_argument('--cache',type=Path,required=True);p.add_argument('--cache774',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True);p.add_argument('--check',action='store_true');args=p.parse_args()
     docs=load(args.cache,args.cache774);locks=json.loads((HERE/'candidate-sources-26.3.json').read_text());baseline={}
     for name in ['protocol','entities']:
         filename=name+'-26.1.json';record=next(r for r in locks['files']+locks['baseline_files'] if r['file']==filename);baseline[name]=locked(args.baseline,filename,record)

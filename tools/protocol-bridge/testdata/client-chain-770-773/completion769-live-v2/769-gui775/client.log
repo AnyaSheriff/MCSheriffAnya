@@ -1,0 +1,1232 @@
+NOTE: Picked up JDK_JAVA_OPTIONS: -Dorg.lwjgl.glfw.libname=/tmp/s26-mv12-gui/usr/lib/x86_64-linux-gnu/libglfw.so.3.4
+[23:16:35] [Datafixer Bootstrap/INFO]: 243 Datafixer optimizations took 417 milliseconds
+[23:16:35] [main/WARN]: Failed retrieving storage space for org.lwjgl.system.SharedLibraryExtractPath
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-q37ksibw/client/natives/lwjgl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403) ~[?:?]
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375) ~[?:?]
+	at ad.b(SourceFile:167) [client.jar:?]
+	at ad.a(SourceFile:154) [client.jar:?]
+	at ad.b(SourceFile:147) [client.jar:?]
+	at ad.a(SourceFile:87) [client.jar:?]
+	at ad.a(SourceFile:82) [client.jar:?]
+	at ad.e(SourceFile:56) [client.jar:?]
+	at ad.a(SourceFile:87) [client.jar:?]
+	at ad.<init>(SourceFile:56) [client.jar:?]
+	at o.<init>(SourceFile:35) [client.jar:?]
+	at o.g(SourceFile:234) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:134) [client.jar:?]
+[23:16:35] [main/WARN]: Failed retrieving storage space for io.netty.native.workdir
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-q37ksibw/client/natives/netty
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403) ~[?:?]
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375) ~[?:?]
+	at ad.b(SourceFile:167) [client.jar:?]
+	at ad.a(SourceFile:154) [client.jar:?]
+	at ad.b(SourceFile:148) [client.jar:?]
+	at ad.a(SourceFile:87) [client.jar:?]
+	at ad.a(SourceFile:82) [client.jar:?]
+	at ad.e(SourceFile:56) [client.jar:?]
+	at ad.a(SourceFile:87) [client.jar:?]
+	at ad.<init>(SourceFile:56) [client.jar:?]
+	at o.<init>(SourceFile:35) [client.jar:?]
+	at o.g(SourceFile:234) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:134) [client.jar:?]
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.4/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[23:16:39] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[23:16:39] [Render thread/INFO]: Setting user: McsaProbe
+[23:16:39] [Render thread/INFO]: Backend library: LWJGL version 3.3.3+5
+Failed to create /home/lenox/.cache/mesa_shader_cache for shader cache (Read-only file system)---disabling.
+[23:16:40] [Render thread/INFO]: [STDERR]: [LWJGL] [ThreadLocalUtil] Unsupported JNI version detected, this may result in a crash. Please inform LWJGL developers.
+[23:16:41] [Render thread/INFO]: Reloading ResourceManager: vanilla
+[23:16:41] [Worker-Main-1/INFO]: Found unifont_jp_patch-16.0.01.hex, loading
+[23:16:41] [Worker-Main-7/INFO]: Found unifont_all_no_pua-16.0.01.hex, loading
+[23:16:43] [Render thread/INFO]: OpenAL initialized on device No Output
+[23:16:43] [Render thread/INFO]: Sound engine started
+[23:16:43] [Render thread/INFO]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 2048x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[23:16:43] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[23:16:43] [Render thread/INFO]: Connecting to 127.0.0.1, 26132
+[23:16:46] [Render thread/ERROR]: Registry loading errors:
+> Errors in registry minecraft:root:
+>> Errors in element minecraft:wolf_variant:
+java.lang.IllegalStateException: Registry must be non-empty
+	at akq.b(SourceFile:196)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:187)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+> Errors in registry minecraft:trim_material:
+>> Errors in element minecraft:amethyst:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"amethyst",description:{translate:"trim_material.minecraft.amethyst"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"amethyst",description:{translate:"trim_material.minecraft.amethyst"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:copper:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"copper",description:{translate:"trim_material.minecraft.copper"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"copper",description:{translate:"trim_material.minecraft.copper"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:diamond:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"diamond",description:{translate:"trim_material.minecraft.diamond"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"diamond",description:{translate:"trim_material.minecraft.diamond"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:emerald:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"emerald",description:{translate:"trim_material.minecraft.emerald"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"emerald",description:{translate:"trim_material.minecraft.emerald"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:gold:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"gold",description:{translate:"trim_material.minecraft.gold"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"gold",description:{translate:"trim_material.minecraft.gold"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:iron:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"iron",description:{translate:"trim_material.minecraft.iron"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"iron",description:{translate:"trim_material.minecraft.iron"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:lapis:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"lapis",description:{translate:"trim_material.minecraft.lapis"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"lapis",description:{translate:"trim_material.minecraft.lapis"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:netherite:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"netherite",description:{translate:"trim_material.minecraft.netherite"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"netherite",description:{translate:"trim_material.minecraft.netherite"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:quartz:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"quartz",description:{translate:"trim_material.minecraft.quartz"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"quartz",description:{translate:"trim_material.minecraft.quartz"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:redstone:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"redstone",description:{translate:"trim_material.minecraft.redstone"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"redstone",description:{translate:"trim_material.minecraft.redstone"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:resin:
+java.lang.IllegalStateException: Failed to parse value {asset_name:"resin",description:{translate:"trim_material.minecraft.resin"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key ingredient in MapLike[{asset_name:"resin",description:{translate:"trim_material.minecraft.resin"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+> Errors in registry minecraft:trim_pattern:
+>> Errors in element minecraft:bolt:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:bolt",decal:0b,description:{translate:"trim_pattern.minecraft.bolt"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:bolt",decal:0b,description:{translate:"trim_pattern.minecraft.bolt"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:coast:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:coast",decal:0b,description:{translate:"trim_pattern.minecraft.coast"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:coast",decal:0b,description:{translate:"trim_pattern.minecraft.coast"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:dune:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:dune",decal:0b,description:{translate:"trim_pattern.minecraft.dune"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:dune",decal:0b,description:{translate:"trim_pattern.minecraft.dune"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:eye:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:eye",decal:0b,description:{translate:"trim_pattern.minecraft.eye"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:eye",decal:0b,description:{translate:"trim_pattern.minecraft.eye"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:flow:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:flow",decal:0b,description:{translate:"trim_pattern.minecraft.flow"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:flow",decal:0b,description:{translate:"trim_pattern.minecraft.flow"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:host:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:host",decal:0b,description:{translate:"trim_pattern.minecraft.host"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:host",decal:0b,description:{translate:"trim_pattern.minecraft.host"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:raiser:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:raiser",decal:0b,description:{translate:"trim_pattern.minecraft.raiser"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:raiser",decal:0b,description:{translate:"trim_pattern.minecraft.raiser"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:rib:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:rib",decal:0b,description:{translate:"trim_pattern.minecraft.rib"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:rib",decal:0b,description:{translate:"trim_pattern.minecraft.rib"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:sentry:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:sentry",decal:0b,description:{translate:"trim_pattern.minecraft.sentry"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:sentry",decal:0b,description:{translate:"trim_pattern.minecraft.sentry"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:shaper:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:shaper",decal:0b,description:{translate:"trim_pattern.minecraft.shaper"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:shaper",decal:0b,description:{translate:"trim_pattern.minecraft.shaper"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:silence:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:silence",decal:0b,description:{translate:"trim_pattern.minecraft.silence"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:silence",decal:0b,description:{translate:"trim_pattern.minecraft.silence"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:snout:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:snout",decal:0b,description:{translate:"trim_pattern.minecraft.snout"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:snout",decal:0b,description:{translate:"trim_pattern.minecraft.snout"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:spire:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:spire",decal:0b,description:{translate:"trim_pattern.minecraft.spire"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:spire",decal:0b,description:{translate:"trim_pattern.minecraft.spire"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:tide:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:tide",decal:0b,description:{translate:"trim_pattern.minecraft.tide"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:tide",decal:0b,description:{translate:"trim_pattern.minecraft.tide"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:vex:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:vex",decal:0b,description:{translate:"trim_pattern.minecraft.vex"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:vex",decal:0b,description:{translate:"trim_pattern.minecraft.vex"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:ward:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:ward",decal:0b,description:{translate:"trim_pattern.minecraft.ward"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:ward",decal:0b,description:{translate:"trim_pattern.minecraft.ward"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:wayfinder:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:wayfinder",decal:0b,description:{translate:"trim_pattern.minecraft.wayfinder"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:wayfinder",decal:0b,description:{translate:"trim_pattern.minecraft.wayfinder"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:wild:
+java.lang.IllegalStateException: Failed to parse value {asset_id:"minecraft:wild",decal:0b,description:{translate:"trim_pattern.minecraft.wild"}} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key template_item in MapLike[{asset_id:"minecraft:wild",decal:0b,description:{translate:"trim_pattern.minecraft.wild"}}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+> Errors in registry minecraft:wolf_variant:
+>> Errors in element minecraft:ashen:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry",tame:"minecraft:entity/wolf/wolf_ashen_tame",wild:"minecraft:entity/wolf/wolf_ashen"},baby_assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry_baby",tame:"minecraft:entity/wolf/wolf_ashen_tame_baby",wild:"minecraft:entity/wolf/wolf_ashen_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry",tame:"minecraft:entity/wolf/wolf_ashen_tame",wild:"minecraft:entity/wolf/wolf_ashen"},baby_assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry_baby",tame:"minecraft:entity/wolf/wolf_ashen_tame_baby",wild:"minecraft:entity/wolf/wolf_ashen_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry",tame:"minecraft:entity/wolf/wolf_ashen_tame",wild:"minecraft:entity/wolf/wolf_ashen"},baby_assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry_baby",tame:"minecraft:entity/wolf/wolf_ashen_tame_baby",wild:"minecraft:entity/wolf/wolf_ashen_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry",tame:"minecraft:entity/wolf/wolf_ashen_tame",wild:"minecraft:entity/wolf/wolf_ashen"},baby_assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry_baby",tame:"minecraft:entity/wolf/wolf_ashen_tame_baby",wild:"minecraft:entity/wolf/wolf_ashen_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry",tame:"minecraft:entity/wolf/wolf_ashen_tame",wild:"minecraft:entity/wolf/wolf_ashen"},baby_assets:{angry:"minecraft:entity/wolf/wolf_ashen_angry_baby",tame:"minecraft:entity/wolf/wolf_ashen_tame_baby",wild:"minecraft:entity/wolf/wolf_ashen_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:black:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_black_angry",tame:"minecraft:entity/wolf/wolf_black_tame",wild:"minecraft:entity/wolf/wolf_black"},baby_assets:{angry:"minecraft:entity/wolf/wolf_black_angry_baby",tame:"minecraft:entity/wolf/wolf_black_tame_baby",wild:"minecraft:entity/wolf/wolf_black_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_black_angry",tame:"minecraft:entity/wolf/wolf_black_tame",wild:"minecraft:entity/wolf/wolf_black"},baby_assets:{angry:"minecraft:entity/wolf/wolf_black_angry_baby",tame:"minecraft:entity/wolf/wolf_black_tame_baby",wild:"minecraft:entity/wolf/wolf_black_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_black_angry",tame:"minecraft:entity/wolf/wolf_black_tame",wild:"minecraft:entity/wolf/wolf_black"},baby_assets:{angry:"minecraft:entity/wolf/wolf_black_angry_baby",tame:"minecraft:entity/wolf/wolf_black_tame_baby",wild:"minecraft:entity/wolf/wolf_black_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_black_angry",tame:"minecraft:entity/wolf/wolf_black_tame",wild:"minecraft:entity/wolf/wolf_black"},baby_assets:{angry:"minecraft:entity/wolf/wolf_black_angry_baby",tame:"minecraft:entity/wolf/wolf_black_tame_baby",wild:"minecraft:entity/wolf/wolf_black_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_black_angry",tame:"minecraft:entity/wolf/wolf_black_tame",wild:"minecraft:entity/wolf/wolf_black"},baby_assets:{angry:"minecraft:entity/wolf/wolf_black_angry_baby",tame:"minecraft:entity/wolf/wolf_black_tame_baby",wild:"minecraft:entity/wolf/wolf_black_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:chestnut:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry",tame:"minecraft:entity/wolf/wolf_chestnut_tame",wild:"minecraft:entity/wolf/wolf_chestnut"},baby_assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry_baby",tame:"minecraft:entity/wolf/wolf_chestnut_tame_baby",wild:"minecraft:entity/wolf/wolf_chestnut_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry",tame:"minecraft:entity/wolf/wolf_chestnut_tame",wild:"minecraft:entity/wolf/wolf_chestnut"},baby_assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry_baby",tame:"minecraft:entity/wolf/wolf_chestnut_tame_baby",wild:"minecraft:entity/wolf/wolf_chestnut_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry",tame:"minecraft:entity/wolf/wolf_chestnut_tame",wild:"minecraft:entity/wolf/wolf_chestnut"},baby_assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry_baby",tame:"minecraft:entity/wolf/wolf_chestnut_tame_baby",wild:"minecraft:entity/wolf/wolf_chestnut_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry",tame:"minecraft:entity/wolf/wolf_chestnut_tame",wild:"minecraft:entity/wolf/wolf_chestnut"},baby_assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry_baby",tame:"minecraft:entity/wolf/wolf_chestnut_tame_baby",wild:"minecraft:entity/wolf/wolf_chestnut_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry",tame:"minecraft:entity/wolf/wolf_chestnut_tame",wild:"minecraft:entity/wolf/wolf_chestnut"},baby_assets:{angry:"minecraft:entity/wolf/wolf_chestnut_angry_baby",tame:"minecraft:entity/wolf/wolf_chestnut_tame_baby",wild:"minecraft:entity/wolf/wolf_chestnut_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:pale:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_angry",tame:"minecraft:entity/wolf/wolf_tame",wild:"minecraft:entity/wolf/wolf"},baby_assets:{angry:"minecraft:entity/wolf/wolf_angry_baby",tame:"minecraft:entity/wolf/wolf_tame_baby",wild:"minecraft:entity/wolf/wolf_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_angry",tame:"minecraft:entity/wolf/wolf_tame",wild:"minecraft:entity/wolf/wolf"},baby_assets:{angry:"minecraft:entity/wolf/wolf_angry_baby",tame:"minecraft:entity/wolf/wolf_tame_baby",wild:"minecraft:entity/wolf/wolf_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_angry",tame:"minecraft:entity/wolf/wolf_tame",wild:"minecraft:entity/wolf/wolf"},baby_assets:{angry:"minecraft:entity/wolf/wolf_angry_baby",tame:"minecraft:entity/wolf/wolf_tame_baby",wild:"minecraft:entity/wolf/wolf_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_angry",tame:"minecraft:entity/wolf/wolf_tame",wild:"minecraft:entity/wolf/wolf"},baby_assets:{angry:"minecraft:entity/wolf/wolf_angry_baby",tame:"minecraft:entity/wolf/wolf_tame_baby",wild:"minecraft:entity/wolf/wolf_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_angry",tame:"minecraft:entity/wolf/wolf_tame",wild:"minecraft:entity/wolf/wolf"},baby_assets:{angry:"minecraft:entity/wolf/wolf_angry_baby",tame:"minecraft:entity/wolf/wolf_tame_baby",wild:"minecraft:entity/wolf/wolf_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:rusty:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry",tame:"minecraft:entity/wolf/wolf_rusty_tame",wild:"minecraft:entity/wolf/wolf_rusty"},baby_assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry_baby",tame:"minecraft:entity/wolf/wolf_rusty_tame_baby",wild:"minecraft:entity/wolf/wolf_rusty_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry",tame:"minecraft:entity/wolf/wolf_rusty_tame",wild:"minecraft:entity/wolf/wolf_rusty"},baby_assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry_baby",tame:"minecraft:entity/wolf/wolf_rusty_tame_baby",wild:"minecraft:entity/wolf/wolf_rusty_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry",tame:"minecraft:entity/wolf/wolf_rusty_tame",wild:"minecraft:entity/wolf/wolf_rusty"},baby_assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry_baby",tame:"minecraft:entity/wolf/wolf_rusty_tame_baby",wild:"minecraft:entity/wolf/wolf_rusty_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry",tame:"minecraft:entity/wolf/wolf_rusty_tame",wild:"minecraft:entity/wolf/wolf_rusty"},baby_assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry_baby",tame:"minecraft:entity/wolf/wolf_rusty_tame_baby",wild:"minecraft:entity/wolf/wolf_rusty_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry",tame:"minecraft:entity/wolf/wolf_rusty_tame",wild:"minecraft:entity/wolf/wolf_rusty"},baby_assets:{angry:"minecraft:entity/wolf/wolf_rusty_angry_baby",tame:"minecraft:entity/wolf/wolf_rusty_tame_baby",wild:"minecraft:entity/wolf/wolf_rusty_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:snowy:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry",tame:"minecraft:entity/wolf/wolf_snowy_tame",wild:"minecraft:entity/wolf/wolf_snowy"},baby_assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry_baby",tame:"minecraft:entity/wolf/wolf_snowy_tame_baby",wild:"minecraft:entity/wolf/wolf_snowy_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry",tame:"minecraft:entity/wolf/wolf_snowy_tame",wild:"minecraft:entity/wolf/wolf_snowy"},baby_assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry_baby",tame:"minecraft:entity/wolf/wolf_snowy_tame_baby",wild:"minecraft:entity/wolf/wolf_snowy_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry",tame:"minecraft:entity/wolf/wolf_snowy_tame",wild:"minecraft:entity/wolf/wolf_snowy"},baby_assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry_baby",tame:"minecraft:entity/wolf/wolf_snowy_tame_baby",wild:"minecraft:entity/wolf/wolf_snowy_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry",tame:"minecraft:entity/wolf/wolf_snowy_tame",wild:"minecraft:entity/wolf/wolf_snowy"},baby_assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry_baby",tame:"minecraft:entity/wolf/wolf_snowy_tame_baby",wild:"minecraft:entity/wolf/wolf_snowy_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry",tame:"minecraft:entity/wolf/wolf_snowy_tame",wild:"minecraft:entity/wolf/wolf_snowy"},baby_assets:{angry:"minecraft:entity/wolf/wolf_snowy_angry_baby",tame:"minecraft:entity/wolf/wolf_snowy_tame_baby",wild:"minecraft:entity/wolf/wolf_snowy_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:spotted:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry",tame:"minecraft:entity/wolf/wolf_spotted_tame",wild:"minecraft:entity/wolf/wolf_spotted"},baby_assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry_baby",tame:"minecraft:entity/wolf/wolf_spotted_tame_baby",wild:"minecraft:entity/wolf/wolf_spotted_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry",tame:"minecraft:entity/wolf/wolf_spotted_tame",wild:"minecraft:entity/wolf/wolf_spotted"},baby_assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry_baby",tame:"minecraft:entity/wolf/wolf_spotted_tame_baby",wild:"minecraft:entity/wolf/wolf_spotted_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry",tame:"minecraft:entity/wolf/wolf_spotted_tame",wild:"minecraft:entity/wolf/wolf_spotted"},baby_assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry_baby",tame:"minecraft:entity/wolf/wolf_spotted_tame_baby",wild:"minecraft:entity/wolf/wolf_spotted_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry",tame:"minecraft:entity/wolf/wolf_spotted_tame",wild:"minecraft:entity/wolf/wolf_spotted"},baby_assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry_baby",tame:"minecraft:entity/wolf/wolf_spotted_tame_baby",wild:"minecraft:entity/wolf/wolf_spotted_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry",tame:"minecraft:entity/wolf/wolf_spotted_tame",wild:"minecraft:entity/wolf/wolf_spotted"},baby_assets:{angry:"minecraft:entity/wolf/wolf_spotted_angry_baby",tame:"minecraft:entity/wolf/wolf_spotted_tame_baby",wild:"minecraft:entity/wolf/wolf_spotted_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:striped:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_striped_angry",tame:"minecraft:entity/wolf/wolf_striped_tame",wild:"minecraft:entity/wolf/wolf_striped"},baby_assets:{angry:"minecraft:entity/wolf/wolf_striped_angry_baby",tame:"minecraft:entity/wolf/wolf_striped_tame_baby",wild:"minecraft:entity/wolf/wolf_striped_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_striped_angry",tame:"minecraft:entity/wolf/wolf_striped_tame",wild:"minecraft:entity/wolf/wolf_striped"},baby_assets:{angry:"minecraft:entity/wolf/wolf_striped_angry_baby",tame:"minecraft:entity/wolf/wolf_striped_tame_baby",wild:"minecraft:entity/wolf/wolf_striped_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_striped_angry",tame:"minecraft:entity/wolf/wolf_striped_tame",wild:"minecraft:entity/wolf/wolf_striped"},baby_assets:{angry:"minecraft:entity/wolf/wolf_striped_angry_baby",tame:"minecraft:entity/wolf/wolf_striped_tame_baby",wild:"minecraft:entity/wolf/wolf_striped_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_striped_angry",tame:"minecraft:entity/wolf/wolf_striped_tame",wild:"minecraft:entity/wolf/wolf_striped"},baby_assets:{angry:"minecraft:entity/wolf/wolf_striped_angry_baby",tame:"minecraft:entity/wolf/wolf_striped_tame_baby",wild:"minecraft:entity/wolf/wolf_striped_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_striped_angry",tame:"minecraft:entity/wolf/wolf_striped_tame",wild:"minecraft:entity/wolf/wolf_striped"},baby_assets:{angry:"minecraft:entity/wolf/wolf_striped_angry_baby",tame:"minecraft:entity/wolf/wolf_striped_tame_baby",wild:"minecraft:entity/wolf/wolf_striped_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+>> Errors in element minecraft:woods:
+java.lang.IllegalStateException: Failed to parse value {assets:{angry:"minecraft:entity/wolf/wolf_woods_angry",tame:"minecraft:entity/wolf/wolf_woods_tame",wild:"minecraft:entity/wolf/wolf_woods"},baby_assets:{angry:"minecraft:entity/wolf/wolf_woods_angry_baby",tame:"minecraft:entity/wolf/wolf_woods_tame_baby",wild:"minecraft:entity/wolf/wolf_woods_baby"},spawn_conditions:[]} from server
+	at akq.a(SourceFile:321)
+	at akq$a.a(SourceFile:112)
+	at akq.a(SourceFile:176)
+	at akq.a(SourceFile:185)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at akq.a(SourceFile:185)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+Caused by: java.lang.IllegalStateException: No key biomes in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_woods_angry",tame:"minecraft:entity/wolf/wolf_woods_tame",wild:"minecraft:entity/wolf/wolf_woods"},baby_assets:{angry:"minecraft:entity/wolf/wolf_woods_angry_baby",tame:"minecraft:entity/wolf/wolf_woods_tame_baby",wild:"minecraft:entity/wolf/wolf_woods_baby"},spawn_conditions:[]}]; No key angry_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_woods_angry",tame:"minecraft:entity/wolf/wolf_woods_tame",wild:"minecraft:entity/wolf/wolf_woods"},baby_assets:{angry:"minecraft:entity/wolf/wolf_woods_angry_baby",tame:"minecraft:entity/wolf/wolf_woods_tame_baby",wild:"minecraft:entity/wolf/wolf_woods_baby"},spawn_conditions:[]}]; No key tame_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_woods_angry",tame:"minecraft:entity/wolf/wolf_woods_tame",wild:"minecraft:entity/wolf/wolf_woods"},baby_assets:{angry:"minecraft:entity/wolf/wolf_woods_angry_baby",tame:"minecraft:entity/wolf/wolf_woods_tame_baby",wild:"minecraft:entity/wolf/wolf_woods_baby"},spawn_conditions:[]}]; No key wild_texture in MapLike[{assets:{angry:"minecraft:entity/wolf/wolf_woods_angry",tame:"minecraft:entity/wolf/wolf_woods_tame",wild:"minecraft:entity/wolf/wolf_woods"},baby_assets:{angry:"minecraft:entity/wolf/wolf_woods_angry_baby",tame:"minecraft:entity/wolf/wolf_woods_tame_baby",wild:"minecraft:entity/wolf/wolf_woods_baby"},spawn_conditions:[]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at akq.a(SourceFile:318)
+	... 21 more
+
+[23:16:46] [Render thread/ERROR]: Failed to handle packet aau@80949d1, disconnecting
+z: Registry Loading
+	at ggo.a(SourceFile:99) ~[client.jar:?]
+	at ggo.a(SourceFile:146) ~[client.jar:?]
+	at gfy.a(SourceFile:117) ~[client.jar:?]
+	at gfy.a(SourceFile:109) ~[client.jar:?]
+	at gfy.a(SourceFile:117) ~[client.jar:?]
+	at aau.a(SourceFile:22) ~[client.jar:?]
+	at aau.a(SourceFile:8) ~[client.jar:?]
+	at yz.a(SourceFile:27) [client.jar:?]
+	at bra.d(SourceFile:164) [client.jar:?]
+	at bre.d(SourceFile:23) [client.jar:?]
+	at bra.B(SourceFile:138) [client.jar:?]
+	at bra.bA(SourceFile:123) [client.jar:?]
+	at flk.c(SourceFile:1296) [client.jar:?]
+	at flk.f(SourceFile:922) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:267) [client.jar:?]
+Caused by: java.lang.IllegalStateException: Failed to load registries due to errors
+	at akq.c(SourceFile:253) ~[client.jar:?]
+	at akq.a(SourceFile:234) ~[client.jar:?]
+	at akq.a(SourceFile:201) ~[client.jar:?]
+	at akq.a(SourceFile:176) ~[client.jar:?]
+	at ggo.a(SourceFile:95) ~[client.jar:?]
+	... 14 more
+XIO:  fatal IO error 2 (No such file or directory) on X server ":100"
+      after 596 requests (590 known processed) with 0 events remaining.

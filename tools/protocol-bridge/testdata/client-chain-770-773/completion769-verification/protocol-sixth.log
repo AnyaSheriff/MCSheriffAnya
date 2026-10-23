@@ -1,0 +1,12 @@
+
+running 7 tests
+test client_769::tests::attributes769_skip_camera_and_waypoints_without_shifting_attack ... ok
+test client_769::tests::chat769_adds_only_the_later_checksum_and_rejects_a_tail ... ok
+test client_769::tests::dropped_variants_still_parse_the_complete_metadata_value ... ok
+test client_769::tests::advancements769_have_no_trailing_show_flag ... ok
+test client_769::tests::tooltip_booleans_are_typed_and_untrusted769_has_no_length_envelope ... ok
+test client_769::tests::palettes769_include_explicit_word_counts_and_reject_truncated_lengths ... ok
+test client_769::tests::all_canonical_content_has_explicit_769_views_without_changing_ids ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 286 filtered out; finished in 0.01s
+

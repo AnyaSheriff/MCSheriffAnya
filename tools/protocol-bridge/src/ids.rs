@@ -16,20 +16,32 @@ pub enum IdTranslationError {
 pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
-    if registry==RegistryKind::Attribute && (from==JavaVersion::V1_21_5 || to==JavaVersion::V1_21_5) {
+    if registry==RegistryKind::Attribute && (from==JavaVersion::V1_21_4 || to==JavaVersion::V1_21_4) {
+        let upper=JavaVersion::V1_21_11;
+        // Wiki Attribute: у769 нет camera_distance и waypoint; JSON неполон.
+        // [проверить] Все32 значения отдельно; живой checklist проверяет attack/speed.
+        if from==JavaVersion::V1_21_4 {
+            if id>=32 {return Err(IdTranslationError::UnknownId(id));}
+            if to==from {return Ok(id);}
+            return translate(registry,upper,to,if id>=8 {id+1}else{id});
+        }
+        let mapped=translate(registry,from,upper,id)?;
+        return if mapped==8 || mapped>=33 {Err(IdTranslationError::MissingTarget(id))}else{Ok(if mapped>8 {mapped-1}else{mapped})};
+    }
+    if registry==RegistryKind::Attribute && (matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) || matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5)) {
         let upper=JavaVersion::V1_21_11;
         // Четыре пропуска старого JSON уже исправлены в774; waypoint добавлен771.
-        if from==JavaVersion::V1_21_5 && to==from {return if id<33 {Ok(id)}else{Err(IdTranslationError::UnknownId(id))};}
-        if from==JavaVersion::V1_21_5 {if id>=33 {return Err(IdTranslationError::UnknownId(id));}return translate(registry,upper,to,id);}
+        if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) && to==from {return if id<33 {Ok(id)}else{Err(IdTranslationError::UnknownId(id))};}
+        if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) {if id>=33 {return Err(IdTranslationError::UnknownId(id));}return translate(registry,upper,to,id);}
         let mapped=translate(registry,from,upper,id)?;
         return if mapped<33 {Ok(mapped)}else{Err(IdTranslationError::MissingTarget(id))};
     }
-    if registry==RegistryKind::Attribute && (matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9)) {
+    if registry==RegistryKind::Attribute && (matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9)) {
         // JSON773 повторяет тот же неполный список774; используем исправленную
         // таблицу774, а значения проверяем непрозрачным клиентом773.
-        return translate(registry,if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{from},if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{to},id);
+        return translate(registry,if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{from},if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{to},id);
     }
-    if (770..=773).contains(&from.protocol()) || (770..=773).contains(&to.protocol()) {
+    if (769..=773).contains(&from.protocol()) || (769..=773).contains(&to.protocol()) {
         let route = crate::chain::path(from,to).map_err(|_| IdTranslationError::UnsupportedVersion(if from == JavaVersion::V1_12_2 {from} else {to}))?;
         if from == to {
             let (count,_) = crate::generated_client_chain::ranges(registry,from,crate::chain::neighbor(from))
@@ -44,7 +56,7 @@ pub fn translate(
                     .ok_or(IdTranslationError::UnknownId(mapped))?;
                 if offset == 65535 {return Err(IdTranslationError::MissingTarget(mapped));}
                 mapped = (i64::from(mapped)+i64::from(offset)) as u32;
-            } else if edge.iter().any(|v| (770..=773).contains(&v.protocol())) {
+            } else if edge.iter().any(|v| (769..=773).contains(&v.protocol())) {
                 return Err(IdTranslationError::UnsupportedVersion(edge[0]));
             } else {mapped = translate(registry,edge[0],edge[1],mapped)?;}
         }

@@ -27,11 +27,12 @@ def main():
     p.add_argument('--protocol', type=Path, required=True)
     p.add_argument('--primary', type=int, choices=(775,777), required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument("--client",type=int,choices=(769,770),default=770)
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
     protocol = json.loads(a.protocol.read_text())
     executable=a.binary or a.test_binary
-    report = dict(client=770, primary=a.primary, checks=[], status='failed', public_admission=bool(a.binary),
+    report = dict(client=a.client, primary=a.primary, checks=[], status='failed', public_admission=bool(a.binary),
                   binary_sha256=hashlib.sha256(executable.read_bytes()).hexdigest())
     password = secrets.token_hex(16)
     wrong = secrets.token_hex(16)
@@ -46,12 +47,12 @@ def main():
             primary='26.3' if a.primary==777 else '26.1.2'
             (root/'config/mcsa.properties').write_text(f'java-version={primary}\nauth-enabled=true\nauth-premium=false\nsend-error-reports=false\nbedrock-port=0\nprefetch-chunks=0\n')
             (root/'config/skins.toml').write_text('mojang=false\nely=false\n')
-            (root/'config/server.properties').write_text('server-ip=127.0.0.1\nserver-port=26127\nonline-mode=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\n')
+            (root/'config/server.properties').write_text(f'server-ip=127.0.0.1\nserver-port={26126 if a.client==769 else 26127}\nonline-mode=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\n')
         log_path = a.output / 'server.log'
         with log_path.open('w') as log:
             try:
                 argv=[str(a.binary.resolve())] if a.binary else [str(a.test_binary.resolve()), '--ignored', '--exact',
-                    'gameplay_probe::serve_java_1_21_5_probe', '--nocapture']
+                    ('gameplay_probe::serve_java_1_21_4_probe' if a.client==769 else 'gameplay_probe::serve_java_1_21_5_probe'), '--nocapture']
                 server = subprocess.Popen(argv, cwd=root,
                     stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True)
                 until = time.monotonic()+120
@@ -61,7 +62,7 @@ def main():
                     time.sleep(.1)
                 class Client(GameplayProbe):
                     def __init__(self, sock, pr, registered, reject=False):
-                        super().__init__(sock, pr, 0, 770)
+                        super().__init__(sock, pr, 0, a.client)
                         self.registered, self.reject = registered, reject
                         self.prompts = self.resets = 0
                         self.joins = log_path.read_text().count('вошёл с номером сущности')
@@ -95,7 +96,7 @@ def main():
                                     send(self.sock,b'\x03'); break
                             else: raise AssertionError('configuration budget')
                 def login(registered, reject=False):
-                    c = connect(26127, protocol, lambda s, pr: Client(s, pr, registered, reject), 770)
+                    c = connect(26126 if a.client==769 else 26127, protocol, lambda s, pr: Client(s, pr, registered, reject), a.client)
                     return c
                 client = login(False)
                 client.pump(30, lambda _: client.resets==1 and 'window_items' in client.seen)

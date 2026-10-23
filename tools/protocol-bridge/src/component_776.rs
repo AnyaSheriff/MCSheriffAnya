@@ -37,7 +37,7 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
     // Наблюдение payload-actions-instrument775: у776 instrument — holder без bool.
     // Внутренний writer775 хранит прежнюю bool+holder форму. JSON здесь неточен.
     if kind==61 {
-        let legacy=!matches!(spaces.0,IdSpace::Wire(JavaVersion::V26_2));
+        let legacy=!matches!(spaces.0,IdSpace::Wire(JavaVersion::V1_21_4 | JavaVersion::V26_2));
         if legacy && !input.boolean()? {return Err(Error::UnsupportedComponent(61));}
         let direct=input.0;
         if holder(input)? {
@@ -45,7 +45,7 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
             skip_string(input)?;if input.boolean()?{float(input)?;}float(input)?;float(input)?;text(input)?;
         }
         let mut out=Vec::new();
-        if !matches!(spaces.1,IdSpace::Wire(JavaVersion::V26_2)){out.push(1);}
+        if !matches!(spaces.1,IdSpace::Wire(JavaVersion::V1_21_4 | JavaVersion::V26_2)){out.push(1);}
         out.extend(&direct[..direct.len()-input.0.len()]);return Ok(out);
     }
     if kind==77 {
@@ -66,6 +66,9 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
             }else{out.extend(nbt);}
             uint(&mut out,input.uint()?);uint(&mut out,input.uint()?);
         }return Ok(out);
+    }
+    if kind==56 && (matches!(spaces.0,IdSpace::Wire(JavaVersion::V1_21_4)) || matches!(spaces.1,IdSpace::Wire(JavaVersion::V1_21_4))) {
+        return crate::client_769::trim(input,spaces);
     }
     let start=input.0;
     match kind {
@@ -111,22 +114,24 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
 }
 
 pub(crate) fn supported_pair(from:JavaVersion,to:JavaVersion)->bool{
-    matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+    matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
 }
 
 /// Equippable770 заканчивается на equipOnInteract, shearable появился771.
 pub(crate) fn equippable_770(input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,spaces:(IdSpace,IdSpace))->Result<Vec<u8>,Error>{
-    let mut out=Vec::new();uint(&mut out,input.count(7)? as u32);
+    let mut out=Vec::new();let slot=input.count(if from==JavaVersion::V1_21_4 {6}else{7})?;uint(&mut out,if to==JavaVersion::V1_21_4 && slot==7 {6}else{slot as u32});
     let sound=input.uint()?;if sound!=0{return Err(Error::UnsupportedComponent(32));}uint(&mut out,sound);
     if sound==0 {string(input,&mut out)?;let range=input.boolean()?;out.push(u8::from(range));if range {let data=input.0;float(input)?;out.extend(&data[..4]);}}
     for _ in 0..2 {let present=input.boolean()?;out.push(u8::from(present));if present {string(input,&mut out)?;}}
     let present=input.boolean()?;out.push(u8::from(present));
     if present {let n=input.count(4097)?;uint(&mut out,n as u32);if n==0 {string(input,&mut out)?;}else{for _ in 1..n {uint(&mut out,context.content.map(RegistryKind::Entity,spaces.0,spaces.1,input.uint()?).map_err(Error::Content)?);}}}
-    for _ in 0..4 {out.push(u8::from(input.boolean()?));}
+    for _ in 0..3 {out.push(u8::from(input.boolean()?));}
+    let interact=if from==JavaVersion::V1_21_4 {false}else{input.boolean()?};
+    if to!=JavaVersion::V1_21_4 {out.push(u8::from(interact));}
     let mut tail=Vec::new();
-    if from!=JavaVersion::V1_21_5 {tail.push(u8::from(input.boolean()?));let sound=input.uint()?;if sound!=0{return Err(Error::UnsupportedComponent(32));}uint(&mut tail,sound);if sound==0 {string(input,&mut tail)?;let range=input.boolean()?;tail.push(u8::from(range));if range {let data=input.0;float(input)?;tail.extend(&data[..4]);}}}
+    if !matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) {tail.push(u8::from(input.boolean()?));let sound=input.uint()?;if sound!=0{return Err(Error::UnsupportedComponent(32));}uint(&mut tail,sound);if sound==0 {string(input,&mut tail)?;let range=input.boolean()?;tail.push(u8::from(range));if range {let data=input.0;float(input)?;tail.extend(&data[..4]);}}}
     // [проверить] У770 нет shearingSound; выбранный именованный звук
     // заполняет только выключенное поле shearable=false, не игровые правила.
     else {tail.extend([0,0]);uint(&mut tail,26);tail.extend(b"minecraft:entity.sheep.shear");tail.push(0);}
-    if to!=JavaVersion::V1_21_5 {out.extend(tail);}Ok(out)
+    if !matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) {out.extend(tail);}Ok(out)
 }

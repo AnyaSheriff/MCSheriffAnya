@@ -7,11 +7,13 @@ mod generated_step1;
 mod generated_client_chain;
 pub mod adjacent;
 mod generated_payload_774;
+mod generated_payload_769;
 mod generated_payload_770;
 mod generated_payload_771;
 mod generated_payload_772;
 mod generated_payload_773;
 pub mod client_774;
+pub mod client_769;
 pub mod client_770;
 pub mod client_771;
 pub mod client_772;
@@ -69,20 +71,20 @@ pub mod client_776;
 pub use client_776 as probe_776;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum JavaVersion { V1_21_5, V1_21_6, V1_21_8, V1_21_9, V1_21_11, V1_12_2, V26_1_2, V26_2, V26_3 }
+pub enum JavaVersion { V1_21_4, V1_21_5, V1_21_6, V1_21_8, V1_21_9, V1_21_11, V1_12_2, V26_1_2, V26_2, V26_3 }
 
 impl JavaVersion {
     pub const fn protocol(self) -> i32 {
-        match self { Self::V1_21_5 => 770, Self::V1_21_6 => 771, Self::V1_21_8 => 772, Self::V1_21_9 => 773, Self::V1_21_11 => 774, Self::V1_12_2 => 340, Self::V26_1_2 => 775, Self::V26_2 => 776, Self::V26_3 => 777 }
+        match self { Self::V1_21_4 => 769, Self::V1_21_5 => 770, Self::V1_21_6 => 771, Self::V1_21_8 => 772, Self::V1_21_9 => 773, Self::V1_21_11 => 774, Self::V1_12_2 => 340, Self::V26_1_2 => 775, Self::V26_2 => 776, Self::V26_3 => 777 }
     }
     pub const fn name(self) -> &'static str {
-        match self { Self::V1_21_5 => "1.21.5", Self::V1_21_6 => "1.21.6", Self::V1_21_8 => "1.21.8", Self::V1_21_9 => "1.21.9", Self::V1_21_11 => "1.21.11", Self::V1_12_2 => "1.12.2", Self::V26_1_2 => "26.1.2", Self::V26_2 => "26.2", Self::V26_3 => "26.3" }
+        match self { Self::V1_21_4 => "1.21.4", Self::V1_21_5 => "1.21.5", Self::V1_21_6 => "1.21.6", Self::V1_21_8 => "1.21.8", Self::V1_21_9 => "1.21.9", Self::V1_21_11 => "1.21.11", Self::V1_12_2 => "1.12.2", Self::V26_1_2 => "26.1.2", Self::V26_2 => "26.2", Self::V26_3 => "26.3" }
     }
     pub fn from_name(name: &str) -> Option<Self> {
-        match name { "1.21.5" => Some(Self::V1_21_5), "1.21.6" => Some(Self::V1_21_6), "1.21.7" | "1.21.8" => Some(Self::V1_21_8), "1.21.9" | "1.21.10" => Some(Self::V1_21_9), "1.21.11" => Some(Self::V1_21_11), "1.12.2" => Some(Self::V1_12_2), "26.1.2" => Some(Self::V26_1_2), "26.2" => Some(Self::V26_2), "26.3" => Some(Self::V26_3), _ => None }
+        match name { "1.21.4" => Some(Self::V1_21_4), "1.21.5" => Some(Self::V1_21_5), "1.21.6" => Some(Self::V1_21_6), "1.21.7" | "1.21.8" => Some(Self::V1_21_8), "1.21.9" | "1.21.10" => Some(Self::V1_21_9), "1.21.11" => Some(Self::V1_21_11), "1.12.2" => Some(Self::V1_12_2), "26.1.2" => Some(Self::V26_1_2), "26.2" => Some(Self::V26_2), "26.3" => Some(Self::V26_3), _ => None }
     }
     pub const fn from_protocol(protocol: i32) -> Option<Self> {
-        match protocol { 770 => Some(Self::V1_21_5), 771 => Some(Self::V1_21_6), 772 => Some(Self::V1_21_8), 773 => Some(Self::V1_21_9), 774 => Some(Self::V1_21_11), 340 => Some(Self::V1_12_2), 775 => Some(Self::V26_1_2), 776 => Some(Self::V26_2), 777 => Some(Self::V26_3), _ => None }
+        match protocol { 769 => Some(Self::V1_21_4), 770 => Some(Self::V1_21_5), 771 => Some(Self::V1_21_6), 772 => Some(Self::V1_21_8), 773 => Some(Self::V1_21_9), 774 => Some(Self::V1_21_11), 340 => Some(Self::V1_12_2), 775 => Some(Self::V26_1_2), 776 => Some(Self::V26_2), 777 => Some(Self::V26_3), _ => None }
     }
 }
 

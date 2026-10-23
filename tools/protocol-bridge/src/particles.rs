@@ -17,15 +17,16 @@ pub(crate) fn particle(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
     let kind = ids::translate(RegistryKind::Particle,from,JavaVersion::V26_1_2,source)?;
     // Явные визуальные виды новых эффектов; [проверить] сходство картинки,
     // игровые сроки роста/частиц на основном не меняются.
-    let view=if to==JavaVersion::V1_21_5 {crate::generated_payload_770::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)} else if to==JavaVersion::V1_21_6 {crate::generated_payload_771::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)}else if to==JavaVersion::V1_21_8 {crate::generated_payload_772::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)}else{None};
+    let view=if to==JavaVersion::V1_21_4 {crate::generated_payload_769::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)} else if to==JavaVersion::V1_21_5 {crate::generated_payload_770::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)} else if to==JavaVersion::V1_21_6 {crate::generated_payload_771::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)}else if to==JavaVersion::V1_21_8 {crate::generated_payload_772::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)}else{None};
     uint(out,match view {Some(id)=>id,None=>ids::translate(RegistryKind::Particle,from,to,source)?});
-    if matches!(kind,8|16|42|46) && (matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) || matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8)) {
-        if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {return Err(Error::PayloadUnavailable("772 particle parameters absent"));}
+    if matches!(kind,8|16|42|46) && (matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) || matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8)) {
+        if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {return Err(Error::PayloadUnavailable("772 particle parameters absent"));}
         let mut discarded=Vec::new();
         if kind!=8 {discarded.extend(input.take(4)?);}
         if kind!=42 {floats(input,&mut discarded,1,false)?;}
         return Ok(());
     }
+    if to==JavaVersion::V1_21_4 && kind==36 {input.take(4)?;return Ok(());}
     match kind {
         1 | 2 | 29 | 111 | 115 => uint(out,context.content.packet_id(RegistryKind::BlockState,from,to,input.uint()?)?),
         14 | 15 => { out.extend(input.take(if kind == 14 {4} else {8})?); floats(input,out,1,false)?; }

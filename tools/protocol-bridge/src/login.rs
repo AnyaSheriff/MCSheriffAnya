@@ -25,7 +25,7 @@ pub struct Success {
 pub enum Error { UnsupportedVersion, Truncated, Invalid, TooLarge, MissingSessionId, UnexpectedSessionId }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if !matches!(version, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
 fn valid_name(name: &str) -> bool {
@@ -68,7 +68,7 @@ impl Success {
         if self.properties.len() > MAX_PROPERTIES { return Err(Error::TooLarge); }
         match (version, self.session_id) {
             (JavaVersion::V26_2 | JavaVersion::V26_3, None) => return Err(Error::MissingSessionId),
-            (JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedSessionId),
+            (JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedSessionId),
             _ => {}
         }
         let mut out = self.uuid.to_vec();

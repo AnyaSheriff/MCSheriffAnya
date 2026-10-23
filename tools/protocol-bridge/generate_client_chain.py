@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Закреплённые соседние таблицы770↔771↔772↔773↔774; не полный Play/dопуск."""
+"""Закреплённые соседние таблицы769↔770↔771↔772↔773↔774; не полный Play/dопуск."""
 import argparse
 import hashlib
 import json
@@ -13,7 +13,7 @@ from generate_static_776 import direct_mapping
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
-VERSIONS = {770: 'V1_21_5', 771: 'V1_21_6', 772: 'V1_21_8', 773: 'V1_21_9', 774: 'V1_21_11'}
+VERSIONS = {769: 'V1_21_4', 770: 'V1_21_5', 771: 'V1_21_6', 772: 'V1_21_8', 773: 'V1_21_9', 774: 'V1_21_11'}
 KINDS = ('Item', 'Block', 'BlockState', 'Entity', 'Component', 'Particle')
 
 
@@ -68,7 +68,7 @@ def generate(docs):
     text += "type Ranges = (u32, &'static [(u32,u32,i32)]);\n"
     ranges, packets, arrays = [], [], []
     report = {'scope': 'Pinned schema/static ID evidence only; controls implemented, full Play and admission CLOSED', 'edges': {}}
-    for older in (773, 772, 771, 770):
+    for older in (773, 772, 771, 770, 769):
         newer = older + 1
         rows = compare(docs[older]['protocol'], docs[newer]['protocol'])
         report['edges'][f'{older}-{newer}'] = {'packets': rows, 'registries': {}}
@@ -119,7 +119,7 @@ def main():
             assert path.read_text() == value, path
         else:
             path.write_text(value)
-    print(json.dumps({'edges': 4, 'rust_bytes': len(text.encode()), 'sha256': hashlib.sha256(text.encode()).hexdigest()}))
+    print(json.dumps({'edges': 5, 'rust_bytes': len(text.encode()), 'sha256': hashlib.sha256(text.encode()).hexdigest()}))
 
 
 if __name__ == '__main__':

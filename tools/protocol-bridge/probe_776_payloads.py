@@ -13,7 +13,7 @@ from generate_tables import states
 
 
 def table(cache, name):
-    if cache.name in ('770','771','772','773'):
+    if cache.name in ('769','770','771','772','773'):
         locks=json.loads((Path(__file__).resolve().parent/'client-chain-sources.json').read_text())['versions'][cache.name]['files']
         record=locks[name];raw=(cache/(name+'.json')).read_bytes()
         assert len(raw)==record['bytes'] and hashlib.sha256(raw).hexdigest()==record['sha256']

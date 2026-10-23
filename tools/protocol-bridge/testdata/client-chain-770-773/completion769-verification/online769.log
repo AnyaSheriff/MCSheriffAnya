@@ -1,0 +1,6 @@
+
+running 1 test
+test network::online::tests::login_with_in_memory_session_service ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2996 filtered out; finished in 0.04s
+

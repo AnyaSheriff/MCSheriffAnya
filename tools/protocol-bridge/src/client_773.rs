@@ -75,7 +75,7 @@ pub(crate) fn translate_selected(direction:Direction,from:JavaVersion,to:JavaVer
             out.extend(input.take(2)?);
             slot(&mut input, &mut out, from, to, true, context.items)?;
         }
-        (Direction::Serverbound, "window_click") => crate::actions::click_with_content(&mut input, &mut out, from, to, context.items.content)?,
+        (Direction::Serverbound, "window_click") => crate::actions::click_with_context(&mut input, &mut out, from, to, context.items)?,
         (Direction::Serverbound, "enchant_item") => {
             uint(&mut out, input.uint()?);
             let selected = if from == JavaVersion::V1_21_9 { input.count(2)? as u8 } else {

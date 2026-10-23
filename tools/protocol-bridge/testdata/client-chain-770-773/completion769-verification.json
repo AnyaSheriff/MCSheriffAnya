@@ -1,0 +1,596 @@
+{
+  "status": "pass",
+  "scope": "Client translation only; primary gameplay and canonical saves unchanged; no new admission gates",
+  "counts": {
+    "rust": 3205,
+    "ignored": 102,
+    "python": 237
+  },
+  "admission": [
+    {
+      "primary": "26.1.2",
+      "client": 769,
+      "open": true
+    },
+    {
+      "primary": "26.1.2",
+      "client": 770,
+      "open": true
+    },
+    {
+      "primary": "26.1.2",
+      "client": 771,
+      "open": true
+    },
+    {
+      "primary": "26.1.2",
+      "client": 772,
+      "open": true
+    },
+    {
+      "primary": "26.1.2",
+      "client": 773,
+      "open": true
+    },
+    {
+      "primary": "26.1.2",
+      "client": 774,
+      "open": true
+    },
+    {
+      "primary": "26.1.2",
+      "client": 776,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 769,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 770,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 771,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 772,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 773,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 774,
+      "open": true
+    },
+    {
+      "primary": "26.3",
+      "client": 776,
+      "open": true
+    }
+  ],
+  "public_checks": 28,
+  "release_sha256": "a39b7e5666a164afdb222466a94d13664eb84a473a1cdf6f6e20bc18fc722dea",
+  "own_sessions": [
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-v7/769-gui775/result.json",
+      "sha256": "3f00cabf038ca11880f92466606764c43fe3ecfd8e27bca55733535ed1b129c8",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-final/769-gameplay775/result.json",
+      "sha256": "3a026dc34cdeb6787a876a691a9a42c98b8d2433ab1d8c56d63f043f6cf574b0",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-final/769-dimensions775/result.json",
+      "sha256": "09b3e9f918d0ec650ab20c6b4156f4450516dd7e35770568d116ba3215b8ffe7",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat-live/769-password775/result.json",
+      "sha256": "697a7d308fe3ea3ec5e9e824e4b14560d18fb35a4ef8f09da66f0f8ac3903761",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat-live/769-auth-gui775/result.json",
+      "sha256": "814b58897fee1941532c30ce6f11b09fa2289dc280d3c7bb88b7d5717d8c9a12",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 4
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-v7/769-gui777/result.json",
+      "sha256": "24b734cc81f5cdf24fdb56dfb7d9de940f358a79eef22ef89fd5d64cf181bc0e",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-final/769-gameplay777/result.json",
+      "sha256": "d15ddb37951f02dfdc28e0c06769f728ae6dfd6bf06e885b6642bcf5b2f2c285",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-final/769-dimensions777/result.json",
+      "sha256": "b2de9bcf9a573dba654d28c9857c81ffab3bdafcb90b14ebadff56ae832eca09",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat-live/769-password777/result.json",
+      "sha256": "9f4a74ade1c0e3fed366275dbfbe349593aa4b39224eff76d4e88f62066b5952",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat-live/769-auth-gui777/result.json",
+      "sha256": "4a443aac7e1161ec2313b4ce4307cca849e9757027c80d88e1d95e6d7c36d462",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 4
+    }
+  ],
+  "regression_sessions": [
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/770-gui775/result.json",
+      "sha256": "0c86380d77d9bbcc81543168d1f6245a72cff50c4ca8ebcd30a6307eb0a6e53c",
+      "binary_sha256": "91ef06e5350af8d02e7f03c7b14df7d8de95ae0862bb776eab842b5d5f4dc171",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/770-gameplay775/result.json",
+      "sha256": "6a4d48eeeb1adb39d54c2443c42053f01f30a9c2dc957e6ca98d44138bfec5eb",
+      "binary_sha256": "cd0866167c83cde9254d6c5b701e1517a06436cd3139c92d3a8d748a4f463887",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/770-dimensions775/result.json",
+      "sha256": "fbc7a8b274181df7ae8699f9d4fc5f94a2784a6ba7b0a5ad0bccc04af08bc630",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat770-regression/770-password775/result.json",
+      "sha256": "d748667c82401bb9285f7e863c291697eb7d63a995d93da1c55ec8ea20a7f05f",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat770-regression/770-auth-gui775/result.json",
+      "sha256": "d0da674e22ada4f37c44cd776616504d4f1ed5654772670728d90c5c07b8442d",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 4
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/770-gui777/result.json",
+      "sha256": "167dd9a42f3ba452d101f86d9f38701a40635b8ace05ccc3a9b2142f5c114c32",
+      "binary_sha256": "91ef06e5350af8d02e7f03c7b14df7d8de95ae0862bb776eab842b5d5f4dc171",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/770-gameplay777/result.json",
+      "sha256": "268be05f7574f046b4737d4bad50d9d082528ec0e8bfa77d8265717c932b110a",
+      "binary_sha256": "cd0866167c83cde9254d6c5b701e1517a06436cd3139c92d3a8d748a4f463887",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/770-dimensions777/result.json",
+      "sha256": "0d7bd2de103a55abc16b52bc04f265dd9f7e5119e445388f12d5f4f75b737346",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat770-regression/770-password777/result.json",
+      "sha256": "a1c8785ee29c5932dd88bb153d2f636560fc7fca2a8dae110a7187af5451b78b",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-chat770-regression/770-auth-gui777/result.json",
+      "sha256": "fb7ba92ba7d43b4b4c550be28efba356b55ad799fcb03aaf24cf6a3a37a64f8d",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 4
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/771-gui775/result.json",
+      "sha256": "30f1dd13bd2110155a4d8c2e7901c6faa8eb0d342594a0cb15a1aaceaeab5b2a",
+      "binary_sha256": "e4038513935f83a8fc05ece689624846af5a25e450fb7f0010410a9955bbb62d",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/771-gameplay775/result.json",
+      "sha256": "af8fb51520a9a3382412370906c791cef18ffe9a75a3857f185e1f525d4bdaf1",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/771-dimensions775/result.json",
+      "sha256": "f6183da1036d788300a3e531f164d08264a2d37d44ef9829fec95fc83d27755c",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/771-password775/result.json",
+      "sha256": "4d032cbe48d3c5cba1962369ba3c2fc6b86651b5931eda879047168bcc37e8dd",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/771-gui777/result.json",
+      "sha256": "b32d6b4fb36d11e81ba271c8916b33ad5f7df74b35601ffa7e8493e51294470c",
+      "binary_sha256": "e4038513935f83a8fc05ece689624846af5a25e450fb7f0010410a9955bbb62d",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/771-gameplay777/result.json",
+      "sha256": "9808dead8db80206a0438e11d6cb4e6ef7b557685d968785d6274f3e1fb48e97",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/771-dimensions777/result.json",
+      "sha256": "b588576810d7b019643e0342de265c9b20f9e2a9adc0096f27309321a950f8ec",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/771-password777/result.json",
+      "sha256": "252a14a33a49ed1f82d55b925a90fe82337a95aeda232a4c7ecd8f6f37c3c0f8",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/772-gui775/result.json",
+      "sha256": "178db1bef2bd4c785be01f9d4c16468df6f736c244f7263778792701d016207f",
+      "binary_sha256": "e4038513935f83a8fc05ece689624846af5a25e450fb7f0010410a9955bbb62d",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/772-gameplay775/result.json",
+      "sha256": "3f153ea47448566c68d0037b98b6be92e13f028b9a52866451da0673dc53139a",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/772-dimensions775/result.json",
+      "sha256": "22545bea682d6c64d2f0877c975e57d236e4d729f356df77a2d115e295a8847f",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/772-password775/result.json",
+      "sha256": "76bbf99d6d6c08f76b2c4a8f4b234293000b8f15818413be7fe01d318d089c2a",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/772-gui777/result.json",
+      "sha256": "197c00de000c902f3b1f8de704f00c6fe64050f032485929921c0f9c56ab8628",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/772-gameplay777/result.json",
+      "sha256": "d626e5c0f5701abcf15169c8abf9aa6407f551f7bae04e1ac0b711ed006d5f95",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/772-dimensions777/result.json",
+      "sha256": "ffcfdca997c5d31f0944d8748af6d35b60967bf005bd58a33b768f899a352942",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/772-password777/result.json",
+      "sha256": "c32f557e4ec2f757e2c597fd99772214bfcc2a3c6a233e37a008cd47b9340b54",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/773-gui775/result.json",
+      "sha256": "acd1b1dbde8eb6e05ca32d637dc7bae447ab36b04a21b98e235c34bf3285f142",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/773-gameplay775/result.json",
+      "sha256": "1eb909acf79813accc6db1e07e4996af26cb2b85b6d3f81c320242ea92775051",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/773-dimensions775/result.json",
+      "sha256": "5ffaf852a502debc69fb9c7cdb7673752c58aed8592e814e3abdcf555f53d879",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/773-password775/result.json",
+      "sha256": "d3fd2405c6bc2eab3a1df52b7afea3d46929054d4274ef36f3735b8efaf36825",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/773-gui777/result.json",
+      "sha256": "2eb3c41cd43eb13ad010c46a41d635cc0061035f5e83de8e65a8c4a3ebbbd4d2",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/773-gameplay777/result.json",
+      "sha256": "a558eb9d08fdd2291df9e59ca68a355f5db62450ba80da3fa04ee7bf3f0fd00d",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/773-dimensions777/result.json",
+      "sha256": "a7d1ab5b4199241d82b29e4df870faf89a833fd6847d486491a4b4734517b0a0",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/773-password777/result.json",
+      "sha256": "9b9e43d84dc88ae4a1b014bf0987c519e2600bca4c3c455f46d6ac56a81469eb",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/774-gui775/result.json",
+      "sha256": "66e274fe17e34924f3db4931219f82af0d2e7ee8da35c5e93de0e6e8cc121ce9",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/774-gameplay775/result.json",
+      "sha256": "b8186ba61b4755e306f45d19e2eb98d3459e0793a186e62e055718dc69bae47a",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/774-dimensions775/result.json",
+      "sha256": "6174aeba5e87927f8075cf329a210388732c72f533e0f8f74544a68c48423e2e",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/774-password775/result.json",
+      "sha256": "ff8f2dc44cef138942308f23626a2bc646142e755326e2e2d5c94ee56381ce1a",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/774-gui777/result.json",
+      "sha256": "254ed5c4e8642fd3d64125bc7f881ff24df530fc7afdcf69506633734dcbdfb8",
+      "binary_sha256": "13d87cdfc113a87401d4cd5e58c1537b4cc1d7e7537f71cd0fc41056a6148752",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/774-gameplay777/result.json",
+      "sha256": "1e7ab182ba9cf18993fcd8e85dc12e512407bc6d0391210b583292af8eb5045d",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/774-dimensions777/result.json",
+      "sha256": "7fa4dcf2b9a54147dba5990889caa931d3597ed817acc8d91252169806d4f0a2",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/774-password777/result.json",
+      "sha256": "0b1cd2a36a18792abcfb551bb2e9a9ccfa720a76e4bce89a3a8b026aa47b49c7",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/776-gui775/result.json",
+      "sha256": "a0f599f18712b0c2ed2723b07db31beaeead6f3f663fc18355fb360c34ff0e03",
+      "binary_sha256": "cd0866167c83cde9254d6c5b701e1517a06436cd3139c92d3a8d748a4f463887",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/776-gameplay775/result.json",
+      "sha256": "96c365ac2b736788012be4219402e47a1b6893b3d43d7b572eeb2e4078d18031",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/776-dimensions775/result.json",
+      "sha256": "29e5a99a43ec218ce9e3f7482d901f32709954eb9839d7bb61d1b09254ea6def",
+      "binary_sha256": "986ed1de0464fc77a03d27ee4ed6a711d48922d753651f68054400018650c261",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/776-password775/result.json",
+      "sha256": "6159ab72466d25e144ad7349443a503de795227f82cd7663ecce2ecfd202672e",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/776-gui777/result.json",
+      "sha256": "4d72ab02aa3e3f396db3073e36bedd209da2769076e5396a97054f6121d4e0e5",
+      "binary_sha256": "cd0866167c83cde9254d6c5b701e1517a06436cd3139c92d3a8d748a4f463887",
+      "checks": 6
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/776-gameplay777/result.json",
+      "sha256": "4cf1fcde96eddb1196768dc3c4482c22b224d6f90c52ab937333c9519e2e81cc",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 11
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression/776-dimensions777/result.json",
+      "sha256": "9cdf830aae32fe9004456ea4befbfc2fd8253dd7f175bbe6d42216ea0a46fcec",
+      "binary_sha256": "986ed1de0464fc77a03d27ee4ed6a711d48922d753651f68054400018650c261",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-regression-passwords/776-password777/result.json",
+      "sha256": "b7122854f3f0599b370eabc952fae94dda1253c191c5b3bae96e2ff57ec9ed19",
+      "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+      "checks": 5
+    }
+  ],
+  "production_auth": [
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-production-auth/769-password775/result.json",
+      "sha256": "2decc3ca8a6110b7c299e3cd1bd82c4d055fecfbb8ee5d9f3c4c2e5221aea4da",
+      "binary_sha256": "a39b7e5666a164afdb222466a94d13664eb84a473a1cdf6f6e20bc18fc722dea",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-production-auth/769-password777/result.json",
+      "sha256": "196ca831b4b049c5c9ba4f09e99bc8f43d67fbc290717a6e77800dc1f5de3860",
+      "binary_sha256": "a39b7e5666a164afdb222466a94d13664eb84a473a1cdf6f6e20bc18fc722dea",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-production-auth/770-password775/result.json",
+      "sha256": "1a7d247e46576f15f6a4b5917816340eb2e83369cc6d228d9850fb55fa58306b",
+      "binary_sha256": "a39b7e5666a164afdb222466a94d13664eb84a473a1cdf6f6e20bc18fc722dea",
+      "checks": 5
+    },
+    {
+      "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-production-auth/770-password777/result.json",
+      "sha256": "7ca6f439491ab0f6fa8c7d53607e48ef78db35fe0426501ab1b3864506cee38b",
+      "binary_sha256": "a39b7e5666a164afdb222466a94d13664eb84a473a1cdf6f6e20bc18fc722dea",
+      "checks": 5
+    }
+  ],
+  "official_native777_reference": {
+    "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion769-official777-reference/result.json",
+    "sha256": "9cd839ed6f715df31fc2bccc64296a1586b78d42c744b4fa0b0bbf32036ceeca",
+    "binary_sha256": null,
+    "checks": 0
+  },
+  "sources769": {
+    "protocol": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/protocol.json",
+      "sha256": "e324c6be98f732a10ddc23539d95b35ad7918b0e2dcc2debf2331c8937564443",
+      "bytes": 260129
+    },
+    "blocks": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/blocks.json",
+      "sha256": "16a26f1dba3e8ae7a5a05a7e25f724ba924b0bacbd17481992d027fbaf70e3e8",
+      "bytes": 789602
+    },
+    "items": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/items.json",
+      "sha256": "f88fb4279715c23e86ff103a09e20a4b15d6b8aa52559bb4d7364258a9d8225d",
+      "bytes": 171037
+    },
+    "entities": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/entities.json",
+      "sha256": "fbf1a0c683a8f0624d75d094f95cd6a2a24f19560466e62cfc2ba7e95a6e9b67",
+      "bytes": 82320
+    },
+    "version": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/version.json",
+      "sha256": "9d5d0d825c048eca7a255bc61851619af237765ae74610f142f9efd957d72483",
+      "bytes": 106
+    }
+  },
+  "opaque_client": {
+    "version": "1.21.4",
+    "metadata_sha1": "ee8ab0f6ec89b3127436d35e36aa766c1e85c3a9",
+    "metadata_sha256": "1cb692f7fd9c963fdbff0d8c2fd2c93409047672ba75393466ab08e53eaa631e",
+    "client_sha1": "a7e5a6024bfd3cd614625aa05629adf760020304",
+    "libraries": 70,
+    "assets": 4039,
+    "unique_verified_files": 4111,
+    "asset_index": "19",
+    "executed": false,
+    "jar_unpacked": false,
+    "reuse_cache": "/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.5"
+  },
+  "source_hashes": {
+    "docs/java-26.3-content.md": "11d82fc7b9e70b82455a1d8a07e86febb5d5aebdb02d50ee0db898cee9a6c5b7",
+    "docs/multiversion-plan.md": "3feb98a1dcb2766138a8294dae23376ef17ef67cf9f54025dfee2275d1610267",
+    "src/main.rs": "b6ebc79026bdb41e47d071fc1a013602c01a72ea33c87c86d2669ca92944711c",
+    "src/network/configuration.rs": "67f32f662f7fff3d63ffd9380683bff02e22224cea525c7869002a895877094d",
+    "src/network/connection.rs": "b95acb9884f37e585f425219a3f5b89fa43beb3a252924b6c2a3617def4f4a97",
+    "src/network/gameplay_probe.rs": "79802c0a1bf2caaf08c529f23893292db0e508b5fb72ad3fc550ea61b9a0f366",
+    "src/network/online.rs": "1305e5865a145d0874b358e30b36d1ccd05788e945803c9b8e8284cea1faf908",
+    "src/network/packet.rs": "4d31fa5f8b2c55ea7f5e3608eaa02f50a89de5588391c33a047d8b3ed80fbdbf",
+    "src/network/registries.rs": "a3168d8392a398a5755b52059eb79c3e4ce0f5718330a706c935f06a427138be",
+    "tools/protocol-bridge/client-chain-report.json": "c086eafcb7171c3773f9418123bf9e0352e7fce77deea9e7d0937402a48eedef",
+    "tools/protocol-bridge/client-chain-sources.json": "a44601ff0b074e8189a7017716b8ea4dfaf701f71d8eccc908ef8c544ae9f19e",
+    "tools/protocol-bridge/generate_client_chain.py": "4490fbf87e7b643c604c65c914d0b82717ba77f7a2477be5ae2ca900328a1f29",
+    "tools/protocol-bridge/generate_payload_769.py": "3d1aed02d886edaa899436ceac03d8181f579e45787b4f4495012f13ef585c00",
+    "tools/protocol-bridge/generate_payload_772.py": "d77a2f9a6a537fb65975b57b613a39597da1119c9e4675735ef9d108f8ecceca",
+    "tools/protocol-bridge/live_client.py": "28533762d91a9db6c6506eaefbceda7501c68fc7c75f8a71a98fdde08dfc80db",
+    "tools/protocol-bridge/payload-769-report.json": "89c8b3f02cb4a5560edbff879cd66faf902f28bb1061e54cecc65139f589fe0d",
+    "tools/protocol-bridge/prepare_registry_client.py": "d74da7304405723b09230e60e577fda9f3f25bd2ee48b6228e268e2d07170441",
+    "tools/protocol-bridge/probe_776_action_client.py": "d272df1cf05d9b10986de87ec7471608c10c97f9bd139aabe3387b9d91b9e92f",
+    "tools/protocol-bridge/probe_776_payloads.py": "41c333299641193f043b0b3dcf706700513109566f7b978ce1175a712a4f3af6",
+    "tools/protocol-bridge/probe_chat_login_770.py": "95bb08545f8c73feb68f9d481b8119f1859627727149bafdea422b83a11364fb",
+    "tools/protocol-bridge/probe_chat_login_client_770.py": "d1461c1a39d82f693563072389e3b017b4ba5798f963c3f63ea55f53c11f214b",
+    "tools/protocol-bridge/probe_light.py": "5159a96b00423cf5901ecf282598dc46e5cac6c6b1b7855ac0fccd1fb3aee79c",
+    "tools/protocol-bridge/probe_public_776.py": "424b00e13a656b95809688de269fb346c42a80ce9d283980ff27c991b1861787",
+    "tools/protocol-bridge/probe_step1_dimensions_recipes_776.py": "181c87ed558d25362ac12a90ea011fc79ec3edf9d16b227a82b69e2115a042b6",
+    "tools/protocol-bridge/probe_step1_gameplay_776.py": "e9b10f8750add0c1cb4eb6c08183524eda73c2ea96976e2e94dfadde213e5e02",
+    "tools/protocol-bridge/src/actions.rs": "600641bd31bb5201f273a8ac8c4a9f8ce611b269caa0f16132ba5c1d46e6ed79",
+    "tools/protocol-bridge/src/adjacent.rs": "cb9fedac45e25dc2c5bdaf12554581c51badffa2ebcf04c3e3234717c77f0068",
+    "tools/protocol-bridge/src/adjacent_tests.rs": "dc5f6f46c17d2a49c69964184a1d7f9e62a076e4eb180917672043bba8ff8144",
+    "tools/protocol-bridge/src/block_entities.rs": "6514d6d47b605262c9fc2029467095d67eb080d69c0998bf67e9f52d273af5b1",
+    "tools/protocol-bridge/src/block_entity_items.rs": "5a02a5e0289afa6debfb76f9a67ffaad4a842230e096d2822e2ebee34507432c",
+    "tools/protocol-bridge/src/chain.rs": "cf39949c03418c975a29017af96761a373e0e156b760a0e6009d57344129118b",
+    "tools/protocol-bridge/src/chunk.rs": "0634f39453dac114763a0b978ce0e9dbef9c9b4ba9183577854f6a81010d46f1",
+    "tools/protocol-bridge/src/chunk_sections.rs": "ce5df9b3cad73bf4d1ff48754244c516ffcb4d6fd280fa335b8be9cdcd5475d6",
+    "tools/protocol-bridge/src/client_769.rs": "25d4f774f33a73380229298ea633cd366d24a3a1490d9fe33ead5fc55928df0d",
+    "tools/protocol-bridge/src/client_769_tests.rs": "4884249f52f6c957e83673e2832a7a46509fb61daa5b3dc269aa8147eaa4e383",
+    "tools/protocol-bridge/src/client_773.rs": "dbf43b90f714463efa8faa288b0621ca202ec40e40df46eccd7e2469630823fd",
+    "tools/protocol-bridge/src/component_776.rs": "06cf820ff3b479274b31cdcb91c0fc11460688a02b3912306fbc0ef6476fb7f1",
+    "tools/protocol-bridge/src/content.rs": "5dff041112da2c79e50eb3af7de59e189d10ea99710d27d0530ad30f9332f82c",
+    "tools/protocol-bridge/src/entities.rs": "db33950cb2b48cbe83362b25fb63caebb842073ea9ce250b2436a6af912479dd",
+    "tools/protocol-bridge/src/expanded_776_tests.rs": "0aee9b948350a79a11d11e0e46d52aea762153510d5eb1cb23462f1903fe20b5",
+    "tools/protocol-bridge/src/generated_client_chain.rs": "72a76e1d55f52006197a2047ad7b939ecfe94837c4d2e0fd5ffec7f3fe2931eb",
+    "tools/protocol-bridge/src/generated_payload_769.rs": "fc9c074ee98d455f039939eb32868549d06e736c8f13710235db30f52094dd7a",
+    "tools/protocol-bridge/src/ids.rs": "c244b0ec2b724a5df8cc63a37224917ea1d868d4665209e9d1f3d84ac8349ccc",
+    "tools/protocol-bridge/src/item_components.rs": "dca8ac6e767d33b304d0b99939634f0edfe84a55ec218c3e22739cb1fe54a9d7",
+    "tools/protocol-bridge/src/items.rs": "cf592be86a5e286c924562e0807688c6c8e3ae03683fe402b34ccf2c57801869",
+    "tools/protocol-bridge/src/lib.rs": "abf81a81a448ada316c25cf865086bfc65542fa4e95151f48098200ddc0b2bff",
+    "tools/protocol-bridge/src/light.rs": "f5988640a489b422e176288fa5ef7d679c19a9ede4583205c827c174fb349a92",
+    "tools/protocol-bridge/src/login.rs": "26ac1288fc04d940e90dd6798ee0de5cec9ceb7504a7d5f93185d3bfb25481c6",
+    "tools/protocol-bridge/src/movement.rs": "029182f34df0c21af28371d0a462376759d1e53d2dd15eff0e3a90f535a39b12",
+    "tools/protocol-bridge/src/nested_items.rs": "00462ced3cdf802f83a06f9ca7328942f796f22d6e7e872cc56d24995343750c",
+    "tools/protocol-bridge/src/packet_layouts.rs": "f303653914a067755768ee869a9c7ede582d8d0cda1da4d879b72bc7459395c7",
+    "tools/protocol-bridge/src/particles.rs": "6043682d61a185eb64efc0f7e13c2f66751a0a35c8ee161d5265c509900df790",
+    "tools/protocol-bridge/src/recipes.rs": "85bd6ac086ae0300d8996d0a0611217d3ea960afccf866693b58b9fce98385b4",
+    "tools/protocol-bridge/src/registry.rs": "ccd2f0eb96f42ef18b1d2983d287e4a2802ef9c9b5883a4583e9872dff52f890",
+    "tools/protocol-bridge/src/teleport.rs": "626d41d86452ed6e2f2e22bdbae4d7e470f2abb399ff0dc4e95999d6bf7284dd",
+    "tools/protocol-bridge/src/wire.rs": "3f10820133bff6ed824e91d07a4c72fdeac8c5402deb698f59f6365a1049e251",
+    "tools/protocol-bridge/test_client_chain.py": "36b03864ab49433f672e4b76b6048cd8669a4e211c5adfd2f55a04371b1e1c16",
+    "tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md": "f5901714e662c8dcb8f46c5be7d4448dbc6a2f6bea654954a218c767fb447249",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion769-verification/verify.py": "470a86966eb6770be0848636e4539ef0fd278527fa94125dbb6413c977a52309",
+    "tools/protocol-bridge/testdata/client-chain-770-773/payload-live-769.json": "9769b6259146d7fe2c6cd409014c32aebbed0c6dfa810993f86ba375e5ffcb8e",
+    "tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md": "acf22634e69f3956c15ef3ce82563fd20fe43b64909ca7304e9f16ee3cad1d67"
+  },
+  "fixture_sha256": "9769b6259146d7fe2c6cd409014c32aebbed0c6dfa810993f86ba375e5ffcb8e",
+  "unchanged_prior_fixtures": {
+    "tools/protocol-bridge/testdata/client-chain-770-773/payload-live-770.json": "c30a16c84b00725d61a6db1f6395bc1f93396b1d5616ef32dda472502d2713d3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/payload-live-771.json": "03b797cfd7010a7e2c3a952a95e587acef5c59d009c1a51a7ea3b81bf34a75ec",
+    "tools/protocol-bridge/testdata/client-chain-770-773/payload-live-772.json": "42c126826ec4e2a39e40fb70e475de7fd2baa81f3aedd7a3deb3a97ec6ccc2ac",
+    "tools/protocol-bridge/testdata/client-chain-770-773/payload-live-773.json": "b255ed7c945da6168045a3bfd8c874e0df1a941303a055cd924aba4e55e879ec",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-live-774-v2.json": "f49c99cd5a0d5e41bf07a95be35ca2c18ddca5e1c5759d80afedd9dce872da41",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-live-776.json": "b315a5d410c666ec1b0bc4b8a38635ec38c765693decc46f15ed82752810bab3"
+  },
+  "limitations": [
+    "Nether/End disk persistence, arbitrary custom forms, dynamic hanging-entity reorientation and exhaustive entity/attribute semantics remain unclaimed; unchanged checklist.",
+    "One authorized copied official26.3 reference run,43 samples,Java25/DEVNULL/26190-26191,stopped by owned PID; temporary world removed.",
+    "Earlier failures remain in completion769-live-v1/v2/v3/v5/v6 and verification logs; no failure relabeled. Unsupported older clients keep the existing Russian rejection."
+  ]
+}
