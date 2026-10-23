@@ -164,7 +164,7 @@ fn main() -> io::Result<()> {
     settings.validate()?;
     // Проверяем мир до создания каталогов, слушателей и фоновых писателей.
     // Замок живёт дольше runtime; session.lock измерений остаются отдельными.
-    let world_guard = world::startup::prepare(Path::new(WORLD_PATH))?;
+    let world_guard = world::startup::prepare_for_version(Path::new(WORLD_PATH), settings.java_version.expect("проверенная версия"))?;
     log_debug!("Проверка заявленного профиля мира: {:?}", world_guard.check);
     if !world_guard.has_exclusive_lock() {
         log_warn!("На этой платформе доступна только читающая проверка профиля мира; общий межпроцессный замок пока не реализован");
@@ -215,10 +215,11 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
 
     // Свои настройки — отдельно от server.properties: тот должен выглядеть
     // как у обычного сервера.
-    log_info!("Основная версия игры: Minecraft Java {} (протокол {})", VERSION_NAME, PROTOCOL_VERSION);
+    let primary = settings.java_version.expect("проверенная версия");
+    log_info!("Основная версия игры: Minecraft Java {} (протокол {})", primary.name(), primary.protocol());
     if first_start {
         log_info!("Первый запуск: основная версия задаётся строкой java-version={} в config/mcsa.properties", VERSION_NAME);
-        log_info!("Чтобы выбрать более старую версию, остановите сервер, сохраните копию мира и укажите поддерживаемую версию в java-version. В этой сборке доступна только {}", VERSION_NAME);
+        log_info!("Чтобы выбрать более старую версию, остановите сервер, сохраните копию мира и укажите поддерживаемую версию в java-version. В этой сборке доступны 26.1.2 и новый мир26.3; прежняя внутренняя версия {}", VERSION_NAME);
         log_info!("При online-mode=false: offline-license-mode=cosmetics — лицензии для косметики; disabled — без проверки лицензий. Пароли настраиваются отдельно через auth-enabled");
     }
     log::set_debug(settings.debug);
@@ -265,14 +266,19 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     // Всё, что подключения делят между собой: мир, список игроков и чат.
     // Обычный мир и Незер: у Незера своя папка внутри папки мира, как у
     // оригинала, и то же семя.
-    let overworld = World::open(WORLD_PATH, properties.level_seed, properties.world_kind)?;
-    let nether = World::open(
-        Dimension::Nether.folder(Path::new(WORLD_PATH)),
+    let catalog = gameplay_catalog::Catalog::for_version(primary);
+    let open_world = |path: &Path, seed, kind| {
+        if primary == network::NATIVE_VERSION { World::open(path, seed, kind) }
+        else { World::open_with_catalog(path, seed, kind, catalog) }
+    };
+    let overworld = open_world(Path::new(WORLD_PATH), properties.level_seed, properties.world_kind)?;
+    let nether = open_world(
+        &Dimension::Nether.folder(Path::new(WORLD_PATH)),
         Some(overworld.seed()),
         WorldKind::Nether,
     )?;
-    let end = World::open(
-        Dimension::End.folder(Path::new(WORLD_PATH)),
+    let end = open_world(
+        &Dimension::End.folder(Path::new(WORLD_PATH)),
         Some(overworld.seed()),
         WorldKind::End,
     )?;
@@ -580,6 +586,7 @@ async fn handle_connection_inner(
                 &properties.motd,
                 online as i32,
                 properties.max_players,
+                shared.settings.java_version.unwrap_or(network::NATIVE_VERSION),
             )
             .await?;
         }
@@ -592,7 +599,10 @@ async fn handle_connection_inner(
             //
             // Клиентская и внутренняя версии разделены. Пока разрешён только
             // родной маршрут; номера новых версий не включают их поддержку.
-            let negotiated = mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION);
+            let negotiated = if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 {
+                mcsa_protocol::Negotiated::native_only(handshake.protocol_version, mcsa_protocol::JavaVersion::V26_3)
+                    .map(|mut route| { route.native = network::NATIVE_VERSION; route })
+            } else { mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION) };
             // Только отдельный тестовый бинарник может исследовать ещё закрытый маршрут.
             #[cfg(test)]
             let negotiated = if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3) && handshake.protocol_version==777 {
@@ -614,7 +624,8 @@ async fn handle_connection_inner(
                     &mut socket,
                     &format!(
                         "Ваша версия не подходит под ядро сервера\nНужен Minecraft {} (протокол {})",
-                        VERSION_NAME, PROTOCOL_VERSION
+                        shared.settings.java_version.unwrap_or(network::NATIVE_VERSION).name(),
+                        shared.settings.java_version.unwrap_or(network::NATIVE_VERSION).protocol()
                     ),
                 )
                 .await?;

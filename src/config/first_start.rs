@@ -20,7 +20,7 @@ pub fn prepare(root: &Path, interactive: bool, input: &mut impl BufRead, output:
         Err(error) if error.kind()==io::ErrorKind::NotFound => {
             if existing { return Ok(true); }
             fs::create_dir_all(path.parent().expect("папка настроек"))?;
-            let text=format!("# Перед первым запуском выберите основную версию Minecraft Java.\n# Доступные в этой сборке: {}.\n# После выбора запустите ядро снова.\njava-version={PENDING}\nsend-error-reports={PENDING}\n",crate::network::VERSION_NAME);
+            let text=format!("# Перед первым запуском выберите основную версию Minecraft Java.\n# Доступные в этой сборке: {}, 26.3 (новый мир).\n# После выбора запустите ядро снова.\njava-version={PENDING}\nsend-error-reports={PENDING}\n",crate::network::VERSION_NAME);
             let mut file=fs::OpenOptions::new().write(true).create_new(true).open(&path)?;
             file.write_all(text.as_bytes())?; file.sync_all()?; text
         }
@@ -38,12 +38,12 @@ pub fn prepare(root: &Path, interactive: bool, input: &mut impl BufRead, output:
         if changed {fs::write(&path,&text)?;}
     }
     let values=super::server_properties::parse_properties(&text);
-    let choose_version=values.get("java-version").is_some_and(|v| v == PENDING || (!existing && v != crate::network::VERSION_NAME));
+    let choose_version=values.get("java-version").is_some_and(|v| v == PENDING || (!existing && !matches!(v.as_str(), "26.1.2" | "26.3")));
     let choose_reports=values.get("send-error-reports").is_some_and(|v| v == PENDING || (!existing && !matches!(v.as_str(),"true"|"false")));
     if !choose_version && !choose_reports { return Ok(true); }
     writeln!(output,"Первоначальная настройка MCSheriffAnya. Мир ещё не создан.")?;
     if choose_version {
-        writeln!(output,"Выберите основную версию Minecraft Java: 1. {}",crate::network::VERSION_NAME)?;
+        writeln!(output,"Выберите основную версию Minecraft Java: 1. {}  2. 26.3 (новый мир)",crate::network::VERSION_NAME)?;
     }
     if choose_reports {
         writeln!(output,"Отправлять разработчикам анонимные отчёты об ошибках?")?;
@@ -51,7 +51,7 @@ pub fn prepare(root: &Path, interactive: bool, input: &mut impl BufRead, output:
     }
     if !interactive {
         writeln!(output,"В панели откройте config/mcsa.properties:")?;
-        if choose_version { writeln!(output,"  java-version={} — основная версия игры",crate::network::VERSION_NAME)?; }
+        if choose_version { writeln!(output,"  java-version={} или 26.3 — основная версия игры",crate::network::VERSION_NAME)?; }
         if choose_reports { writeln!(output,"  send-error-reports=true или false — отправлять или не отправлять отчёты")?; }
         writeln!(output,"Укажите выбранные значения и запустите сервер снова. Запуск остановлен до выбора.")?;
         return Ok(false);
@@ -63,6 +63,9 @@ pub fn prepare(root: &Path, interactive: bool, input: &mut impl BufRead, output:
             let mut line=String::new();if input.read_line(&mut line)?==0 { return Ok(false); }
             let choice=line.trim();
             if matches!(choice,"stop"|"cancel"|"отмена") { return Ok(false); }
+            if matches!(choice, "2" | "26.3") {
+                answers.push(("java-version", "26.3")); break;
+            }
             if choice == "1" || choice == crate::network::VERSION_NAME {
                 answers.push(("java-version",crate::network::VERSION_NAME));break;
             }
@@ -165,13 +168,23 @@ mod tests {
     fn unavailable_fresh_version_requires_selection_before_start() {
         let root=root("invalid-version");fs::create_dir(root.join("config")).unwrap();
         let path=root.join(super::super::mcsheriffanya::FILE);
-        for invalid in ["", "invalid", "26.3"] {
+        for invalid in ["", "invalid", "26.4"] {
             fs::write(&path,format!("java-version={invalid}\nsend-error-reports=false\n")).unwrap();
             assert!(!prepare(&root,false,&mut &b""[..],&mut Vec::new()).unwrap());
             assert!(!root.join("world").exists());
             assert!(prepare(&root,true,&mut &b"1\n"[..],&mut Vec::new()).unwrap());
             assert!(fs::read_to_string(&path).unwrap().contains(&format!("java-version={}",crate::network::VERSION_NAME)));
         }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn explicit_263_choice_survives_headless_restart() {
+        let root = root("263-choice");
+        assert!(prepare(&root, true, &mut &b"2\nno\n"[..], &mut Vec::new()).unwrap());
+        assert!(fs::read_to_string(root.join(super::super::mcsheriffanya::FILE)).unwrap().contains("java-version=26.3"));
+        assert!(prepare(&root, false, &mut &b""[..], &mut Vec::new()).unwrap());
+        assert!(!root.join("world").exists());
         fs::remove_dir_all(root).unwrap();
     }
 

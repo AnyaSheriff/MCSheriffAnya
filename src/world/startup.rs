@@ -94,6 +94,57 @@ pub(crate) fn prepare(world: &Path) -> io::Result<StartupGuard> {
     })
 }
 
+/// Новый профиль допускается только для пустого мира или совпавшего манифеста.
+/// Неопознанный мир и переходы не перемаркируются настройкой сервера.
+pub(crate) fn prepare_for_version(world: &Path, version: mcsa_protocol::JavaVersion) -> io::Result<StartupGuard> {
+    if version == mcsa_protocol::JavaVersion::V26_1_2 { return prepare(world); }
+    if version != mcsa_protocol::JavaVersion::V26_3 {
+        return Err(profile_error(profile::Error::UnsupportedProfile(version.name().into())));
+    }
+    let world = world_path(world)?;
+    check_directory(&world)?;
+    let lock = lock_world(&world)?;
+    if lock.is_none() { return Err(io::Error::new(io::ErrorKind::Unsupported, "профиль26.3 требует исключительного замка мира")); }
+    check_directory(&world)?;
+    let catalog = crate::gameplay_catalog::Catalog::for_version(version);
+    let target = profile::ProfileDescriptor {
+        gameplay_version: version.name().into(), release_order: 2,
+        save_format: profile::current_profile().save_format, registry_id: catalog.registry_id().into_owned(),
+    };
+    let manifest = match profile::read_manifest(&world).map_err(profile_error)? {
+        Some(manifest) => {
+            let plan = profile::plan_transition(Some(&manifest), version.name(), &[target]).map_err(profile_error)?;
+            if plan.requires_migration() { return Err(profile_error(profile::Error::TransitionRequired)); }
+            manifest
+        }
+        None => {
+            if nonempty_world(&world)? { return Err(profile_error(profile::Error::UnknownSource)); }
+            fs::create_dir_all(&world)?;
+            let manifest = profile::Manifest {
+                schema: profile::MANIFEST_SCHEMA, save_format: target.save_format,
+                registry_id: target.registry_id, gameplay_version: target.gameplay_version,
+                // Нули обозначают новый мир, исходного снимка для него нет.
+                snapshot_id: "00000000000000000000000000000000".into(),
+            };
+            use std::io::Write;
+            let mut file = fs::OpenOptions::new().write(true).create_new(true).open(world.join(profile::MANIFEST_NAME))?;
+            file.write_all(&serde_json::to_vec(&manifest).map_err(io::Error::other)?)?;
+            file.sync_all()?;
+            File::open(&world)?.sync_all()?;
+            manifest
+        }
+    };
+    #[cfg(target_os = "linux")]
+    let identity = {
+        use std::os::unix::fs::MetadataExt;
+        let metadata = fs::metadata(&world)?;
+        Some((metadata.dev(), metadata.ino()))
+    };
+    Ok(StartupGuard { lock, #[cfg(target_os = "linux")] world,
+        #[cfg(target_os = "linux")] identity,
+        check: StartupCheck::ManifestMatches { snapshot_id: manifest.snapshot_id } })
+}
+
 fn prepare_with_upgrade(world: &Path,
     upgrade: impl FnOnce(&StartupGuard, &profile::Manifest) -> io::Result<()>,
 ) -> io::Result<StartupGuard> {

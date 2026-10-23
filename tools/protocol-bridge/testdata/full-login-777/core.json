@@ -1,0 +1,239 @@
+{
+  "checks": [
+    "public777-login-configuration-play-chunks",
+    "survival-player-attack-reduces-peer-health",
+    "death-event-respawn-health20-teleport-ack",
+    "survival-new-block-placement-consumes-one",
+    "survival-mining-finish3-drop-and-tool-damage1",
+    "inventory-authoritative-click-moves-stack",
+    "logout-login-preserves-new-items",
+    "restart-restores-profile-player-and-native-regions"
+  ],
+  "protocol": 777,
+  "official": false,
+  "commands": [
+    "gamerule doMobSpawning false",
+    "forceload add -24 -24 23 23",
+    "fill -4 64 -4 5 64 4 stone",
+    "fill -4 65 -4 5 68 4 air",
+    "tp McsaProbe 0.5 65 0.5",
+    "gamemode survival McsaProbe",
+    "clear McsaProbe",
+    "tp McsaPeer 0.5 65 2",
+    "gamemode survival McsaPeer",
+    "tp McsaProbe 0.5 65 0.5",
+    "kill McsaProbe",
+    "tp McsaProbe 0.5 65 0.5",
+    "clear McsaProbe",
+    "give McsaProbe white_concrete_slab 2",
+    "clear McsaProbe",
+    "setblock 2 65 0 stone",
+    "give McsaProbe diamond_pickaxe",
+    "clear McsaProbe",
+    "give McsaProbe white_concrete_slab 3",
+    "setblock 2 65 0 white_concrete_slab[type=top,waterlogged=false]",
+    "forceload add 0 0",
+    "setblock 2 65 0 white_concrete_slab[type=top,waterlogged=false]"
+  ],
+  "runner_sha256": "0ebfb54f346074aa33a2b6250827fe804e77326cfa0ad07e6bd8352aab0112f7",
+  "binary_sha256": "9d3a6d6596bb64d32e6b36bf61d1aa0fd779825c24c723eaa37318f22f6d411a",
+  "pids": [
+    35,
+    43
+  ],
+  "pvp_poses": [
+    [
+      0.5,
+      65.0,
+      0.5,
+      0.0,
+      30.0
+    ],
+    [
+      0.5,
+      65.0,
+      2.5,
+      0.0,
+      30.0
+    ]
+  ],
+  "pvp_health": 19.0,
+  "placement": {
+    "update": {
+      "name": "block_change",
+      "position": [
+        2,
+        65,
+        0
+      ],
+      "state": 18310
+    },
+    "held": {
+      "item": 721,
+      "count": 1
+    }
+  },
+  "mining": {
+    "drops": {
+      "9": {
+        "item": 62,
+        "count": 1
+      }
+    },
+    "tool": {
+      "item": 1052,
+      "count": 1,
+      "damage": 1
+    }
+  },
+  "reconnected_inventory": {
+    "0": null,
+    "1": null,
+    "2": null,
+    "3": null,
+    "4": null,
+    "5": null,
+    "6": null,
+    "7": null,
+    "8": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "12": null,
+    "13": null,
+    "14": null,
+    "15": null,
+    "16": null,
+    "17": null,
+    "18": null,
+    "19": null,
+    "20": null,
+    "21": null,
+    "22": null,
+    "23": null,
+    "24": null,
+    "25": null,
+    "26": null,
+    "27": null,
+    "28": null,
+    "29": null,
+    "30": null,
+    "31": null,
+    "32": null,
+    "33": null,
+    "34": null,
+    "35": null,
+    "36": null,
+    "37": {
+      "item": 721,
+      "count": 3
+    },
+    "38": null,
+    "39": null,
+    "40": null,
+    "41": null,
+    "42": null,
+    "43": null,
+    "44": null,
+    "45": null
+  },
+  "exit_codes": [
+    0,
+    0
+  ],
+  "manifest": {
+    "schema": 1,
+    "save_format": {
+      "region_layout": 1,
+      "playerdata_layout": 11
+    },
+    "registry_id": "mcsa-catalog-v1:sha256:87ef40d7b5b846a34b4cacb78a9a1c1d4ebcba13cf6e1f09946faffd5710e3b4",
+    "gameplay_version": "26.3",
+    "snapshot_id": "00000000000000000000000000000000"
+  },
+  "saved_files": [
+    {
+      "path": "world/playerdata/04401d94d4a53fdd9518a3cc040d6cfd.mcrw",
+      "sha256": "fd2d0de137b7c2646cc5c87f7724df3295cfd554e217f2a872230f2476ff9d2b",
+      "bytes": 131
+    },
+    {
+      "path": "world/playerdata/f0856c057f7739b1b6005719f4e70be8.mcrw",
+      "sha256": "64313267d5b43a30a610610085f8b2c09be80a7c485483e01914bf872f012f1b",
+      "bytes": 143
+    },
+    {
+      "path": "world/region/r.-1.-1.mcs",
+      "sha256": "9eb7d1ef2884dff1b40c4021643dca54d42eb77fef30f4ea737fa4db49839e4c",
+      "bytes": 11008
+    },
+    {
+      "path": "world/region/r.-1.0.mcs",
+      "sha256": "f000c0a74380fca6f1ecdae332e3fd6fde7d260c11c0ea7920217141f84f6a0e",
+      "bytes": 11776
+    },
+    {
+      "path": "world/region/r.0.-1.mcs",
+      "sha256": "d1562cbcf299e0e4972f77b9b1ecfb2014eccf3d88a383aa6309b3af821eb68c",
+      "bytes": 11776
+    },
+    {
+      "path": "world/region/r.0.0.mcs",
+      "sha256": "69e08873954dab319663cb74688258edaa2f10aeeb0b067a97de336fdf645b41",
+      "bytes": 12800
+    }
+  ],
+  "status": "pass",
+  "packets": [
+    "login",
+    "abilities",
+    "position",
+    "declare_commands",
+    "declare_recipes",
+    "player_info",
+    "entity_metadata",
+    "initialize_world_border",
+    "set_ticking_state",
+    "step_tick",
+    "spawn_position",
+    "update_health",
+    "game_state_change",
+    "update_time",
+    "update_view_position",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "map_chunk",
+    "window_items",
+    "held_item_slot",
+    "system_chat",
+    "recipe_book_settings",
+    "recipe_book_add",
+    "advancements",
+    "system_chat",
+    "playerlist_header",
+    "update_time",
+    "system_chat"
+  ]
+}

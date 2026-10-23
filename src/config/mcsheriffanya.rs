@@ -108,9 +108,9 @@ pub struct Settings {
 impl Settings {
     /// Ошибка в режиме не должна молча включать обращения к Mojang.
     pub fn validate(&self) -> std::io::Result<()> {
-        if self.java_version != Some(crate::network::NATIVE_VERSION) {
+        if !matches!(self.java_version, Some(mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3)) {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
-                format!("config/mcsa.properties: эта сборка поддерживает java-version={}; перенос 26.2/26.3 ещё не завершён", crate::network::VERSION_NAME)));
+                format!("config/mcsa.properties: эта сборка поддерживает java-version={}; также доступен новый мир26.3; перенос существующего мира ещё не завершён", crate::network::VERSION_NAME)));
         }
         if self.offline_license_mode == OfflineLicenseMode::Invalid {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
@@ -263,7 +263,7 @@ impl Settings {
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
     fn sections(self) -> [(&'static str, String); 21] {
         [
-            ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Сейчас поддерживается 26.1.2; 26.2/26.3 ещё в разработке. Перед сменой версии\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
+            ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Поддерживаются 26.1.2 и новые миры26.3. Перед сменой версии\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
             ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
@@ -442,7 +442,7 @@ mod tests {
         let path = Path::new("mcsa.properties");
         for version in ["26.1.2", "26.2", "26.3", "unknown", ""] {
             let settings = Settings::parse(&format!("java-version={version}"), path);
-            assert_eq!(settings.validate().is_ok(), version == crate::network::VERSION_NAME);
+            assert_eq!(settings.validate().is_ok(), matches!(version, "26.1.2" | "26.3"));
             assert_eq!(Settings::parse(&settings.to_file(), path), settings);
         }
         assert!(Settings::parse("", path).validate().is_ok());

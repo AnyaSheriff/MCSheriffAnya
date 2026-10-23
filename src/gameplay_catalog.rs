@@ -145,6 +145,11 @@ impl Catalog {
     pub const fn new(profile: Profile) -> Self { Self { profile } }
     pub const fn profile(self) -> Profile { self.profile }
 
+    pub fn for_version(version: mcsa_protocol::JavaVersion) -> Self {
+        Self::new(if version == mcsa_protocol::JavaVersion::V26_3 { Profile::Preview26_3 } else { Profile::Java26_1_2 })
+    }
+
+
     pub fn content_codec(self) -> mcsa_protocol::content::ContentCodec {
         match self.profile {
             Profile::Java26_1_2 => Default::default(),

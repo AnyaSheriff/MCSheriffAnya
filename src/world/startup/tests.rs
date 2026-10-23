@@ -368,3 +368,25 @@ fn existing_shape_valid_receipt_is_a_local_claim_without_repeat_backup_verificat
     assert!(!fixture.0.join("backups").exists());
     assert!(!world.join(profile::MANIFEST_NAME).exists());
 }
+
+#[test]
+fn profile_263_fresh_restart_and_unsafe_transitions() {
+    let fixture = Fixture::new();
+    let world = fixture.world();
+    let version = mcsa_protocol::JavaVersion::V26_3;
+    let guard = prepare_for_version(&world, version).unwrap();
+    let manifest = profile::read_manifest(&world).unwrap().unwrap();
+    assert_eq!(manifest.gameplay_version, "26.3");
+    assert_eq!(manifest.registry_id, crate::gameplay_catalog::Catalog::for_version(version).registry_id());
+    let bytes = fs::read(world.join(profile::MANIFEST_NAME)).unwrap();
+    assert!(prepare_for_version(&world, version).is_err());
+    drop(guard);
+    fs::write(world.join("marker"), b"player and world bytes").unwrap();
+    drop(prepare_for_version(&world, version).unwrap());
+    assert!(prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_1_2).is_err());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), bytes);
+    assert_eq!(fs::read(world.join("marker")).unwrap(), b"player and world bytes");
+    fs::remove_file(world.join(profile::MANIFEST_NAME)).unwrap();
+    assert!(prepare_for_version(&world, version).is_err());
+    assert!(!world.join(profile::MANIFEST_NAME).exists());
+}

@@ -1,0 +1,10 @@
+{
+  "rust_unit_pass": 2884,
+  "rust_integration_pass": 3,
+  "rust_ignored": 77,
+  "python_pass": 213,
+  "clippy": "cargo clippy --release --all-targets -- -D warnings: pass",
+  "build": "cargo build --release: pass",
+  "raw_core_checks": 8,
+  "binary_sha256": "9d3a6d6596bb64d32e6b36bf61d1aa0fd779825c24c723eaa37318f22f6d411a"
+}

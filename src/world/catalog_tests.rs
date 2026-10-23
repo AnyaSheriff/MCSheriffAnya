@@ -48,8 +48,7 @@ fn explicit_preview_manifest_stops_startup_before_world_writers() {
     fs::write(world.join("fixture-player.bin"), b"fixture unchanged").unwrap();
     let before = inventory(&world);
     assert!(matches!(profile::check_current_world(&world), Err(profile::Error::UnsupportedProfile(version)) if version == "26.3"));
-    // Это существующий startup gate, не прямой World::open: private preview
-    // разрешён в памяти, но persistent open ещё не реализован.
+    // Родной запуск775 отказывает до writer; профиль263 выбирается отдельно.
     let error = match startup::prepare(&world) {
         Err(error) => error,
         Ok(_) => panic!("preview manifest не должен допускать запуск writer"),
@@ -106,4 +105,26 @@ fn preview_codec_can_reread_private_disk_fixture_without_claiming_world_open_sup
     assert_eq!(back.to_bytes_with_catalog(catalog).unwrap(), bytes);
     assert!(matches!(Chunk::decode_for_load(&stored), Err(codec::DecodeError::UnsupportedCatalogState { .. })));
     assert_eq!(inventory(&fixture.0), before);
+}
+
+#[test]
+fn persistent_preview_keeps_all_catalog_block_states_after_reopen() {
+    let fixture = Fixture::new();
+    let catalog = Catalog::new(Profile::Preview26_3);
+    let states: Vec<_> = crate::gameplay_catalog::entries()
+        .filter(|row| row.has_block())
+        .flat_map(|row| row.first_state..=row.last_state).collect();
+    {
+        let mut world = World::open_with_catalog(&fixture.0, Some(1), WorldKind::Flat, catalog).unwrap();
+        assert!(world.ensure(0, 0));
+        for (i, state) in states.iter().enumerate() {
+            world.set_block((i % 16) as i32, 80 + (i / 256) as i32, ((i / 16) % 16) as i32, *state);
+        }
+        world.save_all();
+    }
+    let mut world = World::open_with_catalog(&fixture.0, Some(1), WorldKind::Flat, catalog).unwrap();
+    assert!(world.ensure(0, 0));
+    for (i, state) in states.iter().enumerate() {
+        assert_eq!(world.get_block((i % 16) as i32, 80 + (i / 256) as i32, ((i / 16) % 16) as i32), *state);
+    }
 }

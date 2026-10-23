@@ -30,7 +30,7 @@ fn unavailable_config_version_keeps_its_existing_error_for_unidentified_worlds()
     fs::create_dir(root.0.join("config")).unwrap();
     fs::write(root.0.join("world/legacy-marker"), b"preserve").unwrap();
     fs::write(root.0.join("config/mcsa.properties"),
-        "java-version=26.3\nsend-error-reports=false\nauth-enabled=false\noffline-license-mode=disabled\nbedrock-port=0\n").unwrap();
+        "java-version=26.2\nsend-error-reports=false\nauth-enabled=false\noffline-license-mode=disabled\nbedrock-port=0\n").unwrap();
     fs::write(root.0.join("config/server.properties"), "server-port=0\nonline-mode=false\n").unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_mcsheriffanya"))
         .current_dir(&root.0).stdin(Stdio::null()).output().unwrap();

@@ -1645,6 +1645,15 @@ impl World {
         wanted_seed: Option<i64>,
         wanted_kind: WorldKind,
     ) -> io::Result<Self> {
+        Self::open_with_catalog(directory, wanted_seed, wanted_kind,
+            crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    /// Каталог выбирается до чтения чанков и отложенных действий.
+    pub fn open_with_catalog(
+        directory: impl AsRef<Path>, wanted_seed: Option<i64>, wanted_kind: WorldKind,
+        catalog: crate::gameplay_catalog::Catalog,
+    ) -> io::Result<Self> {
         let path = directory.as_ref().to_path_buf();
 
         fs::create_dir_all(path.join(REGIONS))?;
@@ -1727,7 +1736,7 @@ impl World {
         log_info!("Тип мира: {}", kind.name());
 
         let mut world = Self {
-            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
+            catalog,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,

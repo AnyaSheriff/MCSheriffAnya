@@ -1,0 +1,87 @@
+[08:45:17] [Server thread/INFO]: config/mcsa.properties: дописаны новые настройки: console-colors, offline-license-mode, tab-tps, debug, prefetch-at-once, bedrock-online-mode, bedrock-show-coordinates, autumn-forests, pink-cherry-groves, text-info, portal-delay, portal-min-width, portal-min-height, portal-max-width, portal-max-height
+[08:45:17] [Server thread/INFO]: Запуск сервера MCSheriffAnya
+[08:45:17] [Server thread/INFO]: Ядер: 2. Такту отведено ядро 1, остальные — сети и складыванию мира
+[08:45:17] [Server thread/INFO]: Загрузка настроек
+[08:45:17] [Server thread/INFO]: Создана директория: logs
+[08:45:17] [Server thread/INFO]: Создана директория: world/playerdata
+[08:45:17] [Server thread/INFO]: Создана директория: skins
+[08:45:17] [Server thread/INFO]: Основная версия игры: Minecraft Java 26.3 (протокол 777)
+[08:45:17] [Server thread/INFO]: Сервер запущен на *:26184
+[08:45:17] [Server thread/INFO]: Подготовка мира "world"
+[08:45:17] [Server thread/INFO]: Семя мира: 1
+[08:45:17] [Server thread/INFO]: Тип мира: minecraft:flat
+[08:45:17] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_nether"
+[08:45:17] [Server thread/INFO]: Семя мира: 1
+[08:45:17] [Server thread/INFO]: Тип мира: minecraft:the_nether
+[08:45:17] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_end"
+[08:45:17] [Server thread/INFO]: Семя мира: 1
+[08:45:17] [Server thread/INFO]: Тип мира: minecraft:the_end
+[08:45:17] [Server thread/INFO]: Скины: в config/skins.toml дописаны настройки скинов Bedrock
+[08:45:17] [Server thread/INFO]: Плагины: папки plugins/ и modules/ пусты
+[08:45:17] [Server thread/INFO]: Готово (0.001 с)! Чтобы узнать команды, набери help
+[08:45:17] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[08:45:17] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[08:45:17] [Server thread/INFO]: Точка появления: 0.5 63 0.5
+[08:45:17] [Server thread/INFO]: McsaProbe[/127.0.0.1:55746 → localhost:26184] вошёл с номером сущности 1 в (0.5, 63.0, 0.5)
+[08:45:20] [Server thread/INFO]: McsaProbe зашёл на сервер
+[08:45:21] [Server thread/INFO]: Правило spawn_mobs: false
+[08:45:21] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[08:45:21] [Server thread/INFO]: Marked 16 chunks in minecraft:minecraft:overworld from [-2, -2] to [1, 1] to be force loaded
+[08:45:21] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[08:45:21] [Server thread/INFO]: Заполнено блоков: 90
+[08:45:21] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[08:45:22] [Server thread/INFO]: Заполнено блоков: 0
+[08:45:22] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[08:45:22] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[08:45:22] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[08:45:22] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[08:45:22] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[08:45:23] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[08:45:23] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[08:45:23] [Server thread/INFO]: Опознаватель игрока McsaPeer — 04401d94-d4a5-3fdd-9518-a3cc040d6cfd
+[08:45:23] [Server thread/INFO]: Скины: скина McsaPeer нет ни в одном источнике
+[08:45:23] [Server thread/INFO]: McsaPeer[/127.0.0.1:49178 → localhost:26184] вошёл с номером сущности 6 в (0.5, 63.0, 0.5)
+[08:45:26] [Server thread/INFO]: McsaPeer зашёл на сервер
+[08:45:26] [Server thread/INFO]: McsaPeer перенесён в 0.5 65 2.5
+[08:45:26] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[08:45:27] [Server thread/INFO]: Игроку McsaPeer установлен режим: выживание
+[08:45:27] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[08:45:28] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[08:45:28] [Server thread/INFO]: [Server] MCSA_CORE_DIG_10
+[08:45:31] [Server thread/INFO]: Убит: McsaProbe
+[08:45:31] [Server thread/INFO]: [Server] MCSA_CORE_DIG_11
+[08:45:31] [Server thread/INFO]: McsaPeer потерял соединение: broken pipe
+[08:45:31] [Server thread/INFO]: McsaProbe was killed
+[08:45:31] [Server thread/INFO]: McsaPeer вышел
+[08:45:31] [Server thread/INFO]: McsaProbe was killed
+[08:45:34] [Server thread/INFO]: McsaProbe перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[08:45:34] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[08:45:34] [Server thread/INFO]: [Server] MCSA_CORE_DIG_12
+[08:45:34] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[08:45:34] [Server thread/INFO]: [Server] MCSA_CORE_DIG_13
+[08:45:34] [Server thread/INFO]: Gave 2 [white_concrete_slab] to McsaProbe
+[08:45:34] [Server thread/INFO]: [Server] MCSA_CORE_DIG_14
+[08:45:35] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[08:45:35] [Server thread/INFO]: [Server] MCSA_CORE_DIG_15
+[08:45:36] [Server thread/INFO]: Changed the block at 2, 65, 0
+[08:45:36] [Server thread/INFO]: [Server] MCSA_CORE_DIG_16
+[08:45:36] [Server thread/INFO]: Gave 1 [diamond_pickaxe] to McsaProbe
+[08:45:36] [Server thread/INFO]: [Server] MCSA_CORE_DIG_17
+[08:45:39] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[08:45:39] [Server thread/INFO]: [Server] MCSA_CORE_DIG_18
+[08:45:39] [Server thread/INFO]: Gave 3 [white_concrete_slab] to McsaProbe
+[08:45:39] [Server thread/INFO]: [Server] MCSA_CORE_DIG_19
+[08:45:41] [Server thread/INFO]: Changed the block at 2, 65, 0
+[08:45:41] [Server thread/INFO]: [Server] MCSA_CORE_DIG_20
+[08:45:41] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[08:45:41] [Server thread/INFO]: McsaProbe вышел
+[08:45:42] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[08:45:42] [Server thread/INFO]: McsaProbe[/127.0.0.1:58216 → localhost:26184] вошёл с номером сущности 11 в (0.5, 65.0, 0.5)
+[08:45:45] [Server thread/INFO]: McsaProbe зашёл на сервер
+[08:45:45] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[08:45:45] [Server thread/INFO]: McsaProbe вышел
+[08:45:46] [Server thread/INFO]: Останавливаю сервер
+[08:45:46] [Server thread/INFO]: Остановка сервера
+[08:45:46] [Server thread/INFO]: Сохранение игроков
+[08:45:46] [Server thread/INFO]: Сохранение мира
+[08:45:46] [Server thread/INFO]: Мир сохранён

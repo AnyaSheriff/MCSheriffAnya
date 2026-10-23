@@ -118,13 +118,14 @@ class Client:
         return None
 
 
-def connect(port, protocol, client_type=Client, version=777, *, login_uuid=None):
+def connect(port, protocol, client_type=Client, version=777, *, login_uuid=None, username="McsaProbe"):
     if login_uuid is not None and (not isinstance(login_uuid, bytes) or len(login_uuid) != 16):
         raise ValueError('login_uuid must contain16 opaque bytes')
     sock = socket.create_connection(('127.0.0.1', port), timeout=10)
     try:
         handshake(sock, version, port, 2)
-        name = b'McsaProbe'
+        name = username.encode('ascii')
+        assert 1 <= len(name) <= 16 and username.replace('_', '').isalnum()
         send(sock, b'\0' + varint(len(name)) + name + (bytes([37]) * 16 if login_uuid is None else login_uuid))
         packet = io.BytesIO(frame(sock))
         assert read_varint(packet.read) == 2
