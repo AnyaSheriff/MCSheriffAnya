@@ -150,3 +150,16 @@ fn configuration770_does_not_tunnel_unavailable_password_dialogs(){
         assert!(crate::client_770::configuration(body).is_err());
     }
 }
+
+#[test]
+fn limbo_configuration_reset_is_empty_and_directional() {
+    let body=packet("start_configuration", &[]);
+    let mapped=super::clientbound(&mut Tracker::default(), &body, Context::default()).unwrap().into_owned();
+    let mut tail=body.clone();tail.push(0);
+    assert!(super::clientbound(&mut Tracker::default(), &tail, Context::default()).is_err());
+    assert!(!mapped.is_empty());
+    let id=(0..256).find(|&id|crate::packet_layouts::packet_info(K::PlayServerbound,LOW,BASE,id).is_some_and(|r|r.name=="configuration_acknowledged")).unwrap();
+    let mut ack=Vec::new();wire::uint(&mut ack,id as u32);
+    assert_eq!(super::serverbound(&ack,Context::default()).unwrap().as_ref(), &[0x10]);
+    ack.push(0);assert!(super::serverbound(&ack,Context::default()).is_err());
+}

@@ -607,11 +607,11 @@ async fn handle_connection_inner(
             //
             // Клиентская и внутренняя версии разделены; допуск задаётся
             // отдельно для проверенных сочетаний клиента и основного.
-            // 771/772/773/774/776 прошли прежний checklist на обоих основных: CONTINUED.md.
+            // 770/771/772/773/774/776 прошли прежний checklist на обоих основных: CONTINUED.md.
             // Это клиентский codec canonical775, а не отдельные игровые правила.
-            let negotiated = if matches!(handshake.protocol_version,771|772|773|774|776) && matches!(shared.catalog().profile(),
+            let negotiated = if matches!(handshake.protocol_version,770|771|772|773|774|776) && matches!(shared.catalog().profile(),
                 gameplay_catalog::Profile::Java26_1_2 | gameplay_catalog::Profile::Preview26_3) {
-                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("771/772/773/774/776"),native:network::NATIVE_VERSION})
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("770/771/772/773/774/776"),native:network::NATIVE_VERSION})
             } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 && handshake.protocol_version == 775 {
                 mcsa_protocol::Negotiated::native_only(775, network::NATIVE_VERSION)
             } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 {
@@ -628,7 +628,7 @@ async fn handle_connection_inner(
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})
             } else if _probe_776 && matches!(handshake.protocol_version,770|771|772|773|774|776) && addr.ip().is_loopback()
                 && !properties.online_mode {
-                Ok(mcsa_protocol::Negotiated { client: mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("771/772/773/774/776"), native: network::NATIVE_VERSION })
+                Ok(mcsa_protocol::Negotiated { client: mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("770/771/772/773/774/776"), native: network::NATIVE_VERSION })
             } else {negotiated};
             if negotiated.is_err() {
                 log_info!(
@@ -822,7 +822,8 @@ async fn handle_connection_inner(
             // Парольный барьер: до Finish Configuration нет игрока, прав,
             // плагиновых join-событий или чтения playerdata. Старую личность
             // при auth-enabled вообще не переносим, включая Ops::adopt.
-            let _auth_session = if let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
+            let _auth_session = if !auth::needs_chat_login(socket.client_version())
+                && let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
                 if !auth::dialog::authenticate(&mut socket, auth, identity, addr.ip(), &shared.ops, verified_uuid, config_deadline).await? {
                     return Ok(());
                 }
@@ -839,11 +840,36 @@ async fn handle_connection_inner(
             send_finish_configuration(&mut socket).await?;
             log_debug!("Finish Configuration отправлен");
 
-            let look = if probe_776 {
+            let mut look = if probe_776 {
                 tokio::time::timeout_at(config_deadline, read_and_log_configuration_packets(&mut socket, look_from_settings)).await
                     .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "776 Configuration ACK не получен"))??
             } else { read_and_log_configuration_packets(&mut socket, look_from_settings).await? };
             log_debug!("Configuration: чтение пакетов клиента завершено");
+
+            // Клиент без dialogs получает только отдельный замороженный мир.
+            let _chat_auth_session = if look.is_some() && auth::needs_chat_login(socket.client_version())
+                && let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
+                if !network::play::chat_login(&mut socket, &shared, identity, addr.ip(), verified_uuid, config_deadline).await? {
+                    return Ok(());
+                }
+                let is_op = shared.ops.lock().expect("ops").level_of(&login.uuid) > 0;
+                if let Some((_, plain)) = commands_admin::login_refusal(&login.username, &login.uuid, addr.ip(), is_op) {
+                    auth::dialog::disconnect(&mut socket, &plain).await?;
+                    return Ok(());
+                }
+                let session = auth.session(identity);
+                // ACK возврата уже прочитан лимбо; реестры согласуются заново.
+                look = tokio::time::timeout_at(config_deadline, async {
+                    send_brand(&mut socket).await?;
+                    send_known_packs(&mut socket).await?;
+                    let (_, settings) = read_known_packs(&mut socket).await?;
+                    send_registry_data(&mut socket).await?;
+                    send_update_tags(&mut socket).await?;
+                    send_finish_configuration(&mut socket).await?;
+                    read_and_log_configuration_packets(&mut socket, settings).await
+                }).await.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, auth::dialog::TIMEOUT))??;
+                Some(session)
+            } else { None };
 
             // Фаза Play: вводим игрока в мир.
             // Если клиент отключился, не подтвердив фазу, входить некуда.

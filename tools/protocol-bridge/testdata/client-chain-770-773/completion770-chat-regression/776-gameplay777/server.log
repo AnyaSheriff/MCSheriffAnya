@@ -1,0 +1,99 @@
+
+running 1 test
+[22:58:41] [Server thread/INFO]: Подготовка мира "world"
+[22:58:41] [Server thread/INFO]: Семя мира: 1
+[22:58:41] [Server thread/INFO]: Тип мира: minecraft:flat
+MCSA gameplay probe ready on 26028
+[22:58:42] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[22:58:42] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[22:58:42] [Server thread/INFO]: McsaProbe[/127.0.0.1:35018 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[22:58:45] [Server thread/INFO]: McsaProbe зашёл на сервер
+[22:58:45] [Server thread/INFO]: Правило spawn_mobs: false
+[22:58:45] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[22:58:46] [Server thread/INFO]: Заполнено блоков: 90
+[22:58:46] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[22:58:46] [Server thread/INFO]: Заполнено блоков: 0
+[22:58:46] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[22:58:46] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[22:58:46] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[22:58:47] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[22:58:47] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[22:58:47] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[22:58:47] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[22:58:47] [Server thread/INFO]: Правило natural_health_regeneration: false
+[22:58:47] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[22:58:48] [Server thread/INFO]: Опознаватель игрока McsaPeer — 04401d94-d4a5-3fdd-9518-a3cc040d6cfd
+[22:58:48] [Server thread/INFO]: Скины: скина McsaPeer нет ни в одном источнике
+[22:58:48] [Server thread/INFO]: McsaPeer[/127.0.0.1:35032 → localhost:26028] вошёл с номером сущности 2 в (0.5, 64.0, 0.5)
+[22:58:51] [Server thread/INFO]: McsaPeer зашёл на сервер
+[22:58:51] [Server thread/INFO]: McsaPeer перенесён в 0.5 65 1.5
+[22:58:51] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[22:58:52] [Server thread/INFO]: Игроку McsaPeer установлен режим: выживание
+[22:58:52] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[22:58:54] [Server thread/INFO]: Gave 2 [stone] to McsaProbe
+[22:58:54] [Server thread/INFO]: [Server] MCSA_CORE_DIG_10
+[22:58:55] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[22:58:55] [Server thread/INFO]: [Server] MCSA_CORE_DIG_11
+[22:58:56] [Server thread/INFO]: Gave 1 [iron_pickaxe] to McsaProbe
+[22:58:56] [Server thread/INFO]: [Server] MCSA_CORE_DIG_12
+[22:58:56] [Server thread/INFO]: McsaProbe has made the advancement [Isn't It Iron Pick]
+[22:58:56] [Server thread/INFO]: McsaProbe has made the advancement [Isn't It Iron Pick]
+[22:58:56] [Server thread/INFO]: Could not set the block
+[22:58:56] [Server thread/INFO]: [Server] MCSA_CORE_DIG_13
+[22:59:00] [Server thread/INFO]: Убит: McsaProbe
+[22:59:00] [Server thread/INFO]: [Server] MCSA_CORE_DIG_14
+[22:59:00] [Server thread/INFO]: McsaProbe was killed
+[22:59:00] [Server thread/INFO]: McsaProbe was killed
+[22:59:00] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[22:59:00] [Server thread/INFO]: [Server] MCSA_CORE_DIG_15
+[22:59:03] [Server thread/INFO]: McsaProbe перешёл в minecraft:overworld (0.5, 65.0, 0.5)
+[22:59:03] [Server thread/INFO]: Убрано сущностей: 2
+[22:59:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_16
+[22:59:04] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[22:59:04] [Server thread/INFO]: [Server] MCSA_CORE_DIG_17
+[22:59:04] [Server thread/INFO]: Gave 3 [diamond] to McsaProbe
+[22:59:04] [Server thread/INFO]: [Server] MCSA_CORE_DIG_18
+[22:59:04] [Server thread/INFO]: McsaProbe has made the advancement [Diamonds!]
+[22:59:04] [Server thread/INFO]: McsaProbe has made the advancement [Diamonds!]
+[22:59:06] [Server thread/INFO]: Changed the block at 2, 65, 0
+[22:59:06] [Server thread/INFO]: [Server] MCSA_CORE_DIG_19
+[22:59:10] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[22:59:10] [Server thread/INFO]: McsaProbe вышел
+[22:59:11] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[22:59:11] [Server thread/INFO]: McsaProbe[/127.0.0.1:34706 → localhost:26028] вошёл с номером сущности 9 в (0.5, 65.0, 0.5)
+[22:59:14] [Server thread/INFO]: McsaProbe зашёл на сервер
+[22:59:14] [Server thread/INFO]: Changed the block at -16, 64, -16
+[22:59:14] [Server thread/INFO]: [Server] MCSA_CORE_DIG_20
+[22:59:15] [Server thread/INFO]: Changed the block at -16, 65, -16
+[22:59:15] [Server thread/INFO]: [Server] MCSA_CORE_DIG_21
+[22:59:16] [Server thread/INFO]: Changed the block at -16, 65, -16
+[22:59:16] [Server thread/INFO]: [Server] MCSA_CORE_DIG_22
+[22:59:20] [Server thread/INFO]: McsaPeer потерял соединение: отключился
+[22:59:20] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[22:59:20] [Server thread/INFO]: McsaPeer вышел
+[22:59:20] [Server thread/INFO]: McsaProbe вышел
+[22:59:21] [Server thread/INFO]: Останавливаю сервер
+[22:59:21] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+MCSA persistence probe saved world
+test gameplay_probe::serve_java_26_2_primary_26_3_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2995 filtered out; finished in 39.96s
+
+
+running 1 test
+[22:59:21] [Server thread/INFO]: Подготовка мира "world"
+[22:59:21] [Server thread/INFO]: Семя мира: 1
+[22:59:21] [Server thread/INFO]: Тип мира: minecraft:flat
+MCSA gameplay probe ready on 26028
+[22:59:22] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[22:59:22] [Server thread/INFO]: McsaProbe[/127.0.0.1:33632 → localhost:26028] вошёл с номером сущности 1 в (0.5, 65.0, 0.5)
+[22:59:25] [Server thread/INFO]: McsaProbe зашёл на сервер
+[22:59:27] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[22:59:27] [Server thread/INFO]: Останавливаю сервер
+[22:59:27] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[22:59:27] [Server thread/INFO]: McsaProbe вышел
+MCSA persistence probe saved world
+test gameplay_probe::serve_java_26_2_primary_26_3_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2995 filtered out; finished in 6.01s
+

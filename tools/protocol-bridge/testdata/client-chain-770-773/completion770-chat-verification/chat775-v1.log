@@ -1,0 +1,1 @@
+{'client': 770, 'primary': 775, 'checks': ['passwords-absent-from-server-log-and-results'], 'status': 'failed', 'error': 'EOFError: missing VarInt', 'server_exit': 'stop-and-stdin-eof'}

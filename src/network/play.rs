@@ -20,6 +20,9 @@
 // клиент берёт из того же измерения (обычный overworld: от -64, высота 384),
 // поэтому секций в чанке ровно 24.
 
+mod auth_limbo;
+pub(crate) use auth_limbo::chat_login;
+
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::Path;
@@ -7778,6 +7781,7 @@ fn handle_client_packet_inner(
             // не нужны: подписи мы не проверяем, а текст стоит первым полем.
             let text = Cursor::new(payload).string();
             if let Some(text) = text.as_deref().and_then(crate::chat::allowed) {
+                if crate::auth::sensitive_command(text) { return reaction; }
                 log_debug!("Play: {} пишет в чат: {}", player.name, text);
 
                 // Плагины могут отменить сообщение или заменить текст

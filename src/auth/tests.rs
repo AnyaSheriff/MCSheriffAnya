@@ -288,7 +288,7 @@ fn console_commands_password_change_and_session_requirement() {
     assert!(list.contains("1")); assert!(list.contains("SheriffAnya")); assert!(!list.contains("new pass"));
     assert_eq!(run("auth unregister sheriffanya", &Source::Console, &shared).reply, "Готово");
     assert!(!auth.identity("SheriffAnya", None).registered);
-    for line in ["auth setpassword A secret", " /changepassword a b", "changepassword"] { assert!(sensitive_command(line)); }
+    for line in ["auth setpassword A secret", " /changepassword a b", "changepassword", "/login secret", "register secret secret"] { assert!(sensitive_command(line)); }
     assert!(!sensitive_command("say auth"));
 }
 
@@ -403,4 +403,13 @@ fn changepassword_and_setpassword_use_new_scheme() {
     auth.submit(&identity,ip(),"correct",None,true).unwrap();
     assert!(auth.state.lock().unwrap().db.accounts["alice"].protected.is_some());
     let _=std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn clients_without_dialogs_select_chat_login() {
+    use mcsa_protocol::JavaVersion as V;
+    for version in [V::V1_12_2, V::V1_21_5] { assert!(needs_chat_login(version)); }
+    for version in [V::V1_21_6, V::V1_21_8, V::V1_21_9, V::V1_21_11, V::V26_1_2, V::V26_2, V::V26_3] {
+        assert!(!needs_chat_login(version));
+    }
 }

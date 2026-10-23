@@ -89,7 +89,7 @@ impl Service {
     fn submit(&self, identity: &Identity, ip: IpAddr, password: &str, repeat: Option<&str>, permitted: bool) -> Result<(), &'static str> {
         self.submit_before(identity, ip, password, repeat, permitted, None)
     }
-    fn submit_before(&self, identity: &Identity, ip: IpAddr, password: &str, repeat: Option<&str>, permitted: bool, deadline: Option<tokio::time::Instant>) -> Result<(), &'static str> {
+    pub(crate) fn submit_before(&self, identity: &Identity, ip: IpAddr, password: &str, repeat: Option<&str>, permitted: bool, deadline: Option<tokio::time::Instant>) -> Result<(), &'static str> {
         // Ограничение памяти/процессов: только одна проверка, без неограниченной очереди.
         let _operation=self.operation.try_lock().map_err(|_| "Авторизация занята. Попробуй ещё раз.")?;
         let mut state = self.state.lock().expect("auth");
@@ -171,8 +171,12 @@ impl Drop for Session {
     }
 }
 
+// До появления dialogs все переведённые клиенты используют отдельный Play-барьер.
+pub fn needs_chat_login(version: mcsa_protocol::JavaVersion) -> bool { version.protocol() < 771 }
+
 pub fn sensitive_command(command: &str) -> bool {
-    matches!(command.trim_start().trim_start_matches('/').split_whitespace().next(), Some("auth" | "changepassword"))
+    command.trim_start().trim_start_matches('/').split_whitespace().next()
+        .is_some_and(|name| ["auth", "changepassword", "register", "login"].iter().any(|s| name.eq_ignore_ascii_case(s)))
 }
 
 pub fn command(command: &str, source: &crate::commands::Source, shared: &crate::shared::Shared) -> Option<crate::commands::Answer> {

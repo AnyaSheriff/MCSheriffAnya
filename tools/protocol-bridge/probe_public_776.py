@@ -19,6 +19,9 @@ from smoke import frame, handshake, read_varint, send
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('binary','protocol','cache','output'):p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--protocol770',type=Path)
+    p.add_argument('--cache770',type=Path)
+    p.add_argument('--admit770',action='store_true')
     p.add_argument('--protocol771',type=Path)
     p.add_argument('--cache771',type=Path)
     p.add_argument('--admit771',action='store_true')
@@ -31,13 +34,18 @@ def main():
     p.add_argument('--protocol774',type=Path)
     p.add_argument('--cache774',type=Path)
     p.add_argument('--admit774',action='store_true')
-    p.add_argument('--closed-clients',type=int,nargs='+',choices=(770,771,772,773),default=[])
+    p.add_argument('--closed-clients',type=int,nargs='+',choices=(769,770,771,772,773),default=[])
     p.add_argument('--port',type=int,default=26184)
     a=p.parse_args();assert 26100<=a.port<=26198
     assert hashlib.sha256(a.protocol.read_bytes()).hexdigest()==PROTOCOL_SHA
     protocol=json.loads(a.protocol.read_text())
     item=next(r['id'] for r in table(a.cache,'entities') if r['name']=='item')
     protocols={776:protocol};items={776:item}
+    if a.admit770:
+        assert a.protocol770 and a.cache770 and 770 not in a.closed_clients
+        assert hashlib.sha256(a.protocol770.read_bytes()).hexdigest()=='8695c1cd011af37d214cc2139fc9bf6e7b445ce45305fbfa28c93f47563cb988'
+        protocols[770]=json.loads(a.protocol770.read_text())
+        items[770]=next(r['id'] for r in table(a.cache770,'entities') if r['name']=='item')
     if a.admit774:
         assert a.protocol774 and a.cache774
         assert hashlib.sha256(a.protocol774.read_bytes()).hexdigest()=='4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab'
@@ -79,7 +87,7 @@ def main():
                         deadline=time.monotonic()+120
                         while 'Готово (' not in path.read_text():
                             assert server.poll() is None and time.monotonic()<deadline,path.read_text()[-2000:];time.sleep(.1)
-                        for version in (*([771] if a.admit771 else []),*([772] if a.admit772 else []),*([773] if a.admit773 else []),774,776,*a.closed_clients):
+                        for version in (*([770] if a.admit770 else []),*([771] if a.admit771 else []),*([772] if a.admit772 else []),*([773] if a.admit773 else []),774,776,*a.closed_clients):
                             row=dict(primary=primary,client=version)
                             with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                 handshake(sock,version,port,1);send(sock,b'\0')

@@ -124,6 +124,8 @@ pub(crate) fn translate_inner(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "start_configuration") |
+        (State::Play, Direction::Serverbound, "configuration_acknowledged") => {},
         (State::Play, Direction::Clientbound, "declare_commands") if to==JavaVersion::V1_21_5 => crate::client_770::commands(&mut cursor,&mut out)?,
         (State::Play, Direction::Clientbound, "difficulty") if to==JavaVersion::V1_21_5 => {out.push(cursor.count(3)? as u8);out.push(u8::from(cursor.boolean()?));}
         (State::Play, Direction::Clientbound, "game_state_change") if to==JavaVersion::V1_21_5 => {let reason=cursor.take(1)?[0];if reason>13{return Err(Error::Invalid);}out.push(reason);out.extend(cursor.take(4)?);}

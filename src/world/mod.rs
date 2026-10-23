@@ -1592,7 +1592,7 @@ impl World {
         Self::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
     }
 
-    #[cfg(test)]
+    // Изолированный мир без диска для парольного лимбо и сетевых проверок.
     pub fn in_memory_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
         Self {
             catalog,
