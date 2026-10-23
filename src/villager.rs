@@ -601,6 +601,8 @@ pub struct Merchant {
     pub villager: i32,
     pub slots: [Option<Stack>; 3],
     pub selected: usize,
+    /// Число предложений, уже показанных в открытом окне.
+    pub sent_offer_count: usize,
 }
 
 impl Merchant {

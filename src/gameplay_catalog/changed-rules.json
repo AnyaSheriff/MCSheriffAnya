@@ -1,0 +1,32 @@
+{
+  "sources": [
+    "https://minecraft.wiki/w/Java_Edition_26.2#Changes",
+    "https://minecraft.wiki/w/Java_Edition_26.3#Changes",
+    "https://minecraft.wiki/w/Hoglin",
+    "https://minecraft.wiki/w/Zoglin",
+    "https://minecraft.wiki/w/Strider",
+    "https://minecraft.wiki/w/Chicken",
+    "https://minecraft.wiki/w/End_gateway"
+  ],
+  "bed_restitution": 0.75,
+  "knockback_resistance_min": -2.0,
+  "baby_humanoid_height": 0.98,
+  "baby_sizes": {
+    "hoglin": [
+      0.75,
+      0.85
+    ],
+    "zoglin": [
+      0.75,
+      0.85
+    ],
+    "strider": [
+      0.45,
+      0.85
+    ],
+    "chicken": [
+      0.3,
+      0.4
+    ]
+  }
+}

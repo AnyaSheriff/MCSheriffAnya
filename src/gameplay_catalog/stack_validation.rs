@@ -79,6 +79,7 @@ impl Catalog {
         for (i, child) in data.bundle.iter().enumerate() { nested(child, StackLocation::Bundle(i))?; }
         if let Some(child) = &data.charged_arrow { nested(child, StackLocation::ChargedArrow)?; }
         for (i, child) in data.charged_projectiles.iter().enumerate() { nested(&child.content, StackLocation::Projectile(i))?; }
+        for side in &data.pot_sides { nested(side, StackLocation::PotDecoration(side.slot as usize))?; }
         if let Some(sides) = data.pot_decorations {
             for (i, item) in sides.into_iter().enumerate() {
                 self.name(Kind::Item, item).map_err(|e| {

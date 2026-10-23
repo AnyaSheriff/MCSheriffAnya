@@ -1,0 +1,25 @@
+{
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "json_sha256": {
+    "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+    "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+    "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+    "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+  },
+  "commands": [],
+  "cases": [],
+  "pid": 66,
+  "exit_code": 143,
+  "status": "login-failed-before-gameplay",
+  "error": "You are not white-listed on this server!",
+  "observed_gameplay_cases": 0,
+  "attempts": 1,
+  "notes": [
+    "The attempted runner omitted white-list=false; it was fixed after this attempt.",
+    "No replacement run authorized or performed."
+  ],
+  "log_excerpt": [
+    "[07:39:32] [Server thread/INFO]: Disconnecting McsaProbe (/127.0.0.1:42708): You are not white-listed on this server!",
+    "[07:39:32] [Server thread/INFO]: McsaProbe (/127.0.0.1:42708) lost connection: You are not white-listed on this server!"
+  ]
+}

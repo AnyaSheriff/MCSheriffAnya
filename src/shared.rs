@@ -152,6 +152,7 @@ pub struct Shared {
 
     /// Правило `announce_advancements` (прежнее announceAdvancements): писать ли
     /// в чат о полученных достижениях.
+    pub advancement_states: Mutex<std::collections::HashMap<[u8; 16], (crate::advancements::AdvState, u64)>>,
     pub announce_advancements: std::sync::atomic::AtomicBool,
 
     /// Правило `natural_health_regeneration`: лечит ли сытость.
@@ -253,6 +254,7 @@ impl Shared {
             raids: std::sync::atomic::AtomicBool::new(true),
             spawn_patrols: std::sync::atomic::AtomicBool::new(true),
             block_drops: std::sync::atomic::AtomicBool::new(true),
+            advancement_states: Mutex::new(std::collections::HashMap::new()),
             announce_advancements: std::sync::atomic::AtomicBool::new(true),
             freeze_damage: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),
@@ -265,7 +267,7 @@ impl Shared {
             players: Mutex::new(Players::new()),
             sessions: crate::sessions::Sessions::default(),
             chat: Mutex::new(Chat::new()),
-            items: [Mutex::new(Items::new()), Mutex::new(Items::new()), Mutex::new(Items::new())],
+            items: std::array::from_fn(|_| Mutex::new(Items::with_catalog(catalog))),
             arrows: Mutex::new(crate::arrow::Arrows::new()),
             thrown: Mutex::new(crate::thrown::Thrown::new()),
             fishing: Mutex::new(Vec::new()),

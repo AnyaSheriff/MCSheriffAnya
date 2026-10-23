@@ -446,6 +446,8 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai
     if mob.water.target.is_some() { return plan; }
     if let Some(p) = ctx.players.iter().find(|p| !p.spectator && p.holding.iter().flatten().any(|food| mob.kind.likes(food)) && distance(mob,(p.x,p.y,p.z)) < 100.0) {
         mob.water.swim_to=Some((p.x,p.y,p.z));
+    } else if !ai::stroll_active(mob, view, ctx) {
+        mob.water.swim_to = None;
     } else if mob.water.swim_to.is_none_or(|at| distance(mob,at)<0.5) || rng.below(100)==0 {
         mob.water.swim_to=water_goal(mob,view,rng);
     }

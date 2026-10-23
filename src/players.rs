@@ -295,7 +295,7 @@ pub enum Order {
     Progress(crate::progress::Event),
 
     /// Команда `advancement`: выдать или отнять достижения (все условия, либо одно).
-    Advancement { grant: bool, ids: Vec<&'static str>, criterion: Option<String> },
+    Advancement { grant: bool, ids: Vec<&'static str>, criterion: Option<String>, revision: u64 },
 
     ChangeDimension {
         dimension: crate::dimension::Dimension,

@@ -25,6 +25,7 @@
 use super::ai::{self, Ctx, Plan, Watcher};
 use super::path;
 use super::{Event, Kind, Mob, Rng, View};
+use crate::blocks;
 
 /// Дальность слежения за целью (вики, Zombie: «Follow range 35»; у прочих 16).
 pub fn follow_range(kind: Kind) -> f64 {
@@ -968,9 +969,21 @@ pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool)
 
     // Кадавр не горит (вики, Husk: «immune to burning in daylight»), утопленник горит
     // вне воды (вики, Drowned).
-    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Phantom) && !mob.h.helmet;
+    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Phantom);
+    let mut protected = mob.h.helmet;
+    if mob.catalog.changed_rules() {
+        protected = super::equipment::slot(mob, 5).is_some();
+        if sun && burns && protected && ctx.sun_up && view.open_sky(x, y, z) {
+            let stack = super::equipment::slot(mob, 5).unwrap();
+            // Вики 26.3: чары учитываются и при защите от солнца.
+            // [проверить] Распределение исходного износа 0/1 за такт.
+            let amount = crate::combat::wear(&stack, rng.below(2) as i32, true, || rng.unit() as f32);
+            let next = crate::combat::add_damage(stack, amount);
+            super::equipment::set_slot(mob, 5, next);
+        }
+    }
 
-    if sun && burns && ctx.sun_up && view.open_sky(x, y, z) && rng.below(SUN_CHANCE) == 0 {
+    if sun && burns && !protected && ctx.sun_up && view.open_sky(x, y, z) && rng.below(SUN_CHANCE) == 0 {
         mob.vitals.ignite(SUN_FIRE_TICKS);
     }
 
@@ -999,7 +1012,7 @@ pub const SUN_FIRE_TICKS: i32 = 160;
 /// (600 тактов) вдали, с шансом 1/800 за такт; ближе — счёт сбрасывается.
 pub fn despawn_check(mob: &mut Mob, players: &[Watcher], rng: &mut Rng, peaceful: bool) {
     // Мирная сложность: враждебные исчезают сразу (вики, Peaceful).
-    if peaceful {
+    if peaceful && !super::spawn::peaceful_exception(mob.catalog, mob.kind) {
         mob.h.despawn = true;
         return;
     }
@@ -1333,6 +1346,7 @@ pub const ATTACKING_BONUS: f64 = 0.15;
 /// (вики, Enderman: «play a sound exclusively at the teleportation
 /// destination»), частицы — событие сущности 46 [проверить].
 pub fn teleport(mob: &mut Mob, view: &dyn View, rng: &mut Rng, centre: (f64, f64, f64), spread: f64) -> bool {
+    if view.catalog().changed_rules() && mob.kind == Kind::Enderman && mob.riding { return false; }
     let free = |state: i32| !super::solid(state) && !super::is_water(state) && !super::is_lava(state);
 
     for _ in 0..64 {
@@ -1346,7 +1360,7 @@ pub fn teleport(mob: &mut Mob, view: &dyn View, rng: &mut Rng, centre: (f64, f64
         }
 
         let to = if mob.kind == Kind::Shulker {
-            let Some(face) = attach_face(view, (cx, cy, cz), rng).filter(|_| free(view.block(cx, cy, cz))) else {
+            let Some(face) = attach_face_for(view, (cx, cy, cz), rng, view.catalog().changed_rules()).filter(|_| free(view.block(cx, cy, cz))) else {
                 continue;
             };
 
@@ -1357,7 +1371,9 @@ pub fn teleport(mob: &mut Mob, view: &dyn View, rng: &mut Rng, centre: (f64, f64
                 cy -= 1;
             }
 
-            if !super::solid(view.block(cx, cy - 1, cz)) || !(0..3).all(|dy| free(view.block(cx, cy + dy, cz))) {
+            if !super::solid(view.block(cx, cy - 1, cz))
+                || (view.catalog().changed_rules() && blocks::block_at_state(view.block(cx, cy - 1, cz)) == Some("bedrock"))
+                || !(0..3).all(|dy| free(view.block(cx, cy + dy, cz))) {
                 continue;
             }
 
@@ -1410,6 +1426,10 @@ pub fn face_offset(face: u8) -> (i32, i32, i32) {
 /// Грань, к которой шалкер в клетке может прилипнуть: сперва пол, потом
 /// потолок, потом стены в случайном порядке [проверить: порядок у оригинала].
 pub fn attach_face(view: &dyn View, (x, y, z): (i32, i32, i32), rng: &mut Rng) -> Option<u8> {
+    attach_face_for(view, (x, y, z), rng, false)
+}
+
+fn attach_face_for(view: &dyn View, (x, y, z): (i32, i32, i32), rng: &mut Rng, teleporting: bool) -> Option<u8> {
     let mut sides = [2u8, 3, 4, 5];
     let shift = rng.below(4) as usize;
 
@@ -1418,7 +1438,8 @@ pub fn attach_face(view: &dyn View, (x, y, z): (i32, i32, i32), rng: &mut Rng) -
     [0u8, 1].into_iter().chain(sides).find(|face| {
         let (dx, dy, dz) = face_offset(*face);
 
-        super::solid(view.block(x + dx, y + dy, z + dz))
+        let support = view.block(x + dx, y + dy, z + dz);
+        super::solid(support) && !(teleporting && blocks::block_at_state(support) == Some("bedrock"))
     })
 }
 

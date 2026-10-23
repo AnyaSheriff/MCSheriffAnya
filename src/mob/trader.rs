@@ -33,14 +33,22 @@ pub fn think(mob: &mut Mob, day: bool) {
     } else if mob.land.invisible == day { mob.land.drinking = 32; mob.attr_changes=mob.attr_changes.wrapping_add(1); }
 }
 fn offer(buy: &str, count: i32, sell: &str, amount: i32, uses: i32) -> Option<Offer> {
-    Some(Offer { buy: Stack::new(blocks::item_named(buy)?, count), buy_b: None,
-        sell: Stack::new(blocks::item_named(sell)?, amount), uses: 0, max_uses: uses,
+    offer_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), buy, count, sell, amount, uses)
+}
+fn offer_with_catalog(catalog: crate::gameplay_catalog::Catalog, buy: &str, count: i32, sell: &str, amount: i32, uses: i32) -> Option<Offer> {
+    Some(Offer { buy: Stack::new(catalog.item_named(buy).ok()??, count), buy_b: None,
+        sell: Stack::new(catalog.item_named(sell).ok()??, amount), uses: 0, max_uses: uses,
         xp: 0, reward_exp: true, multiplier: 0.0, special: 0, demand: 0 })
 }
 fn choose(pool: &mut Vec<Offer>, n: usize, out: &mut Vec<Offer>, rng: &mut Rng) {
     for _ in 0..n.min(pool.len()) { let i = rng.below(pool.len() as u32) as usize; out.push(pool.swap_remove(i)); }
 }
+#[cfg(test)]
 pub fn offers(rng: &mut Rng) -> Vec<Offer> {
+    offers_for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), rng)
+}
+
+pub fn offers_for_catalog(catalog: crate::gameplay_catalog::Catalog, rng: &mut Rng) -> Vec<Offer> {
     let mut out = Vec::new();
     let mut buying: Vec<_> = [("baked_potato",4,1),("fermented_spider_eye",1,3),("hay_block",1,1),("milk_bucket",1,2),("potion",1,1),("water_bucket",1,2)]
         .into_iter().filter_map(|(item,n,emerald)| offer(item,n,"emerald",emerald,2)).collect();
@@ -51,6 +59,7 @@ pub fn offers(rng: &mut Rng) -> Vec<Offer> {
     for name in ["acacia_log","birch_log","cherry_log","dark_oak_log","jungle_log","oak_log","spruce_log","pale_oak_log"] {
         if let Some(o)=offer("emerald",1,name,8,4) { special.push(o); }
     }
+    if catalog.changed_rules() && let Some(o) = offer_with_catalog(catalog,"emerald",1,"poplar_log",8,4) { special.push(o); }
     for (name,cost,count,uses) in [("gunpowder",1,4,2),("packed_ice",1,1,6),("blue_ice",6,1,6),("podzol",3,3,6),("potion",5,1,1)] {
         if let Some(mut o)=offer("emerald",cost,name,count,uses) {
             if name=="potion" { let mut d=o.sell.extras(); d.potion=Some(7); o.sell=o.sell.with_extras(d); }
@@ -83,11 +92,35 @@ pub fn offers(rng: &mut Rng) -> Vec<Offer> {
     for color in ["orange","magenta","light_blue","yellow","lime","pink","gray","light_gray","cyan","purple","green","red"] {
         if let Some(o)=offer("emerald",1,&format!("{color}_dye"),3,12) { ordinary.push(o); }
     }
+    // Вики, Trading: стоимость, число и запас новых предложений 26.2/26.3.
+    if catalog.changed_rules() {
+        for (name,cost,count,uses) in [("sulfur_spike",1,2,5),("shelf_mushroom",1,3,12),("poplar_sapling",5,1,8)] {
+            if let Some(o)=offer_with_catalog(catalog,"emerald",cost,name,count,uses) { ordinary.push(o); }
+        }
+    }
     choose(&mut ordinary,5,&mut out,rng); out
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn preview_trader_pool_contains_new_offers_without_changing_native_pool() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        let names = ["sulfur_spike", "shelf_mushroom", "poplar_log", "poplar_sapling"];
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let mut found = [false;4];
+            for seed in 0..400 {
+                let pool = offers_for_catalog(Catalog::new(profile), &mut Rng::new(seed));
+                assert_eq!(pool.len(), 9);
+                for offer in pool {
+                    for (i, name) in names.iter().enumerate() {
+                        if Catalog::new(profile).name(crate::gameplay_catalog::Kind::Item,offer.sell.item) == Ok(*name) { found[i] = true; }
+                    }
+                }
+            }
+            assert_eq!(found, [profile == Profile::Preview26_3;4]);
+        }
+    }
     #[test] fn timer_freezes_and_chance_is_bounded() {
         let mut s=Spawner::default(); let mut rng=Rng::new(8);
         for _ in 0..24000 { assert!(!s.tick(false,true,true,&mut rng)); }

@@ -266,7 +266,7 @@ impl Chunk {
         // Хранилища — последними, и только если они есть. Порядок — по
         // месту, чтобы одинаковый чанк давал одинаковые байты. Если дальше
         // идёт что-то ещё, число хранилищ пишется и нулём.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -280,7 +280,7 @@ impl Chunk {
         // Особый динамит — после хранилищ (их число тогда пишется и
         // нулём): сколько, потом место и номер вида. Если дальше рамки —
         // число пишется и нулём.
-        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
 
             places.sort_unstable();
@@ -296,7 +296,7 @@ impl Chunk {
         // Рамки для предметов (frame.rs): сколько и записи по порядку места,
         // чтобы одинаковый чанк давал одинаковые байты. Если дальше мобы —
         // число пишется и нулём.
-        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut frames: Vec<&crate::frame::Frame> = self.frames.iter().collect();
 
             frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
@@ -309,7 +309,7 @@ impl Chunk {
 
         // Мобы (mob/mod.rs): сколько и записи по порядку. Если дальше
         // командные блоки — число пишется и нулём.
-        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             out.extend_from_slice(&(self.mobs.len() as u16).to_be_bytes());
 
             for mob in &self.mobs {
@@ -319,7 +319,7 @@ impl Chunk {
 
         // Командные блоки (command_block.rs), по порядку места. Если дальше
         // спавнеры — число пишется и нулём.
-        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.command_blocks.keys().copied().collect();
 
             places.sort_unstable();
@@ -332,7 +332,7 @@ impl Chunk {
 
         // Спавнеры (spawner.rs), по порядку места. Если дальше таблички —
         // число пишется и нулём.
-        if !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.spawners.keys().copied().collect();
 
             places.sort_unstable();
@@ -345,7 +345,7 @@ impl Chunk {
 
         // Таблички (sign.rs), по порядку места. Если дальше испытательные
         // блоки — число пишется и нулём.
-        if !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.signs.keys().copied().collect();
 
             places.sort_unstable();
@@ -358,7 +358,7 @@ impl Chunk {
 
         // Испытательные спавнеры и хранилища (trial.rs), по порядку места.
         // Если дальше ульи — число пишется и нулём.
-        if !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.trials.keys().copied().collect();
 
             places.sort_unstable();
@@ -370,7 +370,7 @@ impl Chunk {
         }
 
         // Ульи и гнёзда пчёл (hive.rs) — самыми последними, по порядку места.
-        if !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.hives.keys().copied().collect();
             places.sort_unstable();
             out.extend_from_slice(&(places.len() as u16).to_be_bytes());
@@ -383,7 +383,7 @@ impl Chunk {
             }
         }
 
-        if !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places:Vec<_>=self.archaeology.keys().copied().collect();places.sort_unstable();
             out.extend_from_slice(&(places.len() as u16).to_be_bytes());
             for (x,y,z) in places {
@@ -393,12 +393,33 @@ impl Chunk {
             }
         }
 
-        if !self.pots.is_empty() {
+        if !self.pots.is_empty() || !self.gateways.is_empty() {
             out.extend_from_slice(&(self.pots.len() as u16).to_be_bytes());
             let mut places: Vec<_> = self.pots.keys().copied().collect(); places.sort_unstable();
             for (x,y,z) in places {
                 out.push(((x<<4)|z) as u8); out.extend_from_slice(&(y as i16).to_be_bytes());
                 for item in self.pots[&(x,y,z)] { out.extend_from_slice(&item.to_be_bytes()); }
+            }
+        }
+
+        if !self.pot_details.is_empty() || !self.gateways.is_empty() {
+            out.extend_from_slice(&(self.pot_details.len() as u16).to_be_bytes());
+            let mut places: Vec<_> = self.pot_details.keys().copied().collect(); places.sort_unstable();
+            for (x,y,z) in places {
+                out.push(((x<<4)|z) as u8); out.extend_from_slice(&(y as i16).to_be_bytes());
+                let bytes = crate::stackdata::to_bytes(&self.pot_details[&(x,y,z)]);
+                out.extend_from_slice(&(bytes.len() as u32).to_be_bytes()); out.extend(bytes);
+            }
+        }
+
+        if !self.gateways.is_empty() {
+            out.extend_from_slice(&(self.gateways.len() as u16).to_be_bytes());
+            let mut places: Vec<_> = self.gateways.keys().copied().collect(); places.sort_unstable();
+            for (x,y,z) in places {
+                out.push(((x<<4)|z) as u8); out.extend_from_slice(&(y as i16).to_be_bytes());
+                let (ex,ey,ez,exact) = self.gateways[&(x,y,z)];
+                for value in [ex,ey,ez] { out.extend_from_slice(&value.to_be_bytes()); }
+                out.push(u8::from(exact));
             }
         }
 
@@ -457,6 +478,9 @@ impl Chunk {
         }
         for frame in &self.frames {
             if let Some(stack) = &frame.item { valid_stack(stack)?; }
+        }
+        for data in self.pot_details.values() {
+            valid_stack(&crate::inventory::Stack::new(crate::blocks::item_named("decorated_pot").unwrap(),1).with_extras(data.clone()))?;
         }
         for sides in self.pots.values() {
             for &item in sides {
@@ -704,6 +728,27 @@ impl Chunk {
             }
         }
 
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes(rest[..2].try_into().ok()?); rest = &rest[2..];
+            for _ in 0..count {
+                let (head, tail) = rest.split_at_checked(7)?; rest = tail;
+                let at = (i32::from(head[0]>>4),i32::from(i16::from_be_bytes(head[1..3].try_into().ok()?)),i32::from(head[0]&15));
+                let len = u32::from_be_bytes(head[3..7].try_into().ok()?) as usize;
+                let (bytes, tail) = rest.split_at_checked(len)?; rest = tail;
+                if !in_bounds(at.1) || !chunk.pots.contains_key(&at) { return None; }
+                chunk.pot_details.insert(at, crate::stackdata::from_bytes(bytes)?);
+            }
+        }
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes(rest[..2].try_into().ok()?); rest = &rest[2..];
+            for _ in 0..count {
+                let (head,tail) = rest.split_at_checked(16)?; rest = tail;
+                let at = (i32::from(head[0]>>4),i32::from(i16::from_be_bytes(head[1..3].try_into().ok()?)),i32::from(head[0]&15));
+                if !in_bounds(at.1) || crate::blocks::block_at_state(chunk.block(at.0,at.1,at.2)) != Some("end_gateway") { return None; }
+                let exit = (i32::from_be_bytes(head[3..7].try_into().ok()?),i32::from_be_bytes(head[7..11].try_into().ok()?),i32::from_be_bytes(head[11..15].try_into().ok()?),head[15]!=0);
+                chunk.gateways.insert(at,exit);
+            }
+        }
         Some(chunk)
     }
 
@@ -732,7 +777,7 @@ impl Chunk {
         my_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
         their_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
 
-        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs && self.hives == other.hives && self.archaeology == other.archaeology && self.pots == other.pots
+        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs && self.hives == other.hives && self.archaeology == other.archaeology && self.pots == other.pots && self.gateways == other.gateways && self.pot_details == other.pot_details
     }
 }
 
@@ -1055,7 +1100,11 @@ mod tests {
         chunk.set(2,8,3,crate::blocks::state_by_name("decorated_pot").unwrap());
         let sides = [crate::blocks::item_named("archer_pottery_sherd").unwrap();4];
         chunk.pots.insert((2,8,3),sides);
-        let back = Chunk::from_bytes(&chunk.to_bytes()).unwrap(); assert_eq!(back.pots,chunk.pots);
+        let side = crate::inventory::Stack::new(crate::blocks::item_named("brick").unwrap(),1).with_extras(crate::stackdata::Data { name: Some("side".into()), ..Default::default() });
+        chunk.pot_details.insert((2,8,3),crate::stackdata::Data { pot_sides: vec![crate::stackdata::Content { slot:0,item:side.stored_item(),count:1,data:side.data }], ..Default::default() });
+        chunk.set(4,8,3,crate::blocks::state_by_name("end_gateway").unwrap());
+        chunk.gateways.insert((4,8,3),(8,70,9,true));
+        let back = Chunk::from_bytes(&chunk.to_bytes()).unwrap(); assert_eq!(back.pots,chunk.pots); assert_eq!(back.pot_details,chunk.pot_details); assert_eq!(back.gateways,chunk.gateways);
         chunk.set(2,8,3,0); assert!(chunk.pots.is_empty());
     }
 

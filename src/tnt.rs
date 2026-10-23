@@ -919,6 +919,18 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
 
         let luck = world.random_unit();
 
+        if world.catalog().changed_rules() && let Some(sides) = world.pot((x,y,z)) {
+            let data = world.pot_details((x,y,z));
+            let tool = crate::inventory::Stack::new(crate::blocks::item_named("diamond_pickaxe").unwrap(),1);
+            // Взрыв разбивает стороны; пустая сторона ничего не создаёт.
+            for stack in crate::pottery::drops_with_data(sides,data,Some(tool)) {
+                dropped.push((stack,(x as f64+0.5,y as f64+0.25,z as f64+0.5)));
+            }
+            world.set_block(x,y,z,AIR);
+            crate::redstone::settle(world);
+            drop_fallen_off(world,items,next_id);
+            continue;
+        }
         let Ok(stack) = world.catalog().explosion_drops(state, luck) else {
             // Ошибка каталога не разрешает удалить блок без его предмета.
             continue;
@@ -926,7 +938,7 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
         if let Some(stack) = stack {
             let joined = dropped
                 .iter_mut()
-                .find(|(pile, _)| pile.item == stack.item && pile.count + stack.count <= pile.limit());
+                .find(|(pile, _)| pile.stacks_with(&stack) && pile.count + stack.count <= pile.limit());
 
             match joined {
                 Some((pile, _)) => pile.count += stack.count,
@@ -1320,6 +1332,21 @@ mod tests {
 
         let cobblestone = blocks::item_named("cobblestone");
         assert!(items.items().iter().any(|item| Some(item.stack.item) == cobblestone));
+    }
+
+    #[test]
+    fn preview_pot_explosion_keeps_named_side_and_does_not_merge_it_with_plain_bricks() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        let mut items = Items::with_catalog(catalog);
+        for x in [0,1] {
+            world.set_block(x,70,0,state("decorated_pot"));
+            crate::pottery::apply_snbt(&mut world,(x,70,0),if x==0 { r#"{sherds:[{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}]}"# } else { r#"{sherds:["minecraft:brick"]}"# });
+        }
+        destroy_blocks(&mut world,&mut items,&[(0,70,0),(1,70,0)],&mut ids());
+        assert_eq!(items.items().len(),2);
+        assert_eq!(items.items().iter().map(|i|i.stack.count).sum::<i32>(),2);
+        assert_eq!(items.items().iter().filter(|i|i.stack.extras().name.as_deref()==Some("side")).count(),1);
     }
 
     /// Пакет взрыва уходит после разрушения, а отвалившийся без опоры рычаг

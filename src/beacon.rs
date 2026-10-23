@@ -94,7 +94,7 @@ pub fn tick(shared: &Shared, dimension: Dimension, world: &mut World) {
             for uuid in nearby {
                 let mut ids = vec!["nether/create_beacon"];
                 if levels == 4 { ids.push("nether/create_full_beacon"); }
-                players.order(&uuid, crate::players::Order::Advancement { grant: true, ids, criterion: Some("construct_beacon".to_owned()) });
+                players.order(&uuid, crate::players::Order::Advancement { grant: true, ids, revision: 0, criterion: Some("construct_beacon".to_owned()) });
             }
         }
     }

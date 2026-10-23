@@ -2185,6 +2185,7 @@ impl BedrockWorld {
                 }
                 // Особый динамит помнит свой вид до слома: выпадет он же.
                 let pot = world.pot((x,y,z));
+    let pot_data = world.pot_details((x,y,z));
                 let custom = world.custom_tnt_at((x, y, z));
                 let tool = self.bag.inventory.held();
                 let original = world.get_block(x, y, z);
@@ -2246,7 +2247,7 @@ impl BedrockWorld {
 
                 if let Some(sides) = pot {
                     if !self.creative() && self.shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
-                        for stack in crate::pottery::drops(sides,tool) {
+                        for stack in crate::pottery::drops_with_data(sides,pot_data,tool) {
                             self.shared.items_in(self.dimension).lock().expect("предметы").drop_item(self.shared.next_entity_id(),stack,(x as f64+0.5,y as f64+0.25,z as f64+0.5),(0.0,0.2,0.0),crate::items::MINED_DELAY);
                         }
                     }

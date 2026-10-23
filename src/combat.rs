@@ -623,7 +623,8 @@ pub fn death_drops(inventory: &mut Inventory, keep: bool) -> Vec<Stack> {
 /// вдвое гасится и растёт на силу, но не выше 0,4. Стойкость (0…1) ослабляет
 /// силу: `сила · (1 − стойкость)`.
 pub fn knockback_velocity(velocity: (f64, f64, f64), dir: (f64, f64), strength: f64, resistance: f64, on_ground: bool) -> (f64, f64, f64) {
-    let strength = strength * (1.0 - resistance.clamp(0.0, 1.0));
+    // Отрицательное значение допускает только каталог 26.3 при расчёте атрибута.
+    let strength = strength * (1.0 - resistance.clamp(-2.0, 1.0));
 
     if strength <= 0.0 {
         return velocity;

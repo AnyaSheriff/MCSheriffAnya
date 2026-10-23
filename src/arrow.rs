@@ -720,7 +720,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             if let Some(part) = sweep_living(from, to, (mob.x, mob.y, mob.z), width / 2.0, height)
                 && best.as_ref().is_none_or(|(known, _)| part < *known)
             {
-                if mob.kind == crate::mob::Kind::Enderman {
+                if mob.kind == crate::mob::Kind::Enderman && !(world.catalog().changed_rules() && mob.riding) {
                     dodgers.push(mob.entity_id);
                     continue;
                 }

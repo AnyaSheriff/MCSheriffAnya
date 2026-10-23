@@ -129,6 +129,10 @@ pub struct Attribute {
 impl Attribute {
     /// Значение с учётом модификаторов.
     pub fn value(&self) -> f64 {
+        self.value_with_min(0.0)
+    }
+
+    fn value_with_min(&self, knockback_min: f64) -> f64 {
         let mut value = self.base;
 
         for modifier in self.modifiers.iter().filter(|m| m.operation == Operation::AddValue) {
@@ -143,7 +147,8 @@ impl Attribute {
             value *= 1.0 + modifier.amount;
         }
 
-        let (low, high) = limits(self.id);
+        let (mut low, high) = limits(self.id);
+        if self.id == KNOCKBACK_RESISTANCE { low = knockback_min; }
 
         value.clamp(low, high)
     }
@@ -193,12 +198,17 @@ const PLAYER_ATTRIBUTES: [i32; 12] = [
 #[derive(Clone, Debug, PartialEq)]
 pub struct Attributes {
     list: Vec<Attribute>,
+    knockback_min: f64,
 }
 
 impl Attributes {
     /// Атрибуты игрока: основа и ни одного модификатора.
     pub fn player() -> Self {
-        Self { list: PLAYER_ATTRIBUTES.iter().map(|id| Attribute { id: *id, base: player_base(*id), modifiers: Vec::new() }).collect() }
+        Self { list: PLAYER_ATTRIBUTES.iter().map(|id| Attribute { id: *id, base: player_base(*id), modifiers: Vec::new() }).collect(), knockback_min: 0.0 }
+    }
+
+    pub fn set_catalog(&mut self, catalog: crate::gameplay_catalog::Catalog) {
+        self.knockback_min = if catalog.changed_rules() { crate::gameplay_catalog::changed_rules::values().knockback_resistance_min } else { 0.0 };
     }
 
     pub fn get(&self, attribute: i32) -> Option<&Attribute> {
@@ -216,7 +226,9 @@ impl Attributes {
 
     /// Значение атрибута; у неведомого — основа игрока.
     pub fn value(&self, attribute: i32) -> f64 {
-        self.get(attribute).map_or_else(|| player_base(attribute), Attribute::value)
+        self.get(attribute).map_or_else(|| player_base(attribute), |a| {
+            if self.knockback_min == 0.0 { a.value() } else { a.value_with_min(self.knockback_min) }
+        })
     }
 
     /// Ставит модификатор; с тем же опознавателем — заменяет прежний.

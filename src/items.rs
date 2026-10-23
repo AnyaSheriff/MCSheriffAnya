@@ -286,6 +286,7 @@ pub enum Change {
 
 /// Все предметы, лежащие в мире, и журнал изменений.
 pub struct Items {
+    catalog: crate::gameplay_catalog::Catalog,
     items: Vec<Dropped>,
 
     /// Вагонетки в порядке появления: у них своя физика (minecart.rs), но
@@ -325,6 +326,7 @@ pub struct Items {
 impl Items {
     pub fn new() -> Self {
         Self {
+            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
             items: Vec::new(),
             carts: Vec::new(),
             bolts: Vec::new(),
@@ -348,7 +350,12 @@ impl Items {
     }
 
     /// Ставит моба в мир: клиентам его покажет конец такта (`send_mob_ticks`).
-    pub fn add_mob(&mut self, mob: crate::mob::Mob) {
+    pub fn with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
+        Self { catalog, ..Self::new() }
+    }
+
+    pub fn add_mob(&mut self, mut mob: crate::mob::Mob) {
+        mob.catalog = self.catalog;
         self.mobs.push(mob);
     }
 
@@ -362,6 +369,10 @@ impl Items {
             let at = (self.mobs[index].x, self.mobs[index].y, self.mobs[index].z);
 
             for event in std::mem::take(&mut self.mobs[index].events) {
+                if matches!(event, crate::mob::Event::Bounce) {
+                    self.vibrations.push(crate::redstone::sculk_family::GameEvent { at, source: Some(entity_id), frequency: 2, projectile: false });
+                    continue;
+                }
                 if self.mobs[index].kind != crate::mob::Kind::Warden {
                     let frequency = match &event {
                         crate::mob::Event::Hurt { .. } => Some(7),
@@ -432,7 +443,8 @@ impl Items {
 
     /// Ставит моба, родившегося во время хода мобов: клиентам он виден уже
     /// в этом конце такта (появление), первая сверка — со следующего.
-    pub fn add_mob_late(&mut self, mob: crate::mob::Mob) {
+    pub fn add_mob_late(&mut self, mut mob: crate::mob::Mob) {
+        mob.catalog = self.catalog;
         self.mob_view.push(mob.clone());
         self.mobs.push(mob);
     }

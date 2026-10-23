@@ -904,6 +904,7 @@ fn forget_reader(shared: &Shared,
 /// соединение оборвалось ошибкой. Иначе он остался бы в списке навсегда.
 pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
     crate::commands_admin::forget_address(uuid);
+    shared.advancement_states.lock().expect("достижения захвачены другим потоком").remove(uuid);
 
     // Снимок — до ухода из списка; вызов плагина — после отпускания замков.
     let view = if crate::plugins::active() { crate::plugins::PlayerView::find(shared, name) } else { None };
@@ -4165,7 +4166,12 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
         (player.x, player.y, player.z),
     );
     // В портале Края ждать не надо.
-    let needed = if end_portal { 1 } else { crate::portal::wait(&shared.settings, player.game_mode == GAME_MODE_CREATIVE) };
+    // В 26.3 наблюдатель проходит портал без задержки, как творческий игрок.
+    // [проверить] Обычный сервер: сетевая проба остановилась до входа.
+    let instant = player.game_mode == GAME_MODE_CREATIVE
+        || (shared.catalog().changed_rules() && player.game_mode == GAME_MODE_SPECTATOR);
+    let gateway = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").gateway_exit((player.x,player.y,player.z)).is_some();
+    let needed = if end_portal || gateway { 1 } else { crate::portal::wait(&shared.settings, instant) };
 
     if player.in_portal < needed {
         return;
@@ -4177,8 +4183,9 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
 
     let (mut dimension, (mut x, mut y, mut z)) = crate::portal::travel(shared, player.dimension, (player.x, player.y, player.z));
 
+    if gateway { player.progress.trigger("end/enter_end_gateway"); }
     // Из Энда — к точке возрождения игрока (кровать), а не к общей.
-    if player.dimension == Dimension::End && dimension == Dimension::Overworld {
+    if !gateway && player.dimension == Dimension::End && dimension == Dimension::Overworld {
         dimension = Dimension::Overworld;
         (x, y, z) = on_the_ground(shared, player.spawn_point);
     }
@@ -4892,6 +4899,8 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
             body.extend_from_slice(&encode_varint(window.id));
             write_body(stream, body).await?;
             close_own_window(shared, player);
+        } else if shared.catalog().changed_rules() {
+            merchant::refresh_open_offers(stream, shared, player).await?;
         }
 
         return Ok(());
@@ -5496,6 +5505,11 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         shared.players.lock().expect("список игроков захвачен другим потоком").set_rest(&player.uuid, rest);
     }
 
+    {
+        let mut states = shared.advancement_states.lock().expect("достижения захвачены другим потоком");
+        let entry = states.entry(player.uuid).or_insert_with(|| (player.progress.adv.clone(), player.advancement_revision));
+        if entry.1 == player.advancement_revision { entry.0 = player.progress.adv.clone(); }
+    }
     progression::effects(player);
     // Предметы у игрока: набор сверяется с таблицей «есть предмет».
     {
@@ -6389,7 +6403,8 @@ async fn read_and_log_play_packets(
                 }
                 Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false }),
                 Order::Progress(event) => player.progress.event(event),
-                Order::Advancement { grant, ids, criterion } => {
+                Order::Advancement { grant, ids, criterion, revision } => {
+                    if revision != 0 { player.advancement_revision = revision; }
                     for id in ids {
                         let changed = match (grant, &criterion) {
                             (true, Some(criterion)) => player.progress.adv.grant(id, criterion),
@@ -6472,7 +6487,7 @@ async fn read_and_log_play_packets(
                     // Из портала в Энд игрок выходит лицом на запад (замер
                     // оригинала: yaw 90, наклон прежний); переход командой
                     // поворот не трогает.
-                    if dimension == Dimension::End && !player.portal_ready {
+                    if dimension == Dimension::End && from_dimension != Dimension::End && !player.portal_ready {
                         player.yaw = 90.0;
                     }
 
@@ -8989,6 +9004,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     let bed = sleep::bed_break_plan(&world, (x, y, z), player.game_mode == GAME_MODE_CREATIVE);
 
     let pot = world.pot((x,y,z));
+    let pot_data = world.pot_details((x,y,z));
     let hive_block = crate::hive::is_hive(state);
     let hive_silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
     let hive_drop = if hive_block && hive_silk { crate::hive::silk_stack(&world, (x, y, z)) } else { None };
@@ -9024,7 +9040,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
 
     if let Some(sides) = pot {
         if player.game_mode != GAME_MODE_CREATIVE && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
-            for stack in crate::pottery::drops(sides,player.inventory.held()) {
+            for stack in crate::pottery::drops_with_data(sides,pot_data,player.inventory.held()) {
                 let scattered = crate::tick::scattered((x,y,z),|| f64::from(world.random_unit()));
                 drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY);
             }
@@ -9271,6 +9287,22 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     if !within_reach(player, (clicked_x, clicked_y, clicked_z)) {
         log_debug!("Play: {} тянется к {} {} {} слишком далеко", player.name, clicked_x, clicked_y, clicked_z);
         return Some(Reaction::accepted(sequence));
+    }
+
+    // 26.3: мотыга и лопата уступают щиту; приседание оставляет действие инструмента.
+    if shared.catalog().changed_rules() && !player.sneaking
+        && player.inventory.held().and_then(|s| blocks::item_name(s.item))
+            .is_some_and(|n| n.ends_with("_hoe") || n.ends_with("_shovel"))
+        && player.inventory.slot(inventory::OFFHAND).and_then(|s| blocks::item_name(s.item)) == Some("shield")
+        && {
+            let world = shared.world_in(player.dimension).lock().expect("мир");
+            let name = blocks::block_at_state(world.get_block(clicked_x, clicked_y, clicked_z));
+            let hoe = player.inventory.held().and_then(|s| blocks::item_name(s.item)).is_some_and(|n| n.ends_with("_hoe"));
+            if hoe { matches!(name, Some("grass_block" | "dirt" | "dirt_path" | "coarse_dirt" | "rooted_dirt")) }
+            else { matches!(name, Some("grass_block" | "dirt" | "coarse_dirt" | "rooted_dirt" | "podzol" | "mycelium")) }
+        }
+    {
+        return Some(refused);
     }
 
     if let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence) {
@@ -11444,6 +11476,7 @@ struct PlayerState {
     speed_touch: u32,
 
     /// Статистика и достижения игрока (progress.rs).
+    advancement_revision: u64,
     progress: crate::progress::Progress,
     progress_location: progression::Location,
 }
@@ -11561,6 +11594,7 @@ impl PlayerState {
         // Здоровье, еда, воздух и огонь — как при выходе.
         let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored(&data.vitals)).unwrap_or_default();
         let mut attrs = crate::attributes::Attributes::player();
+        attrs.set_catalog(catalog);
         attrs.set_creative_ranges(game_mode == GAME_MODE_CREATIVE);
 
         // Семя зачарования 0 — не заведено: завести (вики, Enchanting
@@ -11650,6 +11684,7 @@ impl PlayerState {
             attrs_touched: Vec::new(),
             speed_due: Vec::new(),
             speed_touch: 0,
+            advancement_revision: 0,
             progress: crate::progress::Progress::load_for_catalog(&uuid, catalog),
             progress_location: progression::Location::default(),
             skin,
@@ -12814,6 +12849,8 @@ mod use_action_tests;
 
 #[cfg(test)]
 mod catalog_action_tests;
+#[cfg(test)]
+mod changed_rules_tests;
 
 #[cfg(test)]
 mod crafter_catalog_tests;

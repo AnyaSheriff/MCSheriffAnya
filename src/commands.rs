@@ -156,7 +156,7 @@ fn allowed(command: &str, source: &Source, shared: &Shared) -> bool {
                 .expect("права захвачены другим потоком")
                 .level_of(uuid);
 
-            level >= needed
+            level >= needed || source_mob(uuid, shared).is_some()
         }
     }
 }
@@ -684,19 +684,26 @@ fn custom_tnt(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// где он стоит, у консоли — начало мира.
 pub(crate) fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
     match source {
-        Source::Player { uuid, .. } => shared
-            .players
-            .lock()
-            .expect("список игроков захвачен другим потоком")
-            .members()
-            .iter()
-            .find(|member| &member.uuid == uuid)
-            .map(|member| (member.position.x, member.position.y, member.position.z))
-            .unwrap_or_default(),
+        Source::Player { uuid, .. } => {
+            let position = shared.players.lock().expect("список игроков захвачен другим потоком").members().iter()
+                .find(|member| &member.uuid == uuid).map(|member| (member.position.x,member.position.y,member.position.z));
+            position.or_else(|| source_mob(uuid, shared).map(|m| m.2)).unwrap_or_default()
+        },
         Source::Console => (0.0, 0.0, 0.0),
         // У командного блока — середина блока (`Vec3.atCenterOf`).
         Source::Block { x, y, z, .. } => (*x as f64 + 0.5, *y as f64 + 0.5, *z as f64 + 0.5),
     }
+}
+
+// Исполнитель-моб использует тот же UUID, который отправляется клиенту.
+pub(crate) fn source_mob(uuid: &[u8;16], shared: &Shared) -> Option<(Dimension, i32, (f64,f64,f64))> {
+    for dimension in [Dimension::Overworld, Dimension::Nether, Dimension::End] {
+        let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        if let Some(m) = items.mobs().iter().find(|m| m.uuid == *uuid && !m.is_dead()) {
+            return Some((dimension, m.entity_id, (m.x,m.y,m.z)));
+        }
+    }
+    None
 }
 
 /// Три координаты места для сущности: числа или `~` со сдвигом от `origin`.
@@ -2321,15 +2328,11 @@ pub(crate) fn names_of(targets: &[([u8; 16], String)]) -> String {
 /// обычном мире.
 pub(crate) fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
     match source {
-        Source::Player { uuid, .. } => shared
-            .players
-            .lock()
-            .expect("список игроков захвачен другим потоком")
-            .members()
-            .iter()
-            .find(|member| &member.uuid == uuid)
-            .map(|member| member.dimension)
-            .unwrap_or_default(),
+        Source::Player { uuid, .. } => {
+            let dimension = shared.players.lock().expect("список игроков захвачен другим потоком").members().iter()
+                .find(|member| &member.uuid == uuid).map(|member| member.dimension);
+            dimension.or_else(|| source_mob(uuid, shared).map(|m| m.0)).unwrap_or_default()
+        },
         Source::Console => Dimension::Overworld,
         Source::Block { dimension, .. } => *dimension,
     }
@@ -2515,6 +2518,17 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                     placed.push((x, y, z));
                 }
 
+                if blocks::block_at_state(state) == Some("decorated_pot") && let Some(text) = data {
+                    crate::pottery::apply_snbt(&mut world,(x,y,z),text);
+                }
+                if shared.catalog().changed_rules() && blocks::block_at_state(state) == Some("end_gateway")
+                    && let Some(root) = data.and_then(crate::snbt::parse)
+                    && let Some(crate::snbt::Value::List(exit)) = root.get("exit_portal")
+                    && let [ex,ey,ez] = exit.as_slice()
+                    && let (Some(ex),Some(ey),Some(ez)) = (ex.as_f64(),ey.as_f64(),ez.as_f64())
+                {
+                    world.set_gateway((x,y,z),(ex as i32,ey as i32,ez as i32,root.get("ExactTeleport").and_then(crate::snbt::Value::as_f64).is_some_and(|n|n!=0.0)));
+                }
                 if let Some(text)=data.filter(|_|hive) && let Some(mut data)=crate::hive::from_snbt(text) {
                     // Тик блока-сущности у оригинала начинается со следующего такта
                     // после постановки (чёрный ящик, hive-exit: выход на +21 при 20).

@@ -531,6 +531,10 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     // 6. Прогулка: в среднем раз в 120 тактов (вики, Mob AI: «Wander»).
+    if !stroll_active(mob, view, ctx) {
+        mob.brain.stop();
+        return plan;
+    }
     if mob.brain.path.is_empty() && rng.below(120) == 0 {
         mob.brain.go(stroll_route(mob.kind, view, here, rng), 1.0);
     }
@@ -543,6 +547,13 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     // Голова: на ближайшего игрока или случайно.
     look_around(mob, ctx, rng);
     plan
+}
+
+/// 26.3: именная бирка больше не поддерживает прогулку вдали от игроков.
+/// [проверить] Граница 32 блока: отдельного наблюдения расстояния нет.
+pub(super) fn stroll_active(mob: &Mob, view: &dyn View, ctx: &Ctx) -> bool {
+    !view.catalog().changed_rules() || ctx.players.iter().any(|p| !p.spectator
+        && (p.x-mob.x).powi(2)+(p.y-mob.y).powi(2)+(p.z-mob.z).powi(2) <= 32.0*32.0)
 }
 
 /// Опускает точку на землю: ближайшая клетка под ней, где можно стоять.

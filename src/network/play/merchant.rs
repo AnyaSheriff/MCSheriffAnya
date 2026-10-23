@@ -39,7 +39,7 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
 
     let wandering = mob.kind == crate::mob::Kind::WanderingTrader;
     if wandering && mob.villager.offers.is_empty() {
-        mob.villager.offers = crate::mob::trader::offers(&mut crate::mob::Rng::new(mob.entity_id as u64 ^ mob.ticks));
+        mob.villager.offers = crate::mob::trader::offers_for_catalog(shared.catalog(), &mut crate::mob::Rng::new(mob.entity_id as u64 ^ mob.ticks));
     }
     // С жителем уже торгуют [проверить: у оригинала второму отказ молча].
     if mob.villager.trading.is_some() {
@@ -127,12 +127,31 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         crafter: false,
         kind: None,
         props: Vec::new(),
-        merchant: Some(Merchant::new(villager_id)),
+        merchant: Some(Merchant { sent_offer_count: state.offers.len(), ..Merchant::new(villager_id) }),
         station: None,
         ender: false,
     });
     send_window_content(stream, player, shared.catalog()).await?;
     write_body(stream, offers_packet(id, &state, wandering)).await
+}
+
+/// 26.3: повышение уровня обновляет уже открытый список сделок.
+pub(super) async fn refresh_open_offers(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    let Some(window) = &player.window else { return Ok(()); };
+    let Some(merchant) = &window.merchant else { return Ok(()); };
+    let update = shared.items_in(player.dimension).lock().expect("торговец").mobs().iter()
+        .find(|m| m.entity_id == merchant.villager && m.villager.offers.len() != merchant.sent_offer_count)
+        .map(|m| (m.villager.clone(), m.kind == crate::mob::Kind::WanderingTrader));
+    if let Some((state, wandering)) = update {
+        let packet = offers_packet(window.id, &state, wandering);
+        if let Some(merchant) = player.window.as_mut().and_then(|w| w.merchant.as_mut()) {
+            merchant.sent_offer_count = state.offers.len();
+            merchant.update_result(&state.offers);
+        }
+        write_body(stream, packet).await?;
+        send_window_content(stream, player, shared.catalog()).await?;
+    }
+    Ok(())
 }
 
 /// Merchant Offers (minecraft-data 26.1, `trade_list`): сделки с ценой без

@@ -494,6 +494,11 @@ pub fn fits(view: &dyn View, mob: &Mob) -> bool {
     space::dry(view, (mob.x, mob.y, mob.z), mob.size())
 }
 
+/// 26.2 разрешает этим видам появляться и на мирной сложности.
+pub fn peaceful_exception(catalog: crate::gameplay_catalog::Catalog, kind: Kind) -> bool {
+    catalog.changed_rules() && matches!(kind, Kind::Ocelot | Kind::Piglin | Kind::ZombieHorse)
+}
+
 // Биомные таблицы новых животных (вики, страницы мобов, «Spawning»).
 // [проверить] Общий алгоритм размещения использует существующую модель чанков.
 pub fn land_table(biome: &str) -> Vec<(Kind,u32,u32,u32)> {

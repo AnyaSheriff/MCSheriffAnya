@@ -9,15 +9,50 @@ pub fn placement_at(world: &World, clicked: (i32,i32,i32), face: i32) -> (i32,i3
 }
 pub fn place(world: &mut World, at: (i32,i32,i32), held: Stack) {
     if blocks::item_name(held.item) == Some("decorated_pot") {
-        world.set_pot(at, held.extras().pot_decorations.unwrap_or([blocks::item_named("brick").unwrap();4]));
+        let data = held.extras();
+        let blank = if world.catalog().changed_rules() { 0 } else { blocks::item_named("brick").unwrap() };
+        world.set_pot(at, data.pot_decorations.unwrap_or([blank;4]));
+        if world.catalog().changed_rules() { world.set_pot_details(at, data); }
     }
 }
 pub fn drops(sides: [i32;4], tool: Option<Stack>) -> Vec<Stack> {
     let shatter = tool.is_some_and(|s| s.extras().level("silk_touch") == 0 && blocks::item_name(s.item).is_some_and(|n|
         matches!(n,"trident" | "mace") || ["_pickaxe","_axe","_shovel","_hoe","_sword"].iter().any(|suffix| n.ends_with(suffix))));
-    if shatter { sides.into_iter().map(|id| Stack::new(id,1)).collect() }
+    if shatter { sides.into_iter().filter(|id| *id != 0).map(|id| Stack::new(id,1)).collect() }
     else { vec![Stack::new(blocks::item_named("decorated_pot").unwrap(),1).with_extras(crate::stackdata::Data { pot_decorations: Some(sides), ..Default::default() })] }
 }
+/// Полные стопки сторон хранятся отдельно от старого массива номеров.
+pub fn drops_with_data(sides: [i32;4], data: crate::stackdata::Data, tool: Option<Stack>) -> Vec<Stack> {
+    let mut result = drops(sides, tool);
+    if result.first().is_some_and(|s| blocks::item_name(s.item) == Some("decorated_pot")) {
+        let mut extra = result[0].extras(); extra.pot_sides = data.pot_sides;
+        result[0] = result[0].with_extras(extra);
+    } else {
+        result = sides.into_iter().enumerate().filter_map(|(i,id)| {
+            if id == 0 { return None; }
+            let side = data.pot_sides.iter().find(|c| c.slot as usize == i);
+            Some(side.map(|c| Stack::from_stored(c.item, 1).with_extras(c.data.map(crate::stackdata::get).unwrap_or_default())).unwrap_or_else(|| Stack::new(id,1)))
+        }).collect();
+    }
+    result
+}
+
+pub fn apply_snbt(world: &mut World, at: (i32,i32,i32), text: &str) {
+    if !world.catalog().changed_rules() { return; }
+    let Some(root) = crate::snbt::parse(text) else { return; };
+    let Some(crate::snbt::Value::List(sides)) = root.get("sherds") else { return; };
+    let mut ids = [0;4];
+    let mut data = crate::stackdata::Data::default();
+    for (i, side) in sides.iter().take(4).enumerate() {
+        let stack = side.as_str().and_then(|n|blocks::item_named(n.trim_start_matches("minecraft:"))).map(|id|Stack::new(id,1)).or_else(||crate::stackdata::stack_from_value(side).ok());
+        if let Some(stack) = stack {
+            ids[i] = stack.item;
+            data.pot_sides.push(crate::stackdata::Content { slot:i as u8,item:stack.stored_item(),count:1,data:stack.data });
+        }
+    }
+    world.set_pot(at,ids); world.set_pot_details(at,data);
+}
+
 pub fn nbt(sides: [i32;4]) -> Vec<u8> {
     let mut out = vec![10,9,0,6]; out.extend_from_slice(b"sherds"); out.push(8); out.extend_from_slice(&4i32.to_be_bytes());
     for item in sides {
@@ -41,6 +76,27 @@ mod tests {
         assert_eq!(drops(sides,Some(tool.with_extras(data))),vec![stack]);
         world.set_block(0,70,0,0); assert_eq!(world.pot((0,70,0)),None);
     }
+    #[test]
+    fn preview_sides_keep_data_through_item_and_block_and_empty_sides_do_not_shatter() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        let at = (1,70,1);
+        world.set_block(at.0,at.1,at.2,blocks::state_by_name("decorated_pot").unwrap());
+        apply_snbt(&mut world,at,r#"{sherds:[{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}]}"#);
+        let sides = world.pot(at).unwrap();
+        assert_eq!(sides[1..],[0;3]);
+        let data = world.pot_details(at);
+        assert_eq!(crate::stackdata::from_bytes(&crate::stackdata::to_bytes(&data)),Some(data.clone()));
+        let tool = Some(Stack::new(blocks::item_named("diamond_pickaxe").unwrap(),1));
+        let parts = drops_with_data(sides,data.clone(),tool);
+        assert_eq!(parts.len(),1); assert_eq!(parts[0].extras().name.as_deref(),Some("side"));
+        let pot = drops_with_data(sides,data,None)[0];
+        world.set_block(2,70,1,blocks::state_by_name("decorated_pot").unwrap());
+        place(&mut world,(2,70,1),pot);
+        assert_eq!(drops_with_data(world.pot((2,70,1)).unwrap(),world.pot_details((2,70,1)),tool),parts);
+        assert!(drops([0;4],tool).is_empty());
+    }
+
     #[test]
     fn replacing_grass_does_not_overwrite_adjacent_pot() {
         let mut world = World::in_memory();

@@ -59,11 +59,28 @@ pub(crate) fn advancement(parts: &[&str], source: &crate::commands::Source, shar
 
     let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
+    let mut changed = 0;
+    let mut changed_players = 0;
+    let mut states = shared.advancement_states.lock().expect("достижения захвачены другим потоком");
     for (uuid, _) in &targets {
-        players.order(uuid, Order::Advancement { grant, ids: ids.iter().map(|def| def.id).collect(), criterion: criterion.clone() });
+        let (state, revision) = states.entry(*uuid).or_insert_with(|| (crate::advancements::AdvState::load(uuid), 0));
+        let count = ids.iter().filter(|def| match (grant, &criterion) {
+            (true, Some(c)) => state.grant(def.id, c),
+            (true, None) => state.grant_all(def.id),
+            (false, Some(c)) => state.revoke(def.id, c),
+            (false, None) => state.revoke_all(def.id),
+        }).count();
+        changed += count;
+        changed_players += usize::from(count > 0);
+        *revision += 1;
+        players.order(uuid, Order::Advancement { grant, ids: ids.iter().map(|def| def.id).collect(), criterion: criterion.clone(), revision: *revision });
     }
-
     let verb = if grant { "Выдано" } else { "Отнято" };
-
-    Answer::saying(format!("{verb} достижений: {} у {}", ids.len(), names_of(&targets)))
+    let mut answer = if shared.catalog().changed_rules() {
+        Answer::saying(format!("{verb} достижений: {changed} у игроков: {changed_players}"))
+    } else {
+        Answer::saying(format!("{verb} достижений: {} у {}", ids.len(), names_of(&targets)))
+    };
+    if shared.catalog().changed_rules() { answer.result = (changed > 0).then_some(changed as i32); }
+    answer
 }

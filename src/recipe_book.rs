@@ -86,6 +86,9 @@ struct Entry { key: String, display: Display, recipe_id: Option<crafting::Recipe
 
 impl Entry {
     fn named(&self, catalog: crate::gameplay_catalog::Catalog, name: &str) -> bool {
+        if catalog.changed_rules() && name == "decorated_pot_simple" {
+            return matches!(&self.display, Display::Crafting(recipe) if blocks::item_name(recipe.result) == Some("decorated_pot"));
+        }
         // Только имя, подтверждённое обычными recipe take/give777; не имя результата.
         if self.slab.is_some() && matches!(self.display, Display::Stonecutting { .. }) { return self.key.strip_prefix("minecraft:") == Some(name); }
         matches!(&self.display, Display::Crafting(recipe) if catalog.name(crate::gameplay_catalog::Kind::Item, recipe.result).ok() == Some(name))

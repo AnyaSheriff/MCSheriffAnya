@@ -1501,6 +1501,8 @@ pub enum Event {
 
     /// Частицы приземления: блок под ногами и их число.
     Landing { block: i32, count: i32 },
+    /// Отскок от опоры; только игровое событие, без отдельного сетевого пакета.
+    Bounce,
 
     /// Частицы осколков блока: состояние, место, разброс, скорость, число (поломка стойки).
     BlockBurst { block: i32, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32 },
@@ -1635,6 +1637,9 @@ pub struct Mob {
 
     /// Сохраняется ли с чанком.
     pub persistent: bool,
+    /// Каталог владельца и состояние транспорта; не являются данными самого моба.
+    pub catalog: crate::gameplay_catalog::Catalog,
+    pub riding: bool,
 
     /// Шаг с оглядкой на цель (скелет): вперёд и влево, в долях скорости;
     /// действует, пока нет пути.
@@ -1822,6 +1827,8 @@ impl Mob {
             brain: ai::Brain::new(entity_id),
             fright: None,
             persistent: true,
+            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
+            riding: false,
             strafe: (0.0, 0.0),
             wall: false,
             h,
@@ -1931,6 +1938,14 @@ impl Mob {
 
         if self.kind == Kind::Warden && self.warden.invulnerable() { return (0.9, 1.0); }
         if self.kind == Kind::HappyGhast && self.is_baby() { return (0.95, 0.95); }
+        if self.catalog.changed_rules() && self.is_baby()
+            && let Some(size) = crate::gameplay_catalog::changed_rules::values().baby_sizes.get(self.kind.name())
+        { return (size[0], size[1]); }
+        if self.catalog.changed_rules() && self.is_baby()
+            && matches!(self.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::ZombifiedPiglin | Kind::Villager | Kind::Piglin)
+        {
+            return (self.kind.width() * 0.5, crate::gameplay_catalog::changed_rules::values().baby_humanoid_height);
+        }
 
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
@@ -1948,6 +1963,8 @@ impl Mob {
     /// свои: зомби и скелет 1,74 (чёрный ящик, skeleton-arrow: стрела вылетает
     /// на 1,64 = глаза − 0,1), крипер 1,445, паук 0,65 [проверить].
     pub fn eye(&self) -> f64 {
+        // [проверить] Индивидуальные глаза и точки посадки детёнышей 26.2.
+        if self.catalog.changed_rules() && self.is_baby() { return self.size().1 * 0.85; }
         match self.kind {
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
             // [проверить] высота глаз: ифрит 1,53, иссушитель 2,1, гаст 2,6.
@@ -2028,6 +2045,7 @@ impl Mob {
     /// Такт моба: рост, мысли, движение, урон от падения. Возвращает то, что
     /// случилось вовне (детёныш, съеденная трава, яйцо), — исполняет вызывающий.
     pub fn tick(&mut self, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan {
+        self.catalog = view.catalog();
         if self.wild.fresh {
             self.wild.fresh = false;
             return ai::Plan::default();
@@ -2615,7 +2633,13 @@ impl Mob {
 
         if down_hit {
             self.on_ground = true;
-            self.vy = 0.0;
+            let below = view.block(self.x.floor() as i32, (self.y - 0.001).floor() as i32, self.z.floor() as i32);
+            let bed = blocks::block_at_state(below).is_some_and(|n| n.ends_with("_bed") && n != "straw_bed");
+            let slime = blocks::block_at_state(below) == Some("slime_block");
+            if view.catalog().changed_rules() && (bed || slime) {
+                self.vy = -dy * if bed { crate::gameplay_catalog::changed_rules::values().bed_restitution } else { 1.0 };
+                self.events.push(Event::Bounce);
+            } else { self.vy = 0.0; }
         } else {
             self.on_ground = false;
 
@@ -2664,6 +2688,8 @@ impl Mob {
             let damage = if horse::equine(self.kind) { horse::fall_damage(fall) } else { ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil() };
             if horse::equine(self.kind) && self.horse.rider.is_some() { self.horse.rider_fall += damage; }
 
+            let damage = if view.catalog().changed_rules()
+                && blocks::block_at_state(below).is_some_and(|n| n.ends_with("_bed") && n != "straw_bed") { damage * 0.5 } else { damage };
             self.hurt(damage, Source::Fall, None);
         }
     }
@@ -2905,7 +2931,7 @@ impl Mob {
         // ниже половины здоровья с шансом 25 % (вики, Shulker).
         if !self.no_ai && !hit.died {
             match self.kind {
-                Kind::Enderman => self.h.want_teleport = true,
+                Kind::Enderman if !(self.catalog.changed_rules() && self.riding) => self.h.want_teleport = true,
                 Kind::Shulker if self.vitals.health < self.kind.max_health() / 2.0 => {
                     self.h.want_teleport = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5B).below(4) == 0;
                 }
@@ -4612,6 +4638,8 @@ pub const DROP_DELAY: u64 = 10;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod changed_rules_tests;
 
 #[cfg(test)]
 mod itemaudit_tests;

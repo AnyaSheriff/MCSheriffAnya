@@ -1303,8 +1303,37 @@ fn execute(words: &[&str], source: &Source, shared: &Shared) -> Answer {
                 };
                 let mut next = Vec::new();
                 for source in &sources {
-                    for (uuid, name) in crate::commands::find_targets(who, source, shared) {
-                        next.push(Source::Player { uuid, name });
+                    for target in crate::commands_world::targets(who, source, shared) {
+                        match target {
+                            crate::commands_world::Target::Player { uuid, name, .. } => next.push(Source::Player { uuid, name }),
+                            crate::commands_world::Target::Mob { entity_id, kind, dimension, .. } => {
+                                let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                                if let Some(mob) = items.mobs().iter().find(|m|m.entity_id==entity_id) {
+                                    next.push(Source::Player { uuid: mob.uuid, name: kind.name().into() });
+                                }
+                            },
+                        }
+                    }
+                }
+                sources = next;
+                at += 2;
+            }
+            "on" if words.get(at + 1) == Some(&"owner") => {
+                let mut next = Vec::new();
+                for source in &sources {
+                    let Source::Player { uuid, .. } = source else { continue; };
+                    let Some((dimension, id, _)) = crate::commands::source_mob(uuid, shared) else { continue; };
+                    let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                    let Some(mob) = items.mobs().iter().find(|m| m.entity_id == id) else { continue; };
+                    if shared.catalog().changed_rules() && mob.kind == crate::mob::Kind::Vex {
+                        if let Some(owner) = items.mobs().iter().find(|m| m.entity_id == mob.h.owner && !m.is_dead()) {
+                            next.push(Source::Player { uuid: owner.uuid, name: owner.kind.name().into() });
+                        }
+                    } else if let Some(owner) = mob.tame.owner {
+                        drop(items);
+                        if let Some(member) = shared.players.lock().expect("игроки захвачены другим потоком").members().iter().find(|m| m.uuid == owner) {
+                            next.push(Source::Player { uuid: owner, name: member.name.clone() });
+                        }
                     }
                 }
                 sources = next;
@@ -1373,6 +1402,7 @@ fn execute(words: &[&str], source: &Source, shared: &Shared) -> Answer {
             "run" => {
                 let command = words[at + 1..].join(" ");
                 let mut last = silent(0);
+                if sources.is_empty() { last.result = None; }
                 let mut successes = 0;
 
                 for source in &sources {

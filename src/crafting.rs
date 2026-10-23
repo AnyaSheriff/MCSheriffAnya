@@ -444,7 +444,21 @@ pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Opt
         && craft(slots).is_none()
         && let Some((_, result)) = mushroom_soup(slots)
     { return Some(result); }
-    craft(slots)
+    let result = craft(slots)?;
+    if catalog.changed_rules() && crate::blocks::item_name(result.item) == Some("decorated_pot") {
+        let mut data = result.extras();
+        // [проверить] Выбор simple/декорированного рецепта при одинаковой сетке кирпичей.
+        if slots.iter().flatten().all(|s| crate::blocks::item_name(s.item) == Some("brick") && s.extras() == crate::stackdata::Data::default()) {
+            data.pot_decorations = Some([0;4]);
+        } else if slots.len() == 9 {
+            data.pot_sides = [1,3,5,7].into_iter().enumerate().filter_map(|(slot,i)| {
+                let stack = slots[i]?;
+                Some(crate::stackdata::Content { slot: slot as u8, item: stack.stored_item(), count: 1, data: stack.data })
+            }).collect();
+        }
+        return Some(result.with_extras(data));
+    }
+    Some(result)
 }
 
 /// Что получится из сетки 3×3 (ячейки по рядам, слева направо): первый

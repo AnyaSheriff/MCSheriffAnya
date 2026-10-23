@@ -1163,7 +1163,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let kinds = if dimension == Dimension::End { &crate::mob::spawn::END_HOSTILE[..] } else { &crate::mob::spawn::HOSTILE[..] };
     let mut natural: Vec<crate::mob::Mob> = Vec::new();
 
-    if hostile_spawning && difficulty > crate::survival::PEACEFUL && ticks.is_multiple_of(8) && !watchers.is_empty() {
+    let peaceful_piglins = world.catalog().changed_rules() && nether;
+    if hostile_spawning && (difficulty > crate::survival::PEACEFUL || peaceful_piglins) && ticks.is_multiple_of(8) && !watchers.is_empty() {
         let players: Vec<(f64, f64, f64)> = watchers.iter().filter(|player| !player.spectator).map(|player| (player.x, player.y, player.z)).collect();
         let crowd = {
             let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
@@ -1186,6 +1187,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             // Fortress); нужен только блочный свет не выше 11 (вики, Mob spawning).
             natural = if nether {
                 let kinds_at = |x: i32, y: i32, z: i32| {
+                    if difficulty == crate::survival::PEACEFUL {
+                        return crate::mob::spawn::nether_kinds(world.surface_biome(x, z)).iter().copied()
+                            .filter(|(kind, _)| crate::mob::spawn::peaceful_exception(world.catalog(), *kind)).collect();
+                    }
                     let on_bricks = blocks::block_at_state(world.get_block(x, y - 1, z)) == Some("nether_bricks");
 
                     if on_bricks && world.in_fortress(x, y, z) {
@@ -1263,6 +1268,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
 
     let targets: Vec<_> = watchers.iter().map(|p| crate::tnt::Target { entity_id: p.id, x: p.x, y: p.y, z: p.z, sneaking: false }).collect();
+    if world.catalog().changed_rules() {
+        let riding = shared.riding.lock().expect("седоки");
+        for mob in items.mobs_mut() { mob.riding = riding.vehicle_of(mob.entity_id).is_some(); }
+    }
     crate::effect_reactions::mobs(world, &mut items, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), rng);
 
     for mut mob in loaded {
@@ -1557,7 +1566,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             let Some(y)=y else { continue; };
             let mut trader=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::WanderingTrader,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
             if !crate::mob::spawn::fits(&MobView(world),&trader) { continue; }
-            trader.land.despawn=48000; trader.villager.offers=crate::mob::trader::offers(rng);
+            trader.land.despawn=48000; trader.villager.offers=crate::mob::trader::offers_for_catalog(world.catalog(),rng);
             let (id,uuid)=(trader.entity_id,trader.uuid);
             let mut llamas=Vec::new();
             for _ in 0..2 {
@@ -2095,7 +2104,7 @@ fn step_spawners(shared: &Shared, world: &mut World, items: &mut items::Items, w
 
         if let Some(kind) = kind
             && spawn_mobs
-            && !(hostile && difficulty == crate::survival::PEACEFUL)
+            && !(hostile && difficulty == crate::survival::PEACEFUL && !crate::mob::spawn::peaceful_exception(world.catalog(), kind))
         {
             // Сколько таких рядом: коробка дальности ±SpawnRange по сторонам и ±1 по высоте.
             let reach = f64::from(data.spawn_range);

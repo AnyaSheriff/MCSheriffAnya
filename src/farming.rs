@@ -265,6 +265,7 @@ pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
         "lava" => crate::fire::lava_tick(world, pos),
         "farmland" => farmland_tick(world, pos, state),
         "snow" => crate::vegetation::snow_tick(world, pos),
+        "ice" => crate::vegetation::ice_tick(world, pos),
         "frosted_ice" => crate::frost::ticked(world, pos),
         "sugar_cane" | "cactus" => column_tick(world, pos, state, name),
         "kelp" => kelp_tick(world, pos, state),

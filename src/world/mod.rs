@@ -61,6 +61,8 @@ pub mod underground;
 mod writer;
 pub mod vegetation;
 
+type GatewayExit = (i32,i32,i32,bool);
+
 use std::cell::Cell;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -473,6 +475,8 @@ struct Chunk {
     hives: HashMap<(i32, i32, i32), crate::hive::Data>,
     archaeology: HashMap<(i32,i32,i32),crate::archaeology::Data>,
     pots: HashMap<(i32,i32,i32), [i32; 4]>,
+    gateways: HashMap<(i32,i32,i32), GatewayExit>,
+    pot_details: HashMap<(i32,i32,i32), crate::stackdata::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -571,6 +575,8 @@ impl Chunk {
             hives: HashMap::new(),
             archaeology: HashMap::new(),
             pots: HashMap::new(),
+            gateways: HashMap::new(),
+            pot_details: HashMap::new(),
         }
     }
 
@@ -989,7 +995,8 @@ impl Chunk {
             }
         }
 
-        if crate::blocks::block_at_state(state) != Some("decorated_pot") { self.pots.remove(&(x,y,z)); }
+        if crate::blocks::block_at_state(state) != Some("end_gateway") { self.gateways.remove(&(x,y,z)); }
+        if crate::blocks::block_at_state(state) != Some("decorated_pot") { self.pots.remove(&(x,y,z)); self.pot_details.remove(&(x,y,z)); }
         if crate::hive::is_hive(state) != crate::hive::is_hive(old) {
             let place=(x.rem_euclid(CHUNK_SIZE),y,z.rem_euclid(CHUNK_SIZE));
             if crate::hive::is_hive(state) { self.hives.insert(place,crate::hive::Data::default()); }
@@ -2279,7 +2286,7 @@ impl World {
     pub fn pot(&self, at: (i32,i32,i32)) -> Option<[i32;4]> {
         if crate::blocks::block_at_state(self.get_block(at.0,at.1,at.2)) != Some("decorated_pot") { return None; }
         Some(self.chunks.get(&chunk_key(at.0,at.2))?.pots.get(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))
-            .copied().unwrap_or([crate::blocks::item_named("brick")?;4]))
+            .copied().unwrap_or([if self.catalog.changed_rules() { 0 } else { crate::blocks::item_named("brick")? };4]))
     }
     pub fn set_pot(&mut self, at: (i32,i32,i32), sides: [i32;4]) {
         if self.pot(at).is_none() { return; }
@@ -2288,6 +2295,35 @@ impl World {
         if let Some(kind) = crate::redstone::block_entity_type(self.get_block(at.0,at.1,at.2)) {
             self.note_block_entity(at.0,at.1,at.2,kind,crate::pottery::nbt(sides));
         }
+    }
+    pub fn set_gateway(&mut self, at: (i32,i32,i32), exit: (i32,i32,i32,bool)) {
+        if crate::blocks::block_at_state(self.get_block(at.0,at.1,at.2)) != Some("end_gateway") { return; }
+        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().gateways.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)),exit);
+        self.dirty.insert(chunk_key(at.0,at.2));
+    }
+    pub fn gateway_exit(&self, at: (f64,f64,f64)) -> Option<(f64,f64,f64)> {
+        if !self.catalog.changed_rules() { return None; }
+        let cell = (at.0.floor() as i32,at.1.floor() as i32,at.2.floor() as i32);
+        if crate::blocks::block_at_state(self.get_block(cell.0,cell.1,cell.2)) != Some("end_gateway") { return None; }
+        let &(x,y,z,exact) = self.chunks.get(&chunk_key(cell.0,cell.2))?.gateways.get(&(cell.0.rem_euclid(16),cell.1,cell.2.rem_euclid(16)))?;
+        if exact { return Some((x as f64+0.5,y as f64+0.5,z as f64+0.5)); }
+        // Вики, End gateway: поиск сверху, при равенстве северо-запад первым.
+        for py in (0..=255).rev() { for dx in -5i32..=5 { for dz in -5i32..=5 {
+            if dx.abs() <= 1 && dz.abs() <= 1 { continue; }
+            let state = self.get_block(x+dx,py,z+dz);
+            if crate::blocks::full_cube(state) && crate::blocks::block_at_state(state) != Some("bedrock") {
+                return Some(((x+dx) as f64+0.5,py as f64+1.0,(z+dz) as f64+0.5));
+            }
+        } } }
+        Some((x as f64+0.5,y as f64+2.0,z as f64+0.5))
+    }
+    pub fn pot_details(&self, at: (i32,i32,i32)) -> crate::stackdata::Data {
+        self.chunks.get(&chunk_key(at.0,at.2)).and_then(|c| c.pot_details.get(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))).cloned().unwrap_or_default()
+    }
+    pub fn set_pot_details(&mut self, at: (i32,i32,i32), data: crate::stackdata::Data) {
+        if self.pot(at).is_none() { return; }
+        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().pot_details.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)), data);
+        self.dirty.insert(chunk_key(at.0,at.2));
     }
     pub fn chunk_pots(&self, cx: i32, cz: i32) -> Vec<((i32,i32,i32),Vec<u8>)> {
         self.chunks.get(&(cx,cz)).map(|c| c.pots.iter().map(|(at,sides)| (*at,crate::pottery::nbt(*sides))).collect()).unwrap_or_default()

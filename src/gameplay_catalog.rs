@@ -15,6 +15,7 @@ mod stack_validation;
 pub use mcsa_protocol::content::{BlockForm, SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, CONCRETE_STAIRS, WOOL_STAIRS, MINERALS, POPLAR, slabs, stairs, minerals, poplar, entries};
 mod mob_validation;
 mod hive_validation;
+pub mod changed_rules;
 
 #[cfg(test)]
 mod hive_validation_tests;

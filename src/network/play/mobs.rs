@@ -1217,7 +1217,7 @@ pub(super) async fn send_mob_event(
             let item = (*kind == crate::mob::Particle::ItemBreak).then(|| crate::blocks::item_named("wolf_armor").unwrap_or(0));
             send_particles(stream, kind.id(), item, *place, *offset, *speed, *count).await?
         }
-        Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) => {}
+        Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) | Event::Bounce => {}
     }
 
     Ok(())

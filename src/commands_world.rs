@@ -1044,13 +1044,13 @@ fn player_arg(name: &str) -> Arg {
 
 /// Цель команды: игрок или моб.
 #[derive(Clone, Debug)]
-enum Target {
+pub(crate) enum Target {
     Player { uuid: [u8; 16], name: String, entity_id: i32, dimension: Dimension, at: (f64, f64, f64) },
     Mob { entity_id: i32, kind: crate::mob::Kind, dimension: Dimension, at: (f64, f64, f64) },
 }
 
 impl Target {
-    fn entity_id(&self) -> i32 {
+    pub(crate) fn entity_id(&self) -> i32 {
         match self {
             Target::Player { entity_id, .. } | Target::Mob { entity_id, .. } => *entity_id,
         }
@@ -1088,7 +1088,7 @@ impl Target {
 }
 
 /// Цели по записи: игроки (`find_targets`) и мобы (`@e[…]`, `@n[…]`).
-fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
+pub(crate) fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
     let players: Vec<crate::players::Member> = shared.players.lock().expect("список игроков захвачен другим потоком").members().to_vec();
     let player_target = |uuid: &[u8; 16]| {
         players.iter().find(|member| &member.uuid == uuid).map(|member| Target::Player {
@@ -1097,6 +1097,10 @@ fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
             entity_id: member.entity_id,
             dimension: member.dimension,
             at: (member.position.x, member.position.y, member.position.z),
+        }).or_else(|| {
+            let dimension = crate::commands::dimension_of(source, shared);
+            let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            items.mobs().iter().find(|m| m.uuid == *uuid && !m.is_dead()).map(|m| Target::Mob { entity_id: m.entity_id, kind: m.kind, dimension, at: (m.x,m.y,m.z) })
         })
     };
 
@@ -1529,6 +1533,7 @@ fn attribute(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     // но ещё не исполненные правки; vanilla-cmd-attribute.json даёт 0.3.
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком");
     let snapshot = known.entry(*uuid).or_default();
+    snapshot.current.set_catalog(shared.catalog());
     let attributes = snapshot.projected();
     let entry = attributes.get(attribute).cloned().unwrap_or(crate::attributes::Attribute { id: attribute, base: crate::attributes::player_base(attribute), modifiers: Vec::new() });
     let scaled = |value: f64, scale: Option<&&str>| -> Result<f64, Answer> {
@@ -1544,8 +1549,8 @@ fn attribute(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     };
 
     match rest {
-        ["get", scale @ ..] if scale.len() <= 1 => match scaled(entry.value(), scale.first()) {
-            Ok(_) => tr("commands.attribute.value.get.success", &[attribute_arg, target.plain_name(), Arg::Double(entry.value())]),
+        ["get", scale @ ..] if scale.len() <= 1 => match scaled(attributes.value(attribute), scale.first()) {
+            Ok(_) => tr("commands.attribute.value.get.success", &[attribute_arg, target.plain_name(), Arg::Double(attributes.value(attribute))]),
             Err(answer) => answer,
         },
         ["base", "get", scale @ ..] if scale.len() <= 1 => match scaled(entry.base, scale.first()) {

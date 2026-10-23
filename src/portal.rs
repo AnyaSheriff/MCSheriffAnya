@@ -256,7 +256,7 @@ pub fn wait(settings: &crate::config::mcsheriffanya::Settings, creative: bool) -
 pub fn standing_in(world: &World, (x, y, z): (f64, f64, f64)) -> bool {
     let (x, y, z) = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
 
-    is_portal(world.get_block(x, y, z)) || is_portal(world.get_block(x, y + 1, z)) || is_end_portal(world.get_block(x, y, z))
+    is_portal(world.get_block(x, y, z)) || is_portal(world.get_block(x, y + 1, z)) || is_end_portal(world.get_block(x, y, z)) || world.gateway_exit((x as f64,y as f64,z as f64)).is_some()
 }
 
 /// Портал Края ли этот блок.
@@ -352,6 +352,8 @@ pub fn build_end_platform(world: &mut World) -> (f64, f64, f64) {
 /// Переход через портал из этого места: другое измерение и где там встать
 /// (у найденного или построенного парного портала).
 pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f64)) -> (Dimension, (f64, f64, f64)) {
+    if let Some(exit) = shared.world_in(from).lock().expect("мир захвачен другим потоком").gateway_exit(at) { return (from,exit); }
+    // [проверить] Автоматическое построение парных врат без exit_portal.
     // Портал Края: из обычного мира и Незера — на площадку, из Края —
     // домой, в обычный мир.
     if standing_in_end_portal(&shared.world_in(from).lock().expect("мир захвачен другим потоком"), at) {
