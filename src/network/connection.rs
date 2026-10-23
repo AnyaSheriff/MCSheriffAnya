@@ -37,6 +37,9 @@ impl<S> CryptoStream<S> {
         { false }
     }
 
+    /// Мир сервера в профиле Preview26_3 (биомы 26.3 в реестре).
+    pub fn world_is_preview(&self) -> bool { self.content.is_preview() }
+
     pub fn client_version(&self) -> mcsa_protocol::JavaVersion {
         self.protocol.map_or(mcsa_protocol::wire::INTERNAL, |profile| profile.client)
     }

@@ -25,6 +25,13 @@ fn row() -> &'static SlabDescriptor {
     ROW.get_or_init(|| MINERALS.iter().find(|row| row.form == BlockForm::Spike).expect("шип в каталоге"))
 }
 
+/// Состояние шипа для генерации: толщина (`TIP`…`BASE`) и направление, без воды.
+pub fn generated(thickness: u8, down: bool) -> i32 { make(thickness, down, false) }
+
+pub const GEN_TIP: u8 = TIP;
+pub const GEN_FRUSTUM: u8 = FRUSTUM;
+pub const GEN_BASE: u8 = BASE;
+
 pub fn is_spike(state: i32) -> bool { (row().first_state..=row().last_state).contains(&state) }
 
 /// (толщина, смотрит ли вниз, налита ли вода).

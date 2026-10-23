@@ -227,6 +227,10 @@ struct Palette {
     mossy_cobblestone: i32,
     brown_mushroom: i32,
     red_mushroom: i32,
+    /// Полочный гриб 26.3 (age=0), смотрящий на север, юг, запад, восток.
+    shelf: [i32; 4],
+    /// Красный куст 26.3.
+    red_shrub: i32,
     /// Шляпка огромного гриба по маске открытых граней (см. `FACES`):
     /// коричневая и красная.
     caps: [[i32; 64]; 2],
@@ -234,7 +238,7 @@ struct Palette {
     /// Лиана, прицепленная к блоку с севера, юга, запада, востока.
     vines: [i32; 4],
     /// Брёвна упавших деревьев вдоль X, Y, Z — по породе (`Wood`).
-    logs: [[i32; 3]; 4],
+    logs: [[i32; 3]; 5],
 }
 
 /// Земля, на которой что-то растёт.
@@ -384,6 +388,13 @@ fn palette() -> &'static Palette {
             mossy_cobblestone: state("mossy_cobblestone"),
             brown_mushroom: state("brown_mushroom"),
             red_mushroom: state("red_mushroom"),
+            shelf: [
+                state("shelf_mushroom[age=0,facing=north]"),
+                state("shelf_mushroom[age=0,facing=south]"),
+                state("shelf_mushroom[age=0,facing=west]"),
+                state("shelf_mushroom[age=0,facing=east]"),
+            ],
+            red_shrub: state("red_shrub"),
             caps: [cap("brown_mushroom_block"), cap("red_mushroom_block")],
             stem: state("mushroom_stem[up=false,down=false]"),
             vines: [
@@ -392,7 +403,7 @@ fn palette() -> &'static Palette {
                 state("vine[west=true]"),
                 state("vine[east=true]"),
             ],
-            logs: [logs("oak_log"), logs("birch_log"), logs("spruce_log"), logs("jungle_log")],
+            logs: [logs("oak_log"), logs("birch_log"), logs("spruce_log"), logs("jungle_log"), logs("poplar_log")],
         }
     })
 }
@@ -656,6 +667,8 @@ enum Wood {
     Birch,
     Spruce,
     Jungle,
+    /// Тополь пятнистого леса 26.3 (только профиль Preview26_3).
+    Poplar,
 }
 
 impl Wood {
@@ -667,12 +680,18 @@ impl Wood {
             Wood::Birch => (5, 8),
             Wood::Spruce => (6, 10),
             Wood::Jungle => (4, 11),
+            // [проверить] длина лежачего тополя: по замеру 26.3 около 6,5 блока.
+            Wood::Poplar => (4, 9),
         }
     }
 }
 
 /// Самая большая густота упавших деревьев (на столбец) — лес.
 const FALLEN_DENSEST: f64 = 0.000_17;
+
+/// То же в пятнистом лесу 26.3: по замеру 710 блоков лежачих брёвен на 47 чанков
+/// (около 2,3 дерева на чанк при длине 6,5) — 0,009 на столбец.
+const FALLEN_DAPPLED: f64 = 0.009;
 
 /// Направления, в которые может лечь ствол.
 const DIRECTIONS: [(i32, i32); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
@@ -701,6 +720,7 @@ fn fallen_at(key: u64, column: &Column, x: i32, z: i32) -> Option<Wood> {
         Biome::Jungle => (0.000_115, Wood::Jungle),
         Biome::SparseJungle => (0.000_034, Wood::Jungle),
         Biome::Plains | Biome::SunflowerPlains => (0.000_002, Wood::Oak),
+        Biome::DappledForest => (FALLEN_DAPPLED, Wood::Poplar),
         _ => return None,
     };
 
@@ -769,6 +789,27 @@ fn fallen_blocks(
     let mushrooms = match wood {
         Wood::Spruce => [blocks.red_mushroom, blocks.red_mushroom],
         Wood::Birch => [blocks.red_mushroom, blocks.brown_mushroom],
+        // Полочные грибы 26.3 — на боковой грани лежачего ствола. [проверить] число и сторона.
+        Wood::Poplar => {
+            for _ in 0..dice.below(3) {
+                let along = start + dice.below(length);
+                let side = dice.below(2) == 0;
+                // Ствол лежит вдоль step; грибы — по бокам, лицом наружу.
+                let (dx, dz, facing) = match (step_x != 0, side) {
+                    (true, true) => (0, -1, 0),
+                    (true, false) => (0, 1, 1),
+                    (false, true) => (-1, 0, 2),
+                    (false, false) => (1, 0, 3),
+                };
+                let at = (step_x * along + dx, 1, step_z * along + dz, blocks.shelf[facing]);
+
+                if !placed.contains(&at) {
+                    placed.push(at);
+                }
+            }
+
+            return placed;
+        }
         Wood::Oak | Wood::Jungle => return placed,
     };
 
@@ -794,7 +835,7 @@ fn fallen_trees(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
             let x = area.chunk_x * CHUNK_SIZE + local_x;
             let z = area.chunk_z * CHUNK_SIZE + local_z;
 
-            if !roll(key, x, z, SALT_FALLEN, FALLEN_DENSEST) {
+            if !roll(key, x, z, SALT_FALLEN, if area.terrain.preview() { FALLEN_DAPPLED } else { FALLEN_DENSEST }) {
                 continue;
             }
 
@@ -1206,6 +1247,8 @@ struct Cover {
     /// Опавшие листья под кроной и на открытом месте рядом.
     litter: (f64, f64),
     brown_mushroom: f64,
+    /// Красный куст 26.3 (пятнистый лес).
+    red_shrub: f64,
     /// Кусты со светлячками: у воды, в болоте — где угодно.
     firefly_bush: f64,
     dead_bush: f64,
@@ -1223,6 +1266,7 @@ const BARE: Cover = Cover {
     meadows: 0.25,
     litter: (0.0, 0.0),
     brown_mushroom: 0.0,
+    red_shrub: 0.0,
     firefly_bush: 0.0,
     dead_bush: 0.0,
     dry_grass: 0.0,
@@ -1263,6 +1307,15 @@ fn cover(biome: Biome) -> Cover {
             tall_grass: 0.0004,
             flowers: 0.00015,
             litter: (0.7, 0.26),
+            ..grassy
+        },
+        // Пятнистый лес 26.3 (замер официального мира, 47 чанков): трава 0,0195 на столбец
+        // сверху, опавшие листья 4,3 на чанк сверху, красные кусты 1,2 на чанк, коричневые грибы 0,6.
+        Biome::DappledForest => Cover {
+            grass: 0.037,
+            litter: (0.33, 0.05),
+            red_shrub: 0.004,
+            brown_mushroom: 0.0023,
             ..grassy
         },
         Biome::DarkForest => Cover {
@@ -1607,6 +1660,16 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
         return;
     }
 
+    edge += cover.red_shrub;
+
+    if cover.red_shrub > 0.0 && value < edge {
+        if earthy {
+            grow(chunk, blocks.red_shrub);
+        }
+
+        return;
+    }
+
     if cover.firefly_bush > 0.0 {
         edge += cover.firefly_bush;
 
@@ -1803,7 +1866,7 @@ mod tests {
 
             let flat = |_: i32, _: i32| Column::flat(70);
 
-            for wood in [Wood::Oak, Wood::Birch, Wood::Spruce, Wood::Jungle] {
+            for wood in [Wood::Oak, Wood::Birch, Wood::Spruce, Wood::Jungle, Wood::Poplar] {
                 let placed = fallen_blocks(key, wood, blocks, x, z, 70, &flat);
                 let (shortest, longest) = wood.lengths();
                 let logs = placed.iter().filter(|b| b.1 == 1 && blocks.logs[wood as usize].contains(&b.3)).count() as i32;

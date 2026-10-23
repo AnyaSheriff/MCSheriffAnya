@@ -2526,7 +2526,9 @@ fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         ["biome", name] => {
             let short = name.strip_prefix("minecraft:").unwrap_or(name);
 
-            if !crate::world::terrain::Biome::ALL.iter().any(|biome| biome.name() == short) {
+            let preview = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
+
+            if crate::world::terrain::Biome::by_name(short, preview).is_none() {
                 return fail("argument.resource.not_found", &[s(*name), s("minecraft:worldgen/biome")]);
             }
 
@@ -2590,10 +2592,12 @@ fn fillbiome(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return bad_syntax();
     };
 
+    let dimension = crate::commands::dimension_of(source, shared);
+    let preview = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
     let number = |name: &str| {
         let short = name.strip_prefix("minecraft:").unwrap_or(name);
 
-        crate::world::terrain::Biome::ALL.iter().find(|biome| biome.name() == short).map(|biome| biome.number() as crate::world::BiomeId)
+        crate::world::terrain::Biome::by_name(short, preview).map(|biome| biome.number() as crate::world::BiomeId)
     };
 
     let Some(biome_number) = number(biome) else {
@@ -2619,7 +2623,6 @@ fn fillbiome(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return fail("commands.fillbiome.toobig", &[Arg::Int(BLOCK_LIMIT), Arg::Int(volume)]);
     }
 
-    let dimension = crate::commands::dimension_of(source, shared);
     let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
     for chunk_x in low.0 >> 4..=high.0 >> 4 {

@@ -115,6 +115,9 @@ pub enum Biome {
     EndMidlands,
     EndHighlands,
     EndBarrens,
+    // Только профиль Preview26_3 (`Biome::PREVIEW`): номера — после Энда.
+    DappledForest,
+    SulfurCaves,
 }
 
 impl Biome {
@@ -188,6 +191,11 @@ impl Biome {
         Biome::SoulSandValley,
         Biome::BasaltDeltas,
     ];
+
+    /// Биомы 26.2/26.3 (пятнистый лес и серные пещеры): в реестре идут после
+    /// Энда, поэтому номера остальных не сдвигаются. Генерируются только при
+    /// `Terrain::with_preview`.
+    pub const PREVIEW: [Biome; 2] = [Biome::DappledForest, Biome::SulfurCaves];
 
     /// Биомы Энда по порядку их номеров: в реестре они идут после биомов
     /// Незера.
@@ -266,6 +274,8 @@ impl Biome {
             Biome::EndMidlands => "end_midlands",
             Biome::EndHighlands => "end_highlands",
             Biome::EndBarrens => "end_barrens",
+            Biome::DappledForest => "dappled_forest",
+            Biome::SulfurCaves => "sulfur_caves",
         }
     }
 
@@ -280,14 +290,32 @@ impl Biome {
             return (Biome::ALL.len() + CUSTOM_BIOMES.len() + at) as i32;
         }
 
+        if let Some(at) = Biome::PREVIEW.iter().position(|biome| *biome == self) {
+            return (Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len() + at) as i32;
+        }
+
         let at = Biome::END
             .iter()
             .position(|biome| *biome == self)
-            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL, NETHER и END", self));
+            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL, NETHER, END и PREVIEW", self));
 
         (Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + at) as i32
     }
 
+
+    /// Биом по короткому имени; биомы 26.3 (`PREVIEW`) известны только в профиле Preview26_3.
+    pub fn by_name(name: &str, preview: bool) -> Option<Biome> {
+        Biome::ALL.iter().chain(if preview { Biome::PREVIEW.iter() } else { [].iter() }).find(|biome| biome.name() == name).copied()
+    }
+
+    /// Биом по номеру в реестре: оригинальные (`ALL`) и биомы 26.3 (`PREVIEW`).
+    /// Незер, Энд и свои биомы здесь None, как и раньше.
+    pub fn by_number(number: usize) -> Option<Biome> {
+        Biome::ALL.get(number).copied().or_else(|| {
+            let first = Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len();
+            number.checked_sub(first).and_then(|at| Biome::PREVIEW.get(at)).copied()
+        })
+    }
 
     /// Основная температура и влажность биома — те же числа, что в игре
     /// (вики, «Biome» → List of biome climates). По ним клиент выбирает цвет
@@ -348,6 +376,9 @@ impl Biome {
         "lush_caves" => (0.5, 0.5),
         "dripstone_caves" => (0.8, 0.4),
         "deep_dark" => (0.8, 0.4),
+        // 26.3/26.2: вики, Dappled Forest и Sulfur Caves.
+        "dappled_forest" => (0.6, 0.6),
+        "sulfur_caves" => (0.8, 0.4),
         "nether_wastes" | "crimson_forest" | "warped_forest" | "soul_sand_valley" | "basalt_deltas" => (2.0, 0.0),
         "the_end" | "small_end_islands" | "end_midlands" | "end_highlands" | "end_barrens" => (0.5, 0.5),
             _ => (0.8, 0.4),
@@ -743,6 +774,11 @@ pub fn biome_registry_size() -> usize {
     Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len()
 }
 
+/// То же в профиле Preview26_3: после Энда идут биомы 26.3 (`Biome::PREVIEW`).
+pub fn biome_registry_size_preview() -> usize {
+    biome_registry_size() + Biome::PREVIEW.len()
+}
+
 /// Включены ли редкие осенние пятна в обычном лесу (`autumn-forests`
 /// в config/mcsa.properties). Выключено — мир как у оригинала; проверки
 /// гоняются с выключенным.
@@ -751,6 +787,16 @@ pub static AUTUMN_FORESTS: std::sync::atomic::AtomicBool = std::sync::atomic::At
 /// Розоватая трава и чуть больше лепестков в вишнёвых рощах
 /// (`pink-cherry-groves`).
 pub static PINK_CHERRY_GROVES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Серные пещеры: масштаб пятен по горизонтали и вертикали, порог шума, поправка к порогу у краёв
+/// промежутка глубин, границы климата и глубины в блоках.
+const SULFUR_SCALE: (f64, f64) = (28.0, 14.0);
+const SULFUR_THRESHOLD: f64 = 0.21;
+const SULFUR_EDGE: f64 = 0.1;
+const SULFUR_EROSION: f64 = 0.45;
+const SULFUR_WEIRDNESS: f64 = 0.3;
+const SULFUR_CONTINENT: (f64, f64) = (-0.45, 0.3);
+const SULFUR_DEPTH: (i32, i32) = (32, 112);
 
 /// Насколько плато поднято над обычной сушей.
 const PLATEAU: f64 = 42.0;
@@ -787,6 +833,11 @@ pub struct Terrain {
     /// Полосы терракоты бесплодных земель: какая терракота на какой высоте
     /// (по кругу через 192 блока), своя раскладка у каждого мира.
     bands: [&'static str; 192],
+    /// Профиль Preview26_3: пятнистый лес, серные пещеры, лагеря. У мира 26.1.2
+    /// выключено, и его генерация остаётся прежней.
+    preview: bool,
+    /// Серные пещеры 26.2: пятна биома и распределение серы и киновари.
+    sulfur: Noise,
 }
 
 #[cfg(test)]
@@ -816,7 +867,57 @@ impl Terrain {
             style,
             seed,
             bands: terracotta_bands(seed),
+            preview: false,
+            sulfur: Noise::new(seed ^ 0x5C_1F_0A_77),
         }
+    }
+
+    /// Включает генерацию 26.2/26.3 (только профиль Preview26_3).
+    pub fn with_preview(mut self, preview: bool) -> Terrain {
+        self.preview = preview;
+        self
+    }
+
+    /// Шум серных пещер для пятен (`part` 0) и для выбора между серой и киноварью (`part` 1).
+    pub fn sulfur_noise(&self, part: u32, x: i32, y: i32, z: i32) -> f64 {
+        let (x, y, z) = (f64::from(x), f64::from(y), f64::from(z));
+        if part == 0 {
+            self.sulfur.octaves3(x / SULFUR_SCALE.0, y / SULFUR_SCALE.1, z / SULFUR_SCALE.0, 2)
+        } else {
+            self.sulfur.octaves3(x / 14.0 + 311.0, y / 7.0 + 97.0, z / 14.0 - 173.0, 2)
+        }
+    }
+
+    /// Серная пещера в клетке 4×4×4 с серединой (x, y, z) под столбцом `column`.
+    /// Вики, Sulfur Caves: на глубине пышных и капельниковых пещер, низкая странность,
+    /// высокая эрозия, умеренная континентальность, мелкие разорванные пятна.
+    /// Пороги подобраны по переписи официального 26.3 (tools/measure/census_263.py):
+    /// доля клеток 0,0016, глубина 32–112 блоков (пик 64–80), над ровной сушей и берегом.
+    pub fn sulfur_cell(&self, column: &Column, x: i32, y: i32, z: i32) -> bool {
+        if !self.preview {
+            return false;
+        }
+
+        let depth = column.height - y;
+        let climate = &column.climate;
+
+        if !(SULFUR_DEPTH.0..=SULFUR_DEPTH.1).contains(&depth)
+            || climate.erosion < SULFUR_EROSION
+            || climate.weirdness.abs() > SULFUR_WEIRDNESS
+            || !(SULFUR_CONTINENT.0..=SULFUR_CONTINENT.1).contains(&climate.continent)
+        {
+            return false;
+        }
+
+        // Глубже и мельче середины пятно реже: пик 64–80 блоков.
+        let lean = ((depth as f64 - 72.0).abs() / 40.0).min(1.0) * SULFUR_EDGE;
+
+        self.sulfur_noise(0, x, y, z) > SULFUR_THRESHOLD + lean
+    }
+
+    /// Генерируется ли содержимое 26.2/26.3.
+    pub fn preview(&self) -> bool {
+        self.preview
     }
 
     /// Семя мира, от которого заведены шумы.
@@ -1019,7 +1120,14 @@ impl Terrain {
             distribution::mapped(&input, &distribution::CALIBRATED)
         } else { input };
         let climate = &adjusted;
-        let biome = biome_of(climate);
+        let mut biome = biome_of(climate);
+
+        // 26.3: пятнистый лес на месте равнин в умеренно холодном и очень сухом
+        // климате при положительной странности (вики, Dappled Forest: «moderately
+        // cold regions with very low humidity, typically where weirdness is positive»).
+        if self.preview && biome == Biome::Plains && dappled_climate(climate) {
+            biome = Biome::DappledForest;
+        }
 
         if !matches!(biome, Biome::SnowySlopes | Biome::Grove) || climate.temperature_level() == 0 {
             return biome;
@@ -2153,6 +2261,13 @@ fn biome_of(climate: &Climate) -> Biome {
     }
 }
 
+const DAPPLED_WEIRDNESS: f64 = 0.4;
+
+/// Климат пятнистого леса 26.3 (замер официального мира, tools/measure/census_263.py).
+fn dappled_climate(climate: &Climate) -> bool {
+    climate.weirdness > DAPPLED_WEIRDNESS && climate.temperature_level() == 1 && climate.humidity_level() == 0
+}
+
 /// Склоны: заснеженные при сухости, роща при влаге.
 fn slope(humidity: u8) -> Biome {
     if humidity <= 1 { Biome::SnowySlopes } else { Biome::Grove }
@@ -2914,6 +3029,13 @@ impl Terrain {
                 1..=3 => Some("dirt"),
                 _ => None,
             },
+            // Пятнистый лес 26.3: на траве пятна грубой земли (замер: 2,7 % столбцов
+            // против 24,5 % травы, около десятой части земли).
+            Biome::DappledForest => match depth {
+                0 => Some(if patch_share(patch()) > 0.9 && !snowy() { "coarse_dirt" } else { grass }),
+                1..=3 => Some("dirt"),
+                _ => None,
+            },
             Biome::MangroveSwamp => match depth {
                 0..=3 => Some("mud"),
                 _ => None,
@@ -3467,6 +3589,12 @@ mod tests {
         for (i, biome) in Biome::END.iter().enumerate() {
             assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + i);
         }
+        // Биомы 26.3 — после Энда: прежние номера не сдвинулись.
+        for (i, biome) in Biome::PREVIEW.iter().enumerate() {
+            assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len() + i);
+        }
+        assert_eq!(Biome::EndBarrens.number() as usize + 1, Biome::DappledForest.number() as usize);
+        assert_eq!(Biome::SulfurCaves.number() as usize + 1, biome_registry_size_preview());
         assert_eq!(Biome::EndBarrens.number() as usize + 1, biome_registry_size());
 
         let mut names: Vec<&str> = Biome::ALL.iter().chain(&Biome::NETHER).chain(&Biome::END).map(|biome| biome.name()).collect();

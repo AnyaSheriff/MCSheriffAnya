@@ -262,6 +262,14 @@ pub fn overworld_kinds(biome: &str, wet: bool) -> Vec<(Kind, u32)> {
     if matches!(biome, "swamp" | "mangrove_swamp") {
         return HOSTILE.iter().copied().chain([(Kind::Bogged, 50)]).collect();
     }
+    // Вики, Sulfur Caves (Java): куб серы 100, крипер, скелет и зомби по 50, слизень 25 (только в
+    // слизневых чанках — как у обычных), пещерный паук 20, эндермен 10, ведьма 5, зомби-житель 5.
+    if biome == super::sulfur_cube::SPAWN_BIOME {
+        return vec![
+            (Kind::SulfurCube, super::sulfur_cube::SPAWN_WEIGHT), (Kind::Creeper, 50), (Kind::Skeleton, 50), (Kind::Zombie, 50),
+            (Kind::Slime, 25), (Kind::CaveSpider, 20), (Kind::Enderman, 10), (Kind::Witch, 5), (Kind::ZombieVillager, 5),
+        ];
+    }
     HOSTILE.to_vec()
 }
 
@@ -424,7 +432,10 @@ pub fn hostile_attempt_in(
     let _ = width;
     let mut group = Vec::new();
 
-    for _ in 0..hostile_group(kind) {
+    // Вики, Sulfur Cube: группы по 2–4.
+    let amount = if kind == Kind::SulfurCube { super::sulfur_cube::SPAWN_GROUP.0 + rng.below(super::sulfur_cube::SPAWN_GROUP.1 - super::sulfur_cube::SPAWN_GROUP.0 + 1) } else { hostile_group(kind) };
+
+    for _ in 0..amount {
         // Разброс пачки: сумма двух равномерных — «треугольный», до 5 блоков.
         let (gx, gz) = (x + rng.below(6) as i32 - rng.below(6) as i32, z + rng.below(6) as i32 - rng.below(6) as i32);
 
@@ -574,6 +585,8 @@ pub fn passive_weights(biome: &str) -> Vec<(Kind,u32)> {
     };
     if rabbit>0 { weights.push((Kind::Rabbit,rabbit)); }
     if matches!(biome,"taiga"|"snowy_taiga"|"old_growth_pine_taiga"|"old_growth_spruce_taiga"|"grove") { weights.push((Kind::Fox,8)); }
+    // Вики, Dappled Forest (Java): овцы, курицы, свиньи, коровы (холодные варианты), лиса, кролик. [проверить] веса.
+    if biome=="dappled_forest" { weights.push((Kind::Fox,8)); weights.push((Kind::Rabbit,4)); }
     // Вики, Armadillo/Parrot, «Spawning»: в бедленде других животных нет.
     if biome.contains("badlands") { weights.clear(); }
     if biome.contains("savanna") || biome.contains("badlands") { weights.push((Kind::Armadillo,6)); }

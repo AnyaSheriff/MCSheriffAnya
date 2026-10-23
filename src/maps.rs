@@ -292,7 +292,7 @@ pub const STRUCTURE_MAPS: [(&str, &str, &str, u8, i32); 16] = [
     ("buried_ancient_city_map", "ancient_city", "Buried Ancient City Map", 2, 26),
     ("buried_mineshaft_map", "mineshaft", "Buried Mineshaft Map", 2, 26),
     ("desert_pyramid_map", "desert_pyramid", "Desert Pyramid Map", 2, 26),
-    // Заброшенных лагерей в нашей генерации нет: локатор вернёт None, карта останется без привязки [проверить].
+    // Лагеря ставит генерация профиля Preview26_3 (abandoned_camp.rs); в мире 26.1.2 локатор вернёт None.
     ("abandoned_camp_map", "abandoned_camp", "Abandoned Camp Map", 2, 26),
     ("warm_ocean_ruins_map", "ocean_ruin_warm", "Warm Ocean Ruins Map", 2, 26),
 ];

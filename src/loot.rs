@@ -294,6 +294,105 @@ pub const SHIPWRECK_TREASURE: [Pool; 4] = [
     NAUTILUS_ARMOR,
 ];
 
+/// Заброшенный лагерь 26.3, обычный сундук (chests/abandoned_camp_common_chest). Таблица подобрана по
+/// 1200 броскам `/loot replace block` на официальном 26.3 (tools/measure/loot_sample_263.py): в сундуке
+/// 6–8 предметов; 14 предметов поровну (вес 6), 10 медных вещей и лук (вес 4), пустая карта поштучно
+/// (вес 9) и по две (вес 3); «карта лагеря» в 0,7 % сундуков. Веса — подбор по частотам, не данные
+/// игры [проверить].
+pub const ABANDONED_CAMP_COMMON: [Pool; 2] = [
+    Pool {
+        rolls: (6, 8),
+        entries: &[
+            ("map", 1, 1, 9),
+            ("map", 2, 2, 3),
+            ("bundle", 1, 1, 6),
+            ("bone", 2, 4, 6),
+            ("saddle", 1, 1, 6),
+            ("glass_bottle", 1, 4, 6),
+            ("fishing_rod", 1, 1, 6),
+            ("leather", 1, 4, 6),
+            ("gunpowder", 2, 4, 6),
+            ("lead", 1, 3, 6),
+            ("rabbit_hide", 1, 4, 6),
+            ("compass", 1, 1, 6),
+            ("cobweb", 1, 1, 6),
+            ("white_candle", 1, 3, 6),
+            ("flint_and_steel", 1, 1, 6),
+            ("arrow", 4, 4, 6),
+            ("spyglass", 1, 1, 4),
+            ("copper_boots", 1, 1, 4),
+            ("copper_leggings", 1, 1, 4),
+            ("copper_spear", 1, 1, 4),
+            ("bucket", 1, 1, 4),
+            ("copper_sword", 1, 1, 4),
+            ("shears", 1, 1, 4),
+            ("copper_axe", 1, 1, 4),
+            ("copper_chestplate", 1, 1, 4),
+            ("bow", 1, 1, 4),
+        ],
+        empty: 0,
+    },
+    Pool { rolls: (1, 1), entries: &[("abandoned_camp_map", 1, 1, 1)], empty: 149 },
+];
+
+/// Заброшенный лагерь 26.3, тайный сундук (chests/abandoned_camp_secret_chest): 6–10 предметов
+/// (1200 бросков). Пять бросков из железа, меди, золота и пустой карты; один-два зелья; алмаз в 42 %;
+/// железная вещь в 50 %; карта строения в 31 % [проверить: веса пулов подобраны по частотам].
+pub const ABANDONED_CAMP_SECRET: [Pool; 5] = [
+    Pool {
+        rolls: (5, 5),
+        entries: &[("iron_ingot", 1, 1, 1), ("copper_ingot", 1, 2, 1), ("gold_ingot", 1, 2, 1), ("map", 1, 1, 1)],
+        empty: 0,
+    },
+    Pool {
+        rolls: (1, 2),
+        entries: &[
+            ("potion:leaping:potion", 1, 1, 1),
+            ("potion:night_vision:potion", 1, 1, 1),
+            ("potion:healing:potion", 1, 1, 1),
+            ("potion:swiftness:potion", 1, 1, 1),
+        ],
+        empty: 0,
+    },
+    Pool { rolls: (1, 1), entries: &[("diamond", 1, 1, 5)], empty: 7 },
+    Pool {
+        rolls: (1, 1),
+        entries: &[("iron_axe", 1, 1, 1), ("iron_spear", 1, 1, 1), ("iron_leggings", 1, 1, 1), ("iron_boots", 1, 1, 1)],
+        empty: 4,
+    },
+    Pool {
+        rolls: (1, 1),
+        entries: &[("warm_ocean_ruins_map", 1, 1, 4), ("buried_trial_chambers_map", 1, 1, 4), ("buried_ancient_city_map", 1, 1, 1)],
+        empty: 20,
+    },
+];
+
+/// Заброшенный лагерь 26.3, бочка (barrels/abandoned_camp_barrel): 5–9 предметов поровну из 17
+/// (1500 бросков); числа штук — замеренные пределы.
+pub const ABANDONED_CAMP_BARREL: [Pool; 1] = [Pool {
+    rolls: (5, 9),
+    entries: &[
+        ("straw_bed", 2, 4, 8),
+        ("wheat", 1, 4, 8),
+        ("bone", 2, 4, 8),
+        ("arrow", 1, 3, 8),
+        ("cobweb", 1, 1, 8),
+        ("coal", 2, 4, 8),
+        ("glass_bottle", 1, 3, 8),
+        ("white_candle", 1, 3, 8),
+        ("string", 1, 2, 8),
+        ("rabbit_hide", 1, 4, 8),
+        ("bowl", 1, 2, 8),
+        ("white_cushion", 1, 2, 8),
+        ("leather", 1, 3, 7),
+        ("bread", 1, 3, 7),
+        ("bundle", 1, 1, 6),
+        ("wooden_axe", 1, 1, 6),
+        ("fishing_rod", 1, 1, 6),
+    ],
+    empty: 0,
+}];
+
 /// Зарытое сокровище (buried_treasure).
 pub const BURIED_TREASURE: [Pool; 7] = [
     Pool { rolls: (1, 1), entries: &[("heart_of_the_sea", 1, 1, 1)], empty: 0 },

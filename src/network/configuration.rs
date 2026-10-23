@@ -357,6 +357,9 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 24] = [
             "end_midlands",
             "end_highlands",
             "end_barrens",
+            // 26.3 / 26.2 (terrain::Biome::PREVIEW): в мире 26.1.2 не встречаются.
+            "dappled_forest",
+            "sulfur_caves",
         ],
     ),
     // Мировые часы: требуются по одной записи на каждое измерение, иначе
@@ -522,7 +525,7 @@ pub async fn read_known_packs(
 pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
     // Сначала собираем весь набор: неизвестная запись/версия не должна
     // оставлять клиенту половину реестров перед ошибкой.
-    let registries = registry_bundle(stream.client_version())?;
+    let registries = registry_bundle_for(stream.client_version(), stream.world_is_preview())?;
     let mut entries = 0;
     for registry in registries {
         entries += registry.entries.len();
@@ -531,7 +534,15 @@ pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
     Ok(entries)
 }
 
+#[cfg(test)]
 fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
+    registry_bundle_for(version, false)
+}
+
+/// `preview` — мир в профиле Preview26_3: в реестр биомов входят пятнистый лес и серные пещеры
+/// (`Biome::PREVIEW`), которые встречаются в чанках только этого мира. Для мира 26.1.2 реестр биомов
+/// остаётся прежним, байт в байт, для клиента любой версии.
+fn registry_bundle_for(version: mcsa_protocol::JavaVersion, preview: bool) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
     use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
     if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
@@ -543,6 +554,7 @@ fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_p
     }).collect();
     let mut registries = vec![Registry { version, name: "minecraft:damage_type".into(), entries: damage }];
     for (name, entries) in REQUIRED_REGISTRIES {
+        let entries = if name == "minecraft:worldgen/biome" && !preview { &entries[..entries.len() - crate::world::terrain::Biome::PREVIEW.len()] } else { entries };
         let mut registry = prepare_registry(version, name, entries)?;
         if matches!(version, JavaVersion::V26_2 | JavaVersion::V26_3) && name == "minecraft:jukebox_song" {
             registry.entries.extend(prepare_registry(version, name, &["bounce"])?.entries);
@@ -900,6 +912,28 @@ fn validate_probe_config_packet(packet: &super::packet::PacketInfo, finishing: b
 mod tests {
     use super::*;
 
+    const PINNED_NATIVE_REGISTRY_HASH: u64 = 16_580_181_847_493_792_798;
+
+    /// Реестр биомов мира 26.1.2: 65 записей, без биомов 26.3, и свёртка всего пакета реестров
+    /// закреплена — на проводе для 775 ничего не изменилось. В мире 26.3 биомов на два больше.
+    #[test]
+    fn native_biome_registry_is_pinned_and_preview_adds_two() {
+        use mcsa_protocol::JavaVersion;
+        let biomes = |bundle: &[mcsa_protocol::registry::Registry]| bundle.iter().find(|r| r.name == "minecraft:worldgen/biome").unwrap().entries.len();
+        let native = registry_bundle_for(JavaVersion::V26_1_2, false).unwrap();
+        assert_eq!(biomes(&native), 65);
+        assert_eq!(biomes(&registry_bundle_for(JavaVersion::V26_1_2, true).unwrap()), 67);
+        assert_eq!(biomes(&registry_bundle_for(JavaVersion::V26_3, false).unwrap()), 65);
+        assert_eq!(biomes(&registry_bundle_for(JavaVersion::V26_3, true).unwrap()), 67);
+        let names: Vec<String> = native.iter().find(|r| r.name == "minecraft:worldgen/biome").unwrap().entries.iter().map(|e| e.name.clone()).collect();
+        assert!(!names.iter().any(|n| n.contains("dappled") || n.contains("sulfur")));
+        let mut hash = 0xCBF2_9CE4_8422_2325u64;
+        for registry in &native {
+            for byte in registry.encode().unwrap() { hash = (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01B3); }
+        }
+        assert_eq!(hash, PINNED_NATIVE_REGISTRY_HASH);
+    }
+
     #[test]
     fn client_registry_profiles_keep_ids_and_reject_missing_definitions() {
         use mcsa_protocol::{JavaVersion, registry::Registry};
@@ -1112,6 +1146,7 @@ mod tests {
             .chain(crate::world::terrain::CUSTOM_BIOMES)
             .chain(crate::world::terrain::Biome::NETHER.iter().map(|biome| biome.name()))
             .chain(crate::world::terrain::Biome::END.iter().map(|biome| biome.name()))
+            .chain(crate::world::terrain::Biome::PREVIEW.iter().map(|biome| biome.name()))
             .collect();
 
         assert_eq!(sent.to_vec(), ours);

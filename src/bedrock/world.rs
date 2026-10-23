@@ -4797,7 +4797,7 @@ fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u1
                         Dimension::End => THE_END,
                         Dimension::Overworld => 1,
                     };
-                    let biome = super::tables::BIOMES.get(ours).copied().unwrap_or(fallback);
+                    let biome = super::tables::BIOMES.get(ours).or_else(|| super::tables::PREVIEW_BIOMES.get(ours.wrapping_sub(super::tables::BIOMES.len()))).copied().unwrap_or(fallback);
                     let at = *known.entry(biome).or_insert_with(|| {
                         palette.push(biome);
                         (palette.len() - 1) as u16

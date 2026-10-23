@@ -25,12 +25,9 @@ pub const TNT_FUSE: i32 = 120;
 /// После снятия блока ножницами куб 100 тактов ничего не подбирает (вики, `pickup_timer`).
 pub const PICKUP_PAUSE: i32 = 100;
 /// Естественный спавн: вес 100 в серных пещерах, группы 2–4, большие, любой свет (вики).
-/// `[проверить]` биом `sulfur_caves` в нашей генерации ещё не существует — правило не подключено.
-#[allow(dead_code)] // правило ждёт биома серных пещер в генерации
+/// Подключено к `spawn::overworld_kinds`; биом ставит генерация профиля Preview26_3.
 pub const SPAWN_BIOME: &str = "sulfur_caves";
-#[allow(dead_code)]
 pub const SPAWN_WEIGHT: u32 = 100;
-#[allow(dead_code)]
 pub const SPAWN_GROUP: (u32, u32) = (2, 4);
 
 /// Архетип по поглощённому блоку (вики, Sulfur Cube, «Archetypes»).

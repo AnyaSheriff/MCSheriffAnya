@@ -19,6 +19,8 @@
 
 mod codec;
 pub mod profile;
+mod sulfur_caves;
+pub mod abandoned_camp;
 pub(crate) mod startup;
 #[cfg(target_os = "linux")]
 pub(crate) mod migration;
@@ -691,6 +693,14 @@ impl Chunk {
                         surface,
                         matches!(generator, Generator::Normal(_)).then_some(&middle),
                     );
+
+                    // Серные пещеры 26.2 (только профиль Preview26_3) занимают клетки поверх
+                    // обычных пещерных биомов.
+                    if let Generator::Normal(terrain) = generator
+                        && terrain.preview()
+                    {
+                        chunk.fill_sulfur_column((local_x / 4) as usize, (local_z / 4) as usize, terrain, &middle, x + 2, z + 2);
+                    }
                 }
             }
         }
@@ -699,6 +709,7 @@ impl Chunk {
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
+        sulfur_caves::decorate(generator, &mut chunk, chunk_x, chunk_z);
         chunk
     }
 
@@ -761,6 +772,8 @@ impl Chunk {
         ocean_ruin::build(generator, &mut chunk, chunk_x, chunk_z);
         // Руины тропы (trail_ruins.rs).
         trail_ruins::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Заброшенные лагеря 26.3 (только профиль Preview26_3, abandoned_camp.rs).
+        abandoned_camp::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         structure_terrain::build(generator, &mut chunk, chunk_x, chunk_z);
@@ -823,6 +836,19 @@ impl Chunk {
                 .map_or(surface, |cave| cave.number() as BiomeId);
 
             self.biomes[biome_cell(layer, cell_x, cell_z)] = biome;
+        }
+    }
+
+    /// Серные пещеры в столбце клеток 4×4: клетка с серой берёт номер `sulfur_caves`.
+    fn fill_sulfur_column(&mut self, cell_x: usize, cell_z: usize, terrain: &Terrain, column: &terrain::Column, x: i32, z: i32) {
+        let number = terrain::Biome::SulfurCaves.number() as BiomeId;
+
+        for layer in 0..BIOME_LAYERS {
+            let y = MIN_Y + layer as i32 * 4 + 2;
+
+            if terrain.sulfur_cell(column, x, y, z) {
+                self.biomes[biome_cell(layer, cell_x, cell_z)] = number;
+            }
         }
     }
 
@@ -1737,6 +1763,8 @@ impl World {
 
         log_info!("Тип мира: {}", kind.name());
 
+        // Профиль мира; 26.3-генерация (пятнистый лес, серные пещеры, лагеря) — только при Preview26_3.
+        let preview = catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3;
         let mut world = Self {
             catalog,
             maps: Default::default(),
@@ -1771,8 +1799,8 @@ impl World {
             kind,
             generator: Arc::new(match kind {
                 WorldKind::Flat => Generator::Flat,
-                WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla)),
-                WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth)),
+                WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla).with_preview(preview)),
+                WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth).with_preview(preview)),
                 WorldKind::Nether => Generator::Nether(nether::Nether::new(seed)),
                 WorldKind::End => Generator::End(the_end::End::new(seed)),
             }),
@@ -2795,7 +2823,7 @@ impl World {
         let biome = if number == terrain::autumn_forest_number() {
             Some(terrain::Biome::Forest)
         } else {
-            terrain::Biome::ALL.get(usize::from(number)).copied()
+            terrain::Biome::by_number(usize::from(number))
         };
 
         biome.is_some_and(|biome| biome.climate().0 < 2.0 && !biome.snows_at(y))
@@ -2824,7 +2852,7 @@ impl World {
         }
 
         let number = chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
-        let biome = if number == terrain::autumn_forest_number() { Some(terrain::Biome::Forest) } else { terrain::Biome::ALL.get(usize::from(number)).copied() };
+        let biome = if number == terrain::autumn_forest_number() { Some(terrain::Biome::Forest) } else { terrain::Biome::by_number(usize::from(number)) };
 
         biome.map_or(0.8, |biome| biome.climate().0 - 0.00125 * ((y - 80).max(0) as f32))
     }
@@ -4199,7 +4227,7 @@ impl World {
     pub fn mob_biome(&self, x: i32, y: i32, z: i32) -> &'static str {
         if (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y)
             && let Some(chunk) = self.chunks.get(&(x.div_euclid(CHUNK_SIZE), z.div_euclid(CHUNK_SIZE)))
-            && let Some(biome) = terrain::Biome::ALL.get(usize::from(chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))))
+            && let Some(biome) = terrain::Biome::by_number(usize::from(chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))))
         {
             return biome.name();
         }
@@ -4271,6 +4299,11 @@ impl World {
         // Лесные особняки — по областям 80×80 чанков (mansion.rs).
         if let (Generator::Normal(terrain), "mansion") = (&*self.generator, name) {
             return mansion::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / mansion::SPACING + 1);
+        }
+
+        // Заброшенные лагеря 26.3 — по областям 37×37 чанка (abandoned_camp.rs).
+        if let (Generator::Normal(terrain), "abandoned_camp") = (&*self.generator, name) {
+            return abandoned_camp::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / abandoned_camp::SPACING + 1);
         }
 
         // Руины тропы — по областям 34×34 чанка (trail_ruins.rs).
@@ -8433,3 +8466,6 @@ mod incompatible_load_tests;
 
 #[cfg(test)]
 mod catalog_tests;
+
+#[cfg(all(test, not(seedmap_core)))]
+mod preview_tests;

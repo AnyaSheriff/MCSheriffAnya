@@ -30,6 +30,8 @@ pub struct Tree {
     /// Под кроной висит пчелиное гнездо: у дубов на равнине, у берёз на лугу.
     pub bees: bool,
     pub heart: bool,
+    /// Полочный гриб на стволе (естественный тополь пятнистого леса 26.3).
+    pub shelf: bool,
 }
 
 /// Форма дерева.
@@ -181,6 +183,27 @@ impl Tree {
             if let Some((x,y,z))=cell {
                 blocks.retain(|b| (b.0,b.1,b.2)!=(x,y,z));
                 blocks.push((x,y,z,Part::Block("creaking_heart[axis=y,natural=true,creaking_heart_state=dormant]")));
+            }
+        }
+        // Вики, Dappled Forest: «Shelf mushrooms grow on all poplar trees».
+        // Замер 26.3: около 0,5 гриба на дерево. [проверить] сторону и выбор бревна.
+        if self.shelf {
+            let logs: Vec<(i32, i32, i32)> = blocks
+                .iter()
+                .filter(|b| matches!(b.3, Part::Log(Axis::Y)) && b.0 == 0 && b.2 == 0 && b.1 >= 2)
+                .map(|b| (b.0, b.1, b.2))
+                .collect();
+            if !logs.is_empty() && fraction(&mut random) < 0.5 {
+                let (x, y, z) = logs[roll(&mut random, logs.len() as i32) as usize];
+                let (dx, dz, facing) = [(0, -1, "north"), (0, 1, "south"), (-1, 0, "west"), (1, 0, "east")][roll(&mut random, 4) as usize];
+                if !blocks.iter().any(|b| (b.0, b.1, b.2) == (x + dx, y, z + dz)) {
+                    blocks.push((x + dx, y, z + dz, Part::Block(match facing {
+                        "north" => "shelf_mushroom[age=0,facing=north]",
+                        "south" => "shelf_mushroom[age=0,facing=south]",
+                        "west" => "shelf_mushroom[age=0,facing=west]",
+                        _ => "shelf_mushroom[age=0,facing=east]",
+                    })));
+                }
             }
         }
         blocks
@@ -1243,7 +1266,7 @@ struct Species {
 /// Порода с таким стволом, кроной, формой и высотой ствола от `low`
 /// до `low + spread + extra - 2`.
 const fn species(log: &'static str, leaves: &'static str, shape: Shape, low: i32, spread: i32, extra: i32) -> Species {
-    Species { tree: Tree { log, leaves, trunk: low, shape, bees: false, heart: false }, spread, extra }
+    Species { tree: Tree { log, leaves, trunk: low, shape, bees: false, heart: false, shelf: false }, spread, extra }
 }
 
 
@@ -1366,6 +1389,9 @@ fn woodland(biome: Biome) -> Option<(f64, Mix, f64)> {
         Biome::OldGrowthBirchForest => (0.045, &[(0.5, TALL_BIRCH), (0.5, BIRCH)], 0.002),
         Biome::DarkForest => (0.06, DARK_FOREST, 0.0),
         Biome::PaleGarden => (0.05, &[(1.0, PALE_OAK)], 0.0),
+        // Пятнистый лес 26.3: замер официального мира — около 2,3 ствола тополя на чанк,
+        // ель очень редка (вики: «Spruce trees appear very sparsely»).
+        Biome::DappledForest => (0.0095, &[(0.96, POPLAR), (0.04, SPRUCE)], 0.0),
         Biome::Taiga | Biome::SnowyTaiga => (0.03, TAIGA, 0.0),
         Biome::OldGrowthSpruceTaiga => (0.045, SPRUCE_TAIGA, 0.0),
         Biome::OldGrowthPineTaiga => (0.045, PINE_TAIGA, 0.0),
@@ -1448,8 +1474,50 @@ impl Terrain {
         let bees = fraction(&mut random) < bees;
 
         let heart = column.biome == Biome::PaleGarden && fraction(&mut random) < 0.1;
+
+        // Листва тополя пятнистого леса: на дерево один цвет; замер 26.3 по листьям —
+        // оранжевые 48 %, красные 32 %, жёлтые 20 %.
+        if column.biome == Biome::DappledForest && species.tree.shape == Shape::Poplar {
+            let colour = fraction(&mut random);
+            let leaves = if colour < 0.48 { "orange_poplar_leaves" } else if colour < 0.80 { "red_poplar_leaves" } else { "yellow_poplar_leaves" };
+            return Some(Tree { trunk, leaves, shelf: true, ..species.tree });
+        }
+
         Some(Tree { trunk, bees, heart, ..species.tree })
     }
+}
+
+/// Дерево лагеря 26.3 по пулу блока-стыка `abandoned_camp/trees/<имя>` (замер: пулы с «_bees»
+/// несут гнездо, у пулов цвета тополя листва одного цвета). None — это не дерево (бамбук) или
+/// пул неизвестен. Высота ствола своя у места и мира [проверить: распределение высот].
+pub fn camp_tree(seed: i64, x: i32, z: i32, pool: &str) -> Option<Tree> {
+    let name = pool.rsplit('/').next()?;
+    let (name, bees) = name.strip_suffix("_bees").map_or((name, false), |name| (name, true));
+    let (species, leaves) = match name {
+        "oak" => (OAK, None),
+        "fancy_oak" => (FANCY_OAK, None),
+        "birch" => (BIRCH, None),
+        "super_birch" => (TALL_BIRCH, None),
+        "spruce" | "spruce_on_snow" => (SPRUCE, None),
+        "pine" => (PINE, None),
+        "mega_pine" => (MEGA_PINE, None),
+        "thick_spruce" => (MEGA_SPRUCE, None),
+        "jungle" => (JUNGLE, None),
+        "acacia" => (ACACIA, None),
+        "cherry" => (CHERRY, None),
+        "pale_oak" => (PALE_OAK, None),
+        "yellow_poplar" => (POPLAR, Some("yellow_poplar_leaves")),
+        "red_poplar" => (POPLAR, Some("red_poplar_leaves")),
+        "orange_poplar" => (POPLAR, Some("orange_poplar_leaves")),
+        _ => return None,
+    };
+    let mut random = Random::new(
+        ((x as i64).wrapping_mul(341_873_128_712).wrapping_add((z as i64).wrapping_mul(132_897_987_541)) + 421)
+            ^ seed.wrapping_mul(6_364_136_223_846_793_005),
+    );
+    let trunk = species.tree.trunk + roll(&mut random, species.spread) + roll(&mut random, species.extra);
+
+    Some(Tree { trunk, bees, leaves: leaves.unwrap_or(species.tree.leaves), shelf: leaves.is_some(), ..species.tree })
 }
 
 /// Дерево с азалией над пышной пещерой в точке (x, z): высота ствола своя

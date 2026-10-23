@@ -634,6 +634,7 @@ fn biome(name: &str, version: mcsa_protocol::JavaVersion) -> Compound {
     let base = if name == crate::world::terrain::AUTUMN_FOREST { "forest" } else { name };
     let biome = Biome::ALL
         .iter()
+        .chain(Biome::PREVIEW.iter())
         .find(|biome| biome.name() == base)
         .copied()
         .unwrap_or(Biome::Plains);
@@ -855,6 +856,27 @@ fn look(name: &str) -> Look {
             grass: Some("#b9a24f"),
             foliage: Some("#d9822b"),
             dry_foliage: Some("#a4532b"),
+            ..PLAIN
+        },
+        // 26.3, вики Dappled Forest: трава #df6827, листва #e68e30, сухая #8c3a04, вода #375154.
+        "dappled_forest" => Look {
+            sky: "#78a7ff",
+            water: "#375154",
+            water_fog: Some("#1e97f2"),
+            grass: Some("#df6827"),
+            foliage: Some("#e68e30"),
+            dry_foliage: Some("#8c3a04"),
+            ..PLAIN
+        },
+        // 26.2, вики Sulfur Caves: туман #8cb831, небо #78a7ff, вода #34bf89 (туман воды #17543c).
+        "sulfur_caves" => Look {
+            sky: "#78a7ff",
+            fog: Some("#8cb831"),
+            water: "#34bf89",
+            water_fog: Some("#17543c"),
+            grass: Some("#aba64f"),
+            foliage: Some("#77ab2f"),
+            dry_foliage: Some("#a37546"),
             ..PLAIN
         },
         "savanna_plateau" => Look { sky: "#6eb1ff", ..PLAIN },

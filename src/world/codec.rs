@@ -519,7 +519,7 @@ impl Chunk {
             read_container(&mut reader, blocks, state_ok)?;
         }
 
-        let biomes = terrain::biome_registry_size();
+        let biomes = if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 { terrain::biome_registry_size_preview() } else { terrain::biome_registry_size() };
 
         for cells in chunk.biomes.chunks_mut(SECTION_BIOMES) {
             read_container(&mut reader, cells, &|biome| (biome as usize) < biomes)?;
