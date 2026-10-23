@@ -5,11 +5,11 @@ import hashlib
 import json
 from pathlib import Path
 from compare_schemas import strings
-from generate_registry_26_2 import CANDIDATE, Sources
+from generate_registry_26_2 import CANDIDATE, Sources, LOCAL_LOCKS
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPONENTS = (0, 1, 2, 3, 4, 6, 9, 11, 12, 13, 16, 18, 19, 20, 21, 22,
-              23, 40, 42, 44, 45, 46, 48, 51, 52, 54, 55, 63, 73, 84)
+COMPONENTS = (0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22,
+              23, 34, 40, 42, 44, 45, 46, 48, 51, 52, 53, 54, 55, 56, 57, 59, 61, 63, 66, 68, 69, 70, 72, 73, 74, 76, 77, 84, 86, 88, 89, 90, 104)
 # Эти ссылки имеют отдельный typed remapper; равенство числовых ID не требуется.
 BOUNDARIES = {'SlotComponentType', 'ItemStackTemplate'}
 
@@ -44,6 +44,7 @@ def generate(baseline, cache):
     # Дискриминатор metadata и envelope Creative Slot совпадают буквально.
     for key in ('entityMetadataEntry', 'UntrustedSlot', 'UntrustedSlotComponent'):
         assert before[key] == after[key], key
+    assert graph(before, 'ResolvableProfile') == graph(after, 'ResolvableProfile')
     names = before['SlotComponentType'][1]['mappings']
     fields = [v['SlotComponent'][1][1]['type'][1]['fields'] for v in (before, after)]
     components = []
@@ -75,7 +76,22 @@ def generate(baseline, cache):
     for kind, _, keys in layouts:
         text += f'    ({kind}, &{json.dumps(keys)}),\n'
     text += '];\n'
-    report = {'sources': sources, 'components': components,
+    item_path = ROOT / 'tools/data/items.json'
+    raw = item_path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == LOCAL_LOCKS['tools/data/items.json']
+    sources['tools/data/items.json'] = {'sha256': LOCAL_LOCKS['tools/data/items.json'], 'bytes': len(raw)}
+    named = [('ITEM_NAMES_775', json.loads(raw)),
+             ('ITEM_NAMES_776', pinned.read(CANDIDATE, 'data/pc/26.2/items.json')),
+             ('ITEM_NAMES_777', old('items.json'))]
+    for key, rows in named:
+        rows = sorted(rows, key=lambda row: row['id'])
+        assert [r['id'] for r in rows] == list(range(len(rows)))
+        text += f'pub(crate) const {key}: &[&str] = &[\n'
+        text += ''.join('    ' + json.dumps(row['name']) + ',\n' for row in rows)
+        text += '];\n'
+    for record in pinned.manifest.values():
+        sources[record['url']] = {k: record[k] for k in ('sha256', 'bytes')}
+    report = {'sources': sources, 'wire_exceptions': {'bees': 'Observed776 has an entity type VarInt before each bee compound; canonical core stores the named id in NBT. payload-actions-bees775/client-debug.', 'instrument': 'Observed776 holder has no bool; canonical core writer retains bool+holder. payload-actions-instrument775/client-debug.'}, 'resolvable_profile_schema_sha256': hashlib.sha256(json.dumps(graph(after, 'ResolvableProfile'), sort_keys=True).encode()).hexdigest(), 'components': components,
               'layouts': [{'kind': k, 'name': n, 'fields': f} for k, n, f in layouts],
               'scope': 'Pinned schemas + existing typed775 codecs; synthetic coverage, not new live776 evidence. Unsupported component data/serializers remain rejected; admission unchanged.',
               'rust_sha256': hashlib.sha256(text.encode()).hexdigest()}

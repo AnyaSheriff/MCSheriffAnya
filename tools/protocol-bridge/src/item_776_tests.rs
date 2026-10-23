@@ -63,10 +63,10 @@ fn synthetic_component_templates_keep_typed_validation() {
         assert_eq!(encode_template(MID, &stack, context()).unwrap(), middle);
         for end in 0..middle.len() { assert!(decode_template(MID, &middle[..end], context()).is_err()); }
     }
-    let raw = [1, 1, 1, 0, 5]; // use_effects: отдельный codec ещё не реализован.
-    assert_eq!(decode_template(MID, &raw, context()), Err(Error::UnsupportedComponent(5)));
-    let stack = Stack { item: 1, count: 1, added: vec![Component { kind: 5, data: vec![] }], removed: vec![] };
-    assert_eq!(encode_template(MID, &stack, context()), Err(Error::UnsupportedComponent(5)));
+    let raw = [1, 1, 1, 0, 8]; // damage_type: отдельный codec ещё не реализован.
+    assert_eq!(decode_template(MID, &raw, context()), Err(Error::UnsupportedComponent(8)));
+    let stack = Stack { item: 1, count: 1, added: vec![Component { kind: 8, data: vec![] }], removed: vec![] };
+    assert_eq!(encode_template(MID, &stack, context()), Err(Error::UnsupportedComponent(8)));
 }
 
 #[test]
@@ -166,7 +166,7 @@ fn missing_native_content_and_unknown_components_still_fail_explicitly() {
     assert_eq!(decode(MID, &unknown, false, context()), Err(Error::Id(ids::IdTranslationError::UnknownId(1537))));
     assert_eq!(decode(MID, &[1, 1, 1, 0, 111], false, context()),
         Err(Error::Id(ids::IdTranslationError::UnknownId(111))));
-    assert_eq!(decode(MID, &[1, 1, 1, 0, 5], false, context()), Err(Error::UnsupportedComponent(5)));
+    assert_eq!(decode(MID, &[1, 1, 1, 0, 8], false, context()), Err(Error::UnsupportedComponent(8)));
     let stack = Stack { item: 1, count: 1, added: vec![], removed: vec![] };
     for raw in [&[0][..], &[1, 1, 0, 0]] {
         assert_eq!(decode(MID, raw, true, context()).unwrap().1, raw.len());
@@ -245,8 +245,8 @@ fn schema_only_776_nested_depth_counts_duplicates_and_missing_ids_are_bounded() 
         Err(Error::Id(ids::IdTranslationError::MissingTarget(1052))));
     assert_eq!(decode(MID, &slot(1, 50, &[1, 1, 1, 1, 0, 78]), false, context()),
         Err(Error::Id(ids::IdTranslationError::MissingTarget(78))));
-    assert_eq!(decode(MID, &slot(1, 50, &[1, 1, 1, 1, 0, 5]), false, context()),
-        Err(Error::UnsupportedComponent(5)));
+    assert_eq!(decode(MID, &slot(1, 50, &[1, 1, 1, 1, 0, 8]), false, context()),
+        Err(Error::UnsupportedComponent(8)));
 }
 
 #[test]

@@ -1,0 +1,16 @@
+{
+  "status": "failed",
+  "primary": 775,
+  "protocol": 776,
+  "collect_only": true,
+  "runner_sha256": "7f2bc7edb0e44f48ef3047e9ace8e2bc42b6a6ab72d1f6bc9d46ffed6b2a12df",
+  "binary_sha256": "02292beb120f7c136c42d5bd9c24098fa3c011de6af8522602cb5cbc04cc3a9f",
+  "packets": [],
+  "commands": [],
+  "checks": [],
+  "screenshots": [],
+  "error": "TimeoutError('timed out')",
+  "client_exit": 1,
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

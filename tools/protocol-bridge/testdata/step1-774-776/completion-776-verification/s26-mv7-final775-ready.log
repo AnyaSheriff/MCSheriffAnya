@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 283, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 202, in main
+    wait(pose_seen)
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 78, in wait
+    raise TimeoutError(stage)
+TimeoutError: statue-sitting

@@ -70,9 +70,9 @@ fn slot_and_template_776_validate_untrusted_lengths_and_unknown_components() {
     assert_eq!(items::encode_template(MID, &stack, ctx), Ok(vec![1, 1, 0, 0]));
     for (from, to) in [(MID, OLD), (OLD, MID), (MID, NEW), (NEW, MID)] {
         let mut input = items::Reader(&[]);
-        // use_effects ещё требует отдельного typed codec.
-        assert_eq!(items::component_bytes(5, &mut input, from, to, ctx),
-            Err(items::Error::UnsupportedComponent(5)));
+        // damage_type ещё требует отдельного typed codec.
+        assert_eq!(items::component_bytes(8, &mut input, from, to, ctx),
+            Err(items::Error::UnsupportedComponent(8)));
     }
 }
 

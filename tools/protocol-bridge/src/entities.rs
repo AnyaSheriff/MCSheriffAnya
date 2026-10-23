@@ -304,6 +304,11 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if present { let name = input.string()?; uint(out,name.len() as u32); out.extend(name.as_bytes()); out.extend(input.take(8)?); }
             }
             34 => registry_id(input,out,context,"minecraft:painting_variant",true)?,
+            41 if has_776 => {
+                let start = input.rest;
+                crate::profile::read(input)?;
+                out.extend(&start[..start.len() - input.rest.len()]);
+            }
             35..=38 | 42 => { let max = match serializer {35=>6,36=>3,37=>3,38=>3,_=>1}; uint(out,input.count(max)? as u32); }
             _ => return Err(failure(Error::Serializer(serializer))),
         }

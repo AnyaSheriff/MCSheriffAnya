@@ -1,0 +1,51 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[16:21:17] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[16:21:17] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[16:21:17] [Server thread/INFO]: McsaProbe[/127.0.0.1:38912 → localhost:26034] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[16:21:18] [Server thread/INFO]: McsaProbe зашёл на сервер
+[16:21:22] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[16:21:22] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_1
+[16:21:22] [Server thread/INFO]: Заполнено блоков: 56
+[16:21:22] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_2
+[16:21:22] [Server thread/INFO]: McsaProbe перенесён в 0.5 64 0.5
+[16:21:22] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_3
+[16:21:23] [Server thread/INFO]: Changed the block at 2, 64, 0
+[16:21:23] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_4
+[16:21:23] [Server thread/INFO]: Предмет в руке заменён — игрокам: McsaProbe
+[16:21:23] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_5
+[16:21:23] [Server thread/INFO]: McsaProbe has made the advancement [Isn't It Iron Pick]
+[16:21:23] [Server thread/INFO]: McsaProbe has made the advancement [Isn't It Iron Pick]
+[16:21:24] [Server thread/INFO]: Changed the block at 2, 64, 0
+[16:21:24] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_6
+[16:21:25] [Server thread/INFO]: Предмет в руке заменён — игрокам: McsaProbe
+[16:21:25] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_7
+[16:21:25] [Server thread/INFO]: Ячейка изменена: McsaProbe
+[16:21:25] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_8
+[16:21:26] [Server thread/INFO]: Предмет в руке заменён — игрокам: McsaProbe
+[16:21:26] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_9
+[16:21:26] [Server thread/INFO]: McsaProbe has made the advancement [Stone Age]
+[16:21:26] [Server thread/INFO]: McsaProbe has made the advancement [Stone Age]
+[16:21:26] [Server thread/INFO]: Ячейка изменена: McsaProbe
+[16:21:26] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_10
+[16:21:27] [Server thread/INFO]: Предмет в руке заменён — игрокам: McsaProbe
+[16:21:27] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_11
+[16:21:27] [Server thread/INFO]: McsaProbe has made the advancement [Acquire Hardware]
+[16:21:27] [Server thread/INFO]: McsaProbe has made the advancement [Acquire Hardware]
+[16:21:27] [Server thread/INFO]: Ячейка изменена: McsaProbe
+[16:21:27] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_12
+[16:21:28] [Server thread/INFO]: Предмет в руке заменён — игрокам: McsaProbe
+[16:21:28] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_13
+[16:21:28] [Server thread/INFO]: Gave 8 [arrow] to McsaProbe
+[16:21:28] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_14
+[16:21:30] [Server thread/INFO]: Предмет в руке заменён — игрокам: McsaProbe
+[16:21:30] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_15
+[16:22:00] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[16:22:00] [Server thread/INFO]: Останавливаю сервер
+[16:22:00] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[16:22:00] [Server thread/INFO]: McsaProbe вышел
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2988 filtered out; finished in 54.20s
+

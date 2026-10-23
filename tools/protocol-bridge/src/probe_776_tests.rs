@@ -78,8 +78,8 @@ fn gameplay_776_actions_are_bounded_and_do_not_enable_unknown_dig_enums() {
         let mut tail=body;tail.push(0);assert!(serverbound(&tail,Context::default()).is_err());
     }
     assert!(serverbound(&[0x0c,3],Context::default()).is_err());
-    // Ненаблюдённое действие1 остаётся закрыто; начало0/конец2 сняты отдельно.
-    assert!(serverbound(&[0x29,1,0,0,0,0,0,0,0,0,1,1],Context::default()).is_err());
+    // Полный enum776 снят GUI; неизвестное действие8 остаётся закрыто.
+    assert!(serverbound(&[0x29,8,0,0,0,0,0,0,0,0,1,1],Context::default()).is_err());
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn observed_776_mining_actions_preserve_position_sequence_and_reject_unobserved_
         body[0] = packet as u8;
         body.extend([0; 8]); body.extend([1, 129, 1]);
         let result = serverbound(&body, Context::default());
-        if matches!(action, 0 | 2) {
+        if action <= 7 {
             let result = result.unwrap();
             assert_eq!(&result[1..], &body[1..]);
             for end in 1..body.len() { assert!(serverbound(&body[..end], Context::default()).is_err()); }

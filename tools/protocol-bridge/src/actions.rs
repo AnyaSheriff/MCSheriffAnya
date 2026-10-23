@@ -2,6 +2,49 @@
 use std::collections::BTreeSet;
 use crate::{JavaVersion,ids::{self,RegistryKind},wire::{Cursor,Error,Context,uint}};
 fn string(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{let value=input.string()?;uint(out,value.len() as u32);out.extend(value.as_bytes());Ok(())}
+// Равенство графов775/776 проверяет dispatcher; здесь границы и семантика полей.
+// ID эффектов относятся к общему динамическому реестру этого соединения.
+pub(crate) fn gui(name: &str, input: &mut Cursor<'_>, out: &mut Vec<u8>) -> Result<(), Error> {
+    match name {
+        "set_beacon_effect" => {
+            for _ in 0..2 {
+                let present = input.boolean()?; out.push(u8::from(present));
+                if present { uint(out, input.count(39)? as u32); }
+            }
+        }
+        "name_item" => string(input, out)?,
+        "enchant_item" => { uint(out, input.uint()?); uint(out, input.count(2)? as u32); }
+        "select_trade" => uint(out, input.uint()?),
+        "set_slot_state" => {
+            uint(out, input.uint()?); uint(out, input.uint()?);
+            out.push(u8::from(input.boolean()?));
+        }
+        "update_sign" => {
+            out.extend(input.take(8)?); out.push(u8::from(input.boolean()?));
+            for _ in 0..4 { string(input, out)?; }
+        }
+        "select_bundle_item" => {
+            uint(out, input.uint()?);
+            let selected = input.varint()?;
+            if selected < -1 { return Err(Error::Invalid); }
+            uint(out, selected as u32);
+        }
+        "edit_book" => {
+            uint(out, input.uint()?);
+            let count = input.count(100)?; uint(out, count as u32);
+            for _ in 0..count { string(input, out)?; }
+            let title = input.boolean()?; out.push(u8::from(title));
+            if title { string(input, out)?; }
+        }
+        "pick_item_from_block" | "pick_item_from_entity" => {
+            if name == "pick_item_from_block" { out.extend(input.take(8)?); }
+            else { uint(out, input.uint()?); }
+            out.push(u8::from(input.boolean()?));
+        }
+        _ => return Err(Error::Invalid),
+    }
+    Ok(())
+}
 fn floats(input:&mut Cursor<'_>,out:&mut Vec<u8>,n:usize,double:bool)->Result<(),Error>{
     for _ in 0..n {let value=input.take(if double{8}else{4})?;
         let finite=if double{f64::from_be_bytes(value.try_into().map_err(|_|Error::Invalid)?).is_finite()}else{f32::from_be_bytes(value.try_into().map_err(|_|Error::Invalid)?).is_finite()};

@@ -206,6 +206,10 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
         && !matches!(kind,25|49|50|75) {
         return Err(Error::UnsupportedComponent(kind));
     }
+    if matches!(kind,53|56|57|59|61|66|68|69|72|74|76|77|86|88|89|90|104) {
+        if !crate::component_776::supported_pair(from,to) {return Err(Error::UnsupportedComponent(kind));}
+        return crate::component_776::remap(kind,input,context,spaces);
+    }
     // В776 эти два компонента наблюдены отдельно. В777 swing_animation
     // удалён, а collar payload здесь ещё не открываем по одному совпавшему ID.
     if matches!(kind,40|84) && matches!(from,JavaVersion::V26_1_2|JavaVersion::V26_2)
@@ -213,6 +217,14 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
         let start=input.0;
         if kind==40 { input.count(2)?; input.uint()?; } else { input.count(15)?; }
         return Ok(start[..start.len()-input.0.len()].to_vec());
+    }
+    if kind == 70 && matches!(from,JavaVersion::V26_1_2|JavaVersion::V26_2)
+        && matches!(to,JavaVersion::V26_1_2|JavaVersion::V26_2) {
+        let start = input.0;
+        let mut cursor = crate::wire::Cursor::new(start);
+        crate::profile::read(&mut cursor).map_err(|_| Error::Invalid)?;
+        let count = start.len() - cursor.rest.len();
+        return Ok(input.take(count)?.to_vec());
     }
     // Для776 вложенные формы25/49/50/75 разрешены только по равенству pinned
     // схем775/776 (fixture); live776 nested ещё НЕ проверены. Общие32 уровня,
@@ -256,16 +268,45 @@ fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result
     Ok(())
 }
 
-/// Только строки и простое оформление. Hover/click/translate/селекторы требуют
-/// отдельной семантики; их нельзя передавать между версиями непрозрачно.
+/// Текст без ссылок на предметы/сущности: wiki Text_component_format.
+/// Вложенные списки ограничены; hover с игровыми ID требует remapper.
 pub(crate) fn plain_text(data: &[u8]) -> Result<(), Error> {
-    if data.first() == Some(&8) { return Ok(()); }
-    if data.first() != Some(&10) { return Err(Error::Invalid); }
-    let fields = fields(&data[1..])?;
-    if !fields.iter().any(|(name, kind, _)| name == "text" && *kind == 8) { return Err(Error::Invalid); }
+    if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
+    let (&kind, payload) = data.split_first().ok_or(Error::Truncated)?;
+    text_node(kind, payload, 0)
+}
+
+fn text_node(kind: u8, data: &[u8], depth: usize) -> Result<(), Error> {
+    if depth > 32 { return Err(Error::TooLarge); }
+    if kind == 8 { nbt_string(data)?; return Ok(()); }
+    if kind == 9 { return text_list(data, depth); }
+    if kind != 10 { return Err(Error::Invalid); }
+    let fields = fields(data)?;
+    if !fields.iter().any(|(name, kind, _)| matches!(name.as_str(), "text" | "translate" | "keybind" | "selector") && *kind == 8) { return Err(Error::Invalid); }
     for (name, kind, payload) in fields {
         match name.as_str() {
-            "text" | "font" | "insertion" if kind == 8 => { nbt_string(payload)?; }
+            "text" | "font" | "insertion" | "translate" | "fallback" | "keybind" | "selector" if kind == 8 => { nbt_string(payload)?; }
+            "extra" | "with" if kind == 9 => text_list(payload, depth + 1)?,
+            "separator" => text_node(kind, payload, depth + 1)?,
+            "hover_event" if kind == 10 => {
+                let event = fields_event(payload)?;
+                if event.0 != "show_text" || event.1.len() != 1 || event.1[0].0 != "value" { return Err(Error::UnsupportedComponent(6)); }
+                text_node(event.1[0].1, event.1[0].2, depth + 1)?;
+            }
+            "click_event" if kind == 10 => {
+                let (action, values) = fields_event(payload)?;
+                if values.len() != 1 { return Err(Error::Invalid); }
+                let (key, kind, value) = &values[0];
+                match (action.as_str(), key.as_str(), *kind) {
+                    ("open_url", "url", 8) => {
+                        let value=nbt_string(value)?;
+                        if !value.starts_with("https://") && !value.starts_with("http://") { return Err(Error::Invalid); }
+                    }
+                    ("run_command" | "suggest_command", "command", 8) | ("copy_to_clipboard", "value", 8) => { nbt_string(value)?; }
+                    ("change_page", "page", 3) if i32::from_be_bytes((*value).try_into().map_err(|_| Error::Invalid)?) > 0 => (),
+                    _ => return Err(Error::UnsupportedComponent(6)),
+                }
+            }
             "color" if kind == 8 => {
                 let color = nbt_string(payload)?;
                 let named = matches!(color,"black"|"dark_blue"|"dark_green"|"dark_aqua"|"dark_red"|"dark_purple"|"gold"|"gray"|"dark_gray"|"blue"|"green"|"aqua"|"red"|"light_purple"|"yellow"|"white");
@@ -276,6 +317,28 @@ pub(crate) fn plain_text(data: &[u8]) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+fn text_list(mut data: &[u8], depth: usize) -> Result<(), Error> {
+    if data.len() < 5 { return Err(Error::Truncated); }
+    let kind=data[0];
+    let count=i32::from_be_bytes(data[1..5].try_into().map_err(|_| Error::Invalid)?);
+    if !(0..=1024).contains(&count) { return Err(Error::TooLarge); }
+    data=&data[5..];
+    for _ in 0..count {
+        let size=registry::nbt_payload_length(kind,data).map_err(Error::Nbt)?;
+        text_node(kind,&data[..size],depth+1)?;
+        data=&data[size..];
+    }
+    if !data.is_empty() { return Err(Error::Invalid); }
+    Ok(())
+}
+
+fn fields_event(data: &[u8]) -> Result<(String, Vec<NbtField<'_>>), Error> {
+    let mut fields=fields(data)?;
+    let at=fields.iter().position(|(key,kind,_)|key=="action" && *kind==8).ok_or(Error::Invalid)?;
+    let (_,_,value)=fields.remove(at);
+    Ok((nbt_string(value)?.to_owned(),fields))
 }
 
 pub(crate) fn nbt_string(bytes: &[u8]) -> Result<&str, Error> {

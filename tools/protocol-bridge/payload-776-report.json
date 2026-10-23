@@ -15,8 +15,25 @@
     "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json": {
       "sha256": "6ea2d04f7f78ea56fa3db8453dd62c4b6021b5eef01994e24e3e3e5f6c28295d",
       "bytes": 88789
+    },
+    "tools/data/items.json": {
+      "sha256": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e",
+      "bytes": 189396
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/items.json": {
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+      "bytes": 207286
+    },
+    "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/items.json": {
+      "sha256": "a0b334b6e8f9583f8d2ae07fb65c201022ee06b1e8a43beb556140e9d8ef2743",
+      "bytes": 193004
     }
   },
+  "wire_exceptions": {
+    "bees": "Observed776 has an entity type VarInt before each bee compound; canonical core stores the named id in NBT. payload-actions-bees775/client-debug.",
+    "instrument": "Observed776 holder has no bool; canonical core writer retains bool+holder. payload-actions-instrument775/client-debug."
+  },
+  "resolvable_profile_schema_sha256": "cc27684d018621c220037137452a550386665c38883f65348f8d91001b415f3e",
   "components": [
     {
       "kind": 0,
@@ -44,14 +61,29 @@
       "schema_sha256": "e78613b209d99a4e1264b7b57bbdecb4b0912a12faa36f842384e1f37cc7da1a"
     },
     {
+      "kind": 5,
+      "name": "use_effects",
+      "schema_sha256": "350d361c36cc6207d8e07752aa47b1b9fb0fd6f5b382bdc309949847e1847b77"
+    },
+    {
       "kind": 6,
       "name": "custom_name",
       "schema_sha256": "f521c9992d0d40b748a7456cd86efeb760db1e02760fe9b1030848c97a7a02e2"
     },
     {
+      "kind": 7,
+      "name": "minimum_attack_charge",
+      "schema_sha256": "dc71233e3ec976e2779d02369a2666258bc5818b1192161c9bd7e52918fda34f"
+    },
+    {
       "kind": 9,
       "name": "item_name",
       "schema_sha256": "f521c9992d0d40b748a7456cd86efeb760db1e02760fe9b1030848c97a7a02e2"
+    },
+    {
+      "kind": 10,
+      "name": "item_model",
+      "schema_sha256": "bff056110af3924ffb15786a1bb3b2b58de27a59c601ddca03e7641768589faa"
     },
     {
       "kind": 11,
@@ -72,6 +104,11 @@
       "kind": 16,
       "name": "attribute_modifiers",
       "schema_sha256": "01618f0489c454bddd296aa1076a94661ed5c007d953fe9224d17654085cf251"
+    },
+    {
+      "kind": 17,
+      "name": "custom_model_data",
+      "schema_sha256": "aead0cc273c818b64b0cdbb0e4b32b579d9f4dd6b9ed78ec96f46ba43fc93446"
     },
     {
       "kind": 18,
@@ -102,6 +139,11 @@
       "kind": 23,
       "name": "food",
       "schema_sha256": "21e45f37baa72233cd1059840e247e61028d825c85a882036d74a3316c21205a"
+    },
+    {
+      "kind": 34,
+      "name": "glider",
+      "schema_sha256": "e78613b209d99a4e1264b7b57bbdecb4b0912a12faa36f842384e1f37cc7da1a"
     },
     {
       "kind": 40,
@@ -144,6 +186,11 @@
       "schema_sha256": "dc71233e3ec976e2779d02369a2666258bc5818b1192161c9bd7e52918fda34f"
     },
     {
+      "kind": 53,
+      "name": "suspicious_stew_effects",
+      "schema_sha256": "1881ffa8777dd9b2cbed257b218540607d82191fa8b97c630e4c29e7bdb61782"
+    },
+    {
       "kind": 54,
       "name": "writable_book_content",
       "schema_sha256": "aade9e3a2da5b57d25b9648bd4e3b04c7032761c79e23d94c5655a021a3f9d69"
@@ -154,9 +201,54 @@
       "schema_sha256": "9fd3ac7eaca0aac07927f1ab829ee868923e6b1d96d3985b33635f80a0211893"
     },
     {
+      "kind": 56,
+      "name": "trim",
+      "schema_sha256": "a3452f16dd0c11b8447140160a9ad5e2696832ccbae2edb7f195b0ce1fa77be5"
+    },
+    {
+      "kind": 57,
+      "name": "debug_stick_state",
+      "schema_sha256": "f521c9992d0d40b748a7456cd86efeb760db1e02760fe9b1030848c97a7a02e2"
+    },
+    {
+      "kind": 59,
+      "name": "bucket_entity_data",
+      "schema_sha256": "f521c9992d0d40b748a7456cd86efeb760db1e02760fe9b1030848c97a7a02e2"
+    },
+    {
+      "kind": 61,
+      "name": "instrument",
+      "schema_sha256": "bccebeacedb532b5e399849584b4055baf4d4477f99da6fe09a581e280af2536"
+    },
+    {
       "kind": 63,
       "name": "ominous_bottle_amplifier",
       "schema_sha256": "d44ba9668528169a9a8d65837b7bb7206a771c9c8a99e52a06508fafb7589c28"
+    },
+    {
+      "kind": 66,
+      "name": "recipes",
+      "schema_sha256": "f521c9992d0d40b748a7456cd86efeb760db1e02760fe9b1030848c97a7a02e2"
+    },
+    {
+      "kind": 68,
+      "name": "firework_explosion",
+      "schema_sha256": "72aa4a9e4903cdd74cc7c9f99bb3b0acacc473991d500ad90b1824eb0395df9d"
+    },
+    {
+      "kind": 69,
+      "name": "fireworks",
+      "schema_sha256": "e0a436cc9fc20df5a5941f03fab07a9d3d0205de2856a032ba255e1851f4df75"
+    },
+    {
+      "kind": 70,
+      "name": "profile",
+      "schema_sha256": "cc27684d018621c220037137452a550386665c38883f65348f8d91001b415f3e"
+    },
+    {
+      "kind": 72,
+      "name": "banner_patterns",
+      "schema_sha256": "7f5411593d431b1a7ab72c9ced5170f749b55c5f8c6218cc831dfa16a3493ae4"
     },
     {
       "kind": 73,
@@ -164,9 +256,49 @@
       "schema_sha256": "ec4a0ad1bbb4efe6414adc8c849b3f71b5436c06343ab1b1dbc4d5d5355bfd75"
     },
     {
+      "kind": 74,
+      "name": "pot_decorations",
+      "schema_sha256": "0bfe5eee67348bb0b4fa4e14b87985d88fdc100306af240836fcbacecda0ec88"
+    },
+    {
+      "kind": 76,
+      "name": "block_state",
+      "schema_sha256": "a8b651dcecd09548258a24f17933f656fd27275ba564860aff38013b90d66a0f"
+    },
+    {
+      "kind": 77,
+      "name": "bees",
+      "schema_sha256": "70e094be8db4e52f73d0dabe1bee50148d3b469f3f05d6a66bb3165f04e86b37"
+    },
+    {
       "kind": 84,
       "name": "wolf/collar",
       "schema_sha256": "ec4a0ad1bbb4efe6414adc8c849b3f71b5436c06343ab1b1dbc4d5d5355bfd75"
+    },
+    {
+      "kind": 86,
+      "name": "salmon/size",
+      "schema_sha256": "d44ba9668528169a9a8d65837b7bb7206a771c9c8a99e52a06508fafb7589c28"
+    },
+    {
+      "kind": 88,
+      "name": "tropical_fish/pattern",
+      "schema_sha256": "d44ba9668528169a9a8d65837b7bb7206a771c9c8a99e52a06508fafb7589c28"
+    },
+    {
+      "kind": 89,
+      "name": "tropical_fish/base_color",
+      "schema_sha256": "ec4a0ad1bbb4efe6414adc8c849b3f71b5436c06343ab1b1dbc4d5d5355bfd75"
+    },
+    {
+      "kind": 90,
+      "name": "tropical_fish/pattern_color",
+      "schema_sha256": "ec4a0ad1bbb4efe6414adc8c849b3f71b5436c06343ab1b1dbc4d5d5355bfd75"
+    },
+    {
+      "kind": 104,
+      "name": "axolotl/variant",
+      "schema_sha256": "d44ba9668528169a9a8d65837b7bb7206a771c9c8a99e52a06508fafb7589c28"
     }
   ],
   "layouts": [
@@ -3668,5 +3800,5 @@
     }
   ],
   "scope": "Pinned schemas + existing typed775 codecs; synthetic coverage, not new live776 evidence. Unsupported component data/serializers remain rejected; admission unchanged.",
-  "rust_sha256": "46d4f683424528d6c1a32d494a12461f7a50160ce2f1c3ac2cb4a0dfe10640a8"
+  "rust_sha256": "21dd877d55782d62bc6c3cfa6330ba0f6047624c7205cef5b5ee5321aae08585"
 }

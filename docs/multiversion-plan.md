@@ -14,4 +14,11 @@
 13. Validate profile-bound saves, explicit backed-up upgrades, and refusal of unsupported downgrade before listeners open.
 14. Publish a client × primary readiness matrix with raw evidence; never infer full support from packet IDs or one successful login.
 
-Step 1 status: public774/776 admission remains closed on both primaries. Private776 gameplay/restart has11/11 per primary; recipe-book/crafting/Nether-return traces have4/4 per primary, and password registration/relogin succeeds before player creation. The latest schema-based extension adds158 entity layouts,30 typed component kinds, Creative Slot lengths and nonempty particle metadata; it preserves sulfur cubes and substitutes cushions on776. These are codec regressions, not fresh official776 observations. The shared encrypted-login test now covers775/776/777 through the same RSA/session-service implementation; per owner decision, a live Mojang trace and chat fallback are not admission requirements for776. Remaining776 action enums, block-entity types/data beyond empty chest, unsupported component/metadata forms and final live payload coverage prevent admission. Full774 Play/gameplay remains absent. See [continuation and trace matrix](../tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md).
+Step 1 readiness (client translation; gameplay still follows the selected primary):
+
+| Client | Primary26.1.2 | Primary26.3 |
+|---|---|---|
+| 26.2 (776) | OPEN | OPEN |
+| 1.21.11 (774) | CLOSED | CLOSED |
+
+776 completes the existing checklist: prior recipe-book/crafting/Nether-return and password-dialog evidence, shared encrypted-login tests, fresh11/11 gameplay/restart per primary, and an actual26.2 client accepting196 translated payloads per primary. Live GUI actions prove cancel/drop/release/swap/jab and four statue poses. The typed path covers the core's component writers, metadata41/rich text, populated block entities and the remaining shared GUI/action envelopes. Primary profiles and canonical saved content are unchanged. Unimplemented arbitrary custom forms remain refused; End travel and Nether/End persistence remain unclaimed, without adding admission gates beyond the existing checklist. Per owner decisions, chat fallback and a live Mojang account trace are not required. 774 was not extended and retains the Russian refusal. See [continuation and raw evidence](../tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md#776-admission-and-evidence).

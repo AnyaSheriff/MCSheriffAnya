@@ -176,6 +176,11 @@ pub(crate) fn translate_inner(
             uint(&mut out, cursor.uint()?);
             out.push(u8::from(cursor.boolean()?));
         }
+        (State::Play, Direction::Serverbound, "set_beacon_effect" | "name_item" | "enchant_item" |
+            "select_trade" | "set_slot_state" | "update_sign" | "select_bundle_item" |
+            "edit_book" | "pick_item_from_block" | "pick_item_from_entity") if probe_776 && equal => {
+            crate::actions::gui(name, &mut cursor, &mut out)?;
+        }
         (State::Play, Direction::Serverbound, "block_dig") => {
             digging(&mut cursor, &mut out, from, to)?;
         }
@@ -263,9 +268,13 @@ pub(crate) fn translate_inner(
         (State::Play, Direction::Clientbound, "tile_entity_data") => {
             out.extend(cursor.take(8)?);
             let kind = cursor.uint()?;
-            let translated = crate::block_entities::translate(from, to, kind, cursor.take(cursor.remaining())?).map_err(Error::BlockEntity)?;
+            let translated = crate::block_entities::translate_with_content(from, to, kind, cursor.take(cursor.remaining())?, context.items.content).map_err(Error::BlockEntity)?;
             let (kind, data) = translated.ok_or(Error::PayloadUnavailable("removed block entity update"))?;
-            uint(&mut out, kind); out.extend(data);
+            uint(&mut out, kind);
+            // Реальный776 требует compound в Update, хотя Chunk принимает End.
+            // payload-actions-live775-v2: Expected non-null compound tag.
+            if to == JavaVersion::V26_2 && data == [0] { out.extend([10,0]); }
+            else { out.extend(data); }
         }
         (State::Play, Direction::Clientbound, "update_light") => {
             // Координаты — signed VarInt; копируем точные 32-битные значения.
@@ -356,32 +365,32 @@ fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
     use JavaVersion::{V26_1_2 as Old, V26_2 as Mid, V26_3 as New};
     let action = match (from, cursor.uint()?) {
         // official-actions-776: начало0 и завершение2 разрушили камень.
-        // Другие действия776 [проверить]; общего сдвига enum нет.
+        // Остальные enum776 сняты обычным GUI: action-client-collector775-v3.
         (Old | Mid | New, 0) => DigAction::Start,
-        (Old, 1) | (New, 2) => DigAction::Cancel,
+        (Old | Mid, 1) | (New, 2) => DigAction::Cancel,
         (Old | Mid, 2) | (New, 3) => DigAction::Finish,
-        (Old, 3) | (New, 4) => DigAction::DropStack,
-        (Old, 4) | (New, 5) => DigAction::DropOne,
-        (Old, 5) | (New, 6) => DigAction::ReleaseUse,
-        (Old, 6) | (New, 7) => DigAction::Swap,
-        (Old, 7) | (New, 8) => DigAction::Jab,
+        (Old | Mid, 3) | (New, 4) => DigAction::DropStack,
+        (Old | Mid, 4) | (New, 5) => DigAction::DropOne,
+        (Old | Mid, 5) | (New, 6) => DigAction::ReleaseUse,
+        (Old | Mid, 6) | (New, 7) => DigAction::Swap,
+        (Old | Mid, 7) | (New, 8) => DigAction::Jab,
         _ => return Err(Error::PayloadUnavailable("unverified block_dig action")),
     };
     let status = match (to, action) {
         (Old | Mid | New, DigAction::Start) => 0,
-        (Old, DigAction::Cancel) => 1,
+        (Old | Mid, DigAction::Cancel) => 1,
         (New, DigAction::Cancel) => 2,
         (Old | Mid, DigAction::Finish) => 2,
         (New, DigAction::Finish) => 3,
-        (Old, DigAction::DropStack) => 3,
+        (Old | Mid, DigAction::DropStack) => 3,
         (New, DigAction::DropStack) => 4,
-        (Old, DigAction::DropOne) => 4,
+        (Old | Mid, DigAction::DropOne) => 4,
         (New, DigAction::DropOne) => 5,
-        (Old, DigAction::ReleaseUse) => 5,
+        (Old | Mid, DigAction::ReleaseUse) => 5,
         (New, DigAction::ReleaseUse) => 6,
-        (Old, DigAction::Swap) => 6,
+        (Old | Mid, DigAction::Swap) => 6,
         (New, DigAction::Swap) => 7,
-        (Old, DigAction::Jab) => 7,
+        (Old | Mid, DigAction::Jab) => 7,
         (New, DigAction::Jab) => 8,
         _ => return Err(Error::UnsupportedVersion(to)),
     };
@@ -462,6 +471,8 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
 // проверяется обычным dispatcher; содержательные ID идут через typed ветки.
 // Никаких aliases776=775, непрозрачных RegistryData или silent skip.
 fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
+    // Остальные штатные ветки без статических ID проходят общий schema_equal.
+    if state==State::Play && passthrough(state,direction,name){return true;}
     match (state, direction) {
         (State::Configuration, Direction::Clientbound) => matches!(name,
             "custom_payload" | "select_known_packs" | "tags" | "finish_configuration" | "disconnect" |
@@ -473,6 +484,8 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "chat_command" | "chat_message" | "chat_session_update" | "message_acknowledgement" |
             "tab_complete" | "window_click" | "close_window" | "held_item_slot" |
             "recipe_book" | "displayed_recipe" | "craft_recipe_request" | "advancement_tab" | "arm_animation" |
+            "set_beacon_effect" | "name_item" | "enchant_item" | "select_trade" | "set_slot_state" |
+            "update_sign" | "select_bundle_item" | "edit_book" | "pick_item_from_block" | "pick_item_from_entity" |
             "attack" | "use_entity" | "client_command" | "block_place" | "use_item" | "block_dig" | "set_creative_slot"),
         (State::Play, Direction::Clientbound) => matches!(name,
             "login" | "position" | "abilities" | "declare_commands" | "declare_recipes" |

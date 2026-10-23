@@ -52,6 +52,19 @@ fn nonnegative_float(input:&mut Reader<'_>)->Result<(),Error>{
 
 pub(crate) fn validate(kind:u32,input:&mut Reader<'_>)->Result<(),Error>{
     match kind {
+        5=>{input.boolean()?;input.boolean()?;nonnegative_float(input)?;}
+        7=>nonnegative_float(input)?,
+        10=>skip_string(input)?,
+        17=>{
+            for _ in 0..input.count(1024)? {
+                let value=f32::from_be_bytes(input.take(4)?.try_into().map_err(|_|Error::Invalid)?);
+                if !value.is_finite(){return Err(Error::Invalid);}
+            }
+            for _ in 0..input.count(1024)?{input.boolean()?;}
+            for _ in 0..input.count(1024)?{skip_string(input)?;}
+            let n=input.count(1024)?;input.take(n*4)?;
+        }
+        34=>(),
         23=>{input.uint()?;nonnegative_float(input)?;input.boolean()?;}
         51=>{
             //46обычных зелий и40эффектов проверены командами на775/777.

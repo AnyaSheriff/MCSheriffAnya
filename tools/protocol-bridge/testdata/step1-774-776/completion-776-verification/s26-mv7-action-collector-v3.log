@@ -1,0 +1,1 @@
+{"status": "pass", "checks": [{"case": "cancel", "statuses": [0, 1]}, {"case": "drop-one", "statuses": [4]}, {"case": "drop-stack", "statuses": [3]}, {"case": "swap", "statuses": [6]}, {"case": "release", "statuses": [5]}, {"case": "jab", "statuses": [7]}]}

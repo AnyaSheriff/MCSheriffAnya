@@ -1,0 +1,29 @@
+{
+  "status": "failed",
+  "binary_sha256": "0754dba15e91525068ed5bceb333046bec2298edbfa93f19cbc090c4abfb8cd7",
+  "runner_sha256": "f9d9229ee7ef528bdbaf9839e4602018d256b9bccca5a9af114556b3d84392a9",
+  "checks": [
+    "26.1.2/774: honest Status775",
+    "26.1.2/774: existing Russian rejection",
+    "26.1.2/776: honest Status775"
+  ],
+  "sessions": [
+    {
+      "primary": "26.1.2",
+      "client": 774,
+      "status_hex": "00747b226465736372697074696f6e223a7b2274657874223a224d79205275737420536572766572227d2c22706c6179657273223a7b226d6178223a32302c226f6e6c696e65223a307d2c2276657273696f6e223a7b226e616d65223a2232362e312e32222c2270726f746f636f6c223a3737357d7d",
+      "admitted": false,
+      "disconnect_hex": "0089017b2274657874223a22d092d0b0d188d0b020d0b2d0b5d180d181d0b8d18f20d0bdd0b520d0bfd0bed0b4d185d0bed0b4d0b8d18220d0bfd0bed0b420d18fd0b4d180d0be20d181d0b5d180d0b2d0b5d180d0b05c6ed09dd183d0b6d0b5d0bd204d696e6563726166742032362e312e322028d0bfd180d0bed182d0bed0bad0bed0bb2037373529227d",
+      "disconnect": "{\"text\":\"Ваша версия не подходит под ядро сервера\\nНужен Minecraft 26.1.2 (протокол 775)\"}"
+    }
+  ],
+  "shutdown": [
+    {
+      "primary": "26.1.2",
+      "pid": 35,
+      "exit": 0,
+      "method": "stop-and-stdin-eof"
+    }
+  ],
+  "error": "TimeoutError(\"expected packet not received; last names: ['keep_alive', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'keep_alive']\")"
+}

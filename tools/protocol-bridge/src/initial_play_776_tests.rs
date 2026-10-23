@@ -280,9 +280,9 @@ fn test_only_chunk_helper_accepts_observed_chest_and_preserves_public_guard() {
     with_entity.extend([1, 0, 255, 192, 1, 0]); // один сундук, xz0,y-64,kind1,NBT End.
     with_entity.extend_from_slice(&payload[entity_count + 1..]);
     assert!(crate::chunk::translate_776_fixture(&with_entity, context).is_ok());
-    with_entity[entity_count + 4] = 2;
+    with_entity[entity_count + 4] = 10;
     assert_eq!(crate::chunk::translate_776_fixture(&with_entity, context),
-        Err(crate::chunk::Error::Entity(crate::block_entities::Error::UnknownType(2))));
+        Err(crate::chunk::Error::Entity(crate::block_entities::Error::UnknownType(10))));
     with_entity[entity_count + 4] = 1;
     for end in entity_count..with_entity.len() {
         assert!(crate::chunk::translate_776_fixture(&with_entity[..end], context).is_err());

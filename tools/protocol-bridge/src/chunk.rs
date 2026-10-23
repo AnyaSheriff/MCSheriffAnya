@@ -96,7 +96,7 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
             let state = sections[relative_y / 16].blocks[(relative_y % 16) * 256 + usize::from(xz & 15) * 16 + usize::from(xz >> 4)];
             if !crate::block_entity_ids::legacy_bed(state) { return Err(Error::Invalid); }
         }
-        if let Some(entity) = block_entities::translate(from, to, kind, data).map_err(Error::Entity)? { entities.insert((y, xz), entity); }
+        if let Some(entity) = block_entities::translate_with_content(from, to, kind, data, content).map_err(Error::Entity)? { entities.insert((y, xz), entity); }
     }
     let light = Light::decode(from, input.0).map_err(Error::Light)?;
     for mask in [&light.sky, &light.block, &light.empty_sky, &light.empty_block] {

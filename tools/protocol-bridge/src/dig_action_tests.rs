@@ -64,7 +64,7 @@ fn native_775_passthrough_and_unverified_776_denial_are_unchanged(){
     }
     let body=packet(3,1,4);
     assert!(matches!(sb(&body,MID,OLD),Err(Error::UnsupportedVersion(MID))));
-    assert!(super::translate_inner(State::Play,Direction::Serverbound,MID,OLD,&body,Context::default(),true).is_err());
+    assert_eq!(super::translate_inner(State::Play,Direction::Serverbound,MID,OLD,&body,Context::default(),true).unwrap().as_ref(),body);
 }
 
 #[test]
@@ -145,4 +145,26 @@ fn actual_777_bow_release_and_spear_jab_map_only_observed_payloads(){
     }
     // Неизвестная777единица не выводится из соседних enum-значений.
     assert!(sb(&packet(1,0,0),NEW,OLD).is_err());
+}
+
+#[test]
+fn ordinary_776_gui_records_all_six_remaining_action_meanings() {
+    let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/step1-774-776/action-client-collector775-v3/result.json")).unwrap();
+    assert_eq!(fixture["status"],"pass");
+    assert_eq!(fixture["protocol"],776);
+    assert_eq!(fixture["collect_only"],true);
+    let expected=[("cancel",vec![0,1]),("drop-one",vec![4]),("drop-stack",vec![3]),("swap",vec![6]),("release",vec![5]),("jab",vec![7])];
+    for (row,(name,values)) in fixture["checks"].as_array().unwrap().iter().zip(expected) {
+        assert_eq!(row["case"],name);assert_eq!(row["statuses"],serde_json::json!(values));
+    }
+    for row in fixture["packets"].as_array().unwrap().iter().filter(|r|r["name"]=="block_dig" && r["direction"]=="toServer") {
+        let mut body=vec![0x29];body.extend(hex(row["hex"].as_str().unwrap()));
+        let translated=super::translate_inner(State::Play,Direction::Serverbound,MID,OLD,&body,Context::default(),true).unwrap();
+        assert_eq!(translated.as_ref(),body);
+        for end in 0..body.len() { assert!(super::translate_inner(State::Play,Direction::Serverbound,MID,OLD,&body[..end],Context::default(),true).is_err()); }
+        let mut extra=body.clone();extra.push(0);assert!(super::translate_inner(State::Play,Direction::Serverbound,MID,OLD,&extra,Context::default(),true).is_err());
+    }
+    for status in 8..=255 {
+        assert!(super::translate_inner(State::Play,Direction::Serverbound,MID,OLD,&packet(status,1,0),Context::default(),true).is_err());
+    }
 }

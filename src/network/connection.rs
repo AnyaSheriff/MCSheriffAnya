@@ -34,7 +34,7 @@ impl<S> CryptoStream<S> {
         #[cfg(test)]
         { self.probe_776 && self.client_version() == mcsa_protocol::JavaVersion::V26_2 }
         #[cfg(not(test))]
-        { false }
+        { self.client_version() == mcsa_protocol::JavaVersion::V26_2 }
     }
 
     /// Мир сервера в профиле Preview26_3 (биомы 26.3 в реестре).

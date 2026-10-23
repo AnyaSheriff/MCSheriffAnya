@@ -188,8 +188,7 @@ pub async fn write_configuration<S: AsyncWrite + Unpin>(stream: &mut CryptoStrea
 
 fn configuration_body(probe_776: bool, version: JavaVersion, body: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>, wire::Error> {
     if probe_776 {
-        #[cfg(test)]
-        if version == JavaVersion::V26_2 { return mcsa_protocol::probe_776::configuration(body); }
+        if version == JavaVersion::V26_2 { return mcsa_protocol::client_776::configuration(body); }
         return Err(wire::Error::UnsupportedVersion(version));
     }
     wire::translate(State::Configuration, Direction::Clientbound, wire::INTERNAL, version, body)
@@ -226,10 +225,10 @@ pub(super) async fn read_play_packet_routed<S: AsyncRead + Unpin>(stream: &mut S
 }
 
 pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
-    if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(cfg!(test) && probe_776 && version == JavaVersion::V26_2) {
+    if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(probe_776 && version == JavaVersion::V26_2) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
     }
-    if probe_776 && (!cfg!(test) || version != JavaVersion::V26_2) {
+    if probe_776 && version != JavaVersion::V26_2 {
         return Err(translate_error(wire::Error::UnsupportedVersion(version)));
     }
     let mut packet = read_packet(stream).await?;
@@ -259,12 +258,11 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
         push_varint(&mut body, confirmation.id);
         return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation), foreign_inventory: false, legacy_inventory: None });
     }
-    #[cfg(test)]
     if probe_776 {
-        let body = mcsa_protocol::probe_776::serverbound(&packet.body, wire::Context { items: item_context(content), ..Default::default() })
+        let body = mcsa_protocol::client_776::serverbound(&packet.body, wire::Context { items: item_context(content), ..Default::default() })
             .map_err(translate_error)?.into_owned();
         let (id, _) = decode_varint(&body)?;
-        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12, legacy_inventory: None });
+        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12 || (content.is_preview() && id == 0x38), legacy_inventory: None });
     }
     if version == wire::INTERNAL {
         if content.is_preview() && packet.id == 0x38 {
@@ -414,13 +412,8 @@ impl<'a> Outgoing<'a> {
                 .chain(std::iter::once(("minecraft:damage_type", super::configuration::DAMAGE_TYPES.len() as u32))).collect());
         context.metadata_registry_counts = &COUNTS;
         if self.probe_776 {
-            #[cfg(test)]
-            {
-                let body = mcsa_protocol::probe_776::clientbound(&mut self.entities, body, context).map_err(translate_error)?;
-                frame(&mut self.buffer, &body, compression_threshold());
-            }
-            #[cfg(not(test))]
-            return Err(translate_error(wire::Error::UnsupportedVersion(self.version)));
+            let body = mcsa_protocol::client_776::clientbound(&mut self.entities, body, context).map_err(translate_error)?;
+            frame(&mut self.buffer, &body, compression_threshold());
         } else if self.version == JavaVersion::V1_12_2 {
             let legacy = self.legacy.as_ref().ok_or_else(|| io::Error::other("Нет состояния соединения1.12.2"))?;
             let translated = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?

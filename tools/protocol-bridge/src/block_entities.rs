@@ -2,24 +2,29 @@
 //! Сложные компоненты предметов/текста нельзя пересылать как непрозрачный NBT.
 use std::collections::BTreeMap;
 use crate::{JavaVersion, registry};
+#[path="block_entity_items.rs"]
+mod item_data;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error { UnsupportedVersion, UnknownType(u32), UnsupportedData, Invalid, Nbt(registry::Error) }
 
 pub fn translate(from: JavaVersion, to: JavaVersion, kind: u32, data: &[u8]) -> Result<Option<(u32, Vec<u8>)>, Error> {
-    if from == JavaVersion::V26_2 || to == JavaVersion::V26_2 {
-        // official-actions-776: сундук1 с пустым сетевым NBT; остальные
-        // типы/поля776 [проверить], не наследуем таблицу777 целиком.
-        if !matches!((from, to), (JavaVersion::V26_1_2, JavaVersion::V26_2) | (JavaVersion::V26_2, JavaVersion::V26_1_2)) {
-            return Err(Error::UnsupportedVersion);
-        }
-        if kind != 1 { return Err(Error::UnknownType(kind)); }
-        if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
-        if !matches!(data, [0] | [10, 0]) { return Err(Error::UnsupportedData); }
-        return Ok(Some((1, data.to_vec())));
-    }
-    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
+    translate_with_content(from,to,kind,data,Default::default())
+}
+
+pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,data:&[u8],content:crate::content::ContentCodec)->Result<Option<(u32,Vec<u8>)>,Error>{
+    // Кровать удалена уже в26.2 (minecraft.wiki/w/Java_Edition_26.2).
+    // Наблюдённые775/777 имена и порядок проверяются отдельно клиентом776;
+    // новые типы вне OBSERVED этим не разрешаются.
+    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
     if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
+    // golem-statue-2026-10-02-0835.md: оригинал775 прислал48 {}.
+    // В776 кровать удалена; отдельная живая проба проверяет47 и смену позы.
+    if (from==JavaVersion::V26_1_2 && to==JavaVersion::V26_2 && kind==48)
+        || (from==JavaVersion::V26_2 && to==JavaVersion::V26_1_2 && kind==47) {
+        if !matches!(data,[0]|[10,0]){return Err(Error::UnsupportedData);}
+        return Ok(Some((if to==JavaVersion::V26_2{47}else{48},data.to_vec())));
+    }
     let row = crate::block_entity_ids::OBSERVED.iter().find(|(old, new, _)| {
         if from == JavaVersion::V26_1_2 { *old == kind } else { *new == Some(kind) }
     }).ok_or(Error::UnknownType(kind))?;
@@ -27,7 +32,8 @@ pub fn translate(from: JavaVersion, to: JavaVersion, kind: u32, data: &[u8]) -> 
     validate(row.0, data)?;
     // В777 кровать больше не имеет отдельной блок-сущности. Для обратного
     // направления MapChunk восстанавливает её по состоянию блока.
-    Ok(target.map(|id| (id, data.to_vec())))
+    let data=item_data::rewrite(row.0,data,from,to,content)?;
+    Ok(target.map(|id| (id,data)))
 }
 
 #[derive(Clone, Copy)]
@@ -51,7 +57,24 @@ fn string(field: Field<'_>) -> Result<&str, Error> {
     if field.kind != 8 || field.bytes.len() < 2 { return Err(Error::UnsupportedData); }
     std::str::from_utf8(&field.bytes[2..]).map_err(|_| Error::UnsupportedData)
 }
-fn empty_items(field: Field<'_>) -> bool { field.kind == 9 && matches!(field.bytes, [0 | 10, 0, 0, 0, 0]) }
+fn spawn_data(field: Field<'_>) -> Result<bool, Error> {
+    if field.kind != 10 { return Ok(false); }
+    for (key, value) in compound(field.bytes)? {
+        if key != "entity" || value.kind != 10 { return Ok(false); }
+        for (key, value) in compound(value.bytes)? {
+            match key {
+                "id" => {
+                    let name = string(value)?.strip_prefix("minecraft:").ok_or(Error::UnsupportedData)?;
+                    // Только общие типы: новых мобов нельзя пропускать по строке.
+                    if !crate::entity_layouts::LAYOUTS[..157].iter().any(|row| row.0 == name) { return Ok(false); }
+                }
+                "NoAI" | "Silent" if boolean(value) => (),
+                _ => return Ok(false),
+            }
+        }
+    }
+    Ok(true)
+}
 fn sign_side(field: Field<'_>) -> Result<(), Error> {
     if field.kind != 10 { return Err(Error::UnsupportedData); }
     for (key, field) in compound(field.bytes)? {
@@ -76,10 +99,27 @@ fn validate(kind: u32, data: &[u8]) -> Result<(), Error> {
             (7 | 8, "front_text" | "back_text") => { sign_side(field)?; true }
             (15, "Levels") => field.kind == 3,
             (15, "primary_effect" | "secondary_effect") => matches!(string(field)?, "minecraft:speed" | "minecraft:haste" | "minecraft:resistance" | "minecraft:jump_boost" | "minecraft:strength" | "minecraft:regeneration"),
-            (33 | 40, "Items") => empty_items(field),
+            (33 | 40, "Items") => item_data::items(field,if kind==33{4}else{3})?,
             (40, "align_items_to_bottom") => boolean(field),
             (20, "components") => field.kind == 10 && field.bytes == [0],
             (22, "Age") => field.kind == 4,
+            (9, "MaxNearbyEntities" | "RequiredPlayerRange" | "SpawnCount" | "MaxSpawnDelay" |
+                "SpawnRange" | "Delay" | "MinSpawnDelay") => field.kind == 2,
+            (9, "SpawnData") | (44, "spawn_data") => spawn_data(field)?,
+            (45, "shared_data") => item_data::shared(field)?,
+            (42, "sherds") => item_data::sherds(field)?,
+            (32, "joint") => matches!(string(field)?, "rollable" | "aligned"),
+            (32, "name" | "pool" | "target") => string(field)? == "minecraft:empty",
+            (32, "final_state") => string(field)? == "minecraft:air",
+            (32, "placement_priority" | "selection_priority") => field.kind == 3,
+            (21, "metadata" | "author" | "name") => field.kind == 8,
+            (21, "mirror") => matches!(string(field)?, "NONE" | "LEFT_RIGHT" | "FRONT_BACK"),
+            (21, "rotation") => matches!(string(field)?, "NONE" | "CLOCKWISE_90" | "CLOCKWISE_180" | "COUNTERCLOCKWISE_90"),
+            (21, "mode") => matches!(string(field)?, "SAVE" | "LOAD" | "CORNER" | "DATA"),
+            (21, "ignoreEntities" | "powered" | "showair" | "strict" | "showboundingbox") => boolean(field),
+            (21, "seed") => field.kind == 4,
+            (21, "posX" | "posY" | "posZ" | "sizeX" | "sizeY" | "sizeZ") => field.kind == 3,
+            (21, "integrity") => field.kind == 5 && f32::from_be_bytes(field.bytes.try_into().map_err(|_| Error::Invalid)?).is_finite(),
             _ => false,
         };
         if !valid { return Err(Error::UnsupportedData); }
@@ -108,15 +148,23 @@ mod tests {
         }
     }
     #[test]
-    fn observed_776_chest_is_bounded_to_empty_network_nbt() {
-        for (from, to) in [(OLD, JavaVersion::V26_2), (JavaVersion::V26_2, OLD)] {
-            for data in [&[0][..], &[10, 0]] {
-                assert_eq!(translate(from, to, 1, data).unwrap(), Some((1, data.to_vec())));
+    fn observed_types_and_validated_data_use_the_post_bed_776_table() {
+        for &(old, new, _) in crate::block_entity_ids::OBSERVED {
+            assert_eq!(translate(OLD, JavaVersion::V26_2, old, &[0]).unwrap(), new.map(|id| (id, vec![0])));
+            if let Some(new) = new {
+                assert_eq!(translate(JavaVersion::V26_2, OLD, new, &[0]).unwrap(), Some((old, vec![0])));
             }
-            assert_eq!(translate(from, to, 2, &[0]), Err(Error::UnknownType(2)));
+        }
+        for (from, to) in [(OLD, JavaVersion::V26_2), (JavaVersion::V26_2, OLD)] {
             assert_eq!(translate(from, to, 1, &[10, 1, 0, 1, b'x', 1, 0]), Err(Error::UnsupportedData));
             assert!(translate(from, to, 1, &[10]).is_err());
             assert!(translate(from, to, 1, &[0, 0]).is_err());
+        }
+        for (kind, data) in [(7, &include_bytes!("../testdata/oak_sign-26.1.2.nbt")[..]),
+                             (8, &include_bytes!("../testdata/oak_hanging_sign-26.1.2.nbt")[..]),
+                             (15, &include_bytes!("../testdata/beacon-26.1.2.nbt")[..])] {
+            assert_eq!(translate(OLD, JavaVersion::V26_2, kind, data).unwrap(), Some((kind, data.to_vec())));
+            for end in 0..data.len() { assert!(translate(OLD, JavaVersion::V26_2, kind, &data[..end]).is_err()); }
         }
     }
 

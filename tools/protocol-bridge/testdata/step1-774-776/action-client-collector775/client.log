@@ -1,0 +1,95 @@
+/usr/bin/xvfb-run: line 173:    51 Aborted                    (core dumped) XAUTHORITY=$AUTHFILE Xvfb ":$SERVERNUM" $XVFBARGS $LISTENTCP >> "$ERRORFILE" 2>&1
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.lwjgl.system.MemoryUtil (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-26.2/libraries/org/lwjgl/lwjgl/3.4.1/lwjgl-3.4.1-unsafe.jar)
+WARNING: Please consider reporting this to the maintainers of class org.lwjgl.system.MemoryUtil
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[16:18:52] [Datafixer Bootstrap #0/INFO]: 295 Datafixer optimizations took 252 milliseconds
+[16:18:55] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[16:18:55] [Render thread/INFO]: Setting user: McsaProbe
+[16:18:55] [Render thread/INFO]: Backend library: LWJGL version 3.4.1+2
+---- Minecraft Crash Report ----
+// You should try our sister game, Minceraft!
+
+Time: 2026-10-23 16:18:55
+Description: Initializing game
+
+java.lang.IllegalStateException: Failed to initialize GLFW, errors: [GLFW 0x1000E] X11: Failed to open display :99
+	at com.mojang.blaze3d.platform.GLX._initGlfw(GLX.java:61)
+	at com.mojang.blaze3d.systems.RenderSystem.initBackendSystem(RenderSystem.java:161)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:481)
+	at net.minecraft.client.main.Main.main(Main.java:278)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at com.mojang.blaze3d.platform.GLX._initGlfw(GLX.java:61)
+	at com.mojang.blaze3d.systems.RenderSystem.initBackendSystem(RenderSystem.java:161)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:481)
+
+-- Initialization --
+Details:
+	Modules: 
+Stacktrace:
+	at net.minecraft.client.main.Main.main(Main.java:278)
+
+-- System Details --
+Details:
+	Minecraft Version: 26.2
+	Minecraft Version ID: 26.2
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 53840104 bytes (51 MiB) / 287309824 bytes (274 MiB) up to 1073741824 bytes (1024 MiB)
+	Memory (heap): init: 250MiB, used: 222MiB, committed: 274MiB, max: 1024MiB
+	Memory (non-head): init: 007MiB, used: 098MiB, committed: 099MiB, max: 000MiB
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 5763.81
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 2539.75
+	Space in storage for jna.tmpdir (MiB): available: 7892.45, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7892.45, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7892.45, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7892.45, total: 7952.55
+	Space in storage for workdir (MiB): available: 7892.45, total: 7952.55
+	Operating System Version: GNU/Linux Arch Linux unknown (unknown) build 7.2.11-1-cachyos
+	Process Elevated: false
+	Process Loads: Uptime: 6s, user: 14s (233.76%), kernel: 0s (6.89%), total: 14s (240.65%)
+	Process Virtual Size (MiB): 3560.56
+	Process Resident Size (MiB): 584.35
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 
+	Launched Version: 26.2
+	Launcher name: mcsa-probe
+	Backend library: LWJGL version 3.4.1+2
+	Window size: <not initialized>
+	Surface Info: <no surface>
+	GFLW Platform: null
+	Graphics Device: <none>
+	GL debug messages: <no renderer available>
+	Is Modded: Probably not. Client jar signature and brand is untouched
+	Universe: 404
+	Type: Client
+	Locale: en
+	System encoding: UTF-8
+	File encoding: UTF-8
+	CPU: 12x AMD Ryzen 5 3600 6-Core Processor
+#@!@# Game crashed! Crash report saved to: #@!@# /tmp/mcsa-776-actions-client-nvsrk2qw/client/crash-reports/crash-2026-10-23_16.18.55-client.txt
+/usr/bin/xvfb-run: line 185: kill: (51) - No such process

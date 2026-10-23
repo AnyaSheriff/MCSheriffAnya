@@ -103,3 +103,13 @@ fn first_own_advancement_update_reaches_the_typed_776_path() {
     assert_eq!(decode_varint(&result).unwrap().0, 0x82);
     assert!(probe_776::clientbound(&mut Default::default(), &body[..body.len() - 1], wire::Context::default()).is_err());
 }
+
+#[tokio::test]
+async fn creative_776_preview_keeps_the_authoritative_new_item_guard() {
+    for preview in [false,true] {
+        let mut framed=Vec::new();frame(&mut framed,&[0x38,0,36,0],compression_threshold());
+        let content=if preview{mcsa_protocol::content::ContentCodec::white_slab_preview()}else{Default::default()};
+        let packet=read_play_packet_with_content(&mut framed.as_slice(),JavaVersion::V26_2,None,true,content).await.unwrap();
+        assert_eq!(packet.id,0x38);assert_eq!(packet.foreign_inventory,preview);
+    }
+}

@@ -20,9 +20,11 @@ pub mod items;
 pub mod content;
 mod content_views;
 mod item_components;
+mod component_776;
 mod particles;
 mod recipes;
 mod actions;
+mod profile;
 pub mod entity_sync;
 pub mod legacy_items;
 pub mod legacy_inventory;
@@ -49,8 +51,10 @@ pub mod movement;
 pub mod teleport;
 pub mod registry;
 pub mod wire;
+#[path="probe_776.rs"]
+pub mod client_776;
 #[cfg(any(test, feature = "probe-776"))]
-pub mod probe_776;
+pub use client_776 as probe_776;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum JavaVersion { V1_21_11, V1_12_2, V26_1_2, V26_2, V26_3 }

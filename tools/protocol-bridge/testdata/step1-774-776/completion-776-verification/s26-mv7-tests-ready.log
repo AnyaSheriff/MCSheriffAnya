@@ -1,0 +1,11 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge)
+error[E0425]: cannot find function `same_payload_safe` in this scope
+   --> tools/protocol-bridge/src/wire.rs:475:30
+    |
+475 |     if state==State::Play && same_payload_safe(state,direction,name){return true;}
+    |                              ^^^^^^^^^^^^^^^^^ not found in this scope
+
+For more information about this error, try `rustc --explain E0425`.
+error: could not compile `mcsa-protocol` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `mcsa-protocol` (lib test) due to 1 previous error

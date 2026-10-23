@@ -1,6 +1,4 @@
-//! Явная ограниченная проба клиента776 на внутреннем775. Не public admission.
-//! Feature открывает только этот API; обычные wire/Tracker/packet-ID guards
-//! остаются закрыты. Core вызывает API лишь из cfg(test) сессии.
+//! Типизированный клиент776 на canonical775; допуск проверяет ядро.
 use std::borrow::Cow;
 use crate::{Direction, JavaVersion, State, entities::Tracker, wire::{self, Context, Error}};
 

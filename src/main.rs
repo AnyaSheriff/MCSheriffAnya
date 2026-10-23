@@ -605,9 +605,14 @@ async fn handle_connection_inner(
             // в невнятную «ошибку сетевого протокола» — вместо этого сразу
             // говорим человеку, в чём дело.
             //
-            // Клиентская и внутренняя версии разделены. Пока разрешён только
-            // родной маршрут; номера новых версий не включают их поддержку.
-            let negotiated = if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 && handshake.protocol_version == 775 {
+            // Клиентская и внутренняя версии разделены; допуск задаётся
+            // отдельно для проверенных сочетаний клиента и основного.
+            // 776 прошёл прежний checklist на обоих основных: CONTINUED.md.
+            // Это клиентский codec canonical775, а не отдельные игровые правила.
+            let negotiated = if handshake.protocol_version == 776 && matches!(shared.catalog().profile(),
+                gameplay_catalog::Profile::Java26_1_2 | gameplay_catalog::Profile::Preview26_3) {
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_2,native:network::NATIVE_VERSION})
+            } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 && handshake.protocol_version == 775 {
                 mcsa_protocol::Negotiated::native_only(775, network::NATIVE_VERSION)
             } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 {
                 mcsa_protocol::Negotiated::native_only(handshake.protocol_version, mcsa_protocol::JavaVersion::V26_3)
@@ -647,7 +652,7 @@ async fn handle_connection_inner(
 
             socket.protocol = negotiated.ok();
             #[cfg(test)]
-            { socket.probe_776 = _probe_776 && socket.client_version() == mcsa_protocol::JavaVersion::V26_2; }
+            { socket.probe_776 = socket.client_version() == mcsa_protocol::JavaVersion::V26_2; }
             let legacy = socket.client_version() == mcsa_protocol::JavaVersion::V1_12_2;
             if legacy {
                 // В340 нет Configuration-диалога. До реализации старого

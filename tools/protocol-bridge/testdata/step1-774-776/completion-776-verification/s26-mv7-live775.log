@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 251, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 170, in main
+    wait(lambda:any(r['name']=='pong' and r['hex']=='4d435341' for r in report['packets']))
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 70, in wait
+    raise RuntimeError(report['relay_errors'])
+RuntimeError: ["toServer: EOFError('missing VarInt')"]
