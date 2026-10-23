@@ -44,6 +44,11 @@ async fn serve(version: mcsa_protocol::JavaVersion, port: u16) {
     //776 — только клиент; игровые правила задаёт каталог основного сервера.
     shared.settings.java_version=Some(if preview { mcsa_protocol::JavaVersion::V26_3 } else if version == mcsa_protocol::JavaVersion::V26_2 { network::NATIVE_VERSION } else { version });
     shared.settings.auth_enabled=false;shared.settings.auth_premium=false;shared.settings.prefetch_chunks=0;
+    // Только изолированная проба; публичный допуск не меняется.
+    if Path::new("mcsa-password-probe.marker").is_file() {
+        shared.settings.auth_enabled = true;
+        shared.auth = Some(Arc::new(crate::auth::Service::open(Path::new("auth.db")).unwrap()));
+    }
     let shared=Arc::new(shared);let properties=Arc::new(properties);
     network::packet::set_compression_threshold(-1);
     let listener=TcpListener::bind(("127.0.0.1",port)).await.unwrap();

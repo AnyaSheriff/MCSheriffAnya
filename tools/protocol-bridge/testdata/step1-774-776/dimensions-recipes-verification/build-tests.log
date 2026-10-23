@@ -1,0 +1,186 @@
+    Updating crates.io index
+     Locking 322 packages to latest Rust 1.98.1 compatible versions
+      Adding aes v0.8.4 (available: v0.9.3)
+      Adding argon2 v0.5.3 (available: v0.6.0)
+      Adding cfb8 v0.8.1 (available: v0.9.1)
+      Adding cranelift-bforest v0.136.2 (available: v0.136.4)
+      Adding cranelift-bitset v0.136.2 (available: v0.136.4)
+      Adding cranelift-codegen v0.136.2 (available: v0.136.4)
+      Adding cranelift-codegen-meta v0.136.2 (available: v0.136.4)
+      Adding cranelift-entity v0.136.2 (available: v0.136.4)
+      Adding cranelift-frontend v0.136.2 (available: v0.136.4)
+      Adding cranelift-isle v0.136.2 (available: v0.136.4)
+      Adding cranelift-native v0.136.2 (available: v0.136.4)
+      Adding generic-array v0.14.7 (available: v0.14.9)
+      Adding hmac v0.12.1 (available: v0.13.0)
+      Adding js-sys v0.3.81 (available: v0.3.106)
+      Adding md-5 v0.10.6 (available: v0.11.0)
+      Adding png v0.17.16 (available: v0.18.1)
+      Adding pulley-interpreter v49.0.2 (available: v49.0.4)
+      Adding pulley-macros v49.0.2 (available: v49.0.4)
+      Adding sha1 v0.10.7 (available: v0.11.0)
+      Adding sha2 v0.10.9 (available: v0.11.1)
+      Adding toml v0.8.23 (available: v1.1.8+spec-1.1.0)
+      Adding wasm-bindgen v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-futures v0.4.54 (available: v0.4.79)
+      Adding wasm-bindgen-macro v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-macro-support v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-shared v0.2.104 (available: v0.2.129)
+      Adding wasmtime v49.0.2 (available: v49.0.4)
+      Adding wasmtime-environ v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-component-macro v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-component-util v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-core v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-cranelift v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-fiber v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-jit-debug v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-jit-icache-coherence v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-unwinder v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-versioned-export-macros v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-wit-bindgen v49.0.2 (available: v49.0.4)
+      Adding wasmtime-wasi v49.0.2 (available: v49.0.4)
+      Adding wasmtime-wasi-io v49.0.2 (available: v49.0.4)
+      Adding web-sys v0.3.81 (available: v0.3.106)
+      Adding zstd v0.13.3 (available: v0.14.3)
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling find-msvc-tools v0.1.15
+   Compiling equivalent v1.0.3
+   Compiling zeroize v1.9.1
+   Compiling cranelift-srcgen v0.136.4
+   Compiling indexmap v2.14.2
+   Compiling proc-macro2 v1.0.107
+   Compiling thiserror v2.0.21
+   Compiling cranelift-assembler-x64-meta v0.136.4
+   Compiling serde_json v1.0.154
+   Compiling quote v1.0.47
+   Compiling crc32fast v1.5.3
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling cranelift-codegen-shared v0.136.4
+   Compiling errno v0.3.14
+   Compiling jobserver v0.1.35
+   Compiling signal-hook-registry v1.4.8
+   Compiling cc v1.10.0
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling cranelift-assembler-x64 v0.136.4
+   Compiling gimli v0.33.0
+   Compiling wasmparser v0.258.3
+   Compiling cmake v0.1.58
+   Compiling aws-lc-rs v1.18.2
+   Compiling icu_normalizer_data v2.4.0
+   Compiling aws-lc-sys v0.46.0
+   Compiling icu_properties_data v2.4.0
+   Compiling cranelift-control v0.136.4
+   Compiling synstructure v0.14.0
+   Compiling pulley-macros v49.0.2
+   Compiling pulley-interpreter v49.0.2
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling zerofrom v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling serde v1.0.229
+   Compiling yoke v0.8.4
+   Compiling smallvec v1.16.3
+   Compiling wasmtime-internal-core v49.0.2
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling cranelift-bitset v0.136.2
+   Compiling thiserror-impl v2.0.21
+   Compiling parking_lot_core v0.9.12
+   Compiling zerovec v0.11.9
+   Compiling parking_lot v0.12.5
+   Compiling cranelift-entity v0.136.2
+   Compiling tokio-macros v2.7.2
+   Compiling cobs v0.3.0
+   Compiling cranelift-bforest v0.136.2
+   Compiling postcard v1.1.3
+   Compiling tinystr v0.8.5
+   Compiling tokio v1.54.1
+   Compiling cranelift-codegen-meta v0.136.2
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling wasmtime-internal-versioned-export-macros v49.0.2
+   Compiling icu_collections v2.4.0
+   Compiling icu_provider v2.4.0
+   Compiling cranelift-codegen v0.136.2
+   Compiling regalloc2 v0.15.2
+   Compiling tracing-attributes v0.1.31
+   Compiling getrandom v0.2.17
+   Compiling wasm-encoder v0.258.3
+   Compiling wasmprinter v0.258.3
+   Compiling tracing v0.1.44
+   Compiling rand_core v0.6.4
+   Compiling object v0.40.0
+   Compiling rustls-pki-types v1.15.1
+   Compiling zerocopy v0.8.63
+   Compiling wit-parser v0.258.3
+   Compiling wasmtime-environ v49.0.2
+   Compiling icu_properties v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling encoding_rs v0.8.42
+   Compiling wasm-metadata v0.258.3
+   Compiling rustls v0.23.46
+   Compiling wit-component v0.258.3
+   Compiling idna_adapter v1.2.2
+   Compiling tokio-util v0.7.20
+   Compiling wasmtime-internal-fiber v49.0.2
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling h2 v0.4.20
+   Compiling want v0.3.2
+   Compiling ppv-lite86 v0.2.21
+   Compiling wasmtime-internal-wit-bindgen v49.0.2
+   Compiling idna v1.1.0
+   Compiling wasmtime v49.0.2
+   Compiling der v0.7.10
+   Compiling unicase v2.10.0
+   Compiling mime_guess v2.0.5
+   Compiling wasmtime-internal-component-macro v49.0.2
+   Compiling spki v0.7.3
+   Compiling url v2.5.8
+   Compiling hyper v1.12.0
+   Compiling rand_chacha v0.3.1
+   Compiling cranelift-native v0.136.2
+   Compiling wasmtime-internal-unwinder v49.0.2
+   Compiling cranelift-frontend v0.136.2
+   Compiling wasmtime-internal-cranelift v49.0.2
+   Compiling wasmtime-internal-jit-icache-coherence v49.0.2
+   Compiling async-trait v0.1.92
+   Compiling tower v0.5.3
+   Compiling rustls-native-certs v0.8.5
+   Compiling hyper-util v0.1.21
+   Compiling rand v0.8.8
+   Compiling pkcs8 v0.10.2
+   Compiling getrandom v0.4.3
+   Compiling serde_spanned v0.6.9
+   Compiling toml_datetime v0.6.11
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv5/tools/seedmap)
+   Compiling password-hash v0.5.0
+   Compiling toml_edit v0.22.27
+   Compiling wasmtime-wasi-io v49.0.2
+   Compiling flate2 v1.1.10
+   Compiling rand v0.10.3
+   Compiling pkcs1 v0.7.5
+   Compiling num-bigint-dig v0.8.6
+   Compiling tower-http v0.6.11
+   Compiling signature v2.2.0
+   Compiling png v0.17.16
+   Compiling rustls-webpki v0.103.16
+   Compiling argon2 v0.5.3
+   Compiling rsa v0.9.10
+   Compiling wasmtime-wasi v49.0.2
+   Compiling tokio-rustls v0.26.6
+   Compiling hyper-rustls v0.27.10
+   Compiling rustls-platform-verifier v0.7.1
+   Compiling reqwest v0.13.5
+   Compiling zstd-safe v7.3.0
+   Compiling zstd v0.13.3
+   Compiling toml v0.8.23
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv5/tools/protocol-bridge)
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv5)
+    Finished `release` profile [optimized] target(s) in 3m 28s
+  Executable unittests src/main.rs (target/release/deps/mcsheriffanya-b5a369944de6d5e0)
+  Executable unittests src/bin/seedmap.rs (target/release/deps/seedmap-a1866386a8493614)
+  Executable tests/world_startup.rs (target/release/deps/world_startup-4257c1ddc90ffb11)

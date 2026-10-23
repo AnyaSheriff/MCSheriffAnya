@@ -1,0 +1,14 @@
+{
+  "primary": 775,
+  "client": 776,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "runner_sha256": "a2a49292999c9c758e55741d6f3feedb5cc1dcd8940a55af11e96a6b2b5f1f44",
+  "binary_sha256": "f036f35a7e8e7e4fca210726ff0cda54fb4c1770ecb257c2328abbe2b7d0cbfa",
+  "auth_prompts": [],
+  "error": "AssertionError()",
+  "traceback": "Traceback (most recent call last):\n  File \"/home/lenox/.cache/mcsheriffanya/work/s26-mv5/tools/protocol-bridge/probe_step1_dimensions_recipes_776.py\", line 149, in main\n    assert server.poll() is None and time.monotonic() < deadline\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+  "server_exit": 0
+}

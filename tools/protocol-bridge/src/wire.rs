@@ -171,6 +171,11 @@ pub(crate) fn translate_inner(
             if name == "entity_teleport" { out.extend(cursor.take(4)?); }
             out.push(u8::from(cursor.boolean()?));
         }
+        (State::Play, Direction::Serverbound, "craft_recipe_request") if probe_776 && equal => {
+            uint(&mut out, cursor.uint()?);
+            uint(&mut out, cursor.uint()?);
+            out.push(u8::from(cursor.boolean()?));
+        }
         (State::Play, Direction::Serverbound, "block_dig") => {
             digging(&mut cursor, &mut out, from, to)?;
         }
@@ -311,6 +316,13 @@ pub(crate) fn translate_inner(
         (State::Configuration | State::Play, Direction::Clientbound, "tags") => {
             tags(&mut cursor, &mut out, from, to, context.items.content)?;
         }
+        (State::Configuration, Direction::Clientbound, "show_dialog") if probe_776 && equal => {
+            // Собственный inline-dialog: реестровая ссылка здесь не допускается.
+            let n = crate::registry::nbt_length(cursor.rest).map_err(|_| Error::Invalid)?;
+            if cursor.rest.first() != Some(&10) { return Err(Error::Invalid); }
+            out.extend(cursor.take(n)?);
+        }
+        (State::Configuration, Direction::Clientbound, "clear_dialog") if probe_776 && equal => {}
         (State::Configuration, Direction::Clientbound, "select_known_packs") => {
             let count = cursor.count(1024)?;
             uint(&mut out, count as u32);
@@ -452,14 +464,15 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
 fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
     match (state, direction) {
         (State::Configuration, Direction::Clientbound) => matches!(name,
-            "custom_payload" | "select_known_packs" | "tags" | "finish_configuration" | "disconnect"),
+            "custom_payload" | "select_known_packs" | "tags" | "finish_configuration" | "disconnect" |
+            "show_dialog" | "clear_dialog"),
         (State::Play, Direction::Serverbound) => matches!(name,
             "settings" | "custom_payload" | "keep_alive" | "pong" | "player_loaded" |
             "chunk_batch_received" | "tick_end" | "position" | "position_look" | "look" |
             "flying" | "player_input" | "abilities" | "entity_action" |
             "chat_command" | "chat_message" | "chat_session_update" | "message_acknowledgement" |
             "tab_complete" | "window_click" | "close_window" | "held_item_slot" |
-            "recipe_book" | "displayed_recipe" | "advancement_tab" | "arm_animation" |
+            "recipe_book" | "displayed_recipe" | "craft_recipe_request" | "advancement_tab" | "arm_animation" |
             "attack" | "use_entity" | "client_command" | "block_place" | "use_item" | "block_dig"),
         (State::Play, Direction::Clientbound) => matches!(name,
             "login" | "position" | "abilities" | "declare_commands" | "declare_recipes" |
@@ -476,7 +489,7 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "chunk_batch_finished" | "window_items" | "set_slot" | "set_cursor_item" |
             "set_player_inventory" | "held_item_slot" | "close_window" |
             "keep_alive" | "ping" | "system_chat" | "tab_complete" | "kick_disconnect" |
-            "recipe_book_settings" | "recipe_book_add" | "recipe_book_remove" |
+            "recipe_book_settings" | "recipe_book_add" | "recipe_book_remove" | "craft_recipe_response" |
             "advancements" | "select_advancement_tab" | "entity_update_attributes" |
             "block_change" | "block_action" | "tile_entity_data" | "multi_block_change" | "sound_effect" | "entity_sound_effect" |
             "playerlist_header"),

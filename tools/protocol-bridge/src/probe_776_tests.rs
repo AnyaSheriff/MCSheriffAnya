@@ -119,3 +119,22 @@ fn observed_776_mining_actions_preserve_position_sequence_and_reject_unobserved_
         } else { assert!(result.is_err()); }
     }
 }
+
+#[test]
+fn private_dialog_and_recipe_request_validate_complete_envelopes() {
+    // Собственный inline compound; ссылки на чужие диалоги запрещены.
+    for body in [vec![0x12, 10, 0], vec![0x11]] {
+        assert_eq!(configuration(&body).unwrap().as_ref(), body);
+        for end in 0..body.len() { assert!(configuration(&body[..end]).is_err()); }
+        let mut tail = body; tail.push(0); assert!(configuration(&tail).is_err());
+    }
+    for body in [vec![0x12, 0], vec![0x12, 1], vec![0x12, 10]] {
+        assert!(configuration(&body).is_err());
+    }
+    let packet = (0..100).find(|&id| crate::packet_layouts::packet_info(RegistryKind::PlayServerbound, MID, OLD, id).is_some_and(|p| p.name == "craft_recipe_request")).unwrap();
+    let body = [packet as u8, 1, 129, 1, 1];
+    assert_eq!(&serverbound(&body, Context::default()).unwrap()[1..], &body[1..]);
+    for end in 0..body.len() { assert!(serverbound(&body[..end], Context::default()).is_err()); }
+    let mut invalid = body; invalid[4] = 2;
+    assert!(serverbound(&invalid, Context::default()).is_err());
+}

@@ -53,3 +53,24 @@ Both successful traces cover mixed777 player packets/PvP in both directions, pla
 **No pair has passed its full checklist.** 776 dimensions/recipes, all entity/component/block-entity layouts and authentication are incomplete. The private776 fixture explicitly refuses online-mode/password authentication; those guards were not bypassed. 774 still lacks full Play codecs, dynamic registries, gameplay, restart and authentication proof on either primary. All four public cells keep the existing Russian refusal. No commit/push or25565 listener.
 
 Final verification:2910 Rust tests (82 ignored),205 protocol tests (5 ignored),218 Python tests; Clippy `--release --all-targets -- -D warnings` and release build PASS. `admission-mining-chest.json` records8/8 fresh Status/rejection checks with the final production binary. Counts, hashes, logs, all four closed cells and retained failures: `mining-chest-verification.json` / `mining-chest-verification/`.
+
+## Dimensions, recipe book and password dialog — admission remains closed
+
+The private776 path now validates bounded recipe requests and inline Configuration dialogs, including truncation/tail/boolean rejection. It allows recipe ghost responses through the existing typed recipe/item converter. Only the isolated loopback test fixture can enable password auth; production admission and gameplay profiles are unchanged.
+
+| Client / primary | New evidence | Result |
+|---|---|---|
+| 776 / 26.1.2 | `dimensions-recipes-v3-776-primary775/` | 4/4 PASS: full book update1478 entries; ghost/autofill; one log consumed for four planks; portal Nether→Overworld, chunks/short ACK, server completion barrier |
+| 776 / 26.3 | `dimensions-recipes-v2-776-primary777/` | Same4/4 PASS; full primary book update1677 entries, actual Preview26_3 catalog |
+| 776 / both | `password-dialog-776-primary{775,777}/` | Registration and relog wrong→correct password PASS; no new player/join before password success, two Clear Dialog envelopes each;5 recorded checks each (the clear check occurs twice) |
+| 774 / both | No new full Play/gameplay evidence | CLOSED |
+
+These are packet clients, not graphical-client proof. Crafting checks the authoritative input count2→1, empty grid and four-plank cursor. Recipe decoding is full-book coverage, not live crafting of every recipe. Nether/End persistence and End travel are not claimed. Chat password fallback does not exist in this core and is not implemented here; online-mode remains unproven.776 still supports only five observed entity metadata layouts and empty chest block-entity data; remaining components/actions/payloads are incomplete. **All four public version/primary cells stay closed with the existing Russian refusal.**
+
+Earlier results are retained: `dimensions-recipes-776-primary775/` invoked the production executable instead of the test executable and failed before listening. `dimensions-recipes-v2-776-primary775/` passed transport assertions but predates explicit consumption/completion assertions. `dimensions-recipes-776-primary777/` passed transport assertions, but its server log lacks return completion and ends in Broken pipe; it is not the final completion proof. The retained first Python verification failure exposed this gap; final traces require the return log plus a command barrier. Password traces retain the runner hash from before these portal-only assertion additions.
+
+`official-777-dimensions-continuation/` is only a native777 reference regression, **not a dimension/recipe776 observation**: one copied official26.3 run, Java25, stdin=/dev/null,26194/26195,7/7, stopped by PID(exit143); copied server/world removed. All private fixtures exit0 and their temporary worlds/auth databases are removed. No25565 listener, commit or push.
+
+Final verification:2910 Rust tests (82 ignored),206 protocol tests (5 ignored),221 Python tests; Clippy `--release --all-targets -- -D warnings` and release build PASS. Raw hashes, final admission rejection8/8 and source hashes: `dimensions-recipes-verification.json`; check logs: `dimensions-recipes-verification/`.
+
+Build cache retained outside the worktree at `/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target` (use `CARGO_TARGET_DIR` for the next continuation). Generated Cargo.lock, Python caches, fixture worlds/auth databases and this run's temporary test leftovers were removed; pre-existing `codex.log` and `plugins-examples/target/` were left intact.

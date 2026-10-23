@@ -622,7 +622,7 @@ async fn handle_connection_inner(
             } else if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V1_12_2) && handshake.protocol_version==340 {
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})
             } else if _probe_776 && handshake.protocol_version == 776 && addr.ip().is_loopback()
-                && !properties.online_mode && !shared.settings.auth_enabled && shared.auth.is_none() {
+                && !properties.online_mode {
                 Ok(mcsa_protocol::Negotiated { client: mcsa_protocol::JavaVersion::V26_2, native: network::NATIVE_VERSION })
             } else {negotiated};
             if negotiated.is_err() {
