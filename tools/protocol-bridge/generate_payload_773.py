@@ -30,18 +30,36 @@ def generate(docs, baseline):
         if row['name'] in lookup:
             text += f'    ({row["id"]}, &{json.dumps(lookup[row["name"]]["metadataKeys"])}),\n'
     text += '];\n'
+    text += 'pub(crate) const ITEM_NAMES: &[&str] = &[\n' + ''.join('    '+json.dumps(row['name'])+',\n' for row in old['items']) + '];\n'
+    replacements = {'nautilus_spawn_egg':'squid_spawn_egg','zombie_nautilus_spawn_egg':'squid_spawn_egg',
+                    'camel_husk_spawn_egg':'camel_spawn_egg','parched_spawn_egg':'skeleton_spawn_egg',
+                    'netherite_horse_armor':'diamond_horse_armor'}
+    for row in new['items']:
+        name=row['name']
+        if name.endswith('_spear'): replacements[name]=name.replace('_spear','_sword')
+        if name.endswith('_nautilus_armor'):
+            metal=name.removesuffix('_nautilus_armor')
+            replacements[name]=('diamond' if metal=='netherite' else 'iron' if metal=='copper' else metal)+'_horse_armor'
+    lowitems={row['name']:row['id'] for row in old['items']}
+    assert set(replacements)=={row['name'] for row in new['items']} - lowitems.keys()
+    text += 'pub(crate) const ITEM_VIEWS: &[(u32,u32)] = &'+str([(row['id'],lowitems[replacements[row['name']]]) for row in baseline['items'] if row['name'] in replacements])+';\n'
+    lowentities={row['name']:row['id'] for row in old['entities']}
+    views={'nautilus':'squid','zombie_nautilus':'squid','camel_husk':'camel','parched':'skeleton'}
+    canonical={row['name']:row['id'] for row in baseline['entities']}
+    text += 'pub(crate) const ENTITY_VIEWS: &[(u32,u32,u32)] = &'+str([(canonical[name],canonical[target],lowentities[target]) for name,target in views.items()])+';\n'
+
     changes = {}
     for row in new['entities']:
         if row['name'] in lookup and row['metadataKeys'] != lookup[row['name']]['metadataKeys']:
             changes[row['name']] = dict(older=lookup[row['name']]['metadataKeys'], newer=row['metadataKeys'])
-    report = dict(scope='Typed adjacent773/774 foundation; public admission CLOSED; no live checklist claimed',
+    report = dict(scope='Canonical773 client codecs and explicit views; live evidence and admission recorded separately in CONTINUED.md',
                   common_component_definitions=len(shared), equal_envelopes=envelopes,
                   missing_components=sorted(target.keys() - shared.keys()),
                   missing_entities=sorted({r['name'] for r in new['entities']} - lookup.keys()),
                   changed_metadata=changes,
-                  semantic_blockers=['remaining_anger_time/anger_end_time: refuse missing fields; semantics unverified',
-                                     'Attribute IDs below774 remain closed pending correction of pinned JSON omission',
-                                     'Bee NBT entity prefix below774 unobserved; component77 refused'])
+                  semantic_limits=['Active anger conversion requires the exact mob snapshot clock',
+                                   'Corrected35 attribute IDs reuse the observed775 order; live payloads do not prove35 distinct semantics',
+                                   'Opaque773 accepted the typed bee entity prefix; unsupported custom component forms remain refused'])
     return text, json.dumps(report, indent=2) + '\n'
 
 
@@ -59,6 +77,10 @@ def main():
         filename = name + '-26.1.json'
         record = next(r for r in locks['files'] + locks['baseline_files'] if r['file'] == filename)
         baseline[name] = locked(args.baseline, filename, record)
+    from generate_registry_26_2 import LOCAL_LOCKS
+    raw=(HERE.parents[1]/'tools/data/items.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest()==LOCAL_LOCKS['tools/data/items.json']
+    baseline['items']=json.loads(raw)
     text, report = generate(docs, baseline)
     for path, content in [(HERE/'src/generated_payload_773.rs', text), (HERE/'payload-773-report.json', report)]:
         if args.check:

@@ -78,7 +78,7 @@ fn unsupported_content_and_routes_still_fail_closed() {
         let stack=Stack{item:1,count:1,added:vec![Component{kind,data:vec![0]}],removed:vec![]};
         assert!(items::encode(LOWER,Some(&stack),false,Default::default()).is_err());
         let removed=Stack{added:vec![],removed:vec![kind],..stack};
-        assert!(items::encode(LOWER,Some(&removed),false,Default::default()).is_err());
+        assert_eq!(items::encode(LOWER,Some(&removed),false,Default::default()).unwrap(),[1,1,0,0]);
     }
     for name in ["map_chunk","entity_metadata","spawn_entity","custom_payload"] {
         assert!(translate_play(Direction::Clientbound,LOWER,&packet(Direction::Clientbound,LOWER,name,&[0;32]),Context::default()).is_err());
@@ -119,25 +119,28 @@ fn metadata_uses_separate_layouts_and_serializer_ids() {
     }
 }
 #[test]
-fn changed_anger_semantics_are_refused_in_both_directions() {
+fn anger_duration_uses_explicit_snapshot_clock_and_correct_serializers() {
     for name in ["bee","wolf"] {
         let kind=crate::entity_layouts::LAYOUTS.iter().position(|r|r.0==name).unwrap() as u32;
-        for (from,layouts,field) in [(LOWER,crate::generated_payload_773::LAYOUTS,"remaining_anger_time"),(UPPER,crate::generated_payload_774::LAYOUTS,"anger_end_time")] {
-            let index=layouts.iter().find(|r|r.0==kind).unwrap().1.iter().position(|&f|f==field).unwrap() as u8;
-            let body=packet(Direction::Clientbound,from,"entity_metadata",&[42,index,1,0,255]);
-            assert!(matches!(translate_play(Direction::Clientbound,from,&body,Context{entity_kind:Some(kind),..Default::default()}),Err(Error::Entity(_))));
-        }
+        let index=crate::generated_payload_773::LAYOUTS.iter().find(|r|r.0==kind).unwrap().1.iter().position(|&f|f=="remaining_anger_time").unwrap() as u8;
+        let lower=packet(Direction::Clientbound,LOWER,"entity_metadata",&[42,index,1,40,255]);
+        let context=Context{entity_kind:Some(kind),entity_clock:Some(1000),..Default::default()};
+        let upper=translate_play(Direction::Clientbound,LOWER,&lower,context).unwrap();
+        assert_eq!(translate_play(Direction::Clientbound,UPPER,&upper,context).unwrap(),&lower[..]);
+        assert!(translate_play(Direction::Clientbound,LOWER,&lower,Context{entity_kind:Some(kind),..Default::default()}).is_err());
+        assert!(translate_play(Direction::Clientbound,UPPER,&upper,Context{entity_kind:Some(kind),..Default::default()}).is_err());
+        for end in 0..lower.len(){assert!(translate_play(Direction::Clientbound,LOWER,&lower[..end],context).is_err());}
     }
 }
 #[test]
-fn malformed_slots_and_unobserved_bee_prefix_are_refused() {
+fn malformed_slots_and_unsupported_routes_are_refused() {
     for untrusted in [false,true] {
         for raw in [vec![1,1,2,0,3,0,3,0],vec![1,1,1,1,3,0,3],vec![1,1,1,0,127,0],vec![128,1,1,0,0],vec![1,0,0,0]] {
             assert!(items::decode(LOWER,&raw,untrusted,Default::default()).is_err());
         }
     }
     let stack=Stack{item:1,count:1,added:vec![Component{kind:77,data:vec![0]}],removed:vec![]};
-    assert!(matches!(items::encode(LOWER,Some(&stack),false,Default::default()),Err(items::Error::UnsupportedComponent(77))));
+    assert!(items::encode(LOWER,Some(&stack),false,Default::default()).is_ok());
     let frame=packet(Direction::Clientbound,LOWER,"set_cursor_item",&[0]);
     let context=Context{items:items::Context{content:crate::content::ContentCodec::white_slab_preview(),..Default::default()},..Default::default()};
     assert!(translate_play(Direction::Clientbound,LOWER,&frame,context).is_err());
@@ -147,17 +150,13 @@ fn malformed_slots_and_unobserved_bee_prefix_are_refused() {
     }
 }
 #[test]
-fn recorded_complex_items_translate_and_attribute_context_stays_closed() {
+fn recorded_complex_items_and_corrected_attributes_translate() {
     let data:serde_json::Value=serde_json::from_str(include_str!("../testdata/complex-item-observations.json")).unwrap();
     let mut accepted=0;
     for row in data["old"]["cases"].as_array().unwrap() {
         let raw:Vec<u8>=row["slot_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter().map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect();
         let (stack,n)=items::decode(wire::INTERNAL,&raw,false,Default::default()).unwrap();assert_eq!(n,raw.len());
         let name=row["name"].as_str().unwrap();
-        if name.starts_with("attribute_") {
-            assert!(items::encode(LOWER,stack.as_ref(),false,Default::default()).is_err());
-            continue;
-        }
         for untrusted in [false,true] {
             let bytes=items::encode(LOWER,stack.as_ref(),untrusted,Default::default()).unwrap_or_else(|error|panic!("{name}: {error:?}"));
             assert_eq!(items::decode(LOWER,&bytes,untrusted,Default::default()).unwrap(),(stack.clone(),bytes.len()),"{name}");
@@ -166,5 +165,52 @@ fn recorded_complex_items_translate_and_attribute_context_stays_closed() {
         }
         accepted+=1;
     }
-    assert_eq!(accepted,52);
+    assert_eq!(accepted,54);
+}
+
+#[test]
+fn explicit_773_content_views_preserve_the_canonical_source() {
+    use crate::content::{ContentCodec,IdSpace};
+    use crate::ids::RegistryKind;
+    let codec=ContentCodec::default();
+    for &(item,target) in crate::generated_payload_773::ITEM_VIEWS {
+        let source=Stack{item,count:3,added:vec![],removed:vec![]};let before=source.clone();
+        let wire=items::encode(LOWER,Some(&source),false,Default::default()).unwrap();
+        assert_eq!(wire[0],3);
+        assert_eq!(codec.map(RegistryKind::Item,IdSpace::Canonical,IdSpace::Wire(LOWER),item).unwrap(),target);
+        let (view,n)=items::decode(LOWER,&wire,false,Default::default()).unwrap();assert_eq!(n,wire.len());
+        assert_eq!(view.unwrap().item,crate::ids::translate(RegistryKind::Item,LOWER,wire::INTERNAL,target).unwrap());
+        assert_eq!(source,before);
+    }
+    assert!(codec.map(RegistryKind::Item,IdSpace::Canonical,IdSpace::Wire(LOWER),u32::MAX).is_err());
+}
+
+#[test]
+fn canonical_773_tracker_uses_explicit_entity_views_and_keeps_metadata_identity() {
+    for &(kind,_,target) in crate::generated_payload_773::ENTITY_VIEWS {
+        let mut tracker=crate::entities::Tracker::default();
+        let mut spawn=vec![1,42];spawn.extend([4;16]);wire::uint(&mut spawn,kind);
+        for value in [1.5f64,64.0,2.5]{spawn.extend(value.to_be_bytes());}spawn.extend([0;5]);
+        let mapped=super::clientbound(&mut tracker,&spawn,Context::default()).unwrap();
+        let mut input=wire::Cursor::new(&mapped);input.uint().unwrap();assert_eq!(input.uint().unwrap(),42);input.take(16).unwrap();assert_eq!(input.uint().unwrap(),target);
+        let metadata=[0x63,42,0,0,1,255];
+        let mapped=super::clientbound(&mut tracker,&metadata,Context::default()).unwrap();
+        assert_eq!(&mapped[1..],&metadata[1..]);
+        for end in 0..spawn.len(){assert!(super::clientbound(&mut tracker,&spawn[..end],Context::default()).is_err());}
+    }
+}
+
+#[test]
+fn main_hand_translates_byte_to_humanoid_arm_without_changing_its_value() {
+    for hand in 0..=1 {
+        let context=Context{entity_kind:Some(crate::entity_layouts::PLAYER),..Default::default()};
+        let canonical=[0x63,42,15,42,hand,255];
+        let lower=crate::wire::translate_inner(crate::State::Play,Direction::Clientbound,wire::INTERNAL,LOWER,&canonical,context,true).unwrap();
+        assert_eq!(&lower[1..],&[42,15,0,hand,255]);
+        let upper=translate_play(Direction::Clientbound,LOWER,&lower,context).unwrap();
+        assert_eq!(&upper[1..],&[42,15,38,hand,255]);
+        assert_eq!(translate_play(Direction::Clientbound,UPPER,&upper,context).unwrap(),&lower[..]);
+        let mut invalid=canonical;invalid[4]=2;
+        assert!(crate::wire::translate_inner(crate::State::Play,Direction::Clientbound,wire::INTERNAL,LOWER,&invalid,context,true).is_err());
+    }
 }

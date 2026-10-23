@@ -1,7 +1,17 @@
-//! Первый typed Play-шаг773↔774. Допуск и прочие Play-пакеты остаются закрыты.
-//! [проверить] remaining_anger_time→anger_end_time: отсутствующие поля запрещены.
+//! Клиентский маршрут773 через общие typed codec774/776 и отдельные таблицы773.
+//! Злость переводится по часам снимка моба; неизвестные формы закрыты.
 //! Источник: client-chain-sources.json; равные Slot envelopes не заменяют codec.
 use crate::{Direction, JavaVersion, ids::RegistryKind, items, wire::{Context, Cursor, Error, uint}};
+
+pub fn configuration(body: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>, Error> {
+    crate::wire::translate_inner(crate::State::Configuration,Direction::Clientbound,crate::wire::INTERNAL,JavaVersion::V1_21_9,body,Context::default(),true)
+}
+pub fn clientbound<'a>(tracker: &mut crate::entities::Tracker, body: &'a [u8], context: Context) -> Result<std::borrow::Cow<'a,[u8]>,Error> {
+    tracker.translate_inner(crate::wire::INTERNAL,JavaVersion::V1_21_9,body,context,true)
+}
+pub fn serverbound(body: &[u8],context: Context) -> Result<std::borrow::Cow<'_,[u8]>,Error> {
+    crate::wire::translate_inner(crate::State::Play,Direction::Serverbound,JavaVersion::V1_21_9,crate::wire::INTERNAL,body,context,true)
+}
 
 fn slot(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, untrusted: bool, context: items::Context) -> Result<(), Error> {
     let (stack, count) = items::decode_packet_slot(from, input.rest, untrusted, context).map_err(Error::Item)?;

@@ -50,6 +50,11 @@ impl Compound {
         self
     }
 
+    /// Добавляет поле-long (например, прежнее fixed_time измерения).
+    pub fn long(mut self, name: &str, value: i64) -> Self {
+        self.bytes.push(4);write_name(&mut self.bytes,name);self.bytes.extend(value.to_be_bytes());self
+    }
+
     /// Добавляет поле-float.
     pub fn float(mut self, name: &str, value: f32) -> Self {
         self.bytes.push(TAG_FLOAT);

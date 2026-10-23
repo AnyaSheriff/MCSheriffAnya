@@ -19,6 +19,9 @@ from smoke import frame, handshake, read_varint, send
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('binary','protocol','cache','output'):p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--protocol773',type=Path)
+    p.add_argument('--cache773',type=Path)
+    p.add_argument('--admit773',action='store_true')
     p.add_argument('--protocol774',type=Path)
     p.add_argument('--cache774',type=Path)
     p.add_argument('--admit774',action='store_true')
@@ -34,6 +37,11 @@ def main():
         assert hashlib.sha256(a.protocol774.read_bytes()).hexdigest()=='4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab'
         protocols[774]=json.loads(a.protocol774.read_text())
         items[774]=next(r['id'] for r in table(a.cache774,'entities') if r['name']=='item')
+    if a.admit773:
+        assert a.protocol773 and a.cache773 and 773 not in a.closed_clients
+        assert hashlib.sha256(a.protocol773.read_bytes()).hexdigest()=='0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70'
+        protocols[773]=json.loads(a.protocol773.read_text())
+        items[773]=next(r['id'] for r in table(a.cache773,'entities') if r['name']=='item')
     a.output.mkdir(parents=True,exist_ok=False)
     report=dict(status='failed',binary_sha256=hashlib.sha256(a.binary.read_bytes()).hexdigest(),
                 runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),checks=[],sessions=[],shutdown=[])
@@ -55,7 +63,7 @@ def main():
                         deadline=time.monotonic()+120
                         while 'Готово (' not in path.read_text():
                             assert server.poll() is None and time.monotonic()<deadline,path.read_text()[-2000:];time.sleep(.1)
-                        for version in (774,776,*a.closed_clients):
+                        for version in (*([773] if a.admit773 else []),774,776,*a.closed_clients):
                             row=dict(primary=primary,client=version)
                             with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                 handshake(sock,version,port,1);send(sock,b'\0')

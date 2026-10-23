@@ -31,7 +31,7 @@ pub enum Error { UnsupportedVersion, Truncated, Invalid, MissingPose, Unexpected
 
 impl Confirmation {
     pub fn decode(version: JavaVersion, payload: &[u8]) -> Result<Self, Error> {
-        if !matches!(version, JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion); }
+        if !matches!(version, JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion); }
         let mut rest = payload;
         let mut value = 0u32;
         let mut complete = false;
@@ -66,7 +66,7 @@ impl Confirmation {
         match (version, self.pose) {
             (JavaVersion::V1_12_2, _) => return Err(Error::UnsupportedVersion),
             (JavaVersion::V26_3, None) => return Err(Error::MissingPose),
-            (JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2, Some(_)) => return Err(Error::UnexpectedPose),
+            (JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2, Some(_)) => return Err(Error::UnexpectedPose),
             _ => {}
         }
         let mut out = Vec::with_capacity(37);

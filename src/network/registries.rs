@@ -116,7 +116,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
 /// Собственные определения для версии клиента; состав и порядок реестров
 /// сохраняются. Изменения форматов: tools/research/registries-26.3.md.
 pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str) -> Option<Compound> {
-    if !matches!(version, mcsa_protocol::JavaVersion::V1_21_11 | mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) { return None; }
+    if !matches!(version, mcsa_protocol::JavaVersion::V1_21_9 | mcsa_protocol::JavaVersion::V1_21_11 | mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) { return None; }
     let out = match registry {
         "minecraft:chat_type" => super::chat_types::entry(name)?,
         "minecraft:decorated_pot_pattern" if version == mcsa_protocol::JavaVersion::V26_3 => {
@@ -202,7 +202,7 @@ pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str
         }
         // На вики в списке звуков волка нет шага, но клиент его требует:
         // без него запись не разбирается ("No key step_sound").
-        "minecraft:wolf_sound_variant" => if version==mcsa_protocol::JavaVersion::V1_21_11 { sounds("wolf", &["ambient_sound","death_sound","growl_sound","hurt_sound","pant_sound","step_sound","whine_sound"]) } else { adult_and_baby(
+        "minecraft:wolf_sound_variant" => if matches!(version,mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11) { sounds("wolf", &["ambient_sound","death_sound","growl_sound","hurt_sound","pant_sound","step_sound","whine_sound"]) } else { adult_and_baby(
             "wolf",
             &[
                 "ambient_sound",
@@ -504,7 +504,30 @@ fn infiniburn(out: Compound, version: mcsa_protocol::JavaVersion, dimension: &st
 /// и координат. Значения — ванильные, из таблицы на вики.
 // 774-client775-v3: новый26.1 атрибут среды отвергнут клиентом774.
 fn ambient_color(version: mcsa_protocol::JavaVersion, out: Compound, color: &str) -> Compound {
-    if version==mcsa_protocol::JavaVersion::V1_21_11 {out} else {out.string("minecraft:visual/ambient_light_color",color)}
+    if matches!(version,mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11) {out} else {out.string("minecraft:visual/ambient_light_color",color)}
+}
+
+// Dimension type/Biome definition (Java Edition), история1.21.11 на wiki:
+// старый клиент получает прежние поля, основной сохраняет свои игровые правила.
+fn dimension_773(out:Compound,version:mcsa_protocol::JavaVersion,name:&str)->Compound {
+    if version!=mcsa_protocol::JavaVersion::V1_21_9 {return out;}
+    let nether=name=="nether";let overworld=name=="overworld";
+    let out=out.boolean("ultrawarm",nether).boolean("natural",overworld)
+        .boolean("piglin_safe",nether).boolean("respawn_anchor_works",nether)
+        .boolean("bed_works",overworld).boolean("has_raids",!nether)
+        .string("effects",if nether {"minecraft:the_nether"}else if overworld {"minecraft:overworld"}else{"minecraft:the_end"});
+    if overworld {out}else{out.long("fixed_time",if nether{18000}else{6000})}
+}
+fn color_773(color:&str)->i32 {i32::from_str_radix(color.strip_prefix('#').expect("цвет каталога"),16).expect("RGB каталога")}
+fn effects_773(look:&Look)->Compound {
+    let mut out=Compound::new().int("sky_color",color_773(look.sky))
+        .int("fog_color",color_773(look.fog.unwrap_or("#c0d8ff")))
+        .int("water_color",color_773(look.water)).int("water_fog_color",color_773(look.water_fog.unwrap_or("#050533")));
+    for (key,color) in [("grass_color",look.grass),("foliage_color",look.foliage),("dry_foliage_color",look.dry_foliage)] {
+        if let Some(color)=color {out=out.int(key,color_773(color));}
+    }
+    if let Some(modifier)=look.grass_modifier {out=out.string("grass_color_modifier",modifier);}
+    out
 }
 
 fn dimension_type(version: mcsa_protocol::JavaVersion) -> Compound {
@@ -521,7 +544,7 @@ fn dimension_type(version: mcsa_protocol::JavaVersion) -> Compound {
         // Предел света для спавна монстров: спавна у нас нет, годится число.
         .int("monster_spawn_light_level", 7)
         .int("monster_spawn_block_light_limit", 0);
-    infiniburn(out, version, "overworld")
+    infiniburn(dimension_773(out,version,"overworld"), version, "overworld")
         .string("skybox", "overworld")
         .string("cardinal_light", "default")
         // Свойства среды: без них небо чёрное. Значение по умолчанию
@@ -558,7 +581,7 @@ fn nether_type(version: mcsa_protocol::JavaVersion) -> Compound {
         .int("logical_height", 128)
         .int("monster_spawn_light_level", 7)
         .int("monster_spawn_block_light_limit", 15);
-    infiniburn(out, version, "nether")
+    infiniburn(dimension_773(out,version,"nether"), version, "nether")
         .string("skybox", "none")
         .string("cardinal_light", "nether")
         .compound(
@@ -587,7 +610,7 @@ fn end_type(version: mcsa_protocol::JavaVersion) -> Compound {
         .int("logical_height", 256)
         .int("monster_spawn_light_level", 15)
         .int("monster_spawn_block_light_limit", 0);
-    infiniburn(out, version, "end")
+    infiniburn(dimension_773(out,version,"end"), version, "end")
         .string("skybox", "end")
         .string("cardinal_light", "default")
         .compound("attributes", Compound::new())
@@ -598,6 +621,10 @@ fn end_type(version: mcsa_protocol::JavaVersion) -> Compound {
 /// нужен один и тот же вид — туман `#181318`, вода как у всех, осадков нет
 /// (вики, The End → Biomes; [проверить] цвет тумана у краёв).
 fn end_biome(version: mcsa_protocol::JavaVersion) -> Compound {
+    if version==mcsa_protocol::JavaVersion::V1_21_9 {
+        return spawn_fields(Compound::new().boolean("has_precipitation",false).float("temperature",0.5).float("downfall",0.5)
+            .compound("effects",effects_773(&Look{sky:"#000000",fog:Some("#181318"),..PLAIN})).empty_list("carvers").empty_list("features"),version);
+    }
     let out = Compound::new()
         .boolean("has_precipitation", false)
         .float("temperature", 0.5)
@@ -680,6 +707,7 @@ fn biome(name: &str, version: mcsa_protocol::JavaVersion) -> Compound {
         }
     }
 
+    if version==mcsa_protocol::JavaVersion::V1_21_9 {effects=effects_773(&look);}
     let mut compound = Compound::new()
         .boolean("has_precipitation", temperature < 2.0)
         .float("temperature", temperature);
@@ -712,6 +740,14 @@ fn nether_biome(biome: crate::world::terrain::Biome, version: mcsa_protocol::Jav
         _ => ("#330808", None, 0.0),
     };
 
+    if version==mcsa_protocol::JavaVersion::V1_21_9 {
+        let mut effects=effects_773(&Look{sky:"#000000",fog:Some(fog),..PLAIN});
+        if let Some(particle)=particle {
+            effects=effects.compound("particle",Compound::new().compound("options",Compound::new().string("type",particle)).float("probability",probability));
+        }
+        return spawn_fields(Compound::new().boolean("has_precipitation",false).float("temperature",2.0).float("downfall",0.0)
+            .compound("effects",effects).empty_list("carvers").empty_list("features"),version);
+    }
     let mut attributes = Compound::new().string("minecraft:visual/fog_color", fog);
 
     if let Some(particle) = particle {
@@ -737,7 +773,7 @@ fn nether_biome(biome: crate::world::terrain::Biome, version: mcsa_protocol::Jav
 /// Biome definition oldid3848210: «Removed ... spawners ... spawn_costs»
 /// в26.3snap4. В775/776 сохраняем прежние байты; генерацию/спавн ведёт сервер.
 fn spawn_fields(out: Compound, version: mcsa_protocol::JavaVersion) -> Compound {
-    if matches!(version, mcsa_protocol::JavaVersion::V1_21_11 | mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2) {
+    if matches!(version, mcsa_protocol::JavaVersion::V1_21_9 | mcsa_protocol::JavaVersion::V1_21_11 | mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2) {
         out.compound("spawners", Compound::new()).compound("spawn_costs", Compound::new())
     } else { out }
 }

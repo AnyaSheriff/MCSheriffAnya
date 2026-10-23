@@ -707,6 +707,9 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
 
 /// Пакет свойств: перечисленные записи.
 async fn send_properties(stream: &mut Outgoing<'_>, entity_id: i32, entries: &[&Property]) -> io::Result<()> {
+    send_properties_at(stream,entity_id,entries,None).await
+}
+async fn send_properties_at(stream: &mut Outgoing<'_>, entity_id: i32, entries: &[&Property],clock:Option<i64>) -> io::Result<()> {
     if entries.is_empty() {
         return Ok(());
     }
@@ -722,7 +725,7 @@ async fn send_properties(stream: &mut Outgoing<'_>, entity_id: i32, entries: &[&
     }
 
     data.push(PROPERTIES_END);
-    write_body(stream, data).await
+    stream.send_entity_properties(&data,clock).await
 }
 
 /// Появление моба: Add Entity и свойства не по умолчанию.
@@ -751,7 +754,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     let properties = properties(mob);
     let changed: Vec<&Property> = properties.iter().filter(|entry| !is_default(entry, mob.kind)).collect();
 
-    send_properties(stream, mob.entity_id, &changed).await?;
+    send_properties_at(stream, mob.entity_id, &changed, Some(mob.tame.clock)).await?;
 
     if crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0 {
         send_horse_attributes(stream, mob, true).await?;
@@ -1639,7 +1642,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             now.iter().filter(|entry| !shown.properties.contains(entry) || (mob.kind == Kind::Dolphin && entry.0 == 1) || (entry.0 == 10 && mob.vitals.effect_gives != shown.effect_gives)).collect()
         };
 
-        send_properties(stream, mob.entity_id, &changed).await?;
+        send_properties_at(stream, mob.entity_id, &changed, Some(mob.tame.clock)).await?;
         shown.properties = now;
         shown.effect_gives = mob.vitals.effect_gives;
 

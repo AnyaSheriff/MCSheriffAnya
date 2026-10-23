@@ -176,11 +176,18 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
     let mut out = Vec::new();
     let item = content_id(context, RegistryKind::Item, IdSpace::Canonical, target, stack.item)?;
     for value in if template { [item, stack.count] } else { [stack.count, item] } { uint(&mut out, value); }
-    uint(&mut out, stack.added.len() as u32); uint(&mut out, stack.removed.len() as u32);
+    let visible=|kind:u32| version!=JavaVersion::V1_21_9 || !matches!(id(RegistryKind::Component,JavaVersion::V26_1_2,version,kind),Err(Error::Id(crate::ids::IdTranslationError::MissingTarget(_))));
+    uint(&mut out, stack.added.iter().filter(|c|visible(c.kind)).count() as u32); uint(&mut out, stack.removed.iter().filter(|&&k|visible(k)).count() as u32);
     let mut seen = BTreeSet::new();
     for component in &stack.added {
         if !seen.insert(component.kind) { return Err(Error::Invalid); }
         if component.data.len() > LIMIT { return Err(Error::TooLarge); }
+        if !visible(component.kind) {
+            // Отсутствующий компонент не переносит новые правила на старый клиент.
+            let mut source=Reader(&component.data);
+            component_bytes_at_spaces(component.kind,&mut source,JavaVersion::V26_1_2,JavaVersion::V26_1_2,context,0,(IdSpace::Canonical,IdSpace::Canonical))?;
+            if !source.0.is_empty(){return Err(Error::Invalid);}continue;
+        }
         let mut input = Reader(&component.data); let data=component_bytes_at_spaces(component.kind,&mut input,JavaVersion::V26_1_2,version,context,0,(IdSpace::Canonical,target))?;
         if !input.0.is_empty() { return Err(Error::Invalid); }
         uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, component.kind)?);
@@ -190,7 +197,7 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
     }
     for &kind in &stack.removed {
         if !seen.insert(kind) { return Err(Error::Invalid); }
-        uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, kind)?);
+        if visible(kind) {uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, kind)?);}
     }
     // Removed IDs тоже занимают место: весь Slot должен укладываться в LIMIT.
     if out.len() > LIMIT { return Err(Error::TooLarge); }
@@ -203,11 +210,9 @@ pub(crate) fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to
 
 pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,spaces:(IdSpace,IdSpace))->Result<Vec<u8>,Error>{
     supported_payload(from)?; supported_payload(to)?;
-    // [проверить] JSON773 и774 не описывает реальный префикс bee NBT.
-    // Префикс774 наблюдён клиентом; для773 до живой проверки не угадываем.
-    if kind == 77 && (from == JavaVersion::V1_21_9 || to == JavaVersion::V1_21_9) {
-        return Err(Error::UnsupportedComponent(kind));
-    }
+    // JSON773/774 не описывает реальный префикс bee NBT.
+    // Оба непрозрачных клиента приняли типизированный префикс пчелы.
+
     if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2)
         && !crate::generated_payload_776::COMPONENTS.contains(&kind)
         && !matches!(kind,25|49|50|75) {

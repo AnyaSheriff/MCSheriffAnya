@@ -36,14 +36,14 @@ def main():
     p.add_argument('--collect-only', action='store_true')
     p.add_argument('--block-entities', action='store_true')
     p.add_argument('--payloads',type=Path)
-    p.add_argument('--client',type=int,choices=(774,776),default=776)
+    p.add_argument('--client',type=int,choices=(773,774,776),default=776)
     a = p.parse_args()
-    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
+    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if a.client==773 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocol = json.loads(a.protocol.read_text())
-    items={r['name']:r['id'] for r in table(a.protocol.parent if a.client==774 else a.protocol.resolve().parents[4],'items')}
-    arrow=next(r['id'] for r in table(a.protocol.parent if a.client==774 else a.protocol.resolve().parents[4],'entities') if r['name']=='arrow')
+    items={r['name']:r['id'] for r in table(a.protocol.parent if a.client in (773,774) else a.protocol.resolve().parents[4],'items')}
+    arrow=next(r['id'] for r in table(a.protocol.parent if a.client in (773,774) else a.protocol.resolve().parents[4],'entities') if r['name']=='arrow')
     hands=dict(mainhand=None,offhand=None)
-    statue_states={number:key for key,number in states(table(a.protocol.parent if a.client==774 else a.protocol.resolve().parents[4],'blocks')).items() if key[0]=='copper_golem_statue'}
+    statue_states={number:key for key,number in states(table(a.protocol.parent if a.client in (773,774) else a.protocol.resolve().parents[4],'blocks')).items() if key[0]=='copper_golem_statue'}
     names = {phase: {d: {v:k for k,v in mapping(protocol, phase, d).items()}
                     for d in ('toClient','toServer')} for phase in ('configuration','play')}
     port, relay_port = 26028, 26034
@@ -98,7 +98,7 @@ def main():
                                 phases.update(dict.fromkeys(phases,'configuration'))
                             elif phase=='configuration' and direction=='toServer' and name=='finish_configuration':
                                 phases.update(dict.fromkeys(phases,'play'))
-                            if phase=='play' and (name in {'block_dig','use_item','attack','block_change',
+                            if phase=='play' and (name in {'block_dig','use_item','attack','use_entity','block_change',
                                 'window_items','set_slot','set_player_inventory','entity_metadata','spawn_entity',
                                 'position','player_loaded','system_chat','pong','entity_velocity','block_place'}):
                                 row=dict(direction=direction,name=name,stage=stage,hex=payload.hex())
@@ -135,7 +135,7 @@ def main():
                 report['screenshots'].append(dict(file=path.name,sha256=sha))
 
             try:
-                test='serve_java_1_21_11_probe' if a.client==774 else ('serve_java_26_2_primary_26_3_probe' if a.primary==777 else 'serve_java_26_2_probe')
+                test='serve_java_1_21_9_probe' if a.client==773 else 'serve_java_1_21_11_probe' if a.client in (773,774) else ('serve_java_26_2_primary_26_3_probe' if a.primary==777 else 'serve_java_26_2_probe')
                 server=subprocess.Popen([str(a.test_binary.resolve()),'--ignored','--exact','gameplay_probe::'+test,'--nocapture'],
                     cwd=core,stdin=subprocess.PIPE,stdout=slog,stderr=subprocess.STDOUT,text=True,start_new_session=True)
                 wait(lambda:'MCSA gameplay probe ready' in (a.output/'server.log').read_text(),120)
@@ -152,7 +152,7 @@ def main():
                     report['authored_blocks']=[b for b in BLOCKS if b!='piston']+['copper_golem_statue']
                 listener=socket.socket();listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 listener.bind(('127.0.0.1',relay_port));listener.listen(1);listener.settimeout(120)
-                client=launch(a.client_dir.resolve(),game,relay_port,clog,version='1.21.11' if a.client==774 else '26.2',gui_scale=2,pause_on_lost_focus=False)
+                client=launch(a.client_dir.resolve(),game,relay_port,clog,version='1.21.10' if a.client==773 else '1.21.11' if a.client==774 else '26.2',gui_scale=2,pause_on_lost_focus=False)
                 peer,_=listener.accept(); peers.append(peer)
                 backend=socket.create_connection(('127.0.0.1',port),timeout=10);peers.append(backend)
                 for _ in range(2): send(backend,frame(FrameDeadline(peer,30)))
@@ -255,14 +255,34 @@ def main():
                     wait(arrow_spawned)
                 report['checks'].append(dict(case=stage,statuses=actions(stage),arrow_spawn=not a.collect_only))
                 stage='jab-setup'
-                command('item replace entity McsaProbe weapon.mainhand with iron_spear')
-                command('enchant McsaProbe lunge 1')
+                if a.client==773:
+                    command('item replace entity McsaProbe weapon.mainhand with iron_sword')
+                    command('kill @e[type=cow]')
+                    command('summon cow 2.5 64 0.5 {NoAI:1b}')
+                else:
+                    command('item replace entity McsaProbe weapon.mainhand with iron_spear')
+                if a.client!=773:command('enchant McsaProbe lunge 1')
                 time.sleep(1)
-                stage='jab';gui(client,'click','1');wait(lambda:bool(actions(stage)))
+                stage='jab';gui(client,'click','1')
+                if a.client==773:
+                    wait(lambda:any(r['stage']=='jab' and r['name']=='use_entity' and r['direction']=='toServer' for r in report['packets']))
+                    report['attack_equivalent']='773 iron sword: ordinary use_entity attack, authoritative weapon wear and target health'
+                    command('data get entity @e[type=cow,limit=1] Health')
+                else:wait(lambda:bool(actions(stage)))
                 if not a.collect_only:wait(lambda:hands['mainhand'] is not None and hands['mainhand'].get('damage')==1)
                 report['checks'].append(dict(case=stage,statuses=actions(stage),authoritative_hands=dict(hands)))
                 shot('finished-actions')
                 expected={'cancel':[0,1],'drop-one':[4],'drop-stack':[3],'swap':[6],'release':[5],'jab':[7]}
+                if a.client==773:
+                    expected['jab']=[]
+                    raw=[r for r in report['packets'] if r['stage']=='jab' and r['name']=='entity_metadata' and r['direction']=='toClient']
+                    health=[]
+                    for row in raw:
+                        data=io.BytesIO(bytes.fromhex(row['hex']));integer(data)
+                        tail=data.read()
+                        if tail[:2]==bytes([9,3]):health.append(struct.unpack('>f',tail[2:6])[0])
+                    assert health and any(0<h<10 for h in health),health
+                    report['checks'][-1]['target_health']=health
                 assert {v['case']:v['statuses'] for v in report['checks']}==expected,report['checks']
                 report['status']='pass'
             except BaseException as error:

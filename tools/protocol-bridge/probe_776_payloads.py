@@ -13,6 +13,11 @@ from generate_tables import states
 
 
 def table(cache, name):
+    if cache.name=='773':
+        locks=json.loads((Path(__file__).resolve().parent/'client-chain-sources.json').read_text())['versions']['773']['files']
+        record=locks[name];raw=(cache/(name+'.json')).read_bytes()
+        assert len(raw)==record['bytes'] and hashlib.sha256(raw).hexdigest()==record['sha256']
+        return json.loads(raw)
     if (cache / 'protocol.json').is_file():
         manifest = json.loads((DEFAULT_OUTPUT.parent / 'step1-sources-774.json').read_text())
         if name in manifest:

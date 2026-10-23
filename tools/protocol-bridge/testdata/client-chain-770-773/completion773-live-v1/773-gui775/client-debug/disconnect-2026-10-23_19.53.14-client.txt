@@ -1,0 +1,102 @@
+---- Minecraft Network Protocol Error Report ----
+// 404
+
+Time: 2026-10-23 19:53:14
+Description: Packet handling error
+
+java.lang.IllegalStateException: Missing registry: ResourceKey[minecraft:root / minecraft:timeline]
+	at jy.j(SourceFile:22)
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403)
+	at jy.f(SourceFile:22)
+	at haa.a(SourceFile:59)
+	at haa.a(SourceFile:85)
+	at java.base/java.util.HashMap.forEach(HashMap.java:1430)
+	at haa$b.a(SourceFile:166)
+	at haa.a(SourceFile:73)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at jy.j(SourceFile:22)
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403)
+	at jy.f(SourceFile:22)
+	at haa.a(SourceFile:59)
+	at haa.a(SourceFile:85)
+	at java.base/java.util.HashMap.forEach(HashMap.java:1430)
+	at haa$b.a(SourceFile:166)
+	at haa.a(SourceFile:73)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+
+-- Incoming Packet --
+Details:
+	Type: clientbound/minecraft:finish_configuration
+	Is Terminal: true
+	Is Skippable: false
+Stacktrace:
+	at aar.a(SourceFile:42)
+	at gzi.a(SourceFile:149)
+	at gzi.a(SourceFile:128)
+	at xb$a.a(SourceFile:60)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+
+-- Connection --
+Details:
+	Protocol: configuration
+	Flow: CLIENTBOUND
+	Is Local: false
+	Server type: OTHER
+	Server brand: MCSheriffAnya
+
+-- System Details --
+Details:
+	Minecraft Version: 1.21.10
+	Minecraft Version ID: 1.21.10
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 28131776 bytes (26 MiB) / 351272960 bytes (335 MiB) up to 1073741824 bytes (1024 MiB)
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 10233.47
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 4381.82
+	Space in storage for jna.tmpdir (MiB): available: 7863.96, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7863.96, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7863.96, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7863.96, total: 7952.55
+	Space in storage for workdir (MiB): available: 7863.96, total: 7952.55
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 

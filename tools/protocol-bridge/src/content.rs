@@ -342,7 +342,7 @@ impl ContentCodec {
                     IdSpace::Wire(JavaVersion::V26_3) => {
                         Ok(wire + canonical - first)
                     }
-                    IdSpace::Wire(version @ (JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2)) => {
+                    IdSpace::Wire(version @ (JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2)) => {
                         // Общий объект26.2 сохраняет настоящий вид; новый объект26.3
                         // получает явно заданного775-двойника с переводом его ID.
                         if version == JavaVersion::V26_2 {
@@ -360,6 +360,16 @@ impl ContentCodec {
                 };
         }
         let version = |space| match space { IdSpace::Canonical => JavaVersion::V26_1_2, IdSpace::Wire(version) => version };
+        if version(from)==JavaVersion::V26_1_2 && to==IdSpace::Wire(JavaVersion::V1_21_9) {
+            let projected=match kind {
+                RegistryKind::Item=>crate::generated_payload_773::ITEM_VIEWS.iter().find(|r|r.0==id).map(|r|r.1),
+                RegistryKind::Entity=>crate::generated_payload_773::ENTITY_VIEWS.iter().find(|r|r.0==id).map(|r|r.2),_=>None,
+            };
+            if let Some(projected)=projected {return Ok(projected);}
+            if let Some(projected)=crate::generated_step1::substitute(kind,id) {
+                return ids::translate(kind,JavaVersion::V1_21_11,JavaVersion::V1_21_9,projected).map_err(Error::Id);
+            }
+        }
         match ids::translate(kind, version(from), version(to), id) {
             Err(ids::IdTranslationError::MissingTarget(_)) if version(from) == JavaVersion::V26_1_2 && to == IdSpace::Wire(JavaVersion::V1_21_11) => {
                 // Явные цветок/горшок: те же формы по blocks.json. [проверить]:

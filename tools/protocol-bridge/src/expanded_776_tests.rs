@@ -251,8 +251,12 @@ fn export_live_776_payloads() { export_live_payloads(MID); }
 #[ignore="экспорт payload774 для непрозрачного клиента"]
 fn export_live_774_payloads() { export_live_payloads(JavaVersion::V1_21_11); }
 
+#[test]
+#[ignore="экспорт payload773 для непрозрачного клиента"]
+fn export_live_773_payloads() {export_live_payloads(JavaVersion::V1_21_9);}
+
 fn export_live_payloads(target: JavaVersion) {
-    let adapter = if target==JavaVersion::V1_21_11 {crate::client_774::clientbound} else {crate::probe_776::clientbound};
+    let adapter = if target==JavaVersion::V1_21_9 {crate::client_773::clientbound} else if target==JavaVersion::V1_21_11 {crate::client_774::clientbound} else {crate::probe_776::clientbound};
     let packet_id=|old:u32|crate::packet_layouts::packet_info(crate::ids::RegistryKind::PlayClientbound,OLD,target,old as usize).unwrap().target_id.unwrap() as u8;
     let mut packets=Vec::new();
     let mut add=|label:String,body:Vec<u8>| {
