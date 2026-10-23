@@ -263,7 +263,7 @@ fn bounded_player_metadata_and_items_do_not_enable_other_entities_or_components(
 }
 
 #[test]
-fn test_only_chunk_helper_rejects_block_entities_and_preserves_public_guard() {
+fn test_only_chunk_helper_accepts_observed_chest_and_preserves_public_guard() {
     let section = crate::chunk_sections::Section {
         blocks_present: 4096, fluids_present: 0, blocks: vec![1; 4096], biomes: vec![0; 64],
     };
@@ -276,9 +276,17 @@ fn test_only_chunk_helper_rejects_block_entities_and_preserves_public_guard() {
     assert!(crate::chunk::translate_776_fixture(&payload, context).is_ok());
     assert_eq!(crate::chunk::translate(OLD, MID, &payload, context),
         Err(crate::chunk::Error::UnsupportedVersion(MID)));
-    let mut with_entity = payload; with_entity[entity_count] = 1;
+    let mut with_entity = payload[..entity_count].to_vec();
+    with_entity.extend([1, 0, 255, 192, 1, 0]); // один сундук, xz0,y-64,kind1,NBT End.
+    with_entity.extend_from_slice(&payload[entity_count + 1..]);
+    assert!(crate::chunk::translate_776_fixture(&with_entity, context).is_ok());
+    with_entity[entity_count + 4] = 2;
     assert_eq!(crate::chunk::translate_776_fixture(&with_entity, context),
-        Err(crate::chunk::Error::Entity(crate::block_entities::Error::UnsupportedVersion)));
+        Err(crate::chunk::Error::Entity(crate::block_entities::Error::UnknownType(2))));
+    with_entity[entity_count + 4] = 1;
+    for end in entity_count..with_entity.len() {
+        assert!(crate::chunk::translate_776_fixture(&with_entity[..end], context).is_err());
+    }
 }
 
 #[test]

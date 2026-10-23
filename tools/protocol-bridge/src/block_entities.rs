@@ -7,6 +7,17 @@ use crate::{JavaVersion, registry};
 pub enum Error { UnsupportedVersion, UnknownType(u32), UnsupportedData, Invalid, Nbt(registry::Error) }
 
 pub fn translate(from: JavaVersion, to: JavaVersion, kind: u32, data: &[u8]) -> Result<Option<(u32, Vec<u8>)>, Error> {
+    if from == JavaVersion::V26_2 || to == JavaVersion::V26_2 {
+        // official-actions-776: сундук1 с пустым сетевым NBT; остальные
+        // типы/поля776 [проверить], не наследуем таблицу777 целиком.
+        if !matches!((from, to), (JavaVersion::V26_1_2, JavaVersion::V26_2) | (JavaVersion::V26_2, JavaVersion::V26_1_2)) {
+            return Err(Error::UnsupportedVersion);
+        }
+        if kind != 1 { return Err(Error::UnknownType(kind)); }
+        if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
+        if !matches!(data, [0] | [10, 0]) { return Err(Error::UnsupportedData); }
+        return Ok(Some((1, data.to_vec())));
+    }
     if [from, to].iter().any(|version| !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
     if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
     let row = crate::block_entity_ids::OBSERVED.iter().find(|(old, new, _)| {
@@ -96,6 +107,19 @@ mod tests {
             assert_eq!(translate(NEW, OLD, kind, new).unwrap(), Some((kind, old.to_vec())));
         }
     }
+    #[test]
+    fn observed_776_chest_is_bounded_to_empty_network_nbt() {
+        for (from, to) in [(OLD, JavaVersion::V26_2), (JavaVersion::V26_2, OLD)] {
+            for data in [&[0][..], &[10, 0]] {
+                assert_eq!(translate(from, to, 1, data).unwrap(), Some((1, data.to_vec())));
+            }
+            assert_eq!(translate(from, to, 2, &[0]), Err(Error::UnknownType(2)));
+            assert_eq!(translate(from, to, 1, &[10, 1, 0, 1, b'x', 1, 0]), Err(Error::UnsupportedData));
+            assert!(translate(from, to, 1, &[10]).is_err());
+            assert!(translate(from, to, 1, &[0, 0]).is_err());
+        }
+    }
+
     #[test]
     fn unsupported_nbt_and_malformed_lengths_never_pass_through() {
         assert_eq!(translate(OLD, NEW, 10, &[0]), Err(Error::UnknownType(10)));

@@ -341,11 +341,13 @@ pub(crate) fn translate_inner(
 enum DigAction { Start, Cancel, Finish, DropStack, DropOne, ReleaseUse, Swap, Jab }
 
 fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
-    use JavaVersion::{V26_1_2 as Old, V26_3 as New};
+    use JavaVersion::{V26_1_2 as Old, V26_2 as Mid, V26_3 as New};
     let action = match (from, cursor.uint()?) {
-        (Old | New, 0) => DigAction::Start,
+        // official-actions-776: начало0 и завершение2 разрушили камень.
+        // Другие действия776 [проверить]; общего сдвига enum нет.
+        (Old | Mid | New, 0) => DigAction::Start,
         (Old, 1) | (New, 2) => DigAction::Cancel,
-        (Old, 2) | (New, 3) => DigAction::Finish,
+        (Old | Mid, 2) | (New, 3) => DigAction::Finish,
         (Old, 3) | (New, 4) => DigAction::DropStack,
         (Old, 4) | (New, 5) => DigAction::DropOne,
         (Old, 5) | (New, 6) => DigAction::ReleaseUse,
@@ -354,10 +356,10 @@ fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
         _ => return Err(Error::PayloadUnavailable("unverified block_dig action")),
     };
     let status = match (to, action) {
-        (Old | New, DigAction::Start) => 0,
+        (Old | Mid | New, DigAction::Start) => 0,
         (Old, DigAction::Cancel) => 1,
         (New, DigAction::Cancel) => 2,
-        (Old, DigAction::Finish) => 2,
+        (Old | Mid, DigAction::Finish) => 2,
         (New, DigAction::Finish) => 3,
         (Old, DigAction::DropStack) => 3,
         (New, DigAction::DropStack) => 4,
@@ -458,7 +460,7 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "chat_command" | "chat_message" | "chat_session_update" | "message_acknowledgement" |
             "tab_complete" | "window_click" | "close_window" | "held_item_slot" |
             "recipe_book" | "displayed_recipe" | "advancement_tab" | "arm_animation" |
-            "attack" | "use_entity" | "client_command" | "block_place" | "use_item"),
+            "attack" | "use_entity" | "client_command" | "block_place" | "use_item" | "block_dig"),
         (State::Play, Direction::Clientbound) => matches!(name,
             "login" | "position" | "abilities" | "declare_commands" | "declare_recipes" |
             "player_info" | "player_remove" | "entity_metadata" | "entity_destroy" |
@@ -466,7 +468,7 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "sync_entity_position" | "entity_teleport" | "entity_look" | "entity_head_rotation" |
             "entity_equipment" | "entity_velocity" | "animation" | "entity_status" |
             "damage_event" | "hurt_animation" | "death_combat_event" | "respawn" |
-            "acknowledge_player_digging" | "open_window" | "craft_progress_bar" |
+            "acknowledge_player_digging" | "block_break_animation" | "world_event" | "open_window" | "craft_progress_bar" |
             "initialize_world_border" | "set_ticking_state" | "step_tick" | "spawn_position" |
             "update_health" | "experience" | "game_state_change" | "update_time" |
             "update_view_position" | "update_view_distance" | "simulation_distance" |

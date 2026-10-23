@@ -33,7 +33,10 @@ async fn serve(version: mcsa_protocol::JavaVersion, port: u16) {
     let properties=ServerProperties {online_mode:false,server_port:port,view_distance:2,simulation_distance:2,compression_threshold:-1,..Default::default()};
     let preview = Path::new("mcsa-catalog-preview263.marker").is_file();
     let catalog = crate::gameplay_catalog::Catalog::new(if preview { crate::gameplay_catalog::Profile::Preview26_3 } else { crate::gameplay_catalog::Profile::Java26_1_2 });
-    let mut world=World::in_memory_with_catalog(catalog);
+    let persistent = Path::new("mcsa-persistence-probe.marker").is_file();
+    let mut world=if persistent {
+        World::open_with_catalog("world", Some(1), crate::config::server_properties::WorldKind::Flat, catalog).unwrap()
+    } else { World::in_memory_with_catalog(catalog) };
     for z in -24..24 {for x in -24..24 {world.set_block(x,63,z,blocks::state_by_name("stone").unwrap());}}
     world.set_spawn_position((0.5, 64.0, 0.5));
     let mut shared=Shared::new(world,World::in_memory_with_catalog(catalog),PathBuf::from("world/playerdata"),PathBuf::from("skins"),properties.clone(),
@@ -62,5 +65,9 @@ async fn serve(version: mcsa_protocol::JavaVersion, port: u16) {
         _=shutdown.changed()=>break,
     }}
     kick_everyone(&shared).await;tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    if persistent {
+        shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap().save_all();
+        println!("MCSA persistence probe saved world");
+    }
     tasks.abort_all();
 }

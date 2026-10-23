@@ -35,3 +35,21 @@ Earlier failed artifacts remain intact. New intermediate failures are retained t
 The private test fixture can now select the actual primary26.3 catalog and admit a777 partner without changing production admission. The776 chunk path receives the canonical content codec explicitly. Health history retains20→19 even if a later sample regenerates; raw chest window/cursor responses and sent clicks/close packets are recorded. All temporary fixture servers shut down by stdin EOF with exit0; their worlds were removed. No new official-server run, commit, push or25565 listener.
 
 Verification:2910 Rust tests passed (2907 core +3 startup;82 ignored),203 protocol tests (5 ignored),216 Python tests; Clippy `--release --all-targets -- -D warnings` clean. Release build and all four final public rejection cells are recorded in `followup-verification.json`; no full scenario is inferred from its successful individual checks.
+
+## Mining, chest-area relog and disk-backed restart — all admission still closed
+
+`official-actions-776/` retains the single official26.2 run (verified opaque JAR, Java25, copied temporary folder, stdin=/dev/null, ports26188/26189, stopped by PID, exit143). Start0/finish2 produced the authored stone→air update; candidate1 did not break it and candidate3 dropped the held tool. A new login received chest type1 with NBT End. The light observer then rejected that chest-bearing chunk: **the overall run remains failed**, and was not repeated. `test_step1_actions_776.py` checks the raw observations independently; the corrected runner is retained for future use.
+
+The private776 adapter now maps only observed mining0/2 and chest type1 with empty network NBT. Other776 actions, block-entity types and nonempty data remain denied. Mining effects pass the existing typed world-event translator. Production admission and primary gameplay rules are unchanged.
+
+| Client / primary | New trace | Result |
+|---|---|---|
+| 776 / 26.1.2 | `mining-chest-restart-776-primary775/` | 11/11 PASS |
+| 776 / 26.3 | `mining-chest-restart-776-primary777/` | 11/11 PASS |
+| 774 / both | No full Play adapter or gameplay/restart/authentication trace | CLOSED |
+
+Both successful traces cover mixed777 player packets/PvP in both directions, placement/consumption, mining to air with one cobblestone and pickaxe damage1, death/respawn, inventory transfers, chest close/reopen/withdraw, relog next to the chest, dynamic light14→0 and a full process restart. The optional fixture uses disk-backed Overworld storage; after restart the client reads the chest and withdraws the same3diamonds. Initial and final fixture processes exit0; temporary worlds are removed, and file hashes remain in each report. Nether/End remain in memory and are not claimed as persistence evidence.
+
+**No pair has passed its full checklist.** 776 dimensions/recipes, all entity/component/block-entity layouts and authentication are incomplete. The private776 fixture explicitly refuses online-mode/password authentication; those guards were not bypassed. 774 still lacks full Play codecs, dynamic registries, gameplay, restart and authentication proof on either primary. All four public cells keep the existing Russian refusal. No commit/push or25565 listener.
+
+Final verification:2910 Rust tests (82 ignored),205 protocol tests (5 ignored),218 Python tests; Clippy `--release --all-targets -- -D warnings` and release build PASS. `admission-mining-chest.json` records8/8 fresh Status/rejection checks with the final production binary. Counts, hashes, logs, all four closed cells and retained failures: `mining-chest-verification.json` / `mining-chest-verification/`.

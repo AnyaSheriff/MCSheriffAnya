@@ -98,10 +98,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('test-binary', 'protocol', 'native-protocol', 'cache', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--scenario', choices=('all', 'lifecycle', 'relog-light', 'mining-denial'), default='all')
+    parser.add_argument('--scenario', choices=('all', 'lifecycle', 'relog-light'), default='all')
     parser.add_argument('--primary', type=int, choices=(775,777), default=775)
     parser.add_argument('--peer', type=int, choices=(775,777), default=775)
     parser.add_argument('--peer-protocol', type=Path)
+    parser.add_argument('--restart', action='store_true')
     args = parser.parse_args()
     assert not args.output.exists(), 'preserve earlier evidence'
     assert hashlib.sha256(args.protocol.read_bytes()).hexdigest() == PROTOCOL_SHA
@@ -134,18 +135,24 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mcsa-step1-gameplay-') as directory:
         root = Path(directory)
         (root / 'mcsa-gameplay-probe.marker').touch()
+        if args.restart:
+            (root / 'mcsa-persistence-probe.marker').touch()
         if args.primary == 777:
             (root / 'mcsa-catalog-preview263.marker').touch()
         test = 'serve_java_26_2_primary_26_3_probe' if args.primary == 777 else 'serve_java_26_2_probe'
         with (args.output / 'server.log').open('w') as log:
             try:
-                server = subprocess.Popen([str(args.test_binary.resolve()), '--ignored', '--exact',
-                    'gameplay_probe::' + test, '--nocapture'], cwd=root,
-                    stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True, start_new_session=True)
-                deadline = time.monotonic() + 30
-                while 'MCSA gameplay probe ready' not in (args.output / 'server.log').read_text():
-                    assert server.poll() is None and time.monotonic() < deadline, 'startup timeout'
-                    time.sleep(.1)
+                def start_server():
+                    offset = len((args.output / 'server.log').read_text())
+                    process = subprocess.Popen([str(args.test_binary.resolve()), '--ignored', '--exact',
+                        'gameplay_probe::' + test, '--nocapture'], cwd=root,
+                        stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+                    deadline = time.monotonic() + 30
+                    while 'MCSA gameplay probe ready' not in (args.output / 'server.log').read_text()[offset:]:
+                        assert process.poll() is None and time.monotonic() < deadline, 'startup timeout'
+                        time.sleep(.1)
+                    return process
+                server = start_server()
 
                 def login(name, version):
                     probe = connect(PORT, protocols[version],
@@ -183,13 +190,6 @@ def main():
                              'gamemode survival McsaProbe', 'clear McsaProbe', 'gamerule naturalRegeneration false']:
                     command(text)
                 client.grounded_fixture = True
-                if args.scenario == 'mining-denial':
-                    command('setblock 2 65 0 stone')
-                    # [проверить] Семантика enum776 не доказана: записываем отказ,
-                    # не выдавая отправку неподтверждённого нуля за успешную добычу.
-                    client.send('block_dig', varint(0) + pack_position((2, 65, 0)) + bytes([1, 1]))
-                    client.pump(5.)
-                    raise AssertionError('unverified776 mining action unexpectedly accepted')
                 if args.scenario == 'all':
                     peer = login('McsaPeer', args.peer)
                     command('tp McsaPeer 0.5 65 1.5')
@@ -221,6 +221,21 @@ def main():
                     assert client.target_updates[-1]['state'] == stone_state, client.target_updates
                     assert client.inventory.get(36) == {'item': items['stone'], 'count': 1}, client.inventory
                     report['checks'].append('survival-placement-state-and-consumption')
+                    command('clear McsaProbe')
+                    command('give McsaProbe iron_pickaxe')
+                    command('setblock 2 65 0 stone')
+                    start = len(client.target_updates)
+                    event_start = len(client.events)
+                    client.send('block_dig', varint(0) + pack_position((2, 65, 0)) + b'\x01' + varint(21))
+                    pump(1.5)
+                    client.send('block_dig', varint(2) + pack_position((2, 65, 0)) + b'\x01' + varint(22))
+                    pump(1.)
+                    assert any(v['state'] == 0 for v in client.target_updates[start:]), client.target_updates[start:]
+                    assert client.inventory.get(36) == {'item': items['iron_pickaxe'], 'count': 1, 'damage': 1}, client.inventory
+                    drops = {e['entity']: e['slot'] for e in client.events[event_start:] if e['name'] == 'entity_metadata' and e.get('slot')}
+                    assert list(drops.values()) == [{'item': items['cobblestone'], 'count': 1}], drops
+                    report['mining_drops'] = drops
+                    report['checks'].append('mining-start0-finish2-air-cobblestone-drop-tool-damage')
                     before = len(client.acks)
                     command('kill McsaProbe')
                     assert client.health == 0 and 'death_combat_event' in client.seen
@@ -282,6 +297,42 @@ def main():
                 pump(1.)
                 assert any(v['source_packet'] == 'update_light' and v['torch_cell_level'] == 0 for v in client.lights[start:])
                 report['checks'].append('dynamic-light-update-torch14-removal0-masks-arrays')
+                if args.restart:
+                    assert args.scenario == 'all'
+                    client.place((2, 65, 0), 1, (.5, .5, .5))
+                    client.pump(5, lambda _: client.window is not None and len(client.slots) == 63)
+                    window = client.window
+                    # Три алмаза остаются в сундуке через полный перезапуск процесса.
+                    click(55)
+                    click(0)
+                    assert client.slots[0] == {'item': items['diamond'], 'count': 3}
+                    client.send('close_window', varint(window))
+                    pump(.5)
+                    for c in clients:
+                        c.sock.close()
+                    time.sleep(1.)
+                    report['first_shutdown'] = stop_server(server)
+                    report['first_server_exit'] = server.returncode
+                    assert server.returncode == 0
+                    assert 'MCSA persistence probe saved world' in (args.output / 'server.log').read_text()
+                    saved = sorted(p for p in (root / 'world').rglob('*') if p.is_file())
+                    report['saved_files'] = [{'path': str(p.relative_to(root)), 'bytes': p.stat().st_size,
+                                              'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in saved]
+                    server = start_server()
+                    peer = None
+                    client = login('McsaProbe', 776)
+                    assert client.inventory.get(37) is None, client.inventory
+                    client.window = None
+                    client.place((2, 65, 0), 1, (.5, .5, .5))
+                    client.pump(5, lambda _: client.window is not None and len(client.slots) == 63)
+                    assert client.slots[0] == {'item': items['diamond'], 'count': 3}, client.slots
+                    window = client.window
+                    click(0)
+                    click(55)
+                    client.send('close_window', varint(window))
+                    pump(.5)
+                    assert client.inventory.get(37) == {'item': items['diamond'], 'count': 3}, client.inventory
+                    report['checks'].append('process-restart-player-and-chest-world-persistence')
                 report['status'] = 'pass'
             except BaseException as error:
                 report['error'] = f'{type(error).__name__}: {error}'

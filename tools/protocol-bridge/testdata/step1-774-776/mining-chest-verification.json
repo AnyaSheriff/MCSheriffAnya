@@ -1,0 +1,141 @@
+{
+  "timestamp_utc": "2026-10-23T12:35:03.006944+00:00",
+  "full_task_complete": false,
+  "public_admission": {
+    "775": {
+      "774": "closed",
+      "776": "closed"
+    },
+    "777": {
+      "774": "closed",
+      "776": "closed"
+    }
+  },
+  "blockers": {
+    "774": [
+      "full Play codecs/dynamic registries missing",
+      "gameplay/restart/authentication unproven on both primaries"
+    ],
+    "776": [
+      "dimensions/recipes unproven",
+      "incomplete entity/item/block-entity payloads and player actions",
+      "AuthMe/online-mode unproven; private fixture refuses authentication"
+    ]
+  },
+  "checks": {
+    "rust": {
+      "passed": 2910,
+      "failed": 0,
+      "ignored": 82
+    },
+    "protocol": {
+      "passed": 205,
+      "failed": 0,
+      "ignored": 5
+    },
+    "python": {
+      "passed": 218
+    },
+    "clippy": "pass",
+    "build": "pass",
+    "public_rejection": {
+      "passed": 8
+    }
+  },
+  "scenarios": {
+    "mining-chest-restart-776-primary775": {
+      "status": "pass",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "mining-start0-finish2-air-cobblestone-drop-tool-damage",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close",
+        "relogin-preserves-authoritative-inventory",
+        "dynamic-light-update-torch14-removal0-masks-arrays",
+        "process-restart-player-and-chest-world-persistence"
+      ],
+      "binary_sha256": "2b8ed30e79ecd3e736fba2e4fba9cd24876c61331d65d96a20815dac96672995",
+      "runner_sha256": "9da019aea769cb6b18463abae7a9479be8bcc05c994a1af134870d908ad712af",
+      "first_server_exit": 0,
+      "server_exit": 0
+    },
+    "mining-chest-restart-776-primary777": {
+      "status": "pass",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "mining-start0-finish2-air-cobblestone-drop-tool-damage",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close",
+        "relogin-preserves-authoritative-inventory",
+        "dynamic-light-update-torch14-removal0-masks-arrays",
+        "process-restart-player-and-chest-world-persistence"
+      ],
+      "binary_sha256": "2b8ed30e79ecd3e736fba2e4fba9cd24876c61331d65d96a20815dac96672995",
+      "runner_sha256": "9da019aea769cb6b18463abae7a9479be8bcc05c994a1af134870d908ad712af",
+      "first_server_exit": 0,
+      "server_exit": 0
+    }
+  },
+  "sha256": {
+    "official-actions-776/result.json": "ab0cad7b30979ae866c4709eed67b80820d4fbcf14d7870d6e1ab29d049d2939",
+    "official-actions-776/server.log": "797504accf664bb74046684c39e583bae063129acbbc366c25d647295f12f778",
+    "mining-chest-restart-776-primary775/result.json": "090c1f62ae8b0a650f63fffdfd2e1d2820f70f86c9562db6d6f1c908b14be497",
+    "mining-chest-restart-776-primary775/server.log": "5f6e3042bda319868078d0b391dbe6314df16e6e476c233d3abb46bb354a20db",
+    "mining-chest-restart-776-primary777/result.json": "3083158bd78d1a764a638b39d28c377355f383e36c7495334ae48285076c29b5",
+    "mining-chest-restart-776-primary777/server.log": "c56b631c6b0da128ae086b0fd1f5754811d9992790d55fb8c531810586b83864",
+    "mining-chest-verification/build.log": "25b68daa7231ced655f5112ba9068882801b6df0014d35007de5fa0794e8c2b0",
+    "mining-chest-verification/clippy.log": "946466edbff0c38b92d86f630598cbe2f3fe06376c854aa0eb8a3170a6b25324",
+    "mining-chest-verification/protocol-before-compact-assertion-edit.log": "70adfba04578985dc8f588ce2707f02ffe0746d37486df4602178762980fa8a1",
+    "mining-chest-verification/protocol-before-expectation-update.log": "fe7ec2e9e46817a84a8c08c4d46d99f90bd3d8dbff5a2b42c5233ca56bec7ef1",
+    "mining-chest-verification/protocol.log": "0188782d3c72ca33b80c6964fb89e76ece15b7dfabbbe8cfba12ffd9d4aa121a",
+    "mining-chest-verification/python.log": "c90c3631f95b6fa8b8a4ce2cd4a6465185f5e85db07dd44825f6aac7ac484e83",
+    "mining-chest-verification/rust.log": "b718ee8d828e477673da6bf311328bf5636d1d905b22c668935dcac6f30e3602",
+    "admission-mining-chest.json": "98314c37367d4d2532cef377c7e5616426bee7b0a24971f57a504efba6643872"
+  },
+  "source_sha256": {
+    "src/network/gameplay_probe.rs": "a24e97ce7224fc580fc07802e34ca52e1f980f9752016716a7d3fad6ecffdcca",
+    "tools/protocol-bridge/src/wire.rs": "1308abb620aaa3192f5ae1914eb839dbb62dfcdca847cd157c4a6e76db3b1e8a",
+    "tools/protocol-bridge/src/chunk.rs": "a5807048d76d7ba7b37718bb2597af29576e80762472c850c608b9ef3fde41c0",
+    "tools/protocol-bridge/src/block_entities.rs": "e1ada5cebdfd258d449038e1a803eb321477280f7948138d690ef9487ffb7b2f",
+    "tools/protocol-bridge/src/probe_776_tests.rs": "c6332181737463dd76c73ad70ecbf751687cce320a038688d0289f9176dad250",
+    "tools/protocol-bridge/src/initial_play_776_tests.rs": "29dce994ebc0ffc7bf5af6221e1838c4dd23ea80d72df6a534cfafa5df3cb1e4",
+    "tools/protocol-bridge/probe_step1_gameplay_776.py": "42e3fd3e98248881a0600a3e2280e98ca839b6fa30c73b09927d4978a6ac0bd9",
+    "tools/protocol-bridge/probe_step1_actions_776.py": "58e49b4dd319f102ce66b3282558a90d7031f0b6351252090c23b6dd115091ff",
+    "tools/protocol-bridge/test_step1_actions_776.py": "929d985aabf8c0da9d426f8b4723fa758719a38cace929b8c68d19ac823e3a5e"
+  },
+  "committed": false,
+  "production_binary_sha256": "777d347064f5bbdead1585bd0c11e0e605abe193f13a23833b33991720d42398",
+  "ports_verified_closed": [
+    26028,
+    26188,
+    26189,
+    26192,
+    26193
+  ],
+  "official_observation": {
+    "runs": 1,
+    "version": 776,
+    "overall_status": "failed observer",
+    "proven": [
+      "start0/finish2 stone-to-air",
+      "relogged chest type1 NBT End"
+    ],
+    "not_proven": [
+      "other mining actions",
+      "other block entities"
+    ]
+  },
+  "notes": [
+    "Earlier failures are retained, including the official observer failure and obsolete denial-test failures.",
+    "Final runner only removes the obsolete mining-denial scenario after the two successful all/restart recordings; each trace keeps its original runner SHA.",
+    "No full774 support or full-checklist776 readiness is claimed. Nether/End storage in the fixture remains in memory."
+  ]
+}

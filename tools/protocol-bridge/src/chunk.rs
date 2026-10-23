@@ -81,9 +81,6 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
     let size = input.count(MAX_BYTES)?;
     let mut sections = chunk_sections::decode_with_content(from, input.take(size)?, context.sections, context.shared_biome_count, content.packet_space(from), content).map_err(Error::Sections)?;
     let count = input.count(context.sections * 4096)?;
-    if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2) && count != 0 {
-        return Err(Error::Entity(block_entities::Error::UnsupportedVersion));
-    }
     if count > input.0.len() / 5 { return Err(Error::Truncated); }
     let mut entities = BTreeMap::new();
     let mut places = BTreeSet::new();

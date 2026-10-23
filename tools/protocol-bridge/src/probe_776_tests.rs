@@ -78,8 +78,8 @@ fn gameplay_776_actions_are_bounded_and_do_not_enable_unknown_dig_enums() {
         let mut tail=body;tail.push(0);assert!(serverbound(&tail,Context::default()).is_err());
     }
     assert!(serverbound(&[0x0c,3],Context::default()).is_err());
-    // [проверить] Номера действий копания776 не следуют из VarInt в JSON.
-    assert!(serverbound(&[0x29,0,0,0,0,0,0,0,0,0,1,1],Context::default()).is_err());
+    // Ненаблюдённое действие1 остаётся закрыто; начало0/конец2 сняты отдельно.
+    assert!(serverbound(&[0x29,1,0,0,0,0,0,0,0,0,1,1],Context::default()).is_err());
 }
 
 #[test]
@@ -100,4 +100,22 @@ fn gameplay_776_player_spawn_movement_and_removal_keep_tracking_consistent() {
     clientbound(&mut tracker,&[0x4d,1,7],Context::default()).unwrap();
     assert!(clientbound(&mut tracker,&meta,Context::default()).is_err());
     assert!(clientbound(&mut tracker,&movement,Context::default()).is_err());
+}
+
+#[test]
+fn observed_776_mining_actions_preserve_position_sequence_and_reject_unobserved_actions() {
+    for action in 0..=8 {
+        let mut body = vec![0x28, action];
+        // Номер пакета берётся по закреплённой таблице, не по enum действия.
+        let packet = (0..100).find(|&id| crate::packet_layouts::packet_info(RegistryKind::PlayServerbound, MID, OLD, id).is_some_and(|p| p.name == "block_dig")).unwrap();
+        body[0] = packet as u8;
+        body.extend([0; 8]); body.extend([1, 129, 1]);
+        let result = serverbound(&body, Context::default());
+        if matches!(action, 0 | 2) {
+            let result = result.unwrap();
+            assert_eq!(&result[1..], &body[1..]);
+            for end in 1..body.len() { assert!(serverbound(&body[..end], Context::default()).is_err()); }
+            body.push(0); assert!(serverbound(&body, Context::default()).is_err());
+        } else { assert!(result.is_err()); }
+    }
 }
