@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 93, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 88, in main
+    text,report=generate(docs,baseline)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 49, in generate
+    name=replacement(r['name']);assert name in lowitems,(r['name'],name)
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 37, in replacement
+    if name.endswith('_spear'):return replacement(name.replace('_spear','_sword'))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 45, in replacement
+    raise AssertionError(name)
+AssertionError: wooden_sword

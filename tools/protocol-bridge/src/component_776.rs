@@ -111,5 +111,5 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
 }
 
 pub(crate) fn supported_pair(from:JavaVersion,to:JavaVersion)->bool{
-    matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+    matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
 }

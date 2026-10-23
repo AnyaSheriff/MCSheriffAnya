@@ -56,7 +56,7 @@ pub(super) fn sherds(field:Field<'_>)->Result<bool,Error>{
 }
 fn table(version:JavaVersion)->Result<&'static [&'static str],Error>{
     match version {
-        JavaVersion::V1_21_9=>Ok(crate::generated_payload_773::ITEM_NAMES),JavaVersion::V1_21_11=>Ok(crate::generated_payload_774::ITEM_NAMES),JavaVersion::V26_1_2=>Ok(names::ITEM_NAMES_775),JavaVersion::V26_2=>Ok(names::ITEM_NAMES_776),
+        JavaVersion::V1_21_8=>Ok(crate::generated_payload_772::ITEM_NAMES),JavaVersion::V1_21_9=>Ok(crate::generated_payload_773::ITEM_NAMES),JavaVersion::V1_21_11=>Ok(crate::generated_payload_774::ITEM_NAMES),JavaVersion::V26_1_2=>Ok(names::ITEM_NAMES_775),JavaVersion::V26_2=>Ok(names::ITEM_NAMES_776),
         JavaVersion::V26_3=>Ok(names::ITEM_NAMES_777),_=>Err(Error::UnsupportedVersion),
     }
 }

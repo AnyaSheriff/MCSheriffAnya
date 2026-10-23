@@ -86,7 +86,7 @@ fn unsupported_content_and_routes_still_fail_closed() {
     for primary in [JavaVersion::V26_1_2,JavaVersion::V26_3] {assert!(crate::Negotiated::native_only(773,primary).is_err());}
     for from in [JavaVersion::V1_21_5,JavaVersion::V1_21_6,JavaVersion::V1_21_8] {
         assert!(translate_play(Direction::Clientbound,from,&[0],Context::default()).is_err());
-        assert!(items::decode(from,&[0],false,Default::default()).is_err());
+        if from!=JavaVersion::V1_21_8 {assert!(items::decode(from,&[0],false,Default::default()).is_err());}
     }
 }
 #[test]
@@ -146,7 +146,7 @@ fn malformed_slots_and_unsupported_routes_are_refused() {
     assert!(translate_play(Direction::Clientbound,LOWER,&frame,context).is_err());
     for step in crate::adjacent::STEPS {
         let result=step.translate_play(Direction::Clientbound,LOWER,&frame,Context::default());
-        assert_eq!(result.is_ok(),step==crate::adjacent::STEPS[0]);
+        assert_eq!(result.is_ok(),step==crate::adjacent::STEPS[0] || step==crate::adjacent::STEPS[1]);
     }
 }
 #[test]

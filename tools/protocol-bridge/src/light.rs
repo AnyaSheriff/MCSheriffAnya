@@ -26,9 +26,9 @@ enum MaskLayout { Longs, Bytes }
 fn mask_layout(version: JavaVersion) -> Result<MaskLayout, Error> {
     // 776: ordinary-payloads-26.2.json, два собственных MapChunk с факелом.
     match version {
-        JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(MaskLayout::Longs),
+        JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(MaskLayout::Longs),
         JavaVersion::V26_3 => Ok(MaskLayout::Bytes),
-        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
+        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
     }
 }
 fn trim(mask: &mut Vec<u8>) { while mask.last() == Some(&0) { mask.pop(); } }

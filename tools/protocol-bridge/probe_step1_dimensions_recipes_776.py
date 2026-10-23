@@ -36,7 +36,7 @@ def idset(d):
 def display(d, depth=0, version=776):
     assert depth < 32
     kind = uint(d)
-    if version in (773,774): kind=(0,1,4,5,6,8,9,10)[kind]
+    if version in (772,773,774): kind=(0,1,4,5,6,8,9,10)[kind]
     r = {'type': kind}
     if kind in (0, 1):
         pass
@@ -46,11 +46,11 @@ def display(d, depth=0, version=776):
         r['item'] = uint(d)
     elif kind == 5:
         item, count = uint(d), uint(d)
-        if version in (773,774): item,count=count,item
+        if version in (772,773,774): item,count=count,item
         assert uint(d) == uint(d) == 0
         r['stack'] = {'item': item, 'count': count}
     elif kind == 6:
-        r['set'] = {'tag':read_string(d)} if version in (773,774) else idset(d)
+        r['set'] = {'tag':read_string(d)} if version in (772,773,774) else idset(d)
     elif kind in (7, 9):
         r['parts'] = [display(d, depth + 1, version) for _ in range(2)]
     elif kind == 10:
@@ -128,10 +128,10 @@ def main():
     p.add_argument('--primary', type=int, choices=(775, 777), required=True)
     p.add_argument('--password', action='store_true')
     p.add_argument('--end', action='store_true', help='Дополнительная проба портала Края; не новое условие допуска')
-    p.add_argument('--client',type=int,choices=(773,774,776),default=776)
+    p.add_argument('--client',type=int,choices=(772,773,774,776),default=776)
     a = p.parse_args()
     assert not (a.end and a.password)
-    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if a.client==773 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
+    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if a.client==772 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if a.client==773 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocol = json.loads(a.protocol.read_text())
     items = {v['name']: v['id'] for v in table(a.cache, 'items')}
     entity = next(v['id'] for v in table(a.cache, 'entities') if v['name'] == 'item')
@@ -149,7 +149,7 @@ def main():
             (root / 'mcsa-catalog-preview263.marker').touch()
         if a.password:
             (root / 'mcsa-password-probe.marker').touch()
-        test = 'serve_java_1_21_9_probe' if a.client==773 else 'serve_java_1_21_11_probe' if a.client in (773,774) else ('serve_java_26_2_primary_26_3_probe' if a.primary == 777 else 'serve_java_26_2_probe')
+        test = 'serve_java_1_21_8_probe' if a.client==772 else 'serve_java_1_21_9_probe' if a.client==773 else 'serve_java_1_21_11_probe' if a.client in (772,773,774) else ('serve_java_26_2_primary_26_3_probe' if a.primary == 777 else 'serve_java_26_2_probe')
         log_path = a.output / 'server.log'
         with log_path.open('w') as log:
             try:

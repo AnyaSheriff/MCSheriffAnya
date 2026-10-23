@@ -255,8 +255,12 @@ fn export_live_774_payloads() { export_live_payloads(JavaVersion::V1_21_11); }
 #[ignore="экспорт payload773 для непрозрачного клиента"]
 fn export_live_773_payloads() {export_live_payloads(JavaVersion::V1_21_9);}
 
+#[test]
+#[ignore="экспорт payload772 для непрозрачного клиента"]
+fn export_live_772_payloads() {export_live_payloads(JavaVersion::V1_21_8);}
+
 fn export_live_payloads(target: JavaVersion) {
-    let adapter = if target==JavaVersion::V1_21_9 {crate::client_773::clientbound} else if target==JavaVersion::V1_21_11 {crate::client_774::clientbound} else {crate::probe_776::clientbound};
+    let adapter = if target==JavaVersion::V1_21_8 {crate::client_772::clientbound} else if target==JavaVersion::V1_21_9 {crate::client_773::clientbound} else if target==JavaVersion::V1_21_11 {crate::client_774::clientbound} else {crate::probe_776::clientbound};
     let packet_id=|old:u32|crate::packet_layouts::packet_info(crate::ids::RegistryKind::PlayClientbound,OLD,target,old as usize).unwrap().target_id.unwrap() as u8;
     let mut packets=Vec::new();
     let mut add=|label:String,body:Vec<u8>| {
@@ -316,7 +320,8 @@ fn export_live_payloads(target: JavaVersion) {
         add(format!("primary-component:{kind}"),body);
     }
     let mut statue=Vec::new();wire::uint(&mut statue,packet);statue.extend((((-16i64 as u64&0x3ffffff)<<38)|((-13i64 as u64&0x3ffffff)<<12)|64).to_be_bytes());
-    statue.extend([48,10,0]);add("block-entity:copper_golem_statue".into(),cb(OLD,target,&statue,Context::default()).unwrap());
+    statue.extend([48,10,0]);let context=Context{block_entity_view:(target==JavaVersion::V1_21_8).then(||crate::generated_payload_772::REMOVED_BE_VIEWS.iter().find(|r|r.0==48).unwrap().1),..Default::default()};
+    add("block-entity:copper_golem_statue".into(),cb(OLD,target,&statue,context).unwrap());
     let entities:serde_json::Value=serde_json::from_str(include_str!("../testdata/entity-observations.json")).unwrap();
     let context=Context{metadata_registry_counts:&[("minecraft:painting_variant",51),("minecraft:wolf_variant",9)],..Default::default()};
     let mut tracker=Tracker::default();

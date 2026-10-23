@@ -18,6 +18,7 @@ pub const STEPS: [Step; 4] = [
 impl Step {
     /// Первый Play-шаг773↔774; остальные требуют собственных codec.
     pub fn translate_play(self, direction: Direction, from: JavaVersion, body: &[u8], context: wire::Context) -> Result<Vec<u8>, wire::Error> {
+        if self == STEPS[1] {return crate::client_772::translate_play(direction,from,body,context);}
         if self != STEPS[0] { return Err(wire::Error::UnsupportedVersion(self.older)); }
         crate::client_773::translate_play(direction, from, body, context)
     }

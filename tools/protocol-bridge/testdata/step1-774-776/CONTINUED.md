@@ -1,6 +1,6 @@
 # Step 1 continuation —776 admitted,774 closed
 
-Latest continuation: [770–773 chain foundations and774/776 regression](../client-chain-770-773/CONTINUED.md). Both774/776 remain open;770–773 remain closed on both primaries. The historical sections below retain their original admission state and evidence.
+Latest continuation: [772 admission and773/774/776 regression](../client-chain-770-773/CONTINUED.md#772-admission-and-773774776-regression).772/773/774/776 are open;770–771 remain closed on both primaries. The historical sections below retain their original admission state and evidence.
 
 The merged baseline initially failed (2903 passed, one startup-lock failure, 81 ignored).
 StartupGuard now explicitly unlocks flock before closing; a duplicate-descriptor regression covers inheritance between fork and exec.

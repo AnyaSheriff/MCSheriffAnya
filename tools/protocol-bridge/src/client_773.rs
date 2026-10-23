@@ -28,6 +28,10 @@ pub fn translate_play(direction: Direction, from: JavaVersion, body: &[u8], cont
         JavaVersion::V1_21_11 => JavaVersion::V1_21_9,
         _ => return Err(Error::UnsupportedVersion(from)),
     };
+    translate_selected(direction,from,to,body,context)
+}
+
+pub(crate) fn translate_selected(direction:Direction,from:JavaVersion,to:JavaVersion,body:&[u8],context:Context)->Result<Vec<u8>,Error> {
     if context.items.content.is_preview() { return Err(Error::PayloadUnavailable("773 adjacent wire content only")); }
     if body.len() > 8 * 1024 * 1024 { return Err(Error::TooLarge); }
     let mut input = Cursor::new(body);

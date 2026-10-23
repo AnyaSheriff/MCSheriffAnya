@@ -1,0 +1,607 @@
+{
+  "primary": 775,
+  "client": 776,
+  "public_admission": false,
+  "checks": [
+    "password-clears-dialog-before-finish",
+    "login-configuration-play",
+    "password-register-before-player-created",
+    "password-clears-dialog-before-finish",
+    "password-relog-wrong-rejected-correct-enters"
+  ],
+  "commands": [],
+  "status": "pass",
+  "runner_sha256": "813bcaafbdfeed68af8ef46391032fa96c6750f229262d48c8ee406b1ae78fdf",
+  "binary_sha256": "c0deb35b38356fa681d21a366f30c53325b1aba9b6d416ac0ec3feb9b04431a4",
+  "auth_prompts": [
+    {
+      "registered": false,
+      "sha256": "a25fd27909dee17b1edbaffa709c6f837b2b5d01bcc4a5282c54c62c9ea54290"
+    },
+    {
+      "registered": true,
+      "sha256": "75cbcf82ce6a9b09161fc8e7e41cf87a205827dc4e40f210b563d28ad6ea5d7a"
+    },
+    {
+      "registered": true,
+      "sha256": "afc4487b3e81fdf0b6acb64ed04d1b42aeaf800699c9bff074755e778fe7e0c4"
+    }
+  ],
+  "packets": [
+    {
+      "name": "login",
+      "bytes": 109,
+      "sha256": "950761c8de55c7837cf82ea4879717318d65f0aa3f2bf25f290f2fbc6f016a40",
+      "hex": "000000020003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64000000000000000001ff000000003f0000"
+    },
+    {
+      "name": "abilities",
+      "bytes": 9,
+      "sha256": "1e1adbe7f73771329075036810af5f7ee8585b85cb36d198a38da58c20eb1922"
+    },
+    {
+      "name": "position",
+      "bytes": 61,
+      "sha256": "13c4dbcb5c42ee6d192f861a0cb521adf26ebb93aa1d8601909b6e6f37a7eaac",
+      "hex": "013fe000000000000040500000000000003fe00000000000000000000000000000000000000000000000000000000000000000000041f0000000000000"
+    },
+    {
+      "name": "declare_commands",
+      "bytes": 3126,
+      "sha256": "6a73d685a6657b4bedbe3ecaa186955c1ceecaee7256fd46f86e57dc18388101"
+    },
+    {
+      "name": "declare_recipes",
+      "bytes": 2134,
+      "sha256": "b11e5183dccb6d33bd6121760903318885045627e6b1e74b9a73de466250a2e2"
+    },
+    {
+      "name": "player_info",
+      "bytes": 31,
+      "sha256": "ec69d69d87f18919bcbf9147f1cd39b11c19a829e743045b13fb8c9fc68ab2b3"
+    },
+    {
+      "name": "entity_metadata",
+      "bytes": 14,
+      "sha256": "2454e2938dc6711c0b27ba1e8b3bd9d54a3d5e8f4a3c0f967d0d3b7fab9f313d",
+      "hex": "020000000614000f2a0110007fff"
+    },
+    {
+      "name": "initialize_world_border",
+      "bytes": 40,
+      "sha256": "e286f6d4e6d5940e349ab3c901cb834c82bd1cbf98906b7c4b75568271567b94"
+    },
+    {
+      "name": "set_ticking_state",
+      "bytes": 5,
+      "sha256": "9e68b6b30dc5915fa29c383f07995a7320faf2600e65a4e48fb967156a655c96"
+    },
+    {
+      "name": "step_tick",
+      "bytes": 1,
+      "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "name": "spawn_position",
+      "bytes": 36,
+      "sha256": "bd659383ad8797d06013a280c860cba45666eda5679e055cce7061058d47fd0d"
+    },
+    {
+      "name": "update_health",
+      "bytes": 9,
+      "sha256": "cd55b3493969a97c399dd2c5ad21ae111ea99c8e767b6f170b4d1cbd90001a03",
+      "hex": "41a000001441a00000"
+    },
+    {
+      "name": "game_state_change",
+      "bytes": 5,
+      "sha256": "3c8f1b104592e3ebb2b2602b3979a27e77f586fb4c655369fa4eccb6d545a0f8"
+    },
+    {
+      "name": "update_time",
+      "bytes": 19,
+      "sha256": "7b82bb7dc3f5250e390c6735e65124dd2ff15b80c65f8091e4e4f1bc2eaecfef"
+    },
+    {
+      "name": "update_view_position",
+      "bytes": 2,
+      "sha256": "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "252069a216bcd1f07e2418ce4d6c1dc74e7dffa3a9d7061cd03a0b7a1b053fe7"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "dad091fe740fc6ef9e83d875473ec884a041e294afdc25be38c3c7c2a0a4dcbc"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "cf719de29b22d00aa452e5ce684a4acb334b2833aab13c0e313b07811e1b98bd"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "e17b91b35cdbc09b7825557bfd74d276707db173dce1b89d30fb6f67e49f7103"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "99ea9c4a0379883b31ceefd72c4c977ac1f742e419b269813c3de3d3c3a9be9b"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "6690a1c0372fceb44090a9bc74551d1ea7572ebb6676757dd0a91c1369223eaf"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "e4a2d3b64f96984936b94d13e7027cf7b8fbcfd4f4b7a9897a180b97baa946c9"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "dc6bba3d283b3b804a36ce0a776235cb8405718b6d66e0b225e83c47917e6e4e"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "154354d007d39b80975ba31600e04179be7a1dd89c76035a322e6fe8dcfad1f1"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "e039e3d0914765041a147cd066d6c6b57d79128f59bae2e950fa9535ab1d58d9"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "3f03bf047f8384d33d053d69bea570ef9eea76c7f30b7d24814aae46490d7f9d"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "6a5177790b2ac073953817a3dc8eb22989fd810248e16bc6878059c1dd2b689c"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "7ed2085fcc7b8ddfdd7c78bd3ac04e48e1be25da45a830f38fbca7c6e1098095"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "7c9397f8b7a5149e09b2b8d80ff9bb2efdc074abde5089fe40b8cb41fe86afc2"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "549fa022865b794d61504df7dd095fb256c95337d164edb233cc28727ff22fd7"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "76c138198278da19f40ea0d70063cbbb932c0a11158f292c09f6b5c061beed3c"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "11da63b94ce6aa6321e67f2a3ad664be7db8ac793c0f88184a91b17e6fa7d447"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "fc3d32a865cf36bf5a3ccc021cec7d8dcb5ce302ef1a179736b35297abd39384"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "bb0526f406dca00482cf7f1c0126744e3a45dc5591df63d0b78965d5f46821c1"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "977e9e85e04fea86d352fbd8344e250559a3544bd51613787278be56dc87fe67"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "78888774f88d97ff8b7d46d72fd2149f66eccb74e9c93fb670b87f9e97c08aa3"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 20734,
+      "sha256": "1745e349a2046819dc1b1f7fcaed1d96eb3bc3fd0048efd5d6c88d2703a2ea88"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "0b98054059918161ea10d0c0975002732dc631d13bee6810befa216793a34cdf"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "842b4b236e1b1756cbf88f8c8c3d273c2a46e03b69faa77396f804b729312677"
+    },
+    {
+      "name": "map_chunk",
+      "bytes": 16635,
+      "sha256": "184bee8f9de18df93ad26a232836d3abdbb2545b0d469a7999c37c37b681e698"
+    },
+    {
+      "name": "window_items",
+      "bytes": 50,
+      "sha256": "84236afe67418de23b5013b1d9d1981e23bb90e983a79a9ee8f2abc8be51eed0",
+      "hex": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "held_item_slot",
+      "bytes": 1,
+      "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "name": "system_chat",
+      "bytes": 42,
+      "sha256": "bd9113c13f535093e47c0751a8395f2235d0c837b56630a301a6fd79bb312149"
+    },
+    {
+      "name": "entity_update_attributes",
+      "bytes": 113,
+      "sha256": "b58d257d2c230371860f1174a6d9be3a9dfd35695f0d08be8da8c47cff90c137"
+    },
+    {
+      "name": "recipe_book_settings",
+      "bytes": 8,
+      "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    },
+    {
+      "name": "recipe_book_add",
+      "bytes": 178,
+      "sha256": "2e84159d9279a4f1cfa5d7ccd3127a55e24ab1dc07e178ba59b36357ac38e561",
+      "hex": "01ab01010202040a0c043f0440044104420443044404450446044704480449044a0a0c043f0440044104420443044404450446044704480449044a0a0c043f0440044104420443044404450446044704480449044a0a0c043f0440044104420443044404450446044704480449044a05e80201000004e802000301040d3f404142434445464748494a0d3f404142434445464748494a0d3f404142434445464748494a0d3f404142434445464748494a0001"
+    },
+    {
+      "name": "advancements",
+      "bytes": 5,
+      "sha256": "a1cb20470d89874f33383802c72d3c27a0668ebffd81934705ab0cfcbf1a1e3a"
+    },
+    {
+      "name": "update_time",
+      "bytes": 9,
+      "sha256": "7256a91f9d351e6a000ebe92c3a16cc2186916ca61f4f308bf77a062a3121c9b"
+    },
+    {
+      "name": "playerlist_header",
+      "bytes": 126,
+      "sha256": "cd3d895f498586f27d36b272d127a4c2025f61fe1d5428b726b43a515c567207"
+    }
+  ],
+  "books": [
+    {
+      "entries": [
+        {
+          "id": 171,
+          "display": {
+            "type": 1,
+            "width": 2,
+            "height": 2,
+            "ingredients": [
+              {
+                "type": 10,
+                "parts": [
+                  {
+                    "type": 4,
+                    "item": 63
+                  },
+                  {
+                    "type": 4,
+                    "item": 64
+                  },
+                  {
+                    "type": 4,
+                    "item": 65
+                  },
+                  {
+                    "type": 4,
+                    "item": 66
+                  },
+                  {
+                    "type": 4,
+                    "item": 67
+                  },
+                  {
+                    "type": 4,
+                    "item": 68
+                  },
+                  {
+                    "type": 4,
+                    "item": 69
+                  },
+                  {
+                    "type": 4,
+                    "item": 70
+                  },
+                  {
+                    "type": 4,
+                    "item": 71
+                  },
+                  {
+                    "type": 4,
+                    "item": 72
+                  },
+                  {
+                    "type": 4,
+                    "item": 73
+                  },
+                  {
+                    "type": 4,
+                    "item": 74
+                  }
+                ]
+              },
+              {
+                "type": 10,
+                "parts": [
+                  {
+                    "type": 4,
+                    "item": 63
+                  },
+                  {
+                    "type": 4,
+                    "item": 64
+                  },
+                  {
+                    "type": 4,
+                    "item": 65
+                  },
+                  {
+                    "type": 4,
+                    "item": 66
+                  },
+                  {
+                    "type": 4,
+                    "item": 67
+                  },
+                  {
+                    "type": 4,
+                    "item": 68
+                  },
+                  {
+                    "type": 4,
+                    "item": 69
+                  },
+                  {
+                    "type": 4,
+                    "item": 70
+                  },
+                  {
+                    "type": 4,
+                    "item": 71
+                  },
+                  {
+                    "type": 4,
+                    "item": 72
+                  },
+                  {
+                    "type": 4,
+                    "item": 73
+                  },
+                  {
+                    "type": 4,
+                    "item": 74
+                  }
+                ]
+              },
+              {
+                "type": 10,
+                "parts": [
+                  {
+                    "type": 4,
+                    "item": 63
+                  },
+                  {
+                    "type": 4,
+                    "item": 64
+                  },
+                  {
+                    "type": 4,
+                    "item": 65
+                  },
+                  {
+                    "type": 4,
+                    "item": 66
+                  },
+                  {
+                    "type": 4,
+                    "item": 67
+                  },
+                  {
+                    "type": 4,
+                    "item": 68
+                  },
+                  {
+                    "type": 4,
+                    "item": 69
+                  },
+                  {
+                    "type": 4,
+                    "item": 70
+                  },
+                  {
+                    "type": 4,
+                    "item": 71
+                  },
+                  {
+                    "type": 4,
+                    "item": 72
+                  },
+                  {
+                    "type": 4,
+                    "item": 73
+                  },
+                  {
+                    "type": 4,
+                    "item": 74
+                  }
+                ]
+              },
+              {
+                "type": 10,
+                "parts": [
+                  {
+                    "type": 4,
+                    "item": 63
+                  },
+                  {
+                    "type": 4,
+                    "item": 64
+                  },
+                  {
+                    "type": 4,
+                    "item": 65
+                  },
+                  {
+                    "type": 4,
+                    "item": 66
+                  },
+                  {
+                    "type": 4,
+                    "item": 67
+                  },
+                  {
+                    "type": 4,
+                    "item": 68
+                  },
+                  {
+                    "type": 4,
+                    "item": 69
+                  },
+                  {
+                    "type": 4,
+                    "item": 70
+                  },
+                  {
+                    "type": 4,
+                    "item": 71
+                  },
+                  {
+                    "type": 4,
+                    "item": 72
+                  },
+                  {
+                    "type": 4,
+                    "item": 73
+                  },
+                  {
+                    "type": 4,
+                    "item": 74
+                  }
+                ]
+              }
+            ],
+            "parts": [
+              {
+                "type": 5,
+                "stack": {
+                  "item": 360,
+                  "count": 1
+                }
+              },
+              {
+                "type": 4,
+                "item": 360
+              }
+            ]
+          },
+          "group": 0,
+          "category": 3,
+          "requirements": [
+            {
+              "items": [
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74
+              ]
+            },
+            {
+              "items": [
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74
+              ]
+            },
+            {
+              "items": [
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74
+              ]
+            },
+            {
+              "items": [
+                63,
+                64,
+                65,
+                66,
+                67,
+                68,
+                69,
+                70,
+                71,
+                72,
+                73,
+                74
+              ]
+            }
+          ],
+          "flags": 0
+        }
+      ],
+      "replace": true
+    }
+  ],
+  "ghosts": [],
+  "dimensions": [],
+  "sent": [
+    {
+      "name": "teleport_confirm",
+      "id": 0,
+      "hex": "01"
+    }
+  ],
+  "acks": [
+    1
+  ],
+  "server_exit": 0
+}

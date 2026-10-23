@@ -15,7 +15,17 @@ fn floats(input: &mut Cursor<'_>, out: &mut Vec<u8>, count: usize, double: bool)
 pub(crate) fn particle(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: items::Context) -> Result<(),Error> {
     let source = input.uint()?;
     let kind = ids::translate(RegistryKind::Particle,from,JavaVersion::V26_1_2,source)?;
-    uint(out,ids::translate(RegistryKind::Particle,from,to,source)?);
+    // Явные визуальные виды новых эффектов; [проверить] сходство картинки,
+    // игровые сроки роста/частиц на основном не меняются.
+    let view=if to==JavaVersion::V1_21_8 {crate::generated_payload_772::PARTICLE_VIEWS.iter().find(|r|r.0==kind).map(|r|r.1)}else{None};
+    uint(out,match view {Some(id)=>id,None=>ids::translate(RegistryKind::Particle,from,to,source)?});
+    if matches!(kind,8|16|42|46) && (from==JavaVersion::V1_21_8 || to==JavaVersion::V1_21_8) {
+        if from==JavaVersion::V1_21_8 {return Err(Error::PayloadUnavailable("772 particle parameters absent"));}
+        let mut discarded=Vec::new();
+        if kind!=8 {discarded.extend(input.take(4)?);}
+        if kind!=42 {floats(input,&mut discarded,1,false)?;}
+        return Ok(());
+    }
     match kind {
         1 | 2 | 29 | 111 | 115 => uint(out,context.content.packet_id(RegistryKind::BlockState,from,to,input.uint()?)?),
         14 | 15 => { out.extend(input.take(if kind == 14 {4} else {8})?); floats(input,out,1,false)?; }

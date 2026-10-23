@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 92, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 87, in main
+    text,report=generate(docs,baseline)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 48, in generate
+    name=replacement(r['name']);assert name in lowitems,(r['name'],name)
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/generate_payload_772.py", line 44, in replacement
+    raise AssertionError(name)
+AssertionError: golden_dandelion

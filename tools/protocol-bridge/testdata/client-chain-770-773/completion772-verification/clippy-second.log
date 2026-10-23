@@ -1,0 +1,25 @@
+    Checking idna_adapter v1.2.2
+    Checking tokio-util v0.7.20
+    Checking wasmtime-internal-unwinder v49.0.2
+    Checking cranelift-frontend v0.136.2
+    Checking cranelift-native v0.136.2
+    Checking wasmtime-internal-fiber v49.0.2
+    Checking tower v0.5.3
+    Checking idna v1.1.0
+    Checking tokio-rustls v0.26.6
+    Checking num-bigint-dig v0.8.6
+    Checking url v2.5.8
+    Checking wasmtime-internal-cranelift v49.0.2
+    Checking mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge)
+    Checking h2 v0.4.20
+    Checking tower-http v0.6.11
+    Checking rsa v0.9.10
+    Checking hyper v1.12.0
+    Checking wasmtime v49.0.2
+    Checking hyper-util v0.1.21
+    Checking hyper-rustls v0.27.10
+    Checking reqwest v0.13.5
+    Checking wasmtime-wasi-io v49.0.2
+    Checking wasmtime-wasi v49.0.2
+    Checking mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv12)
+    Finished `release` profile [optimized] target(s) in 36.41s

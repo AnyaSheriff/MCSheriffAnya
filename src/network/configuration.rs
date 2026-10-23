@@ -544,7 +544,7 @@ fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_p
 /// остаётся прежним, байт в байт, для клиента любой версии.
 fn registry_bundle_for(version: mcsa_protocol::JavaVersion, preview: bool) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
     use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
-    if !matches!(version, JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
+    if !matches!(version, JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
     }
     let damage = DAMAGE_TYPES.iter().map(|name| Entry {

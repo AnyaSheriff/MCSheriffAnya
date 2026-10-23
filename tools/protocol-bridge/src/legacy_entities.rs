@@ -40,7 +40,7 @@ fn angle(value: f32) -> u8 { ((f64::from(value).rem_euclid(360.0) * 256.0 / 360.
 
 /// Обратная операция нашего entity_sync::push_velocity. Зарезервированный
 /// компонент32767 и переполненный множитель не превращаются в числа.
-fn velocity(input: &mut Cursor<'_>) -> Result<[f64; 3], Error> {
+pub(crate) fn velocity(input: &mut Cursor<'_>) -> Result<[f64; 3], Error> {
     let first = input.take(1)?[0];
     if first == 0 { return Ok([0.0; 3]); }
     if first & 7 == 0 { return Err(Error::Invalid); }
@@ -58,7 +58,7 @@ fn velocity(input: &mut Cursor<'_>) -> Result<[f64; 3], Error> {
     }
     Ok(values)
 }
-fn put_velocity(out: &mut Vec<u8>, values: [f64; 3]) -> Result<(), Error> {
+pub(crate) fn put_velocity(out: &mut Vec<u8>, values: [f64; 3]) -> Result<(), Error> {
     for value in values {
         // [проверить] Высокие скорости требуют отдельной пробы ограничения340.
         // Здесь не обрезаем неизвестный диапазон молча; обычный дроп в пределах.

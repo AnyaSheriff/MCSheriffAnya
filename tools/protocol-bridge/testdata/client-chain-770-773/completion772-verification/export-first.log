@@ -1,0 +1,10 @@
+    Blocking waiting for file lock on build directory
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge)
+    Finished `release` profile [optimized] target(s) in 1m 43s
+     Running unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-484fd9e2a0621407)
+
+running 1 test
+test expanded_776_tests::export_live_772_payloads ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 255 filtered out; finished in 0.00s
+

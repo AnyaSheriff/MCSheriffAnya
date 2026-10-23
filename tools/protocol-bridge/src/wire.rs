@@ -49,6 +49,8 @@ pub const INTERNAL: JavaVersion = JavaVersion::V26_1_2;
 
 #[derive(Clone, Copy, Default)]
 pub struct Context {
+    /// Последний подтверждённый wire772-вид статуи в той же точке.
+    pub block_entity_view: Option<u32>,
     /// Часы снимка моба для абсолютной злости775 и оставшихся тактов773.
     pub entity_clock: Option<i64>,
     /// Последняя синхронизация часов для формата774 без clockUpdates.
@@ -85,7 +87,7 @@ pub(crate) fn translate_inner(
     body: &[u8], context: Context, probe_776: bool,
 ) -> Result<Cow<'_, [u8]>, Error> {
     if probe_776 && !matches!((from,to),
-        (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_11) | (JavaVersion::V1_21_11,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_9) | (JavaVersion::V1_21_9,JavaVersion::V26_1_2)) {
+        (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_11) | (JavaVersion::V1_21_11,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_8) | (JavaVersion::V1_21_8,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_9) | (JavaVersion::V1_21_9,JavaVersion::V26_1_2)) {
         return Err(Error::UnsupportedVersion(from));
     }
     if context.items.content.is_native_view() && (from != JavaVersion::V26_1_2 || to != JavaVersion::V26_1_2 || state != State::Play || direction != Direction::Clientbound) {
@@ -122,20 +124,48 @@ pub(crate) fn translate_inner(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
-        (State::Play, Direction::Clientbound, "open_book") if matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => uint(&mut out,cursor.count(1)? as u32),
-        (State::Play, Direction::Serverbound, "chat_command_signed") if matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {
+        (State::Play, Direction::Clientbound, "player_info") if to==JavaVersion::V1_21_8 => {
+            let flags=cursor.take(1)?[0];out.push(flags);
+            let n=cursor.count(4096)?;uint(&mut out,n as u32);
+            for _ in 0..n {
+                out.extend(cursor.take(16)?);
+                if flags&1!=0 {
+                    string(&mut out,cursor.string()?);
+                    let properties=cursor.count(256)?;uint(&mut out,properties as u32);
+                    for _ in 0..properties {string(&mut out,cursor.string()?);string(&mut out,cursor.string()?);let signed=cursor.boolean()?;out.push(u8::from(signed));if signed{string(&mut out,cursor.string()?);}}
+                }
+                if flags&2!=0 {let present=cursor.boolean()?;out.push(u8::from(present));if present {out.extend(cursor.take(24)?);for _ in 0..2 {let n=cursor.count(8192)?;uint(&mut out,n as u32);out.extend(cursor.take(n)?);}}}
+                if flags&4!=0 {uint(&mut out,cursor.count(3)? as u32);}
+                if flags&8!=0 {out.push(u8::from(cursor.boolean()?));}
+                if flags&16!=0 {uint(&mut out,cursor.uint()?);}
+                if flags&32!=0 {let present=cursor.boolean()?;out.push(u8::from(present));if present {let n=crate::registry::nbt_length(cursor.rest).map_err(|_|Error::Invalid)?;let text=cursor.take(n)?;crate::items::plain_text(text).map_err(Error::Item)?;out.extend(text);}}
+                if flags&128!=0 {uint(&mut out,cursor.uint()?);}
+                if flags&64!=0 {out.push(u8::from(cursor.boolean()?));}
+            }
+        }
+        (State::Play, Direction::Clientbound, "entity_velocity") if to==JavaVersion::V1_21_8 => {
+            uint(&mut out,cursor.uint()?);let speed=crate::legacy_entities::velocity(&mut cursor)?;crate::legacy_entities::put_velocity(&mut out,speed)?;
+        }
+        (State::Play, Direction::Clientbound, "spawn_position") if to==JavaVersion::V1_21_8 => {
+            cursor.string()?;out.extend(cursor.take(12)?);cursor.take(4)?;
+        }
+        (State::Play, Direction::Clientbound, "player_rotation") if to==JavaVersion::V1_21_8 => {
+            for _ in 0..2 {out.extend(cursor.take(4)?);if cursor.boolean()? {return Err(Error::PayloadUnavailable("772 relative rotation"));}}
+        }
+        (State::Play, Direction::Clientbound, "open_book") if matches!(to,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => uint(&mut out,cursor.count(1)? as u32),
+        (State::Play, Direction::Serverbound, "chat_command_signed") if matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {
             string(&mut out,cursor.string()?);out.extend(cursor.take(16)?);
             let n=cursor.count(64)?;uint(&mut out,n as u32);
             for _ in 0..n{string(&mut out,cursor.string()?);out.extend(cursor.take(256)?);}
             uint(&mut out,cursor.uint()?);out.extend(cursor.take(4)?);
         }
-        (State::Play, Direction::Serverbound, "use_entity") if matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => crate::client_774::interact(&mut cursor,&mut out)?,
-        (State::Play, Direction::Clientbound, "update_time") if matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => crate::client_774::time(&mut cursor,&mut out,context.clock_774)?,
-        (State::Play, Direction::Serverbound, "arm_animation" | "client_command") if matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => uint(&mut out,cursor.count(1)? as u32),
-        (State::Play, Direction::Serverbound, "entity_action") if matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {uint(&mut out,cursor.uint()?);uint(&mut out,cursor.count(6)? as u32);uint(&mut out,cursor.count(100)? as u32);}
-        (State::Play, Direction::Serverbound, "enchant_item") if matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {uint(&mut out,cursor.uint()?);let n=if from==JavaVersion::V1_21_9 {cursor.count(2)? as u8}else{cursor.take(1)?[0]};if n>2{return Err(Error::Invalid);}uint(&mut out,u32::from(n));}
+        (State::Play, Direction::Serverbound, "use_entity") if matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => crate::client_774::interact(&mut cursor,&mut out)?,
+        (State::Play, Direction::Clientbound, "update_time") if matches!(to,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => crate::client_774::time(&mut cursor,&mut out,context.clock_774)?,
+        (State::Play, Direction::Serverbound, "arm_animation" | "client_command") if matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => uint(&mut out,cursor.count(1)? as u32),
+        (State::Play, Direction::Serverbound, "entity_action") if matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {uint(&mut out,cursor.uint()?);uint(&mut out,cursor.count(6)? as u32);uint(&mut out,cursor.count(100)? as u32);}
+        (State::Play, Direction::Serverbound, "enchant_item") if matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {uint(&mut out,cursor.uint()?);let n=if matches!(from,JavaVersion::V1_21_8|JavaVersion::V1_21_9) {cursor.count(2)? as u8}else{cursor.take(1)?[0]};if n>2{return Err(Error::Invalid);}uint(&mut out,u32::from(n));}
 
-        (State::Play, Direction::Serverbound, "block_place" | "use_item") if probe_776 && (equal || matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11)) => {
+        (State::Play, Direction::Serverbound, "block_place" | "use_item") if probe_776 && (equal || matches!(from,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11)) => {
             let hand = cursor.uint()?;
             if hand > 1 { return Err(Error::Invalid); }
             uint(&mut out, hand);
@@ -283,14 +313,24 @@ pub(crate) fn translate_inner(
             } else { crate::chunk::translate_with_content(from, to, payload, context, content) }.map_err(Error::Chunk)?);
         }
         (State::Play, Direction::Clientbound, "tile_entity_data") => {
-            out.extend(cursor.take(8)?);
+            let position=cursor.take(8)?;out.extend(position);
             let kind = cursor.uint()?;
             let translated = crate::block_entities::translate_with_content(from, to, kind, cursor.take(cursor.remaining())?, context.items.content).map_err(Error::BlockEntity)?;
+            if translated.is_none() && to==JavaVersion::V1_21_8 {
+                // У визуального bookshelf/медного блока нет block entity.
+                // Сначала валидируем прежний NBT, затем посылаем его явный вид.
+                out.clear();
+                let info=crate::packet_layouts::packet_info(RegistryKind::PlayClientbound,INTERNAL,to,8).ok_or(Error::Invalid)?;
+                uint(&mut out,info.target_id.ok_or(Error::Invalid)?);out.extend(position);
+                let state=if kind==48 {context.block_entity_view.ok_or(Error::PayloadUnavailable("772 statue view requires block state"))?}
+                    else {crate::generated_payload_772::REMOVED_BE_VIEWS.iter().find(|r|r.0==kind).ok_or(Error::Invalid)?.1};
+                uint(&mut out,state);return Ok(Cow::Owned(out));
+            }
             let (kind, data) = translated.ok_or(Error::PayloadUnavailable("removed block entity update"))?;
             uint(&mut out, kind);
             // Реальный776 требует compound в Update, хотя Chunk принимает End.
             // payload-actions-live775-v2: Expected non-null compound tag.
-            if matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2) && data == [0] { out.extend([10,0]); }
+            if matches!(to,JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2) && data == [0] { out.extend([10,0]); }
             else { out.extend(data); }
         }
         (State::Play, Direction::Clientbound, "update_light") => {
@@ -379,33 +419,33 @@ pub(crate) fn translate_inner(
 enum DigAction { Start, Cancel, Finish, DropStack, DropOne, ReleaseUse, Swap, Jab }
 
 fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
-    use JavaVersion::{V1_21_9 as Lower, V1_21_11 as Earlier, V26_1_2 as Old, V26_2 as Mid, V26_3 as New};
+    use JavaVersion::{V1_21_8 as Lowest, V1_21_9 as Lower, V1_21_11 as Earlier, V26_1_2 as Old, V26_2 as Mid, V26_3 as New};
     let action = match (from, cursor.uint()?) {
         // official-actions-776: начало0 и завершение2 разрушили камень.
         // Остальные enum776 сняты обычным GUI: action-client-collector775-v3.
-        (Lower | Earlier | Old | Mid | New, 0) => DigAction::Start,
-        (Lower | Earlier | Old | Mid, 1) | (New, 2) => DigAction::Cancel,
-        (Lower | Earlier | Old | Mid, 2) | (New, 3) => DigAction::Finish,
-        (Lower | Earlier | Old | Mid, 3) | (New, 4) => DigAction::DropStack,
-        (Lower | Earlier | Old | Mid, 4) | (New, 5) => DigAction::DropOne,
-        (Lower | Earlier | Old | Mid, 5) | (New, 6) => DigAction::ReleaseUse,
-        (Lower | Earlier | Old | Mid, 6) | (New, 7) => DigAction::Swap,
+        (Lowest | Lower | Earlier | Old | Mid | New, 0) => DigAction::Start,
+        (Lowest | Lower | Earlier | Old | Mid, 1) | (New, 2) => DigAction::Cancel,
+        (Lowest | Lower | Earlier | Old | Mid, 2) | (New, 3) => DigAction::Finish,
+        (Lowest | Lower | Earlier | Old | Mid, 3) | (New, 4) => DigAction::DropStack,
+        (Lowest | Lower | Earlier | Old | Mid, 4) | (New, 5) => DigAction::DropOne,
+        (Lowest | Lower | Earlier | Old | Mid, 5) | (New, 6) => DigAction::ReleaseUse,
+        (Lowest | Lower | Earlier | Old | Mid, 6) | (New, 7) => DigAction::Swap,
         (Earlier | Old | Mid, 7) | (New, 8) => DigAction::Jab,
         _ => return Err(Error::PayloadUnavailable("unverified block_dig action")),
     };
     let status = match (to, action) {
-        (Lower | Earlier | Old | Mid | New, DigAction::Start) => 0,
-        (Lower | Earlier | Old | Mid, DigAction::Cancel) => 1,
+        (Lowest | Lower | Earlier | Old | Mid | New, DigAction::Start) => 0,
+        (Lowest | Lower | Earlier | Old | Mid, DigAction::Cancel) => 1,
         (New, DigAction::Cancel) => 2,
-        (Lower | Earlier | Old | Mid, DigAction::Finish) => 2,
+        (Lowest | Lower | Earlier | Old | Mid, DigAction::Finish) => 2,
         (New, DigAction::Finish) => 3,
-        (Lower | Earlier | Old | Mid, DigAction::DropStack) => 3,
+        (Lowest | Lower | Earlier | Old | Mid, DigAction::DropStack) => 3,
         (New, DigAction::DropStack) => 4,
-        (Lower | Earlier | Old | Mid, DigAction::DropOne) => 4,
+        (Lowest | Lower | Earlier | Old | Mid, DigAction::DropOne) => 4,
         (New, DigAction::DropOne) => 5,
-        (Lower | Earlier | Old | Mid, DigAction::ReleaseUse) => 5,
+        (Lowest | Lower | Earlier | Old | Mid, DigAction::ReleaseUse) => 5,
         (New, DigAction::ReleaseUse) => 6,
-        (Lower | Earlier | Old | Mid, DigAction::Swap) => 6,
+        (Lowest | Lower | Earlier | Old | Mid, DigAction::Swap) => 6,
         (New, DigAction::Swap) => 7,
         (Earlier | Old | Mid, DigAction::Jab) => 7,
         (New, DigAction::Jab) => 8,
@@ -534,7 +574,7 @@ struct SpawnLayout {
 
 fn spawn_layout(version: JavaVersion) -> Result<SpawnLayout, Error> {
     match version {
-        JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 => Ok(SpawnLayout { varint_modes: false, join_online_mode: false }),
+        JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 => Ok(SpawnLayout { varint_modes: false, join_online_mode: false }),
         // Собственные Join/Respawn observations: 776 уже содержит onlineMode,
         // но режимы ещё byte/255(None), а dimensionType по-прежнему VarInt.
         // testdata/protocol-26.2-observations.json; публичный маршрут закрыт.
@@ -610,9 +650,9 @@ fn respawn(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
 // флагами/шагами, затем yaw/pitch. Не является общим alias протокола776.
 fn move_angles_before_ground(version: JavaVersion) -> Result<bool, Error> {
     match version {
-        JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
+        JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
         JavaVersion::V26_3 => Ok(false),
-        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
+        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
     }
 }
 
@@ -671,7 +711,7 @@ fn tags(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaV
                 uint(out, match registry { Some(kind) => content.packet_id(kind, from, to, id)?, None => id });
             }
         }
-        if to==JavaVersion::V1_21_9 && name=="minecraft:timeline" {out.truncate(start);kept-=1;}
+        if matches!(to,JavaVersion::V1_21_8|JavaVersion::V1_21_9) && name=="minecraft:timeline" {out.truncate(start);kept-=1;}
     }
     uint(destination,kept as u32);destination.extend(groups);
     Ok(())

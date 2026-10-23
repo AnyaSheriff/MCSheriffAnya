@@ -7518,9 +7518,11 @@ fn handle_client_packet(
     }
     let before = (player.x, player.y, player.z, player.yaw, player.pitch);
     let mut reaction = handle_client_packet_inner(packet, player, shared);
-    if packet.foreign_inventory && packet.id==CLICK_CONTAINER {
+    if packet.foreign_inventory && matches!(packet.id,CLICK_CONTAINER|USE_ITEM_ON) {
         // Действия вычисляет сервер. Межверсионные хэши не разрешают скрыть
         // авторитетное обновление контейнера/курсора после щелчка.
+        // Клиент772 предсказывает установку вместо использования статуи:
+        // возвращаем настоящую руку, иначе пустая рука вызывает второй Use.
         reaction.inventory=true;
     }
 

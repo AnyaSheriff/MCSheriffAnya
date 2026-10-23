@@ -117,12 +117,15 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
             floats(input,out,2,false)?;out.extend(input.take(8)?);
         }
         "explosion"=>{
-            floats(input,out,3,true)?;floats(input,out,1,false)?;
-            let count=input.take(4)?;if i32::from_be_bytes(count.try_into().map_err(|_|Error::Invalid)?)<0{return Err(Error::Invalid);}out.extend(count);
+            floats(input,out,3,true)?;let mut discarded=Vec::new();
+            let older_to=to==JavaVersion::V1_21_8;let older_from=from==JavaVersion::V1_21_8;
+            if !older_from {floats(input,if older_to{&mut discarded}else{out},1,false)?;}else if !older_to {out.extend(0f32.to_be_bytes());}
+            if !older_from {let count=input.take(4)?;if i32::from_be_bytes(count.try_into().map_err(|_|Error::Invalid)?)<0{return Err(Error::Invalid);}
+            if !older_to {out.extend(count);}}else if !older_to {out.extend(0i32.to_be_bytes());}
             let knockback=input.boolean()?;out.push(u8::from(knockback));if knockback{floats(input,out,3,true)?;}
             crate::particles::particle(input,out,from,to,context.items)?;sound(input,out)?;
-            let n=input.count(4096)?;uint(out,n as u32);
-            for _ in 0..n{crate::particles::particle(input,out,from,to,context.items)?;floats(input,out,2,false)?;uint(out,input.uint()?);}
+            if !older_from {let n=input.count(4096)?;let target=if older_to{&mut discarded}else{out};uint(target,n as u32);
+            for _ in 0..n{crate::particles::particle(input,target,from,to,context.items)?;floats(input,target,2,false)?;uint(target,input.uint()?);}}else if !older_to {uint(out,0);}
         }
         "world_event"=>{
             let effect=input.take(4)?;let kind=i32::from_be_bytes(effect.try_into().map_err(|_|Error::Invalid)?);out.extend(effect);out.extend(input.take(8)?);
