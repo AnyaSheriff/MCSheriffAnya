@@ -76,6 +76,7 @@ mod vitals;
 mod mobs;
 mod land;
 mod water;
+mod sulfur;
 #[cfg(test)]
 mod water_tests;
 mod merchant;
@@ -8505,6 +8506,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         }
         return true;
     }
+    if sulfur::use_on_mob(&mut items, index, player, shared, &mut world, reaction) { return true; }
     if water::use_on_mob(&mut items, index, player, &mut world, reaction) { return true; }
     // Вики, Golden Dandelion: переключает возраст только у растущих малышей.
     // [Bedrock: потом] use/частицы; offhand маршрутизация use_entity [проверить].
@@ -9909,6 +9911,10 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
         return Some(reaction);
     }
 
+    if let Some(reaction) = sulfur::use_bucket(item, (clicked_x, clicked_y, clicked_z), face, sequence, player, shared) {
+        return Some(reaction);
+    }
+
     if let Some(reaction) = use_spawn_egg(item, (clicked_x, clicked_y, clicked_z), face, sequence, player, shared) {
         return Some(reaction);
     }
@@ -10433,6 +10439,7 @@ fn use_spawn_egg(
     let (x, y, z) = offset_towards(clicked.0, clicked.1, clicked.2, face);
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), kind, (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5));
 
+    if kind == crate::mob::Kind::SulfurCube { crate::mob::sulfur_cube::initialize(&mut mob); }
     if kind == crate::mob::Kind::Slime {
         let mut rng = crate::mob::Rng::new(mob.entity_id as u64);
         let size = crate::mob::slime::roll_size(&mut rng);

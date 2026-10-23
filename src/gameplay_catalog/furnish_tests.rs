@@ -15,8 +15,8 @@ fn observed() -> serde_json::Value {
 fn ids_continue_after_poplar_boats_and_match_the_pinned_777_tables() {
     let boats_end = POPLAR.iter().filter(|row| row.form == BlockForm::Boat).map(|row| row.item).max().unwrap();
     let rows: Vec<_> = POPLAR.iter().filter(|row| row.item > boats_end).collect();
-    // кровать + 16 подушек + 16 карт + пластинка
-    assert_eq!(rows.len(), 34);
+    // кровать + 16 подушек + 16 карт + пластинка + ведро и яйцо куба серы
+    assert_eq!(rows.len(), 36);
     for (offset, row) in rows.iter().enumerate() { assert_eq!(row.item, boats_end + 1 + offset as i32, "{}", row.name); }
     let straw = rows[0];
     assert_eq!((straw.name, straw.form), ("straw_bed", BlockForm::Wood));

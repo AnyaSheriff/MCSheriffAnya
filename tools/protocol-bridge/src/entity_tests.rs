@@ -144,3 +144,18 @@ fn poplar_boats_spawn_with_wire_kinds_only_with_the_preview_content() {
         assert!(Tracker::default().translate(OLD,NEW,&patched,context()).is_err());
     }
 }
+
+#[test]
+fn sulfur_cube_layout_and_ids_follow_the_observed_777_indices() {
+    // Прогон официального 26.3: baby 16, size 18 (= Size + 1), from_bucket 20; внутренние индексы куба равны индексам 777.
+    let cube=entity_layouts::LAYOUTS.iter().find(|v| v.0=="sulfur_cube").unwrap();
+    assert_eq!(cube.1,cube.2);
+    assert_eq!((cube.2[16],cube.2[17],cube.2[18],cube.2[19],cube.2[20]),("baby","age_locked","size","max_fuse","from_bucket"));
+    assert_eq!(crate::content::entity_ids_of("sulfur_cube_spawn_egg"),Some((160,133)));
+    assert_eq!(crate::content::ContentCodec::white_slab_preview().entity_layout_base(160),Some("sulfur_cube"));
+    // Большой куб: здоровье 8,0 и размер 2 - как в записи официального сервера (09 03 41000000 12 01 02).
+    let kind=entity_layouts::LAYOUTS.iter().position(|v| v.0=="sulfur_cube").unwrap() as u32;
+    let context=wire::Context {entity_kind:Some(kind),..context()};
+    let packet=[0x63,2,9,3,0x41,0,0,0,18,1,2,255];
+    assert_eq!(cb(&packet,OLD,NEW,context).unwrap()[1..],packet[1..]);
+}

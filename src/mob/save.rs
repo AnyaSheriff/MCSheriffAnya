@@ -117,6 +117,7 @@ save_kinds! {
     CopperGolem => 110,
     ArmorStand => 111,
     Cushion => 112,
+    SulfurCube => 113,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;

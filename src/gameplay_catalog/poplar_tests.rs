@@ -17,7 +17,7 @@ fn iname(id: i32) -> &'static str { PREVIEW.name(Kind::Item, id).unwrap() }
 #[test]
 fn ids_are_appended_after_minerals_and_match_the_pinned_777_tables() {
     // 23 блока дерева + полочный гриб, красный куст и две лодки (plants_tests ниже).
-    assert_eq!(POPLAR.len(), 61); // 27 + соломенная кровать, 16 подушек, 16 карт, пластинка (furnish_tests)
+    assert_eq!(POPLAR.len(), 63); // 27 + соломенная кровать, 16 подушек, 16 карт, пластинка (furnish_tests)
     let last = &MINERALS[MINERALS.len() - 1];
     assert_eq!(POPLAR[0].block, last.block + 1);
     assert_eq!(POPLAR[0].first_state, last.last_state + 1);

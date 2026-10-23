@@ -605,7 +605,7 @@ pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],out
             continue;
         }
         let prey=mobs.iter().enumerate().filter(|(j,m)| *j!=i && !m.is_dead() && !m.h.despawn)
-            .filter(|(_,m)| if kind==Kind::Frog { super::slime::cube(m.kind) && m.nether.size==1 }
+            .filter(|(_,m)| if kind==Kind::Frog { super::slime::cube(m.kind) && m.kind!=Kind::SulfurCube && m.nether.size==1 }
                 else { m.water.wet || super::is_water(view.block(m.cell().0,m.cell().1,m.cell().2)) })
             .filter(|(_,m)| kind==Kind::Frog || matches!(m.kind,Kind::Drowned | Kind::Guardian | Kind::ElderGuardian)
                 || (mobs[i].water.hunt_cooldown==0 && (fish(m.kind) || matches!(m.kind,Kind::Squid | Kind::GlowSquid))))

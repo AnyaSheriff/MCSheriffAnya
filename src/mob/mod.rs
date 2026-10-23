@@ -17,6 +17,7 @@
 pub mod ai;
 pub mod armor_stand;
 pub mod cushion;
+pub mod sulfur_cube;
 pub mod movement_enchantments;
 pub mod trial_gear;
 pub mod equipment;
@@ -71,6 +72,8 @@ pub enum Kind {
     ArmorStand,
     /// Подушка 26.3: неподвижная сущность без ИИ, цвет — в `color`, сидеть на ней можно (mob/cushion.rs).
     Cushion,
+    /// Куб серы 26.3: пассивный прыгающий моб, поглощает блоки (mob/sulfur_cube.rs).
+    SulfurCube,
     Cow,
     Pig,
     Sheep,
@@ -196,7 +199,7 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 90] = [
+    pub const ALL: [Kind; 91] = [
         Kind::Rabbit, Kind::Fox, Kind::Bee,
         Kind::Endermite,
         Kind::Zoglin,
@@ -205,6 +208,7 @@ impl Kind {
         Kind::CopperGolem,
         Kind::ArmorStand,
         Kind::Cushion,
+        Kind::SulfurCube,
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -375,6 +379,7 @@ impl Kind {
             "copper_golem" => Kind::CopperGolem,
             "armor_stand" => Kind::ArmorStand,
             "cushion" => Kind::Cushion,
+            "sulfur_cube" => Kind::SulfurCube,
             "cow" => Kind::Cow,
             "pig" => Kind::Pig,
             "sheep" => Kind::Sheep,
@@ -471,6 +476,7 @@ impl Kind {
             Kind::CopperGolem => "copper_golem",
             Kind::ArmorStand => "armor_stand",
             Kind::Cushion => "cushion",
+            Kind::SulfurCube => "sulfur_cube",
             Kind::Cow => "cow",
             Kind::Pig => "pig",
             Kind::Sheep => "sheep",
@@ -568,6 +574,8 @@ impl Kind {
             Kind::ArmorStand => 5,
             // Внутренний номер расширения 26.3 (после 775: 157/158 — лодки тополя); в 777 это 33.
             Kind::Cushion => 159,
+            // Следующий внутренний номер расширения 26.3; в 777 это 133.
+            Kind::SulfurCube => 160,
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
@@ -676,6 +684,7 @@ impl Kind {
             Kind::CopperGolem => "minecraft:copper_golem",
             Kind::ArmorStand => "minecraft:armor_stand", // [Bedrock: потом] свойства.
             Kind::Cushion => "minecraft:cushion", // [проверить] имя в Bedrock.
+            Kind::SulfurCube => "minecraft:sulfur_cube", // [проверить] имя в Bedrock.
             Kind::Cow => "minecraft:cow",
             Kind::Pig => "minecraft:pig",
             Kind::Sheep => "minecraft:sheep",
@@ -794,6 +803,7 @@ impl Kind {
             Kind::CopperGolem => 0.49,
             Kind::ArmorStand => 0.5,
             Kind::Cushion => 0.999,
+            Kind::SulfurCube => 0.49,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -872,6 +882,7 @@ impl Kind {
             Kind::CopperGolem => 0.98,
             Kind::ArmorStand => 1.975,
             Kind::Cushion => 0.249,
+            Kind::SulfurCube => 0.49,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -955,6 +966,7 @@ impl Kind {
             Kind::CopperGolem => 12.0,
             Kind::ArmorStand => 5.0,
             Kind::Cushion => 1.0,
+            Kind::SulfurCube => 4.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -1042,6 +1054,7 @@ impl Kind {
             Kind::CopperGolem => 0.2,
             Kind::ArmorStand => 0.0,
             Kind::Cushion => 0.0,
+            Kind::SulfurCube => 0.3,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -1164,6 +1177,8 @@ impl Kind {
             Kind::CopperGolem => ("", "minecraft:entity.copper_golem.hurt", "minecraft:entity.copper_golem.death"),
             Kind::ArmorStand => ("", "minecraft:entity.armor_stand.hit", "minecraft:entity.armor_stand.break"),
             Kind::Cushion => ("", "", ""),
+            // [проверить] имена звуков куба серы (в прогоне снят только порядок пакетов).
+            Kind::SulfurCube => ("", "minecraft:entity.sulfur_cube.hurt", "minecraft:entity.sulfur_cube.death"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -1256,6 +1271,7 @@ impl Kind {
             Kind::CopperGolem => "minecraft:entity.copper_golem.step",
             Kind::ArmorStand => "",
             Kind::Cushion => "",
+            Kind::SulfurCube => "",
             Kind::WitherSkeleton => "minecraft:entity.wither_skeleton.step",
             Kind::ZombifiedPiglin => "minecraft:entity.zombified_piglin.step",
             Kind::Piglin => "minecraft:entity.piglin.step",
@@ -1703,6 +1719,8 @@ pub struct Mob {
 
     /// Големы: цель, «построен игроком», тыква снежного (mob/golem.rs).
     pub golem: golem::State,
+    /// Куб серы: поглощённый блок, запал, пауза подбора (mob/sulfur_cube.rs).
+    pub sulfur: sulfur_cube::State,
     /// Фантом: размер, якорь кружения, пике (mob/phantom.rs).
     pub phantom: phantom::State,
     /// Бриз: поза, выстрел, прыжок (mob/breeze.rs).
@@ -1755,6 +1773,13 @@ impl Mob {
 
         if kind == Kind::Slime {
             nether.size = 1;
+        }
+
+        // Куб серы по умолчанию малый (наблюдение: призванный с NBT без Size — Size 0, 4 здоровья).
+        if kind == Kind::SulfurCube {
+            nether.size = sulfur_cube::SMALL;
+            vitals.health = 4.0;
+            vitals.max_health = 4.0;
         }
 
         // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
@@ -1823,6 +1848,7 @@ impl Mob {
             leash: None,
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
             golem: golem::State::default(),
+            sulfur: sulfur_cube::State::default(),
             phantom: phantom::State::default(),
             breeze: breeze::State::default(),
             guardian: guardian::State::default(),
@@ -1899,6 +1925,7 @@ impl Mob {
     /// Ширина и высота ящика: у детёныша вдвое меньше (вики, Baby mobs).
     pub fn size(&self) -> (f64, f64) {
         if self.kind==Kind::Cushion {return (0.999, 0.249);}
+        if self.kind==Kind::SulfurCube {let w=sulfur_cube::width(self.nether.size); return (w, w);}
         if self.kind==Kind::ArmorStand {return if self.stand.marker {(0.0,0.0)} else if self.stand.small {(0.25,0.9875)} else {(0.5,1.975)};}
         if let Some(size) = water::size(self) { return size; }
 
@@ -2125,6 +2152,7 @@ impl Mob {
         let was_baby = self.age < 0;
         growth::tick_age(self);
         if was_baby && self.age == 0 && self.kind == Kind::Turtle { water::scute(self); }
+        if was_baby && self.age == 0 && self.kind == Kind::SulfurCube { sulfur_cube::grow(self); }
 
         if self.love > 0 {
             self.love -= 1;
@@ -2349,6 +2377,7 @@ impl Mob {
         if slime::cube(self.kind) && self.on_ground && !was_on_ground {
             slime::landed(self, rng);
         }
+        if self.kind == Kind::SulfurCube && self.on_ground && !was_on_ground { sulfur_cube::landed(self); }
 
         plan
     }
@@ -2713,6 +2742,10 @@ impl Mob {
         if crate::frost::protects_boots(equipment::slot(self, 2), source) { return None; }
         if self.kind==Kind::ArmorStand {return armor_stand::hurt(self,amount,source);}
         if self.kind==Kind::Cushion {return cushion::hurt(self,amount,source);}
+        if self.kind==Kind::SulfurCube && sulfur_cube::resists(self, source) {
+            sulfur_cube::launch(self, amount, push);
+            return None;
+        }
         if horse::undead(self.kind) && source == Source::Drown { return None; }
         if self.is_dead() || (self.fire_immune() && matches!(source, Source::InFire | Source::Campfire | Source::HotFloor | Source::OnFire | Source::Lava | Source::Fireball)) {
             return None;
@@ -2978,6 +3011,7 @@ impl Mob {
     /// Вики, Sculk Catalyst: опыт без требования последнего удара игрока.
     pub fn sculk_xp(&self, rng: &mut Rng) -> i32 {
         if self.is_baby() || self.kind.object() || matches!(self.kind, Kind::Villager | Kind::IronGolem | Kind::SnowGolem) { return 0; }
+        if self.kind == Kind::SulfurCube { return sulfur_cube::experience(self, rng); }
         if slime::cube(self.kind) { return self.nether.size; }
         if guardian::guardian(self.kind) { return guardian::XP; }
         if self.kind == Kind::EnderDragon { return 0; }
@@ -3042,6 +3076,8 @@ impl Mob {
 
             self.pending_xp = if matches!(self.kind,Kind::Axolotl | Kind::Tadpole | Kind::Bat | Kind::Allay) {
                 0
+            } else if self.kind == Kind::SulfurCube {
+                sulfur_cube::experience(self, &mut rng)
             } else if slime::cube(self.kind) {
                 // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
                 self.nether.size
@@ -3105,6 +3141,13 @@ impl Mob {
                 out.extend_from_slice(&self.nether.size.to_be_bytes());
                 out.push(u8::from(self.silent) | (u8::from(self.nether.persistence_required) << 1));
             }
+            Kind::SulfurCube => {
+                out.extend_from_slice(&self.nether.size.to_be_bytes());
+                out.push(u8::from(self.silent) | (u8::from(self.sulfur.from_bucket) << 1));
+                out.extend_from_slice(&self.sulfur.body.unwrap_or(-1).to_be_bytes());
+                out.extend_from_slice(&self.sulfur.fuse.to_be_bytes());
+                out.extend_from_slice(&self.sulfur.pickup_timer.to_be_bytes());
+            }
             Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
             Kind::Villager | Kind::ZombieVillager => crate::villager::write(&self.villager, out),
@@ -3167,6 +3210,10 @@ impl Mob {
             }
         } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
+        let cube_data = if kind == Kind::SulfurCube {
+            Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0], i32::from_be_bytes(take(4)?.try_into().ok()?),
+                i32::from_be_bytes(take(4)?.try_into().ok()?), i32::from_be_bytes(take(4)?.try_into().ok()?)))
+        } else { None };
         let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
@@ -3201,6 +3248,11 @@ impl Mob {
             slime::set_size(&mut mob, size);
             mob.silent = flags & 1 != 0;
             mob.nether.persistence_required = flags & 2 != 0;
+        }
+        if let Some((size, flags, body, fuse, pause)) = cube_data {
+            sulfur_cube::set_size(&mut mob, size);
+            mob.silent = flags & 1 != 0;
+            mob.sulfur = sulfur_cube::State { body: (body >= 0).then_some(body), fuse, pickup_timer: pause, from_bucket: flags & 2 != 0, ..sulfur_cube::State::default() };
         }
         mob.vitals.health = health.clamp(0.5, if kind == Kind::Wolf { tame::TAME_HEALTH } else { mob.vitals.max_health });
         mob.age = age;
@@ -3441,6 +3493,10 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             if credited && rng.below(1000) < 25 + 10 * mob.looting as u32 {
                 give("wither_skeleton_skull", 1, 1, rng);
             }
+        }
+        // Куб серы: поглощённый блок (малый — ничего); опыт считает `die`.
+        Kind::SulfurCube => {
+            for stack in sulfur_cube::loot(mob) { drops.push(stack); }
         }
         Kind::Slime => {
             if mob.nether.size == 1 {
@@ -4428,6 +4484,7 @@ pub fn step_all(
 
     *items.mobs_vec() = mobs;
     wildlife::pickup(items,view.griefing());
+    sulfur_cube::absorb_items(items,view.griefing());
 
     // Тела, пролежавшие своё, уходят облачком.
     for mob in items.mobs_mut() {

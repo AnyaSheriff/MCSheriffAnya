@@ -270,6 +270,13 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     match mob.kind {
         Kind::ArmorStand => {},
+        // Куб серы 26.3 (наблюдение, индексы 777): baby 16, age_locked 17, size 18 (= Size + 1; по умолчанию 1), from_bucket 20.
+        Kind::SulfurCube => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.size <= crate::mob::sulfur_cube::SMALL)]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.age_locked)]));
+            out.push((18, TYPE_INT, encode_varint(mob.nether.size.max(1))));
+            out.push((20, TYPE_BOOL, vec![u8::from(mob.sulfur.from_bucket)]));
+        }
         // Подушка 26.3: цвет в metadata с индексом 8 (minecraft-data 26.3, entities.json); тип — [проверить].
         Kind::Cushion => out.push((8, TYPE_INT, encode_varint(i32::from(mob.color)))),
         Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
@@ -661,6 +668,8 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (16, Kind::Phantom) => value.as_slice() == [0],
         (5 | 16 | 17, Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vindicator | Kind::Ravager | Kind::Vex) => value.iter().all(|byte| *byte == 0),
         (16, Kind::MagmaCube | Kind::Slime) => value.as_slice() == encode_varint(1).as_slice(),
+        (16 | 17 | 20, Kind::SulfurCube) => value.as_slice() == [0],
+        (18, Kind::SulfurCube) => value.as_slice() == encode_varint(1).as_slice(),
         (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
@@ -954,6 +963,16 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         let size = f64::from(mob.nether.size.max(1));
 
         body.extend_from_slice(&encode_varint(if mob.kind == Kind::MagmaCube { 3 } else { 2 }));
+        // Куб серы (777): сначала здоровье 4·размер, затем скорость (наблюдение).
+        if mob.kind == Kind::SulfurCube {
+            body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
+            push_f64(&mut body, f64::from(mob.vitals.max_health));
+            super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
+            body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
+            push_f64(&mut body, crate::mob::slime::speed(mob.nether.size));
+            super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, None);
+            return write_body(stream, body).await;
+        }
         if mob.kind == Kind::MagmaCube {
             body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
             push_f64(&mut body, 3.0 * size);
@@ -1208,6 +1227,11 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    // Куб серы: поглощённый блок — слот тела (6); пустой слот шлётся только при смене (наблюдение: пакет 06 + предмет).
+    if mob.kind == Kind::SulfurCube {
+        let body = mob.sulfur.body.map(|item| Stack::new(item, 1));
+        return if body.is_some() || changed { send_equipment(stream, mob.entity_id, &[(6, body)]).await } else { Ok(()) };
+    }
     if mob.equipment.is_some() {
         let gear = crate::mob::equipment::all(mob);
         let mut slots: Vec<_> = gear.iter().enumerate().filter(|(_, stack)| changed || stack.is_some()).map(|(index, stack)| (index as u8, *stack)).collect();
@@ -1648,7 +1672,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         // Разбойник: арбалет заряжен или выстрелил — снаряжение заново
         // (чёрный ящик, pillager-crossbow: charged_projectiles, затем damage).
-        let land_gear = mob.kind==Kind::ArmorStand && shown.attr_changes!=mob.attr_changes || (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
+        let land_gear = mob.kind==Kind::SulfurCube && shown.attr_changes != mob.attr_changes || mob.kind==Kind::ArmorStand && shown.attr_changes!=mob.attr_changes || (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
         let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
 
         // Стойка: уходят только изменившиеся ячейки, пустая — ничего (чёрный ящик armorstand-equip-break).
@@ -1970,6 +1994,21 @@ mod slime_tests {
         assert!(properties(&bogged).contains(&(16, TYPE_BOOL, vec![1])));
         assert!(properties(&bogged).contains(&(8, TYPE_BYTE, vec![1])));
         assert!(!is_default(&(16, TYPE_BOOL, vec![1]), Kind::Bogged));
+    }
+
+    #[test]
+    fn sulfur_cube_metadata_matches_the_official_777_run() {
+        // Большой: здоровье 8, size 18 = 2 (09 03 41000000 12 01 02); малый: здоровье 4 и baby 16 = true, size по умолчанию.
+        let mut big = Mob::new(1, Kind::SulfurCube, (0.0, 0.0, 0.0));
+        crate::mob::sulfur_cube::initialize(&mut big);
+        let shown: Vec<_> = properties(&big).into_iter().filter(|e| !is_default(e, Kind::SulfurCube)).collect();
+        assert!(shown.contains(&(9, TYPE_FLOAT, float(8.0))) && shown.contains(&(18, TYPE_INT, encode_varint(2))));
+        assert!(!shown.iter().any(|e| e.0 == 16));
+        let mut small = Mob::new(2, Kind::SulfurCube, (0.0, 0.0, 0.0));
+        crate::mob::sulfur_cube::set_size(&mut small, crate::mob::sulfur_cube::SMALL);
+        let shown: Vec<_> = properties(&small).into_iter().filter(|e| !is_default(e, Kind::SulfurCube)).collect();
+        assert!(shown.contains(&(9, TYPE_FLOAT, float(4.0))) && shown.contains(&(16, TYPE_BOOL, vec![1])));
+        assert!(!shown.iter().any(|e| e.0 == 18));
     }
 
     #[test]

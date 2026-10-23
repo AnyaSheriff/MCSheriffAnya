@@ -160,6 +160,8 @@ pub(crate) const LAYOUTS: &[Layout] = &[
     ("fishing_bobber", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "hooked_entity", "biting"], &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "hooked_entity", "biting"]),
     // 26.3: сущность подушки (нет в 775); добавляется генератором после обычных строк.
     ("cushion", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen"], &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "color"]),
+    // 26.3: куб серы (нет в 775); внутренние индексы совпадают с 777, поэтому раскладки одинаковы.
+    ("sulfur_cube", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "living_entity_flags", "health", "effect_particles", "effect_ambience", "arrow_count", "stinger_count", "sleeping_pos", "mob_flags", "baby", "age_locked", "size", "max_fuse", "from_bucket"], &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "living_entity_flags", "health", "effect_particles", "effect_ambience", "arrow_count", "stinger_count", "sleeping_pos", "mob_flags", "baby", "age_locked", "size", "max_fuse", "from_bucket"]),
 ];
 pub(crate) const PLAYER: u32 = 155;
 pub(crate) const FALLING_BLOCK: u32 = 51;

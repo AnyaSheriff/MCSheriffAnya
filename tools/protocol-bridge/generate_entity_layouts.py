@@ -28,6 +28,9 @@ def main():
     extra = by_name['cushion']['metadataKeys']  # 26.3: сущность подушки (нет в 775)
     text += '    // 26.3: сущность подушки (нет в 775); добавляется генератором после обычных строк.\n'
     text += '    ("cushion", &'+json.dumps(extra[:8])+', &'+json.dumps(extra)+'),\n'
+    cube = by_name['sulfur_cube']['metadataKeys']  # 26.3: куб серы, внутренние индексы = индексам 777
+    text += '    // 26.3: куб серы (нет в 775); внутренние индексы совпадают с 777, поэтому раскладки одинаковы.\n'
+    text += '    ("sulfur_cube", &'+json.dumps(cube)+', &'+json.dumps(cube)+'),\n'
     text += '];\n'
     for name in ['player','falling_block']:
         text += 'pub(crate) const '+name.upper()+': u32 = '+str(next(v['id'] for v in old if v['name']==name))+';\n'

@@ -462,7 +462,9 @@ pub fn hostile_attempt_in(
             mob.h.offhand_shell = rng.unit() < 0.03;
         }
 
-        if super::slime::cube(each) {
+        if each == Kind::SulfurCube {
+            super::sulfur_cube::initialize(&mut mob);
+        } else if super::slime::cube(each) {
             super::nether::set_size(&mut mob, super::nether::roll_size(rng));
         }
 

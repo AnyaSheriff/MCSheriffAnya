@@ -322,6 +322,9 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     if mob.kind.hostile() {
         return super::hostile::think(mob, view, ctx, rng);
     }
+    if mob.kind == Kind::SulfurCube {
+        return super::sulfur_cube::think(mob, view, ctx, rng);
+    }
 
     let mut plan = Plan::default();
 

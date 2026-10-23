@@ -1115,6 +1115,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     crate::mob::armor_stand::apply(mob,data);
     crate::mob::village_golems::apply_data(mob,data);
     crate::mob::land::apply_data(mob, data);
+    crate::mob::sulfur_cube::apply_data(mob, data);
     crate::mob::water::apply_data(mob,data);
     if crate::mob::horse::equine(mob.kind) && let Some(value) = crate::snbt::parse(data) {
         crate::mob::horse::apply_data(mob, &value);
@@ -1187,7 +1188,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     // Магмовый куб: `Size:2` — размер 3 (вики, Magma Cube: размер = Size + 1;
     // чёрный ящик, magma-cube-stand: свойство 16=3, здоровье 9, броня 9).
-    if crate::mob::slime::cube(mob.kind)
+    if crate::mob::slime::cube(mob.kind) && mob.kind != crate::mob::Kind::SulfurCube
         && let Some(size) = crate::snbt::parse(data).and_then(|value| value.get("Size").and_then(|size| size.as_f64()).map(|size| size as i32))
     {
         crate::mob::nether::set_size(mob, size.clamp(0, 126) + 1);
@@ -1396,6 +1397,8 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
         let size = crate::mob::slime::roll_size(&mut rng);
         crate::mob::slime::set_size(&mut mob, size);
     }
+    // Куб серы без данных — большой (наблюдение: /summon без NBT → Size 1; с NBT без Size → малый).
+    if kind == crate::mob::Kind::SulfurCube && data.is_empty() { crate::mob::sulfur_cube::initialize(&mut mob); }
     if crate::mob::land::animal(kind) {
         if data.is_empty() { crate::mob::land::initialize(&mut mob, &mut crate::mob::Rng::new(shared.next_entity_id() as u64)); }
         else if crate::mob::land::llama(kind) {

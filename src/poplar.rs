@@ -111,7 +111,7 @@ pub fn stack_size(item: i32) -> Option<i32> {
         BlockForm::Boat => return Some(1),
         BlockForm::Plant => return Some(64),
         // Наблюдение официального 26.3 (probe_furnish_777.py): кровать и подушки по 16, карты по 64, пластинка 1.
-        BlockForm::Item => return Some(if row.name.ends_with("_cushion") { 16 } else if row.name.ends_with("_map") { 64 } else { 1 }),
+        BlockForm::Item => return Some(if row.name.ends_with("_cushion") { 16 } else if row.name.ends_with("_map") || row.name.ends_with("_spawn_egg") { 64 } else { 1 }),
         _ if row.name == "straw_bed" => return Some(16),
         _ => {}
     }

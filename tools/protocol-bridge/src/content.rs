@@ -151,7 +151,7 @@ pub static MINERALS: [SlabDescriptor; 28] = [
 /// blocks.json/items.json. `input_name`/`input_item` — дубовый двойник (те же свойства и порядок
 /// состояний, поэтому таблицы твёрдости, света и формы берутся по смещению от него); `item: -1` —
 /// у блока нет предмета (настенные таблички, горшок с саженцем). Лодки — предметы без блока (`BlockForm::Boat`); их сущности — `entity_ids`.
-pub static POPLAR: [SlabDescriptor; 61] = [
+pub static POPLAR: [SlabDescriptor; 63] = [
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Wood, name: "poplar_planks", item: 1598, block: 1260, first_state: 35118, last_state: 35118, default_state: 35118, wire_item: 72, wire_block: 23, wire_first_state: 27, input_name: "oak_planks", input_item: 36 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Stairs, name: "poplar_stairs", item: 1599, block: 1261, first_state: 35119, last_state: 35198, default_state: 35130, wire_item: 524, wire_block: 574, wire_first_state: 14139, input_name: "oak_stairs", input_item: 442 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Slab, name: "poplar_slab", item: 1600, block: 1262, first_state: 35199, last_state: 35204, default_state: 35202, wire_item: 350, wire_block: 662, wire_first_state: 15231, input_name: "oak_slab", input_item: 271 },
@@ -218,6 +218,9 @@ pub static POPLAR: [SlabDescriptor; 61] = [
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "abandoned_camp_map", item: 1653, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1253, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "warm_ocean_ruins_map", item: 1654, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1254, wire_block: 0, wire_first_state: 0, input_name: "filled_map", input_item: 0 },
     SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "music_disc_bounce", item: 1655, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1463, wire_block: 0, wire_first_state: 0, input_name: "music_disc_pigstep", input_item: 0 },
+    // Куб серы 26.3: ведро и яйцо призыва (предметы без блока). Сущность куба привязана к яйцу (`entity_ids_of`).
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "sulfur_cube_bucket", item: 1656, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1140, wire_block: 0, wire_first_state: 0, input_name: "bucket", input_item: 0 },
+    SlabDescriptor { family: SlabFamily::Poplar, form: BlockForm::Item, name: "sulfur_cube_spawn_egg", item: 1657, block: -1, first_state: 35723, last_state: 35722, default_state: -1, wire_item: 1316, wire_block: 0, wire_first_state: 0, input_name: "slime_spawn_egg", input_item: 0 },
 ];
 
 /// Сущности лодок тополя: (внутренний номер после 775, номер в 777 по pinned entities.json).
@@ -228,6 +231,8 @@ pub const fn entity_ids_of(name: &str) -> Option<(u32, u32)> {
         b"poplar_chest_boat" => Some((158, 107)),
         // Сущность подушки (цвет — в metadata): привязана к строке белой подушки.
         b"white_cushion" => Some((159, 33)),
+        // Куб серы (раскладка metadata — своя, индексы 26.3); привязан к строке яйца призыва.
+        b"sulfur_cube_spawn_egg" => Some((160, 133)),
         _ => None,
     }
 }
@@ -287,7 +292,7 @@ impl ContentCodec {
     /// (те же 14 полей, [проверить] сверкой с 777). None — это не сущность расширения.
     pub fn entity_layout_base(self, id: u32) -> Option<&'static str> {
         if !self.white_slab { return None; }
-        match id { 157 => Some("oak_boat"), 158 => Some("oak_chest_boat"), 159 => Some("cushion"), _ => None }
+        match id { 157 => Some("oak_boat"), 158 => Some("oak_chest_boat"), 159 => Some("cushion"), 160 => Some("sulfur_cube"), _ => None }
     }
     /// Только граница внутреннего packet builder: раскладка775 содержит
     /// canonical content. К настоящему входному Slot775 это неприменимо.
