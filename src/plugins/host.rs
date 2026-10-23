@@ -84,6 +84,8 @@ impl Drop for InsideGuard {
 }
 
 type Completion = wasmtime::component::TypedFunc<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>;
+type Damage = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, f64), (Option<f64>,)>;
+type Death = wasmtime::component::TypedFunc<(mcsa::api::types::Player, bool), ()>;
 
 /// Загруженный плагин.
 pub struct Loaded {
@@ -92,6 +94,8 @@ pub struct Loaded {
     pub store: Store<PluginCtx>,
     instance: Module,
     completion: Option<Completion>,
+    damage: Option<Damage>,
+    death: Option<Death>,
     limits: Limits,
     pub stats: Stats,
 }
@@ -351,7 +355,22 @@ impl Host {
                 crate::presentation::release(&self.shared, &manifest.name);
                 short(&error)
             })?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, limits, stats: Stats::default() };
+        let combat = raw.get_export_index(&mut store, None, "mcsa:api/combat-events@0.1.0");
+        let damage = combat.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-damage"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, String, f64), (Option<f64>,)>(&mut store, &index))
+            .transpose().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared, &manifest.name);
+                short(&error)
+            })?;
+        let death = combat.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-death"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, bool), ()>(&mut store, &index))
+            .transpose().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared, &manifest.name);
+                short(&error)
+            })?;
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, death, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
@@ -537,6 +556,39 @@ impl Host {
     }
 
     // ----- события -----
+
+    pub fn damage(&mut self, who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {
+        let now = self.shared_tick();
+        let mut damage = f64::from(amount);
+        let mut crashes = Vec::new();
+        let mut cancelled = false;
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.damage else { continue };
+            match plugin.call(now, |_, store| {
+                let (result,) = function.call(&mut *store, (who.to_wit(), cause.to_string(), damage))?;
+                Ok(result)
+            }) {
+                Ok(None) => { cancelled = true; break; }
+                Ok(Some(value)) if value.is_finite() && (0.0..=f64::from(f32::MAX)).contains(&value) => damage = value,
+                Ok(_) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason: "обработчик урона вернул некорректное число".into() }),
+                Err(reason) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason }),
+            }
+        }
+        self.bury(crashes);
+        if cancelled { None } else { Some(damage as f32) }
+    }
+
+    pub fn death(&mut self, who: &PlayerView, keep_inventory: bool) {
+        let now = self.shared_tick();
+        let mut crashes = Vec::new();
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.death else { continue };
+            if let Err(reason) = plugin.call(now, |_, store| function.call(&mut *store, (who.to_wit(), keep_inventory))) {
+                crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason });
+            }
+        }
+        self.bury(crashes);
+    }
 
     pub fn player_join(&mut self, who: &PlayerView) {
         let who = who.to_wit();

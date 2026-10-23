@@ -6329,6 +6329,7 @@ async fn read_and_log_play_packets(
                     vitals::command_hit(stream, shared, player, amount, source, origin).await?;
                 }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
+                Order::Health { value } => vitals::set_health(stream, shared, player, value).await?,
                 Order::Effect(effect) => {
                     vitals::give_effect(stream, player, effect).await?;
                     // Маяк (фоновый эффект) обновляет частицы и атрибуты на такт

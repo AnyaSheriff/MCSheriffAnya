@@ -296,6 +296,39 @@ impl mcsa::api::server::Host for PluginCtx {
 }
 
 impl mcsa::api::player::Host for PluginCtx {
+    fn set_health(&mut self, uuid: String, health: f64) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        let info = players.ui.info.get(&uuid).ok_or("игрока Java нет на сервере")?;
+        if !health.is_finite() || health < 0.0 || health > f64::from(info.max_health) {
+            return Err("здоровье: конечное число от 0 до максимума игрока".into());
+        }
+        if players.gear(&uuid).view.dead { return Err("игрок уже умер".into()); }
+        players.order(&uuid, Order::Health { value: health as f32 });
+        Ok(())
+    }
+
+    fn add_potion_effect(&mut self, uuid: String, effect: mcsa::api::player::PotionEffect) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let kind = crate::survival::EffectKind::from_name(&effect.kind).ok_or("неизвестный эффект")?;
+        if effect.duration < -1 || !(0..=255).contains(&effect.amplifier) {
+            return Err("эффект: duration >= -1, amplifier от 0 до 255".into());
+        }
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.members().iter().any(|member| member.uuid == uuid) { return Err("игрока нет на сервере".into()); }
+        players.order(&uuid, Order::Effect(crate::survival::Effect { kind, amplifier: effect.amplifier, ticks_left: effect.duration, ambient: effect.ambient, visible: effect.particles, show_icon: effect.icon }));
+        Ok(())
+    }
+
+    fn remove_potion_effect(&mut self, uuid: String, kind: String) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let kind = crate::survival::EffectKind::from_name(&kind).ok_or("неизвестный эффект")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.members().iter().any(|member| member.uuid == uuid) { return Err("игрока нет на сервере".into()); }
+        players.order(&uuid, Order::ClearEffect(kind));
+        Ok(())
+    }
+
     fn send_message(&mut self, uuid: String, message: String) -> bool {
         let Some(uuid) = parse_uuid(&uuid) else { return false };
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
@@ -406,6 +439,35 @@ impl mcsa::api::player::Host for PluginCtx {
 }
 
 impl mcsa::api::world::Host for PluginCtx {
+    fn get_border(&mut self, dimension: wit::Dimension) -> mcsa::api::world::Border {
+        let border = crate::commands_world::border_of(&self.shared, dimension_from_wit(dimension));
+        mcsa::api::world::Border { size: border.size(), center_x: border.center_x, center_z: border.center_z }
+    }
+
+    fn set_border(&mut self, dimension: wit::Dimension, value: mcsa::api::world::Border) -> Result<(), String> {
+        if !value.size.is_finite() || !(1.0..=crate::commands_world::MAX_SIZE).contains(&value.size)
+            || !value.center_x.is_finite() || value.center_x.abs() > crate::commands_world::MAX_CENTER
+            || !value.center_z.is_finite() || value.center_z.abs() > crate::commands_world::MAX_CENTER {
+            return Err("рамка: размер 1..59999968, центр в пределах ±29999984".into());
+        }
+        let dimension = dimension_from_wit(dimension);
+        let packet = {
+            let mut borders = self.shared.world_cmd.borders.lock().expect("рамки");
+            let border = &mut borders[dimension.index()];
+            border.from = value.size;
+            border.to = value.size;
+            border.center_x = value.center_x;
+            border.center_z = value.center_z;
+            border.lerp_total = 0;
+            border.lerp_left = 0;
+            border.init_packet()
+        };
+        let mut players = self.shared.players.lock().expect("игроки");
+        let targets: Vec<_> = players.members().iter().filter(|member| member.dimension == dimension).map(|member| member.uuid).collect();
+        for uuid in targets { players.order(&uuid, Order::Packet(packet.clone())); }
+        Ok(())
+    }
+
     fn get_block(&mut self, pos: wit::BlockPos) -> Option<String> {
         let world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
 

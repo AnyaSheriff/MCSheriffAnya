@@ -1,2 +1,2 @@
 package org.bukkit.entity;
-public interface Player extends Entity, org.bukkit.command.CommandSender { org.bukkit.GameMode getGameMode(); void setGameMode(org.bukkit.GameMode mode); double getHealth(); org.bukkit.inventory.PlayerInventory getInventory(); void kickPlayer(String reason); }
+public interface Player extends LivingEntity, org.bukkit.command.CommandSender { org.bukkit.GameMode getGameMode(); void setGameMode(org.bukkit.GameMode mode); org.bukkit.inventory.PlayerInventory getInventory(); void kickPlayer(String reason); void sendActionBar(net.kyori.adventure.text.Component message); default boolean isOnline(){return org.bukkit.Bukkit.getPlayer(getUniqueId())!=null;} }

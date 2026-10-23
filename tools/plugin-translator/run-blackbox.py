@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# Собственный процесс ядра, собственные настройки и только порт 26110.
+# Собственный процесс ядра, собственные настройки и свободный тестовый порт.
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -14,18 +15,24 @@ import uuid
 
 root = Path(__file__).resolve().parent
 repo = root.parent.parent
+parser = argparse.ArgumentParser()
+parser.add_argument('--port', type=int, default=26210)
+args = parser.parse_args()
+if not 26200 <= args.port <= 26299:
+    raise SystemExit('Тестовый порт: 26200..26299')
+port = args.port
 binary = repo / 'target/release/mcsheriffanya'
 if not binary.is_file():
     raise SystemExit('Сначала соберите ядро: CARGO_BUILD_JOBS=6 cargo build --release')
 with socket.socket() as probe:
-    if probe.connect_ex(('127.0.0.1', 26110)) == 0:
-        raise SystemExit('Порт 26110 занят; остановите предыдущий тестовый процесс')
+    if probe.connect_ex(('127.0.0.1', port)) == 0:
+        raise SystemExit(f'Порт {port} занят; выберите другой тестовый порт')
 subprocess.run([sys.executable, str(root / 'build-fixtures.py')], check=True)
 (repo / 'tmp').mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as temp:
     work = Path(temp)
     (work / 'config').mkdir()
-    (work / 'config/server.properties').write_text('server-port=26110\nonline-mode=false\nlevel-type=minecraft\\:flat\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\n')
+    (work / 'config/server.properties').write_text(f'server-port={port}\nonline-mode=false\nlevel-type=minecraft\\:flat\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\n')
     (work / 'config/mcsa.properties').write_text('auth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\nconsole-colors=never\nsend-error-reports=false\n')
     identity = bytearray(hashlib.md5(b'OfflinePlayer:JavaTester').digest())
     identity[6] = (identity[6] & 15) | 48
@@ -48,7 +55,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут запуска ядра')
-            subprocess.run(['node', str(root / 'blackbox.cjs')], check=True, timeout=60)
+            subprocess.run(['node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=60)
             assert config.read_text() == (root / 'fixtures/scheduler/config.yml').read_text(), 'config.yml не восстановлен из JAR'
         finally:
             server.send_signal(signal.SIGINT)

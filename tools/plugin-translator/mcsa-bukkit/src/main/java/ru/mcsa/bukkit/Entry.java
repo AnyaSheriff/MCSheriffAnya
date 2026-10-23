@@ -26,10 +26,13 @@ public final class Entry {
    case 3:e=new AsyncPlayerChatEvent(p,a[9]);break;
    case 4:case 5:org.bukkit.block.Block b=new RemoteBlock(new RemoteWorld(Integer.parseInt(a[9])),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),kind==5?a[13]:null);e=kind==4?new BlockBreakEvent(b,p):new BlockPlaceEvent(b,p);break;
    case 6:e=new PlayerCommandPreprocessEvent(p,"/"+a[9]);break;
+   case 10:e=new org.bukkit.event.entity.EntityDamageEvent(p,org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(a[9]),Double.parseDouble(a[10]));break;
+   case 11:e=new org.bukkit.event.entity.PlayerDeathEvent(p,a[9].equals("1"));break;
    default:throw new IllegalArgumentException("Неизвестное событие");
   }
   RuntimeState.fire(e);
   if(e instanceof Cancellable&&((Cancellable)e).isCancelled())return 1;
+  if(kind==10){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}
   if(kind==3&&!((AsyncPlayerChatEvent)e).getMessage().equals(a[9])){Host.call(22,((AsyncPlayerChatEvent)e).getMessage());return 2;}
   return 0;
  }

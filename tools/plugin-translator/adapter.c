@@ -59,6 +59,13 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 23: mcsa_api_log_write(MCSA_API_LOG_LEVEL_INFO,&s[0]);break;
     case 24: enabled=true;break;
     case 25: if(completions.len<100 && s[0].len<=512) { completions.ptr=realloc(completions.ptr,(completions.len+1)*sizeof(plugin_string_t));if(!completions.ptr)abort();plugin_string_dup(&completions.ptr[completions.len++],a[0]); }break;
+    case 27: number(mcsa_api_presentation_send_component(&s[0],&s[1]));break;
+    case 28: number(mcsa_api_presentation_set_action_bar(&s[0],&s[1]));break;
+    case 29: if(!mcsa_api_player_set_health(&s[0],atof(a[1]),&err))error(err);break;
+    case 30: {mcsa_api_player_potion_effect_t effect={.kind=s[1],.duration=atoi(a[2]),.amplifier=atoi(a[3]),.ambient=!strcmp(a[4],"true"),.particles=!strcmp(a[5],"true"),.icon=!strcmp(a[6],"true")};if(!mcsa_api_player_add_potion_effect(&s[0],&effect,&err))error(err);else number(1);break;}
+    case 31: if(!mcsa_api_player_remove_potion_effect(&s[0],&s[1],&err))error(err);break;
+    case 32: {mcsa_api_world_border_t border;mcsa_api_world_get_border(atoi(a[0]),&border);number(border.size);number(border.center_x);number(border.center_z);break;}
+    case 33: {mcsa_api_world_border_t border={atof(a[1]),atof(a[2]),atof(a[3])};if(!mcsa_api_world_set_border(atoi(a[0]),&border,&err))error(err);break;}
     default: abort();
     }
     free(copy);return output;
@@ -86,6 +93,15 @@ void exports_mcsa_api_events_on_command(mcsa_api_types_sender_t *caller,plugin_s
     for(size_t i=0;i<args->len;i++)string(args->ptr[i]);ret->success=dispatch(7)!=0;ret->message.is_some=false;
 }
 void exports_mcsa_api_events_on_task(uint32_t task) {clear();number(task);dispatch(8);}
+
+bool exports_mcsa_api_combat_events_on_damage(exports_mcsa_api_combat_events_player_t *who,plugin_string_t *cause,double damage,double *ret) {
+    clear();player(who);string(*cause);number(damage);int result=dispatch(10);
+    if(result==1)return false;
+    *ret=result==2&&event_text?atof(event_text):damage;return true;
+}
+void exports_mcsa_api_combat_events_on_death(exports_mcsa_api_combat_events_player_t *who,bool keep_inventory) {
+    clear();player(who);number(keep_inventory);dispatch(11);
+}
 
 void exports_mcsa_api_completion_on_tab_complete(mcsa_api_types_sender_t *caller,plugin_string_t *name,plugin_list_string_t *args,plugin_list_string_t *ret) {
     clear();number(caller->kind);if(caller->uuid.is_some)string(caller->uuid.val);else text("");string(caller->name);string(*name);

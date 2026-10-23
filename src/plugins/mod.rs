@@ -306,6 +306,16 @@ mod enabled {
         with_host(Verdict::Allow, move |host| host.player_command(&who, &line))
     }
 
+    pub fn damage(who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {
+        let (who, cause) = (who.clone(), cause.to_string());
+        with_host(Some(amount), move |host| host.damage(&who, &cause, amount))
+    }
+
+    pub fn death(who: &PlayerView, keep_inventory: bool) {
+        let who = who.clone();
+        with_host((), move |host| host.death(&who, keep_inventory));
+    }
+
     pub fn command_names(shared: &Shared, uuid: &[u8;16]) -> Vec<String> {
         let level = shared.ops.lock().expect("операторы").level_of(uuid) as u8;
         with_host(Vec::new(), move |host| host.command_names(level))
@@ -381,7 +391,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{command_names, tab_complete, active, block_break, block_place, chat, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -441,6 +451,9 @@ mod disabled {
         Verdict::Allow
     }
 
+    pub fn damage(_who: &PlayerView, _cause: &str, amount: f32) -> Option<f32> { Some(amount) }
+    pub fn death(_who: &PlayerView, _keep_inventory: bool) {}
+
     pub fn command_names(_shared: &Shared, _uuid: &[u8;16]) -> Vec<String> { Vec::new() }
 
     pub fn tab_complete(_shared: &Shared, _uuid: &[u8;16], _line: &str) -> Option<Vec<String>> { None }
@@ -451,7 +464,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{command_names, tab_complete, active, block_break, block_place, chat, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

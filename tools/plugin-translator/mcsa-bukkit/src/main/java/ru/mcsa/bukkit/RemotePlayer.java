@@ -8,6 +8,11 @@ public final class RemotePlayer implements Player {
  public World getWorld(){return getLocation().getWorld();} public GameMode getGameMode(){for(Player p:Bukkit.getOnlinePlayers())if(p.getUniqueId().toString().equals(uuid))return ((RemotePlayer)p).mode;return mode;}
  public void setGameMode(GameMode m){Host.call(11,uuid,""+m.ordinal());}public double getHealth(){return Double.parseDouble(Host.text(12,uuid));}
  public void sendMessage(String m){Host.call(2,uuid,m);}public boolean isOp(){return Integer.parseInt(Host.text(10,uuid))>0;}
+ public void sendMessage(net.kyori.adventure.text.Component m){if(!Host.yes(27,uuid,Text.json(m)))throw new IllegalStateException("Компонент сообщения отклонён хозяином");}
+ public void sendActionBar(net.kyori.adventure.text.Component m){if(!Host.yes(28,uuid,Text.json(m)))throw new IllegalStateException("Компонент action bar отклонён хозяином");}
+ public void setHealth(double health){if(!Double.isFinite(health)||health<0)throw new IllegalArgumentException("Здоровье должно быть конечным и неотрицательным");Host.call(29,uuid,""+health);}
+ public boolean addPotionEffect(org.bukkit.potion.PotionEffect effect){return Host.yes(30,uuid,effect.getType().getKey().getKey(),""+effect.getDuration(),""+effect.getAmplifier(),""+effect.isAmbient(),""+effect.hasParticles(),""+effect.hasIcon());}
+ public void removePotionEffect(org.bukkit.potion.PotionEffectType type){Host.call(31,uuid,type.getKey().getKey());}
  public boolean hasPermission(String p){return Integer.parseInt(Host.text(10,uuid))>=4;}
  public boolean teleport(Location l){return Host.yes(3,uuid,""+((RemoteWorld)l.getWorld()).dimension,""+l.getX(),""+l.getY(),""+l.getZ(),""+l.getYaw(),""+l.getPitch());}
  public void kickPlayer(String r){Host.call(20,uuid,r);}

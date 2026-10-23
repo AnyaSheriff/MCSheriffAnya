@@ -101,6 +101,9 @@ fn load_run_command_and_unload() {
     assert_eq!(host.run_command(console(), "hello", &[]).unwrap().1, "Привет, Console!");
 
     host.player_join(&view());
+    assert_eq!(host.damage(&view(), "CUSTOM", 4.0), Some(4.0));
+    assert_eq!(host.damage(&view(), "FALL", 5.0), Some(5.0));
+    host.death(&view(), false);
 
     assert_eq!(host.unload("hello").unwrap(), "hello выгружен");
     assert!(host.command_level("hello").is_none());
@@ -585,6 +588,9 @@ fn translated_bukkit_jars() {
     assert!(host.run_command(sender.clone(), "javahello", &[]).unwrap().0);
     assert_eq!(host.complete(sender.clone(), 4, "javahello", vec!["java-tab".into()]).unwrap(), vec!["java-tab-ok", "java-tab-two"]);
     host.player_join(&view());
+    assert_eq!(host.damage(&view(), "CUSTOM", 4.0), Some(1.0));
+    assert_eq!(host.damage(&view(), "FALL", 5.0), None);
+    host.death(&view(), false);
     assert_eq!(host.chat(&view(), "cancel-java"), ChatOutcome::Cancel);
     assert_eq!(host.chat(&view(), "обычный чат"), ChatOutcome::Pass);
     assert_eq!(host.player_command(&view(), "java-blocked"), Verdict::Deny);
@@ -612,6 +618,20 @@ fn bukkit_host_operations_remain_typed_and_bounded() {
     let uuid = crate::network::login::format_uuid(&[1;16]);
     assert_eq!(ctx.operator_level(uuid.clone()), Some(0));
     assert_eq!(ctx.operator_level("ошибка".into()), None);
+    shared.players.lock().unwrap().ui.info.insert([1;16], crate::presentation::Info { health: 20.0, max_health: 20.0, ..Default::default() });
+    for value in [f64::NAN, f64::INFINITY, -1.0, 20.1] { assert!(ctx.set_health(uuid.clone(), value).is_err()); }
+    assert!(ctx.set_health(uuid.clone(), 18.0).is_ok());
+    assert!(ctx.set_health(uuid.clone(), 0.0).is_ok());
+    assert!(ctx.set_health("не UUID".into(), 1.0).is_err());
+    let effect = super::api::mcsa::api::player::PotionEffect { kind: "night_vision".into(), duration: 100, amplifier: 0, ambient: false, particles: false, icon: true };
+    assert!(ctx.add_potion_effect(uuid.clone(), effect.clone()).is_ok());
+    assert!(ctx.add_potion_effect(uuid.clone(), super::api::mcsa::api::player::PotionEffect { duration: -2, ..effect.clone() }).is_err());
+    assert!(ctx.add_potion_effect(uuid.clone(), super::api::mcsa::api::player::PotionEffect { amplifier: 256, ..effect.clone() }).is_err());
+    assert!(ctx.add_potion_effect(uuid.clone(), super::api::mcsa::api::player::PotionEffect { kind: "несуществующий".into(), ..effect }).is_err());
+    assert!(ctx.remove_potion_effect(uuid.clone(), "night_vision".into()).is_ok());
+    let orders = shared.players.lock().unwrap().take_orders(&[1;16]);
+    assert!(orders.iter().any(|order| matches!(order, crate::players::Order::Health { value } if *value == 18.0)));
+    assert!(orders.iter().any(|order| matches!(order, crate::players::Order::Effect(effect) if effect.show_icon && !effect.visible)));
     assert!(ctx.set_game_mode(uuid.clone(), wit::GameMode::Survival));
     assert_eq!(shared.players.lock().unwrap().members()[0].game_mode, 0);
     assert!(ctx.set_inventory_slot(uuid.clone(), 36, Some(wit::ItemStack { item: "stone".into(), count: 3 })).is_ok());
@@ -623,6 +643,12 @@ fn bukkit_host_operations_remain_typed_and_bounded() {
     assert_eq!(ctx.weather(wit::Dimension::Overworld), "thunder");
     assert!(ctx.set_weather(wit::Dimension::Overworld, "ошибка".into(), 100).is_err());
     assert!(ctx.set_weather(wit::Dimension::Overworld, "rain".into(), u32::MAX).is_err());
+    let border = ctx.get_border(wit::Dimension::Overworld);
+    assert_eq!(border.size, 59_999_968.0);
+    assert!(ctx.set_border(wit::Dimension::Overworld, super::api::mcsa::api::world::Border { size: f64::NAN, center_x: 0.0, center_z: 0.0 }).is_err());
+    assert!(ctx.set_border(wit::Dimension::Overworld, super::api::mcsa::api::world::Border { size: 10_000.0, center_x: 1.0, center_z: -2.0 }).is_ok());
+    assert_eq!(ctx.get_border(wit::Dimension::Overworld).size, 10_000.0);
+    assert_eq!(ctx.get_border(wit::Dimension::Nether).size, 59_999_968.0);
     for name in ["auth", "changepassword", "op", "stop"] {
         let spec = super::api::mcsa::api::command::CommandSpec { name: name.into(), description: String::new(), usage: String::new(), level: 0, permission: None };
         assert!(ctx.register(spec).is_err(), "имя ядра нельзя занимать");

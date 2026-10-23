@@ -1333,6 +1333,18 @@ pub(super) async fn send_health(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::
     write_body(stream, body).await
 }
 
+/// Прямая смена здоровья не является ударом: ноль обходит броню и тотем.
+pub(super) async fn set_health(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, value: f32) -> io::Result<()> {
+    if player.vit.dead { return Ok(()); }
+    player.vit.health = value.min(player.vit.max_health);
+    if value == 0.0 {
+        player.vit.dead = true;
+        die(stream, shared, player, Source::GenericKill, None).await?;
+    }
+    shared.players.lock().expect("игроки").set_health(&player.uuid, player.vit.health);
+    send_health(stream, &player.vit).await
+}
+
 /// Set Experience: доля шкалы, уровень, всего очков.
 pub(super) async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::Result<()> {
     let (level, bar) = survival::level_of(vit.xp);
@@ -1704,6 +1716,9 @@ pub(super) fn respawned(player: &mut PlayerState) {
 
 /// Смерть: сообщение, событие и выпавшие вещи.
 async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, source: Source, killer: Option<Killer<'_>>) -> io::Result<()> {
+    if crate::plugins::active() {
+        crate::plugins::death(&super::plugin_view(player), shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
+    }
     super::vehicle::dismount(shared, player);
     effect_reactions(shared, player, true);
     let mob = player.net.killer;
@@ -2064,6 +2079,41 @@ fn projectile_difficulty(amount: f32, source: Source, difficulty: u8, player_own
     } else { amount }
 }
 
+/// Причины публичного Bukkit API; детали источника и модификаторы пока не экспортируются.
+fn plugin_damage_cause(source: Source) -> &'static str {
+    match source {
+        Source::Fall | Source::EnderPearl => "FALL",
+        Source::OnFire => "FIRE_TICK",
+        Source::InFire => "FIRE",
+        Source::Campfire => "CAMPFIRE",
+        Source::Lava => "LAVA",
+        Source::OutOfWorld => "VOID",
+        Source::GenericKill => "KILL",
+        Source::Drown => "DROWNING",
+        Source::InWall => "SUFFOCATION",
+        Source::Starve => "STARVATION",
+        Source::Wither => "WITHER",
+        Source::Cactus | Source::SweetBerryBush | Source::Stalagmite => "CONTACT",
+        Source::HotFloor => "HOT_FLOOR",
+        Source::Freeze => "FREEZE",
+        Source::Lightning => "LIGHTNING",
+        Source::Thorns => "THORNS",
+        Source::Cramming => "CRAMMING",
+        Source::DryOut => "DRYOUT",
+        Source::FlyIntoWall => "FLY_INTO_WALL",
+        Source::SonicBoom => "SONIC_BOOM",
+        Source::FallingAnvil | Source::FallingBlock | Source::FallingStalactite => "FALLING_BLOCK",
+        Source::MobAttack | Source::MobAttackNoAggro | Source::PlayerAttack | Source::MaceSmash | Source::Sting | Source::Spear => "ENTITY_ATTACK",
+        Source::PlayerExplosion | Source::Fireworks => "ENTITY_EXPLOSION",
+        Source::Explosion | Source::BadRespawnPoint => "BLOCK_EXPLOSION",
+        Source::Arrow | Source::MobProjectile | Source::Trident | Source::Fireball | Source::LargeFireball | Source::WitherSkull | Source::Thrown | Source::WindCharge | Source::Spit | Source::UnattributedFireball => "PROJECTILE",
+        Source::Magic | Source::IndirectMagic => "MAGIC",
+        Source::DragonBreath => "DRAGON_BREATH",
+        Source::OutsideBorder => "WORLD_BORDER",
+        Source::Generic => "CUSTOM",
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn hit_by_breached(
     stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
@@ -2071,6 +2121,11 @@ pub(super) async fn hit_by_breached(
 ) -> io::Result<Option<survival::Hit>> {
     if crate::frost::protects(&player.inventory, source) { return Ok(None); }
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
+
+    if crate::plugins::active() {
+        let Some(changed) = crate::plugins::damage(&super::plugin_view(player), plugin_damage_cause(source), amount) else { return Ok(None); };
+        amount = changed;
+    }
 
     // Броня и защитные чары — разные слои: Feather Falling действует
     // на падение, Protection — на магию, Fire Protection — на горение.

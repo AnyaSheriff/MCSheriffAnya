@@ -27,7 +27,7 @@ def run(*args, **kwargs):
     subprocess.run([str(a) for a in args], check=True, **kwargs)
 
 
-def bootstrap():
+def bootstrap(toolchain=True):
     TARGET.mkdir(exist_ok=True)
     if not (TARGET / "lib/teavm-tooling-0.12.3.jar").exists():
         run("mvn", "-q", "-f", ROOT / "pom.xml", "dependency:copy-dependencies", "-DoutputDirectory=target/lib")
@@ -42,8 +42,9 @@ def bootstrap():
         with tarfile.open(archive) as tar:
             tar.extractall(CHAIN, filter="data")
         archive.unlink()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-        list(pool.map(fetch, PACKAGES.items()))
+    if toolchain:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            list(pool.map(fetch, PACKAGES.items()))
     cp = str(TARGET / "lib/*")
     for source, dest in [(ROOT / "mcsa-bukkit/src/main/java", TARGET / "sdk"), (ROOT / "src/main/java", TARGET / "tool")]:
         shutil.rmtree(dest, ignore_errors=True)
@@ -81,13 +82,13 @@ int64_t teavm_currentTimeNano(void) { struct timespec t;clock_gettime(CLOCK_MONO
     p.write_text(p.read_text().replace("int main(int argc, char** argv)", "int teavm_main(int argc, char** argv)"))
 
 
-def translate(jar, output, check_only=False):
+def translate(jar, output, check_only=False, report=None):
     if jar.stat().st_size > 64 * 1024 * 1024:
         raise ValueError("JAR больше 64 МиБ")
     with tempfile.TemporaryDirectory(prefix="translate-", dir=TARGET) as temp:
         work = Path(temp)
         cp = str(TARGET / "tool") + os.pathsep + str(TARGET / "lib/*")
-        run("java", "-cp", cp, "ru.mcsa.translator.Inspect", jar, work, TARGET / "mcsa-bukkit.jar")
+        run("java", "-cp", cp, "ru.mcsa.translator.Inspect", jar, work, TARGET / "mcsa-bukkit.jar", *([report.resolve()] if report else []))
         if check_only:
             return
         import tomllib
@@ -130,12 +131,13 @@ def main():
     parser.add_argument("jar", type=Path, nargs="?")
     parser.add_argument("--output", type=Path, default=Path("plugins"), help="Корневая папка плагинов")
     parser.add_argument("--check-only", action="store_true", help="Только статическая проверка; без гарантии компиляции TeaVM")
+    parser.add_argument("--report", type=Path, help="JSON: точные отсутствующие API и места обращений, в том числе при отказе")
     parser.add_argument("--build-sdk", action="store_true", help="Собрать SDK и инструменты без перевода")
     args = parser.parse_args()
     try:
-        bootstrap()
+        bootstrap(toolchain=bool(args.jar and not args.check_only))
         if args.jar:
-            translate(args.jar.resolve(), args.output.resolve(), args.check_only)
+            translate(args.jar.resolve(), args.output.resolve(), args.check_only, args.report)
         elif not args.build_sdk:
             parser.error("нужен JAR или --build-sdk")
     except (subprocess.CalledProcessError, OSError, ValueError) as error:

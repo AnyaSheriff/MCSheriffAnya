@@ -1067,6 +1067,8 @@ impl BedrockWorld {
         for order in orders {
             match order {
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
+                // API set-health допускает только игроков со снимком Java UI.
+                crate::players::Order::Health { .. } => {}
                 // [Bedrock: потом] Атрибуция команды; само здоровье обновляется.
                 crate::players::Order::CommandDamage { amount, source, .. } => self.health.hurt(amount, source),
                 crate::players::Order::MagicHit { amount, from, .. } => self.health.hurt(amount, if from.is_some() { crate::survival::Source::IndirectMagic } else { crate::survival::Source::Magic }),

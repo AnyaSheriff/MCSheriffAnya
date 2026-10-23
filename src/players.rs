@@ -229,6 +229,8 @@ pub enum Order {
 
     /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
     Hurt { amount: f32, source: crate::survival::Source },
+    /// Прямая смена здоровья API плагина; ноль проходит через обычную смерть.
+    Health { value: f32 },
     /// /damage с прямым виновником, причиной или точкой источника.
     CommandDamage { amount: f32, source: crate::survival::Source, origin: crate::combat::DamageOrigin },
     /// Мгновенный урон зелья с известным бросившим игроком.

@@ -134,6 +134,20 @@ interface player {
     /// Заменить ячейку окна игрока (9..44); none очищает ячейку.
     set-inventory-slot: func(uuid: string, slot: u32, stack: option<item-stack>) -> result<_, string>;
 
+    /// Здоровье 0..max-health; ноль вызывает обычную смерть, без возрождения.
+    set-health: func(uuid: string, health: f64) -> result<_, string>;
+    record potion-effect {
+        kind: string,
+        /// Число тактов; -1 означает бессрочный эффект.
+        duration: s32,
+        amplifier: s32,
+        ambient: bool,
+        particles: bool,
+        icon: bool,
+    }
+    add-potion-effect: func(uuid: string, effect: potion-effect) -> result<_, string>;
+    remove-potion-effect: func(uuid: string, kind: string) -> result<_, string>;
+
     /// Выгнать с сервера.
     kick: func(uuid: string, reason: string) -> bool;
 }
@@ -213,6 +227,11 @@ interface presentation {
 
 interface %world {
     use types.{block-pos, location, dimension};
+
+    record border { size: f64, center-x: f64, center-z: f64 }
+    get-border: func(dimension: dimension) -> border;
+    /// Мгновенное изменение рамки; предупреждения и урон сохраняются.
+    set-border: func(dimension: dimension, value: border) -> result<_, string>;
 
     /// Имя блока (`minecraft:stone`). none — чанк не загружен.
     get-block: func(pos: block-pos) -> option<string>;
@@ -358,6 +377,16 @@ interface completion {
 world bukkit-plugin {
     include plugin;
     export completion;
+    export combat-events;
+}
+
+/// Необязательные события игроков: старым компонентам экспорт не нужен.
+interface combat-events {
+    use types.{player};
+    /// Базовый урон до брони; none отменяет удар. Результат проверяется хозяином.
+    on-damage: func(who: player, cause: string, damage: f64) -> option<f64>;
+    /// Уведомление о смерти до выпадения вещей; keep-inventory только для чтения.
+    on-death: func(who: player, keep-inventory: bool);
 }
 
 world sdk-module {
