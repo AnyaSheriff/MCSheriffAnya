@@ -517,6 +517,10 @@ impl mcsa::api::privileged::Host for PluginCtx {
         if line.split_whitespace().next() == Some("plugman") {
             return "plugman из плагина не вызывается".to_string();
         }
+        // Аккаунты и пароли: даже доверенный плагин их не читает и не меняет.
+        if crate::auth::sensitive_command(line) {
+            return "команды auth из плагина не вызываются".to_string();
+        }
 
         crate::commands::run(line, &crate::commands::Source::Console, &self.shared).reply
     }
