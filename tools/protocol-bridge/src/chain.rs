@@ -1,9 +1,21 @@
-//! Соседние переходы774↔775↔776↔777. Наличие пути не открывает допуск.
+//! Соседние переходы770↔771↔772↔773↔774↔775↔776↔777. Путь не открывает допуск.
 //! Пока полная цепь проверяет только перечисленные управляющие пакеты без
 //! ID содержимого. Остальные требуют отдельных кодеков и возвращают отказ.
 use crate::{Direction, JavaVersion, State, ids::RegistryKind, wire::{self, Cursor, uint}};
 
-const VERSIONS: [JavaVersion; 4] = [JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3];
+const VERSIONS: [JavaVersion; 8] = [JavaVersion::V1_21_5, JavaVersion::V1_21_6, JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3];
+
+pub(crate) fn neighbor(version: JavaVersion) -> JavaVersion {
+    match version {
+        JavaVersion::V1_21_5 => JavaVersion::V1_21_6,
+        JavaVersion::V1_21_6 => JavaVersion::V1_21_8,
+        JavaVersion::V1_21_8 => JavaVersion::V1_21_9,
+        JavaVersion::V1_21_9 => JavaVersion::V1_21_11,
+        JavaVersion::V1_21_11 => JavaVersion::V26_1_2,
+        JavaVersion::V26_1_2 => JavaVersion::V26_2,
+        _ => JavaVersion::V26_1_2,
+    }
+}
 
 /// Направленный маршрут не зависит от основной версии игровых правил.
 /// Статический путь ничего не говорит о готовности его самого слабого ребра.
@@ -27,6 +39,10 @@ fn kind(state: State, direction: Direction) -> RegistryKind {
 }
 
 fn info(registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: usize) -> Option<(&'static str,u32,bool)> {
+    if let Some(entries) = crate::generated_client_chain::packets(registry,from,to) {
+        let &(name,target,equal) = entries.get(id)?;
+        return (target != u16::MAX).then_some((name,u32::from(target),equal));
+    }
     if from == JavaVersion::V1_21_11 || to == JavaVersion::V1_21_11 {
         let &(name,target,equal) = crate::generated_step1::packets(registry,from == JavaVersion::V1_21_11)?.get(id)?;
         if target == u16::MAX { return None; }
@@ -52,10 +68,7 @@ pub fn translate_control(state: State, direction: Direction, from: JavaVersion, 
         let mut input = Cursor::new(&body);
         let id = input.uint()?;
         let lookup = if source == target {
-            let neighbor = if source == JavaVersion::V1_21_11 { JavaVersion::V26_1_2 }
-                else if source == JavaVersion::V26_1_2 { JavaVersion::V26_2 }
-                else { JavaVersion::V26_1_2 };
-            let (name,_,_) = info(kind(state,direction),source,neighbor,id as usize).ok_or(wire::Error::Invalid)?;
+            let (name,_,_) = info(kind(state,direction),source,neighbor(source),id as usize).ok_or(wire::Error::Invalid)?;
             (name,id,true)
         } else { info(kind(state,direction),source,target,id as usize).ok_or(wire::Error::Invalid)? };
         let (name,mapped,equal) = lookup;
@@ -96,8 +109,7 @@ mod tests {
                 assert!(route.windows(2).all(|p| (p[0].protocol()-p[1].protocol()).abs()==1));
                 // ID берётся из разрешённой таблицы, значение не зависит от версии.
                 let registry=K::PlayServerbound;
-                let neighbor=if from==JavaVersion::V1_21_11 { JavaVersion::V26_1_2 } else if from==JavaVersion::V26_1_2 { JavaVersion::V26_2 } else { JavaVersion::V26_1_2 };
-                let id=(0..256).find(|&id|info(registry,from,neighbor,id).is_some_and(|r|r.0=="keep_alive")).unwrap();
+                let id=(0..256).find(|&id|info(registry,from,neighbor(from),id).is_some_and(|r|r.0=="keep_alive")).unwrap();
                 let mut body=Vec::new();uint(&mut body,id as u32);body.extend((-123456789i64).to_be_bytes());
                 let translated=translate_control(State::Play,Direction::Serverbound,from,to,&body).unwrap();
                 assert_eq!(translate_control(State::Play,Direction::Serverbound,to,from,&translated).unwrap(),body);

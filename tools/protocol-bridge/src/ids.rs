@@ -16,6 +16,27 @@ pub enum IdTranslationError {
 pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
+    if (770..=773).contains(&from.protocol()) || (770..=773).contains(&to.protocol()) {
+        let route = crate::chain::path(from,to).map_err(|_| IdTranslationError::UnsupportedVersion(if from == JavaVersion::V1_12_2 {from} else {to}))?;
+        if from == to {
+            let (count,_) = crate::generated_client_chain::ranges(registry,from,crate::chain::neighbor(from))
+                .ok_or(IdTranslationError::UnsupportedVersion(from))?;
+            return if id < count {Ok(id)} else {Err(IdTranslationError::UnknownId(id))};
+        }
+        let mut mapped = id;
+        for edge in route.windows(2) {
+            if let Some((count,ranges)) = crate::generated_client_chain::ranges(registry,edge[0],edge[1]) {
+                if mapped >= count {return Err(IdTranslationError::UnknownId(mapped));}
+                let &(_,_,offset) = ranges.iter().find(|&&(a,b,_)| (a..=b).contains(&mapped))
+                    .ok_or(IdTranslationError::UnknownId(mapped))?;
+                if offset == 65535 {return Err(IdTranslationError::MissingTarget(mapped));}
+                mapped = (i64::from(mapped)+i64::from(offset)) as u32;
+            } else if edge.iter().any(|v| (770..=773).contains(&v.protocol())) {
+                return Err(IdTranslationError::UnsupportedVersion(edge[0]));
+            } else {mapped = translate(registry,edge[0],edge[1],mapped)?;}
+        }
+        return Ok(mapped);
+    }
     if from == JavaVersion::V1_21_11 || to == JavaVersion::V1_21_11 {
         if from != JavaVersion::V1_21_11 && from != JavaVersion::V26_1_2 {
             let middle = if from == JavaVersion::V26_3 {

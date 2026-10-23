@@ -16,7 +16,7 @@ fn name(kind: RegistryKind, version: JavaVersion, id: usize) -> Option<&'static 
         JavaVersion::V26_1_2 => generated_ids::packet_info(kind, false, id).map(|(name, _)| name),
         JavaVersion::V26_2 => generated_packet_776::names(kind)?.get(id).copied(),
         JavaVersion::V26_3 => generated_ids::packet_info(kind, true, id).map(|(name, _)| name),
-        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => None,
+        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => None,
     }
 }
 
@@ -24,6 +24,10 @@ fn name(kind: RegistryKind, version: JavaVersion, id: usize) -> Option<&'static 
 /// Отсутствующая цель представлена отдельно через PacketInfo::target_id.
 /// Числовые ID не являются основанием для переименования spectator packets.
 pub(crate) fn packet_info(kind: RegistryKind, from: JavaVersion, to: JavaVersion, id: usize) -> Option<PacketInfo> {
+    if let Some(entries) = crate::generated_client_chain::packets(kind,from,to) {
+        let &(name,target,schema_equal) = entries.get(id)?;
+        return Some(PacketInfo {name,target_id:(target != u16::MAX).then_some(u32::from(target)),schema_equal});
+    }
     if (from == JavaVersion::V1_21_11 && to == JavaVersion::V26_1_2) || (to == JavaVersion::V1_21_11 && from == JavaVersion::V26_1_2) {
         let &(name, target, schema_equal) = crate::generated_step1::packets(kind, from == JavaVersion::V1_21_11)?.get(id)?;
         return Some(PacketInfo { name, target_id: (target != u16::MAX).then_some(u32::from(target)), schema_equal });

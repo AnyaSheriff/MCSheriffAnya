@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Production: честный Status, открытый776 Play и прежний отказ774 на двух основных."""
+"""Production: честный Status, допущенный Play и русский отказ закрытым клиентам."""
 import argparse
 import hashlib
 import json
@@ -22,6 +22,7 @@ def main():
     p.add_argument('--protocol774',type=Path)
     p.add_argument('--cache774',type=Path)
     p.add_argument('--admit774',action='store_true')
+    p.add_argument('--closed-clients',type=int,nargs='+',choices=(770,771,772,773),default=[])
     p.add_argument('--port',type=int,default=26184)
     a=p.parse_args();assert 26100<=a.port<=26198
     assert hashlib.sha256(a.protocol.read_bytes()).hexdigest()==PROTOCOL_SHA
@@ -54,7 +55,7 @@ def main():
                         deadline=time.monotonic()+120
                         while 'Готово (' not in path.read_text():
                             assert server.poll() is None and time.monotonic()<deadline,path.read_text()[-2000:];time.sleep(.1)
-                        for version in (774,776):
+                        for version in (774,776,*a.closed_clients):
                             row=dict(primary=primary,client=version)
                             with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                 handshake(sock,version,port,1);send(sock,b'\0')
@@ -63,14 +64,14 @@ def main():
                                 assert status['version']==dict(name=primary,protocol=native),status
                                 row['status_hex']=raw.hex()
                             report['checks'].append(f'{primary}/{version}: honest Status{native}')
-                            if version==774 and not a.admit774:
+                            if version in a.closed_clients or (version==774 and not a.admit774):
                                 with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                     handshake(sock,version,port,2);response=frame(sock);raw=response.getvalue()
                                     assert read_varint(response.read)==0
                                     text=response.read(read_varint(response.read)).decode()
                                     assert 'Ваша версия не подходит под ядро сервера' in text,text
                                     row.update(admitted=False,disconnect_hex=raw.hex(),disconnect=text)
-                                report['checks'].append(f'{primary}/774: existing Russian rejection')
+                                report['checks'].append(f'{primary}/{version}: existing Russian rejection')
                             else:
                                 client=connect(port,protocols[version],lambda sock,pr:GameplayProbe(sock,pr,items[version],version),version=version,username=f'Mcsa{version}')
                                 client.pump(30,lambda _:client.position is not None and 'window_items' in client.seen and 'map_chunk' in client.seen)

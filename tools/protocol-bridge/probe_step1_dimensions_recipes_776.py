@@ -85,6 +85,13 @@ class Probe(GameplayProbe):
         super().__init__(*args)
         self.books, self.ghosts, self.dimensions = [], [], []
 
+    def move_to(self, values):
+        # Следующий tick_end должен повторять новое место, а не старый teleport.
+        self.position = list(values) + list(self.position[3:])
+        payload = struct.pack('>dddB', *values, 1)
+        self.sent.append(dict(name='position', id=self.outgoing['position'], hex=payload.hex()))
+        self.send('position', payload)
+
     def observe_packet(self, name, payload):
         super().observe_packet(name, payload)
         d = io.BytesIO(payload)
@@ -120,8 +127,10 @@ def main():
         p.add_argument('--' + name, type=Path, required=True)
     p.add_argument('--primary', type=int, choices=(775, 777), required=True)
     p.add_argument('--password', action='store_true')
+    p.add_argument('--end', action='store_true', help='Дополнительная проба портала Края; не новое условие допуска')
     p.add_argument('--client',type=int,choices=(774,776),default=776)
     a = p.parse_args()
+    assert not (a.end and a.password)
     assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocol = json.loads(a.protocol.read_text())
     items = {v['name']: v['id'] for v in table(a.cache, 'items')}
@@ -261,8 +270,8 @@ def main():
                     client.pump(.5)
                     command('fill 1 65 -1 4 69 -1 obsidian')
                     command('fill 2 66 -1 3 68 -1 nether_portal[axis=x]')
-                    command('tp McsaProbe 2.5 66 -0.5')
-                    client.send('position', struct.pack('>dddB', 2.5, 66., -.5, 1))
+                    command('tp McsaProbe 2.5 66 0.5')
+                    client.move_to([2.5, 66., -.5])
                     client.pump(20, lambda _: len(client.dimensions) >= 1)
                     assert client.dimensions[-1]['name'] == 'minecraft:the_nether', client.dimensions
                     client.pump(1)
@@ -270,8 +279,8 @@ def main():
                     # Выйти из портала и войти снова обычным движением.
                     away = [destination[0], destination[1], destination[2] + 3]
                     client.grounded_fixture = False
-                    client.send('position', struct.pack('>dddB', *away, 1)); client.pump(.5)
-                    client.send('position', struct.pack('>dddB', *destination, 1))
+                    client.move_to(away); client.pump(.5)
+                    client.move_to(destination)
                     client.pump(20, lambda _: len(client.dimensions) >= 2)
                     assert client.dimensions[-1]['name'] == 'minecraft:overworld', client.dimensions
                     command('say portal-roundtrip-complete')
@@ -279,6 +288,40 @@ def main():
                     assert 'перешёл в minecraft:overworld' in log_path.read_text()
                     assert len(client.acks) >= 3
                     report['checks'].append('nether-portal-out-and-back-respawn-chunks-short-ack')
+                    if a.end:
+                        command('op McsaProbe')
+                        # Авторский проём; перенос выполняется обычным движением, не execute-in/tp.
+                        client.grounded_fixture = True
+                        command('fill 9 64 9 13 64 13 stone')
+                        command('fill 10 65 10 12 65 12 end_portal')
+                        command('tp McsaProbe 11.5 66 11.5')
+                        client.move_to([11.5, 65.5, 11.5])
+                        client.pump(20, lambda _: len(client.dimensions) >= 3)
+                        assert client.dimensions[-1]['name'] == 'minecraft:the_end', client.dimensions
+                        command('say end-outbound-complete')
+                        client.pump(1)
+                        destination = list(client.position[:3])
+                        # Авторим блок от имени игрока в его измерении;
+                        # игрок входит в портал собственным пакетом позиции.
+                        x, y, z = [int(v // 1) for v in destination]
+                        command(f'execute as McsaProbe run setblock {x+2} {y} {z} end_portal')
+                        client.grounded_fixture = False
+                        client.move_to([destination[0], destination[1], destination[2] + 1])
+                        client.pump(.5)
+                        client.move_to([x + 2.5, y + .5, z + .5])
+                        client.pump(20, lambda _: len(client.dimensions) >= 4)
+                        assert client.dimensions[-1]['name'] == 'minecraft:overworld', client.dimensions
+                        command('say end-roundtrip-complete')
+                        client.pump(1)
+                        log_text = log_path.read_text()
+                        assert 'перешёл в minecraft:the_end' in log_text
+                        assert log_text.count('перешёл в minecraft:overworld') >= 2
+                        assert len(client.acks) >= 5
+                        respawns = [i for i, row in enumerate(client.raw) if row['name'] == 'respawn']
+                        assert len(respawns) == 4
+                        for start, end in zip(respawns, respawns[1:] + [len(client.raw)]):
+                            assert {'map_chunk', 'position'} <= {r['name'] for r in client.raw[start:end]}
+                        report['checks'].append('end-portal-out-and-back-respawn-chunks-short-ack')
                 report['status'] = 'pass'
             except BaseException as error:
                 report['error'], report['traceback'] = repr(error), traceback.format_exc()

@@ -198,7 +198,7 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
             .map(|entry| entry.1).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
         JavaVersion::V26_3 => Ok(new),
         JavaVersion::V1_21_11 => crate::generated_payload_774::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
-        JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+        JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
 }
 
