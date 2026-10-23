@@ -306,6 +306,25 @@ mod enabled {
         with_host(Verdict::Allow, move |host| host.player_command(&who, &line))
     }
 
+    pub fn command_names(shared: &Shared, uuid: &[u8;16]) -> Vec<String> {
+        let level = shared.ops.lock().expect("операторы").level_of(uuid) as u8;
+        with_host(Vec::new(), move |host| host.command_names(level))
+    }
+
+    pub fn tab_complete(shared: &Shared, uuid: &[u8;16], line: &str) -> Option<Vec<String>> {
+        if crate::auth::sensitive_command(line) || line.len() > 8192 { return None; }
+        let mut words = line.split(' ');
+        let name = words.next()?.to_ascii_lowercase();
+        let args: Vec<String> = words.map(str::to_string).collect();
+        let caller = {
+            let players = shared.players.lock().expect("игроки");
+            let member = players.members().iter().find(|member| &member.uuid == uuid)?;
+            wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(uuid)), name: member.name.clone() }
+        };
+        let level = shared.ops.lock().expect("операторы").level_of(uuid) as u8;
+        with_host(None, move |host| host.complete(caller, level, &name, args))
+    }
+
     /// `/plugman` и команды плагинов: вызывается в начале `commands::run`.
     /// None — это не наша команда.
     pub fn run_command(command: &str, source: &Source, shared: &Shared) -> Option<Answer> {
@@ -362,7 +381,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{active, block_break, block_place, chat, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{command_names, tab_complete, active, block_break, block_place, chat, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -422,13 +441,17 @@ mod disabled {
         Verdict::Allow
     }
 
+    pub fn command_names(_shared: &Shared, _uuid: &[u8;16]) -> Vec<String> { Vec::new() }
+
+    pub fn tab_complete(_shared: &Shared, _uuid: &[u8;16], _line: &str) -> Option<Vec<String>> { None }
+
     pub fn run_command(_command: &str, _source: &Source, _shared: &Shared) -> Option<Answer> {
         None
     }
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{active, block_break, block_place, chat, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{command_names, tab_complete, active, block_break, block_place, chat, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

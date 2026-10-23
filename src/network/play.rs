@@ -1030,7 +1030,7 @@ async fn enter_world(
         // Дерево команд: без него клиент не знает, что можно вводить после косой
         // черты, и не подсказывает.
         let may_tnt = crate::permissions::allowed(shared, &player.uuid, crate::custom_tnt::GIVE_NODE);
-        send_commands(stream, may_tnt).await?;
+        send_commands(stream, may_tnt, shared, &player.uuid).await?;
         write_body(stream, crate::stonecutter::recipe_packet()).await?;
 
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
@@ -3552,7 +3552,7 @@ fn push_text_component(out: &mut Vec<u8>, text: &str) {
 /// Ветка `tnt` (особый динамит) — только тем, кому она позволена
 /// (`may_tnt`): остальным её незачем и видеть. Права, выданные позже,
 /// откроют её при следующем входе.
-async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<()> {
+async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool, shared: &Shared, who: &[u8;16]) -> io::Result<()> {
     /// Виды узлов — младшие два бита флагов.
     const NODE_ROOT: u8 = 0x00;
     const NODE_LITERAL: u8 = 0x01;
@@ -3758,6 +3758,20 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
 
     nodes.extend(admin_nodes);
 
+    // Команды плагинов используют серверные подсказки для остатка строки.
+    let mut plugin_roots = Vec::new();
+    for name in crate::plugins::command_names(shared, who) {
+        let at = nodes.len() as i32;
+        plugin_roots.push(at);
+        nodes.push(literal(&name, &[at + 1], true));
+        let mut argument = vec![NODE_ARGUMENT | EXECUTABLE | 0x10, 0];
+        argument.extend(encode_string("аргументы"));
+        argument.extend(encode_varint(PARSER_STRING));
+        argument.extend(encode_varint(GREEDY));
+        argument.extend(encode_string("minecraft:ask_server"));
+        nodes.push(argument);
+    }
+
     // Корень — заново, с новыми словами.
     {
         let mut root = vec![NODE_ROOT];
@@ -3770,6 +3784,7 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
         children.extend((0..WORLD_COMMANDS.len() as i32).map(|index| world_base + index * 2));
         children.extend(extra_roots);
         children.extend(admin_roots);
+        children.extend(plugin_roots);
         root.extend_from_slice(&encode_varint(children.len() as i32));
 
         for child in children {
@@ -3833,6 +3848,14 @@ fn hints_for(text: &str, typed: &str, shared: &Shared, who: &[u8; 16]) -> Vec<St
     let starting = |list: &mut dyn Iterator<Item = &str>| -> Vec<String> {
         list.filter(|word| word.starts_with(typed)).map(|word| word.to_string()).collect()
     };
+
+    if written == 0 {
+        let names = crate::plugins::command_names(shared, who);
+        let matches: Vec<_> = names.into_iter().filter(|name| name.starts_with(command)).collect();
+        if !matches.is_empty() { return matches; }
+    } else if let Some(values) = crate::plugins::tab_complete(shared, who, line) {
+        return values.into_iter().filter(|value| value.starts_with(typed)).collect();
+    }
 
     // Особый динамит: подсказки — только тем, кому он позволен.
     if command == "tnt" && !crate::permissions::allowed(shared, who, crate::custom_tnt::GIVE_NODE) {

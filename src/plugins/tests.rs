@@ -561,3 +561,70 @@ fn custom_tablist_handles_a_default_capacity_server() {
     assert!(host.is_loaded("custom-tablist"));
     assert_eq!(shared.players.lock().unwrap().ui.headers.len(),20);
 }
+
+/// Сначала build-fixtures.py и translate.py для трёх JAR в tmp/java-test/plugins.
+#[test]
+#[ignore = "нужны переведённые Java-компоненты из tools/plugin-translator"]
+fn translated_bukkit_jars() {
+    let root = server_root("java-jars");
+    for name in ["java-command", "java-events", "java-scheduler"] {
+        let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-test/plugins").join(name);
+        let folder = root.join("plugins").join(name);
+        std::fs::create_dir_all(folder.join("data")).unwrap();
+        for file in ["plugin.toml", "plugin.wasm"] {
+            std::fs::copy(source.join(file), folder.join(file)).unwrap();
+        }
+        if name == "java-scheduler" {
+            std::fs::copy(source.join("data/config.yml"), folder.join("data/config.yml")).unwrap();
+        }
+    }
+    let shared = shared();
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap();
+    for name in ["java-command", "java-events", "java-scheduler"] { host.load(name).unwrap(); }
+    let sender = wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(&[1;16])), name: "Первый".into() };
+    assert!(host.run_command(sender.clone(), "javahello", &[]).unwrap().0);
+    assert_eq!(host.complete(sender.clone(), 4, "javahello", vec!["java-tab".into()]).unwrap(), vec!["java-tab-ok", "java-tab-two"]);
+    host.player_join(&view());
+    assert_eq!(host.chat(&view(), "cancel-java"), ChatOutcome::Cancel);
+    assert_eq!(host.chat(&view(), "обычный чат"), ChatOutcome::Pass);
+    assert_eq!(host.player_command(&view(), "java-blocked"), Verdict::Deny);
+    assert_eq!(host.block_break(&view(), &wit::BlockPos { dimension: wit::Dimension::Overworld, x: 3, y: 70, z: 0 }, "minecraft:stone"), Verdict::Deny);
+    let messages = shared.players.lock().unwrap().take_orders(&[1;16]).into_iter().filter(|order| matches!(order, crate::players::Order::Message { .. })).count();
+    assert!(messages >= 5, "ответ команды, вход и три отмены");
+    let due = host.loaded.iter().flat_map(|plugin| &plugin.store.data().tasks).map(|task| task.due).min().unwrap();
+    host.tick(due);
+    assert_eq!(host.loaded.len(), 3);
+    assert!(shared.chat.lock().unwrap().count() > 0, "задача прочитала YAML и разослала сообщение");
+    host.player_quit(&view());
+    for name in ["java-command", "java-events", "java-scheduler"] { host.unload(name).unwrap(); }
+    assert!(host.is_empty());
+}
+
+#[test]
+fn bukkit_host_operations_remain_typed_and_bounded() {
+    use super::api::mcsa::api::{command::Host as _, player::Host as _, world::Host as _};
+    let root = server_root("bukkit-api");
+    install(&root, "plugins", "hello", "hello", "");
+    let shared = shared();
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap();
+    host.load("hello").unwrap();
+    let ctx = host.loaded[0].store.data_mut();
+    let uuid = crate::network::login::format_uuid(&[1;16]);
+    assert_eq!(ctx.operator_level(uuid.clone()), Some(0));
+    assert_eq!(ctx.operator_level("ошибка".into()), None);
+    assert!(ctx.set_game_mode(uuid.clone(), wit::GameMode::Survival));
+    assert_eq!(shared.players.lock().unwrap().members()[0].game_mode, 0);
+    assert!(ctx.set_inventory_slot(uuid.clone(), 36, Some(wit::ItemStack { item: "stone".into(), count: 3 })).is_ok());
+    assert!(ctx.set_inventory_slot(uuid.clone(), 8, None).is_err());
+    assert!(ctx.set_inventory_slot(uuid, 36, Some(wit::ItemStack { item: "stone".into(), count: 65 })).is_err());
+    ctx.set_time(wit::Dimension::Overworld, 25001);
+    assert_eq!(ctx.time(wit::Dimension::Overworld), 1001);
+    assert!(ctx.set_weather(wit::Dimension::Overworld, "thunder".into(), 100).is_ok());
+    assert_eq!(ctx.weather(wit::Dimension::Overworld), "thunder");
+    assert!(ctx.set_weather(wit::Dimension::Overworld, "ошибка".into(), 100).is_err());
+    assert!(ctx.set_weather(wit::Dimension::Overworld, "rain".into(), u32::MAX).is_err());
+    for name in ["auth", "changepassword", "op", "stop"] {
+        let spec = super::api::mcsa::api::command::CommandSpec { name: name.into(), description: String::new(), usage: String::new(), level: 0, permission: None };
+        assert!(ctx.register(spec).is_err(), "имя ядра нельзя занимать");
+    }
+}

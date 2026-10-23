@@ -1,4 +1,4 @@
-# Плагины MCSheriffAnya (фаза 1: WebAssembly)
+# Плагины MCSheriffAnya: WebAssembly и Java
 
 Плагин — это модуль WebAssembly (компонент), написанный под API `mcsa:api`.
 Ядро запускает его встроенным [wasmtime](https://wasmtime.dev): никакой JVM, никакого
@@ -6,7 +6,10 @@ JDK на сервере. Плагины грузятся, выгружаются
 перезапуска сервера.
 
 Фаза 1 — это хозяин в ядре, `/plugman`, API (WIT) и примеры на Rust.
-Java API, TeaVM и сборщик `.jar → .wasm` (Jar2WASM) — фаза 2, их здесь нет.
+Ограниченный Java SDK `mcsa-bukkit` и переводчик `.jar → .wasm` доступны в
+[tools/plugin-translator](../tools/plugin-translator/README.md). Он принимает
+обычные Bukkit JAR только в поддерживаемом подмножестве; неподдерживаемые API
+отклоняются с русским отчётом. Полная совместимость Bukkit не заявляется.
 
 Хозяин включается cargo-возможностью `plugins` (по умолчанию включена).
 `cargo build --release --no-default-features` собирает ядро без плагинов:
@@ -22,7 +25,9 @@ Java API, TeaVM и сборщик `.jar → .wasm` (Jar2WASM) — фаза 2, и
 собрать с `CARGO_PROFILE_RELEASE_STRIP=none`.
 
 У Wasmtime выключены возможности по умолчанию; оставлены `runtime`, `cranelift`,
-`component-model`, `std`. У WASI включён только `p2`: Preview 0/1/3 не нужны.
+`component-model`, `gc`, `gc-null`, `std`. Возможность `gc` нужна для
+исключений Java/TeaVM; WASM GC и function references выключены в Config,
+куча Java остаётся линейной под прежними лимитами. У WASI включён только `p2`: Preview 0/1/3 не нужны.
 Preview 2 транзитивно включает `wasmtime/async`, хотя хозяин использует
 `add_to_linker_sync`. Удалять эту зависимость или отдельные импорты WASI
 ради размера нельзя без изменения совместимости компонентов.
@@ -114,26 +119,13 @@ dependencies = ["other"]        # необязательно; должны бы�
   ломания и установки блоков; для Bedrock пока — чат, вход и выход
   (блоки Bedrock — позже).
 
-## Соответствие WIT и Java-пакета
+## Java SDK и WIT
 
-WIT-пакет `mcsa:api@0.1.0` (файл `wit/mcsa-api.wit`) — то же, что Java-пакет
-`ru.sheriffanya.mcsa.api`; интерфейсы WIT — подпакеты:
-
-| WIT | Java (фаза 2) |
-|---|---|
-| `mcsa:api/types` | `ru.sheriffanya.mcsa.api` (Player, BlockPos, ItemStack, Location …) |
-| `mcsa:api/log` | `ru.sheriffanya.mcsa.api.log` |
-| `mcsa:api/server` | `ru.sheriffanya.mcsa.api.server` |
-| `mcsa:api/player` | `ru.sheriffanya.mcsa.api.player` |
-| `mcsa:api/world` | `ru.sheriffanya.mcsa.api.world` |
-| `mcsa:api/scheduler` | `ru.sheriffanya.mcsa.api.scheduler` |
-| `mcsa:api/command` | `ru.sheriffanya.mcsa.api.command` |
-| `mcsa:api/storage` | `ru.sheriffanya.mcsa.api.storage` |
-| `mcsa:api/privileged` | `ru.sheriffanya.mcsa.api.privileged` (только модули) |
-| `mcsa:api/lifecycle` | `ru.sheriffanya.mcsa.api.Plugin` (enable/disable) |
-| `mcsa:api/events` | `ru.sheriffanya.mcsa.api.event` (обработчики) |
-
-Миры: `plugin` (обычный плагин) и `module` (всё то же и `privileged`).
+Java SDK сохраняет имена `org.bukkit` в поддерживаемом подмножестве;
+`ru.mcsa.bukkit` — внутренний мост переводчика, не API для исходного плагина.
+Компонент использует `mcsa:api@0.1.0` из `wit/mcsa-api.wit`.
+Обычные плагины остаются в `plugins/`; импорт `privileged` разрешён только
+модулям из `modules/`. Переводчик не повышает доверие плагина.
 
 ## API 0.1
 
@@ -174,8 +166,11 @@ WIT-пакет `mcsa:api@0.1.0` (файл `wit/mcsa-api.wit`) — то же, ч�
 Ограничения 0.1, о которых надо знать:
 - `player.send-message` пока доходит только до игроков Java (Bedrock — позже);
   ответ команды плагина (`message`) доходит всем.
-- Подсказки (`Tab`) для команд плагинов не показываются: дерево команд клиенту
-  пока статическое. Команда при этом работает.
+- Команды загруженных плагинов включаются в дерево при входе Java-клиента.
+  Необязательный экспорт `mcsa:api/completion` даёт подсказки аргументов:
+  максимум 100 строк по 512 байт, с проверкой уровня прав. После добавления
+  новых команд через hot-load дерево обновляется при следующем входе.
+  Содержимое подсказок запрашивается при каждом Tab; auth не передаётся плагинам.
 - Имена команд ядра (`op`, `stop`, `give`, `plugman` …) плагину занимать нельзя.
 - У каждого плагина не больше 256 задач и 64 команд.
 
@@ -313,3 +308,15 @@ ChatListener исходника использует chat.format; global-format 
 
 [проверить] Внешний вид на Java-клиенте и сопоставление с исходным плагином
 требуют отдельной проверки; автоматические тесты запускают WASM без сервера.
+
+## Дополнения Bukkit-моста
+
+`player.set-game-mode`, `operator-level` (только чтение) и `set-inventory-slot`
+доступны через Rust SDK. Ячейки в WIT — номера окна 9..44, count 1..64,
+none очищает ячейку. Java SDK переводит Bukkit 0..8 в 36..44.
+`world.time/set-time` работают со временем суток, `weather/set-weather` —
+с clear/rain/thunder, срок от 1 до 2400000 тактов. Ошибочные UUID, ячейки,
+названия блоков/предметов и сроки отвергаются хозяином.
+Rust Plugin.on_tab_complete экспортируется макросом SDK; старые компоненты
+без этого экспорта тоже загружаются. `bukkit-plugin` — WIT world переводчика,
+`sdk-module` — world Rust SDK, прежние plugin/module сохраняются.

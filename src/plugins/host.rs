@@ -83,12 +83,15 @@ impl Drop for InsideGuard {
     }
 }
 
+type Completion = wasmtime::component::TypedFunc<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>;
+
 /// Загруженный плагин.
 pub struct Loaded {
     pub manifest: Manifest,
     pub trusted: bool,
     pub store: Store<PluginCtx>,
     instance: Module,
+    completion: Option<Completion>,
     limits: Limits,
     pub stats: Stats,
 }
@@ -174,6 +177,11 @@ impl Host {
     pub fn new(shared: Arc<Shared>, root: PathBuf) -> wasmtime::Result<Host> {
         let mut config = Config::new();
 
+        // Исключения нужны Java/TeaVM. Управляемые объекты WASM выключены:
+        // куча Java остаётся линейной и под прежним StoreLimits.
+        config.wasm_gc(false);
+        config.wasm_function_references(false);
+        config.wasm_exceptions(true);
         config.consume_fuel(true);
         config.epoch_interruption(true);
         // Компиляция в машинный код на загрузке; кэша на диске нет — плагины
@@ -314,10 +322,16 @@ impl Host {
         self.ensure_clock();
 
         let linker = if trusted { &self.trusted } else { &self.sandbox };
-        let instance = {
+        let raw = {
             let _inside = InsideGuard::enter();
 
-            Module::instantiate(&mut store, &component, linker).map_err(|error| {
+            // Проверяем обязательные экспорты до исполнения стартового кода гостя.
+            let prepared = linker.instantiate_pre(&component);
+            let validated = prepared.and_then(|pre| {
+                super::api::ModulePre::new(pre.clone())?;
+                pre.instantiate(&mut store)
+            });
+            validated.map_err(|error| {
                 let text = short(&error);
 
                 if text.contains("privileged") {
@@ -328,7 +342,16 @@ impl Host {
             })?
         };
 
-        let mut plugin = Loaded { manifest, trusted, store, instance, limits, stats: Stats::default() };
+        let instance = Module::new(&mut store, &raw).map_err(|error| short(&error))?;
+        let completion = raw.get_export_index(&mut store, None, "mcsa:api/completion@0.1.0")
+            .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-tab-complete"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>(&mut store, &index))
+            .transpose().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared, &manifest.name);
+                short(&error)
+            })?;
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
@@ -621,6 +644,29 @@ impl Host {
                 self.bury(vec![Crash { plugin: owner, reason }]);
                 Some((false, "Команда плагина упала, плагин выгружен".to_string()))
             }
+        }
+    }
+
+    /// Список команд с учётом прав вызывающего, без обращения к гостю.
+    pub fn command_names(&self, level: u8) -> Vec<String> {
+        let mut names: Vec<_> = self.loaded.iter().flat_map(|plugin| &plugin.store.data().commands)
+            .filter(|command| command.level <= level).map(|command| command.name.clone()).collect();
+        names.sort(); names
+    }
+
+    pub fn complete(&mut self, from: mcsa::api::types::Sender, level: u8, name: &str, args: Vec<String>) -> Option<Vec<String>> {
+        let needed = self.command_level(name)?;
+        if i32::from(level) < needed { return Some(Vec::new()); }
+        let index = self.loaded.iter().position(|plugin| plugin.store.data().commands.iter().any(|command| command.name == name))?;
+        let Some(function) = self.loaded[index].completion else { return Some(Vec::new()) };
+        let now = self.shared_tick();
+        let result = self.loaded[index].call(now, |_, store| {
+            let (values,) = function.call(&mut *store, (from, name.to_string(), args))?;
+            Ok(values)
+        });
+        match result {
+            Ok(values) => Some(values.into_iter().filter(|value| value.len() <= 512 && !value.chars().any(char::is_control)).take(100).collect()),
+            Err(reason) => { let plugin = self.loaded[index].manifest.name.clone(); self.bury(vec![Crash { plugin, reason }]); Some(Vec::new()) }
         }
     }
 

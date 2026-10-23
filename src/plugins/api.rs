@@ -362,6 +362,36 @@ impl mcsa::api::player::Host for PluginCtx {
         Ok(())
     }
 
+    fn set_game_mode(&mut self, uuid: String, mode: wit::GameMode) -> bool {
+        let Some(uuid) = parse_uuid(&uuid) else { return false };
+        let mode = match mode { wit::GameMode::Survival => 0, wit::GameMode::Creative => 1, wit::GameMode::Adventure => 2, wit::GameMode::Spectator => 3 };
+        let mut players = self.shared.players.lock().expect("список игроков занят");
+        if !players.members().iter().any(|member| member.uuid == uuid) { return false; }
+        players.set_game_mode(&uuid, mode);
+        players.order(&uuid, Order::GameMode { mode });
+        true
+    }
+
+    fn operator_level(&mut self, uuid: String) -> Option<u8> {
+        let uuid = parse_uuid(&uuid)?;
+        if !self.shared.players.lock().expect("список игроков занят").members().iter().any(|member| member.uuid == uuid) { return None; }
+        Some(self.shared.ops.lock().expect("список операторов занят").level_of(&uuid) as u8)
+    }
+
+    fn set_inventory_slot(&mut self, uuid: String, slot: u32, stack: Option<wit::ItemStack>) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        if !(9..=44).contains(&slot) { return Err("ячейка: от 9 до 44".into()); }
+        let stack = match stack {
+            Some(stack) if stack.count > 0 && stack.count <= 64 => crate::commands::stack_from_spec(&stack.item, stack.count as i32)?,
+            Some(_) => return Err("count: от 1 до 64".into()),
+            None => None,
+        };
+        let mut players = self.shared.players.lock().expect("список игроков занят");
+        if !players.members().iter().any(|member| member.uuid == uuid) { return Err("игрока нет на сервере".into()); }
+        players.order(&uuid, Order::SetSlot { slot: slot as i32, stack });
+        Ok(())
+    }
+
     fn kick(&mut self, uuid: String, reason: String) -> bool {
         let Some(uuid) = parse_uuid(&uuid) else { return false };
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
@@ -414,6 +444,26 @@ impl mcsa::api::world::Host for PluginCtx {
         Ok(())
     }
 
+    fn time(&mut self, dimension: wit::Dimension) -> u32 {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").time_of_day() as u32
+    }
+
+    fn set_time(&mut self, dimension: wit::Dimension, ticks: u32) {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").set_time_of_day(i64::from(ticks));
+    }
+
+    fn weather(&mut self, dimension: wit::Dimension) -> String {
+        let world = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят");
+        if world.weather.thundering { "thunder" } else if world.weather.raining { "rain" } else { "clear" }.into()
+    }
+
+    fn set_weather(&mut self, dimension: wit::Dimension, kind: String, duration: u32) -> Result<(), String> {
+        let kind = crate::weather::Kind::from_name(&kind).ok_or("погода: clear, rain, thunder")?;
+        if !(1..=2_400_000).contains(&duration) { return Err("срок: от 1 до 2400000 тактов".into()); }
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").weather.set(kind, duration as i32);
+        Ok(())
+    }
+
     fn spawn_location(&mut self, dimension: wit::Dimension) -> wit::Location {
         let (x, y, z) = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир захвачен другим потоком").spawn_position();
 
@@ -446,7 +496,7 @@ impl mcsa::api::command::Host for PluginCtx {
             return Err(format!("имя команды «{}» не годится: a-z, 0-9, «-», «_»", spec.name));
         }
 
-        if RESERVED.contains(&name.as_str()) || crate::commands_admin::NAMES.contains(&name.as_str()) {
+        if crate::auth::sensitive_command(&name) || RESERVED.contains(&name.as_str()) || crate::commands_admin::NAMES.contains(&name.as_str()) {
             return Err(format!("команда «{name}» принадлежит ядру — другое имя"));
         }
 

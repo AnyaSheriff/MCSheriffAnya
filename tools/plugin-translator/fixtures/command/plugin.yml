@@ -1,0 +1,6 @@
+name: java-command
+version: '1.0'
+main: fixtures.CommandPlugin
+commands:
+  javahello:
+    description: Проверка Java

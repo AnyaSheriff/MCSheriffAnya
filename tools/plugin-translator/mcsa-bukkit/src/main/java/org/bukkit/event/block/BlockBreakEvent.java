@@ -1,0 +1,2 @@
+package org.bukkit.event.block;
+public class BlockBreakEvent extends BlockEvent implements org.bukkit.event.Cancellable {private boolean cancelled;private final org.bukkit.entity.Player player;public BlockBreakEvent(org.bukkit.block.Block b,org.bukkit.entity.Player p){super(b);player=p;}public org.bukkit.entity.Player getPlayer(){return player;}public boolean isCancelled(){return cancelled;}public void setCancelled(boolean b){cancelled=b;}}

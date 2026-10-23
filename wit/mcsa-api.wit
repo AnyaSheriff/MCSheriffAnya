@@ -1,23 +1,8 @@
 // API плагинов MCSheriffAnya, версия 0.1.
-//
-// Пакет WIT `mcsa:api` — это то же самое, что Java-пакет
-// `ru.sheriffanya.mcsa.api` (утверждён 2026-10-02). Соответствие имён:
-//
-//   WIT                         Java (будет в фазе 2, Jar2WASM)
-//   mcsa:api/types              ru.sheriffanya.mcsa.api          (Player, BlockPos, ItemStack …)
-//   mcsa:api/log                ru.sheriffanya.mcsa.api.log
-//   mcsa:api/server             ru.sheriffanya.mcsa.api.server
-//   mcsa:api/player             ru.sheriffanya.mcsa.api.player
-//   mcsa:api/world              ru.sheriffanya.mcsa.api.world
-//   mcsa:api/scheduler          ru.sheriffanya.mcsa.api.scheduler
-//   mcsa:api/command            ru.sheriffanya.mcsa.api.command
-//   mcsa:api/storage            ru.sheriffanya.mcsa.api.storage
-//   mcsa:api/privileged         ru.sheriffanya.mcsa.api.privileged  (только modules/)
-//   mcsa:api/lifecycle          ru.sheriffanya.mcsa.api.Plugin      (enable/disable)
-//   mcsa:api/events             ru.sheriffanya.mcsa.api.event       (обработчики)
-//
-// Идентификатор игрока — его UUID строкой «8-4-4-4-12».
-// Имена блоков и предметов — как в игре, с приставкой или без: `minecraft:stone`.
+// Java SDK сохраняет публичное подмножество org.bukkit; ru.mcsa.bukkit —
+// внутренний мост переводчика. ABI компонента задаётся только этим WIT.
+// Идентификатор игрока — UUID строкой «8-4-4-4-12».
+// Имена блоков и предметов — с приставкой minecraft: или без неё.
 
 package mcsa:api@0.1.0;
 
@@ -129,7 +114,7 @@ interface server {
 }
 
 interface player {
-    use types.{location, item-stack};
+    use types.{location, item-stack, game-mode};
 
     /// Личное сообщение. false — игрока нет на сервере.
     send-message: func(uuid: string, message: string) -> bool;
@@ -139,6 +124,15 @@ interface player {
 
     /// Выдать предметы: что не влезло — падает на землю.
     give-item: func(uuid: string, stack: item-stack) -> result<_, string>;
+
+    /// Сменить режим игры без исполнения команды.
+    set-game-mode: func(uuid: string, mode: game-mode) -> bool;
+
+    /// Уровень оператора; none — игрок отсутствует. Права не повышает.
+    operator-level: func(uuid: string) -> option<u8>;
+
+    /// Заменить ячейку окна игрока (9..44); none очищает ячейку.
+    set-inventory-slot: func(uuid: string, slot: u32, stack: option<item-stack>) -> result<_, string>;
 
     /// Выгнать с сервера.
     kick: func(uuid: string, reason: string) -> bool;
@@ -225,6 +219,14 @@ interface %world {
 
     /// Поставить блок: `stone`, `minecraft:lever[face=floor]`.
     set-block: func(pos: block-pos, block: string) -> result<_, string>;
+
+    /// Время суток, 0..23999.
+    time: func(dimension: dimension) -> u32;
+    set-time: func(dimension: dimension, ticks: u32);
+
+    /// Погода: clear, rain, thunder; срок 1..2400000 тактов.
+    weather: func(dimension: dimension) -> string;
+    set-weather: func(dimension: dimension, kind: string, duration: u32) -> result<_, string>;
 
     /// Общая точка появления измерения.
     spawn-location: func(dimension: dimension) -> location;
@@ -345,4 +347,20 @@ world plugin {
 world module {
     include plugin;
     import privileged;
+}
+
+/// Необязательный экспорт: старые компоненты продолжают работать без него.
+interface completion {
+    use types.{sender};
+    on-tab-complete: func(caller: sender, name: string, args: list<string>) -> list<string>;
+}
+
+world bukkit-plugin {
+    include plugin;
+    export completion;
+}
+
+world sdk-module {
+    include module;
+    export completion;
 }

@@ -42,8 +42,9 @@ aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys",
 # Исполнитель плагинов: wasmtime с моделью компонентов (WIT). Только то, что
 # нужно: исполнение, компилятор cranelift, компоненты. WASI только Preview 2;
 # он сам включает wasmtime/async даже для синхронного линкера. Без кэша,
-# профилирования, WAT, GC и остальных возможностей по умолчанию.
-wasmtime = { version = "=49.0.2", optional = true, default-features = false, features = ["runtime", "cranelift", "component-model", "std"] }
+# профилирования, WAT и остальных возможностей по умолчанию. GC-null нужен
+# исключениям TeaVM; управляемые объекты WASM выключены в Config хозяина.
+wasmtime = { version = "=49.0.2", optional = true, default-features = false, features = ["runtime", "cranelift", "component-model", "gc", "gc-null", "std"] }
 wasmtime-wasi = { version = "=49.0.2", optional = true, default-features = false, features = ["p2"] }
 
 # Местное время без libc на Windows (там нет localtime_r).
