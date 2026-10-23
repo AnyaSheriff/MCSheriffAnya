@@ -1,0 +1,22 @@
+{
+  "protocol": {
+    "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.11/protocol.json",
+    "sha256": "4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab",
+    "bytes": 330552
+  },
+  "blocks": {
+    "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.11/blocks.json",
+    "sha256": "894b926701b73047f1e24ad9650356d8d6f4c1a6d79f65143facbc9c58598a47",
+    "bytes": 859248
+  },
+  "items": {
+    "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.11/items.json",
+    "sha256": "0031a948bf8210aaf68d4964499cb2c31f2c3bf5d7339439540ca82a9eb28686",
+    "bytes": 189280
+  },
+  "entities": {
+    "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.11/entities.json",
+    "sha256": "df64b1ab9851cfaecf624cc5644c3611d2bfd064e4f2f0ddd1eafd38551f7e64",
+    "bytes": 87002
+  }
+}

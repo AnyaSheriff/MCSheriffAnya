@@ -3,6 +3,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 mod generated_ids;
+mod generated_step1;
+pub mod chain;
 mod generated_packet_776;
 mod packet_layouts;
 mod generated_static_776;
@@ -48,20 +50,20 @@ pub mod wire;
 pub mod probe_776;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum JavaVersion { V1_12_2, V26_1_2, V26_2, V26_3 }
+pub enum JavaVersion { V1_21_11, V1_12_2, V26_1_2, V26_2, V26_3 }
 
 impl JavaVersion {
     pub const fn protocol(self) -> i32 {
-        match self { Self::V1_12_2 => 340, Self::V26_1_2 => 775, Self::V26_2 => 776, Self::V26_3 => 777 }
+        match self { Self::V1_21_11 => 774, Self::V1_12_2 => 340, Self::V26_1_2 => 775, Self::V26_2 => 776, Self::V26_3 => 777 }
     }
     pub const fn name(self) -> &'static str {
-        match self { Self::V1_12_2 => "1.12.2", Self::V26_1_2 => "26.1.2", Self::V26_2 => "26.2", Self::V26_3 => "26.3" }
+        match self { Self::V1_21_11 => "1.21.11", Self::V1_12_2 => "1.12.2", Self::V26_1_2 => "26.1.2", Self::V26_2 => "26.2", Self::V26_3 => "26.3" }
     }
     pub fn from_name(name: &str) -> Option<Self> {
-        match name { "1.12.2" => Some(Self::V1_12_2), "26.1.2" => Some(Self::V26_1_2), "26.2" => Some(Self::V26_2), "26.3" => Some(Self::V26_3), _ => None }
+        match name { "1.21.11" => Some(Self::V1_21_11), "1.12.2" => Some(Self::V1_12_2), "26.1.2" => Some(Self::V26_1_2), "26.2" => Some(Self::V26_2), "26.3" => Some(Self::V26_3), _ => None }
     }
     pub const fn from_protocol(protocol: i32) -> Option<Self> {
-        match protocol { 340 => Some(Self::V1_12_2), 775 => Some(Self::V26_1_2), 776 => Some(Self::V26_2), 777 => Some(Self::V26_3), _ => None }
+        match protocol { 774 => Some(Self::V1_21_11), 340 => Some(Self::V1_12_2), 775 => Some(Self::V26_1_2), 776 => Some(Self::V26_2), 777 => Some(Self::V26_3), _ => None }
     }
 }
 
@@ -186,11 +188,11 @@ mod tests {
     fn admission_never_enables_a_version_just_because_its_number_is_known() {
         let native = JavaVersion::V26_1_2;
         assert_eq!(Negotiated::native_only(775, native).unwrap().client, native);
-        for client in [JavaVersion::V1_12_2, JavaVersion::V26_2, JavaVersion::V26_3] {
+        for client in [JavaVersion::V1_21_11, JavaVersion::V1_12_2, JavaVersion::V26_2, JavaVersion::V26_3] {
             assert_eq!(Negotiated::native_only(client.protocol(), native), Err(AdmissionError::AdapterUnavailable { client, native }));
             assert_eq!(JavaVersion::from_protocol(client.protocol()), Some(client));
         }
-        for protocol in [-1, 0, 774, 778, i32::MAX] {
+        for protocol in [-1, 0, 778, i32::MAX] {
             assert_eq!(Negotiated::native_only(protocol, native), Err(AdmissionError::UnknownProtocol(protocol)));
         }
     }

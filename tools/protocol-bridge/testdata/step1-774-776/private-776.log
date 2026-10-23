@@ -1,0 +1,19 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[09:50:05] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[09:50:05] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[09:50:05] [Server thread/INFO]: McsaProbe[/127.0.0.1:50538 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[09:50:05] [Server thread/INFO]: McsaProbe зашёл на сервер
+[09:50:09] [Server thread/INFO]: Gave 5 [stone] to McsaProbe
+[09:50:13] [Server thread/INFO]: Теперь есть права: McsaProbe
+[09:50:14] [Server thread/INFO]: [McsaProbe] mcsa776-smoke
+[09:50:16] [Server thread/INFO]: McsaProbe перенесён в 0.5 64 0.5
+[09:50:18] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[09:50:18] [Server thread/INFO]: Останавливаю сервер
+[09:50:18] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[09:50:18] [Server thread/INFO]: McsaProbe вышел
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2966 filtered out; finished in 14.52s
+

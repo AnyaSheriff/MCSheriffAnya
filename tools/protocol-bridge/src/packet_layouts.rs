@@ -16,7 +16,7 @@ fn name(kind: RegistryKind, version: JavaVersion, id: usize) -> Option<&'static 
         JavaVersion::V26_1_2 => generated_ids::packet_info(kind, false, id).map(|(name, _)| name),
         JavaVersion::V26_2 => generated_packet_776::names(kind)?.get(id).copied(),
         JavaVersion::V26_3 => generated_ids::packet_info(kind, true, id).map(|(name, _)| name),
-        JavaVersion::V1_12_2 => None,
+        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => None,
     }
 }
 

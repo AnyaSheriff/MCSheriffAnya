@@ -1,0 +1,73 @@
+{
+  "status": "partial: full gameplay not implemented or proven; admission remains closed",
+  "root_release_tests": {
+    "passed": 2893,
+    "ignored": 77,
+    "command": "cargo test --release"
+  },
+  "protocol_release_tests": {
+    "passed": 201,
+    "ignored": 5,
+    "command": "cargo test --release -p mcsa-protocol"
+  },
+  "python_tests": {
+    "passed": 213,
+    "command": "python3 -m unittest discover -s tools/protocol-bridge -p 'test_*.py'"
+  },
+  "clippy": {
+    "status": "pass",
+    "command": "cargo clippy --release --all-targets -- -D warnings"
+  },
+  "build": {
+    "status": "pass",
+    "command": "cargo build --release",
+    "binary_sha256": "c694624ab5382df28288c740717f22f6a947930c5fad7405b4d5103c10caa4bf"
+  },
+  "generation": {
+    "status": "reproduced",
+    "generated_sha256": "575e7ba9f21df25f478d5005895853cc5c2b909e2df8c06c9d2b5dff37582f1d"
+  },
+  "raw_probes": {
+    "official_777": 7,
+    "private_776_primary775": 5,
+    "public_admission_guard": 8
+  },
+  "admission": {
+    "26.1.2": {
+      "774": "closed: full gameplay checks incomplete",
+      "776": "closed: full gameplay checks incomplete"
+    },
+    "26.3": {
+      "774": "closed: full gameplay checks incomplete",
+      "776": "closed: full gameplay checks incomplete"
+    }
+  },
+  "unproven": [
+    "full774 gameplay on both primaries",
+    "full776 gameplay on both primaries",
+    "complete item components/entity metadata/dynamic registries",
+    "GUI geometry/audio",
+    "AuthMe/online-mode"
+  ],
+  "artifacts": {
+    "README.md": "190821c2bae3f9cf25217c0b2ac94d5626bb9acfacdd84810594d44e765af526",
+    "admission.json": "7de654af206b5113c2ed490d9cf588379922103ccea7722fd7ff7e23e9778b16",
+    "official-777.json": "3612750a7149aaf5d876cb6e76f1b07638d995912ce780ab39ee9f4626d2248e",
+    "official-777.log": "21d8bf4082bd94b17545f25c28c1c4afb33e817693827a518333f1df780d7935",
+    "private-776.json": "9a1cdfaaef32c9122146658ccb20893c50383a14acbc8b0b2c9d7b60ed90a0e6",
+    "private-776.log": "e29c10b623f516f0cb42838796ebdc20420b56538ffb6675b5242ccd56815c6c"
+  },
+  "log_summaries": {
+    "root": [
+      "test result: ok. 2890 passed; 0 failed; 77 ignored; 0 measured; 0 filtered out; finished in 27.32s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+    ],
+    "protocol": [
+      "test result: ok. 201 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.99s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "clippy": "    Finished `release` profile [optimized] target(s) in 26.29s",
+    "build": "    Finished `release` profile [optimized] target(s) in 1m 57s"
+  }
+}

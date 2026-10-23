@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn primary_version_never_enables_an_unimplemented_adapter() {
         let path = Path::new("mcsa.properties");
-        for version in ["26.1.2", "26.2", "26.3", "unknown", ""] {
+        for version in ["1.21.11", "26.1.2", "26.2", "26.3", "unknown", ""] {
             let settings = Settings::parse(&format!("java-version={version}"), path);
             assert_eq!(settings.validate().is_ok(), matches!(version, "26.1.2" | "26.3"));
             assert_eq!(Settings::parse(&settings.to_file(), path), settings);

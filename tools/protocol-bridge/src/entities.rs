@@ -179,7 +179,7 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
         JavaVersion::V26_2 => layouts_776::LAYOUTS.iter().find(|entry| entry.0 == kind)
             .map(|entry| entry.2).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
         JavaVersion::V26_3 => Ok(new),
-        JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
 }
 

@@ -16,6 +16,30 @@ pub enum IdTranslationError {
 pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
+    if from == JavaVersion::V1_21_11 || to == JavaVersion::V1_21_11 {
+        if from != JavaVersion::V1_21_11 && from != JavaVersion::V26_1_2 {
+            let middle = if from == JavaVersion::V26_3 {
+                let adjacent = translate(registry, from, JavaVersion::V26_2, id)?;
+                translate(registry, JavaVersion::V26_2, JavaVersion::V26_1_2, adjacent)?
+            } else { translate(registry, from, JavaVersion::V26_1_2, id)? };
+            return translate(registry, JavaVersion::V26_1_2, to, middle);
+        }
+        if to != JavaVersion::V1_21_11 && to != JavaVersion::V26_1_2 {
+            let middle = translate(registry, from, JavaVersion::V26_1_2, id)?;
+            return if to == JavaVersion::V26_3 {
+                let adjacent = translate(registry, JavaVersion::V26_1_2, JavaVersion::V26_2, middle)?;
+                translate(registry, JavaVersion::V26_2, to, adjacent)
+            } else { translate(registry, JavaVersion::V26_1_2, to, middle) };
+        }
+        let (count, ranges) = crate::generated_step1::ranges(registry, from == JavaVersion::V1_21_11)
+            .ok_or(IdTranslationError::UnsupportedVersion(JavaVersion::V1_21_11))?;
+        if id >= count { return Err(IdTranslationError::UnknownId(id)); }
+        if from == to { return Ok(id); }
+        let &(_, _, offset) = ranges.iter().find(|&&(first,last,_)| (first..=last).contains(&id))
+            .ok_or(IdTranslationError::UnknownId(id))?;
+        return if offset == 65535 { Err(IdTranslationError::MissingTarget(id)) }
+            else { Ok((i64::from(id) + i64::from(offset)) as u32) };
+    }
     if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2)
         && crate::generated_static_776::source_count(registry, JavaVersion::V26_2).is_some() {
         // Плотность source IDs доказана генератором. Сначала проверяем наличие

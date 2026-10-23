@@ -342,12 +342,32 @@ impl ContentCodec {
                     IdSpace::Wire(JavaVersion::V26_3) => {
                         Ok(wire + canonical - first)
                     }
-                    IdSpace::Wire(JavaVersion::V26_1_2) => crate::content_views::substitute(kind, canonical).ok_or(Error::Unrepresentable { kind, id: canonical, target: to }),
+                    IdSpace::Wire(version @ (JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2)) => {
+                        // Общий объект26.2 сохраняет настоящий вид; новый объект26.3
+                        // получает явно заданного775-двойника с переводом его ID.
+                        if version == JavaVersion::V26_2 {
+                            match ids::translate(kind, JavaVersion::V26_3, version, wire + canonical - first) {
+                                Ok(mapped) => return Ok(mapped),
+                                Err(ids::IdTranslationError::MissingTarget(_)) => (),
+                                Err(error) => return Err(Error::Id(error)),
+                            }
+                        }
+                        let substitute = crate::content_views::substitute(kind, canonical)
+                            .ok_or(Error::Unrepresentable { kind, id: canonical, target: to })?;
+                        ids::translate(kind, JavaVersion::V26_1_2, version, substitute).map_err(Error::Id)
+                    }
                     _ => Err(Error::Unrepresentable { kind, id: canonical, target: to }),
                 };
         }
         let version = |space| match space { IdSpace::Canonical => JavaVersion::V26_1_2, IdSpace::Wire(version) => version };
-        ids::translate(kind, version(from), version(to), id).map_err(Error::Id)
+        match ids::translate(kind, version(from), version(to), id) {
+            Err(ids::IdTranslationError::MissingTarget(_)) if version(from) == JavaVersion::V26_1_2 && to == IdSpace::Wire(JavaVersion::V1_21_11) => {
+                // Явные цветок/горшок: те же формы по blocks.json. [проверить]:
+                // внешний вид настоящим клиентом774; игровые правила остаются у ядра.
+                crate::generated_step1::substitute(kind,id).ok_or(Error::Unrepresentable { kind,id,target:to })
+            }
+            result => result.map_err(Error::Id),
+        }
     }
 }
 
@@ -372,7 +392,7 @@ mod tests {
                     assert!(ContentCodec::default().map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_3),id).is_err());
                     assert!(codec.map(kind,IdSpace::Wire(JavaVersion::V26_1_2),IdSpace::Canonical,id).is_err());
                     assert!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_1_2),id).is_ok());
-                    for version in [JavaVersion::V26_2,JavaVersion::V1_12_2] {
+                    for version in [JavaVersion::V1_12_2] {
                         assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(version),id),Err(Error::Unrepresentable { .. })));
                     }
                 }

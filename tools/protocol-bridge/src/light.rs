@@ -28,7 +28,7 @@ fn mask_layout(version: JavaVersion) -> Result<MaskLayout, Error> {
     match version {
         JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(MaskLayout::Longs),
         JavaVersion::V26_3 => Ok(MaskLayout::Bytes),
-        JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
+        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
     }
 }
 fn trim(mask: &mut Vec<u8>) { while mask.last() == Some(&0) { mask.pop(); } }

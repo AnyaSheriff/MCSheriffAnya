@@ -509,7 +509,7 @@ fn move_angles_before_ground(version: JavaVersion) -> Result<bool, Error> {
     match version {
         JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
         JavaVersion::V26_3 => Ok(false),
-        JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
+        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
     }
 }
 

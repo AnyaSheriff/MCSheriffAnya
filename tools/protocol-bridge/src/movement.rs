@@ -44,7 +44,7 @@ impl Delta {
                 };
                 Self { on_ground: properties & 1 != 0, motion }
             }
-            JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
+            JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         };
         Ok((value, cursor.offset))
     }
@@ -73,7 +73,7 @@ impl Delta {
                     }
                 }
             },
-            JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
+            JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         }
         Ok(out)
     }
