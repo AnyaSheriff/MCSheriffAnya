@@ -16,7 +16,7 @@ fn all_canonical_content_has_explicit_771_views_without_changing_ids(){
             assert_eq!(codec.map(kind,IdSpace::Canonical,IdSpace::Canonical,id),Ok(id));
         }
     }
-    assert!(items::decode(V::V1_21_5,&[0],false,Default::default()).is_err());
+    assert!(items::decode(V::V1_12_2,&[0],false,Default::default()).is_err());
 }
 #[test]
 fn profile771_keeps_partial_identity_and_properties_in_its_old_envelope(){

@@ -118,3 +118,25 @@ Retained failures: `protocol-first.log` had the stale771 attribute-refusal asser
 Exactly one authorized copied official26.3 native777 reference run: `completion771-official777-reference/`,Java25,stdin=/dev/null,26190/26191,7/7,stopped by PID(exit143),copied server/world removed. This is reference evidence, not771 proof. Opaque1.21.6 metadata SHA1`8137b78647df617d8a38754c4d61deedb74f9fa5`,client SHA1`740a125b83dd3447feaa3c5e891ead7fbb21ae28`;4343 files/70 libraries/4271 assets hash-verified. Existing pinned repo JSON/observations and prior Debian GUI runtime are reused; no implementation sources,JAR unpacking,reports,secrets,commit or push.
 
 Final verification:3183 Rust PASS (2908core+3startup+261protocol+11seedmap;98ignored),237 Python PASS; workspace/root Clippy-Dwarnings clean,release build PASS,production24/24 honest Status/admission checks PASS. Final binaries/source/artifact hashes and all12 admission cells: `completion771-verification.json`; logs/verifier:`completion771-verification/`. Temporary worlds/auth databases,Cargo.lock,Python caches and test leftovers removed; pre-existing codex.log/plugins-examples/target and external build/client caches retained.
+
+## 770 Play and password barrier
+
+770 reuses the771/772 typed helpers with its own locked tables:111 item,65 block/1965 state,7 entity and3 particle views. Harnesses→matching wool,dried ghast→soul sand,happy ghast→ghast,Tears/Lava Chicken discs→disc13. Attribute display and equippable shearing tails,old command-tree parsers,metadata indices/serializers and hanging-entity direction fields have explicit conversions. Canonical items,saves and primary gameplay remain authoritative; no older gameplay profiles or checklist gates.
+
+| Unchanged checklist | 770 /26.1.2 | 770 /26.3 |
+|---|---|---|
+| Opaque1.21.5 GUI196 payload Pong barriers,6 actions,4 poses | `completion770-live-v3/770-gui775/` PASS | `770-gui777/` PASS |
+| Mixed777 PvP,death/respawn,place/mine/wear,inventory/chest/relog/light/disk restart | `770-gameplay775/`:11/11 | `770-gameplay777/`:11/11 |
+| Full recipes/ghost/autofill/consumption/Nether return; supplemental End | `770-dimensions775/`:4 original plus End | `770-dimensions777/`:same |
+| Password barrier before player creation | `completion770-password/770-password775/` FAIL | `770-password777/` FAIL |
+| Encrypted online login | Shared RSA/session-service/encryption/compression/identity test includes770 | Same implementation |
+
+**Both770 public cells stay CLOSED with the existing Russian refusal.** Pinned770 has no Configuration Show/Clear Dialog or Custom Click Action; the existing password barrier fails translating Show Dialog (`MissingTarget(18)`) before creating a player. No password bypass or chat fallback is added. The owner’s earlier exclusion of a live Mojang account/chat fallback is retained; it does not manufacture a working770 password dialog.
+
+`completion770-regression/` repeats the unchanged full GUI196/6/4,gameplay/restart11,recipes/Nether4 plus supplemental End,password5 checks for all ten771/772/773/774/776 pairs. Their original payload files are unchanged. Nether/End disk persistence,arbitrary custom forms,dynamic reorientation of existing hanging entities and exhaustive live entity/attribute semantics remain unclaimed; no new gates.
+
+Retained failures:protocol-first stale770-refusal assertions;old unreachable refusal arms;export-first painting direction metadata;protocol-fourth’s unpopulated test tracker;`completion770-live` selected774 JSON locks;`live-v2` missed the opaque launch allowlist;`live-v3/770-gameplay775-light-parser-failed` missed770 in the robot’s light decoder. Clippy’s missing-newline style finding was fixed without suppression. The first777 password observer hit TCP TIME_WAIT before listening;its log is retained separately,then the same port was allowed to become free.
+
+Exactly one copied official26.3 native777 reference run:`completion770-official777-reference/`,Java25,stdin=/dev/null,26190/26191,7/7,stopped by PID(exit143),copied server/world removed. Sources are the pinned repo JSON and existing observations;the opaque1.21.5 metadata/client/libraries/assets are hash-verified (`client-prepare.log`). No implementation sources,JAR unpacking,reports,secrets,25565 listener,commit or push.
+
+Final counts,source/artifact/binary hashes and all12 admission cells:`completion770-verification.json`;logs/verifier:`completion770-verification/`. 3195 Rust PASS (2908core+3startup+273protocol+11seedmap;100ignored),237 Python PASS;workspace/root Clippy-Dwarnings clean,release build PASS,production24/24 PASS. All40 admitted-client regressions PASS. Per-run binary hashes are retained;770 payloads were exported after the direction-field conversion,and final unit tests cover all codec changes;the final source clarification about the disabled770 shearing-sound field was followed by clean workspace Clippy/release rebuilding,and the release hash is identical to the public24/24 binary. Temporary worlds/auth databases,Cargo.lock,Python caches and test leftovers removed;pre-existing codex.log/plugins-examples/target and external build/client caches retained.

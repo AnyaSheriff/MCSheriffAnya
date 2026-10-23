@@ -1,0 +1,3901 @@
+{
+  "status": "pass",
+  "primary": 777,
+  "protocol": 771,
+  "collect_only": false,
+  "runner_sha256": "8e5ef5b8380d6ed06e4c1e7b32ae39c29f464a10f6d916efa86a346716dd55af",
+  "binary_sha256": "eaa4fe042b432a381f9b9dbac82de07ea5eceef109d84f3432c7f711e5fd6abd",
+  "packets": [
+    {
+      "direction": "toClient",
+      "name": "position",
+      "stage": "login",
+      "hex": "013fe000000000000040500000000000003fe00000000000000000000000000000000000000000000000000000000000000000000041f0000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "login",
+      "hex": "0100000006150012000111007fff"
+    },
+    {
+      "direction": "toServer",
+      "name": "player_loaded",
+      "stage": "login",
+      "hex": ""
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ff5f6fd1eb8523fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404fe21858af5fd53fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404fc4966cf437a03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f9da2926170e43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f6d6d24c522a83fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f34258854d95e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ef1fa2ea1476e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ea7189b709b2e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404e53ad697ffc1c3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404df7e44f2cae8f3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404d93e823055a873fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404d27e2e043efcd3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404cb3fdab309f203fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404c3860d56e5dc23fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404bb533e23166643fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404b2a9d8a6028253fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404a98c3c09f12133fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004049ffcbb547a7653fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040495fd9da4b46833fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004048b911e7020ad03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040480b96dbe62f0b3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004047578b063c54233fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040469d1003a90e4d3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004045dc46c5b418423fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004045154f95398a943fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004044484a15c973313fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004043755548f627503fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040429c8f9191a8383fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004041be16b6da71843fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004040da07e79805e03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403fe0ff7a4f1ad03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403e03347cf1ae973fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403c1ae5c5f81d2c3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403a28492b00e0ff3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040382b936e08a1fd3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403624f842ed71c43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403414aa54d5ce4b3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004031fadb4b7bfb8d3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402faf77a0bc83a03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402b56f727a936a13fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004026ec92a418b2b43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402270a5afd48c213fe000000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "login",
+      "hex": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "authoritative_hands": {
+        "mainhand": null,
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "0800264d63736150726f626520d0b7d0b0d188d191d0bb20d0bdd0b020d181d0b5d180d0b2d0b5d18000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "login",
+      "hex": "fffffc3fffff1040a94e"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000401bc7141f4f16483fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040128b2f797dd9b43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040025c93b76e77243fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430000"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430002"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430003"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430004"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430005"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430006"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430007"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430008"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430009"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43000a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43000b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43000c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43000d"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43000e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43000f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430010"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430011"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430012"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430013"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430014"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430015"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430016"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430017"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430018"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430019"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43001a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43001b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43001c"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43001d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43001e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43001f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430020"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430021"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430022"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430023"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430024"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430025"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430026"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430027"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430028"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430029"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43002a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43002b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43002c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43002d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43002e"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43002f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430030"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430031"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430032"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430033"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430034"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430035"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430036"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430037"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430038"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430039"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43003a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43003b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43003c"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43003d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43003e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43003f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430040"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430041"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430042"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "payload-injection",
+      "hex": "fffff540000330000a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430043"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430044"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430045"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430046"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430047"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430048"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430049"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43004a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43004b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43004c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43004d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43004e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43004f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430050"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430051"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430052"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430053"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430054"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430055"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430056"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430057"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430058"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430059"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43005a"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43005b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43005c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43005d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43005e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43005f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430060"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430061"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430062"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430063"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430064"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430065"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430066"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430067"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430068"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430069"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43006a"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43006b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43006c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43006d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43006e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43006f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430070"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430071"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430072"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430073"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430074"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430075"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430076"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430077"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430078"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430079"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43007a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43007b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43007c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43007d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43007e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43007f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430080"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430081"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430082"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430083"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430084"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430085"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430086"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430087"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430088"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430089"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43008a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43008b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43008c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43008d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43008e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43008f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430090"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430091"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430092"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430093"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430094"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430095"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430096"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430097"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430098"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d430099"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43009a"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43009b"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43009c"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43009d"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43009e"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d43009f"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a0"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a1"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a2"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a3"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a4"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a5"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a6"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a7"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a8"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300a9"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300aa"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300ab"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300ac"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300ad"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300ae"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300af"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b0"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b1"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b2"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b3"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b4"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b5"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b6"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b7"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b8"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300b9"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300ba"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300bb"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300bc"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300bd"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300be"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300bf"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300c0"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300c1"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300c2"
+    },
+    {
+      "direction": "toServer",
+      "name": "pong",
+      "stage": "payload-injection",
+      "hex": "4d4300c3"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "payload-injection",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f343900"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353100"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "statue-setup",
+      "hex": "0002002401010000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 1
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-setup",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353200"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-setup",
+      "hex": "fffffc3fffff304100"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353300"
+    },
+    {
+      "direction": "toClient",
+      "name": "position",
+      "stage": "statue-setup",
+      "hex": "02c0318000000000004050000000000000c029000000000000000000000000000000000000000000000000000000000000c2b4000041f0000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_place",
+      "stage": "statue-sitting",
+      "hex": "00fffffc3fffff304004000000003f4108ab3f000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-sitting",
+      "hex": "c0318000000000004050000000000000c02900000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-sitting",
+      "hex": "fffffc3fffff3040c6bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-sitting",
+      "hex": "fffffbffffff304000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-sitting",
+      "hex": "fffffc3fffff3040c6bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-sitting",
+      "hex": "fffffc3fffff3040c6bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "statue-sitting",
+      "hex": "00032e0000000000000000000000000000000000000000000000000000000000000000000000000101000000000000000000000000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 1
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-sitting",
+      "hex": "c0318000000000004050000000000000c02900000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_place",
+      "stage": "statue-running",
+      "hex": "00fffffc3fffff304004000000003f4108ab3f000000000002"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-running",
+      "hex": "fffffc3fffff3040c5bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-running",
+      "hex": "fffffbffffff304000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-running",
+      "hex": "fffffc3fffff3040c5bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-running",
+      "hex": "fffffc3fffff3040c5bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "statue-running",
+      "hex": "00042e0000000000000000000000000000000000000000000000000000000000000000000000000101000000000000000000000000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 1
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-running",
+      "hex": "c0318000000000004050000000000000c02900000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_place",
+      "stage": "statue-star",
+      "hex": "00fffffc3fffff304004000000003f4108ab3f000000000003"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-star",
+      "hex": "fffffc3fffff3040c4bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-star",
+      "hex": "fffffbffffff304000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-star",
+      "hex": "fffffc3fffff3040c4bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-star",
+      "hex": "fffffc3fffff3040c4bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "statue-star",
+      "hex": "00052e0000000000000000000000000000000000000000000000000000000000000000000000000101000000000000000000000000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 1
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-star",
+      "hex": "c0318000000000004050000000000000c02900000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_place",
+      "stage": "statue-standing",
+      "hex": "00fffffc3fffff304004000000003f4108ab3f000000000004"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-standing",
+      "hex": "fffffc3fffff3040c7bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-standing",
+      "hex": "fffffbffffff304000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-standing",
+      "hex": "fffffc3fffff3040c7bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-standing",
+      "hex": "fffffc3fffff3040c7bb01"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "statue-standing",
+      "hex": "00062e0000000000000000000000000000000000000000000000000000000000000000000000000101000000000000000000000000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 1
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "statue-standing",
+      "hex": "fffffc3fffff1040aa4e"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-standing",
+      "hex": "c0318000000000004050000000000000c02900000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-standing",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353400"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-standing",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353500"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "statue-standing",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353600"
+    },
+    {
+      "direction": "toClient",
+      "name": "position",
+      "stage": "statue-standing",
+      "hex": "033fe000000000000040500000000000003fe0000000000000000000000000000000000000000000000000000000000000c2b4000041f0000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "statue-standing",
+      "hex": "3fe000000000000040500000000000003fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "cancel",
+      "hex": "00000000c00000003f0105",
+      "status": 0,
+      "filtered": false
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "cancel",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "cancel",
+      "hex": "01000000c00000003f0000",
+      "status": 1,
+      "filtered": false
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353700"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353800"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "08001d5b5365727665725d204d4353415f43414e43454c5f52455441494e454400"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f353900"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "cancel",
+      "hex": "0007002401fc060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 892,
+          "count": 1
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "cancel",
+      "hex": "0000008000000040e012"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "0a090004776974680a0000000208000000094d63736150726f626500090004776974680a000000010a000b686f7665725f6576656e74080006616374696f6e000973686f775f746578740a000576616c7565080005636f6c6f720005677265656e09000565787472610a0000000208000000010a000800097472616e736c6174650029616476616e63656d656e74732e73746f72792e69726f6e5f746f6f6c732e6465736372697074696f6e000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e69726f6e5f746f6f6c732e7469746c6500000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e69726f6e5f746f6f6c732e7469746c6500080005636f6c6f720005677265656e0800097472616e736c6174650014636861742e7371756172655f627261636b657473000800097472616e736c617465001a636861742e747970652e616476616e63656d656e742e7461736b0000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "cancel",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "cancel",
+      "hex": "000000800000004000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-one-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363100"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-one-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363200"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-one-setup",
+      "hex": "0008002407010000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 7
+        },
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-one-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363300"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-one-setup",
+      "hex": "0009002d05e8060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 7
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "drop-one-setup",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "drop-one",
+      "hex": "0400000000000000000000",
+      "status": 4,
+      "filtered": false
+    },
+    {
+      "direction": "toClient",
+      "name": "spawn_entity",
+      "stage": "drop-one",
+      "hex": "1318e13e1b559fbbbb000000136974656d453feccccccccccccd40504ccccccccccd3fe000000000000000000000081eff110000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "drop-one",
+      "hex": "13080701010000ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-one",
+      "hex": "000a002406010000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 6
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "drop-one",
+      "hex": "13080701010000ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_velocity",
+      "stage": "drop-one",
+      "hex": "13043a00000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363400"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "drop-stack-setup",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363500"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-stack-setup",
+      "hex": "000b00240b230000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 35,
+          "count": 11
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "0a090004776974680a0000000208000000094d63736150726f626500090004776974680a000000010a000b686f7665725f6576656e74080006616374696f6e000973686f775f746578740a000576616c7565080005636f6c6f720005677265656e09000565787472610a0000000208000000010a000800097472616e736c6174650029616476616e63656d656e74732e73746f72792e6d696e655f73746f6e652e6465736372697074696f6e000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e6d696e655f73746f6e652e7469746c6500000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e6d696e655f73746f6e652e7469746c6500080005636f6c6f720005677265656e0800097472616e736c6174650014636861742e7371756172655f627261636b657473000800097472616e736c617465001a636861742e747970652e616476616e63656d656e742e7461736b0000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363600"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-stack-setup",
+      "hex": "000c002d05e8060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 35,
+          "count": 11
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "drop-stack",
+      "hex": "0300000000000000000000",
+      "status": 3,
+      "filtered": false
+    },
+    {
+      "direction": "toClient",
+      "name": "spawn_entity",
+      "stage": "drop-stack",
+      "hex": "1518e13e1bb1faee7c000000156974656d453feccccccccccccd40504ccccccccccd3fe000000000000000000000081eff110000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "drop-stack",
+      "hex": "1508070b230000ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-stack",
+      "hex": "000d002400",
+      "authoritative_hands": {
+        "mainhand": null,
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "drop-stack",
+      "hex": "1508070b230000ff"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "drop-stack",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_velocity",
+      "stage": "drop-stack",
+      "hex": "15043a00000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363700"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363800"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "swap-setup",
+      "hex": "000e002403e4060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 868,
+          "count": 3
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "0a090004776974680a0000000208000000094d63736150726f626500090004776974680a000000010a000b686f7665725f6576656e74080006616374696f6e000973686f775f746578740a000576616c7565080005636f6c6f720005677265656e09000565787472610a0000000208000000010a000800097472616e736c6174650029616476616e63656d656e74732e73746f72792e736d656c745f69726f6e2e6465736372697074696f6e000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e736d656c745f69726f6e2e7469746c6500000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e736d656c745f69726f6e2e7469746c6500080005636f6c6f720005677265656e0800097472616e736c6174650014636861742e7371756172655f627261636b657473000800097472616e736c617465001a636861742e747970652e616476616e63656d656e742e7461736b0000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f363900"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "swap-setup",
+      "hex": "000f002d05e8060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 868,
+          "count": 3
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "swap-setup",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "swap",
+      "hex": "0600000000000000000000",
+      "status": 6,
+      "filtered": false
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "swap",
+      "hex": "0010002405e8060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 872,
+          "count": 5
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "swap",
+      "hex": "0011002d03e4060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 872,
+          "count": 5
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "release-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f373000"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "release-setup",
+      "hex": "0012002401da060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 858,
+          "count": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "release-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f373100"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "release-setup",
+      "hex": "0013002508db060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 858,
+          "count": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "spawn_entity",
+      "stage": "release-setup",
+      "hex": "1718e13e1c2f2adaec000000176974656d453fe00000000000004050547ae147ae143fe000000000000000000000081efe710000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release-setup",
+      "hex": "17080701db060000ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release-setup",
+      "hex": "17080701db060000ff"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "release-setup",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release-setup",
+      "hex": "fffff540000320000a"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_place",
+      "stage": "release",
+      "hex": "00000000c00000003f013e9cbcfe3f8000003f000000000006"
+    },
+    {
+      "direction": "toServer",
+      "name": "use_item",
+      "stage": "release",
+      "hex": "0007c2b4000041f00000"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_place",
+      "stage": "release",
+      "hex": "01000000c00000003f013e9cbcfe3f8000003f000000000008"
+    },
+    {
+      "direction": "toServer",
+      "name": "use_item",
+      "stage": "release",
+      "hex": "0109c2b4000041f00000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000003f01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000004000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000003f01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000004000"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "release",
+      "hex": "00142e00000000000000000000000000000000000000000000000000000000000000000000000001da06000008db0600000000000000000003e406000000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 858,
+          "count": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "release",
+      "hex": "00152e00000000000000000000000000000000000000000000000000000000000000000000000001da06000008db0600000000000000000003e406000000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 858,
+          "count": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release",
+      "hex": "01080001ff"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "release",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "release",
+      "hex": "0500000000000000000000",
+      "status": 5,
+      "filtered": false
+    },
+    {
+      "direction": "toClient",
+      "name": "spawn_entity",
+      "stage": "release",
+      "hex": "1c18e13e1c91843eac0000001c6974656d063fe000000000000040506147ae147ae23fe0000000000000ea3f000151d8d10500c7"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release",
+      "hex": "1c080001ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release",
+      "hex": "1c080001ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release",
+      "hex": "01080000ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "release",
+      "hex": "0016002401da0601000301",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 858,
+          "count": 1,
+          "damage": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "release",
+      "hex": "0017002507db060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 858,
+          "count": 1,
+          "damage": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "jab-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f373200"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "jab-setup",
+      "hex": "0018002401fa060000",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 890,
+          "count": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_velocity",
+      "stage": "jab-setup",
+      "hex": "1c000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "jab-setup",
+      "hex": "1c0a0801ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "jab-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f373300"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab-setup",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "jab-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f373400"
+    },
+    {
+      "direction": "toClient",
+      "name": "spawn_entity",
+      "stage": "jab-setup",
+      "hex": "1e18e13e1cb6967a9b0000001e6d6f62211c400400000000000040500000000000003fe000000000000000000000000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "jab-setup",
+      "hex": "1e0903412000000f0001ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "jab-setup",
+      "hex": "1e0903412000000f0001ff"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab-setup",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "use_entity",
+      "stage": "jab",
+      "hex": "1e0100"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_velocity",
+      "stage": "jab",
+      "hex": "1e0c7f00000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "jab",
+      "hex": "1e090340800000ff"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_velocity",
+      "stage": "jab",
+      "hex": "1e0c7f00000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "jab",
+      "hex": "0019002401fa0601000301",
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 890,
+          "count": 1,
+          "damage": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "jab",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f373500"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    }
+  ],
+  "commands": [
+    "forceload add -16 -16",
+    "fill -16 63 -16 -1 63 -1 stone",
+    "fill -16 65 -16 -1 65 -1 stone",
+    "setblock -16 64 -16 furnace",
+    "setblock -15 64 -16 chest",
+    "setblock -14 64 -16 trapped_chest",
+    "setblock -13 64 -16 ender_chest",
+    "setblock -12 64 -16 jukebox",
+    "setblock -11 64 -16 dispenser",
+    "setblock -10 64 -16 dropper",
+    "setblock -9 64 -16 oak_sign{front_text:{messages:[\"MCSA probe\",\"\",\"\",\"\"]}}",
+    "setblock -8 64 -16 oak_hanging_sign[attached=true]",
+    "setblock -7 64 -16 spawner",
+    "setblock -5 64 -16 brewing_stand",
+    "setblock -4 64 -16 enchanting_table",
+    "setblock -3 64 -16 end_portal",
+    "setblock -2 64 -16 beacon",
+    "setblock -1 64 -16 skeleton_skull",
+    "setblock -16 64 -15 daylight_detector",
+    "setblock -15 64 -15 hopper",
+    "setblock -14 64 -15 comparator",
+    "setblock -13 64 -15 white_banner",
+    "setblock -12 64 -15 structure_block",
+    "setblock -11 64 -15 end_gateway",
+    "setblock -10 64 -15 command_block",
+    "setblock -9 64 -15 shulker_box",
+    "setblock -8 64 -15 white_bed",
+    "setblock -7 64 -15 conduit",
+    "setblock -6 64 -15 barrel",
+    "setblock -5 64 -15 smoker",
+    "setblock -4 64 -15 blast_furnace",
+    "setblock -3 64 -15 lectern",
+    "setblock -2 64 -15 bell",
+    "setblock -1 64 -15 jigsaw",
+    "setblock -16 64 -14 campfire",
+    "setblock -15 64 -14 beehive",
+    "setblock -14 64 -14 sculk_sensor",
+    "setblock -13 64 -14 calibrated_sculk_sensor",
+    "setblock -12 64 -14 sculk_catalyst",
+    "setblock -11 64 -14 sculk_shrieker",
+    "setblock -10 64 -14 chiseled_bookshelf",
+    "setblock -9 64 -14 oak_shelf",
+    "setblock -8 64 -14 suspicious_sand",
+    "setblock -7 64 -14 decorated_pot",
+    "setblock -6 64 -14 crafter",
+    "setblock -5 64 -14 trial_spawner",
+    "setblock -4 64 -14 vault",
+    "setblock -16 64 -13 copper_golem_statue",
+    "gamemode survival McsaProbe",
+    "fill -20 63 -16 -17 63 -10 stone",
+    "item replace entity McsaProbe weapon.mainhand with stone",
+    "setblock -16 65 -13 air",
+    "tp McsaProbe -17.5 64 -12.5 -90 30",
+    "gamemode survival McsaProbe",
+    "fill -3 63 -3 4 63 3 stone",
+    "tp McsaProbe 0.5 64 0.5 -90 30",
+    "setblock 2 64 0 obsidian",
+    "item replace entity McsaProbe weapon.mainhand with iron_pickaxe",
+    "execute if block 2 64 0 obsidian run say MCSA_CANCEL_RETAINED",
+    "setblock 2 64 0 air",
+    "kill @e[type=item]",
+    "item replace entity McsaProbe weapon.mainhand with stone 7",
+    "item replace entity McsaProbe weapon.offhand with gold_ingot 5",
+    "kill @e[type=item]",
+    "item replace entity McsaProbe weapon.mainhand with cobblestone 11",
+    "item replace entity McsaProbe weapon.offhand with gold_ingot 5",
+    "kill @e[type=item]",
+    "item replace entity McsaProbe weapon.mainhand with iron_ingot 3",
+    "item replace entity McsaProbe weapon.offhand with gold_ingot 5",
+    "item replace entity McsaProbe weapon.mainhand with bow",
+    "give McsaProbe arrow 8",
+    "item replace entity McsaProbe weapon.mainhand with iron_sword",
+    "kill @e[type=cow]",
+    "summon cow 2.5 64 0.5 {NoAI:1b}",
+    "data get entity @e[type=cow,limit=1] Health"
+  ],
+  "checks": [
+    {
+      "case": "cancel",
+      "statuses": [
+        0,
+        1
+      ],
+      "block_retained": true
+    },
+    {
+      "case": "drop-one",
+      "statuses": [
+        4
+      ],
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 6
+        },
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "case": "drop-stack",
+      "statuses": [
+        3
+      ],
+      "authoritative_hands": {
+        "mainhand": null,
+        "offhand": {
+          "item": 872,
+          "count": 5
+        }
+      }
+    },
+    {
+      "case": "swap",
+      "statuses": [
+        6
+      ],
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 872,
+          "count": 5
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      }
+    },
+    {
+      "case": "release",
+      "statuses": [
+        5
+      ],
+      "arrow_spawn": true
+    },
+    {
+      "case": "jab",
+      "statuses": [],
+      "authoritative_hands": {
+        "mainhand": {
+          "item": 890,
+          "count": 1,
+          "damage": 1
+        },
+        "offhand": {
+          "item": 868,
+          "count": 3
+        }
+      },
+      "target_health": [
+        4.0
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "payloads-accepted.png",
+      "sha256": "995706f2a48204dddcf32126f73b38d695c2eee269b77b2b4276b5362088d7ca"
+    },
+    {
+      "file": "statue-ready.png",
+      "sha256": "12fa3fa8d30ef2b8685bd1abcb3e71f25cdce32f4223f43fb7ea352c19b5e4f3"
+    },
+    {
+      "file": "statue-sitting.png",
+      "sha256": "27a81ff474b59bfc8cbdf65e5a0d7f276ec72e152e89e8e57ed139f6f57716ff"
+    },
+    {
+      "file": "statue-running.png",
+      "sha256": "b39852c07b0a84a5cdeb45b55caf2a7f9d13ddf3ba29026c228acc0969dd93e1"
+    },
+    {
+      "file": "statue-star.png",
+      "sha256": "409493d3ac63d7bccfc6d6e7396e57db086b2a60f883047156cb63941eda046e"
+    },
+    {
+      "file": "statue-standing.png",
+      "sha256": "9bdc6c534ce89b9e4a4ffcb3bf29b6e7b2b0d1ab48491adf742a89fddd21ab65"
+    },
+    {
+      "file": "ready-cancel.png",
+      "sha256": "2a3e2c9286b8846d70d7824541de6ea1dad0514bc953c64151fa242e8397dc29"
+    },
+    {
+      "file": "finished-actions.png",
+      "sha256": "7e106279cf646d0a9bea3bcdaef31b0f3ed47fca180f6ff47f7717653c2e849f"
+    }
+  ],
+  "authored_blocks": [
+    "furnace",
+    "chest",
+    "trapped_chest",
+    "ender_chest",
+    "jukebox",
+    "dispenser",
+    "dropper",
+    "oak_sign",
+    "oak_hanging_sign",
+    "spawner",
+    "brewing_stand",
+    "enchanting_table",
+    "end_portal",
+    "beacon",
+    "skeleton_skull",
+    "daylight_detector",
+    "hopper",
+    "comparator",
+    "white_banner",
+    "structure_block",
+    "end_gateway",
+    "command_block",
+    "shulker_box",
+    "white_bed",
+    "conduit",
+    "barrel",
+    "smoker",
+    "blast_furnace",
+    "lectern",
+    "bell",
+    "jigsaw",
+    "campfire",
+    "beehive",
+    "sculk_sensor",
+    "calibrated_sculk_sensor",
+    "sculk_catalyst",
+    "sculk_shrieker",
+    "chiseled_bookshelf",
+    "oak_shelf",
+    "suspicious_sand",
+    "decorated_pot",
+    "crafter",
+    "trial_spawner",
+    "vault",
+    "copper_golem_statue"
+  ],
+  "payload_source_sha256": "03b797cfd7010a7e2c3a952a95e587acef5c59d009c1a51a7ea3b81bf34a75ec",
+  "payloads": [
+    {
+      "label": "complex-item:\"potion_water\"",
+      "hex": "650001b40801002a0100000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_mundane\"",
+      "hex": "650001b40801002a0101000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_thick\"",
+      "hex": "650001b40801002a0102000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_awkward\"",
+      "hex": "650001b40801002a0103000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_night_vision\"",
+      "hex": "650001b40801002a0104000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_night_vision\"",
+      "hex": "650001b40801002a0105000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_invisibility\"",
+      "hex": "650001b40801002a0106000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_invisibility\"",
+      "hex": "650001b40801002a0107000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_leaping\"",
+      "hex": "650001b40801002a0108000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_leaping\"",
+      "hex": "650001b40801002a0109000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_leaping\"",
+      "hex": "650001b40801002a010a000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_fire_resistance\"",
+      "hex": "650001b40801002a010b000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_fire_resistance\"",
+      "hex": "650001b40801002a010c000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_swiftness\"",
+      "hex": "650001b40801002a010d000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_swiftness\"",
+      "hex": "650001b40801002a010e000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_swiftness\"",
+      "hex": "650001b40801002a010f000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_slowness\"",
+      "hex": "650001b40801002a0110000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_slowness\"",
+      "hex": "650001b40801002a0111000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_slowness\"",
+      "hex": "650001b40801002a0112000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_turtle_master\"",
+      "hex": "650001b40801002a0113000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_turtle_master\"",
+      "hex": "650001b40801002a0114000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_turtle_master\"",
+      "hex": "650001b40801002a0115000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_water_breathing\"",
+      "hex": "650001b40801002a0116000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_water_breathing\"",
+      "hex": "650001b40801002a0117000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_healing\"",
+      "hex": "650001b40801002a0118000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_healing\"",
+      "hex": "650001b40801002a0119000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_harming\"",
+      "hex": "650001b40801002a011a000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_harming\"",
+      "hex": "650001b40801002a011b000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_poison\"",
+      "hex": "650001b40801002a011c000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_poison\"",
+      "hex": "650001b40801002a011d000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_poison\"",
+      "hex": "650001b40801002a011e000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_regeneration\"",
+      "hex": "650001b40801002a011f000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_regeneration\"",
+      "hex": "650001b40801002a0120000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_regeneration\"",
+      "hex": "650001b40801002a0121000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strength\"",
+      "hex": "650001b40801002a0122000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_strength\"",
+      "hex": "650001b40801002a0123000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_strong_strength\"",
+      "hex": "650001b40801002a0124000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_weakness\"",
+      "hex": "650001b40801002a0125000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_weakness\"",
+      "hex": "650001b40801002a0126000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_luck\"",
+      "hex": "650001b40801002a0127000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_slow_falling\"",
+      "hex": "650001b40801002a0128000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_long_slow_falling\"",
+      "hex": "650001b40801002a0129000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_wind_charged\"",
+      "hex": "650001b40801002a012a000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_weaving\"",
+      "hex": "650001b40801002a012b000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_oozing\"",
+      "hex": "650001b40801002a012c000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_infested\"",
+      "hex": "650001b40801002a012d000000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"attribute_attack\"",
+      "hex": "650001890701000d01020a6d6373613a70726f62654022000000000000000100",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"attribute_speed\"",
+      "hex": "650001890701000d01160a6d6373613a70726f62653fd0000000000000020200",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_custom\"",
+      "hex": "650005d90901002a011c0100123456010102a3060001010000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"potion_scale\"",
+      "hex": "650001b40802002a010d0000002b3fc00000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"writable\"",
+      "hex": "650001920901002d020a46697273742070616765001dd092d182d0bed180d0b0d18f20d181d182d180d0b0d0bdd0b8d186d0b000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"written\"",
+      "hex": "650001930901002e0553746f72790004416c6578000108000a466972737420706167650000",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"tooltip\"",
+      "hex": "650001d70701000f0002032d",
+      "post_pong": true
+    },
+    {
+      "label": "complex-item:\"food\"",
+      "hex": "650001d906010014074020000001",
+      "post_pong": true
+    },
+    {
+      "label": "component:5",
+      "hex": "650001010000",
+      "post_pong": true
+    },
+    {
+      "label": "component:7",
+      "hex": "650001010000",
+      "post_pong": true
+    },
+    {
+      "label": "component:10",
+      "hex": "650001010100070178",
+      "post_pong": true
+    },
+    {
+      "label": "component:17",
+      "hex": "6500010101000e013f800000010101017801ffffffff",
+      "post_pong": true
+    },
+    {
+      "label": "component:34",
+      "hex": "6500010101001e",
+      "post_pong": true
+    },
+    {
+      "label": "component:70",
+      "hex": "6500010101003d000000",
+      "post_pong": true
+    },
+    {
+      "label": "rich-name",
+      "hex": "650001010100050a0800047465787400014109000565787472610a0000000108000474657874000142010004626f6c6401000a000b686f7665725f6576656e74080006616374696f6e000973686f775f7465787408000576616c7565000c4d43534120746f6f6c7469700000",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"cloud\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000704",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"block\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007011b",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"block_marker\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007021b",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"falling_dust\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000071c1b",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"dust_pillar\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000076c1b",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"block_crumble\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007701b",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"dust\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070dffff7f3f3fc00000",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"dust_color_transition\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070effff0000ff0000ff3fc00000",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"entity_effect\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000714ffff7f3f",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"item\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072e05e3010000",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"item_damage\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072e01ff0601000307",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"sculk_charge\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007253f000000",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"shriek\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000076607",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"vibration_block\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072f0000000080000020500a",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"trail\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000073040000000000000004054000000000000400000000000000000ff00000a",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"tinted_leaves\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072300ff0000",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"dragon_breath\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000707",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"effect\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070f",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"instant_effect\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072d",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"flash\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000729",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"cloud_zero\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000004",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"cloud_one\"",
+      "hex": "2901003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000104",
+      "post_pong": true
+    },
+    {
+      "label": "particle:\"cloud_normal\"",
+      "hex": "2900003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000704",
+      "post_pong": true
+    },
+    {
+      "label": "mannequin-spawn",
+      "hex": "01f02e0606060606060606060606060606060605400c0000000000004050000000000000400c00000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "serializer41",
+      "hex": "5cf02eff",
+      "post_pong": true
+    },
+    {
+      "label": "mannequin-remove",
+      "hex": "4601f02e",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"suspicious_sand\"",
+      "hex": "06fffffe3fffff2040280a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"oak_shelf\"",
+      "hex": "08fffffdffffff2040de10",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"white_banner\"",
+      "hex": "06fffffcffffff1040140a0a000a636f6d706f6e656e74730000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"chiseled_bookshelf\"",
+      "hex": "06fffffdbfffff2040270a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"shulker_box\"",
+      "hex": "06fffffdffffff1040180a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"calibrated_sculk_sensor\"",
+      "hex": "06fffffcffffff2040240a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"enchanting_table\"",
+      "hex": "06ffffff3fffff00400d0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"sculk_sensor\"",
+      "hex": "06fffffcbfffff2040230a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"furnace\"",
+      "hex": "06fffffc3fffff0040000a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"jigsaw\"",
+      "hex": "06ffffffffffff1040200a0800056a6f696e740008726f6c6c61626c650800046e616d65000f6d696e6563726166743a656d707479080004706f6f6c000f6d696e6563726166743a656d70747908000b66696e616c5f7374617465000d6d696e6563726166743a616972030012706c6163656d656e745f7072696f726974790000000003001273656c656374696f6e5f7072696f7269747900000000080006746172676574000f6d696e6563726166743a656d70747900",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"bell\"",
+      "hex": "06ffffffbfffff10401f0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"lectern\"",
+      "hex": "06ffffff7fffff10401e0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"blast_furnace\"",
+      "hex": "06ffffff3fffff10401d0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"smoker\"",
+      "hex": "06fffffeffffff10401c0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"dispenser\"",
+      "hex": "06fffffd7fffff0040050a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"daylight_detector\"",
+      "hex": "06fffffc3fffff1040110a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"end_portal\"",
+      "hex": "06ffffff7fffff00400e0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"skeleton_skull\"",
+      "hex": "06ffffffffffff0040100a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"comparator\"",
+      "hex": "06fffffcbfffff1040130a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"spawner\"",
+      "hex": "06fffffe7fffff0040090a0200114d61784e6561726279456e74697469657300060200135265717569726564506c6179657252616e6765001002000a537061776e436f756e74000402000d4d6178537061776e44656c6179032002000a537061776e52616e6765000402000544656c6179001402000d4d696e537061776e44656c617900c800",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"command_block\"",
+      "hex": "06fffffdbfffff1040170a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"structure_block\"",
+      "hex": "06fffffd3fffff1040150a0800086d6574616461746100000800066d6972726f7200044e4f4e4501000e69676e6f7265456e74697469657301010007706f776572656400040004736565640000000000000000080006617574686f720000080008726f746174696f6e00044e4f4e45030004706f7358000000000800046d6f646500044c4f4144030004706f73590000000103000573697a655800000000030004706f735a00000000050009696e746567726974793f80000001000773686f77616972000800046e616d6500000100067374726963740003000573697a65590000000003000573697a655a0000000001000f73686f77626f756e64696e67626f780100",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"oak_sign\"",
+      "hex": "06fffffdffffff0040070a0a00096261636b5f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000001000869735f7761786564000a000a66726f6e745f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d657373616765730800000004000a4d4353412070726f62650000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"brewing_stand\"",
+      "hex": "06fffffeffffff00400c0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"chest\"",
+      "hex": "06fffffc7fffff0040010a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"trapped_chest\"",
+      "hex": "06fffffcbfffff0040020a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"jukebox\"",
+      "hex": "06fffffd3fffff0040040a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"ender_chest\"",
+      "hex": "06fffffcffffff0040030a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"oak_hanging_sign\"",
+      "hex": "06fffffe3fffff0040080a0a00096261636b5f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000001000869735f7761786564000a000a66726f6e745f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"conduit\"",
+      "hex": "06fffffe7fffff10401a0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"barrel\"",
+      "hex": "06fffffebfffff10401b0a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"dropper\"",
+      "hex": "06fffffdbfffff0040060a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"hopper\"",
+      "hex": "06fffffc7fffff1040120a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"beacon\"",
+      "hex": "06ffffffbfffff00400f0a0300064c6576656c730000000000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"decorated_pot\"",
+      "hex": "06fffffe7fffff2040290a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"end_gateway\"",
+      "hex": "06fffffd7fffff1040160a040003416765000000000000001a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"beehive\"",
+      "hex": "06fffffc7fffff2040220a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"sculk_shrieker\"",
+      "hex": "06fffffd7fffff2040260a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"sculk_catalyst\"",
+      "hex": "06fffffd3fffff2040250a00",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"campfire\"",
+      "hex": "06fffffc3fffff2040210a0900054974656d73000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"vault\"",
+      "hex": "06ffffff3fffff20402c0a0a000b7368617265645f646174610000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"trial_spawner\"",
+      "hex": "06fffffeffffff20402b0a0a000a737061776e5f646174610a0006656e74697479000000",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:\"crafter\"",
+      "hex": "06fffffebfffff20402a0a00",
+      "post_pong": true
+    },
+    {
+      "label": "populated-block-entity:oak_shelf",
+      "hex": "08fffffdffffff2040de10",
+      "post_pong": true
+    },
+    {
+      "label": "populated-block-entity:campfire",
+      "hex": "06fffffc3fffff2040210a0900054974656d730a00000001030005636f756e7400000001080002696400116d696e6563726166743a636869636b656e010004536c6f74000000",
+      "post_pong": true
+    },
+    {
+      "label": "populated-block-entity:vault",
+      "hex": "06ffffff3fffff20402c0a0a000b7368617265645f646174610a000c646973706c61795f6974656d030005636f756e7400000001080002696400116d696e6563726166743a6469616d6f6e64000000",
+      "post_pong": true
+    },
+    {
+      "label": "populated-block-entity:spawner",
+      "hex": "06fffffe7fffff0040090a0a0009537061776e446174610a0006656e746974790800026964000d6d696e6563726166743a706967000000",
+      "post_pong": true
+    },
+    {
+      "label": "populated-block-entity:trial_spawner",
+      "hex": "06fffffeffffff20402b0a0a000a737061776e5f646174610a0006656e746974790800026964000d6d696e6563726166743a706967000000",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:53",
+      "hex": "6500010101002c011607",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:56",
+      "hex": "6500010101002f0101",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:57",
+      "hex": "650001010100300a0800116d696e6563726166743a6f616b5f6c6f6700046178697300",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:59",
+      "hex": "650001010100320a030003416765000000000500064865616c7468412000000100044e6f41490000",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:61",
+      "hex": "650001010100340101",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:66",
+      "hex": "6500010101003909080000000100146d696e6563726166743a6f616b5f706c616e6b73",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:68",
+      "hex": "6500010101003b020100ff0000000101",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:69",
+      "hex": "6500010101003c0101020100ff0000000101",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:72",
+      "hex": "6500010101003f01010f",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:74",
+      "hex": "650001010100410401010101",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:76",
+      "hex": "65000101010043010b686f6e65795f6c6576656c0135",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:77",
+      "hex": "65000101010044010a0800026964000d6d696e6563726166743a626565030003416765000000000014e012",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:86",
+      "hex": "6500010101004d01",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:88",
+      "hex": "6500010101004f02",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:89",
+      "hex": "6500010101005003",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:90",
+      "hex": "6500010101005104",
+      "post_pong": true
+    },
+    {
+      "label": "primary-component:104",
+      "hex": "6500010101005b01",
+      "post_pong": true
+    },
+    {
+      "label": "block-entity:copper_golem_statue",
+      "hex": "08fffffc3fffff3040c7bb01",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"armor_stand\":0",
+      "hex": "01d42fdd708f9d8704439b88afaad9b2d7b3150540040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"armor_stand\":1",
+      "hex": "5cd42f050801090341a000000f000510094120000041a0000041f00000ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"armor_stand\":2",
+      "hex": "5cd42f050801090341a000000f000510094120000041a0000041f00000ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"cow\":0",
+      "hex": "01d52f788f5482f4e84cd0b4acedc14e6149a81c40040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"cow\":1",
+      "hex": "5cd52f0206010800084d43534120636f770308010903412000000f0001100801ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"cow\":2",
+      "hex": "5cd52f0206010800084d43534120636f770308010903412000000f0001100801ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"slime\":0",
+      "hex": "01d62fb7f4f0a70b6b4260945b248a8bd5a3897040040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"slime\":1",
+      "hex": "5cd62f0903418000000f0001100104ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"slime\":2",
+      "hex": "5cd62f0903418000000f0001100104ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"magma_cube\":0",
+      "hex": "01d72f5314770d6d2c41d98c10057de3f722814e40040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"magma_cube\":1",
+      "hex": "5cd72f0903411000000f0001100103ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"magma_cube\":2",
+      "hex": "5cd72f0903411000000f0001100103ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"falling_block\":0",
+      "hex": "01d82f204423be5b584cc0bb6788c385062a70314004000000000000405400000000000040040000000000000000008801000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"falling_block\":1",
+      "hex": "5cd82f050801ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"falling_block\":2",
+      "hex": "5cd82f050801ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"item\":0",
+      "hex": "01d92f4d89d2ad66d24daab7c5a2b455453bb74540040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"item\":1",
+      "hex": "5cd92f050801080705e3010000ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"item\":2",
+      "hex": "5cd92f050801080705e3010000ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"arrow\":0",
+      "hex": "01da2f66fae6a72fd943e6b5ec9cbf1756b9020640040000000000004054000000000000400400000000000000000000005000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"arrow\":1",
+      "hex": "5cda2f050801ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"arrow\":2",
+      "hex": "5cda2f050801ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"painting\":0",
+      "hex": "01db2fddb0d91a11474fc087bb946b4f8cebdd5940000000000000004054000000000000400000000000000000800002000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"painting\":1",
+      "hex": "5cdb2f080c02091e19ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"painting\":2",
+      "hex": "5cdb2f080c02091e19ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"wolf\":0",
+      "hex": "01dc2fd029492d27514a73a51914bbba811e128f0140040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"wolf\":1",
+      "hex": "5cdc2f0903410000000f0001110005120d0100000001000000020000000300000004ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"wolf\":2",
+      "hex": "5cdc2f0903410000000f0001110005120d0100000001000000020000000300000004ff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"enderman\":0",
+      "hex": "01dd2f6eae8159e1dd4c469e418a97efdc5dea2740040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"enderman\":1",
+      "hex": "5cdd2f0903422000000f0001100f1bff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"enderman\":2",
+      "hex": "5cdd2f0903422000000f0001100f1bff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"block_display\":0",
+      "hex": "01de2fd36706a68fec4369933d41fd7693cb1f0f40040000000000004054000000000000400400000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"block_display\":1",
+      "hex": "5cde2f170e1bff",
+      "post_pong": true
+    },
+    {
+      "label": "entity:\"block_display\":2",
+      "hex": "5cde2f080100170e1bff",
+      "post_pong": true
+    },
+    {
+      "label": "entity-samples-remove",
+      "hex": "460bd42fd52fd62fd72fd82fd92fda2fdb2fdc2fdd2fde2f",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:157:spawn",
+      "hex": "01b8302828282828282828282828282828282855400c0000000000004050000000000000401600000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:157:metadata",
+      "hex": "5cb830000001ff",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:158:spawn",
+      "hex": "01b9302929292929292929292929292929292956400c0000000000004050000000000000401a00000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:158:metadata",
+      "hex": "5cb930000001ff",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:159:spawn",
+      "hex": "01ba302a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a05400c0000000000004050000000000000401e00000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:159:metadata",
+      "hex": "5cba30ff",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:160:spawn",
+      "hex": "01bb302b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b70400c0000000000004050000000000000402100000000000000000000000000000000",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entity:160:metadata",
+      "hex": "5cbb30100102ff",
+      "post_pong": true
+    },
+    {
+      "label": "preview-entities-remove",
+      "hex": "4604b830b930ba30bb30",
+      "post_pong": true
+    }
+  ],
+  "payload_post_pong": true,
+  "statue_poses": [
+    "sitting",
+    "running",
+    "star",
+    "standing"
+  ],
+  "attack_equivalent": "771 iron sword: ordinary use_entity attack, authoritative weapon wear and target health",
+  "client_exit": -15,
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

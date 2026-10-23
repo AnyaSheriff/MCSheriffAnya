@@ -24,8 +24,9 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersi
                 uint(&mut out,ids::translate(RegistryKind::Attribute,from,to,input.uint()?).map_err(Error::Id)?);
                 string(input,&mut out)?;finite(input,&mut out)?;
                 uint(&mut out,input.count(2)? as u32);uint(&mut out,input.count(10)? as u32);
-                let display=input.count(2)?;uint(&mut out,display as u32);
-                if display==2 {let text=input.nbt()?;plain_text(text)?;out.extend(text);}
+                let display=if from==JavaVersion::V1_21_5 {0}else{input.count(2)?};
+                if to!=JavaVersion::V1_21_5 {uint(&mut out,display as u32);}
+                if display==2 {let text=input.nbt()?;plain_text(text)?;if to!=JavaVersion::V1_21_5 {out.extend(text);}}
             }
         }
         18=>{

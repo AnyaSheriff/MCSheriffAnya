@@ -1,0 +1,65 @@
+
+running 1 test
+MCSA gameplay probe ready on 26127
+[22:13:39] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[22:13:39] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[22:13:39] [Server thread/INFO]: McsaProbe[/127.0.0.1:39598 → localhost:26127] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[22:13:43] [Server thread/INFO]: McsaProbe зашёл на сервер
+[22:13:43] [Server thread/INFO]: Правило spawn_mobs: false
+[22:13:43] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[22:13:44] [Server thread/INFO]: Игроку McsaProbe установлен режим: творческий
+[22:13:44] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[22:13:44] [Server thread/INFO]: Заполнено блоков: 90
+[22:13:44] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[22:13:44] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[22:13:44] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[22:13:45] [Server thread/INFO]: Рецепты: take * — McsaProbe
+[22:13:45] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[22:13:45] [Server thread/INFO]: Рецепты: give * — McsaProbe
+[22:13:45] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[22:13:45] [Server thread/INFO]: Рецепты: take * — McsaProbe
+[22:13:45] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[22:13:46] [Server thread/INFO]: Рецепты: give minecraft:oak_planks — McsaProbe
+[22:13:46] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[22:13:46] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[22:13:46] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[22:13:46] [Server thread/INFO]: Gave 2 [oak_log] to McsaProbe
+[22:13:46] [Server thread/INFO]: [Server] MCSA_CORE_DIG_10
+[22:13:49] [Server thread/INFO]: Заполнено блоков: 20
+[22:13:49] [Server thread/INFO]: [Server] MCSA_CORE_DIG_11
+[22:13:50] [Server thread/INFO]: Заполнено блоков: 6
+[22:13:50] [Server thread/INFO]: [Server] MCSA_CORE_DIG_12
+[22:13:50] [Server thread/INFO]: McsaProbe перенесён в 2.5 66 0.5
+[22:13:50] [Server thread/INFO]: [Server] MCSA_CORE_DIG_13
+[22:13:54] [Server thread/INFO]: McsaProbe перешёл в minecraft:the_nether (0.5, 66.0, -0.5)
+[22:13:54] [Server thread/INFO]: McsaProbe has made the advancement [We Need to Go Deeper]
+[22:13:54] [Server thread/INFO]: McsaProbe has made the advancement [We Need to Go Deeper]
+[22:13:55] [Server thread/INFO]: [Server] portal-roundtrip-complete
+[22:13:55] [Server thread/INFO]: [Server] MCSA_CORE_DIG_14
+[22:13:58] [Server thread/INFO]: McsaProbe перешёл в minecraft:overworld (4.5, 1.0, -3.5)
+[22:14:00] [Server thread/INFO]: Теперь есть права: McsaProbe
+[22:14:00] [Server thread/INFO]: [Server] MCSA_CORE_DIG_15
+[22:14:00] [Server thread/INFO]: Заполнено блоков: 25
+[22:14:00] [Server thread/INFO]: [Server] MCSA_CORE_DIG_16
+[22:14:00] [Server thread/INFO]: Заполнено блоков: 9
+[22:14:00] [Server thread/INFO]: [Server] MCSA_CORE_DIG_17
+[22:14:00] [Server thread/INFO]: McsaProbe перенесён в 11.5 66 11.5
+[22:14:00] [Server thread/INFO]: [Server] MCSA_CORE_DIG_18
+[22:14:01] [Server thread/INFO]: [Server] end-outbound-complete
+[22:14:01] [Server thread/INFO]: [Server] MCSA_CORE_DIG_19
+[22:14:05] [Server thread/INFO]: McsaProbe перешёл в minecraft:the_end (100.5, 49.0, 0.5)
+[22:14:05] [Server thread/INFO]: McsaProbe has made the advancement [The End?]
+[22:14:05] [Server thread/INFO]: McsaProbe has made the advancement [The End?]
+[22:14:07] [Server thread/INFO]: Changed the block at 102, 49, 0
+[22:14:07] [Server thread/INFO]: [Server] MCSA_CORE_DIG_20
+[22:14:08] [Server thread/INFO]: [Server] end-roundtrip-complete
+[22:14:08] [Server thread/INFO]: [Server] MCSA_CORE_DIG_21
+[22:14:12] [Server thread/INFO]: McsaProbe перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[22:14:14] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[22:14:14] [Server thread/INFO]: Останавливаю сервер
+[22:14:14] [Server thread/INFO]: McsaProbe вышел
+[22:14:14] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_1_21_5_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2994 filtered out; finished in 35.37s
+

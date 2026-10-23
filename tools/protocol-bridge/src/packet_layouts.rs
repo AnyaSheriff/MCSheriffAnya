@@ -24,6 +24,12 @@ fn name(kind: RegistryKind, version: JavaVersion, id: usize) -> Option<&'static 
 /// Отсутствующая цель представлена отдельно через PacketInfo::target_id.
 /// Числовые ID не являются основанием для переименования spectator packets.
 pub(crate) fn packet_info(kind: RegistryKind, from: JavaVersion, to: JavaVersion, id: usize) -> Option<PacketInfo> {
+    if (from==JavaVersion::V1_21_5 && matches!(to,JavaVersion::V1_21_8|JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2)) || (to==JavaVersion::V1_21_5 && matches!(from,JavaVersion::V1_21_8|JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2)) {
+        let middle=JavaVersion::V1_21_6;
+        let first=packet_info(kind,from,middle,id)?;
+        let second=packet_info(kind,middle,to,first.target_id? as usize)?;
+        return Some(PacketInfo{name:first.name,target_id:second.target_id,schema_equal:first.schema_equal && second.schema_equal});
+    }
     if (from==JavaVersion::V1_21_6 && matches!(to,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2)) || (to==JavaVersion::V1_21_6 && matches!(from,JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2)) {
         let middle=JavaVersion::V1_21_8;
         let first=packet_info(kind,from,middle,id)?;

@@ -8,7 +8,7 @@ use crate::wire::{self, Cursor, uint};
 pub enum Error { UnknownEntity(u32), UnknownKind(u32), UnknownField(u8), MissingField(&'static str), Serializer(u32), MissingRegistry(&'static str) }
 
 fn projected_kind(to: JavaVersion, kind:u32)->u32 {
-    if to==JavaVersion::V1_21_6 {crate::generated_payload_771::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)} else if to==JavaVersion::V1_21_8 {crate::generated_payload_772::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)} else if to==JavaVersion::V1_21_9 {crate::generated_payload_773::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)}else{kind}
+    if to==JavaVersion::V1_21_5 {crate::generated_payload_770::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)} else if to==JavaVersion::V1_21_6 {crate::generated_payload_771::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)} else if to==JavaVersion::V1_21_8 {crate::generated_payload_772::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)} else if to==JavaVersion::V1_21_9 {crate::generated_payload_773::ENTITY_VIEWS.iter().find(|r|r.0==kind).map_or(kind,|r|r.1)}else{kind}
 }
 fn failure(error: Error) -> wire::Error { wire::Error::Entity(error) }
 
@@ -54,7 +54,7 @@ impl Tracker {
         let packet = input.uint()?;
         if !probe_776 { ids::translate(RegistryKind::PlayClientbound, from, to, packet)?; }
         let name = crate::packet_layouts::packet_info(RegistryKind::PlayClientbound, from, if context.items.content.is_native_view() { JavaVersion::V26_3 } else { to }, packet as usize).ok_or(wire::Error::Invalid)?.name;
-        if matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8) && name=="tile_entity_data" {
+        if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) && name=="tile_entity_data" {
             let position:[u8;8]=input.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?;
             context.block_entity_view=self.block_views.get(&position).copied();
         }
@@ -74,7 +74,7 @@ impl Tracker {
                 if probe_776 {
                     let target = if entity_layouts::LAYOUTS[kind as usize].0 == "cushion" {
                         entity_layouts::LAYOUTS.iter().position(|row| row.0 == "armor_stand").ok_or(wire::Error::Invalid)? as u32
-                    } else if matches!(to,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) && entity_layouts::LAYOUTS[kind as usize].0=="sulfur_cube" {entity_layouts::LAYOUTS.iter().position(|row|row.0=="slime").ok_or(wire::Error::Invalid)? as u32} else { kind };
+                    } else if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) && entity_layouts::LAYOUTS[kind as usize].0=="sulfur_cube" {entity_layouts::LAYOUTS.iter().position(|row|row.0=="slime").ok_or(wire::Error::Invalid)? as u32} else { kind };
                     metadata_layout(to, projected_kind(to,target))?;
                 }
                 spawn = Some((id, kind));
@@ -120,13 +120,13 @@ impl Tracker {
         let translated = if probe_776 {
             wire::translate_inner(State::Play, Direction::Clientbound, from, to, body, context, true)?
         } else { wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context)? };
-        if matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8) && name=="block_change" {
+        if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) && name=="block_change" {
             let mut view=Cursor::new(&translated);view.uint()?;
             let position:[u8;8]=view.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?;let state=view.uint()?;
             if self.block_views.len()>=65_536 && !self.block_views.contains_key(&position){return Err(wire::Error::TooLarge);}
             self.block_views.insert(position,state);
         }
-        if name=="update_time" && matches!(to,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {
+        if name=="update_time" && matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {
             let mut clock=Cursor::new(&translated);clock.uint()?;
             let age=i64::from_be_bytes(clock.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?);
             let time=i64::from_be_bytes(clock.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?);
@@ -161,7 +161,7 @@ pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVer
     // Проверяется именно раскладка целевого заменителя, а не wire ID.
     let kind = if entity_layouts::LAYOUTS[kind as usize].0 == "cushion" {
         entity_layouts::LAYOUTS.iter().position(|row| row.0 == "armor_stand").ok_or(wire::Error::Invalid)? as u32
-    } else if matches!(to,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) && entity_layouts::LAYOUTS[kind as usize].0=="sulfur_cube" {entity_layouts::LAYOUTS.iter().position(|row|row.0=="slime").ok_or(wire::Error::Invalid)? as u32} else { kind };
+    } else if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) && entity_layouts::LAYOUTS[kind as usize].0=="sulfur_cube" {entity_layouts::LAYOUTS.iter().position(|row|row.0=="slime").ok_or(wire::Error::Invalid)? as u32} else { kind };
     metadata_layout(to, projected_kind(to,kind))?;
     spawn_with_content(input, out, from, to, content)
 }
@@ -185,7 +185,7 @@ pub(crate) fn spawn_with_content(input: &mut Cursor<'_>, out: &mut Vec<u8>, from
         if first & 4 != 0 { uint(out, input.uint()?); }
     }
     let velocity_end=out.len();
-    let speed=if matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8) {let bytes=out[velocity_start..velocity_end].to_vec();out.truncate(velocity_start);Some(crate::legacy_entities::velocity(&mut Cursor::new(&bytes))?)}else{None};
+    let speed=if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {let bytes=out[velocity_start..velocity_end].to_vec();out.truncate(velocity_start);Some(crate::legacy_entities::velocity(&mut Cursor::new(&bytes))?)}else{None};
     out.extend(input.take(3)?); // pitch/yaw/headYaw
     let data = input.varint()?;
     let old_kind = if extension.is_some() { u32::MAX } else { ids::translate(RegistryKind::Entity, from, wire::INTERNAL, kind)? };
@@ -215,17 +215,18 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
             .map(|entry| entry.1).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
         JavaVersion::V26_3 => Ok(new),
         JavaVersion::V1_21_11 => crate::generated_payload_774::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
+        JavaVersion::V1_21_5 => crate::generated_payload_770::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
         JavaVersion::V1_21_6 => crate::generated_payload_771::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
         JavaVersion::V1_21_8 => crate::generated_payload_772::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
         JavaVersion::V1_21_9 => crate::generated_payload_773::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
-        JavaVersion::V1_21_5 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+        JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
 }
 
 pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: wire::Context) -> Result<(), wire::Error> {
     let kind = context.entity_kind.ok_or(wire::Error::MissingEntityContext)?;
     let source = metadata_layout(from, kind)?;
-    let substitute = if projected_kind(to,kind)!=kind {Some(entity_layouts::LAYOUTS[projected_kind(to,kind) as usize].0)} else if context.items.content.is_native_view() || (context.items.content.is_preview() && matches!(to,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2)) {
+    let substitute = if projected_kind(to,kind)!=kind {Some(entity_layouts::LAYOUTS[projected_kind(to,kind) as usize].0)} else if context.items.content.is_native_view() || (context.items.content.is_preview() && matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2)) {
         match entity_layouts::LAYOUTS.get(kind as usize).map(|r| r.0) {
             Some("cushion") => Some("armor_stand"),
             Some("sulfur_cube") if to != JavaVersion::V26_2 => Some("slime"), _ => None,
@@ -242,18 +243,20 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         if std::mem::replace(&mut seen[index as usize], true) { return Err(wire::Error::Invalid); }
         let field = source.get(index as usize).ok_or_else(|| failure(Error::UnknownField(index)))?;
         let start = out.len();
-        let anger=matches!(*field,"remaining_anger_time"|"anger_end_time") && (matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9));
-        let target_index = target.iter().position(|name| name == field || (matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8) && matches!((*field,*name),("shoulder_parrot_left","shoulder_left")|("shoulder_parrot_right","shoulder_right"))) || (anger && matches!(*name,"remaining_anger_time"|"anger_end_time")));
-        if target_index.is_none() && substitute.is_none() && !(matches!(to,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) && matches!(*field,"age_locked"|"sound_variant"|"villager_finalized")) { return Err(failure(Error::MissingField(field))); }
+        let anger=matches!(*field,"remaining_anger_time"|"anger_end_time") && (matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9));
+        // У770 направление висящих сущностей задаёт Spawn Object data.
+        // [проверить] Смена направления уже созданной рамки требует пересоздания.
+        let target_index = target.iter().position(|name| name == field || (matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) && matches!((*field,*name),("shoulder_parrot_left","shoulder_left")|("shoulder_parrot_right","shoulder_right"))) || (anger && matches!(*name,"remaining_anger_time"|"anger_end_time")));
+        if target_index.is_none() && substitute.is_none() && !(to==JavaVersion::V1_21_5 && *field=="direction" && matches!(entity_layouts::LAYOUTS[kind as usize].0,"painting"|"item_frame"|"glow_item_frame")) && !(matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) && matches!(*field,"age_locked"|"sound_variant"|"villager_finalized")) { return Err(failure(Error::MissingField(field))); }
         out.push(target_index.unwrap_or(0) as u8);
         let raw_serializer = input.uint()?;
-        let serializer = if from==JavaVersion::V1_21_6 {u32::from(*crate::generated_payload_771::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_8 {u32::from(*crate::generated_payload_772::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_9 {u32::from(*crate::generated_payload_773::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_11 {u32::from(*crate::generated_payload_774::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else {raw_serializer};
-        if matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) && matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
+        let serializer = if from==JavaVersion::V1_21_5 {u32::from(*crate::generated_payload_770::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_6 {u32::from(*crate::generated_payload_771::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_8 {u32::from(*crate::generated_payload_772::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_9 {u32::from(*crate::generated_payload_773::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else if from==JavaVersion::V1_21_11 {u32::from(*crate::generated_payload_774::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else {raw_serializer};
+        if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) && matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
             if anger {if serializer!=1{return Err(failure(Error::Serializer(serializer)));}uint(out,1);uint(out,input.uint()?);continue;}
             if matches!(*field,"player_main_hand"|"main_hand") {if serializer!=0{return Err(failure(Error::Serializer(serializer)));}uint(out,0);let hand=input.take(1)?[0];if hand>1{return Err(wire::Error::Invalid);}out.push(hand);continue;}
         }
-        if matches!(*field,"player_main_hand"|"main_hand") && (matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9)) {
-            if matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
+        if matches!(*field,"player_main_hand"|"main_hand") && (matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9)) {
+            if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
                 if serializer!=0{return Err(failure(Error::Serializer(serializer)));}
                 let hand=input.take(1)?[0];if hand>1{return Err(wire::Error::Invalid);}
                 uint(out,if to==JavaVersion::V1_21_11 {u32::from(crate::generated_payload_774::SERIALIZERS_TO[42])}else{42});uint(out,u32::from(hand));
@@ -264,7 +267,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
             continue;
         }
         if anger {
-            let value=if matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
+            let value=if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
                 if serializer!=1 {return Err(failure(Error::Serializer(serializer)));}
                 i64::from(input.uint()?)
             }else{
@@ -273,7 +276,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 for n in 0..10 {let b=input.take(1)?[0];if n==9 && b&254!=0{return Err(wire::Error::Invalid);}bits|=u64::from(b&127)<<(7*n);if b&128==0{complete=true;break;}}
                 if !complete{return Err(wire::Error::Invalid);}bits as i64
             };
-            if matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
+            if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {
                 let remaining=if value<=0 {0}else{value.saturating_sub(context.entity_clock.ok_or(wire::Error::MissingEntityContext)?).max(0)};
                 uint(out,1);uint(out,u32::try_from(remaining).ok().filter(|n|*n<=i32::MAX as u32).ok_or(wire::Error::Invalid)?);
             }else{
@@ -292,7 +295,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if serializer != expected { return Err(failure(Error::Serializer(serializer))); }
             }
         }
-        let target_serializer=if to==JavaVersion::V1_21_6 {*crate::generated_payload_771::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_8 {*crate::generated_payload_772::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_9 {*crate::generated_payload_773::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_11 {*crate::generated_payload_774::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else {serializer};
+        let target_serializer=if to==JavaVersion::V1_21_5 {*crate::generated_payload_770::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_6 {*crate::generated_payload_771::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_8 {*crate::generated_payload_772::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_9 {*crate::generated_payload_773::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else if to==JavaVersion::V1_21_11 {*crate::generated_payload_774::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else {serializer};
         if target_serializer==u32::from(u16::MAX) && target_index.is_some(){return Err(failure(Error::Serializer(serializer)));}
         uint(out, target_serializer);
         match serializer {
@@ -371,7 +374,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if present { let name = input.string()?; uint(out,name.len() as u32); out.extend(name.as_bytes()); out.extend(input.take(8)?); }
             }
             34 => registry_id(input,out,context,"minecraft:painting_variant",true)?,
-            41 if has_776 || matches!(from,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) || matches!(to,JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {
+            41 if has_776 || matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) || matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {
                 let start = input.rest;
                 crate::profile::read(input)?;
                 out.extend(&start[..start.len() - input.rest.len()]);

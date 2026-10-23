@@ -626,7 +626,7 @@ async fn handle_connection_inner(
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_3,native:network::NATIVE_VERSION})
             } else if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V1_12_2) && handshake.protocol_version==340 {
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})
-            } else if _probe_776 && matches!(handshake.protocol_version,771|772|773|774|776) && addr.ip().is_loopback()
+            } else if _probe_776 && matches!(handshake.protocol_version,770|771|772|773|774|776) && addr.ip().is_loopback()
                 && !properties.online_mode {
                 Ok(mcsa_protocol::Negotiated { client: mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("771/772/773/774/776"), native: network::NATIVE_VERSION })
             } else {negotiated};
@@ -652,7 +652,7 @@ async fn handle_connection_inner(
 
             socket.protocol = negotiated.ok();
             #[cfg(test)]
-            { socket.probe_776 = matches!(socket.client_version(),mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2); }
+            { socket.probe_776 = matches!(socket.client_version(),mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2); }
             let legacy = socket.client_version() == mcsa_protocol::JavaVersion::V1_12_2;
             if legacy {
                 // В340 нет Configuration-диалога. До реализации старого

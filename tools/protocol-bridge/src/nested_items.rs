@@ -5,12 +5,12 @@ use crate::content::IdSpace;
 use crate::{JavaVersion,ids::{self,RegistryKind},items::{self,Reader,Context,Error,uint}};
 
 fn template(input:&mut Reader<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,spaces:(IdSpace,IdSpace))->Result<(),Error>{
-    let old_count = if matches!(from, JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) { Some(input.count(127)? as u32) } else { None };
+    let old_count = if matches!(from, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) { Some(input.count(127)? as u32) } else { None };
     if old_count == Some(0) { return Err(Error::Invalid); }
     let item=items::content_id(context,RegistryKind::Item,spaces.0,spaces.1,input.uint()?)?;
     if item==0{return Err(Error::Invalid);}
     let count=match old_count {Some(n)=>n,None=>input.count(127)? as u32};if count==0{return Err(Error::Invalid);}
-    if matches!(to, JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {uint(out,count);uint(out,item);}else{uint(out,item);uint(out,count);}
+    if matches!(to, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {uint(out,count);uint(out,item);}else{uint(out,item);uint(out,count);}
     let added=input.count(256)?;let removed=input.count(256)?;uint(out,added as u32);uint(out,removed as u32);
     let mut seen=BTreeSet::new();
     for _ in 0..added {
@@ -39,9 +39,9 @@ pub(crate) fn remap_with_spaces(kind:u32,input:&mut Reader<'_>,from:JavaVersion,
         49|50|75=>{
             let count=input.count(256)?;uint(&mut out,count as u32);
             for _ in 0..count {
-                let present=if kind!=75 {true} else if matches!(from, JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {if input.0.first()==Some(&0){input.take(1)?;false}else{true}} else {input.boolean()?};
-                if kind==75 && !matches!(to, JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {out.push(u8::from(present));}
-                if !present && matches!(to, JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {out.push(0);}
+                let present=if kind!=75 {true} else if matches!(from, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {if input.0.first()==Some(&0){input.take(1)?;false}else{true}} else {input.boolean()?};
+                if kind==75 && !matches!(to, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {out.push(u8::from(present));}
+                if !present && matches!(to, JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11) {out.push(0);}
                 if present{template(input,&mut out,from,to,context,depth+1,spaces)?;}
                 if out.len()>items::LIMIT{return Err(Error::TooLarge);}
             }

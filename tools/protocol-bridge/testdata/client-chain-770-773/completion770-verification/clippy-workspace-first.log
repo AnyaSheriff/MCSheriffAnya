@@ -1,0 +1,16 @@
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/seedmap)
+    Checking mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge)
+error: this looks like an `else if` but the `else` is missing
+  --> tools/protocol-bridge/src/client_770.rs:40:143
+   |
+40 | ...alid);}out.push(mask);if mask&1!=0 {out.extend(input.take(4)?);}if mask&2!=0 {out.extend(input.take(4)?);}}
+   |                                                                    ^
+   |
+   = note: to remove this lint, add the missing `else` or add a new line before the second `if`
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#possible_missing_else
+   = note: `-D clippy::possible-missing-else` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::possible_missing_else)]`
+
+error: could not compile `mcsa-protocol` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `mcsa-protocol` (lib test) due to 1 previous error

@@ -1,6 +1,6 @@
 # Ordered multiversion plan
 1. Keep canonical world IDs separate from client IDs and primary gameplay profiles; pin allowed JSON and retain raw evidence.
-2. Build adjacent, directional adapters 770 ↔ 771 ↔ 772 ↔ 773 ↔ 774 ↔ 775 ↔ 776 ↔ 777; compose routes rather than implement every pair. Below771 only pinned static IDs and bounded control packets are implemented so far; those steps do not provide full Play or admission.
+2. Build adjacent, directional adapters 770 ↔ 771 ↔ 772 ↔ 773 ↔ 774 ↔ 775 ↔ 776 ↔ 777; compose routes rather than implement every pair. Static IDs and bounded control packets alone do not provide full Play or admission; each client still needs its own checklist.
 3. First validate clients 26.2 (776) and 1.21.11 (774) on both primaries 26.1.2 and 26.3.
 4. Cover login/configuration, chunks/light, entities, inventory, interactions, combat/PvP, death/respawn and relogin for each route.
 5. Give missing content explicit visual substitutes; preserve true server items/states and validate client predictions against authoritative inventory.
@@ -24,6 +24,8 @@ Step 1 readiness (client translation; gameplay still follows the selected primar
 | 1.21.7–1.21.8 (772) | OPEN | OPEN |
 | 1.21.6 (771) | OPEN | OPEN |
 | 1.21.5 (770) | CLOSED | CLOSED |
+
+770 now has its own typed Configuration/Play/content path through the771 helpers. Both public cells remain CLOSED:1.21.5 has no Configuration Show/Clear Dialog or Custom Click Action for the existing password barrier. No password bypass, chat fallback or older gameplay profile is introduced. Live evidence and the unchanged771–776 regressions are recorded in the [770 continuation](../tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md#770-play-and-password-barrier).
 
 771 completes the unchanged772/774 checklist on both primaries using the772 typed path and its own locked content/layout/serializer tables. It adds92 item views (including Lava Chicken disc→disc13),64 block/1933 state views,6 entity and3 particle views, and full Configuration/Play/chunk/light/inventory/metadata/action integration. Named block-entity item NBT uses771 views while canonical items/saves and primary gameplay remain authoritative. Both pairs pass196 payload barriers,6 GUI actions,4 poses,11 gameplay/restart checks, full recipes/crafting/Nether return, password registration/relogin and shared encrypted login; End remains supplemental. Fresh772/773/774/776 regressions and final verification are recorded in the [continuation](../tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md#771-admission-and-772773774776-regression).
 

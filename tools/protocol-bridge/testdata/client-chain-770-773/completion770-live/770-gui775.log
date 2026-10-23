@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_776_action_client.py", line 311, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_776_action_client.py", line 43, in main
+    items={r['name']:r['id'] for r in table(a.protocol.parent if a.client in (770,771,772,773,774) else a.protocol.resolve().parents[4],'items')}
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_776_payloads.py", line 25, in table
+    assert hashlib.sha256(raw).hexdigest()==manifest[name]['sha256'] and len(raw)==manifest[name]['bytes']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

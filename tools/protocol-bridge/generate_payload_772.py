@@ -13,7 +13,7 @@ def generate(docs,baseline,client=772):
     a=old['protocol']['types'];b=newer['protocol']['types']
     shared=a['SlotComponent'][1][1]['type'][1]['fields'];target=b['SlotComponent'][1][1]['type'][1]['fields']
     changed={k for k in shared if shared[k]!=target.get(k)}
-    assert changed=={'entity_data','block_entity_data','profile','lodestone_tracker'}
+    assert changed==({'entity_data','block_entity_data','profile','lodestone_tracker','equippable','attribute_modifiers'} if client==770 else {'entity_data','block_entity_data','profile','lodestone_tracker'})
     assert all(a[k]==b[k] for k in ['Slot','UntrustedSlot','UntrustedSlotComponent'])
     text=f'// Закреплённые JSON{client}; generate_payload_{client}.py. Это не живое доказательство.\n'
     canonical=mapper(baseline['protocol']['types']['entityMetadataEntry'][1][1]['type']);serializers=mapper(a['entityMetadataEntry'][1][1]['type'])
@@ -27,6 +27,10 @@ def generate(docs,baseline,client=772):
     # Явные визуальные замены; серверные предметы/состояния не меняются.
     def replacement(name):
         if name in ('golden_dandelion','potted_golden_dandelion'):return name.replace('golden_','')
+        if name=='dried_ghast':return 'soul_sand'
+        if name=='happy_ghast_spawn_egg':return 'ghast_spawn_egg'
+        if name.endswith('_harness'):return name.replace('_harness','_wool')
+        if name=='music_disc_tears':return 'music_disc_13'
         if name=='music_disc_lava_chicken':return 'music_disc_13'
         if name=='iron_chain':return 'chain'
         if name=='copper_nugget':return 'iron_nugget'
@@ -53,6 +57,7 @@ def generate(docs,baseline,client=772):
     text+='pub(crate) const ITEM_VIEWS: &[(u32,u32)] = &'+str(itemviews)+';\n'
     canonical={r['name']:r['id'] for r in baseline['entities']};lowentities={r['name']:r['id'] for r in old['entities']}
     views={'nautilus':'squid','zombie_nautilus':'squid','camel_husk':'camel','parched':'skeleton','copper_golem':'iron_golem','mannequin':'armor_stand'}
+    if client==770:views['happy_ghast']='ghast'
     text+='pub(crate) const ENTITY_VIEWS: &[(u32,u32,u32)] = &'+str([(canonical[n],canonical[t],lowentities[t]) for n,t in views.items()])+';\n'
     lowblocks={r['name']:r for r in old['blocks']};lowstates=block_states(old['blocks']);highstates=block_states(baseline['blocks']);stateviews=[];blockviews=[]
     for r in baseline['blocks']:
@@ -92,7 +97,7 @@ def generate(docs,baseline,client=772):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--client',type=int,choices=(771,772),default=772);p.add_argument('--cache',type=Path,required=True);p.add_argument('--cache774',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True);p.add_argument('--check',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--client',type=int,choices=(770,771,772),default=772);p.add_argument('--cache',type=Path,required=True);p.add_argument('--cache774',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True);p.add_argument('--check',action='store_true');args=p.parse_args()
     docs=load(args.cache,args.cache774);locks=json.loads((HERE/'candidate-sources-26.3.json').read_text());baseline={}
     for name in ['protocol','entities']:
         filename=name+'-26.1.json';record=next(r for r in locks['files']+locks['baseline_files'] if r['file']==filename);baseline[name]=locked(args.baseline,filename,record)

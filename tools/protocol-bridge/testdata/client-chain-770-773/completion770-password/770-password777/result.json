@@ -1,0 +1,14 @@
+{
+  "primary": 777,
+  "client": 770,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "runner_sha256": "fdc7d3cee9b90e3e06e61095995ae82b237649c6671e3947546b5c23263679d4",
+  "binary_sha256": "41a76ba284fd154b1ab8069b677347c1f8152536f758d1f97adbe83728070d66",
+  "auth_prompts": [],
+  "error": "EOFError('missing VarInt')",
+  "traceback": "Traceback (most recent call last):\n  File \"/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_step1_dimensions_recipes_776.py\", line 197, in main\n    client = login()\n             ^^^^^^^\n  File \"/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_step1_dimensions_recipes_776.py\", line 192, in login\n    c = connect(port, protocol, lambda s, pr: Probe(s, pr, entity, a.client), a.client,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_gameplay.py\", line 136, in connect\n    packet = io.BytesIO(frame(sock))\n                        ^^^^^^^^^^^\n  File \"/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/observe.py\", line 21, in frame\n    length = read_varint(sock.recv)\n             ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/smoke.py\", line 29, in read_varint\n    raise EOFError('missing VarInt')\nEOFError: missing VarInt\n",
+  "server_exit": 0
+}

@@ -30,7 +30,7 @@ def decode(payload, version):
     for _ in range(4):
         count = read_varint(data.read)
         assert count <= 40
-        if version in (771,772, 773, 774, 775, 776):
+        if version in (770,771,772, 773, 774, 775, 776):
             words = [int.from_bytes(data.read(8), 'big') for _ in range(count)]
             mask = sum(word << (i * 64) for i, word in enumerate(words))
         else:

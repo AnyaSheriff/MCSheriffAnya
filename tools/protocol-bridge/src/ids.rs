@@ -16,10 +16,18 @@ pub enum IdTranslationError {
 pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
-    if registry==RegistryKind::Attribute && (matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9)) {
+    if registry==RegistryKind::Attribute && (from==JavaVersion::V1_21_5 || to==JavaVersion::V1_21_5) {
+        let upper=JavaVersion::V1_21_11;
+        // Четыре пропуска старого JSON уже исправлены в774; waypoint добавлен771.
+        if from==JavaVersion::V1_21_5 && to==from {return if id<33 {Ok(id)}else{Err(IdTranslationError::UnknownId(id))};}
+        if from==JavaVersion::V1_21_5 {if id>=33 {return Err(IdTranslationError::UnknownId(id));}return translate(registry,upper,to,id);}
+        let mapped=translate(registry,from,upper,id)?;
+        return if mapped<33 {Ok(mapped)}else{Err(IdTranslationError::MissingTarget(id))};
+    }
+    if registry==RegistryKind::Attribute && (matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) || matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9)) {
         // JSON773 повторяет тот же неполный список774; используем исправленную
         // таблицу774, а значения проверяем непрозрачным клиентом773.
-        return translate(registry,if matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{from},if matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{to},id);
+        return translate(registry,if matches!(from,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{from},if matches!(to,JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {JavaVersion::V1_21_11}else{to},id);
     }
     if (770..=773).contains(&from.protocol()) || (770..=773).contains(&to.protocol()) {
         let route = crate::chain::path(from,to).map_err(|_| IdTranslationError::UnsupportedVersion(if from == JavaVersion::V1_12_2 {from} else {to}))?;
