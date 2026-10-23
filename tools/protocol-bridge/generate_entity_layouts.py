@@ -27,7 +27,7 @@ def main():
         text += '    ('+json.dumps(v['name'])+', &'+json.dumps(keys[0])+', &'+json.dumps(keys[1])+'),\n'
     extra = by_name['cushion']['metadataKeys']  # 26.3: сущность подушки (нет в 775)
     text += '    // 26.3: сущность подушки (нет в 775); добавляется генератором после обычных строк.\n'
-    text += '    ("cushion", &'+json.dumps(extra[:8])+', &'+json.dumps(extra)+'),\n'
+    text += '    ("cushion", &'+json.dumps(extra)+', &'+json.dumps(extra)+'),\n'
     cube = by_name['sulfur_cube']['metadataKeys']  # 26.3: куб серы, внутренние индексы = индексам 777
     text += '    // 26.3: куб серы (нет в 775); внутренние индексы совпадают с 777, поэтому раскладки одинаковы.\n'
     text += '    ("sulfur_cube", &'+json.dumps(cube)+', &'+json.dumps(cube)+'),\n'

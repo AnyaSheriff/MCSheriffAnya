@@ -705,7 +705,7 @@ pub async fn play_session(
     verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
     if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
-        && socket.client_version() != mcsa_protocol::JavaVersion::V26_3 {
+        && !matches!(socket.client_version(), mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
     }
     socket.content = shared.catalog().content_codec();
@@ -7972,6 +7972,13 @@ fn handle_client_packet_inner(
             }
         }
         SET_CREATIVE_MODE_SLOT => {
+            // CreativeSlot не несёт происхождения заменителя. При новых вещах
+            // возвращаем авторитетный инвентарь, не заменяем их видимыми двойниками.
+            if packet.foreign_inventory && crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2)
+                .validate_inventory(&player.inventory).is_err() {
+                reaction.inventory=true;
+                return reaction;
+            }
             // Слот −1 — предмет выброшен прямо из меню, мимо инвентаря.
             if let Some(thrown) = read_creative_slot_with_catalog(payload, player, shared.catalog()) {
                 throw_out(shared, player, thrown);

@@ -84,14 +84,18 @@ pub(crate) fn translate_inner(
         (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2)) {
         return Err(Error::UnsupportedVersion(from));
     }
-    if context.items.content.is_preview() && (probe_776 || !matches!((from,to),
+    if context.items.content.is_native_view() && (from != JavaVersion::V26_1_2 || to != JavaVersion::V26_1_2 || state != State::Play || direction != Direction::Clientbound) {
+        return Err(Error::PayloadUnavailable("775 view is clientbound only"));
+    }
+    if context.items.content.is_preview() && !context.items.content.is_native_view() && (probe_776 || !matches!((from,to),
         (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2))) {
         return Err(Error::PayloadUnavailable("preview content requires explicit canonical/777 route"));
     }
     if body.is_empty() { return Err(Error::Truncated); }
     if body.len() > LIMIT { return Err(Error::TooLarge); }
     // Родной маршрут не копирует пакеты и сохраняет существующие проверки ядра.
-    if from == to { return Ok(Cow::Borrowed(body)); }
+    let native_view = from == to && context.items.content.is_native_view() && state == State::Play && direction == Direction::Clientbound;
+    if from == to && !native_view { return Ok(Cow::Borrowed(body)); }
     let registry = match (state, direction) {
         (State::Login, Direction::Clientbound) => RegistryKind::LoginClientbound,
         (State::Login, Direction::Serverbound) => RegistryKind::LoginServerbound,
@@ -103,13 +107,14 @@ pub(crate) fn translate_inner(
     let mut cursor = Cursor::new(body);
     let id = cursor.uint()?;
     let standard_id = if probe_776 { None } else { Some(ids::translate(registry, from, to, id)?) };
-    let info = crate::packet_layouts::packet_info(registry, from, to, id as usize).ok_or(Error::Invalid)?;
+    let info = crate::packet_layouts::packet_info(registry, from, if native_view { JavaVersion::V26_3 } else { to }, id as usize).ok_or(Error::Invalid)?;
     let mapped = if probe_776 {
         if !probe_776_allowed(state, direction, info.name) { return Err(Error::PayloadUnavailable(info.name)); }
         info.target_id.ok_or(ids::IdTranslationError::MissingTarget(id))?
     } else { standard_id.ok_or(Error::Invalid)? };
-    debug_assert_eq!(info.target_id, Some(mapped));
+    if !native_view { debug_assert_eq!(info.target_id, Some(mapped)); }
     let (name, equal) = (info.name, info.schema_equal);
+    if native_view && !matches!(name, "trade_list" | "declare_recipes" | "recipe_book_add" | "craft_recipe_response" | "advancements" | "world_particles" | "spawn_entity" | "entity_metadata" | "set_slot" | "window_items" | "set_cursor_item" | "set_player_inventory" | "entity_equipment" | "map_chunk" | "block_change" | "block_action" | "multi_block_change" | "world_event") { return Ok(Cow::Borrowed(body)); }
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {

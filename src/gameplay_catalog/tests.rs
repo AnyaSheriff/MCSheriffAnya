@@ -53,7 +53,8 @@ fn server_profile_not_client_number_controls_new_content() {
         assert!(matches!(OLD_CATALOG.decode_client_id(kind, wire, NEW), Err(Error::Disabled { .. })));
         assert_eq!(PREVIEW.to_client(kind, internal, NEW), Ok(wire));
         assert_eq!(PREVIEW.decode_client_id(kind, wire, NEW), Ok(internal));
-        for unsupported in [OLD, MIDDLE, JavaVersion::V1_12_2] {
+        assert!(PREVIEW.to_client(kind, internal, OLD).is_ok());
+        for unsupported in [MIDDLE, JavaVersion::V1_12_2] {
             assert!(matches!(PREVIEW.to_client(kind, internal, unsupported), Err(Error::Unrepresentable { .. })));
         }
     }
@@ -206,7 +207,7 @@ fn concrete_family_selected_metadata_and_all_96_states_stay_distinct() {
             assert_eq!(PREVIEW.to_client(kind,id,NEW),Ok(wire));
             assert_eq!(PREVIEW.decode_client_id(kind,wire,NEW),Ok(id));
             assert!(matches!(OLD_CATALOG.name(kind,id),Err(Error::Disabled { .. })));
-            assert!(PREVIEW.to_client(kind,id,OLD).is_err());
+            assert!(PREVIEW.to_client(kind,id,OLD).is_ok());
         }
         for half in [SlabHalf::Top,SlabHalf::Bottom,SlabHalf::Double] {
             for wet in [true,false] {
@@ -277,7 +278,8 @@ fn wool_metadata_allocates_only_append_ids_and_maps_all_96_selected_states() {
             assert_eq!(PREVIEW.to_client(kind, id, NEW), Ok(wire));
             assert_eq!(PREVIEW.decode_client_id(kind, wire, NEW), Ok(id));
             assert!(matches!(OLD_CATALOG.decode_client_id(kind, wire, NEW), Err(Error::Disabled { .. })));
-            for version in [OLD, MIDDLE, JavaVersion::V1_12_2] { assert!(PREVIEW.to_client(kind, id, version).is_err()); }
+            assert!(PREVIEW.to_client(kind,id,OLD).is_ok());
+            for version in [MIDDLE, JavaVersion::V1_12_2] { assert!(PREVIEW.to_client(kind, id, version).is_err()); }
         }
         for (half_index, half) in [SlabHalf::Top, SlabHalf::Bottom, SlabHalf::Double].into_iter().enumerate() {
             for wet in [true, false] {
@@ -295,7 +297,7 @@ fn wool_metadata_allocates_only_append_ids_and_maps_all_96_selected_states() {
                 assert_eq!(PREVIEW.decode_client_id(Kind::State, wire, NEW), Ok(state));
                 assert!(matches!(OLD_CATALOG.slab_entry(state), Err(Error::Disabled { .. })));
                 assert!(OLD_CATALOG.decode_client_id(Kind::State, wire, NEW).is_err());
-                assert!(PREVIEW.to_client(Kind::State, state, OLD).is_err());
+                assert!(PREVIEW.to_client(Kind::State, state, OLD).is_ok());
             }
         }
     }

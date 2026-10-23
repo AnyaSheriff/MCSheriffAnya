@@ -61,7 +61,7 @@ fn every_state_translates_to_the_wire_and_back_only_in_the_preview_profile() {
             let wire = PREVIEW.to_client(Kind::State, state, JavaVersion::V26_3).unwrap();
             assert_eq!(wire, row.wire_first_state + (state - row.first_state) as u32);
             assert_eq!(PREVIEW.decode_client_id(Kind::State, wire, JavaVersion::V26_3), Ok(state));
-            assert!(PREVIEW.to_client(Kind::State, state, JavaVersion::V26_1_2).is_err());
+            assert!(PREVIEW.to_client(Kind::State, state, JavaVersion::V26_1_2).is_ok());
             assert!(NATIVE.mining_properties(state).is_err());
             assert!(NATIVE.drops_by_luck(state, None, 0.5).is_err());
         }
@@ -371,7 +371,7 @@ fn plants_and_boats_have_the_pinned_777_ids_and_no_native_identity() {
         assert_eq!(PREVIEW.to_client(Kind::Item, row.item, JavaVersion::V26_3), Ok(row.wire_item));
         assert_eq!(PREVIEW.decode_client_id(Kind::Item, row.wire_item, JavaVersion::V26_3), Ok(row.item));
         assert!(NATIVE.item_named(row.name).is_err());
-        assert!(PREVIEW.to_client(Kind::Item, row.item, JavaVersion::V26_1_2).is_err());
+        assert!(PREVIEW.to_client(Kind::Item, row.item, JavaVersion::V26_1_2).is_ok());
         assert_eq!(PREVIEW.stack_size(row.item), Ok(1));
         assert_eq!(crate::blocks::block_id(row.name), None);
         assert_eq!(crate::blocks::state_by_name(row.name), None);
@@ -394,7 +394,7 @@ fn plants_and_boats_have_the_pinned_777_ids_and_no_native_identity() {
     for (internal, wire) in [(157, 106), (158, 107)] {
         assert_eq!(codec.map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_3), internal), Ok(wire));
         assert_eq!(codec.map(RegistryKind::Entity, IdSpace::Wire(JavaVersion::V26_3), IdSpace::Canonical, wire), Ok(internal));
-        assert!(codec.map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_1_2), internal).is_err());
+        assert!(codec.map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_1_2), internal).is_ok());
         assert!(ContentCodec::default().map(RegistryKind::Entity, IdSpace::Canonical, IdSpace::Wire(JavaVersion::V26_3), internal).is_err());
     }
     assert_eq!(crate::minecart::Kind::from_name("poplar_boat").map(|kind| kind.java_type()), Some(157));

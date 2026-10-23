@@ -278,7 +278,7 @@ pub fn poplar() -> impl Iterator<Item = &'static SlabDescriptor> {
 pub enum IdSpace { Canonical, Wire(JavaVersion) }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct ContentCodec { white_slab: bool }
+pub struct ContentCodec { white_slab: bool, native_view: bool }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
@@ -287,6 +287,11 @@ pub enum Error {
 }
 
 impl ContentCodec {
+    pub const fn native_view(mut self) -> Self { self.native_view = self.white_slab; self }
+    pub const fn is_native_view(self) -> bool { self.native_view }
+    pub(crate) fn output_space(self, version: JavaVersion) -> IdSpace {
+        if self.native_view && version == JavaVersion::V26_1_2 { IdSpace::Wire(version) } else { self.packet_space(version) }
+    }
     pub const fn is_preview(self) -> bool { self.white_slab }
     /// Лодка тополя во внутреннем пространстве: раскладка metadata — как у дубовой лодки
     /// (те же 14 полей, [проверить] сверкой с 777). None — это не сущность расширения.
@@ -301,12 +306,12 @@ impl ContentCodec {
         else { IdSpace::Wire(version) }
     }
     pub(crate) fn packet_id(self, kind: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32) -> Result<u32, Error> {
-        self.map(kind,self.packet_space(from),self.packet_space(to),id)
+        self.map(kind,self.packet_space(from),self.output_space(to),id)
     }
 
     /// Только вызывающий серверный каталог разрешает этот private preview.
     /// Версия подключившегося клиента сама по себе его не выбирает.
-    pub const fn white_slab_preview() -> Self { Self { white_slab: true } }
+    pub const fn white_slab_preview() -> Self { Self { white_slab: true, native_view: false } }
 
     fn extension(kind: RegistryKind, space: IdSpace, id: u32) -> Option<(u32, u32, u32)> {
         entries().find_map(|row| {
@@ -337,6 +342,7 @@ impl ContentCodec {
                     IdSpace::Wire(JavaVersion::V26_3) => {
                         Ok(wire + canonical - first)
                     }
+                    IdSpace::Wire(JavaVersion::V26_1_2) => crate::content_views::substitute(kind, canonical).ok_or(Error::Unrepresentable { kind, id: canonical, target: to }),
                     _ => Err(Error::Unrepresentable { kind, id: canonical, target: to }),
                 };
         }
@@ -365,7 +371,8 @@ mod tests {
                     assert_eq!(codec.map(kind,IdSpace::Wire(JavaVersion::V26_3),IdSpace::Canonical,target),Ok(id));
                     assert!(ContentCodec::default().map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_3),id).is_err());
                     assert!(codec.map(kind,IdSpace::Wire(JavaVersion::V26_1_2),IdSpace::Canonical,id).is_err());
-                    for version in [JavaVersion::V26_1_2,JavaVersion::V26_2,JavaVersion::V1_12_2] {
+                    assert!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_1_2),id).is_ok());
+                    for version in [JavaVersion::V26_2,JavaVersion::V1_12_2] {
                         assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(version),id),Err(Error::Unrepresentable { .. })));
                     }
                 }

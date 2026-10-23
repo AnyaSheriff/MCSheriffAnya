@@ -226,13 +226,14 @@ pub(super) async fn read_play_packet_routed<S: AsyncRead + Unpin>(stream: &mut S
 }
 
 pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
-    if content.is_preview() && version != JavaVersion::V26_3 {
+    if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
     }
     if probe_776 && (!cfg!(test) || version != JavaVersion::V26_2) {
         return Err(translate_error(wire::Error::UnsupportedVersion(version)));
     }
-    let packet = read_packet(stream).await?;
+    let mut packet = read_packet(stream).await?;
+    if content.is_preview() && version == JavaVersion::V26_1_2 && matches!(packet.id, 0x12 | 0x38) { packet.foreign_inventory=true; }
     if version == JavaVersion::V1_12_2 {
         let legacy = legacy.ok_or_else(|| io::Error::other("Нет состояния соединения1.12.2"))?;
         if matches!(packet.id, 0x05 | 0x07 | 0x1b) {
@@ -265,7 +266,16 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
         let (id, _) = decode_varint(&body)?;
         return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12, legacy_inventory: None });
     }
-    if version == wire::INTERNAL { return Ok(packet); }
+    if version == wire::INTERNAL {
+        if content.is_preview() && packet.id == 0x38 {
+            let payload=packet.payload();
+            let slot=payload.get(2..).ok_or_else(||io::Error::other("обрезан CreativeSlot775"))?;
+            let (_,size)=mcsa_protocol::items::decode(version,slot,true,item_context(content))
+                .map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("CreativeSlot775: {e:?}")))?;
+            if size!=slot.len(){return Err(io::Error::other("лишние данные CreativeSlot775"));}
+        }
+        return Ok(packet);
+    }
     let body = wire::translate_with_context(State::Play, Direction::Serverbound,
         version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(content), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
@@ -346,6 +356,11 @@ impl<'a> Outgoing<'a> {
     pub fn capture() -> Self { Self { content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
+    pub(crate) fn capture_content(version: JavaVersion, content: mcsa_protocol::content::ContentCodec) -> Self {
+        let mut out=Self::capture();out.version=version;out.content=content;out
+    }
+
+    #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
         Self { content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
     }
@@ -388,8 +403,8 @@ impl<'a> Outgoing<'a> {
     }
 
     async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
-        context.items = item_context(self.content);
-        if self.content.is_preview() && self.version != JavaVersion::V26_3 {
+        context.items = item_context(if self.version == JavaVersion::V26_1_2 { self.content.native_view() } else { self.content });
+        if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
         }
         // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же

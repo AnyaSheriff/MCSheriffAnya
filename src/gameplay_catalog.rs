@@ -302,6 +302,10 @@ impl Catalog {
     pub fn to_client(self, kind: Kind, id: i32, client: JavaVersion) -> Result<u32, Error> {
         let name = self.name(kind, id)?;
         if let Some(row) = Self::entry_id(kind, id) {
+            if client == JavaVersion::V26_1_2 {
+                return self.content_codec().map(kind.registry(), mcsa_protocol::content::IdSpace::Canonical, mcsa_protocol::content::IdSpace::Wire(client), id as u32)
+                    .map_err(|_| Error::Unrepresentable { client, name });
+            }
             if client != JavaVersion::V26_3 { return Err(Error::Unrepresentable { client, name }); }
             return Ok(match kind {
                 Kind::Item => row.wire_item,

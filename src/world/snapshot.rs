@@ -91,3 +91,8 @@ pub(crate) fn create_unidentified_storage_receipt(guard: &StartupGuard) -> Resul
     #[cfg(not(target_os = "linux"))]
     { let _ = guard; Err(unsupported()) }
 }
+
+#[cfg(target_os = "linux")]
+pub(crate) fn create_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
+    linux::create_profile_upgrade(guard)
+}

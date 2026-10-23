@@ -1,0 +1,19 @@
+{
+  "root_unit_passed": 2890,
+  "root_integration_passed": 3,
+  "root_ignored": 77,
+  "protocol_passed": 197,
+  "protocol_ignored": 5,
+  "python_passed": 213,
+  "clippy_release_all_targets_Dwarnings": "pass",
+  "build_release": "pass",
+  "core_checks": 17,
+  "official_checks": 7,
+  "released_ports": [
+    26180,
+    26181,
+    26184,
+    26185
+  ],
+  "binary_sha256": "4881a330d0a2f19d89deccd5f8530402d83dd512526bdfe59cc94263e5440e43"
+}

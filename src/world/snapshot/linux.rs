@@ -788,3 +788,12 @@ fn publish_storage_receipt(source: &LockedWorld<'_>, backup: &VerifiedBackup, un
     *uncertain = false;
     Ok(())
 }
+
+// Все session.lock живут до конца activate, включая переименования мира.
+pub(super) fn create_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
+    create_with_completion(guard, Options::default(), &mut |_| Ok(()), None, false,
+        &mut |source, backup, uncertain| {
+            source.check_anchor()?;
+            super::super::migration::activate(guard, backup, uncertain)
+        })
+}

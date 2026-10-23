@@ -249,6 +249,24 @@ pub fn read_slot(path: &Path, slot: usize) -> io::Result<Stored> {
 
 /// Начало файла должно быть нашим и нашей версии: чужой файл не читаем и,
 /// главное, не пишем — он мог бы пропасть.
+/// Строгий офлайн-анализ: усечённая таблица не означает пустой регион.
+#[cfg(target_os = "linux")]
+pub(super) fn validate_for_migration(path: &Path) -> io::Result<()> {
+    let file=File::open(path)?;
+    let mut header=vec![0;HEADER_LEN];file.read_exact_at(&mut header,0)?;check_head(&header)?;
+    let size=file.metadata()?.len();let mut ranges=Vec::new();
+    for slot in 0..SLOTS {
+        let (offset,length)=entry(&header[TABLE_AT..],slot);
+        if length==0 {continue;}
+        let first=(offset as u64)*UNIT as u64;let end=first+length as u64;
+        if offset<HEADER_UNITS || length<PRELUDE || end>size {return Err(io::Error::new(io::ErrorKind::InvalidData,"повреждена таблица региона"));}
+        ranges.push((first,end));
+    }
+    ranges.sort_unstable();
+    if ranges.windows(2).any(|pair|pair[0].1>pair[1].0){return Err(io::Error::new(io::ErrorKind::InvalidData,"пересекаются записи чанков"));}
+    Ok(())
+}
+
 fn check_head(head: &[u8]) -> io::Result<()> {
     if head[..3] != MAGIC {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "это не файл региона MCSheriffAnya (.mcs)"));

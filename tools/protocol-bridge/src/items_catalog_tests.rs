@@ -14,7 +14,7 @@ fn assert_roundtrip(stack: &Stack) {
     }
     let bytes=encode_template(NEW,stack,preview()).unwrap();
     assert_eq!(decode_template(NEW,&bytes,preview()).unwrap(),(stack.clone(),bytes.len()));
-    assert!(encode(OLD,Some(stack),false,preview()).is_err());
+    assert!(encode(OLD,Some(stack),false,preview()).is_ok());
     assert!(encode(NEW,Some(stack),false,Context::default()).is_err());
 }
 

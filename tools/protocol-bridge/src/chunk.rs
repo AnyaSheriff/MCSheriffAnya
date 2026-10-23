@@ -28,7 +28,8 @@ pub fn translate(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Co
 /// Endpoint775 обозначает внутренний packet builder; content IDs при
 /// preview canonical. Публичный translate выше остаётся Wire→Wire base.
 pub fn translate_with_content(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context, content: crate::content::ContentCodec) -> Result<Vec<u8>, Error> {
-    if content.is_preview() && !matches!((from,to),
+    if content.is_native_view() && (from,to)!=(JavaVersion::V26_1_2,JavaVersion::V26_1_2) {return Err(Error::Context);}
+    if content.is_preview() && !content.is_native_view() && !matches!((from,to),
         (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) {
         return Err(Error::Context);
     }
@@ -120,7 +121,7 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
             }
         }
     }
-    let sections = chunk_sections::encode_with_content(to, &sections, context.shared_biome_count, content.packet_space(to), content).map_err(Error::Sections)?;
+    let sections = chunk_sections::encode_with_content(to, &sections, context.shared_biome_count, content.output_space(to), content).map_err(Error::Sections)?;
     let mut out = payload[..header_length].to_vec();
     uint(&mut out, sections.len() as u32); out.extend(sections);
     uint(&mut out, entities.len() as u32);

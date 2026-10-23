@@ -106,6 +106,8 @@ pub(crate) fn prepare_for_version(world: &Path, version: mcsa_protocol::JavaVers
     let lock = lock_world(&world)?;
     if lock.is_none() { return Err(io::Error::new(io::ErrorKind::Unsupported, "профиль26.3 требует исключительного замка мира")); }
     check_directory(&world)?;
+    #[cfg(target_os = "linux")]
+    super::migration::recover(&world)?;
     let catalog = crate::gameplay_catalog::Catalog::for_version(version);
     let target = profile::ProfileDescriptor {
         gameplay_version: version.name().into(), release_order: 2,
@@ -151,6 +153,8 @@ fn prepare_with_upgrade(world: &Path,
     let world = world_path(world)?;
     check_directory(&world)?;
     let lock = lock_world(&world)?;
+    #[cfg(target_os = "linux")]
+    super::migration::recover(&world)?;
     check_directory(&world)?;
     let manifest = profile::read_manifest(&world).map_err(profile_error)?;
     let receipt = storage_receipt::read(&world)?;
@@ -204,3 +208,14 @@ fn profile_error(error: profile::Error) -> io::Error {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(target_os = "linux")]
+pub(super) fn lock_for_upgrade(path: &Path) -> io::Result<StartupGuard> {
+    use std::os::unix::fs::MetadataExt;
+    let world=world_path(path)?;check_directory(&world)?;
+    let lock=lock_world(&world)?;
+    if lock.is_none(){return Err(io::Error::other("нет исключительного замка"));}
+    super::migration::recover(&world)?;
+    let meta=fs::metadata(&world)?;
+    Ok(StartupGuard{lock,identity:Some((meta.dev(),meta.ino())),world,check:StartupCheck::LegacyUnidentified})
+}

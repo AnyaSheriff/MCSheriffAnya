@@ -132,3 +132,20 @@ fn native_slab_refused_merge_preserves_stack_and_half() {
     assert_eq!(target(&shared, &player), slab);
     assert!(shared.items_in(player.dimension).lock().unwrap().items().is_empty());
 }
+
+#[test]
+fn creative775_view_cannot_overwrite_or_drop_real_new_items() {
+    let (shared,mut player)=setup(Profile::Preview26_3);
+    player.game_mode=GAME_MODE_CREATIVE;
+    let actual=Stack::new(WHITE_SLAB_ITEM,3);
+    player.inventory.set_for_catalog(36,Some(actual),shared.catalog()).unwrap();
+    let shown=Stack::new(blocks::item_named("quartz_slab").unwrap(),3);
+    let slot=mcsa_protocol::items::Stack{item:shown.item as u32,count:3,added:vec![],removed:vec![]};
+    for target in [36i16,37,-1] {
+        let mut body=encode_varint(SET_CREATIVE_MODE_SLOT);body.extend(target.to_be_bytes());
+        body.extend(mcsa_protocol::items::encode(mcsa_protocol::JavaVersion::V26_1_2,Some(&slot),true,Default::default()).unwrap());
+        let packet=PacketInfo{id:SET_CREATIVE_MODE_SLOT,length:body.len() as i32,body,teleport:None,foreign_inventory:true,legacy_inventory:None};
+        let reaction=handle_client_packet(&packet,&mut player,&shared);
+        assert!(reaction.inventory);assert_eq!(player.inventory.slot(36),Some(actual));assert!(player.inventory.slot(37).is_none());
+    }
+}

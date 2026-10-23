@@ -20,6 +20,8 @@
 mod codec;
 pub mod profile;
 pub(crate) mod startup;
+#[cfg(target_os = "linux")]
+pub(crate) mod migration;
 pub(crate) mod snapshot;
 mod spawn_search;
 #[cfg(test)]

@@ -155,6 +155,14 @@ const SERVER_PROPERTIES_PATH: &str = "config/server.properties";
 const WORLD_PATH: &str = "world";
 
 fn main() -> io::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        let args: Vec<_> = std::env::args_os().collect();
+        if args.get(1).is_some_and(|v| v == "--upgrade-world-26.3") {
+            if args.len()!=3 { return Err(io::Error::new(io::ErrorKind::InvalidInput,"usage: --upgrade-world-26.3 WORLD")); }
+            return world::migration::upgrade(Path::new(&args[2]));
+        }
+    }
     use std::io::IsTerminal;
     if !config::first_start::prepare(Path::new("."),std::io::stdin().is_terminal(),&mut std::io::stdin().lock(),&mut std::io::stdout().lock())? { return Ok(()); }
     // Неподдержанная игровая версия не должна запускать даже перенос хранения.
@@ -599,7 +607,9 @@ async fn handle_connection_inner(
             //
             // Клиентская и внутренняя версии разделены. Пока разрешён только
             // родной маршрут; номера новых версий не включают их поддержку.
-            let negotiated = if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 {
+            let negotiated = if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 && handshake.protocol_version == 775 {
+                mcsa_protocol::Negotiated::native_only(775, network::NATIVE_VERSION)
+            } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 {
                 mcsa_protocol::Negotiated::native_only(handshake.protocol_version, mcsa_protocol::JavaVersion::V26_3)
                     .map(|mut route| { route.native = network::NATIVE_VERSION; route })
             } else { mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION) };

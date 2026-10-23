@@ -44,11 +44,11 @@ impl Tracker {
     }
 
     pub(crate) fn translate_inner<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], mut context: wire::Context, probe_776: bool) -> Result<Cow<'a, [u8]>, wire::Error> {
-        if from == to { return wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context); }
+        if from == to && !context.items.content.is_native_view() { return wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context); }
         let mut input = Cursor::new(body);
         let packet = input.uint()?;
         if !probe_776 { ids::translate(RegistryKind::PlayClientbound, from, to, packet)?; }
-        let name = crate::packet_layouts::packet_info(RegistryKind::PlayClientbound, from, to, packet as usize).ok_or(wire::Error::Invalid)?.name;
+        let name = crate::packet_layouts::packet_info(RegistryKind::PlayClientbound, from, if context.items.content.is_native_view() { JavaVersion::V26_3 } else { to }, packet as usize).ok_or(wire::Error::Invalid)?.name;
         let mut spawn = None;
         let mut removed = Vec::new();
         let mut dimension = None;
@@ -186,7 +186,13 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
 pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: wire::Context) -> Result<(), wire::Error> {
     let kind = context.entity_kind.ok_or(wire::Error::MissingEntityContext)?;
     let source = metadata_layout(from, kind)?;
-    let target = metadata_layout(to, kind)?;
+    let substitute = if context.items.content.is_native_view() {
+        match entity_layouts::LAYOUTS.get(kind as usize).map(|r| r.0) {
+            Some("cushion") => Some("armor_stand"), Some("sulfur_cube") => Some("slime"), _ => None,
+        }
+    } else { None };
+    let target_kind = substitute.and_then(|name| entity_layouts::LAYOUTS.iter().position(|r| r.0 == name)).map_or(kind, |n| n as u32);
+    let target = metadata_layout(to, target_kind)?;
     let has_776 = from == JavaVersion::V26_2 || to == JavaVersion::V26_2;
     uint(out, input.uint()?);
     let mut seen = [false;255];
@@ -195,8 +201,10 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         if index == 255 { out.push(255); break; }
         if std::mem::replace(&mut seen[index as usize], true) { return Err(wire::Error::Invalid); }
         let field = source.get(index as usize).ok_or_else(|| failure(Error::UnknownField(index)))?;
-        let target_index = target.iter().position(|name| name == field).ok_or_else(|| failure(Error::MissingField(field)))?;
-        out.push(target_index as u8);
+        let start = out.len();
+        let target_index = target.iter().position(|name| name == field);
+        if target_index.is_none() && substitute.is_none() { return Err(failure(Error::MissingField(field))); }
+        out.push(target_index.unwrap_or(0) as u8);
         let serializer = input.uint()?;
         if has_776 {
             // Только пять выбранных layout. Поле не разрешает произвольный
@@ -286,6 +294,8 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
             35..=38 | 42 => { let max = match serializer {35=>6,36=>3,37=>3,38=>3,_=>1}; uint(out,input.count(max)? as u32); }
             _ => return Err(failure(Error::Serializer(serializer))),
         }
+        // Поля отсутствующего типа не посылаются заменителю; серверная metadata сохраняется.
+        if target_index.is_none() { out.truncate(start); }
     }
     Ok(())
 }

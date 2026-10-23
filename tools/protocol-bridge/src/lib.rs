@@ -13,6 +13,7 @@ pub mod entities;
 mod entity_layouts;
 pub mod items;
 pub mod content;
+mod content_views;
 mod item_components;
 mod particles;
 mod recipes;

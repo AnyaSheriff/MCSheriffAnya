@@ -68,7 +68,7 @@ fn all_2560_states_have_properties_mining_drops_wire_and_native_refusal() {
             let wire = PREVIEW.to_client(Kind::State, state, JavaVersion::V26_3).unwrap();
             assert_eq!(wire, row.wire_first_state + (state - row.first_state) as u32);
             assert_eq!(PREVIEW.decode_client_id(Kind::State, wire, JavaVersion::V26_3), Ok(state));
-            assert!(PREVIEW.to_client(Kind::State, state, JavaVersion::V26_1_2).is_err());
+            assert!(PREVIEW.to_client(Kind::State, state, JavaVersion::V26_1_2).is_ok());
             assert!(NATIVE.orientation_of(state).is_err());
             assert!(NATIVE.mining_properties(state).is_err());
             assert!(NATIVE.drops_by_luck(state, None, 0.5).is_err());

@@ -89,7 +89,7 @@ fn attributes_at(mob: &Mob) -> u64 {
         Kind::Vex => 1,
         // Кристаллу и дракону атрибуты не шлются вовсе (чёрный ящик,
         // end-crystal-explode, dragon-summon).
-        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs => u64::MAX,
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs | Kind::Cushion => u64::MAX,
         _ => 3,
     }
 }
@@ -179,6 +179,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
     // Свечение (0x40): у разбойников после звона колокола (raid.rs);
     // невидимость (0x20): торговец, выпивший зелье.
     let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 } | if mob.land.invisible || mob.vitals.has_effect(crate::survival::EffectKind::Invisibility) { 0x20 } else { 0 };
+
+    // Подушка наследует Entity: поля живого моба9/12/15 ей не принадлежат.
+    if mob.kind==Kind::Cushion {
+        return vec![(0,TYPE_BYTE,vec![fire]),(2,TYPE_OPT_COMPONENT,custom_name(mob)),
+            (4,TYPE_BOOL,vec![u8::from(mob.silent)]),(8,TYPE_INT,encode_varint(i32::from(mob.color)))];
+    }
 
     // Кристалл Края — не живое: флаги, тишина, цель луча (11 — Optional
     // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
@@ -278,7 +284,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((20, TYPE_BOOL, vec![u8::from(mob.sulfur.from_bucket)]));
         }
         // Подушка 26.3: цвет в metadata с индексом 8 (minecraft-data 26.3, entities.json); тип — [проверить].
-        Kind::Cushion => out.push((8, TYPE_INT, encode_varint(i32::from(mob.color)))),
+        Kind::Cushion => unreachable!("подушка обработана до living metadata"),
         Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
             let s = &mob.land;
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
@@ -2155,5 +2161,25 @@ mod orb_pickup_tests {
         assert_eq!(metadata.id, SET_ENTITY_DATA);
         assert_eq!(metadata.payload(), &[42, ORB_VALUE_KEY, TYPE_INT as u8, 5, 255]);
         assert!(input.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod catalog_view_tests {
+    use super::*;
+    #[tokio::test]
+    async fn real_cushion_and_cube_metadata_translate_for_both_clients() {
+        let content=mcsa_protocol::content::ContentCodec::white_slab_preview();
+        for version in [mcsa_protocol::JavaVersion::V26_1_2,mcsa_protocol::JavaVersion::V26_3] {
+            let mut out=Outgoing::capture_content(version,content);
+            for (index,kind) in [Kind::Cushion,Kind::SulfurCube].into_iter().enumerate() {
+                let mut mob=Mob::new(index as i32+50,kind,(0.0,65.0,0.0));mob.color=7;
+                if kind==Kind::SulfurCube {crate::mob::sulfur_cube::initialize(&mut mob);}
+                send_mob(&mut out,&mob).await.unwrap();
+                let all=properties(&mob);let refs:Vec<_>=all.iter().collect();
+                send_properties(&mut out,mob.entity_id,&refs).await.unwrap();
+                if kind==Kind::Cushion {assert!(all.iter().all(|row|row.0<=8));assert_eq!(attributes_at(&mob),u64::MAX);}
+            }
+        }
     }
 }
