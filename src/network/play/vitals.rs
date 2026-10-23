@@ -2024,7 +2024,17 @@ pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, play
     player.net.hurt_from = at;
     player.net.command_origin = Some(origin.clone());
     let killer = origin.player.as_ref().map(|(name, uuid)| Killer { name, uuid: *uuid, weapon: None });
-    let result = hit_by(stream, shared, player, amount, source, origin.direct, origin.cause, killer, None).await;
+    // itemaudit2-shield-magic, официальный777: /damage indirect_magic без
+    // источника даёт Hurt Animation yaw0 и случайную горизонтальную отдачу0,4.
+    // Щит без позиции источника её не блокирует; прежний основной не меняем.
+    let magic_feedback = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && source == Source::IndirectMagic && at.is_none() && origin.direct == 0 && origin.cause == 0;
+    let result = hit_by(stream, shared, player, amount, source, origin.direct, origin.cause, killer, magic_feedback.then_some(0.0)).await;
+    if magic_feedback && matches!(result, Ok(Some(_))) {
+        let angle = f64::from(world_random(shared, player.dimension)) * std::f64::consts::TAU;
+        let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
+        knock_back(player, (angle.cos(), angle.sin()), crate::mob::BASE_KNOCKBACK, resistance);
+    }
     player.net.command_origin = None;
     player.net.hurt_from = None;
     result.map(|_| ())
@@ -4010,5 +4020,49 @@ mod hot_block_enchantment_tests {
         assert!(!bedrock_environment(&shared, &mut player).iter().any(|(_, source)| *source == Source::Campfire));
         shared.world_in(player.dimension).lock().unwrap().set_block_silently(0, 64, 0, fluids::state_of(fluids::Kind::Lava, 0));
         assert!(bedrock_environment(&shared, &mut player).contains(&(4.0, Source::Lava)));
+    }
+}
+
+#[cfg(test)]
+mod combat_777_command_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile};
+
+    #[tokio::test]
+    async fn unattributed_magic_has_hurt_feedback_only_in_the_263_primary() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/combat777-command/ops.json")), crate::skins::Settings::default());
+            shared.difficulty.store(2, std::sync::atomic::Ordering::Relaxed);
+            let mut player = PlayerState::new_for_catalog([73;16], "Magic".into(), None, None, 0, 73, (0.5,64.0,0.5), catalog);
+            player.game_mode = GAME_MODE_SURVIVAL;
+            player.on_ground = true;
+            player.inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(),1)));
+            player.net.using = Some(Using { kind: UseKind::Shield, hand: 1, since: 0 });
+            shared.ticks.send_replace(10);
+            let mut out = Outgoing::capture();
+            command_hit(&mut out, &shared, &mut player, 4.0, Source::IndirectMagic, Default::default()).await.unwrap();
+            assert_eq!(player.vit.health, 16.0);
+            assert_eq!(player.inventory.slot(inventory::OFFHAND).unwrap().extras().damage, 0);
+            let preview = profile == Profile::Preview26_3;
+            assert_eq!(player.net.velocity.is_some(), preview);
+            if let Some((x,y,z)) = player.net.velocity {
+                assert!((x.hypot(z)-0.4).abs()<1e-9);
+                assert!((y-0.3608).abs()<1e-9);
+            }
+            let mut bytes = out.queued();
+            let mut animations = 0;
+            while !bytes.is_empty() {
+                let packet = read_packet(&mut bytes).await.unwrap();
+                if packet.id == HURT_ANIMATION { animations += 1; }
+            }
+            assert_eq!(animations, usize::from(preview));
+            player.net.velocity = None;
+            command_hit(&mut out, &shared, &mut player, 4.0, Source::IndirectMagic, Default::default()).await.unwrap();
+            assert_eq!(player.vit.health,16.0);
+            assert!(player.net.velocity.is_none(), "отклонённый повторный урон не толкает");
+        }
     }
 }

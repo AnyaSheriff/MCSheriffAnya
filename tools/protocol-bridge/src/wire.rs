@@ -124,6 +124,16 @@ pub(crate) fn translate_inner(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "animation") if context.items.content.is_preview()
+            && from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 => {
+            uint(&mut out, cursor.uint()?);
+            let kind = cursor.take(1)?[0];
+            // Официальный777: cow-crit и cow-crit-fist, крит на +13 имеет
+            // animation=1; pvp-sharpness имеет2 вместо внутреннего5.
+            // Внутренний775 и прежний основной профиль сохраняют прежний enum.
+            // [проверить] Остальные изменённые значения enum отдельными сценариями.
+            out.push(match kind { 4 => 1, 5 => 2, other => other });
+        }
         (State::Play, Direction::Clientbound, "start_configuration") |
         (State::Play, Direction::Serverbound, "configuration_acknowledged") => {},
         (State::Play, Direction::Clientbound, "declare_commands") if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) => crate::client_770::commands(&mut cursor,&mut out)?,
@@ -1151,3 +1161,57 @@ mod initial_play_776_tests;
 #[cfg(test)]
 #[path = "dig_action_tests.rs"]
 mod dig_action_tests;
+
+#[cfg(test)]
+mod combat_777_tests {
+    use super::*;
+
+    #[test]
+    fn observed_critical_animation_changes_only_for_the_263_primary_view() {
+        let legacy = [0x02, 7, 4];
+        let context = Context {
+            items: crate::items::Context {
+                content: crate::content::ContentCodec::white_slab_preview(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let modern = translate_with_context(State::Play, Direction::Clientbound,
+            JavaVersion::V26_1_2, JavaVersion::V26_3, &legacy, context).unwrap();
+        assert_eq!(modern.as_ref(), &[0x02, 7, 1]);
+        // Прежний основной профиль не меняет ни775, ни его777-представление.
+        for client in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+            assert_eq!(translate(State::Play, Direction::Clientbound,
+                JavaVersion::V26_1_2, client, &legacy).unwrap().as_ref(), legacy);
+        }
+        for end in 0..legacy.len() {
+            assert!(translate_with_context(State::Play, Direction::Clientbound,
+                JavaVersion::V26_1_2, JavaVersion::V26_3, &legacy[..end], context).is_err());
+        }
+        assert!(translate_with_context(State::Play, Direction::Clientbound,
+            JavaVersion::V26_1_2, JavaVersion::V26_3, &[0x02,7,4,0], context).is_err());
+    }
+}
+
+#[cfg(test)]
+mod combat_777_enchanted_animation_tests {
+    use super::*;
+
+    #[test]
+    fn observed_sharpness_animation_uses_two_only_for_the_263_primary() {
+        let legacy = [0x02, 7, 5];
+        let context = Context {
+            items: crate::items::Context {
+                content: crate::content::ContentCodec::white_slab_preview(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(translate_with_context(State::Play, Direction::Clientbound,
+            JavaVersion::V26_1_2, JavaVersion::V26_3, &legacy, context).unwrap().as_ref(), &[0x02,7,2]);
+        for client in [JavaVersion::V26_1_2,JavaVersion::V26_3] {
+            assert_eq!(translate(State::Play,Direction::Clientbound,
+                JavaVersion::V26_1_2,client,&legacy).unwrap().as_ref(),legacy);
+        }
+    }
+}

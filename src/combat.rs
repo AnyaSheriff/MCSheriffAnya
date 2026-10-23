@@ -77,6 +77,8 @@ pub fn outcome_breached(view: &CombatView, damage: f32, source: Source, now: u64
 pub struct PlayerStrike {
     pub victim: i32,
     pub attacker: i32,
+    /// Прямая сущность снаряда; виновник и кредит остаются у attacker.
+    pub projectile: Option<i32>,
     pub attacker_uuid: [u8; 16],
     pub attacker_name: String,
     /// Где стоял нападающий и куда смотрел (градусы).

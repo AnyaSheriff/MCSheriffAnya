@@ -73,7 +73,7 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
             let at = (member.position.x, member.position.y, member.position.z);
             world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, attacker);
             world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
-            world.note_player_strike(PlayerStrike {
+            world.note_player_strike(PlayerStrike { projectile: None,
                 victim:attacker,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
                 from,yaw:player.yaw,damage,source:Source::Thorns,extra_knockback:0.0,weapon:None,
                 disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new(),
@@ -226,7 +226,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_sound((player.x, player.y, player.z), "minecraft:entity.player.attack.knockback");
     }
 
-    shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_strike(PlayerStrike {
+    shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_strike(PlayerStrike { projectile: None,
         victim: target,
         attacker: player.entity_id,
         attacker_uuid: player.uuid,
@@ -454,8 +454,13 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     // Анимация ушиба: откуда пришёл удар относительно взгляда жертвы.
     let toward = (from.2 - at.2).atan2(from.0 - at.0).to_degrees() as f32;
     let yaw = (toward - player.yaw).rem_euclid(360.0);
+    // Официальный777 pvp-bow: sourceCause — стрелок, sourceDirect — стрела.
+    // Прежний основной сохраняет свой wire-result; кредит убийства не меняется.
+    let direct = if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        strike.projectile.unwrap_or(strike.attacker)
+    } else { strike.attacker };
     let result = if mortal {
-        vitals::hit_by_breached(stream, shared, player, damage, strike.source, strike.attacker, strike.attacker, Some(killer), Some(yaw), strike.breach_scale).await?
+        vitals::hit_by_breached(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale).await?
     } else {
         None
     };
@@ -651,7 +656,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
         }
 
         world.note_sound_player_except(feet, "minecraft:entity.player.hurt", 1.0, 1.0, entity_id);
-        world.note_player_strike(PlayerStrike {
+        world.note_player_strike(PlayerStrike { projectile: None,
             victim: entity_id,
             attacker: player.entity_id,
             attacker_uuid: player.uuid,
@@ -874,5 +879,44 @@ mod itemaudit4_thorns_tests {
             retaliate(&shared,&mut p,Source::Thorns,99);assert_eq!(p.inventory.slot(6).unwrap().extras().damage,2);
         }
         assert!(combat::shield_blocks(Source::Thorns));
+    }
+}
+
+#[cfg(test)]
+mod combat_777_projectile_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile};
+
+    #[tokio::test]
+    async fn projectile_damage_keeps_shooter_credit_and_uses_observed_direct_entity_in_263() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog=Catalog::new(profile);
+            let shared=Shared::new(World::in_memory_with_catalog(catalog),World::in_memory_with_catalog(catalog),
+                Default::default(),Default::default(),Default::default(),
+                crate::ops::Ops::open(Path::new("tmp/combat777-projectile/ops.json")),crate::skins::Settings::default());
+            shared.difficulty.store(2,std::sync::atomic::Ordering::Relaxed);
+            let mut player=PlayerState::new_for_catalog([71;16],"Victim".into(),None,None,0,71,(0.5,64.0,0.5),catalog);
+            player.entity_id=71;
+            player.game_mode=GAME_MODE_SURVIVAL;
+            player.on_ground=true;
+            let strike=PlayerStrike {
+                victim:71,attacker:2,projectile:Some(42),attacker_uuid:[2;16],attacker_name:"Archer".into(),
+                from:(0.5,65.0,-1.5),yaw:0.0,damage:5.0,source:Source::Arrow,extra_knockback:0.0,
+                weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,
+                thorns_slots:Vec::new(),effects:Vec::new(),
+            };
+            let mut out=Outgoing::capture();
+            take_strike(&mut out,&shared,&mut player,&strike).await.unwrap();
+            assert_eq!(player.vit.health,15.0);
+            let direct=if profile==Profile::Preview26_3 {42}else{2};
+            let expected=vitals::damage_packet(71,Source::Arrow,direct,2,None);
+            let mut queued=out.queued();
+            let mut actual=Vec::new();
+            while !queued.is_empty() {
+                let packet=read_packet(&mut queued).await.unwrap();
+                if packet.id==0x19 {actual.push(packet.body);}
+            }
+            assert_eq!(actual,vec![expected]);
+        }
     }
 }
