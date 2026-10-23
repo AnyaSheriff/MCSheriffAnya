@@ -54,7 +54,7 @@ class ConsoleTests(unittest.TestCase):
     def command(self, entry='wrapper', args=()):
         entry_args = (['-cp', str(JAR), 'pro.gravit.launcher.server.ServerWrapper'] if entry == 'wrapper'
                       else ['-jar', str(JAR)])
-        return [JAVA, '-DMCSA_UPDATE=0', '-DSERVER_PORT=25951', '-Dterminal.jline=false'] + entry_args + list(args)
+        return [JAVA, '-DMCSA_UPDATE=0', '-DMCSA_AUTO_UPDATE=0', '-DSERVER_PORT=25951', '-Dterminal.jline=false'] + entry_args + list(args)
 
     def start_pty(self, entry='wrapper', args=()):
         master, slave = pty.openpty()

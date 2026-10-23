@@ -17,6 +17,7 @@ final class LauncherSelfTest {
         tarTests();
         propertiesTests();
         jsonAndUrlTests();
+        updateTests();
         System.out.println("Самопроверка: " + checks + " проверок пройдено, сеть не использовалась.");
     }
 
@@ -165,6 +166,99 @@ final class LauncherSelfTest {
             check(Files.readString(server).equals(before), "свои настройки важнее панели, отсутствие SERVER_PORT");
             rejects(() -> Launcher.configure(cwd, "bad"), "плохой порт до записи");
             check(Files.readString(server).equals(before), "неверный порт не изменил файл");
+        } finally {
+            try (var files = Files.walk(cwd)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
+            }
+        }
+    }
+
+    private static void updateTests() throws Exception {
+        for (String[] pair : new String[][]{{"v0.10.0", "v0.9.9"}, {"v1.0.0", "v1.0.0-rc.1"},
+                {"v1.0.0-alpha.10", "v1.0.0-alpha.2"}, {"v1.0.0-beta", "v1.0.0-alpha"},
+                {"v1.0.0-alpha.1", "v1.0.0-alpha"}, {"v1.0.0-alpha", "v1.0.0-1"},
+                {"v999999999999999999999.0", "v2.0"}}) {
+            check(Launcher.compareVersions(pair[0], pair[1]) > 0, "новее: " + pair[0]);
+            check(Launcher.compareVersions(pair[1], pair[0]) < 0, "старее: " + pair[1]);
+        }
+        check(Launcher.compareVersions("v1.2.3", "1.2.3") == 0, "префикс v");
+        check(Launcher.compareVersions("v1.2.3", "v1.2.3") == 0, "равные версии");
+        check(Launcher.compareVersions("1.2.3+build.1", "v1.2.3+build.2") == 0, "build metadata");
+        rejects(() -> Launcher.compareVersions("latest", "v1.0.0"), "неизвестный формат версии");
+        Path cwd = Files.createTempDirectory("mcsa-update-self-test-");
+        Path binary = cwd.resolve("mcsheriffanya"), version = cwd.resolve("mcsheriffanya.version");
+        Path marker = cwd.resolve("mcsa-update");
+        byte[] old = {1, 2, 3}, replacement = {4, 5, 6, 7};
+        ByteArrayOutputStream tar = new ByteArrayOutputStream();
+        entry(tar, "mcsheriffanya", "", '0', replacement);
+        tar.write(new byte[1024]);
+        byte[] archive = gzip(tar.toByteArray());
+        class FakeUpdates implements Launcher.Updates {
+            int calls, installs;
+            boolean offline, corrupt;
+            String tag = "v1.2.0", requested;
+            public Launcher.Asset release(String pinned) throws IOException {
+                calls++;
+                requested = pinned;
+                if (offline) throw new IOException("private URL must not be logged");
+                return new Launcher.Asset(pinned == null ? tag : pinned, "release.tar.gz",
+                        URI.create("https://github.com/archive"), archive.length);
+            }
+            public void install(Launcher.Asset asset) throws IOException {
+                installs++;
+                byte[] bytes = archive.clone();
+                if (corrupt) bytes[bytes.length - 8] ^= 1;
+                Launcher.install(cwd, binary, asset, uri -> new ByteArrayInputStream(bytes));
+            }
+        }
+        FakeUpdates updates = new FakeUpdates();
+        try {
+            Files.write(binary, old);
+            Files.writeString(version, "v1.1.0\n");
+            Launcher.prepareBinary(cwd, "v1.0.0", null, false, updates);
+            Launcher.prepareBinary(cwd, null, "0", false, updates);
+            check(updates.calls == 0, "закрепление и отключение исключают сеть");
+            Launcher.prepareBinary(cwd, null, null, false, updates);
+            check(Arrays.equals(Files.readAllBytes(binary), replacement)
+                    && Files.readString(version).equals("v1.2.0\n"), "автообновление и сохранение метки");
+            Launcher.prepareBinary(cwd, null, null, false, updates);
+            updates.tag = "v1.0.0";
+            Launcher.prepareBinary(cwd, null, null, false, updates);
+            check(updates.calls == 3 && updates.installs == 1, "проверка каждый запуск без повторов и отката");
+            Files.writeString(marker, "");
+            Launcher.prepareBinary(cwd, "v1.0.0", "0", true, updates);
+            check(updates.requested.equals("v1.0.0") && !Files.exists(marker)
+                    && Files.readString(version).equals("v1.0.0\n"), "ручное обновление учитывает закрепление");
+            Files.delete(version);
+            Launcher.prepareBinary(cwd, null, null, false, updates);
+            check(Files.exists(version) && updates.installs == 3, "миграция без сохранённой версии");
+            updates.tag = "v2.0.0";
+            Files.writeString(marker, "");
+            PrintStream stderr = System.err;
+            ByteArrayOutputStream log = new ByteArrayOutputStream();
+            try (PrintStream captured = new PrintStream(log, true, StandardCharsets.UTF_8)) {
+                System.setErr(captured);
+                updates.offline = true;
+                Launcher.prepareBinary(cwd, null, null, false, updates);
+                updates.offline = false;
+                updates.corrupt = true;
+                Launcher.prepareBinary(cwd, null, null, true, updates);
+            } finally { System.setErr(stderr); }
+            check(log.toString(StandardCharsets.UTF_8).lines().count() == 2
+                    && !log.toString(StandardCharsets.UTF_8).contains("private"), "одна безопасная строка на отказ");
+            check(Arrays.equals(Files.readAllBytes(binary), replacement)
+                    && Files.readString(version).equals("v1.0.0\n") && Files.exists(marker),
+                    "сеть и плохой архив сохраняют бинарник, метку и запрос повтора");
+            try (var files = Files.list(cwd)) {
+                check(files.count() == 3, "временные файлы удалены после отказа");
+            }
+            Files.delete(binary);
+            updates.offline = true;
+            rejects(() -> Launcher.prepareBinary(cwd, null, null, false, updates), "без бинарника отказ фатален");
+            updates.offline = false;
+            updates.corrupt = false;
+            Launcher.prepareBinary(cwd, "v1.0.0", "0", false, updates);
+            check(Files.size(binary) == replacement.length, "первая установка при закреплении и отключении");
         } finally {
             try (var files = Files.walk(cwd)) {
                 for (Path path : files.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
