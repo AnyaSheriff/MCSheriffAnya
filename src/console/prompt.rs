@@ -83,7 +83,7 @@ pub fn print_above(message: &str) {
     if line.shown {
         // Стираем строку ввода, печатаем сообщение и рисуем строку ввода
         // заново — уже под сообщением, вместе с набранным.
-        let _ = write!(out, "{}{}\n{}{}", CLEAR_LINE, message, PROMPT, line.buffer);
+        let _ = write!(out, "{}{}\n{}{}", CLEAR_LINE, message, PROMPT, visible(&line.buffer));
     } else {
         let _ = writeln!(out, "{}", message);
     }
@@ -117,7 +117,7 @@ pub fn take() -> String {
 
     let mut out = io::stdout().lock();
 
-    let _ = write!(out, "{}{}{}\n{}", CLEAR_LINE, PROMPT, taken, PROMPT);
+    let _ = write!(out, "{}{}{}\n{}", CLEAR_LINE, PROMPT, visible(&taken), PROMPT);
     let _ = out.flush();
 
     taken
@@ -131,8 +131,13 @@ fn redraw(line: &Line) {
 
     let mut out = io::stdout().lock();
 
-    let _ = write!(out, "{}{}{}", CLEAR_LINE, PROMPT, line.buffer);
+    let _ = write!(out, "{}{}{}", CLEAR_LINE, PROMPT, visible(&line.buffer));
     let _ = out.flush();
+}
+
+// Never echo password-bearing commands into captured terminal output.
+fn visible(command: &str) -> &str {
+    if crate::auth::sensitive_command(command) { "[команда авторизации скрыта]" } else { command }
 }
 
 #[cfg(test)]
@@ -144,6 +149,14 @@ mod tests {
     ///
     /// Проверяется именно накопление: печать проверить нечем — она уходит
     /// в терминал, — а вот что набрано, важно.
+    #[test]
+    fn password_commands_are_hidden() {
+        for line in ["/login secret", "register secret secret", "auth setpassword User secret", "changepassword old secret"] {
+            assert!(!visible(line).contains("secret"));
+        }
+        assert_eq!(visible("list"), "list");
+    }
+
     #[test]
     fn typed_characters_add_up() {
         // Строка ввода выключена: в проверках терминала нет, и рисовать

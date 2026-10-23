@@ -90,7 +90,7 @@ impl Service {
     fn submit(&self, identity: &Identity, ip: IpAddr, password: &str, repeat: Option<&str>, permitted: bool) -> Result<(), &'static str> {
         self.submit_before(identity, ip, password, repeat, permitted, None)
     }
-    fn submit_before(&self, identity: &Identity, ip: IpAddr, password: &str, repeat: Option<&str>, permitted: bool, deadline: Option<tokio::time::Instant>) -> Result<(), &'static str> {
+    pub(crate) fn submit_before(&self, identity: &Identity, ip: IpAddr, password: &str, repeat: Option<&str>, permitted: bool, deadline: Option<tokio::time::Instant>) -> Result<(), &'static str> {
         // Ограничение памяти/процессов: только одна проверка, без неограниченной очереди.
         let _operation=self.operation.try_lock().map_err(|_| "Авторизация занята. Попробуй ещё раз.")?;
         let mut state = self.state.lock().expect("auth");
@@ -173,7 +173,7 @@ impl Drop for Session {
 }
 
 pub fn sensitive_command(command: &str) -> bool {
-    matches!(command.trim_start().trim_start_matches('/').split_whitespace().next(), Some("auth" | "changepassword"))
+    matches!(command.trim_start().trim_start_matches('/').split_whitespace().next(), Some("auth" | "changepassword" | "login" | "register"))
 }
 
 pub fn command(command: &str, source: &crate::commands::Source, shared: &crate::shared::Shared) -> Option<crate::commands::Answer> {
@@ -205,6 +205,9 @@ fn arguments(mut line: &str) -> Result<Vec<String>, &'static str> {
 
 fn command_inner(command: &str, source: &crate::commands::Source, shared: &crate::shared::Shared) -> Result<String, &'static str> {
     use crate::commands::Source;
+    if matches!(command.split_whitespace().next(), Some("login" | "register")) {
+        return Err("Вход уже выполнен или парольная авторизация выключена");
+    }
     let service = shared.auth.as_ref().ok_or("Парольная авторизация выключена")?;
     let parsed = arguments(command)?;
     let words: Vec<_> = parsed.iter().map(String::as_str).collect();

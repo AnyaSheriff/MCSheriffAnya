@@ -260,7 +260,7 @@ fn console_commands_password_change_and_session_requirement() {
     assert!(list.contains("1")); assert!(list.contains("SheriffAnya")); assert!(!list.contains("new pass"));
     assert_eq!(run("auth unregister sheriffanya", &Source::Console, &shared).reply, "Готово");
     assert!(!auth.identity("SheriffAnya", None).registered);
-    for line in ["auth setpassword A secret", " /changepassword a b", "changepassword"] { assert!(sensitive_command(line)); }
+    for line in ["auth setpassword A secret", " /changepassword a b", "changepassword", "/login secret", "register secret secret"] { assert!(sensitive_command(line)); }
     assert!(!sensitive_command("say auth"));
 }
 

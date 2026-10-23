@@ -48,6 +48,8 @@ use crate::commands::{
     Source,
 };
 use crate::hardness_table::UNBREAKABLE;
+mod chat_auth;
+pub use chat_auth::authenticate as chat_authenticate;
 mod mining;
 mod movement_enchantments;
 mod spear;
@@ -323,6 +325,12 @@ const SERVERBOUND_CHAT_MESSAGE: i32 = 0x09;
 /// Serverbound Chat Command — игрок ввёл команду, начиная с косой черты.
 /// Клиент присылает команду без самой черты, одним полем.
 const SERVERBOUND_CHAT_COMMAND: i32 = 0x07;
+// ViaProxy forwards older clients' commands in the signed packet form.
+// Both forms start with the same command string; unsigned commands remain allowed.
+const SERVERBOUND_CHAT_COMMAND_SIGNED: i32 = 0x08;
+fn is_chat_command(id: i32) -> bool {
+    matches!(id, SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_COMMAND_SIGNED)
+}
 
 /// Clientbound System Chat Message — сообщение в чат от сервера.
 const SYSTEM_CHAT: i32 = 0x79;
@@ -695,7 +703,7 @@ pub async fn play_session(
     uuid: &[u8; 16],
     look: configuration::ClientLook,
     shared: &Shared,
-    (came_from, came_to): (&str, &str),
+    (came_from, came_to, limbo_entity): (&str, &str, Option<i32>),
     verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
     // Смена сессии завершается до load: прежний владелец уже сохранил вещи
@@ -734,6 +742,7 @@ pub async fn play_session(
         spawn,
     );
 
+    player.entity_id = limbo_entity.unwrap_or(0);
     player.main_hand = look.main_hand;
     player.view = view_for(shared, &look);
 
@@ -962,11 +971,12 @@ async fn enter_world(
     // Заводим игрока в общем списке до Login (Play): оттуда берётся номер его
     // сущности, а его клиент должен узнать этот номер сразу — по нему он
     // отличает себя от остальных. Остальные узнают о нём из журнала.
+    let from_limbo = player.entity_id != 0;
     let member = player.member();
 
     let joined = {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
-        let joined = players.join(member, shared.next_entity_id());
+        let joined = players.join(member, if player.entity_id == 0 { shared.next_entity_id() } else { player.entity_id });
         if joined.is_some() && let Some(control) = stream.session_control() {
             players.connection(player.uuid, control);
         }
@@ -995,15 +1005,19 @@ async fn enter_world(
     // игрока надо из списка убрать, иначе его ник останется «занятым».
     let entered: io::Result<Option<Entered>> = async {
 
-        send_login(
-            stream,
-            player.dimension,
-            player.game_mode,
-            player.entity_id,
-            shared.properties.view_distance,
-            shared.properties.simulation_distance,
-        )
-        .await?;
+        if from_limbo {
+            send_respawn_after_death(stream, player.dimension, player).await?;
+        } else {
+            send_login(
+                stream,
+                player.dimension,
+                player.game_mode,
+                player.entity_id,
+                shared.properties.view_distance,
+                shared.properties.simulation_distance,
+            )
+            .await?;
+        }
         send_abilities(stream, player.game_mode).await?;
         send_player_position(stream, player).await?;
 
@@ -6909,7 +6923,7 @@ async fn read_and_log_play_packets(
                     // перенос на +1 мс при любой фазе, у нас на +27 — падающий робот
                     // успевал на тик меньше). Мир при этом не меняется: до начала
                     // такта всё равно ничего не идёт.
-                    let at_once = packet.id == SERVERBOUND_CHAT_COMMAND && *ticks.borrow() >= *starts.borrow();
+                    let at_once = is_chat_command(packet.id) && *ticks.borrow() >= *starts.borrow();
 
                     if gated && !at_once {
                         // Ждать начала такта с неотправленным нельзя: оно
@@ -6961,7 +6975,7 @@ async fn read_and_log_play_packets(
                     // уже в этом такте, до шага сущностей, как у оригинала
                     // (minecart-push: вагонетку толкает в такте команды). Пакет
                     // переноса клиенту уйдёт с поручением на ближайшем круге.
-                    let moved = if packet.id == SERVERBOUND_CHAT_COMMAND {
+                    let moved = if is_chat_command(packet.id) {
                         shared.players.lock().expect("список игроков захвачен другим потоком").pending_teleport(&player.uuid)
                     } else {
                         None
@@ -6986,7 +7000,7 @@ async fn read_and_log_play_packets(
                     // Пакеты одной границы — подряд, без рассылки чанков и хода
                     // здоровья между движением и броском. FIFO сохраняется;
                     // команду и её поручения разбирает следующий круг.
-                    incoming = if packet.id == SERVERBOUND_CHAT_COMMAND { None } else { inbound.take_gameplay(*starts.borrow()) };
+                    incoming = if is_chat_command(packet.id) { None } else { inbound.take_gameplay(*starts.borrow()) };
                 }
                 // Запись на диск — после пачки: она не задерживает движение
                 // перед следующим Use Item на той же границе такта.
@@ -7005,7 +7019,7 @@ async fn read_and_log_play_packets(
 fn is_gated(packet_id: i32) -> bool {
     matches!(
         packet_id,
-        USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND | ATTACK
+        USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_COMMAND_SIGNED | ATTACK
             | SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION | SET_PLAYER_ROTATION | SET_PLAYER_ON_GROUND
             | vitals::PLAYER_COMMAND | PLAYER_INPUT | vehicle::VEHICLE_MOVE | vehicle::STEER_BOAT
             // Взмах и смена ячейки тоже ждут начала такта: взмах сбрасывает
@@ -7702,7 +7716,7 @@ fn handle_client_packet_inner(
                     .push(format!("<{}> {}", player.name, text));
             }
         }
-        SERVERBOUND_CHAT_COMMAND => {
+        SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_COMMAND_SIGNED => {
             if let Some(command) = Cursor::new(payload).string() {
                 if !crate::auth::sensitive_command(&command) { log_debug!("{} ввёл команду: /{}", player.name, command); }
 

@@ -1,0 +1,12 @@
+# ViaProxy 3.4.14; отдельный процесс. Порты заменяются run.sh.
+bind-address: 0.0.0.0:26101
+target-address: 127.0.0.1:26100
+target-version: '26.1.2'
+proxy-online-mode: false
+auth-method: NONE
+backend-haproxy: true
+frontend-haproxy: false
+wildcard-domain-handling: NONE
+allow-legacy-client-passthrough: false
+ignore-protocol-translation-errors: false
+log-ips: true

@@ -22,9 +22,18 @@ pub const FILE: &str = "config/mcsa.properties";
 pub const OLD_FILES: [&str; 2] = ["config/mcsheriffanya.toml", "config/rustcraft.toml"];
 
 /// Настройки.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Require PROXY v1/v2 on Java TCP connections.
+    pub proxy_protocol: bool,
+    pub viaproxy: bool,
+    pub viaproxy_port: u16,
+    pub viaproxy_java: String,
+    pub viaproxy_memory: String,
+    pub auth_mode: String,
+    /// Exact TCP peer IPs allowed to supply PROXY headers (no CIDR).
+    pub proxy_protocol_trusted_sources: Vec<std::net::IpAddr>,
     /// Парольный диалог для Java offline-mode до входа в мир.
     pub auth_enabled: bool,
     /// Пробовать лицензию; неудача разрешает cracked-повторный вход.
@@ -99,6 +108,13 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            proxy_protocol: false,
+            viaproxy: false,
+            viaproxy_port: 26101,
+            viaproxy_java: "java".into(),
+            viaproxy_memory: "512M".into(),
+            auth_mode: "dialog".into(),
+            proxy_protocol_trusted_sources: vec![std::net::Ipv4Addr::LOCALHOST.into()],
             auth_enabled: true,
             auth_premium: true,
             debug: false,
@@ -174,6 +190,20 @@ impl Settings {
             log_info!("{}: auth-provider больше не нужен — пароли всегда хранятся через Argon2id; настройка игнорируется", path.display());
         }
         Settings {
+            viaproxy: take(&values, "viaproxy", default.viaproxy, path),
+            viaproxy_port: take(&values, "viaproxy-port", default.viaproxy_port, path),
+            viaproxy_java: take(&values, "viaproxy-java", default.viaproxy_java, path),
+            viaproxy_memory: take(&values, "viaproxy-memory", default.viaproxy_memory, path),
+            auth_mode: take(&values, "auth-mode", default.auth_mode, path),
+            proxy_protocol: take(&values, "proxy-protocol", default.proxy_protocol, path),
+            proxy_protocol_trusted_sources: values.get("proxy-protocol-trusted-sources")
+                .map(|s| s.split(',').filter(|s| !s.trim().is_empty())
+                    .map(|s| s.trim().parse()).collect::<Result<Vec<_>, _>>()
+                    .unwrap_or_else(|_| {
+                        log_warn!("Invalid proxy-protocol-trusted-sources: trusting nobody");
+                        Vec::new()
+                    }))
+                .unwrap_or(default.proxy_protocol_trusted_sources),
             auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
             debug: take(&values, "debug", default.debug, path),
@@ -197,7 +227,7 @@ impl Settings {
     }
 
     /// Файл с пояснениями — чтобы было понятно, что править.
-    fn to_file(self) -> String {
+    fn to_file(&self) -> String {
         let mut text = String::from(HEADER);
 
         for (_, section) in self.sections() {
@@ -210,8 +240,15 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 19] {
+    fn sections(&self) -> [(&'static str, String); 26] {
         [
+            ("viaproxy", format!("# Автозапуск официального ViaProxy; backend принудительно на loopback.\nviaproxy={}\n", self.viaproxy)),
+            ("viaproxy-port", format!("viaproxy-port={}\n", self.viaproxy_port)),
+            ("viaproxy-java", format!("# Путь к Java 17+ (рекомендуется 21).\nviaproxy-java={}\n", self.viaproxy_java)),
+            ("viaproxy-memory", format!("# Максимальная Java heap, например 512M или 1G.\nviaproxy-memory={}\n", self.viaproxy_memory)),
+            ("auth-mode", format!("# dialog или chat; доверенный PROXY всегда использует chat.\nauth-mode={}\n", self.auth_mode)),
+            ("proxy-protocol", format!("# Java TCP: требовать PROXY v1/v2; прямые подключения отклоняются.\nproxy-protocol={}\n", self.proxy_protocol)),
+            ("proxy-protocol-trusted-sources", format!("# Доверенные TCP-адреса прокси через запятую (точные IP, без CIDR).\n# Пустой список не доверяет никому. Backend закройте от внешнего доступа.\nproxy-protocol-trusted-sources={}\n", self.proxy_protocol_trusted_sources.iter().map(ToString::to_string).collect::<Vec<_>>().join(","))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
             ("auth-premium", format!("# Проверять лицензию Java; после неудачи повторный вход без лицензии.\n# Действует при auth-enabled=true и online-mode=false.\nauth-premium={}\n", self.auth_premium)),
@@ -302,7 +339,7 @@ send-error-reports={}
     /// прежней версией сервера), — с пояснениями и значениями по умолчанию.
     /// Остальное в файле не трогается. Не записалось — не беда: настройки
     /// всё равно берутся по умолчанию.
-    fn add_missing(self, path: &Path, text: &str) {
+    fn add_missing(&self, path: &Path, text: &str) {
         let values = parse_properties(text);
         let missing: Vec<_> = self.sections().into_iter().filter(|(key, _)| !values.contains_key(*key)).collect();
 
@@ -360,11 +397,28 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn proxy_settings_fail_closed_and_round_trip() {
+        use std::net::IpAddr;
+        let path = std::path::Path::new("unused");
+        let defaults = super::Settings::default();
+        assert!(!defaults.proxy_protocol);
+        assert_eq!(defaults.proxy_protocol_trusted_sources, vec!["127.0.0.1".parse::<IpAddr>().unwrap()]);
+        let settings = super::Settings::parse("proxy-protocol=true\nproxy-protocol-trusted-sources=127.0.0.1, ::1\n", path);
+        assert!(settings.proxy_protocol);
+        assert_eq!(settings.proxy_protocol_trusted_sources.len(), 2);
+        assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        for value in ["", "127.0.0.1,typo", "127.0.0.0/8"] {
+            let settings = super::Settings::parse(&format!("proxy-protocol-trusted-sources={value}\n"), path);
+            assert!(settings.proxy_protocol_trusted_sources.is_empty());
+        }
+    }
+
+    #[test]
     fn auth_settings_default_and_round_trip() {
         let defaults = super::Settings::default();
         assert!(defaults.auth_enabled && defaults.auth_premium);
         let path = std::path::Path::new("config/mcsa.properties");
-        let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\n", path);
+        let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\nauth-mode=chat\nviaproxy=true\nviaproxy-port=26121\nviaproxy-java=/opt/java path/bin/java\nviaproxy-memory=1G\n", path);
         assert!(!changed.auth_enabled && !changed.auth_premium);
         assert_eq!(super::Settings::parse(&changed.to_file(), path), changed);
         // Старая настройка auth-provider игнорируется и не попадает в файл.

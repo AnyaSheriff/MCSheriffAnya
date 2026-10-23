@@ -28,3 +28,5 @@ pub mod keep_alive;
 
 pub mod connection;
 pub mod online;
+
+pub mod proxy_protocol;
