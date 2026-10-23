@@ -62,7 +62,12 @@ impl Tracker {
                     None => ids::translate(RegistryKind::Entity, from, wire::INTERNAL, raw)?,
                 };
                 if !self.entities.contains_key(&id) && self.entities.len() >= 65_536 { return Err(wire::Error::TooLarge); }
-                if probe_776 { metadata_layout(JavaVersion::V26_2, kind)?; }
+                if probe_776 {
+                    let target = if entity_layouts::LAYOUTS[kind as usize].0 == "cushion" {
+                        entity_layouts::LAYOUTS.iter().position(|row| row.0 == "armor_stand").ok_or(wire::Error::Invalid)? as u32
+                    } else { kind };
+                    metadata_layout(JavaVersion::V26_2, target)?;
+                }
                 spawn = Some((id, kind));
             }
             "entity_metadata" => {
@@ -123,18 +128,22 @@ fn probe_776_item_kind() -> u32 {
     entity_layouts::LAYOUTS.iter().position(|entry| entry.0 == "item").expect("item layout") as u32
 }
 
-pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
+pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, content: crate::content::ContentCodec) -> Result<(), wire::Error> {
     let mut header = Cursor::new(input.rest);
     header.uint()?; header.take(16)?;
-    let kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, header.uint()?)?;
-    // Только пять уже закреплённых раскладок, включая наблюдённых мобов и игрока.
+    let raw = header.uint()?;
+    let kind = match content.entity_layout_base(raw).filter(|_| from == wire::INTERNAL) {
+        Some(name) => entity_layouts::LAYOUTS.iter().position(|row| row.0 == name).ok_or(wire::Error::Invalid)? as u32,
+        None => ids::translate(RegistryKind::Entity, from, wire::INTERNAL, raw)?,
+    };
+    // Проверяется именно раскладка целевого заменителя, а не wire ID.
+    let kind = if entity_layouts::LAYOUTS[kind as usize].0 == "cushion" {
+        entity_layouts::LAYOUTS.iter().position(|row| row.0 == "armor_stand").ok_or(wire::Error::Invalid)? as u32
+    } else { kind };
     metadata_layout(JavaVersion::V26_2, kind)?;
-    spawn(input, out, from, to)
+    spawn_with_content(input, out, from, to, content)
 }
 
-pub(crate) fn spawn(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
-    spawn_with_content(input,out,from,to,crate::content::ContentCodec::default())
-}
 pub(crate) fn spawn_with_content(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, content: crate::content::ContentCodec) -> Result<(), wire::Error> {
     uint(out, input.uint()?); out.extend(input.take(16)?);
     let kind = input.uint()?;
@@ -177,8 +186,8 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
     let (_, old, new) = entity_layouts::LAYOUTS.get(kind as usize).ok_or_else(|| failure(Error::UnknownKind(kind)))?;
     match version {
         JavaVersion::V26_1_2 => Ok(old),
-        JavaVersion::V26_2 => layouts_776::LAYOUTS.iter().find(|entry| entry.0 == kind)
-            .map(|entry| entry.2).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
+        JavaVersion::V26_2 => crate::generated_payload_776::LAYOUTS.iter().find(|entry| entry.0 == kind)
+            .map(|entry| entry.1).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
         JavaVersion::V26_3 => Ok(new),
         JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
@@ -187,9 +196,10 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
 pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: wire::Context) -> Result<(), wire::Error> {
     let kind = context.entity_kind.ok_or(wire::Error::MissingEntityContext)?;
     let source = metadata_layout(from, kind)?;
-    let substitute = if context.items.content.is_native_view() {
+    let substitute = if context.items.content.is_native_view() || (context.items.content.is_preview() && to == JavaVersion::V26_2) {
         match entity_layouts::LAYOUTS.get(kind as usize).map(|r| r.0) {
-            Some("cushion") => Some("armor_stand"), Some("sulfur_cube") => Some("slime"), _ => None,
+            Some("cushion") => Some("armor_stand"),
+            Some("sulfur_cube") if to != JavaVersion::V26_2 => Some("slime"), _ => None,
         }
     } else { None };
     let target_kind = substitute.and_then(|name| entity_layouts::LAYOUTS.iter().position(|r| r.0 == name)).map_or(kind, |n| n as u32);
@@ -208,11 +218,14 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         out.push(target_index.unwrap_or(0) as u8);
         let serializer = input.uint()?;
         if has_776 {
-            // Только пять выбранных layout. Поле не разрешает произвольный
-            // serializer и тем самым не открывает непроверенные Slot/Particle.
-            let expected = layouts_776::SERIALIZERS.iter().find(|entry| entry.0 == *field)
-                .ok_or_else(|| failure(Error::UnknownField(index)))?.1;
-            if serializer != expected { return Err(failure(Error::Serializer(serializer))); }
+            // Пять наблюдённых типов сохраняют строгую проверку serializer
+            // поля; прочие раскладки закреплены JSON, значения разбираются
+            // по совпадающему дискриминатору entityMetadataEntry775/776.
+            if layouts_776::LAYOUTS.iter().any(|row| row.0 == kind) {
+                let expected = layouts_776::SERIALIZERS.iter().find(|entry| entry.0 == *field)
+                    .ok_or_else(|| failure(Error::UnknownField(index)))?.1;
+                if serializer != expected { return Err(failure(Error::Serializer(serializer))); }
+            }
         }
         uint(out, serializer);
         match serializer {
@@ -269,7 +282,6 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
             16 => crate::particles::particle(input,out,from,to,context.items)?,
             17 => {
                 let count = input.count(1024)?;
-                if has_776 && count != 0 { return Err(wire::Error::PayloadUnavailable("unverified 26.2 metadata particles")); }
                 uint(out,count as u32);
                 for _ in 0..count { crate::particles::particle(input,out,from,to,context.items)?; }
             }

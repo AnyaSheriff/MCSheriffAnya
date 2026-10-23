@@ -50,8 +50,11 @@ mod tests {
     #[test]
     fn direct_tables_match_binary_search_for_every_state() {
         // Тополь (за таблицей 775) проверяется в poplar::tests.
+        #[cfg(not(seedmap_core))]
         let poplar = crate::gameplay_catalog::POPLAR[0].first_state..=crate::gameplay_catalog::POPLAR[crate::gameplay_catalog::POPLAR.len() - 1].last_state;
-        for state in (-2..=i32::from(u16::MAX) + 1).chain([i32::MIN, i32::MAX]).filter(|state| !poplar.contains(state)) {
+        for state in (-2..=i32::from(u16::MAX) + 1).chain([i32::MIN, i32::MAX]) {
+            #[cfg(not(seedmap_core))]
+            if poplar.contains(&state) { continue; }
             let old = BLOCK_NAMES.partition_point(|(low, _, _)| *low <= state)
                 .checked_sub(1).and_then(|index| {
                     let (low, high, name) = BLOCK_NAMES[index];

@@ -8,6 +8,9 @@ pub mod chain;
 mod generated_packet_776;
 mod packet_layouts;
 mod generated_static_776;
+mod generated_payload_776;
+#[cfg(test)]
+mod expanded_776_tests;
 #[cfg(test)]
 mod static_776_tests;
 pub mod ids;

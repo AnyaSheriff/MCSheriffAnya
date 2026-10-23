@@ -72,13 +72,11 @@ fn supported_payload(version: JavaVersion) -> Result<(), Error> {
 // Slot776 и component-free ItemStackTemplate камнереза наблюдены отдельно
 // (stonecutter-26.2-observation.json). Для компонентов остаётся прежний gate:
 // композиция проверяется синтетически, не объявляется отдельным live наблюдением.
-// Serverbound Creative Slot776 ещё закрыт; новые длины компонентов не угадываем.
+// UntrustedSlot776: та же envelope с длиной каждого компонента, проверенная
+// generate_payload_776.py; вложенные ID всё равно проходят typed remapper.
 fn supported_form(version: JavaVersion, untrusted: bool) -> Result<(), Error> {
-    supported_payload(version)?;
-    if version == JavaVersion::V26_2 && untrusted {
-        return Err(Error::UnsupportedVersion(version));
-    }
-    Ok(())
+    let _ = untrusted;
+    supported_payload(version)
 }
 
 /// Разбирает ровно один слот; возвращает число прочитанных байтов для массива слотов.
@@ -204,7 +202,8 @@ pub(crate) fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to
 pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,spaces:(IdSpace,IdSpace))->Result<Vec<u8>,Error>{
     supported_payload(from)?; supported_payload(to)?;
     if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2)
-        && !matches!(kind,3|6|16|40|45|84|25|49|50|75) {
+        && !crate::generated_payload_776::COMPONENTS.contains(&kind)
+        && !matches!(kind,25|49|50|75) {
         return Err(Error::UnsupportedComponent(kind));
     }
     // В776 эти два компонента наблюдены отдельно. В777 swing_animation

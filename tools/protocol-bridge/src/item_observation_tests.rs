@@ -102,7 +102,7 @@ fn unknown_old_content_and_new_only_enchantments_fail_without_replacements() {
     sword.added.iter_mut().find(|c|c.kind==13).unwrap().data=vec![1,4,1]; // breach отсутствует1.12.2
     assert_eq!(legacy_items::encode(Some(&sword),legacy()),Err(legacy_items::Error::UnknownEnchantment(4)));
     assert_eq!(items::decode(OLD,&bytes(SAMPLES[3].2),false,Context::default()),Err(items::Error::MissingEnchantmentContext));
-    assert!(items::decode(crate::JavaVersion::V26_2,&[0],true,context()).is_err()); // Creative776 ещё закрыт.
+    assert_eq!(items::decode(crate::JavaVersion::V26_2,&[0],true,context()).unwrap(), (None, 1));
 }
 #[test]
 fn malformed_text_and_out_of_range_color_do_not_reach_clients() {

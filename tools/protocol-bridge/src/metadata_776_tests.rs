@@ -60,7 +60,7 @@ fn middle_metadata_layout_is_explicit_and_added_age_fields_are_not_dropped() {
             assert_eq!(meta(MID, OLD, &bytes, kind), Err(failure(Error::MissingField(field))));
         }
     }
-    assert!(matches!(metadata_layout(MID, 0), Err(wire::Error::PayloadUnavailable(_))));
+    assert_eq!(metadata_layout(MID, 0).unwrap(), metadata_layout(OLD, 0).unwrap());
     assert_eq!(metadata_layout(MID, u32::MAX), Err(failure(Error::UnknownKind(u32::MAX))));
     assert_eq!(metadata_layout(V1_12_2, 30), Err(wire::Error::UnsupportedVersion(V1_12_2)));
 }
@@ -96,8 +96,7 @@ fn bounded_776_metadata_refuses_unknown_duplicate_and_complex_payloads() {
     let mut invalid_float = vec![2, 9, 3]; invalid_float.extend(f32::NAN.to_be_bytes()); invalid_float.push(255);
     assert_eq!(meta(MID, NEW, &invalid_float, cow), Err(wire::Error::Invalid));
     assert_eq!(meta(MID, NEW, &[2, 10, 17, 0, 255], cow).unwrap(), [2, 10, 17, 0, 255]);
-    assert_eq!(meta(MID, NEW, &[2, 10, 17, 1, 0, 255], cow),
-        Err(wire::Error::PayloadUnavailable("unverified 26.2 metadata particles")));
+    assert_eq!(meta(MID, NEW, &[2, 10, 17, 1, 0, 255], cow).unwrap(), [2, 10, 17, 1, 0, 255]);
     // Динамический вариант не проходит без согласованного caller registry context.
     assert_eq!(meta(MID, NEW, &[2, 18, 23, 0, 255], cow),
         Err(failure(Error::MissingRegistry("minecraft:cow_variant"))));

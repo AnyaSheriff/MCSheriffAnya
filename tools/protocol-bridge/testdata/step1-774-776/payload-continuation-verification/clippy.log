@@ -1,0 +1,4 @@
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv6/tools/seedmap)
+    Checking mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv6/tools/protocol-bridge)
+    Checking mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv6)
+    Finished `release` profile [optimized] target(s) in 27.26s

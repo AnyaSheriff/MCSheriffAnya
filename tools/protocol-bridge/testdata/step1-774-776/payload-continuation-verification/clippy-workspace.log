@@ -1,0 +1,53 @@
+    Checking seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv6/tools/seedmap)
+    Checking mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv6/tools/protocol-bridge)
+error[E0433]: cannot find `gameplay_catalog` in `crate`
+  --> tools/seedmap/src/../../../src/blocks_lookup.rs:53:29
+   |
+53 | ...   let poplar = crate::gameplay_catalog::POPLAR[0].first_state..=crate::gameplay_catalog::POPLAR[crate::gameplay_catalog::POPLAR....
+   |                           ^^^^^^^^^^^^^^^^ could not find `gameplay_catalog` in the crate root
+
+error[E0433]: cannot find `gameplay_catalog` in `crate`
+  --> tools/seedmap/src/../../../src/blocks_lookup.rs:53:78
+   |
+53 | ...OPLAR[0].first_state..=crate::gameplay_catalog::POPLAR[crate::gameplay_catalog::POPLAR.len() - 1].last_state;
+   |                                  ^^^^^^^^^^^^^^^^ could not find `gameplay_catalog` in the crate root
+
+error[E0433]: cannot find `gameplay_catalog` in `crate`
+  --> tools/seedmap/src/../../../src/blocks_lookup.rs:53:110
+   |
+53 | ...meplay_catalog::POPLAR[crate::gameplay_catalog::POPLAR.len() - 1].last_state;
+   |                                  ^^^^^^^^^^^^^^^^ could not find `gameplay_catalog` in the crate root
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `seedmap-core` (lib test) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: using `clone` on type `Context` which implements the `Copy` trait
+   --> tools/protocol-bridge/src/entity_tests.rs:139:52
+    |
+139 |         let out=tracker.translate(OLD,NEW,&patched,preview.clone()).unwrap();
+    |                                                    ^^^^^^^^^^^^^^^ help: try removing the `clone` call: `preview`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#clone_on_copy
+    = note: `-D clippy::clone-on-copy` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::clone_on_copy)]`
+
+error: for loop over a single element
+   --> tools/protocol-bridge/src/content.rs:395:21
+    |
+395 | / ...   for version in [JavaVersion::V1_12_2] {
+396 | | ...       assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(version),id),Err(Error::Unrepresentable { .. })));
+397 | | ...   }
+    | |_______^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#single_element_loop
+    = note: `-D clippy::single-element-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::single_element_loop)]`
+help: try
+    |
+395 ~                     {
+396 +                         let version = JavaVersion::V1_12_2;
+397 +                         assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(version),id),Err(Error::Unrepresentable { .. })));
+398 +                     }
+    |
+
+error: could not compile `mcsa-protocol` (lib test) due to 2 previous errors

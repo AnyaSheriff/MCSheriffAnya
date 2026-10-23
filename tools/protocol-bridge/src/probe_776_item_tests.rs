@@ -45,14 +45,14 @@ fn bounded_776_failed_spawns_never_create_tracking_and_unknown_layouts_stay_clos
         assert!(clientbound(&mut tracker,&spawn[..end],Context::default()).is_err());
         assert!(clientbound(&mut tracker,&[0x63,2,8,7,0,255],Context::default()).is_err());
     }
-    for kind in [0,154,u32::MAX] {
+    for kind in [157,158,u32::MAX] {
         assert!(clientbound(&mut joined(),&item_spawn(2,kind),Context::default()).is_err());
     }
     let mut tail=spawn;tail.push(0);
     assert!(clientbound(&mut joined(),&tail,Context::default()).is_err());
     // Прямой dispatcher тоже не обходит список закреплённых раскладок.
     assert!(wire::translate_inner(State::Play,Direction::Clientbound,OLD,MID,
-        &item_spawn(2,0),Context::default(),true).is_err());
+        &item_spawn(2,u32::MAX),Context::default(),true).is_err());
 }
 
 #[test]

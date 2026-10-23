@@ -246,6 +246,9 @@ def main():
                     report['checks'].append('death-respawn-health20-teleport-ack')
                     command('tp McsaProbe 0.5 65 0.5')
                     client.grounded_fixture = True
+                    # После смерти оставшиеся предметы могут подбираться между
+                    # щелчками. Убираем их до очистки инвентаря, с command barrier.
+                    command('kill @e[type=item]')
                     command('clear McsaProbe')
                     command('give McsaProbe diamond 3')
                     for slot in (36, 37):

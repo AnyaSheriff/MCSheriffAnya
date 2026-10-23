@@ -49,7 +49,6 @@ fn preview_does_not_change_base_slot_bytes_or_allow_unknown_items() {
     let stack=Stack {item:1,count:2,added:vec![Component {kind:3,data:vec![4]}],removed:vec![]};
     for version in [OLD,JavaVersion::V26_2,NEW] {
         for untrusted in [false,true] {
-            if version==JavaVersion::V26_2 && untrusted { continue; }
             let bytes=encode(version,Some(&stack),untrusted,Context::default()).unwrap();
             assert_eq!(encode(version,Some(&stack),untrusted,preview()).unwrap(),bytes);
             assert_eq!(decode(version,&bytes,untrusted,preview()).unwrap().0,Some(stack.clone()));

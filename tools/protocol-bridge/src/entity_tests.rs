@@ -136,7 +136,7 @@ fn poplar_boats_spawn_with_wire_kinds_only_with_the_preview_content() {
     for (internal,wire_kind) in [(157u8,106u8),(158,107)] {
         let mut patched=spawn[..at].to_vec(); uint(&mut patched,u32::from(internal)); patched.extend_from_slice(&spawn[at+1..]);
         let mut tracker=Tracker::default();
-        let out=tracker.translate(OLD,NEW,&patched,preview.clone()).unwrap();
+        let out=tracker.translate(OLD,NEW,&patched,preview).unwrap();
         let mut output=Cursor::new(&out); output.uint().unwrap(); output.uint().unwrap(); output.take(16).unwrap();
         assert_eq!(output.uint().unwrap(),u32::from(wire_kind));
         assert_eq!(tracker.entities.len(),1);

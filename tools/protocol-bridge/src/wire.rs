@@ -207,7 +207,7 @@ pub(crate) fn translate_inner(
             crate::particles::world(&mut cursor, &mut out, from, to, context.items)?;
         }
         (State::Play, Direction::Clientbound, "spawn_entity") => {
-            if probe_776 { crate::entities::spawn_776(&mut cursor, &mut out, from, to)?; }
+            if probe_776 { crate::entities::spawn_776(&mut cursor, &mut out, from, to, context.items.content)?; }
             else { crate::entities::spawn_with_content(&mut cursor, &mut out, from, to, context.items.content)?; }
         }
         (State::Play, Direction::Clientbound, "collect") if probe_776 => {
@@ -473,7 +473,7 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "chat_command" | "chat_message" | "chat_session_update" | "message_acknowledgement" |
             "tab_complete" | "window_click" | "close_window" | "held_item_slot" |
             "recipe_book" | "displayed_recipe" | "craft_recipe_request" | "advancement_tab" | "arm_animation" |
-            "attack" | "use_entity" | "client_command" | "block_place" | "use_item" | "block_dig"),
+            "attack" | "use_entity" | "client_command" | "block_place" | "use_item" | "block_dig" | "set_creative_slot"),
         (State::Play, Direction::Clientbound) => matches!(name,
             "login" | "position" | "abilities" | "declare_commands" | "declare_recipes" |
             "player_info" | "player_remove" | "entity_metadata" | "entity_destroy" |
@@ -492,7 +492,7 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "recipe_book_settings" | "recipe_book_add" | "recipe_book_remove" | "craft_recipe_response" |
             "advancements" | "select_advancement_tab" | "entity_update_attributes" |
             "block_change" | "block_action" | "tile_entity_data" | "multi_block_change" | "sound_effect" | "entity_sound_effect" |
-            "playerlist_header"),
+            "playerlist_header" | "trade_list" | "world_particles" | "explosion" | "entity_effect" | "remove_entity_effect"),
         _ => false,
     }
 }

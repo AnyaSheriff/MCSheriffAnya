@@ -392,9 +392,7 @@ mod tests {
                     assert!(ContentCodec::default().map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_3),id).is_err());
                     assert!(codec.map(kind,IdSpace::Wire(JavaVersion::V26_1_2),IdSpace::Canonical,id).is_err());
                     assert!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_1_2),id).is_ok());
-                    for version in [JavaVersion::V1_12_2] {
-                        assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(version),id),Err(Error::Unrepresentable { .. })));
-                    }
+                    assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V1_12_2),id),Err(Error::Unrepresentable { .. })));
                 }
             }
         }

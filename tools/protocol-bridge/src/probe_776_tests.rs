@@ -20,7 +20,7 @@ fn allowed_controls_and_explicitly_unsupported_payloads_are_distinct() {
     assert_eq!(clientbound(&mut Tracker::default(), &[0x69, 0], Context::default()).unwrap().as_ref(), &[0x69, 0]);
     assert_eq!(serverbound(&[0x35, 0, 2], Context::default()).unwrap().as_ref(), &[0x35, 0, 2]);
     // ACK нужен typed transport, а не непрозрачный passthrough.
-    for body in [&[0, 1][..], &[0x38, 0, 0, 0], &[0x42, 0], &[0x3e, 0]] {
+    for body in [&[0, 1][..], &[0x38, 0, 0], &[0x42, 0], &[0x3e, 0]] {
         assert!(serverbound(body, Context::default()).is_err());
     }
     for body in [&[0x2f, 0][..], &[0x6d, 0], &[0x06, 0], &[0x01, 0], &[0x34, 0]] {

@@ -1,0 +1,194 @@
+{
+  "timestamp_utc": "2026-10-23T13:11:40.086276+00:00",
+  "full_task_complete": false,
+  "checks": {
+    "rust": {
+      "passed": 3133,
+      "ignored": 89,
+      "core": 2907,
+      "startup": 3,
+      "protocol": 212,
+      "seedmap": 11
+    },
+    "python": 226,
+    "clippy": "pass; root and workspace all-targets -D warnings",
+    "release": "pass",
+    "public_status_rejection": 8,
+    "private_gameplay_restart": {
+      "775": 11,
+      "777": 11
+    },
+    "official777_reference": 7
+  },
+  "owner_decisions": {
+    "776_chat_fallback_required": false,
+    "776_live_mojang_trace_required": false,
+    "776_shared_online_code_unit_test": "passed: network::online::tests::login_with_in_memory_session_service, 775/776/777"
+  },
+  "public_admission": {
+    "775": {
+      "774": "closed",
+      "776": "closed"
+    },
+    "777": {
+      "774": "closed",
+      "776": "closed"
+    }
+  },
+  "payload_scope": {
+    "schema_entity_layouts": 158,
+    "typed_component_kinds": 30,
+    "existing_nested_component_kinds": 4,
+    "live_776_entity_layouts_newly_observed": 0,
+    "old_fixture_codec_cases": {
+      "complex_items": 54,
+      "inventory": 10,
+      "particles": 23,
+      "entity_types": 11
+    }
+  },
+  "blockers": {
+    "776": [
+      "only block_dig 0/2 observed; cancel/drop/release/swap/jab remain closed",
+      "only empty chest block-entity1 observed; other IDs/data closed",
+      "remaining components, metadata serializer41/rich text, serverbound GUI/action branches and expanded payload live coverage incomplete",
+      "End travel and Nether/End persistence unproven"
+    ],
+    "774": [
+      "full Play codecs, dynamic registries, gameplay, restart and authentication missing on both primaries"
+    ]
+  },
+  "trace_build_note": "Gameplay traces preceded only test-only workspace lint fixes and indentation; final tests cover latest sources. Binary hashes are recorded independently.",
+  "scenarios": {
+    "payload-regression-776-primary775": {
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "mining-start0-finish2-air-cobblestone-drop-tool-damage",
+        "death-respawn-health20-teleport-ack"
+      ],
+      "server_exit": 0,
+      "exit_codes": null,
+      "binary_sha256": "f56938c95f468ed519e67b9bd911504b1cf27a899e7597531b2edadc23707d8c",
+      "runner_sha256": "42e3fd3e98248881a0600a3e2280e98ca839b6fa30c73b09927d4978a6ac0bd9",
+      "error": "AssertionError: "
+    },
+    "payload-regression-v2-776-primary775": {
+      "status": "pass",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "mining-start0-finish2-air-cobblestone-drop-tool-damage",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close",
+        "relogin-preserves-authoritative-inventory",
+        "dynamic-light-update-torch14-removal0-masks-arrays",
+        "process-restart-player-and-chest-world-persistence"
+      ],
+      "server_exit": 0,
+      "exit_codes": null,
+      "binary_sha256": "f56938c95f468ed519e67b9bd911504b1cf27a899e7597531b2edadc23707d8c",
+      "runner_sha256": "21fd0f24197ff698dde139cf89abdca8eab3c9c86a839487e4d08b3c4ffadd9a",
+      "error": null
+    },
+    "payload-regression-776-primary777": {
+      "status": "pass",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "mining-start0-finish2-air-cobblestone-drop-tool-damage",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close",
+        "relogin-preserves-authoritative-inventory",
+        "dynamic-light-update-torch14-removal0-masks-arrays",
+        "process-restart-player-and-chest-world-persistence"
+      ],
+      "server_exit": 0,
+      "exit_codes": null,
+      "binary_sha256": "f56938c95f468ed519e67b9bd911504b1cf27a899e7597531b2edadc23707d8c",
+      "runner_sha256": "21fd0f24197ff698dde139cf89abdca8eab3c9c86a839487e4d08b3c4ffadd9a",
+      "error": null
+    },
+    "official-777-payload-continuation": {
+      "status": "pass",
+      "checks": [
+        "public777-login-configuration-play-chunks",
+        "survival-player-attack-reduces-peer-health",
+        "death-event-respawn-health20-teleport-ack",
+        "survival-new-block-placement-consumes-one",
+        "survival-mining-drop-and-tool-damage1",
+        "inventory-authoritative-click-moves-stack",
+        "logout-login-preserves-new-items"
+      ],
+      "server_exit": null,
+      "exit_codes": [
+        143
+      ],
+      "binary_sha256": null,
+      "runner_sha256": "e7d258b78a54e91ce540734cdb3c053e0552eaf8443c784329034dca26f7a906",
+      "error": null
+    }
+  },
+  "sha256": {
+    "docs/java-26.3-content.md": "da5f1c6fe711bb8d20614a2461dc13153d3b2b4f35d7b6a5e3244a4f26a0324d",
+    "docs/multiversion-plan.md": "8e4e6602d4de2157ae3fc7009b34c61c488ca0b36d4bd1e4049d2363e256c592",
+    "src/blocks_lookup.rs": "44b03b8ddb06d0bfa90787ac216624443649515b731962a71c19ee23afd49bb7",
+    "src/network/online.rs": "b5b25a30899db1a80bf9555651c638e7d51799c278f2e68a47314639aa1dc80e",
+    "tools/protocol-bridge/generate_payload_776.py": "3e990c4ac97fb305b468d6ef64a03b1fdcd611fca6675eb830a220b2b7c36ad4",
+    "tools/protocol-bridge/payload-776-report.json": "18bb1612aa05393ef73af11e22b06bca70e3badb9c29c53b65c9c945fa1ac34e",
+    "tools/protocol-bridge/probe_step1_gameplay_776.py": "21fd0f24197ff698dde139cf89abdca8eab3c9c86a839487e4d08b3c4ffadd9a",
+    "tools/protocol-bridge/src/content.rs": "d5326a71fedac94d55d706fc082bc3173130ad217b815b42cd23a66f53fc0b1b",
+    "tools/protocol-bridge/src/entities.rs": "fe05d8a106deeb4f27b690a94228aee8cd8ab88bf1a47adeeb26576a70ee9c3a",
+    "tools/protocol-bridge/src/entity_tests.rs": "c6b89fcca98362740026204870198aa370adc5f2d5d3fa49820cc2159fffa9ee",
+    "tools/protocol-bridge/src/expanded_776_tests.rs": "d734c3de4894f5585b429323a266435a8c20c8d84d953c66dd7ecc4a5fd5c3b4",
+    "tools/protocol-bridge/src/generated_payload_776.rs": "46d4f683424528d6c1a32d494a12461f7a50160ce2f1c3ac2cb4a0dfe10640a8",
+    "tools/protocol-bridge/src/item_776_tests.rs": "acaed146549898736cd11d7e614a9540a01e8d5cb9e5247b7186db459d7b5568",
+    "tools/protocol-bridge/src/item_observation_tests.rs": "c22e8550e0006eb27a9d746343061ecd1b96f6944195d07fc68e43e0f6e273b4",
+    "tools/protocol-bridge/src/items.rs": "53dd83b5ccd1a5d8a3b8a267812df4b059425ac6ce30b50e266db8c974abdb51",
+    "tools/protocol-bridge/src/items_catalog_tests.rs": "796cabedafd6483ca8c43a09eed44afe22eb0c916a9fd935688f655730d17b02",
+    "tools/protocol-bridge/src/lib.rs": "a992f14a02032d6573ee4a634fcd9f17a2fdd0f1dc9257d40c100c3483aaab88",
+    "tools/protocol-bridge/src/metadata_776_tests.rs": "a85652cb56e11d085409c336ce7c13b4daf75481b2f5cb6bfee352c014fb1386",
+    "tools/protocol-bridge/src/particles.rs": "cbe086c47162ba9110a5d8a042a59b44fa5e5da68e4eac1d054d0cdfc596ca01",
+    "tools/protocol-bridge/src/probe_776_item_tests.rs": "1809c6e9640d4728a7b2c92b41c18261b90aee822e98edfe0ad5b3bf05b8bd98",
+    "tools/protocol-bridge/src/probe_776_tests.rs": "7b885cfd65fb7f5117329c0d3730db454f1018c7ff314a1251ec69effdd0bcbe",
+    "tools/protocol-bridge/src/static_776_tests.rs": "467867590a5d3e0f75bcba56f16bc32fbe7f5e1b73677f36fb70c05ce5a6340a",
+    "tools/protocol-bridge/src/wire.rs": "6d3821323fe215a5fa9906f8a9ca8f495735820f655fa27512939856d4553fa4",
+    "tools/protocol-bridge/test_payload_776.py": "5240c546076982e051cb80c91e0e9ab3fe203c4da4494b21e86e5520a1a2d40a",
+    "tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md": "cfbff27fa27152cda83c6e6fadd2cdd07e08d39a145ad1ef633283c8da183a0f",
+    "tools/protocol-bridge/testdata/step1-774-776/README.md": "0fc5d2769359676fffa2ab26320d2e930968fe51b0e717a0e9f10de73cdc3fb3",
+    "tools/protocol-bridge/testdata/step1-774-776/admission-payload-continuation.json": "79542b15d9518690248a96733b6e311d95d9bbcdbba520a728597041c4d9c51b",
+    "tools/protocol-bridge/testdata/step1-774-776/admission-payload-final.json": "27c4864a5528aba27c1aea0dab1582f55bb0c13542c98c6002e0fb2b32b3ddb2",
+    "tools/protocol-bridge/testdata/step1-774-776/official-777-payload-continuation/result.json": "caf19cb1aaa194564e05c4d90f6225e9e19aa42a70739b0d0326f81366ed83af",
+    "tools/protocol-bridge/testdata/step1-774-776/official-777-payload-continuation/server-1.log": "07e89ba933287aa2e9bd1c0261229850a9178f103d0798054ee48b6d371c6ef1",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/build-final.log": "5dfdd62278b6e54cb047dec245c0339923589e26ad104bab0e5782f241e68d5a",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/build.log": "0e8c736d8e17a1c46e0ae543f19bb2d0acd401cc4d9818918b706b1486acb74c",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/clippy-workspace-final.log": "288277d1e898dc7f02a8662be7b8bba3b2c7ac08b04df804ff357cb7ff915683",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/clippy-workspace.log": "ec5887683b08ea1c1b4affe372d77516a100c8a1fd1f2fbf88a074ada6e8f49a",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/clippy.log": "cec951a2439e266c108f3338aec96cb5ac0f33ed80ca5a7ae268c3111a2b1b05",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/protocol-final.log": "881ca5b1414a77280591131b4e47ad4c66f47ec4b53b9c94579ae58ce115c35e",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/protocol-initial.log": "6dd54c14465840e84af67153d29c7620277e471d6095e9a5df05ffa2b8478dd6",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/protocol-second.log": "2cfa4e7663863066386faaedd0a55aa24fd735ea00cbb9f410318059fc12d2c0",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/protocol.log": "28e86e2d7489533d6f2e96e3b21e1e24fa9aa32d15ebdbc3686073214cf00b45",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/python-final.log": "55a38dd6e62f52cb6be775676cc4f98cd77e56c5a337ff8a8165d8ece84b1322",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/python.log": "631f4ec7e63a37d327ad9e2104c68edd7a330b2a21dfd2e31c24ef62e6471068",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/rust.log": "db01e06c51ce47423688302f3b92f725ae8340f4a76589aadcce75698f04da24",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-continuation-verification/workspace-tests.log": "79f1f66ed16a9216442984ef467b2ccb4b9e9afdf2196d679c0932377a66fe56",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-regression-776-primary775/result.json": "0f17ec5b1e4beabba7beefe056e4ba6f272c01ee95adc031688359de9a18c52d",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-regression-776-primary775/server.log": "9048da1ef090e339299307bd04f9125e6220e13a1f273566b979ad400e898bf2",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-regression-776-primary777/result.json": "4ea586d70e616d1cfab25865a8b332eacabb012489d807937d66b25ffe4cb1ff",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-regression-776-primary777/server.log": "0154a1c7079256983dd03a1dfd3e7bf4f9b13b74551147c43c0b588af105d301",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-regression-v2-776-primary775/result.json": "bc8a20157d0d9469a3cbfdf37199479e9697c036766ba2cf9d8818c9ace1e03c",
+    "tools/protocol-bridge/testdata/step1-774-776/payload-regression-v2-776-primary775/server.log": "8152c2b613d5895f7fad8c8384bf7de31d799dcf0af5f52681ea6478ca52c8b4"
+  },
+  "release_binary_sha256": "39d6e46a61a8272aa94e706b29a92d69697d43d7129ab71c96c3873deb910acd",
+  "test_binary_sha256": "d37dae3cb392bfc86eb3dab8005c528d6b51a81e7a021820d1c986ea59a066ff"
+}

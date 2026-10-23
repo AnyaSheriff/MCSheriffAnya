@@ -10,3 +10,5 @@ Remaining:774 time/interaction layouts, item components, dynamic registries, com
 No JAR inspection, additional official runs, commits or publishing; no25565 listener. The requested full client gameplay step is not complete.
 
 Latest continuation:776 mining, chest-area relog and disk-backed process restart pass11/11 on each primary; all four public admission cells remain closed. Full774 Play/gameplay and authentication are still unproven. See `CONTINUED.md` and `mining-chest-verification.json` for the final matrix, counts and raw trace hashes.
+
+Latest payload continuation:158 pinned metadata layouts,30 typed components and Creative Slot/particles now have synthetic regression coverage; shared encrypted-login775/776/777 passes the owner's online-mode requirement. Fresh private776 gameplay/restart is11/11 on each primary. Action enums, block entities, remaining payloads/live coverage still prevent admission; all four public cells remain closed. See `CONTINUED.md` and `payload-continuation-verification.json`.

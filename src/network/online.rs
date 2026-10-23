@@ -367,52 +367,65 @@ mod tests {
 
     #[tokio::test]
     async fn login_with_in_memory_session_service() {
+        use mcsa_protocol::{JavaVersion, Negotiated};
         let auth = auth();
-        let (server, client) = tokio::io::duplex(7);
-        let mut server = CryptoStream::new(server);
-        let mut client = CryptoStream::new(client);
-        let serving = async {
-            let login = super::super::login::read_login_start(&mut server).await.unwrap();
-            assert_eq!(login.username, "notch");
-            assert_eq!(login.uuid, [99; 16]);
-            let profile = auth.authenticate_with(&mut server, |hash| async move {
-                assert_eq!(hash, server_hash("", &[9; 16], &auth.public_key));
-                let response = http::Response::builder().status(200).body(PROFILE.to_vec()).unwrap();
-                session_profile(response.into(), "notch").await
-            }).await.unwrap();
-            super::super::login::send_set_compression(&mut server, 32).await.unwrap();
-            super::super::login::send_login_success(&mut server, &profile.name, &profile.uuid, profile.skin.as_ref(), 32).await.unwrap();
-            assert_eq!(raw_packet(&mut server).await, [0, 3]); // Login Acknowledged, уже шифрован
-        };
-        let joining = async {
-            let mut start = vec![0];
-            start.extend(encode_string("notch"));
-            start.extend([99; 16]);
-            let mut frame = encode_varint(start.len() as i32);
-            frame.extend(start);
-            client.write_all(&frame).await.unwrap();
-            client_exchange(&mut client).await;
-            assert_eq!(raw_packet(&mut client).await, [3, 32]);
-            let packed = raw_packet(&mut client).await;
-            let (length, offset) = decode_varint(&packed).unwrap();
-            let mut body = Vec::new();
-            std::io::Read::read_to_end(&mut flate2::read::ZlibDecoder::new(&packed[offset..]), &mut body).unwrap();
-            assert_eq!(length as usize, body.len());
-            assert_eq!(body[0], 2);
-            assert_eq!(&body[1..17], &parse_profile(PROFILE, "Notch").unwrap().uuid);
-            let mut offset = 17;
-            assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "Notch");
-            assert_eq!(body[offset], 1);
-            offset += 1;
-            assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "textures");
-            assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "skin");
-            assert_eq!(body[offset], 1);
-            offset += 1;
-            assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "signed");
-            assert_eq!(offset, body.len());
-            client.write_all(&[2, 0, 3]).await.unwrap();
-        };
-        tokio::join!(serving, joining);
+        // Один и тот же RSA/session-service путь для775/776/777, без Mojang аккаунта.
+        for version in [JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
+            let (server, client) = tokio::io::duplex(7);
+            let mut server = CryptoStream::new(server);
+            let mut client = CryptoStream::new(client);
+            let route = Negotiated { client: version, native: JavaVersion::V26_1_2 };
+            server.protocol = Some(route); client.protocol = Some(route);
+            let serving = async {
+                let login = super::super::login::read_login_start(&mut server).await.unwrap();
+                assert_eq!(login.username, "notch");
+                assert_eq!(login.uuid, [99; 16]);
+                let profile = auth.authenticate_with(&mut server, |hash| async move {
+                    assert_eq!(hash, server_hash("", &[9; 16], &auth.public_key));
+                    let response = http::Response::builder().status(200).body(PROFILE.to_vec()).unwrap();
+                    session_profile(response.into(), "notch").await
+                }).await.unwrap();
+                super::super::login::send_set_compression(&mut server, 32).await.unwrap();
+                super::super::login::send_login_success(&mut server, &profile.name, &profile.uuid, profile.skin.as_ref(), 32).await.unwrap();
+                assert_eq!(raw_packet(&mut server).await, [0, 3]); // Login Acknowledged, уже шифрован
+            };
+            let joining = async {
+                let mut start = vec![0];
+                start.extend(encode_string("notch"));
+                start.extend([99; 16]);
+                let mut frame = encode_varint(start.len() as i32);
+                frame.extend(start);
+                client.write_all(&frame).await.unwrap();
+                client_exchange(&mut client).await;
+                assert_eq!(raw_packet(&mut client).await, [3, 32]);
+                let packed = raw_packet(&mut client).await;
+                let (length, offset) = decode_varint(&packed).unwrap();
+                let mut body = Vec::new();
+                std::io::Read::read_to_end(&mut flate2::read::ZlibDecoder::new(&packed[offset..]), &mut body).unwrap();
+                assert_eq!(length as usize, body.len());
+                assert_eq!(body[0], 2);
+                assert_eq!(&body[1..17], &parse_profile(PROFILE, "Notch").unwrap().uuid);
+                let mut offset = 17;
+                assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "Notch");
+                assert_eq!(body[offset], 1);
+                offset += 1;
+                assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "textures");
+                assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "skin");
+                assert_eq!(body[offset], 1);
+                offset += 1;
+                assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "signed");
+                if version != JavaVersion::V26_1_2 {
+                    assert_eq!(body.len() - offset, 16);
+                    let session: [u8; 16] = body[offset..].try_into().unwrap();
+                    assert_ne!(session, [0; 16]);
+                    assert_ne!(session, parse_profile(PROFILE, "Notch").unwrap().uuid);
+                    offset += 16;
+                }
+                assert_eq!(offset, body.len());
+                client.write_all(&[2, 0, 3]).await.unwrap();
+            };
+            tokio::join!(serving, joining);
+        }
     }
 
     #[tokio::test]

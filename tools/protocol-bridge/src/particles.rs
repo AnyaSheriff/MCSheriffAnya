@@ -53,18 +53,20 @@ pub(crate) fn world(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion
         let count = i32::from_be_bytes(input.take(4)?.try_into().map_err(|_| Error::Invalid)?);
         u32::try_from(count).map_err(|_| Error::Invalid)?
     };
-    if modern {
+    if !modern { particle(input,&mut effect,from,to,context)?; }
+    let randomization = if modern { input.uint()? } else { 0 };
+    if to != JavaVersion::V26_3 {
         // Новые распределения и разные скорости по осям не представимы
         // старым пакетом. Не подменяем их похожим, но другим эффектом.
-        if input.uint()? != 0 || speed[..4] != speed[4..8] || speed[..4] != speed[8..] {
+        if randomization != 0 || (modern && (speed[..4] != speed[4..8] || speed[..4] != speed[8..])) {
             return Err(Error::PayloadUnavailable("particle randomization or axis speeds"));
         }
-        out.extend(common); out.extend(&speed[..4]); out.extend((count as i32).to_be_bytes()); out.extend(effect);
+        out.extend(common); out.extend(&speed[..4]);
+        out.extend(i32::try_from(count).map_err(|_| Error::Invalid)?.to_be_bytes()); out.extend(effect);
     } else {
-        particle(input,&mut effect,from,to,context)?;
         out.extend(effect); out.extend(common);
-        for _ in 0..3 { out.extend(&speed); }
-        uint(out,count); uint(out,0);
+        if modern { out.extend(speed); } else { for _ in 0..3 { out.extend(&speed); } }
+        uint(out,count); uint(out,randomization);
     }
     Ok(())
 }

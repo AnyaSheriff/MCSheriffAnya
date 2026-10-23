@@ -74,3 +74,24 @@ Earlier results are retained: `dimensions-recipes-776-primary775/` invoked the p
 Final verification:2910 Rust tests (82 ignored),206 protocol tests (5 ignored),221 Python tests; Clippy `--release --all-targets -- -D warnings` and release build PASS. Raw hashes, final admission rejection8/8 and source hashes: `dimensions-recipes-verification.json`; check logs: `dimensions-recipes-verification/`.
 
 Build cache retained outside the worktree at `/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target` (use `CARGO_TARGET_DIR` for the next continuation). Generated Cargo.lock, Python caches, fixture worlds/auth databases and this run's temporary test leftovers were removed; pre-existing `codex.log` and `plugins-examples/target/` were left intact.
+
+## Payload expansion and shared encrypted login — public admission still closed
+
+`generate_payload_776.py` checks the pinned775/776 metadata discriminator and Creative Slot envelope, component schema graphs (with explicit typed ID-remapper boundaries), and common particle payloads. `payload-776-report.json` records hashes:158 schema-based entity layouts and30 typed component kinds, plus the four previously supported nested forms. Creative Slot now checks component lengths; nonempty particle metadata and old-layout world particles translate through typed ID remappers. Primary777 extensions preserve sulfur cubes and translate cushion spawns/metadata to armor stands. This is **schema/synthetic evidence**, not158 live entity observations or complete metadata/component coverage.
+
+Six new Rust codec regressions cover54 complex item cases,10 inventory samples,23 particle effects,11 recorded entity types, all158 layouts' shared flags, nested ID/length rejection, and all four primary777 entity extensions. The existing encrypted-login unit test now runs775/776/777 through the same RSA/session-service implementation, compression and verified identity, checking a separate session UUID for776/777. **Owner decisions applied:**776 chat fallback is not required; this shared-code unit proof satisfies online-mode verification without a live Mojang account. Neither is a remaining admission blocker.
+
+| Client / primary | Fresh private regression | Public admission |
+|---|---|---|
+| 776 / 26.1.2 | `payload-regression-v2-776-primary775/`:11/11, mixed777 PvP, placement/mining, death/respawn, inventory/chest/relog/light and disk-backed process restart | CLOSED |
+| 776 / 26.3 | `payload-regression-776-primary777/`:same11/11 with the actual Preview26_3 catalog | CLOSED |
+| 774 / both | No new full Play/gameplay proof | CLOSED |
+
+The first `payload-regression-776-primary775/` run remains failed: a leftover death/mining cobblestone was picked up between inventory clicks (raw SetSlot follows cursor pickup; three diamonds still reach slot37). The corrected robot removes item entities, with a command barrier, before clearing/giving the inventory fixture; no gameplay rule was changed. All fixture processes exit0 and temporary worlds are removed.
+
+Remaining776 blockers: block_dig cancel/drop/release/swap/jab meanings beyond observed0/2; block-entity IDs/data beyond empty chest1; unsupported components/metadata serializer41 and rich text; remaining serverbound GUI/action branches and fresh live coverage for the expanded payloads. End travel and Nether/End persistence are not proven. Full774 codecs, registries, gameplay/restart/authentication remain incomplete. These unresolved checks keep all four public cells closed with the existing Russian message; no old-version gameplay profiles were added. **The requested full admission task is not complete.**
+
+`official-777-payload-continuation/`:one copied official26.3 run, Java25, stdin=/dev/null,26196/26197,7/7 reference checks; stopped by PID(exit143), copied server/world deleted. This is not776 proof. `admission-payload-final.json`:8/8 fresh final-binary Status/refusal checks (the earlier admission check is also retained). The expanded workspace check also exposed and fixed an existing seedmap test's unavailable gameplay-catalog reference and two protocol-test Clippy warnings. Final counts/hashes/logs are in `payload-continuation-verification.json` and `payload-continuation-verification/`; earlier failed checks remain retained. No25565 listener, commit or push.
+
+Final test counts:3133 Rust PASS (2907 core +3 startup +212 protocol +11 seedmap;89 ignored),226 Python PASS. Workspace Clippy `--release --workspace --all-targets -- -D warnings` is clean; required root-only Clippy also passes. The build cache remains at `/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target`.
+Release build PASS; generated Cargo.lock, Python caches and tmp test leftovers removed. Raw gameplay traces precede only test-only lint fixes and indentation; their original test-binary hashes are retained separately from the final build hashes. Pre-existing codex.log and plugins-examples/target remain untouched.
