@@ -21,7 +21,7 @@ impl Delta {
     pub fn decode_prefix(version: JavaVersion, bytes: &[u8]) -> Result<(Self, usize), Error> {
         let mut cursor = Cursor { bytes, offset: 0 };
         let value = match version {
-            JavaVersion::V26_1_2 | JavaVersion::V26_2 => {
+            JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => {
                 let delta = cursor.delta()?;
                 let on_ground = match cursor.take(1)?[0] {
                     0 => false, 1 => true, _ => return Err(Error::Invalid),
@@ -44,7 +44,7 @@ impl Delta {
                 };
                 Self { on_ground: properties & 1 != 0, motion }
             }
-            JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
+            JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         };
         Ok((value, cursor.offset))
     }
@@ -52,7 +52,7 @@ impl Delta {
     pub fn encode(&self, version: JavaVersion) -> Result<Vec<u8>, Error> {
         let mut out = Vec::new();
         match version {
-            JavaVersion::V26_1_2 | JavaVersion::V26_2 => {
+            JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => {
                 let Motion::Linear(delta) = &self.motion else { return Err(Error::RequiresTimedDelivery); };
                 push_delta(&mut out, delta);
                 out.push(u8::from(self.on_ground));
@@ -73,7 +73,7 @@ impl Delta {
                     }
                 }
             },
-            JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
+            JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         }
         Ok(out)
     }

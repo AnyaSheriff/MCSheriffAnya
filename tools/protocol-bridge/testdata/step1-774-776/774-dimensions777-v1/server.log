@@ -1,0 +1,47 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[18:20:06] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[18:20:06] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[18:20:06] [Server thread/INFO]: McsaProbe[/127.0.0.1:49762 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[18:20:10] [Server thread/INFO]: McsaProbe зашёл на сервер
+[18:20:11] [Server thread/INFO]: Правило spawn_mobs: false
+[18:20:11] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[18:20:11] [Server thread/INFO]: Игроку McsaProbe установлен режим: творческий
+[18:20:11] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[18:20:11] [Server thread/INFO]: Заполнено блоков: 90
+[18:20:11] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[18:20:12] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[18:20:12] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[18:20:12] [Server thread/INFO]: Рецепты: take * — McsaProbe
+[18:20:12] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[18:20:12] [Server thread/INFO]: Рецепты: give * — McsaProbe
+[18:20:12] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[18:20:13] [Server thread/INFO]: Рецепты: take * — McsaProbe
+[18:20:13] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[18:20:13] [Server thread/INFO]: Рецепты: give minecraft:oak_planks — McsaProbe
+[18:20:13] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[18:20:13] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[18:20:13] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[18:20:14] [Server thread/INFO]: Gave 2 [oak_log] to McsaProbe
+[18:20:14] [Server thread/INFO]: [Server] MCSA_CORE_DIG_10
+[18:20:17] [Server thread/INFO]: Заполнено блоков: 20
+[18:20:17] [Server thread/INFO]: [Server] MCSA_CORE_DIG_11
+[18:20:17] [Server thread/INFO]: Заполнено блоков: 6
+[18:20:17] [Server thread/INFO]: [Server] MCSA_CORE_DIG_12
+[18:20:17] [Server thread/INFO]: McsaProbe перенесён в 2.5 66 -0.5
+[18:20:17] [Server thread/INFO]: [Server] MCSA_CORE_DIG_13
+[18:20:22] [Server thread/INFO]: McsaProbe перешёл в minecraft:the_nether (0.5, 66.0, -0.5)
+[18:20:22] [Server thread/INFO]: McsaProbe has made the advancement [We Need to Go Deeper]
+[18:20:22] [Server thread/INFO]: McsaProbe has made the advancement [We Need to Go Deeper]
+[18:20:23] [Server thread/INFO]: [Server] portal-roundtrip-complete
+[18:20:23] [Server thread/INFO]: [Server] MCSA_CORE_DIG_14
+[18:20:27] [Server thread/INFO]: McsaProbe перешёл в minecraft:overworld (4.5, 1.0, -3.5)
+[18:20:28] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[18:20:28] [Server thread/INFO]: Останавливаю сервер
+[18:20:28] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[18:20:28] [Server thread/INFO]: McsaProbe вышел
+test gameplay_probe::serve_java_1_21_11_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2990 filtered out; finished in 23.17s
+

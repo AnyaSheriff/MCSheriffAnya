@@ -4,6 +4,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 mod generated_ids;
 mod generated_step1;
+mod generated_payload_774;
+pub mod client_774;
 pub mod chain;
 mod generated_packet_776;
 mod packet_layouts;

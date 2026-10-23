@@ -31,6 +31,11 @@ pub fn translate(
                 translate(registry, JavaVersion::V26_2, to, adjacent)
             } else { translate(registry, JavaVersion::V26_1_2, to, middle) };
         }
+        if registry == RegistryKind::Attribute {
+            let values = if from == JavaVersion::V1_21_11 {crate::generated_payload_774::ATTRIBUTES_FROM} else {crate::generated_payload_774::ATTRIBUTES_TO};
+            let mapped=*values.get(id as usize).ok_or(IdTranslationError::UnknownId(id))?;
+            return if from==to {Ok(id)} else if mapped==u16::MAX {Err(IdTranslationError::MissingTarget(id))} else {Ok(u32::from(mapped))};
+        }
         let (count, ranges) = crate::generated_step1::ranges(registry, from == JavaVersion::V1_21_11)
             .ok_or(IdTranslationError::UnsupportedVersion(JavaVersion::V1_21_11))?;
         if id >= count { return Err(IdTranslationError::UnknownId(id)); }

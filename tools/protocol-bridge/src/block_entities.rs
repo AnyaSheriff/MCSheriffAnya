@@ -16,7 +16,15 @@ pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,da
     // Кровать удалена уже в26.2 (minecraft.wiki/w/Java_Edition_26.2).
     // Наблюдённые775/777 имена и порядок проверяются отдельно клиентом776;
     // новые типы вне OBSERVED этим не разрешаются.
-    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
+    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
+    if from == JavaVersion::V1_21_11 || to == JavaVersion::V1_21_11 {
+        if !matches!((from,to),(JavaVersion::V26_1_2,JavaVersion::V1_21_11)|(JavaVersion::V1_21_11,JavaVersion::V26_1_2)) { return Err(Error::UnsupportedVersion); }
+        if kind==48 { if !matches!(data,[0]|[10,0]) { return Err(Error::UnsupportedData); } return Ok(Some((kind,data.to_vec()))); }
+        if !crate::block_entity_ids::OBSERVED.iter().any(|r|r.0==kind){return Err(Error::UnknownType(kind));}
+        if registry::nbt_length(data).map_err(Error::Nbt)? != data.len(){return Err(Error::Invalid);}
+        validate(kind,data)?;
+        return Ok(Some((kind,item_data::rewrite(kind,data,from,to,content)?)));
+    }
     if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
     // golem-statue-2026-10-02-0835.md: оригинал775 прислал48 {}.
     // В776 кровать удалена; отдельная живая проба проверяет47 и смену позы.

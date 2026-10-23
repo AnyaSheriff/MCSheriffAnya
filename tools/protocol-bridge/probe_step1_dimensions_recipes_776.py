@@ -33,34 +33,36 @@ def idset(d):
     return {'tag': read_string(d)} if n == 0 else {'items': [uint(d) for _ in range(n - 1)]}
 
 
-def display(d, depth=0):
+def display(d, depth=0, version=776):
     assert depth < 32
     kind = uint(d)
+    if version==774: kind=(0,1,4,5,6,8,9,10)[kind]
     r = {'type': kind}
     if kind in (0, 1):
         pass
     elif kind == 2:
-        r['base'] = display(d, depth + 1)
+        r['base'] = display(d, depth + 1, version)
     elif kind == 4:
         r['item'] = uint(d)
     elif kind == 5:
         item, count = uint(d), uint(d)
+        if version==774: item,count=count,item
         assert uint(d) == uint(d) == 0
         r['stack'] = {'item': item, 'count': count}
     elif kind == 6:
-        r['set'] = idset(d)
+        r['set'] = {'tag':read_string(d)} if version==774 else idset(d)
     elif kind in (7, 9):
-        r['parts'] = [display(d, depth + 1) for _ in range(2)]
+        r['parts'] = [display(d, depth + 1, version) for _ in range(2)]
     elif kind == 10:
         count = uint(d)
         assert count <= 4096
-        r['parts'] = [display(d, depth + 1) for _ in range(count)]
+        r['parts'] = [display(d, depth + 1, version) for _ in range(count)]
     else:
         raise ValueError(('unobserved display', kind))
     return r
 
 
-def recipe(d):
+def recipe(d, version=776):
     kind = uint(d)
     r = {'type': kind}
     if kind in (0, 1):
@@ -68,11 +70,11 @@ def recipe(d):
             r['width'], r['height'] = uint(d), uint(d)
         count = uint(d)
         assert count <= 9
-        r['ingredients'] = [display(d) for _ in range(count)]
+        r['ingredients'] = [display(d, version=version) for _ in range(count)]
         count = 2
     else:
         count = {2: 4, 3: 3, 4: 5}[kind]
-    r['parts'] = [display(d) for _ in range(count)]
+    r['parts'] = [display(d, version=version) for _ in range(count)]
     if kind == 2:
         r['duration'], r['xp'] = uint(d), struct.unpack('>f', d.read(4))[0]
     return r
@@ -91,7 +93,7 @@ class Probe(GameplayProbe):
             assert count <= 65536
             entries = []
             for _ in range(count):
-                ident, value = uint(d), recipe(d)
+                ident, value = uint(d), recipe(d,self.version)
                 group, category = uint(d), uint(d)
                 requirements = [idset(d) for _ in range(uint(d))] if boolean(d) else None
                 flags = d.read(1)
@@ -102,7 +104,7 @@ class Probe(GameplayProbe):
             assert not d.read()
             self.books.append(dict(entries=entries, replace=replace))
         elif name == 'craft_recipe_response':
-            self.ghosts.append(dict(window=uint(d), display=recipe(d)))
+            self.ghosts.append(dict(window=uint(d), display=recipe(d,self.version)))
             assert not d.read()
         elif name == 'respawn':
             dimension_type = uint(d)
@@ -118,15 +120,16 @@ def main():
         p.add_argument('--' + name, type=Path, required=True)
     p.add_argument('--primary', type=int, choices=(775, 777), required=True)
     p.add_argument('--password', action='store_true')
+    p.add_argument('--client',type=int,choices=(774,776),default=776)
     a = p.parse_args()
-    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == PROTOCOL_SHA
+    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocol = json.loads(a.protocol.read_text())
     items = {v['name']: v['id'] for v in table(a.cache, 'items')}
     entity = next(v['id'] for v in table(a.cache, 'entities') if v['name'] == 'item')
     with socket.socket() as s:
         s.bind(('127.0.0.1', PORT))
     a.output.mkdir(parents=True, exist_ok=False)
-    report = dict(primary=a.primary, client=776, public_admission=False, checks=[], commands=[],
+    report = dict(primary=a.primary, client=a.client, public_admission=False, checks=[], commands=[],
                   status='failed', runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   binary_sha256=hashlib.sha256(a.test_binary.read_bytes()).hexdigest(), auth_prompts=[])
     client = server = None
@@ -137,7 +140,7 @@ def main():
             (root / 'mcsa-catalog-preview263.marker').touch()
         if a.password:
             (root / 'mcsa-password-probe.marker').touch()
-        test = 'serve_java_26_2_primary_26_3_probe' if a.primary == 777 else 'serve_java_26_2_probe'
+        test = 'serve_java_1_21_11_probe' if a.client==774 else ('serve_java_26_2_primary_26_3_probe' if a.primary == 777 else 'serve_java_26_2_probe')
         log_path = a.output / 'server.log'
         with log_path.open('w') as log:
             try:
@@ -176,7 +179,7 @@ def main():
                     send(sock, b'\x08' + varint(len(action)) + action + varint(len(nbt)) + nbt)
                     return True
                 def login():
-                    c = connect(PORT, protocol, lambda s, pr: Probe(s, pr, entity, 776), 776,
+                    c = connect(PORT, protocol, lambda s, pr: Probe(s, pr, entity, a.client), a.client,
                                 configuration_handler=auth if a.password else None)
                     c.pump(20, lambda _: c.position is not None and 'window_items' in c.seen)
                     c.pump(.5)

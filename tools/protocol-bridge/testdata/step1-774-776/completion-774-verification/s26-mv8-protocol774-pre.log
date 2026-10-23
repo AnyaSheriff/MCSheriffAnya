@@ -1,0 +1,8 @@
+
+running 3 tests
+test client_774::tests::clock_keeps_set_time_across_empty_updates_and_stops_when_frozen ... ok
+test client_774::tests::complex_items_roundtrip_and_774_templates_have_count_before_id ... ok
+test client_774::tests::interaction_preserves_attack_hand_hit_and_rejects_truncation_and_tail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 230 filtered out; finished in 0.01s
+

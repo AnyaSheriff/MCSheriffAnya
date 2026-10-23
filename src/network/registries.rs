@@ -116,7 +116,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
 /// Собственные определения для версии клиента; состав и порядок реестров
 /// сохраняются. Изменения форматов: tools/research/registries-26.3.md.
 pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str) -> Option<Compound> {
-    if !matches!(version, mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) { return None; }
+    if !matches!(version, mcsa_protocol::JavaVersion::V1_21_11 | mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) { return None; }
     let out = match registry {
         "minecraft:chat_type" => super::chat_types::entry(name)?,
         "minecraft:decorated_pot_pattern" if version == mcsa_protocol::JavaVersion::V26_3 => {
@@ -202,7 +202,7 @@ pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str
         }
         // На вики в списке звуков волка нет шага, но клиент его требует:
         // без него запись не разбирается ("No key step_sound").
-        "minecraft:wolf_sound_variant" => adult_and_baby(
+        "minecraft:wolf_sound_variant" => if version==mcsa_protocol::JavaVersion::V1_21_11 { sounds("wolf", &["ambient_sound","death_sound","growl_sound","hurt_sound","pant_sound","step_sound","whine_sound"]) } else { adult_and_baby(
             "wolf",
             &[
                 "ambient_sound",
@@ -213,7 +213,7 @@ pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str
                 "step_sound",
                 "whine_sound",
             ],
-        ),
+        ) },
         "minecraft:zombie_nautilus_variant" => {
             let out = if name == "warm" {
                 Compound::new().string("asset_id", "minecraft:entity/nautilus/zombie_nautilus_coral").string("model", "warm")
@@ -502,6 +502,11 @@ fn infiniburn(out: Compound, version: mcsa_protocol::JavaVersion, dimension: &st
 
 /// Обычный мир: высота, освещение и всё, от чего зависит расчёт света
 /// и координат. Значения — ванильные, из таблицы на вики.
+// 774-client775-v3: новый26.1 атрибут среды отвергнут клиентом774.
+fn ambient_color(version: mcsa_protocol::JavaVersion, out: Compound, color: &str) -> Compound {
+    if version==mcsa_protocol::JavaVersion::V1_21_11 {out} else {out.string("minecraft:visual/ambient_light_color",color)}
+}
+
 fn dimension_type(version: mcsa_protocol::JavaVersion) -> Compound {
     let out = Compound::new()
         .boolean("has_skylight", true)
@@ -524,12 +529,11 @@ fn dimension_type(version: mcsa_protocol::JavaVersion) -> Compound {
         // Числа — ванильные, со страницы Overworld на вики.
         .compound(
             "attributes",
-            Compound::new()
+            ambient_color(version, Compound::new()
                 .string("minecraft:visual/sky_color", "#78a7ff")
                 .string("minecraft:visual/fog_color", "#c0d8ff")
                 .string("minecraft:visual/cloud_color", "#ccffffff")
-                .float("minecraft:visual/cloud_height", 192.33)
-                .string("minecraft:visual/ambient_light_color", "#0a0a0a"),
+                .float("minecraft:visual/cloud_height", 192.33), "#0a0a0a"),
         )
         .string("default_clock", "minecraft:overworld")
         // Без линии времени солнце висит на месте, а небо не темнеет.
@@ -559,9 +563,8 @@ fn nether_type(version: mcsa_protocol::JavaVersion) -> Compound {
         .string("cardinal_light", "nether")
         .compound(
             "attributes",
-            Compound::new()
-                .string("minecraft:visual/fog_color", "#330808")
-                .string("minecraft:visual/ambient_light_color", "#302821"),
+            ambient_color(version, Compound::new()
+                .string("minecraft:visual/fog_color", "#330808"), "#302821"),
         )
 }
 
@@ -734,7 +737,7 @@ fn nether_biome(biome: crate::world::terrain::Biome, version: mcsa_protocol::Jav
 /// Biome definition oldid3848210: «Removed ... spawners ... spawn_costs»
 /// в26.3snap4. В775/776 сохраняем прежние байты; генерацию/спавн ведёт сервер.
 fn spawn_fields(out: Compound, version: mcsa_protocol::JavaVersion) -> Compound {
-    if matches!(version, mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2) {
+    if matches!(version, mcsa_protocol::JavaVersion::V1_21_11 | mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2) {
         out.compound("spawners", Compound::new()).compound("spawn_costs", Compound::new())
     } else { out }
 }

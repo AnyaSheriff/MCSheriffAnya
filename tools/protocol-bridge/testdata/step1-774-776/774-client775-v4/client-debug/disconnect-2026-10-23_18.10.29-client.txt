@@ -1,0 +1,141 @@
+---- Minecraft Network Protocol Error Report ----
+// Could be worse, I guess
+
+Time: 2026-10-23 18:10:29
+Description: Packet handling error
+
+io.netty.handler.codec.DecoderException: Failed to decode packet 'clientbound/minecraft:update_recipes'
+	at aan.a(SourceFile:41)
+	at aan.decode(SourceFile:14)
+	at xi.decode(SourceFile:30)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:356)
+	at io.netty.handler.flow.FlowControlHandler.dequeue(FlowControlHandler.java:201)
+	at io.netty.handler.flow.FlowControlHandler.channelRead(FlowControlHandler.java:163)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:354)
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346)
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:333)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:455)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:356)
+	at io.netty.handler.timeout.IdleStateHandler.channelRead(IdleStateHandler.java:293)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:354)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1429)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918)
+	at io.netty.channel.epoll.AbstractEpollStreamChannel$EpollStreamUnsafe.epollInReady(AbstractEpollStreamChannel.java:794)
+	at io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.handle(AbstractEpollChannel.java:482)
+	at io.netty.channel.epoll.EpollIoHandler$DefaultEpollIoRegistration.handle(EpollIoHandler.java:317)
+	at io.netty.channel.epoll.EpollIoHandler.processReady(EpollIoHandler.java:515)
+	at io.netty.channel.epoll.EpollIoHandler.run(EpollIoHandler.java:460)
+	at io.netty.channel.SingleThreadIoEventLoop.runIo(SingleThreadIoEventLoop.java:225)
+	at io.netty.channel.SingleThreadIoEventLoop.run(SingleThreadIoEventLoop.java:196)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:1193)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: s: Non [a-z0-9/._-] character in path of location: minecraft:\u0006\u0005
+	at amo.f(SourceFile:265)
+	at amo.b(SourceFile:51)
+	at amo.a(SourceFile:78)
+	at amo.a(SourceFile:47)
+	at aao$14.decode(SourceFile:82)
+	at aao$19.decode(SourceFile:177)
+	at aam$24.a(SourceFile:633)
+	at aam$24.decode(SourceFile:620)
+	at aao$19.decode(SourceFile:179)
+	at aao$16.decode(SourceFile:114)
+	at aao$17.decode(SourceFile:136)
+	at aao$18.decode(SourceFile:156)
+	at aam$17.a(SourceFile:450)
+	at aam$17.decode(SourceFile:444)
+	at aao$17.decode(SourceFile:136)
+	at aao$18.decode(SourceFile:156)
+	at aao$15.a(SourceFile:97)
+	at aao$15.decode(SourceFile:93)
+	at aan.a(SourceFile:36)
+	... 28 more
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Netty Epoll IO #0
+Stacktrace:
+	at xk.a(SourceFile:33)
+
+-- Connection --
+Details:
+	Protocol: play
+	Flow: CLIENTBOUND
+	Is Local: false
+	Server type: OTHER
+	Server brand: MCSheriffAnya
+Stacktrace:
+	at xk.a(SourceFile:33)
+	at abb.a(SourceFile:47)
+	at hia.a(SourceFile:146)
+	at hia.a(SourceFile:137)
+	at wu.exceptionCaught(SourceFile:134)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeExceptionCaught(AbstractChannelHandlerContext.java:289)
+	at io.netty.channel.AbstractChannelHandlerContext.fireExceptionCaught(AbstractChannelHandlerContext.java:271)
+	at io.netty.channel.ChannelInboundHandlerAdapter.exceptionCaught(ChannelInboundHandlerAdapter.java:143)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeExceptionCaught(AbstractChannelHandlerContext.java:289)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:359)
+	at io.netty.handler.flow.FlowControlHandler.dequeue(FlowControlHandler.java:201)
+	at io.netty.handler.flow.FlowControlHandler.channelRead(FlowControlHandler.java:163)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:354)
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346)
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:333)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:455)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:356)
+	at io.netty.handler.timeout.IdleStateHandler.channelRead(IdleStateHandler.java:293)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:354)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1429)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918)
+	at io.netty.channel.epoll.AbstractEpollStreamChannel$EpollStreamUnsafe.epollInReady(AbstractEpollStreamChannel.java:794)
+	at io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.handle(AbstractEpollChannel.java:482)
+	at io.netty.channel.epoll.EpollIoHandler$DefaultEpollIoRegistration.handle(EpollIoHandler.java:317)
+	at io.netty.channel.epoll.EpollIoHandler.processReady(EpollIoHandler.java:515)
+	at io.netty.channel.epoll.EpollIoHandler.run(EpollIoHandler.java:460)
+	at io.netty.channel.SingleThreadIoEventLoop.runIo(SingleThreadIoEventLoop.java:225)
+	at io.netty.channel.SingleThreadIoEventLoop.run(SingleThreadIoEventLoop.java:196)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:1193)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+-- System Details --
+Details:
+	Minecraft Version: 1.21.11
+	Minecraft Version ID: 1.21.11
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 116552360 bytes (111 MiB) / 347078656 bytes (331 MiB) up to 1073741824 bytes (1024 MiB)
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 18569.22
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 7782.51
+	Space in storage for jna.tmpdir (MiB): available: 7810.43, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7810.43, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7810.43, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7810.43, total: 7952.55
+	Space in storage for workdir (MiB): available: 7810.43, total: 7952.55
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 

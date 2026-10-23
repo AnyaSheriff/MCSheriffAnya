@@ -49,6 +49,8 @@ pub const INTERNAL: JavaVersion = JavaVersion::V26_1_2;
 
 #[derive(Clone, Copy, Default)]
 pub struct Context {
+    /// Последняя синхронизация часов для формата774 без clockUpdates.
+    pub clock_774: Option<(i64,i64,bool)>,
     /// Настоящий server.properties online-mode; не результат проверки лицензии/AuthMe.
     pub online_mode: Option<bool>,
     pub chunk: Option<crate::chunk::Context>,
@@ -81,7 +83,7 @@ pub(crate) fn translate_inner(
     body: &[u8], context: Context, probe_776: bool,
 ) -> Result<Cow<'_, [u8]>, Error> {
     if probe_776 && !matches!((from,to),
-        (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2)) {
+        (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_11) | (JavaVersion::V1_21_11,JavaVersion::V26_1_2)) {
         return Err(Error::UnsupportedVersion(from));
     }
     if context.items.content.is_native_view() && (from != JavaVersion::V26_1_2 || to != JavaVersion::V26_1_2 || state != State::Play || direction != Direction::Clientbound) {
@@ -118,7 +120,20 @@ pub(crate) fn translate_inner(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
-        (State::Play, Direction::Serverbound, "block_place" | "use_item") if probe_776 && equal => {
+        (State::Play, Direction::Clientbound, "open_book") if to==JavaVersion::V1_21_11 => uint(&mut out,cursor.count(1)? as u32),
+        (State::Play, Direction::Serverbound, "chat_command_signed") if from==JavaVersion::V1_21_11 => {
+            string(&mut out,cursor.string()?);out.extend(cursor.take(16)?);
+            let n=cursor.count(64)?;uint(&mut out,n as u32);
+            for _ in 0..n{string(&mut out,cursor.string()?);out.extend(cursor.take(256)?);}
+            uint(&mut out,cursor.uint()?);out.extend(cursor.take(4)?);
+        }
+        (State::Play, Direction::Serverbound, "use_entity") if from==JavaVersion::V1_21_11 => crate::client_774::interact(&mut cursor,&mut out)?,
+        (State::Play, Direction::Clientbound, "update_time") if to==JavaVersion::V1_21_11 => crate::client_774::time(&mut cursor,&mut out,context.clock_774)?,
+        (State::Play, Direction::Serverbound, "arm_animation" | "client_command") if from==JavaVersion::V1_21_11 => uint(&mut out,cursor.count(1)? as u32),
+        (State::Play, Direction::Serverbound, "entity_action") if from==JavaVersion::V1_21_11 => {uint(&mut out,cursor.uint()?);uint(&mut out,cursor.count(6)? as u32);uint(&mut out,cursor.count(100)? as u32);}
+        (State::Play, Direction::Serverbound, "enchant_item") if from==JavaVersion::V1_21_11 => {uint(&mut out,cursor.uint()?);let n=cursor.take(1)?[0];if n>2{return Err(Error::Invalid);}uint(&mut out,u32::from(n));}
+
+        (State::Play, Direction::Serverbound, "block_place" | "use_item") if probe_776 && (equal || from==JavaVersion::V1_21_11) => {
             let hand = cursor.uint()?;
             if hand > 1 { return Err(Error::Invalid); }
             uint(&mut out, hand);
@@ -273,7 +288,7 @@ pub(crate) fn translate_inner(
             uint(&mut out, kind);
             // Реальный776 требует compound в Update, хотя Chunk принимает End.
             // payload-actions-live775-v2: Expected non-null compound tag.
-            if to == JavaVersion::V26_2 && data == [0] { out.extend([10,0]); }
+            if matches!(to,JavaVersion::V1_21_11|JavaVersion::V26_2) && data == [0] { out.extend([10,0]); }
             else { out.extend(data); }
         }
         (State::Play, Direction::Clientbound, "update_light") => {
@@ -362,35 +377,35 @@ pub(crate) fn translate_inner(
 enum DigAction { Start, Cancel, Finish, DropStack, DropOne, ReleaseUse, Swap, Jab }
 
 fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
-    use JavaVersion::{V26_1_2 as Old, V26_2 as Mid, V26_3 as New};
+    use JavaVersion::{V1_21_11 as Earlier, V26_1_2 as Old, V26_2 as Mid, V26_3 as New};
     let action = match (from, cursor.uint()?) {
         // official-actions-776: начало0 и завершение2 разрушили камень.
         // Остальные enum776 сняты обычным GUI: action-client-collector775-v3.
-        (Old | Mid | New, 0) => DigAction::Start,
-        (Old | Mid, 1) | (New, 2) => DigAction::Cancel,
-        (Old | Mid, 2) | (New, 3) => DigAction::Finish,
-        (Old | Mid, 3) | (New, 4) => DigAction::DropStack,
-        (Old | Mid, 4) | (New, 5) => DigAction::DropOne,
-        (Old | Mid, 5) | (New, 6) => DigAction::ReleaseUse,
-        (Old | Mid, 6) | (New, 7) => DigAction::Swap,
-        (Old | Mid, 7) | (New, 8) => DigAction::Jab,
+        (Earlier | Old | Mid | New, 0) => DigAction::Start,
+        (Earlier | Old | Mid, 1) | (New, 2) => DigAction::Cancel,
+        (Earlier | Old | Mid, 2) | (New, 3) => DigAction::Finish,
+        (Earlier | Old | Mid, 3) | (New, 4) => DigAction::DropStack,
+        (Earlier | Old | Mid, 4) | (New, 5) => DigAction::DropOne,
+        (Earlier | Old | Mid, 5) | (New, 6) => DigAction::ReleaseUse,
+        (Earlier | Old | Mid, 6) | (New, 7) => DigAction::Swap,
+        (Earlier | Old | Mid, 7) | (New, 8) => DigAction::Jab,
         _ => return Err(Error::PayloadUnavailable("unverified block_dig action")),
     };
     let status = match (to, action) {
-        (Old | Mid | New, DigAction::Start) => 0,
-        (Old | Mid, DigAction::Cancel) => 1,
+        (Earlier | Old | Mid | New, DigAction::Start) => 0,
+        (Earlier | Old | Mid, DigAction::Cancel) => 1,
         (New, DigAction::Cancel) => 2,
-        (Old | Mid, DigAction::Finish) => 2,
+        (Earlier | Old | Mid, DigAction::Finish) => 2,
         (New, DigAction::Finish) => 3,
-        (Old | Mid, DigAction::DropStack) => 3,
+        (Earlier | Old | Mid, DigAction::DropStack) => 3,
         (New, DigAction::DropStack) => 4,
-        (Old | Mid, DigAction::DropOne) => 4,
+        (Earlier | Old | Mid, DigAction::DropOne) => 4,
         (New, DigAction::DropOne) => 5,
-        (Old | Mid, DigAction::ReleaseUse) => 5,
+        (Earlier | Old | Mid, DigAction::ReleaseUse) => 5,
         (New, DigAction::ReleaseUse) => 6,
-        (Old | Mid, DigAction::Swap) => 6,
+        (Earlier | Old | Mid, DigAction::Swap) => 6,
         (New, DigAction::Swap) => 7,
-        (Old | Mid, DigAction::Jab) => 7,
+        (Earlier | Old | Mid, DigAction::Jab) => 7,
         (New, DigAction::Jab) => 8,
         _ => return Err(Error::UnsupportedVersion(to)),
     };
@@ -517,7 +532,7 @@ struct SpawnLayout {
 
 fn spawn_layout(version: JavaVersion) -> Result<SpawnLayout, Error> {
     match version {
-        JavaVersion::V26_1_2 => Ok(SpawnLayout { varint_modes: false, join_online_mode: false }),
+        JavaVersion::V1_21_11 | JavaVersion::V26_1_2 => Ok(SpawnLayout { varint_modes: false, join_online_mode: false }),
         // Собственные Join/Respawn observations: 776 уже содержит onlineMode,
         // но режимы ещё byte/255(None), а dimensionType по-прежнему VarInt.
         // testdata/protocol-26.2-observations.json; публичный маршрут закрыт.
@@ -593,9 +608,9 @@ fn respawn(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
 // флагами/шагами, затем yaw/pitch. Не является общим alias протокола776.
 fn move_angles_before_ground(version: JavaVersion) -> Result<bool, Error> {
     match version {
-        JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
+        JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
         JavaVersion::V26_3 => Ok(false),
-        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
+        JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
     }
 }
 

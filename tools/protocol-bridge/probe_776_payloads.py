@@ -13,6 +13,12 @@ from generate_tables import states
 
 
 def table(cache, name):
+    if (cache / 'protocol.json').is_file():
+        manifest = json.loads((DEFAULT_OUTPUT.parent / 'step1-sources-774.json').read_text())
+        if name in manifest:
+            raw=(cache / (name+'.json')).read_bytes()
+            assert hashlib.sha256(raw).hexdigest()==manifest[name]['sha256'] and len(raw)==manifest[name]['bytes']
+            return json.loads(raw)
     locked = json.loads(DEFAULT_OUTPUT.read_text())['sources']
     source = Sources(cache, False, locked)
     return source.read(CANDIDATE, 'data/pc/26.2/' + name + '.json')

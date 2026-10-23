@@ -30,7 +30,7 @@ def data(url):
 
 REUSE_ROOT = None
 OUTPUT_ROOT = None
-CLIENT_SHA1 = {"26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
+CLIENT_SHA1 = {"1.21.11": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd", "26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
                "26.3": "e877b6a07acd633fb3bb475002175cec036e7b87"}
 
 
@@ -106,7 +106,7 @@ def main():
     assert hashlib.sha1(raw).hexdigest() == expected_metadata_sha1
     metadata = json.loads(raw)
     assert metadata['id'] == args.version
-    assert metadata['javaVersion']['majorVersion'] == 25
+    assert metadata['javaVersion']['majorVersion'] == (21 if args.version == '1.21.11' else 25)
     output_file(root / 'version.json').write_bytes(raw)
     client = metadata['downloads']['client']
     assert client['sha1'] == CLIENT_SHA1[args.version]

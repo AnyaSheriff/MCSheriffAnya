@@ -19,11 +19,20 @@ from smoke import frame, handshake, read_varint, send
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('binary','protocol','cache','output'):p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--protocol774',type=Path)
+    p.add_argument('--cache774',type=Path)
+    p.add_argument('--admit774',action='store_true')
     p.add_argument('--port',type=int,default=26184)
     a=p.parse_args();assert 26100<=a.port<=26198
     assert hashlib.sha256(a.protocol.read_bytes()).hexdigest()==PROTOCOL_SHA
     protocol=json.loads(a.protocol.read_text())
     item=next(r['id'] for r in table(a.cache,'entities') if r['name']=='item')
+    protocols={776:protocol};items={776:item}
+    if a.admit774:
+        assert a.protocol774 and a.cache774
+        assert hashlib.sha256(a.protocol774.read_bytes()).hexdigest()=='4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab'
+        protocols[774]=json.loads(a.protocol774.read_text())
+        items[774]=next(r['id'] for r in table(a.cache774,'entities') if r['name']=='item')
     a.output.mkdir(parents=True,exist_ok=False)
     report=dict(status='failed',binary_sha256=hashlib.sha256(a.binary.read_bytes()).hexdigest(),
                 runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),checks=[],sessions=[],shutdown=[])
@@ -54,7 +63,7 @@ def main():
                                 assert status['version']==dict(name=primary,protocol=native),status
                                 row['status_hex']=raw.hex()
                             report['checks'].append(f'{primary}/{version}: honest Status{native}')
-                            if version==774:
+                            if version==774 and not a.admit774:
                                 with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                     handshake(sock,version,port,2);response=frame(sock);raw=response.getvalue()
                                     assert read_varint(response.read)==0
@@ -63,7 +72,7 @@ def main():
                                     row.update(admitted=False,disconnect_hex=raw.hex(),disconnect=text)
                                 report['checks'].append(f'{primary}/774: existing Russian rejection')
                             else:
-                                client=connect(port,protocol,lambda sock,pr:GameplayProbe(sock,pr,item,776),version=776)
+                                client=connect(port,protocols[version],lambda sock,pr:GameplayProbe(sock,pr,items[version],version),version=version,username=f'Mcsa{version}')
                                 client.pump(30,lambda _:client.position is not None and 'window_items' in client.seen and 'map_chunk' in client.seen)
                                 assert client.position is not None and client.acks and {'login','window_items','map_chunk'}<=set(client.seen)
                                 client.pump(.5)
@@ -71,7 +80,7 @@ def main():
                                 server.stdin.write('say '+token+'\n');server.stdin.flush()
                                 client.pump(10,lambda _:token in client.markers);assert token in client.markers
                                 row.update(admitted=True,position=client.position,teleport_acks=client.acks,records=client.raw,sent=client.sent)
-                                report['checks'].append(f'{primary}/776: public Login/Configuration/Play/chunks/inventory/ACK/command barrier')
+                                report['checks'].append(f'{primary}/{version}: public Login/Configuration/Play/chunks/inventory/ACK/command barrier')
                                 client.sock.close();client=None
                             report['sessions'].append(row)
                     finally:

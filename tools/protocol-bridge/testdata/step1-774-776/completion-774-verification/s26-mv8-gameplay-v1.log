@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_step1_gameplay_776.py", line 363, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_step1_gameplay_776.py", line 156, in main
+    server = start_server()
+             ^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_step1_gameplay_776.py", line 153, in start_server
+    assert process.poll() is None and time.monotonic() < deadline, 'startup timeout'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: startup timeout

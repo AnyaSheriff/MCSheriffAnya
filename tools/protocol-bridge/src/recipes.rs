@@ -15,7 +15,17 @@ fn id_set(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion
 }
 fn display(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,budget:&mut usize)->Result<(),Error>{
     if depth>32 || *budget==0 {return Err(Error::TooLarge);}*budget-=1;
-    let kind=input.count(10)?;uint(out,kind as u32);
+    let raw=input.count(if from==JavaVersion::V1_21_11{7}else{10})?;
+    let kind=if from==JavaVersion::V1_21_11{[0,1,4,5,6,8,9,10][raw]}else{raw};
+    if kind==6 && (from==JavaVersion::V1_21_11 || to==JavaVersion::V1_21_11) {
+        // Старый tag-display содержит строку; новый writer передаёт IDSet.
+        if from==JavaVersion::V1_21_11 {uint(out,6);uint(out,0);string(input,out)?;}
+        else {let n=input.count(65537)?;if n==0{uint(out,4);string(input,out)?;}else{
+            uint(out,7);uint(out,(n-1) as u32);for _ in 1..n{uint(out,2);item(input,out,from,to,context)?;}
+        }}return Ok(());
+    }
+    let target=if to==JavaVersion::V1_21_11 {match kind{0=>0,1=>1,4=>2,5=>3,8=>5,9=>6,10=>7,_=>return Err(Error::PayloadUnavailable("774 recipe display"))}}else{kind};
+    uint(out,target as u32);
     match kind {
         0|1=>(),
         2=>display(input,out,from,to,context,depth+1,budget)?,
@@ -105,7 +115,7 @@ fn advancements(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaV
 // подтверждена камнерезом; полный initial advancement требует actual core run.
 fn advancement_coordinates_inside(version: JavaVersion) -> Result<bool, Error> {
     match version {
-        JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
+        JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
         JavaVersion::V26_3 => Ok(false),
         _ => Err(Error::UnsupportedVersion(version)),
     }

@@ -24,6 +24,10 @@ fn name(kind: RegistryKind, version: JavaVersion, id: usize) -> Option<&'static 
 /// Отсутствующая цель представлена отдельно через PacketInfo::target_id.
 /// Числовые ID не являются основанием для переименования spectator packets.
 pub(crate) fn packet_info(kind: RegistryKind, from: JavaVersion, to: JavaVersion, id: usize) -> Option<PacketInfo> {
+    if (from == JavaVersion::V1_21_11 && to == JavaVersion::V26_1_2) || (to == JavaVersion::V1_21_11 && from == JavaVersion::V26_1_2) {
+        let &(name, target, schema_equal) = crate::generated_step1::packets(kind, from == JavaVersion::V1_21_11)?.get(id)?;
+        return Some(PacketInfo { name, target_id: (target != u16::MAX).then_some(u32::from(target)), schema_equal });
+    }
     if !matches!(to, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { return None; }
     let name = name(kind, from, id)?;
     if from == to { return Some(PacketInfo { name, target_id: Some(u32::try_from(id).ok()?), schema_equal: true }); }

@@ -482,7 +482,7 @@ pub async fn read_known_packs(
         }
 
         #[cfg(test)]
-        if stream.probe_776_enabled() { validate_probe_known_packs(packet.payload())?; }
+        if stream.probe_776_enabled() { validate_probe_known_packs_for(packet.payload(),stream.client_version().name())?; }
         let (_, mut offset) = decode_varint(&packet.body)?;
         let (count, read) = decode_varint(&packet.body[offset..])?;
         offset += read;
@@ -544,7 +544,7 @@ fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_p
 /// остаётся прежним, байт в байт, для клиента любой версии.
 fn registry_bundle_for(version: mcsa_protocol::JavaVersion, preview: bool) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
     use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
-    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
+    if !matches!(version, JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
     }
     let damage = DAMAGE_TYPES.iter().map(|name| Entry {
@@ -875,14 +875,17 @@ fn validate_probe_settings(body: &[u8]) -> io::Result<()> {
 }
 
 #[cfg(test)]
-fn validate_probe_known_packs(body: &[u8]) -> io::Result<()> {
+fn validate_probe_known_packs(body: &[u8]) -> io::Result<()> { validate_probe_known_packs_for(body,"26.2") }
+
+#[cfg(test)]
+fn validate_probe_known_packs_for(body: &[u8], expected: &str) -> io::Result<()> {
     let mut offset = 0;
     let count = probe_uint(body, &mut offset, 1)?;
     if count == 1 {
         let namespace = decode_string(body, &mut offset)?;
         let id = decode_string(body, &mut offset)?;
         let version = decode_string(body, &mut offset)?;
-        if (namespace.as_str(), id.as_str(), version.as_str()) != ("minecraft", "core", "26.2") {
+        if (namespace.as_str(), id.as_str(), version.as_str()) != ("minecraft", "core", expected) {
             return Err(probe_invalid());
         }
     }

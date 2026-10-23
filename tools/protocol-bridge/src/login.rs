@@ -25,7 +25,7 @@ pub struct Success {
 pub enum Error { UnsupportedVersion, Truncated, Invalid, TooLarge, MissingSessionId, UnexpectedSessionId }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
 fn valid_name(name: &str) -> bool {
@@ -68,7 +68,7 @@ impl Success {
         if self.properties.len() > MAX_PROPERTIES { return Err(Error::TooLarge); }
         match (version, self.session_id) {
             (JavaVersion::V26_2 | JavaVersion::V26_3, None) => return Err(Error::MissingSessionId),
-            (JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedSessionId),
+            (JavaVersion::V1_21_11 | JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedSessionId),
             _ => {}
         }
         let mut out = self.uuid.to_vec();
@@ -181,6 +181,9 @@ mod tests {
             assert_eq!(Success::decode(V26_1_2, &new_wire), Err(Error::Invalid));
         }
         assert_eq!(new.encode(V26_1_2), Err(Error::UnexpectedSessionId));
+        assert_eq!(new.encode(JavaVersion::V1_21_11), Err(Error::UnexpectedSessionId));
+        assert_eq!(old.encode(JavaVersion::V1_21_11).unwrap(),old_wire);
+        assert_eq!(Success::decode(JavaVersion::V1_21_11,&old_wire),Ok(old.clone()));
         assert_eq!(old.encode(JavaVersion::V1_12_2), Err(Error::UnsupportedVersion));
         assert_eq!(Success::decode(JavaVersion::V1_12_2, &old_wire), Err(Error::UnsupportedVersion));
     }

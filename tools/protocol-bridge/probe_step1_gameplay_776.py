@@ -103,10 +103,11 @@ def main():
     parser.add_argument('--peer', type=int, choices=(775,777), default=775)
     parser.add_argument('--peer-protocol', type=Path)
     parser.add_argument('--restart', action='store_true')
+    parser.add_argument('--client', type=int, choices=(774,776), default=776)
     args = parser.parse_args()
     assert not args.output.exists(), 'preserve earlier evidence'
-    assert hashlib.sha256(args.protocol.read_bytes()).hexdigest() == PROTOCOL_SHA
-    protocols = {776: json.loads(args.protocol.read_text()), 775: json.loads(args.native_protocol.read_text())}
+    assert hashlib.sha256(args.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if args.client==776 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
+    protocols = {args.client: json.loads(args.protocol.read_text()), 775: json.loads(args.native_protocol.read_text())}
     if args.peer == 777:
         assert args.peer_protocol
         assert args.peer_protocol.name == 'protocol.json'
@@ -117,8 +118,8 @@ def main():
     native_entities = re.findall(r'\("([^"]+)",', (Path(__file__).resolve().parent / 'src/entity_layouts.rs').read_text())
     native_item = native_entities.index('item')
     player_wire = {775: native_entities.index('player'),
-                   776: next(v['id'] for v in table(args.cache, 'entities') if v['name'] == 'player')}
-    item_wire = {775: native_item, 776: entity_item}
+                   args.client: next(v['id'] for v in table(args.cache, 'entities') if v['name'] == 'player')}
+    item_wire = {775: native_item, args.client: entity_item}
     if args.peer == 777:
         peer_entities = {v['name']: v['id'] for v in peer_tables['entities.json']}
         player_wire[777], item_wire[777] = peer_entities['player'], peer_entities['item']
@@ -126,7 +127,7 @@ def main():
         check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         check.bind(('127.0.0.1', PORT))
     args.output.mkdir(parents=True)
-    report = {'primary': args.primary, 'client': 776, 'peer': args.peer if args.scenario == 'all' else None, 'public_admission': False,
+    report = {'primary': args.primary, 'client': args.client, 'peer': args.peer if args.scenario == 'all' else None, 'public_admission': False,
               'checks': [], 'commands': [], 'status': 'failed', 'scenario': args.scenario,
               'runner_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               'binary_sha256': hashlib.sha256(args.test_binary.read_bytes()).hexdigest()}
@@ -139,7 +140,7 @@ def main():
             (root / 'mcsa-persistence-probe.marker').touch()
         if args.primary == 777:
             (root / 'mcsa-catalog-preview263.marker').touch()
-        test = 'serve_java_26_2_primary_26_3_probe' if args.primary == 777 else 'serve_java_26_2_probe'
+        test = 'serve_java_1_21_11_probe' if args.client==774 else ('serve_java_26_2_primary_26_3_probe' if args.primary == 777 else 'serve_java_26_2_probe')
         with (args.output / 'server.log').open('w') as log:
             try:
                 def start_server():
@@ -164,7 +165,7 @@ def main():
                     assert probe.position and probe.entity is not None and 'map_chunk' in probe.seen
                     return probe
 
-                client = login('McsaProbe', 776)
+                client = login('McsaProbe', args.client)
                 report['checks'].append('private-login-configuration-chunks-inventory')
                 marker = 0
 
@@ -196,21 +197,21 @@ def main():
                     command('gamemode survival McsaPeer')
                     peer.grounded_fixture = True
                     pump(1.)
-                    assert [peer.entity, player_wire[776]] in client.spawns, client.spawns
+                    assert [peer.entity, player_wire[args.client]] in client.spawns, client.spawns
                     assert [client.entity, player_wire[args.peer]] in peer.spawns, peer.spawns
                     report['checks'].append(f'mixed{args.peer}-player-spawns-metadata-movement')
                     before = len(peer.health_events)
-                    client.send('attack', varint(peer.entity))
+                    client.send('use_entity' if args.client==774 else 'attack', varint(peer.entity)+(b'\x01\x00' if args.client==774 else b''))
                     client.pump(.3)
                     peer.pump(5, lambda _: peer.health is not None and 0 < peer.health < 20)
                     assert any(0 < h < 20 for h in peer.health_events[before:]), peer.health_events
-                    report[f'pvp_776_to_{args.peer}'] = peer.health_events[before:]
+                    report[f'pvp_{args.client}_to_{args.peer}'] = peer.health_events[before:]
                     before = len(client.health_events)
                     peer.send('attack', varint(client.entity))
                     peer.pump(.3)
                     client.pump(5, lambda _: client.health is not None and 0 < client.health < 20)
                     assert any(0 < h < 20 for h in client.health_events[before:]), client.health_events
-                    report[f'pvp_{args.peer}_to_776'] = client.health_events[before:]
+                    report[f'pvp_{args.peer}_to_{args.client}'] = client.health_events[before:]
                     report['checks'].append(f'mixed{args.peer}-pvp-both-directions-health-decreases')
                 if args.scenario != 'relog-light':
                     command('give McsaProbe stone 2')
@@ -286,7 +287,7 @@ def main():
                     command('give McsaProbe diamond 3')
                 client.sock.close()
                 time.sleep(.7)
-                client = login('McsaProbe', 776)
+                client = login('McsaProbe', args.client)
                 expected_slot = 36 if args.scenario == 'relog-light' else 37
                 assert client.inventory.get(expected_slot) == {'item': items['diamond'], 'count': 3}, client.inventory
                 report['checks'].append('relogin-preserves-authoritative-inventory')
@@ -323,7 +324,7 @@ def main():
                                               'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in saved]
                     server = start_server()
                     peer = None
-                    client = login('McsaProbe', 776)
+                    client = login('McsaProbe', args.client)
                     assert client.inventory.get(37) is None, client.inventory
                     client.window = None
                     client.place((2, 65, 0), 1, (.5, .5, .5))

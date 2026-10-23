@@ -36,13 +36,14 @@ def main():
     p.add_argument('--collect-only', action='store_true')
     p.add_argument('--block-entities', action='store_true')
     p.add_argument('--payloads',type=Path)
+    p.add_argument('--client',type=int,choices=(774,776),default=776)
     a = p.parse_args()
-    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == PROTOCOL_SHA
+    assert hashlib.sha256(a.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if a.client==776 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocol = json.loads(a.protocol.read_text())
-    items={r['name']:r['id'] for r in table(a.protocol.resolve().parents[4],'items')}
-    arrow=next(r['id'] for r in table(a.protocol.resolve().parents[4],'entities') if r['name']=='arrow')
+    items={r['name']:r['id'] for r in table(a.protocol.parent if a.client==774 else a.protocol.resolve().parents[4],'items')}
+    arrow=next(r['id'] for r in table(a.protocol.parent if a.client==774 else a.protocol.resolve().parents[4],'entities') if r['name']=='arrow')
     hands=dict(mainhand=None,offhand=None)
-    statue_states={number:key for key,number in states(table(a.protocol.resolve().parents[4],'blocks')).items() if key[0]=='copper_golem_statue'}
+    statue_states={number:key for key,number in states(table(a.protocol.parent if a.client==774 else a.protocol.resolve().parents[4],'blocks')).items() if key[0]=='copper_golem_statue'}
     names = {phase: {d: {v:k for k,v in mapping(protocol, phase, d).items()}
                     for d in ('toClient','toServer')} for phase in ('configuration','play')}
     port, relay_port = 26028, 26034
@@ -51,7 +52,7 @@ def main():
             check.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
             check.bind(('127.0.0.1', number))
     a.output.mkdir(parents=True, exist_ok=False)
-    report = dict(status='failed', primary=a.primary, protocol=776, collect_only=a.collect_only,
+    report = dict(status='failed', primary=a.primary, protocol=a.client, collect_only=a.collect_only,
                   runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   binary_sha256=hashlib.sha256(a.test_binary.read_bytes()).hexdigest(),
                   packets=[], commands=[], checks=[], screenshots=[])
@@ -134,7 +135,7 @@ def main():
                 report['screenshots'].append(dict(file=path.name,sha256=sha))
 
             try:
-                test='serve_java_26_2_primary_26_3_probe' if a.primary==777 else 'serve_java_26_2_probe'
+                test='serve_java_1_21_11_probe' if a.client==774 else ('serve_java_26_2_primary_26_3_probe' if a.primary==777 else 'serve_java_26_2_probe')
                 server=subprocess.Popen([str(a.test_binary.resolve()),'--ignored','--exact','gameplay_probe::'+test,'--nocapture'],
                     cwd=core,stdin=subprocess.PIPE,stdout=slog,stderr=subprocess.STDOUT,text=True,start_new_session=True)
                 wait(lambda:'MCSA gameplay probe ready' in (a.output/'server.log').read_text(),120)
@@ -151,7 +152,7 @@ def main():
                     report['authored_blocks']=[b for b in BLOCKS if b!='piston']+['copper_golem_statue']
                 listener=socket.socket();listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 listener.bind(('127.0.0.1',relay_port));listener.listen(1);listener.settimeout(120)
-                client=launch(a.client_dir.resolve(),game,relay_port,clog,version='26.2',gui_scale=2,pause_on_lost_focus=False)
+                client=launch(a.client_dir.resolve(),game,relay_port,clog,version='1.21.11' if a.client==774 else '26.2',gui_scale=2,pause_on_lost_focus=False)
                 peer,_=listener.accept(); peers.append(peer)
                 backend=socket.create_connection(('127.0.0.1',port),timeout=10);peers.append(backend)
                 for _ in range(2): send(backend,frame(FrameDeadline(peer,30)))
@@ -162,7 +163,7 @@ def main():
                 time.sleep(3)
                 if a.payloads:
                     assert a.block_entities
-                    payloads=json.loads(a.payloads.read_text());assert payloads['protocol']==776
+                    payloads=json.loads(a.payloads.read_text());assert payloads['protocol']==a.client
                     report['payload_source_sha256']=hashlib.sha256(a.payloads.read_bytes()).hexdigest()
                     stage='payload-injection'
                     report['payloads']=[]

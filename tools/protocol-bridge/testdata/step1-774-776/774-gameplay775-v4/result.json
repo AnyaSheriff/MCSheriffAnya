@@ -1,0 +1,146 @@
+{
+  "primary": 775,
+  "client": 774,
+  "peer": 777,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "scenario": "all",
+  "runner_sha256": "9f4d1ebe97e07f642c86a6d108240d58318cc4111dc6521a0c300be3c54bcce3",
+  "binary_sha256": "3a85c574dfa8b3405728102c39528de1e85c44171c8a9f19a8dc4df3152f48e8",
+  "error": "AssertionError: ",
+  "sessions": [
+    {
+      "version": 774,
+      "records": [
+        {
+          "name": "login",
+          "bytes": 108,
+          "sha256": "5b728c04d0489f1aa4239b590c5fbb62ec5f17f66b3663bb90c7f1902181cced",
+          "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64000000000000000001ff000000003f00"
+        },
+        {
+          "name": "abilities",
+          "bytes": 9,
+          "sha256": "1e1adbe7f73771329075036810af5f7ee8585b85cb36d198a38da58c20eb1922"
+        },
+        {
+          "name": "position",
+          "bytes": 61,
+          "sha256": "13c4dbcb5c42ee6d192f861a0cb521adf26ebb93aa1d8601909b6e6f37a7eaac",
+          "hex": "013fe000000000000040500000000000003fe00000000000000000000000000000000000000000000000000000000000000000000041f0000000000000"
+        },
+        {
+          "name": "declare_commands",
+          "bytes": 3126,
+          "sha256": "6a73d685a6657b4bedbe3ecaa186955c1ceecaee7256fd46f86e57dc18388101"
+        },
+        {
+          "name": "declare_recipes",
+          "bytes": 2066,
+          "sha256": "5e793f3e011bf7a0e54a6d48f103b72b0d849245efa31c47c42c51f751414bb6"
+        },
+        {
+          "name": "player_info",
+          "bytes": 31,
+          "sha256": "ec69d69d87f18919bcbf9147f1cd39b11c19a829e743045b13fb8c9fc68ab2b3"
+        },
+        {
+          "name": "entity_metadata",
+          "bytes": 14,
+          "sha256": "b572084c9ea668c93bf28ffc911c61d1c1b2a7c2303a65f4a5f218f01fd11655",
+          "hex": "010000000614000f260110007fff"
+        },
+        {
+          "name": "initialize_world_border",
+          "bytes": 40,
+          "sha256": "e286f6d4e6d5940e349ab3c901cb834c82bd1cbf98906b7c4b75568271567b94"
+        },
+        {
+          "name": "set_ticking_state",
+          "bytes": 5,
+          "sha256": "9e68b6b30dc5915fa29c383f07995a7320faf2600e65a4e48fb967156a655c96"
+        },
+        {
+          "name": "step_tick",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "name": "spawn_position",
+          "bytes": 36,
+          "sha256": "bd659383ad8797d06013a280c860cba45666eda5679e055cce7061058d47fd0d"
+        },
+        {
+          "name": "update_health",
+          "bytes": 9,
+          "sha256": "bf6310d7180737c07d92099cc5b91eabf8ef748f56cc5aecc8870fa6e94ed3b4",
+          "hex": "41a000001440a00000"
+        },
+        {
+          "name": "game_state_change",
+          "bytes": 5,
+          "sha256": "3c8f1b104592e3ebb2b2602b3979a27e77f586fb4c655369fa4eccb6d545a0f8"
+        },
+        {
+          "name": "update_time",
+          "bytes": 17,
+          "sha256": "19a61c235a767c93ff21160f4774d4cb42c6ea0b7de05128a80ee69d12126b77"
+        },
+        {
+          "name": "update_view_position",
+          "bytes": 2,
+          "sha256": "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7"
+        },
+        {
+          "name": "map_chunk",
+          "bytes": 8435,
+          "sha256": "7d11590e424042aaeadda39f5b40e3b1b159909b060b548e5db4ca81d353e0e5"
+        },
+        {
+          "name": "map_chunk",
+          "bytes": 8435,
+          "sha256": "d1804ca55a1588a4af46257f86890c3c5f4e1336c157cee0e685fec73e7ff031"
+        },
+        {
+          "name": "map_chunk",
+          "bytes": 8435,
+          "sha256": "217f05e9867455eb8ae55eb78a61aca0ce9d71eacdeae3c2c10fac70d2edc755"
+        },
+        {
+          "name": "map_chunk",
+          "bytes": 8435,
+          "sha256": "09ccf18b4b25d81d952dc56f6c65a6178a70d12ab5dad2685bcbf9ecbb535438"
+        },
+        {
+          "name": "map_chunk",
+          "bytes": 8435,
+          "sha256": "40a9897f219c9f9c138845f40543158463e9eed8af6905d1a6c4507611b9cdf8"
+        },
+        {
+          "name": "map_chunk",
+          "bytes": 8435,
+          "sha256": "206e464386f5d3a0280f0029cabe5b9465bac49dd37a92e6d9131ce5e2c995b6"
+        }
+      ],
+      "sent": [
+        {
+          "name": "teleport_confirm",
+          "id": 0,
+          "hex": "01"
+        }
+      ],
+      "acks": [
+        1
+      ],
+      "lights": [],
+      "inventory": {},
+      "health_events": [
+        20.0
+      ]
+    }
+  ],
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

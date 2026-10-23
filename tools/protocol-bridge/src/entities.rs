@@ -16,6 +16,7 @@ pub struct Tracker {
     entities: BTreeMap<u32, u32>,
     player: Option<u32>,
     dimension: Option<String>,
+    clock_774: Option<(i64,i64,bool)>,
 }
 
 fn supported_payload(from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
@@ -65,8 +66,8 @@ impl Tracker {
                 if probe_776 {
                     let target = if entity_layouts::LAYOUTS[kind as usize].0 == "cushion" {
                         entity_layouts::LAYOUTS.iter().position(|row| row.0 == "armor_stand").ok_or(wire::Error::Invalid)? as u32
-                    } else { kind };
-                    metadata_layout(JavaVersion::V26_2, target)?;
+                    } else if to==JavaVersion::V1_21_11 && entity_layouts::LAYOUTS[kind as usize].0=="sulfur_cube" {entity_layouts::LAYOUTS.iter().position(|row|row.0=="slime").ok_or(wire::Error::Invalid)? as u32} else { kind };
+                    metadata_layout(to, target)?;
                 }
                 spawn = Some((id, kind));
             }
@@ -107,9 +108,16 @@ impl Tracker {
             "respawn" => { input.uint()?; dimension = Some(input.string()?.to_owned()); }
             _ => (),
         }
+        context.clock_774=self.clock_774;
         let translated = if probe_776 {
             wire::translate_inner(State::Play, Direction::Clientbound, from, to, body, context, true)?
         } else { wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context)? };
+        if name=="update_time" && to==JavaVersion::V1_21_11 {
+            let mut clock=Cursor::new(&translated);clock.uint()?;
+            let age=i64::from_be_bytes(clock.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?);
+            let time=i64::from_be_bytes(clock.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?);
+            self.clock_774=Some((age,time,clock.boolean()?));
+        }
         if let Some(dimension) = dimension {
             // В том же измерении остальные сущности остаются известны клиенту.
             if player.is_some() || self.dimension.as_ref() != Some(&dimension) { self.entities.clear(); }
@@ -139,8 +147,8 @@ pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVer
     // Проверяется именно раскладка целевого заменителя, а не wire ID.
     let kind = if entity_layouts::LAYOUTS[kind as usize].0 == "cushion" {
         entity_layouts::LAYOUTS.iter().position(|row| row.0 == "armor_stand").ok_or(wire::Error::Invalid)? as u32
-    } else { kind };
-    metadata_layout(JavaVersion::V26_2, kind)?;
+    } else if to==JavaVersion::V1_21_11 && entity_layouts::LAYOUTS[kind as usize].0=="sulfur_cube" {entity_layouts::LAYOUTS.iter().position(|row|row.0=="slime").ok_or(wire::Error::Invalid)? as u32} else { kind };
+    metadata_layout(to, kind)?;
     spawn_with_content(input, out, from, to, content)
 }
 
@@ -189,14 +197,15 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
         JavaVersion::V26_2 => crate::generated_payload_776::LAYOUTS.iter().find(|entry| entry.0 == kind)
             .map(|entry| entry.1).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
         JavaVersion::V26_3 => Ok(new),
-        JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+        JavaVersion::V1_21_11 => crate::generated_payload_774::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
+        JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
 }
 
 pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: wire::Context) -> Result<(), wire::Error> {
     let kind = context.entity_kind.ok_or(wire::Error::MissingEntityContext)?;
     let source = metadata_layout(from, kind)?;
-    let substitute = if context.items.content.is_native_view() || (context.items.content.is_preview() && to == JavaVersion::V26_2) {
+    let substitute = if context.items.content.is_native_view() || (context.items.content.is_preview() && matches!(to,JavaVersion::V1_21_11|JavaVersion::V26_2)) {
         match entity_layouts::LAYOUTS.get(kind as usize).map(|r| r.0) {
             Some("cushion") => Some("armor_stand"),
             Some("sulfur_cube") if to != JavaVersion::V26_2 => Some("slime"), _ => None,
@@ -214,9 +223,10 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         let field = source.get(index as usize).ok_or_else(|| failure(Error::UnknownField(index)))?;
         let start = out.len();
         let target_index = target.iter().position(|name| name == field);
-        if target_index.is_none() && substitute.is_none() { return Err(failure(Error::MissingField(field))); }
+        if target_index.is_none() && substitute.is_none() && !(to==JavaVersion::V1_21_11 && matches!(*field,"age_locked"|"sound_variant"|"villager_finalized")) { return Err(failure(Error::MissingField(field))); }
         out.push(target_index.unwrap_or(0) as u8);
-        let serializer = input.uint()?;
+        let raw_serializer = input.uint()?;
+        let serializer = if from==JavaVersion::V1_21_11 {u32::from(*crate::generated_payload_774::SERIALIZERS_FROM.get(raw_serializer as usize).ok_or(wire::Error::Invalid)?)} else {raw_serializer};
         if has_776 {
             // Пять наблюдённых типов сохраняют строгую проверку serializer
             // поля; прочие раскладки закреплены JSON, значения разбираются
@@ -227,7 +237,9 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if serializer != expected { return Err(failure(Error::Serializer(serializer))); }
             }
         }
-        uint(out, serializer);
+        let target_serializer=if to==JavaVersion::V1_21_11 {*crate::generated_payload_774::SERIALIZERS_TO.get(serializer as usize).ok_or(wire::Error::Invalid)? as u32} else {serializer};
+        if target_serializer==u32::from(u16::MAX) && target_index.is_some(){return Err(failure(Error::Serializer(serializer)));}
+        uint(out, target_serializer);
         match serializer {
             0 => out.extend(input.take(1)?),
             1 => uint(out, input.varint()? as u32),
@@ -304,7 +316,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 if present { let name = input.string()?; uint(out,name.len() as u32); out.extend(name.as_bytes()); out.extend(input.take(8)?); }
             }
             34 => registry_id(input,out,context,"minecraft:painting_variant",true)?,
-            41 if has_776 => {
+            41 if has_776 || from==JavaVersion::V1_21_11 || to==JavaVersion::V1_21_11 => {
                 let start = input.rest;
                 crate::profile::read(input)?;
                 out.extend(&start[..start.len() - input.rest.len()]);

@@ -1,0 +1,14 @@
+{
+  "id": "1.21.11",
+  "javaVersion": {
+    "component": "java-runtime-delta",
+    "majorVersion": 21
+  },
+  "client": {
+    "sha1": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd",
+    "size": 31152600,
+    "url": "https://piston-data.mojang.com/v1/objects/ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd/client.jar"
+  },
+  "metadata_sha256": "e1174d4c351a37ebe004e41fe50a6f871a3bec4f437318f84fc321792c194baf",
+  "note": "The original downloaded version.json hash is recorded by download-verification.json; this small metadata copy is reserialized."
+}

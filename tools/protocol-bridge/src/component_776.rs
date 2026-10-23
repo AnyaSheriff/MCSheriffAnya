@@ -49,18 +49,19 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
         out.extend(&direct[..direct.len()-input.0.len()]);return Ok(out);
     }
     if kind==77 {
-        // payload-actions-bees775:776 читает тип сущности перед compound.
+        // payload-actions-bees775 и774-client775-v6: тип сущности перед compound.
         // Общий JSON этого VarInt не содержит; принимаем только пчелу ядра.
         let bee=crate::entity_layouts::LAYOUTS.iter().position(|row|row.0=="bee").ok_or(Error::Invalid)? as u32;
-        let wire=crate::ids::translate(RegistryKind::Entity,JavaVersion::V26_1_2,JavaVersion::V26_2,bee).map_err(Error::Id)?;
+        let wire_id=|space|match space {IdSpace::Wire(version @ (JavaVersion::V1_21_11|JavaVersion::V26_2))=>crate::ids::translate(RegistryKind::Entity,JavaVersion::V26_1_2,version,bee).map(Some).map_err(Error::Id),_=>Ok(None)};
+        let source_type=wire_id(spaces.0)?;let target_type=wire_id(spaces.1)?;
         let count=input.count(3)?;let mut out=Vec::new();uint(&mut out,count as u32);
         for _ in 0..count {
-            if matches!(spaces.0,IdSpace::Wire(JavaVersion::V26_2)) && input.uint()?!=wire{return Err(Error::UnsupportedComponent(77));}
+            if let Some(wire)=source_type && input.uint()?!=wire {return Err(Error::UnsupportedComponent(77));}
             let nbt=input.nbt()?;bucket(nbt,true)?;
-            if matches!(spaces.1,IdSpace::Wire(JavaVersion::V26_2)){uint(&mut out,wire);}
+            if let Some(wire)=target_type {uint(&mut out,wire);}
             // У обычного клиента id может быть вынесен в VarInt; внутреннее
             // сохранение пчелы по-прежнему получает именованный id.
-            if !matches!(spaces.1,IdSpace::Wire(JavaVersion::V26_2)) && !compound(nbt)?.iter().any(|(key,_,_)|key=="id") {
+            if target_type.is_none() && !compound(nbt)?.iter().any(|(key,_,_)|key=="id") {
                 out.extend([10,8,0,2,b'i',b'd',0,13]);out.extend(b"minecraft:bee");out.extend(&nbt[1..]);
             }else{out.extend(nbt);}
             uint(&mut out,input.uint()?);uint(&mut out,input.uint()?);
@@ -110,5 +111,5 @@ pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,context:Context,spaces:(IdSpa
 }
 
 pub(crate) fn supported_pair(from:JavaVersion,to:JavaVersion)->bool{
-    matches!(from,JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V26_1_2|JavaVersion::V26_2)
+    matches!(from,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) && matches!(to,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
 }

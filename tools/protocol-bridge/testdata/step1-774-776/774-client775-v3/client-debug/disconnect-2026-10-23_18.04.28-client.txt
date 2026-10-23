@@ -1,0 +1,151 @@
+---- Minecraft Network Protocol Error Report ----
+// I'm sorry, I don't speak that language
+
+Time: 2026-10-23 18:04:28
+Description: Registry Loading
+
+java.lang.IllegalStateException: Failed to load registries due to errors
+	at amp.c(SourceFile:288)
+	at amp.a(SourceFile:269)
+	at amp.a(SourceFile:236)
+	at amp.a(SourceFile:211)
+	at his.a(SourceFile:93)
+	at his.a(SourceFile:144)
+	at hib.a(SourceFile:149)
+	at hib.a(SourceFile:117)
+	at hib.a(SourceFile:149)
+	at acj.a(SourceFile:22)
+	at acj.a(SourceFile:8)
+	at xl$a.a(SourceFile:55)
+	at xl.b(SourceFile:38)
+	at gfj.d(SourceFile:1337)
+	at gfj.j(SourceFile:966)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at amp.c(SourceFile:288)
+	at amp.a(SourceFile:269)
+	at amp.a(SourceFile:236)
+
+-- Loading info --
+Details:
+	Errors: 
+		minecraft:dimension_type/minecraft:overworld: Failed to parse value {ambient_light:0.0f,attributes:{"minecraft:visual/ambient_light_color":"#0a0a0a","minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]} from server
+		minecraft:dimension_type/minecraft:the_nether: Failed to parse value {ambient_light:0.1f,attributes:{"minecraft:visual/ambient_light_color":"#302821","minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"} from server
+		minecraft:root/minecraft:wolf_sound_variant: Registry must be non-empty: minecraft:wolf_sound_variant
+		minecraft:wolf_sound_variant/minecraft:classic: Failed to parse value {adult_sounds:{ambient_sound:{sound_id:"minecraft:entity.wolf.ambient"},death_sound:{sound_id:"minecraft:entity.wolf.death"},growl_sound:{sound_id:"minecraft:entity.wolf.growl"},hurt_sound:{sound_id:"minecraft:entity.wolf.hurt"},pant_sound:{sound_id:"minecraft:entity.wolf.pant"},step_sound:{sound_id:"minecraft:entity.wolf.step"},whine_sound:{sound_id:"minecraft:entity.wolf.whine"}},baby_sounds:{ambient_sound:{sound_id:"minecraft:entity.wolf.ambient"},death_sound:{sound_id:"minecraft:entity.wolf.death"},growl_sound:{sound_id:"minecraft:entity.wolf.growl"},hurt_sound:{sound_id:"minecraft:entity.wolf.hurt"},pant_sound:{sound_id:"minecraft:entity.wolf.pant"},step_sound:{sound_id:"minecraft:entity.wolf.step"},whine_sound:{sound_id:"minecraft:entity.wolf.whine"}}} from server
+Stacktrace:
+	at amp.c(SourceFile:288)
+	at amp.a(SourceFile:269)
+	at amp.a(SourceFile:236)
+	at amp.a(SourceFile:211)
+	at his.a(SourceFile:93)
+	at his.a(SourceFile:144)
+	at hib.a(SourceFile:149)
+	at hib.a(SourceFile:117)
+	at hib.a(SourceFile:149)
+	at acj.a(SourceFile:22)
+	at acj.a(SourceFile:8)
+	at xl$a.a(SourceFile:55)
+	at xl.b(SourceFile:38)
+	at gfj.d(SourceFile:1337)
+	at gfj.j(SourceFile:966)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+
+-- Received Elements and Tags --
+Details:
+	Dynamic Registries: 
+		minecraft:banner_pattern: elements=43 tags=11
+		minecraft:cat_sound_variant: elements=1 tags=0
+		minecraft:cat_variant: elements=11 tags=0
+		minecraft:chat_type: elements=7 tags=0
+		minecraft:chicken_sound_variant: elements=1 tags=0
+		minecraft:chicken_variant: elements=3 tags=0
+		minecraft:cow_sound_variant: elements=1 tags=0
+		minecraft:cow_variant: elements=1 tags=0
+		minecraft:damage_type: elements=51 tags=3
+		minecraft:dimension_type: elements=3 tags=0
+		minecraft:enchantment: elements=43 tags=0
+		minecraft:frog_variant: elements=3 tags=0
+		minecraft:instrument: elements=8 tags=0
+		minecraft:jukebox_song: elements=21 tags=0
+		minecraft:painting_variant: elements=51 tags=0
+		minecraft:pig_sound_variant: elements=1 tags=0
+		minecraft:pig_variant: elements=1 tags=0
+		minecraft:timeline: elements=2 tags=1
+		minecraft:trim_material: elements=11 tags=0
+		minecraft:trim_pattern: elements=18 tags=0
+		minecraft:wolf_sound_variant: elements=1 tags=0
+		minecraft:wolf_variant: elements=9 tags=0
+		minecraft:world_clock: elements=2 tags=0
+		minecraft:worldgen/biome: elements=65 tags=0
+		minecraft:zombie_nautilus_variant: elements=1 tags=0
+	Static Registries: 
+Stacktrace:
+	at his.a(SourceFile:110)
+	at his.a(SourceFile:96)
+	at his.a(SourceFile:144)
+	at hib.a(SourceFile:149)
+	at hib.a(SourceFile:117)
+	at hib.a(SourceFile:149)
+	at acj.a(SourceFile:22)
+	at acj.a(SourceFile:8)
+	at xl$a.a(SourceFile:55)
+	at xl.b(SourceFile:38)
+	at gfj.d(SourceFile:1337)
+	at gfj.j(SourceFile:966)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+
+-- Incoming Packet --
+Details:
+	Type: clientbound/minecraft:finish_configuration
+	Is Terminal: true
+	Is Skippable: false
+
+-- Connection --
+Details:
+	Protocol: configuration
+	Flow: CLIENTBOUND
+	Is Local: false
+	Server type: OTHER
+	Server brand: MCSheriffAnya
+
+-- System Details --
+Details:
+	Minecraft Version: 1.21.11
+	Minecraft Version ID: 1.21.11
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 118261824 bytes (112 MiB) / 355467264 bytes (339 MiB) up to 1073741824 bytes (1024 MiB)
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 16344.13
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 7706.21
+	Space in storage for jna.tmpdir (MiB): available: 7810.59, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7810.59, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7810.59, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7810.59, total: 7952.55
+	Space in storage for workdir (MiB): available: 7810.59, total: 7952.55
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 

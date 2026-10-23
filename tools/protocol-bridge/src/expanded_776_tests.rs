@@ -245,7 +245,15 @@ fn rich_776_text_preserves_nested_styles_translation_and_text_events_with_bounds
 
 #[test]
 #[ignore="экспорт переведённых payload776 для непрозрачного клиента в частном реле"]
-fn export_live_776_payloads() {
+fn export_live_776_payloads() { export_live_payloads(MID); }
+
+#[test]
+#[ignore="экспорт payload774 для непрозрачного клиента"]
+fn export_live_774_payloads() { export_live_payloads(JavaVersion::V1_21_11); }
+
+fn export_live_payloads(target: JavaVersion) {
+    let adapter = if target==JavaVersion::V1_21_11 {crate::client_774::clientbound} else {crate::probe_776::clientbound};
+    let packet_id=|old:u32|crate::packet_layouts::packet_info(crate::ids::RegistryKind::PlayClientbound,OLD,target,old as usize).unwrap().target_id.unwrap() as u8;
     let mut packets=Vec::new();
     let mut add=|label:String,body:Vec<u8>| {
         packets.push(serde_json::json!({"label":label,"hex":body.iter().map(|b|format!("{b:02x}")).collect::<String>()}));
@@ -253,38 +261,38 @@ fn export_live_776_payloads() {
     let data:serde_json::Value=serde_json::from_str(include_str!("../testdata/complex-item-observations.json")).unwrap();
     for row in data["old"]["cases"].as_array().unwrap() {
         let (stack,_)=items::decode(OLD,&hex(&row["slot_hex"]),false,items::Context::default()).unwrap();
-        let mut body=vec![0x6c,0];body.extend(items::encode(MID,stack.as_ref(),false,items::Context::default()).unwrap());
+        let mut body=vec![packet_id(0x6c),0];body.extend(items::encode(target,stack.as_ref(),false,items::Context::default()).unwrap());
         add(format!("complex-item:{}",row["name"]),body);
     }
     for (kind,data) in [(5,vec![1,0,0x3f,0x80,0,0]),(7,vec![0x3f,0x40,0,0]),(10,vec![1,b'x']),
         (17,vec![1,0x3f,0x80,0,0,1,1,1,1,b'x',1,255,255,255,255]),(34,vec![]),(70,vec![0,0,0,0,0,0,0,0])] {
         let stack=items::Stack{item:1,count:1,added:vec![items::Component{kind,data}],removed:vec![]};
-        let mut body=vec![0x6c,0];body.extend(items::encode(MID,Some(&stack),false,items::Context::default()).unwrap());add(format!("component:{kind}"),body);
+        let mut body=vec![packet_id(0x6c),0];body.extend(items::encode(target,Some(&stack),false,items::Context::default()).unwrap());add(format!("component:{kind}"),body);
     }
     let mut list=vec![10,0,0,0,1];list.extend(nbt_fields(&[(8,"text",nbt_string("B")),(1,"bold",vec![1])]));
     let hover=nbt_fields(&[(8,"action",nbt_string("show_text")),(8,"value",nbt_string("MCSA tooltip"))]);
     let mut rich=vec![10];rich.extend(nbt_fields(&[(8,"text",nbt_string("A")),(9,"extra",list),(10,"hover_event",hover)]));
     let stack=items::Stack{item:1,count:1,added:vec![items::Component{kind:6,data:rich}],removed:vec![]};
-    let mut body=vec![0x6c,0];body.extend(items::encode(MID,Some(&stack),false,items::Context::default()).unwrap());add("rich-name".into(),body);
+    let mut body=vec![packet_id(0x6c),0];body.extend(items::encode(target,Some(&stack),false,items::Context::default()).unwrap());add("rich-name".into(),body);
     let data:serde_json::Value=serde_json::from_str(include_str!("../testdata/particle-observations.json")).unwrap();
-    for row in data["old"]["particles"].as_array().unwrap() {add(format!("particle:{}",row["case"]),cb(OLD,MID,&hex(&row["body"]),Context::default()).unwrap());}
+    for row in data["old"]["particles"].as_array().unwrap() {add(format!("particle:{}",row["case"]),cb(OLD,target,&hex(&row["body"]),Context::default()).unwrap());}
     let mut tracker=Tracker::default();
     let kind=crate::entity_layouts::LAYOUTS.iter().position(|row|row.0=="mannequin").unwrap() as u32;
     let mut spawn=vec![1];wire::uint(&mut spawn,6000);spawn.extend([6;16]);wire::uint(&mut spawn,kind);
     for value in [3.5f64,64.0,3.5] {spawn.extend(value.to_be_bytes());}spawn.extend([0;5]);
-    add("mannequin-spawn".into(),crate::probe_776::clientbound(&mut tracker,&spawn,Context::default()).unwrap().into_owned());
+    add("mannequin-spawn".into(),adapter(&mut tracker,&spawn,Context::default()).unwrap().into_owned());
     let field=crate::entity_layouts::LAYOUTS[kind as usize].1.iter().position(|v|*v=="profile").unwrap() as u8;
     let mut metadata=vec![0x63];wire::uint(&mut metadata,6000);metadata.extend([field,41,0,0,0,0,0,0,0,0,255]);
-    add("serializer41".into(),crate::probe_776::clientbound(&mut tracker,&metadata,Context::default()).unwrap().into_owned());
-    let mut destroy=vec![0x4d,1];wire::uint(&mut destroy,6000);add("mannequin-remove".into(),destroy);
+    add("serializer41".into(),adapter(&mut tracker,&metadata,Context::default()).unwrap().into_owned());
+    let mut destroy=vec![packet_id(0x4d),1];wire::uint(&mut destroy,6000);add("mannequin-remove".into(),destroy);
     let data:serde_json::Value=serde_json::from_str(include_str!("../testdata/step1-774-776/official777-blockentities-reference/result.json")).unwrap();
-    let packet=(0..256).find_map(|id|crate::packet_layouts::packet_info(crate::ids::RegistryKind::PlayClientbound,OLD,MID,id).filter(|r|r.name=="tile_entity_data").map(|_|id as u32)).unwrap();
+    let packet=(0..256).find_map(|id|crate::packet_layouts::packet_info(crate::ids::RegistryKind::PlayClientbound,OLD,target,id).filter(|r|r.name=="tile_entity_data").map(|_|id as u32)).unwrap();
     for row in data["entities"].as_array().unwrap() {
         let kind=row["kind"].as_u64().unwrap() as u32;
         let (kind,nbt)=crate::block_entities::translate(JavaVersion::V26_3,OLD,kind,&hex(&row["nbt_hex"])).unwrap().unwrap();
         let position=row["position"].as_array().unwrap();let x=position[0].as_i64().unwrap();let y=position[1].as_i64().unwrap()-1;let z=position[2].as_i64().unwrap();
         let mut body=Vec::new();wire::uint(&mut body,packet);body.extend((((x as u64&0x3ffffff)<<38)|((z as u64&0x3ffffff)<<12)|(y as u64&4095)).to_be_bytes());
-        wire::uint(&mut body,kind);body.extend(nbt);add(format!("block-entity:{}",row["block"]),cb(OLD,MID,&body,Context::default()).unwrap());
+        wire::uint(&mut body,kind);body.extend(nbt);add(format!("block-entity:{}",row["block"]),cb(OLD,target,&body,Context::default()).unwrap());
     }
     for (block,old_kind,nbt) in [
         ("oak_shelf",40,item_block_nbt("minecraft:stone")),
@@ -296,15 +304,15 @@ fn export_live_776_payloads() {
         let row=data["entities"].as_array().unwrap().iter().find(|r|r["block"]==block).unwrap();
         let position=row["position"].as_array().unwrap();let x=position[0].as_i64().unwrap();let y=position[1].as_i64().unwrap()-1;let z=position[2].as_i64().unwrap();
         let mut body=Vec::new();wire::uint(&mut body,packet);body.extend((((x as u64&0x3ffffff)<<38)|((z as u64&0x3ffffff)<<12)|(y as u64&4095)).to_be_bytes());
-        wire::uint(&mut body,old_kind);body.extend(nbt);add(format!("populated-block-entity:{block}"),cb(OLD,MID,&body,Context::default()).unwrap());
+        wire::uint(&mut body,old_kind);body.extend(nbt);add(format!("populated-block-entity:{block}"),cb(OLD,target,&body,Context::default()).unwrap());
     }
     for (kind,data) in remaining_primary_components() {
         let stack=items::Stack{item:1,count:1,added:vec![items::Component{kind,data}],removed:vec![]};
-        let mut body=vec![0x6c,0];body.extend(items::encode(MID,Some(&stack),false,items::Context::default()).unwrap());
+        let mut body=vec![packet_id(0x6c),0];body.extend(items::encode(target,Some(&stack),false,items::Context::default()).unwrap());
         add(format!("primary-component:{kind}"),body);
     }
     let mut statue=Vec::new();wire::uint(&mut statue,packet);statue.extend((((-16i64 as u64&0x3ffffff)<<38)|((-13i64 as u64&0x3ffffff)<<12)|64).to_be_bytes());
-    statue.extend([48,10,0]);add("block-entity:copper_golem_statue".into(),cb(OLD,MID,&statue,Context::default()).unwrap());
+    statue.extend([48,10,0]);add("block-entity:copper_golem_statue".into(),cb(OLD,target,&statue,Context::default()).unwrap());
     let entities:serde_json::Value=serde_json::from_str(include_str!("../testdata/entity-observations.json")).unwrap();
     let context=Context{metadata_registry_counts:&[("minecraft:painting_variant",51),("minecraft:wolf_variant",9)],..Default::default()};
     let mut tracker=Tracker::default();
@@ -313,23 +321,23 @@ fn export_live_776_payloads() {
         for (number,packet) in row["packets"].as_array().unwrap().iter().enumerate() {
             let raw=hex(&packet["body"]);let mut input=wire::Cursor::new(&raw);let id=input.uint().unwrap();input.uint().unwrap();
             let mut source=Vec::new();wire::uint(&mut source,id);wire::uint(&mut source,entity);source.extend(input.rest);
-            add(format!("entity:{}:{number}",row["type"]),crate::probe_776::clientbound(&mut tracker,&source,context).unwrap().into_owned());
+            add(format!("entity:{}:{number}",row["type"]),adapter(&mut tracker,&source,context).unwrap().into_owned());
         }
     }
-    let mut destroy=vec![0x4d,11];for entity in 6100..6111 {wire::uint(&mut destroy,entity);}add("entity-samples-remove".into(),destroy);
+    let mut destroy=vec![packet_id(0x4d),11];for entity in 6100..6111 {wire::uint(&mut destroy,entity);}add("entity-samples-remove".into(),destroy);
     let context=Context{items:items::Context{content:crate::content::ContentCodec::white_slab_preview(),..Default::default()},..Default::default()};
     let mut tracker=Tracker::default();
     for (index,canonical) in [157,158,159,160].into_iter().enumerate() {
         let entity=6200+index as u32;let mut source=vec![1];wire::uint(&mut source,entity);source.extend([40+index as u8;16]);wire::uint(&mut source,canonical);
         for coordinate in [3.5f64,64.0,5.5+index as f64] {source.extend(coordinate.to_be_bytes());}source.extend([0;5]);
-        add(format!("preview-entity:{canonical}:spawn"),crate::probe_776::clientbound(&mut tracker,&source,context).unwrap().into_owned());
+        add(format!("preview-entity:{canonical}:spawn"),adapter(&mut tracker,&source,context).unwrap().into_owned());
         let mut source=vec![0x63];wire::uint(&mut source,entity);
         source.extend(match canonical{159=>&[8,1,14,255][..],160=>&[18,1,2,255],_=>&[0,0,1,255]});
-        add(format!("preview-entity:{canonical}:metadata"),crate::probe_776::clientbound(&mut tracker,&source,context).unwrap().into_owned());
+        add(format!("preview-entity:{canonical}:metadata"),adapter(&mut tracker,&source,context).unwrap().into_owned());
     }
-    let mut destroy=vec![0x4d,4];for entity in 6200..6204 {wire::uint(&mut destroy,entity);}add("preview-entities-remove".into(),destroy);
-    let path=std::path::Path::new("tmp/776-payload-live.json");std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    std::fs::write(path,serde_json::to_vec_pretty(&serde_json::json!({"protocol":776,"packets":packets})).unwrap()).unwrap();
+    let mut destroy=vec![packet_id(0x4d),4];for entity in 6200..6204 {wire::uint(&mut destroy,entity);}add("preview-entities-remove".into(),destroy);
+    let filename=format!("tmp/{}-payload-live.json",target.protocol());let path=std::path::Path::new(&filename);std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path,serde_json::to_vec_pretty(&serde_json::json!({"protocol":target.protocol(),"packets":packets})).unwrap()).unwrap();
 }
 
 #[test]
@@ -422,4 +430,19 @@ fn bee_component_776_remaps_entity_prefix_and_rejects_other_occupants() {
     let mut bad=expected;bad[6]=255;assert!(items::decode(MID,&bad,false,items::Context::default()).is_err());
     assert_eq!(crate::block_entities::translate(OLD,MID,48,&[10,0]).unwrap(),Some((47,vec![10,0])));
     assert!(crate::block_entities::translate(OLD,MID,48,&[10,1,0,1,b'x',1,0]).is_err());
+}
+
+#[test]
+fn actual_774_bees_have_a_typed_entity_prefix_without_changing_canonical_nbt() {
+    let data=remaining_primary_components().into_iter().find(|r|r.0==77).unwrap().1;
+    let stack=items::Stack{item:1,count:1,added:vec![items::Component{kind:77,data:data.clone()}],removed:vec![]};
+    let old=JavaVersion::V1_21_11;
+    let encoded=items::encode(old,Some(&stack),false,Default::default()).unwrap();
+    let mut cursor=wire::Cursor::new(&encoded);for _ in 0..5{cursor.uint().unwrap();}
+    assert_eq!(cursor.uint().unwrap(),1);
+    let bee=crate::entity_layouts::LAYOUTS.iter().position(|r|r.0=="bee").unwrap() as u32;
+    assert_eq!(cursor.uint().unwrap(),crate::ids::translate(crate::ids::RegistryKind::Entity,OLD,old,bee).unwrap());
+    assert_eq!(cursor.rest[0],10);
+    assert_eq!(items::decode(old,&encoded,false,Default::default()).unwrap(),(Some(stack),encoded.len()));
+    assert_eq!(data[0],1);
 }

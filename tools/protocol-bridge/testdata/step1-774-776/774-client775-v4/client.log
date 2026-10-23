@@ -1,0 +1,115 @@
+NOTE: Picked up JDK_JAVA_OPTIONS: -Dorg.lwjgl.glfw.libname=/tmp/s26-mv8-gui/libglfw.so.3.4
+[18:10:06] [main/WARN]: Failed retrieving storage space for org.lwjgl.system.SharedLibraryExtractPath
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-o7bcv66z/client/natives/lwjgl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59)
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66)
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403)
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375)
+	at y.b(SourceFile:175)
+	at y.a(SourceFile:162)
+	at y.b(SourceFile:155)
+	at y.a(SourceFile:95)
+	at y.a(SourceFile:90)
+	at y.f(SourceFile:59)
+	at y.a(SourceFile:95)
+	at y.<init>(SourceFile:59)
+	at m.<init>(SourceFile:35)
+	at m.g(SourceFile:233)
+	at net.minecraft.client.main.Main.main(SourceFile:130)
+[18:10:06] [main/WARN]: Failed retrieving storage space for io.netty.native.workdir
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-o7bcv66z/client/natives/netty
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59)
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66)
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403)
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375)
+	at y.b(SourceFile:175)
+	at y.a(SourceFile:162)
+	at y.b(SourceFile:156)
+	at y.a(SourceFile:95)
+	at y.a(SourceFile:90)
+	at y.f(SourceFile:59)
+	at y.a(SourceFile:95)
+	at y.<init>(SourceFile:59)
+	at m.<init>(SourceFile:35)
+	at m.g(SourceFile:233)
+	at net.minecraft.client.main.Main.main(SourceFile:130)
+[18:10:06] [Datafixer Bootstrap/INFO]: 287 Datafixer optimizations took 364 milliseconds
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.11/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[18:10:22] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[18:10:22] [Render thread/INFO]: Setting user: McsaProbe
+[18:10:23] [Render thread/INFO]: Backend library: LWJGL version 3.3.3+5
+Failed to create /home/lenox/.cache/mesa_shader_cache for shader cache (Read-only file system)---disabling.
+[18:10:23] [Render thread/INFO]: [STDERR]: [LWJGL] [ThreadLocalUtil] Unsupported JNI version detected, this may result in a crash. Please inform LWJGL developers.
+[18:10:24] [Download-2/ERROR]: Failed to fetch user properties
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:59)
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:150)
+	at gfj.bU(SourceFile:457)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.get(MinecraftClient.java:56)
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:121)
+	... 5 more
+[18:10:24] [Render thread/INFO]: Using optional rendering extensions: GL_ARB_buffer_storage, GL_KHR_debug, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access, GL_EXT_texture_filter_anisotropic
+[18:10:24] [Render thread/INFO]: Reloading ResourceManager: vanilla
+[18:10:24] [Download-1/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[18:10:24] [Download-1/ERROR]: Failed to fetch Realms feature flags
+gce: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+	at fzz.a(SourceFile:526)
+	at fzz.o(SourceFile:186)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[18:10:24] [Worker-Main-10/INFO]: Found unifont_all_no_pua-17.0.01.hex, loading
+[18:10:24] [Worker-Main-5/INFO]: Found unifont_pua-17.0.01.hex, loading
+[18:10:24] [Worker-Main-1/INFO]: Found unifont_jp_patch-17.0.01.hex, loading
+[18:10:26] [Render thread/INFO]: OpenAL initialized on device No Output
+[18:10:26] [Render thread/INFO]: Sound engine started
+[18:10:26] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 128x128x0 minecraft:textures/atlas/decorated_pot.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 2048x1024x0 minecraft:textures/atlas/armor_trims.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/shield_patterns.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 2048x2048x4 minecraft:textures/atlas/blocks.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/chest.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 256x128x0 minecraft:textures/atlas/celestials.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/banner_patterns.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/beds.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/items.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 1024x1024x0 minecraft:textures/atlas/gui.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 128x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/signs.png-atlas
+[18:10:26] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/shulker_boxes.png-atlas
+[18:10:27] [Render thread/INFO]: Connecting to 127.0.0.1, 26034
+[18:10:27] [Download-1/ERROR]: Failed to retrieve profile key pair
+com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103)
+	at com.mojang.authlib.minecraft.client.MinecraftClient.post(MinecraftClient.java:64)
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.getKeyPair(YggdrasilUserApiService.java:61)
+	at hhv.a(SourceFile:128)
+	at hhv.b(SourceFile:77)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[18:10:29] [Netty Epoll IO #0/ERROR]: Negative index in crash report handler (29/32)

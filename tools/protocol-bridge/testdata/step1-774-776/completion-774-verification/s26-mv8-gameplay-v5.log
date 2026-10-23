@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_step1_gameplay_776.py", line 363, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_step1_gameplay_776.py", line 196, in main
+    command('tp McsaPeer 0.5 65 1.5')
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_step1_gameplay_776.py", line 184, in command
+    client.pump(5, lambda _: token in client.markers)
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/probe_gameplay.py", line 57, in pump
+    packet = io.BytesIO(frame(self.sock))
+                        ^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/observe.py", line 21, in frame
+    length = read_varint(sock.recv)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge/smoke.py", line 29, in read_varint
+    raise EOFError('missing VarInt')
+EOFError: missing VarInt

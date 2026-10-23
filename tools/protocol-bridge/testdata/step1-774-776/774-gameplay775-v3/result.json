@@ -1,0 +1,16 @@
+{
+  "primary": 775,
+  "client": 774,
+  "peer": 777,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "scenario": "all",
+  "runner_sha256": "9f4d1ebe97e07f642c86a6d108240d58318cc4111dc6521a0c300be3c54bcce3",
+  "binary_sha256": "ea0f9ef578d6010fdcb11c7bbc939117462b098bba2d327024f7156dee967152",
+  "error": "EOFError: missing VarInt",
+  "sessions": [],
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

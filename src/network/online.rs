@@ -369,8 +369,8 @@ mod tests {
     async fn login_with_in_memory_session_service() {
         use mcsa_protocol::{JavaVersion, Negotiated};
         let auth = auth();
-        // Один и тот же RSA/session-service путь для775/776/777, без Mojang аккаунта.
-        for version in [JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
+        // Один и тот же RSA/session-service путь для774/775/776/777, без Mojang аккаунта.
+        for version in [JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
             let (server, client) = tokio::io::duplex(7);
             let mut server = CryptoStream::new(server);
             let mut client = CryptoStream::new(client);
@@ -414,7 +414,7 @@ mod tests {
                 assert_eq!(body[offset], 1);
                 offset += 1;
                 assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "signed");
-                if version != JavaVersion::V26_1_2 {
+                if matches!(version,JavaVersion::V26_2|JavaVersion::V26_3) {
                     assert_eq!(body.len() - offset, 16);
                     let session: [u8; 16] = body[offset..].try_into().unwrap();
                     assert_ne!(session, [0; 16]);

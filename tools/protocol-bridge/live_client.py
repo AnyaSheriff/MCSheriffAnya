@@ -7,7 +7,7 @@ import subprocess
 import uuid
 
 
-CLIENT_SHA1 = {"26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
+CLIENT_SHA1 = {"1.21.11": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd", "26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
                "26.3": "e877b6a07acd633fb3bb475002175cec036e7b87"}
 
 

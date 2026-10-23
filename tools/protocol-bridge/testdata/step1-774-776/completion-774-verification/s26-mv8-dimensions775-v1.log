@@ -1,0 +1,1 @@
+{"status": "failed", "checks": ["login-configuration-play", "complete-primary-recipe-book-translates-and-decodes"], "error": "EOFError('missing VarInt')", "server_exit": 0}

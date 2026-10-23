@@ -65,7 +65,7 @@ pub(crate) fn content_id(context: Context, kind: RegistryKind, from: IdSpace, to
 
 // Таблица ID сама по себе не разрешает payload этой версии.
 fn supported_payload(version: JavaVersion) -> Result<(), Error> {
-    if matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Ok(()) }
+    if matches!(version, JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Ok(()) }
     else { Err(Error::UnsupportedVersion(version)) }
 }
 
@@ -118,6 +118,7 @@ pub(crate) fn encode_packet_template(version: JavaVersion, stack: &Stack, contex
 }
 
 fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool, source: IdSpace) -> Result<(Option<Stack>, usize), Error> {
+    let template = template && version != JavaVersion::V1_21_11;
     supported_form(version, untrusted)?;
     if bytes.len() > LIMIT { return Err(Error::TooLarge); }
     let mut input = Reader(bytes);
@@ -168,6 +169,7 @@ pub fn encode_canonical_template(stack: &Stack, context: Context) -> Result<Vec<
 }
 
 fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool, target: IdSpace) -> Result<Vec<u8>, Error> {
+    let template = template && version != JavaVersion::V1_21_11;
     supported_form(version, untrusted)?;
     let Some(stack) = stack else { return Ok(vec![0]); };
     if !(1..=127).contains(&stack.count) || stack.item == 0 || stack.added.len() > 256 || stack.removed.len() > 256 { return Err(Error::Invalid); }
@@ -212,14 +214,14 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
     }
     // В776 эти два компонента наблюдены отдельно. В777 swing_animation
     // удалён, а collar payload здесь ещё не открываем по одному совпавшему ID.
-    if matches!(kind,40|84) && matches!(from,JavaVersion::V26_1_2|JavaVersion::V26_2)
-        && matches!(to,JavaVersion::V26_1_2|JavaVersion::V26_2) {
+    if matches!(kind,40|84) && matches!(from,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+        && matches!(to,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) {
         let start=input.0;
         if kind==40 { input.count(2)?; input.uint()?; } else { input.count(15)?; }
         return Ok(start[..start.len()-input.0.len()].to_vec());
     }
-    if kind == 70 && matches!(from,JavaVersion::V26_1_2|JavaVersion::V26_2)
-        && matches!(to,JavaVersion::V26_1_2|JavaVersion::V26_2) {
+    if kind == 70 && matches!(from,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2)
+        && matches!(to,JavaVersion::V1_21_11|JavaVersion::V26_1_2|JavaVersion::V26_2) {
         let start = input.0;
         let mut cursor = crate::wire::Cursor::new(start);
         crate::profile::read(&mut cursor).map_err(|_| Error::Invalid)?;
