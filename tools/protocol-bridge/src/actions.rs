@@ -118,7 +118,7 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
         }
         "explosion"=>{
             floats(input,out,3,true)?;let mut discarded=Vec::new();
-            let older_to=to==JavaVersion::V1_21_8;let older_from=from==JavaVersion::V1_21_8;
+            let older_to=matches!(to,JavaVersion::V1_21_6|JavaVersion::V1_21_8);let older_from=matches!(from,JavaVersion::V1_21_6|JavaVersion::V1_21_8);
             if !older_from {floats(input,if older_to{&mut discarded}else{out},1,false)?;}else if !older_to {out.extend(0f32.to_be_bytes());}
             if !older_from {let count=input.take(4)?;if i32::from_be_bytes(count.try_into().map_err(|_|Error::Invalid)?)<0{return Err(Error::Invalid);}
             if !older_to {out.extend(count);}}else if !older_to {out.extend(0i32.to_be_bytes());}

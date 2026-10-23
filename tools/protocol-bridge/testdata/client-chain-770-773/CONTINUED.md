@@ -96,3 +96,25 @@ Retained failures and fixes: old closed-path assertions; chain input rename; dra
 Exactly one authorized copied official26.3 reference run: `completion772-official777-reference/`,Java25,stdin=/dev/null,26190/26191,7/7,stopped by PID(exit143),copied server/world deleted. This is native777 reference evidence, not772 proof. The opaque1.21.8 client metadata SHA1 is`6b61868e9cc18b59f97241ac46cc84ab605c8152`,client SHA1`a19d9badbea944a4369fd0059e53bf7286597576`;4343 files/70 libraries/4271 assets are verified. GUI runtime reuses the prior hash-pinned Debian GLFW/xdotool packages. Sources remain locked repo JSON/observations; no implementation sources, JAR unpacking, reports, secrets or25565 listener.
 
 Final verification:3175 Rust PASS (2908 core+3 startup+253 protocol+11 seedmap;96 ignored),237 Python PASS; workspace/root Clippy`--release --all-targets -- -D warnings` clean,release build PASS,production24/24 Status/admission checks PASS. Binary/source/artifact hashes,all12 admission cells and raw verification logs: `completion772-verification.json` and `completion772-verification/`. Temporary test worlds/auth databases and build/test leftovers are removed; pre-existing codex.log/plugins-examples/target and external build/client caches are retained.
+
+## 771 admission and 772/773/774/776 regression
+
+771 (opaque1.21.6) passes the unchanged772/774 checklist and is publicly admitted on both primaries.772/773/774/776 remain open.770 tables/control adapter are untouched and both770 pairs remain closed with the existing Russian refusal: full codecs/integration/live checklist are unfinished. No older gameplay profiles or new gates.
+
+| Existing checklist | 771 /26.1.2 | 771 /26.3 |
+|---|---|---|
+| GUI196 payload Pong barriers,6 actions,4 pose views | `completion771-live-final/771-gui775/` PASS | `completion771-live-final/771-gui777/` PASS |
+| Mixed777 PvP, death/respawn, place/mine/wear, inventory/chest/relog/light/disk restart | `771-gameplay775/`:11/11 | `771-gameplay777/`:11/11 |
+| Full recipes/ghost/autofill/consumption/Nether return; supplemental End | `771-dimensions775/`:4 original plus End | `771-dimensions777/`:same |
+| Password registration/wrong→correct relog/Clear Dialog | `771-password775/`:5 records | `771-password777/`:5 records |
+| Online login | Shared RSA/session-service/encryption/compression/identity test extended to771 | Same implementation |
+
+771 reuses772 typed helpers with separate locked metadata/serializer/content tables:92 item,64 block/1933 state,6 entity and3 particle views. Lava Chicken disc projects to disc13; named item NBT in block entities uses771 views and legitimate chain input maps to iron_chain. Inventory resynchronization, tracked statue pose views, short velocity/profiles/particles, Configuration/Play/chunk/light and old action envelopes reuse772. The sixth GUI action uses the same ordinary sword attack (cow10→4,wear1);774/776 keep jab7. Canonical saves, inventory and primary gameplay stay authoritative. Equal pinned771/772 type graphs are checked but do not replace live proof.
+
+`completion771-regression/` repeats every existing GUI196/6/4,gameplay/restart11,recipes/Nether4 plus supplemental End,password5 check for all eight772/773/774/776 pairs; their payload files are byte-for-byte unchanged. Nether/End disk persistence, arbitrary custom component forms and exhaustive live entity/attribute semantics remain unclaimed; prior excluded live Mojang-account/chat-fallback requirements remain excluded. No new checklist gate.
+
+Retained failures: `protocol-first.log` had the stale771 attribute-refusal assertion; `compile-first.log` warned about an initially unused771 BE-view table; `completion771-live/771-gui775` reached Play then exposed the remaining chunk wrapper guard. The guard now includes771. Dedicated private771 ports26128/26134 allow independent regressions; no25565 listener. Per-run binary hashes precede only admission/test-port alignment, final unsupported770 BE guard and test-only cleanup; final full suite and production checks follow all Rust changes.
+
+Exactly one authorized copied official26.3 native777 reference run: `completion771-official777-reference/`,Java25,stdin=/dev/null,26190/26191,7/7,stopped by PID(exit143),copied server/world removed. This is reference evidence, not771 proof. Opaque1.21.6 metadata SHA1`8137b78647df617d8a38754c4d61deedb74f9fa5`,client SHA1`740a125b83dd3447feaa3c5e891ead7fbb21ae28`;4343 files/70 libraries/4271 assets hash-verified. Existing pinned repo JSON/observations and prior Debian GUI runtime are reused; no implementation sources,JAR unpacking,reports,secrets,commit or push.
+
+Final verification:3183 Rust PASS (2908core+3startup+261protocol+11seedmap;98ignored),237 Python PASS; workspace/root Clippy-Dwarnings clean,release build PASS,production24/24 honest Status/admission checks PASS. Final binaries/source/artifact hashes and all12 admission cells: `completion771-verification.json`; logs/verifier:`completion771-verification/`. Temporary worlds/auth databases,Cargo.lock,Python caches and test leftovers removed; pre-existing codex.log/plugins-examples/target and external build/client caches retained.

@@ -19,6 +19,9 @@ from smoke import frame, handshake, read_varint, send
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('binary','protocol','cache','output'):p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--protocol771',type=Path)
+    p.add_argument('--cache771',type=Path)
+    p.add_argument('--admit771',action='store_true')
     p.add_argument('--protocol772',type=Path)
     p.add_argument('--cache772',type=Path)
     p.add_argument('--admit772',action='store_true')
@@ -40,6 +43,11 @@ def main():
         assert hashlib.sha256(a.protocol774.read_bytes()).hexdigest()=='4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab'
         protocols[774]=json.loads(a.protocol774.read_text())
         items[774]=next(r['id'] for r in table(a.cache774,'entities') if r['name']=='item')
+    if a.admit771:
+        assert a.protocol771 and a.cache771 and 771 not in a.closed_clients
+        assert hashlib.sha256(a.protocol771.read_bytes()).hexdigest()=='11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be'
+        protocols[771]=json.loads(a.protocol771.read_text())
+        items[771]=next(r['id'] for r in table(a.cache771,'entities') if r['name']=='item')
     if a.admit772:
         assert a.protocol772 and a.cache772 and 772 not in a.closed_clients
         assert hashlib.sha256(a.protocol772.read_bytes()).hexdigest()=='11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be'
@@ -71,7 +79,7 @@ def main():
                         deadline=time.monotonic()+120
                         while 'Готово (' not in path.read_text():
                             assert server.poll() is None and time.monotonic()<deadline,path.read_text()[-2000:];time.sleep(.1)
-                        for version in (*([772] if a.admit772 else []),*([773] if a.admit773 else []),774,776,*a.closed_clients):
+                        for version in (*([771] if a.admit771 else []),*([772] if a.admit772 else []),*([773] if a.admit773 else []),774,776,*a.closed_clients):
                             row=dict(primary=primary,client=version)
                             with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
                                 handshake(sock,version,port,1);send(sock,b'\0')

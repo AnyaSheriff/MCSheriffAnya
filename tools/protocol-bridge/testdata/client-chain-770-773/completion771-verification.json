@@ -1,0 +1,622 @@
+{
+  "client_translation_only": true,
+  "no_old_gameplay_profiles": true,
+  "no_new_admission_gates": true,
+  "public_admission": {
+    "775": {
+      "770": "closed",
+      "771": "open",
+      "772": "open",
+      "773": "open",
+      "774": "open",
+      "776": "open"
+    },
+    "777": {
+      "770": "closed",
+      "771": "open",
+      "772": "open",
+      "773": "open",
+      "774": "open",
+      "776": "open"
+    }
+  },
+  "checks": {
+    "rust": 3183,
+    "ignored": 98,
+    "python": 237,
+    "public": 24,
+    "shared_online_login": true,
+    "official_native777_reference": 7
+  },
+  "evidence": {
+    "771/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775",
+        "checks": 6,
+        "result_sha256": "01bfd6c99f5513154f0e5f5b90929de89242142f92f8e2b97bd3ab271f37c925",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay775",
+        "checks": 11,
+        "result_sha256": "8af88f2cd07675c9303719c34bcdd5afcae46adfddce31b40f67c5d048799612",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions775",
+        "checks": 5,
+        "result_sha256": "49f4f723d14557aabe0e25fc3951311427b05447343fe1feb8fa4d705e216fda",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password775",
+        "checks": 5,
+        "result_sha256": "fdc1130f953d826543cec194c12473a7d5da0f8be9f21188a7e40cb97dca6b30",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      }
+    },
+    "771/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777",
+        "checks": 6,
+        "result_sha256": "8159d8e785ae2b5b84af871c1808d5cd0da0d1112ba1cfb2b5bd2e5531740422",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay777",
+        "checks": 11,
+        "result_sha256": "11f77c82b204e4e56308ed6d67695fdec5490e2a3970823614b8eae52c409023",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions777",
+        "checks": 5,
+        "result_sha256": "98a10b00eb7cbb8105780848e246956fdad672376f1f3f3fb412993bef67b9b5",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password777",
+        "checks": 5,
+        "result_sha256": "db7976c34ff497f132b1d35359374a6c16cb19572417e21b29b0dfd74d3c9931",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      }
+    },
+    "772/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775",
+        "checks": 6,
+        "result_sha256": "9e38a210ef5ffd328d23d9af843da0ba4d22f6bfb64a9367e8991e6ea7a2d11f",
+        "test_binary_sha256": "955cb2a2306e77b4712aabaf86bc87ac616ecd4b042403f8d7bd0075c8d8d135"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay775",
+        "checks": 11,
+        "result_sha256": "75cdd0df38acf2b960edafeb5601b7d5f8a7fe1374eeec4eeb0eb9b53ab885d9",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions775",
+        "checks": 5,
+        "result_sha256": "74f0a04a874daf8b3593f8054c6cc622152ce327ba6d784a3bd36371615945e6",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password775",
+        "checks": 5,
+        "result_sha256": "26384e1369b3c089579b211cbb0f0b749736e55ef49c8520d570d435a1adb959",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "772/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777",
+        "checks": 6,
+        "result_sha256": "3f2b3bba8ae33ddc0b354dd7020e470c303ade6d80373ecc950a6239e1bd0a43",
+        "test_binary_sha256": "955cb2a2306e77b4712aabaf86bc87ac616ecd4b042403f8d7bd0075c8d8d135"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay777",
+        "checks": 11,
+        "result_sha256": "a014b064ef5848102fe8523d532923c32a0eb81c593fe608a9dce06f727a1a9d",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions777",
+        "checks": 5,
+        "result_sha256": "16d8e36103fc05feb82f83eedb8fea35c2da1b7b33361f9b7aa8caba1af9a795",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password777",
+        "checks": 5,
+        "result_sha256": "cb5d8abe5b20bdd3dc8d2e804428dc4aeb0dcc6aca0c4c8dd2182498031ddab9",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "773/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775",
+        "checks": 6,
+        "result_sha256": "1a6b51f94b9be75eb2ddc40be6ef5ce830d02d32eb80b5e3b285caacb6c441ee",
+        "test_binary_sha256": "a4d7e5c9761e3108e8bb384a1bd0316255d8d2102f506a2bbadd043973fef06e"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay775",
+        "checks": 11,
+        "result_sha256": "abf65eb29ba5e751bc47590e0790f6b38bdd2609e4ffcadff1d7005ed7c2b71c",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions775",
+        "checks": 5,
+        "result_sha256": "eb420051629071136c285bbbacefcf1263b4030a00160f0b29258f33b6ef7416",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password775",
+        "checks": 5,
+        "result_sha256": "f50c919c253f5abe8bf996100d795760c7a8bfab14decb5332d609c4ac9fc9ce",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "773/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777",
+        "checks": 6,
+        "result_sha256": "f89aed8a1e09cf58171d7b1ae929cd38ffef0196bd4612b87eb84faf5c0f9782",
+        "test_binary_sha256": "a4d7e5c9761e3108e8bb384a1bd0316255d8d2102f506a2bbadd043973fef06e"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay777",
+        "checks": 11,
+        "result_sha256": "57b8ef90df868ff4ac27fe43463e85cb99eb8813c2c7725bd93a1aa3c256b032",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions777",
+        "checks": 5,
+        "result_sha256": "cddbc049a586528fe629525730d55f27b764a07a8ef9f127904ddb96901b123b",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password777",
+        "checks": 5,
+        "result_sha256": "82c47574abaa2da5d86f449aecfca93ff871c1a2f981ffcdd197367052411a33",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "774/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775",
+        "checks": 6,
+        "result_sha256": "c54d7ae3f6777e5dbe651c407fda502f38114092943fea47c68f03577899e7a8",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay775",
+        "checks": 11,
+        "result_sha256": "87eeea679a9bc4aba2e727861f387ad68575d40639e294b55bb82bbc149d7f2f",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions775",
+        "checks": 5,
+        "result_sha256": "32f1ea38b290580626afd47561027daf376e673c81be5ec1f76de86d325c250f",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password775",
+        "checks": 5,
+        "result_sha256": "020d2f6df1decb53fd8696490ab4fa099c2f347df6177c79c05642640c8f0c59",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "774/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777",
+        "checks": 6,
+        "result_sha256": "dfa542eb11d98911362d7370ca04b158e75a454cdd78fa8a1d11df6769b83f4b",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay777",
+        "checks": 11,
+        "result_sha256": "1f3a22dc5c5d191345ed5ea9903deaaa373ce537d551e733fdce363418dc70d7",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions777",
+        "checks": 5,
+        "result_sha256": "ec5e13b92ad3c0f3582e3cb58530675de0638c133f35c6e1c9bfc8eb1eb221f3",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password777",
+        "checks": 5,
+        "result_sha256": "c30b3e7fab4db9b001ea3f0caffc1cacacbb305600c5afbecc1a13c5b04e5790",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "776/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775",
+        "checks": 6,
+        "result_sha256": "82234534460dbf92c32f0edc86d3d1872c8bfc24881079e6d6395e901f24dcfb",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay775",
+        "checks": 11,
+        "result_sha256": "a4c953ffc185c8d77632836f58f73ca904a07d83a948bf58edcf3b53ecd7cdc0",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions775",
+        "checks": 5,
+        "result_sha256": "388932c979c69790bfd03e476b4fc75a642de447da013c7fc9d71b512666a242",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password775",
+        "checks": 5,
+        "result_sha256": "278ad95333045057dd53bf899761767e55802f1ddf097030311af111c8c01915",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    },
+    "776/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777",
+        "checks": 6,
+        "result_sha256": "acadcead7ed7775cebdfd469bbd51fc1f12988bd02fd3bdb6b4c4d926b6bb99a",
+        "test_binary_sha256": "3f9059f1eebed585f7de7d6580304575abde45867585c410472c5aa8e0fc44bc"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay777",
+        "checks": 11,
+        "result_sha256": "e55b8dc6937343e81a466f4f269a1032e631fed5acf56de375df5a43fd656438",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions777",
+        "checks": 5,
+        "result_sha256": "6c8489f2f1b22be83842a69ef2f5be21b37d458e6f0d0a1d949ebf80940cb5d4",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password777",
+        "checks": 5,
+        "result_sha256": "0f617dd2f7ff87667b41ccb77658bd3f5ad26670e03539b3369e383d5a12dee0",
+        "test_binary_sha256": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad"
+      }
+    }
+  },
+  "fixtures": {
+    "771": "03b797cfd7010a7e2c3a952a95e587acef5c59d009c1a51a7ea3b81bf34a75ec",
+    "772": "42c126826ec4e2a39e40fb70e475de7fd2baa81f3aedd7a3deb3a97ec6ccc2ac",
+    "773": "b255ed7c945da6168045a3bfd8c874e0df1a941303a055cd924aba4e55e879ec",
+    "774": "f49c99cd5a0d5e41bf07a95be35ca2c18ddca5e1c5759d80afedd9dce872da41",
+    "776": "b315a5d410c666ec1b0bc4b8a38635ec38c765693decc46f15ed82752810bab3"
+  },
+  "final_binaries": {
+    "test": "e845c7b877f2813d45a3e268d5d65631580ebd055eb65035c9882223c9f5f1ad",
+    "release": "7016f320e0904be3d86b517ef7a235fad3738d50a4379a27e1fc735f4f25214e"
+  },
+  "source_sha256": {
+    "docs/java-26.3-content.md": "91942d0bfc170dc70f27d3577a54fc81da76425316fefcecaaf916522f9ecff2",
+    "docs/multiversion-plan.md": "cb152585f5f229867026b1b7da728e21b721a12f472bc427151216449d9380f8",
+    "src/main.rs": "b1290d29b601df3e46fe673af5fa2fc46ed9f1bd307cb409993af29f4ed68316",
+    "src/network/configuration.rs": "18402e100aec159525d63e3591dbc831892de1582bc836ec784c263dcf3eff94",
+    "src/network/connection.rs": "f7503b94a984b22da1c085919b7c64e0453ab91738504c07dd2e4e0ede3c9f46",
+    "src/network/gameplay_probe.rs": "9e20f6b2ade5d1c963b86635479a24779b9b027a7c3f92684f35c951c7b7f695",
+    "src/network/online.rs": "016984ebdd2ca050c449e867dbfbdf2ed867a888e3224ef1036266095fb72af3",
+    "src/network/packet.rs": "e814926a636854259b780fee84856210623c5e45829326a32745f28bb28692a3",
+    "src/network/registries.rs": "0953d59cada22dd489bbd877115e2a281c9498d145840da947a0b5a608947473",
+    "tools/protocol-bridge/generate_payload_772.py": "4c401c13910de109af80ebc539aaacb018d44e946d50ca3fe442557230d45196",
+    "tools/protocol-bridge/live_client.py": "7414858422467b8ae2e2a51456096aa3e16f7c6c4382e447e4e0cbdf009086fa",
+    "tools/protocol-bridge/prepare_registry_client.py": "eb521dd8e18172cbb68c25117c27aaa84b50be872013d157b3557e7f3aced817",
+    "tools/protocol-bridge/probe_776_action_client.py": "0d6310e00a53a5760c10972e43b5622f2acbeaacbbcf1b63c32ca3e55bba6170",
+    "tools/protocol-bridge/probe_776_payloads.py": "0c8cb378bd4a32045f62ce1a022655014ad673c6e5a57b4caa6ad84d86a6c2e5",
+    "tools/protocol-bridge/probe_light.py": "b9cd881e914ca3f7b9383f344a17e6e5658be523042d22df1dd5d167ca8d4e9a",
+    "tools/protocol-bridge/probe_public_776.py": "2ae0416232bf18769c87cca5d23aa635870d1b74493aca81ccdd960c42840084",
+    "tools/protocol-bridge/probe_step1_dimensions_recipes_776.py": "3e9d3ddffe28f316ce516ad5013c266ec48798107858a39a94cdb22412d1a5e9",
+    "tools/protocol-bridge/probe_step1_gameplay_776.py": "a2cd7f7ab409e5af742415a50f6bcc35adf5c0bf28fc26fa7ed2af15dc43b522",
+    "tools/protocol-bridge/src/actions.rs": "d754d236c491ef9a72e8a2c2574dd8cf090b2979189fe56a9b70611481555504",
+    "tools/protocol-bridge/src/adjacent.rs": "0b5b13098b95540f6611fee62483da94ec4e69586deae66a8f3ef5a4fd0a1124",
+    "tools/protocol-bridge/src/adjacent_tests.rs": "cf507c613729aa46aa96b3dcfffec664d3a62ae9098981a0f86533b804f2f4af",
+    "tools/protocol-bridge/src/block_entities.rs": "31201ccdcb8f20699ee5c3bb7db969f972ff3b33b380a0bef1d5525c5cc9417d",
+    "tools/protocol-bridge/src/block_entity_items.rs": "97f8e75e10b5dafb5e767feeb90f280d957e4512022f1e8cad84d4cdfa9b4e67",
+    "tools/protocol-bridge/src/chunk.rs": "10e6431bc62ed5574c48dd97b8ca6304cf9f7973712ebb5b26b54652cbe89b47",
+    "tools/protocol-bridge/src/chunk_sections.rs": "dad5d72effdb17e89f057368c81a7b237a54ab03d293ec56f1f57d04ebba778d",
+    "tools/protocol-bridge/src/client_772_tests.rs": "fa7e5ad00582e9afeb6c6032bb9614e1a1df9742dadc91a35f784b3fe8266aeb",
+    "tools/protocol-bridge/src/client_773_tests.rs": "4052ff0443d7fea396bff80949cd2538806caa4d576029670fde0e08d73fad9c",
+    "tools/protocol-bridge/src/component_776.rs": "dde7f807bf613ac69a7ee06e43e763e265b8197952bc5f0a1833bfbf775a06e1",
+    "tools/protocol-bridge/src/content.rs": "c43472b77c7505f3941487c1f808d18c39f7261ce556d5d4aaefa85a664cca73",
+    "tools/protocol-bridge/src/entities.rs": "9aa75dd88f2348123175a34ab9d78adec58537a1abc4df1d51eee01daf47ab1b",
+    "tools/protocol-bridge/src/expanded_776_tests.rs": "3d8d52ea13c9135ef710dada00ec3a64c0cb1a641710baf74db6306169dcfdb4",
+    "tools/protocol-bridge/src/ids.rs": "f2ff9ce006410169db9efbde7c420b5bf19ae89de59863911e1d4717a1801f3a",
+    "tools/protocol-bridge/src/items.rs": "e6d260a3ae1273bbd515162e7618c9659ffcbc07363cd232c2f46fd259535746",
+    "tools/protocol-bridge/src/lib.rs": "b16bd34a3f29e05350743ebaedcb12f4d62681c32b234c233302c6685616ece5",
+    "tools/protocol-bridge/src/light.rs": "202790543f52853fbcea5d0c93df5b901c0f1ff3307551825f314d01c6acc6dd",
+    "tools/protocol-bridge/src/login.rs": "f93b57d97b57b240a8ec3e1954d276b93b838ebf4dc88cf5e8d84052a75c3424",
+    "tools/protocol-bridge/src/movement.rs": "bafe0558eb7683d45b0b20a1131d7177d45309268e966f5df10394ca5594dfbe",
+    "tools/protocol-bridge/src/nested_items.rs": "ce63c7727ffbb66d6705927d5259890a40c87ae50f5d1db4b23512ccc8df226d",
+    "tools/protocol-bridge/src/packet_layouts.rs": "20f3feda252aa747426f438e87454c856db981279c612ee686009bc4717bb906",
+    "tools/protocol-bridge/src/particles.rs": "7e0047ae805ba20b3e1081cf37e80bfadadc8444a73ef1f11218555f79585954",
+    "tools/protocol-bridge/src/recipes.rs": "bfa92f9d17d65e4ca5c01beed9109f0f24591601113d13e63269d443f2c82447",
+    "tools/protocol-bridge/src/registry.rs": "b19d27f8de6aad320e2e7d6478e45d86354335e415f26b75e2a468aa4043dedc",
+    "tools/protocol-bridge/src/teleport.rs": "1d2ac2af27158a2a3a94354179fad98b8ed30f31c4a33d11aab4d25ab4dea1a1",
+    "tools/protocol-bridge/src/wire.rs": "55ba63638b5fea19174f9e4614ee3f06ea4174016fe3e0885811b0790587bd8a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md": "f6dc4dcd638476762cbb54ae546c9fb2d65070219d36743365b3dc16db2e979d",
+    "tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md": "f05b5de41e98b8ebe73ad9c26d8789765e0fa7b32b2a56b629528fffc87b53d1",
+    "tools/protocol-bridge/generate_payload_771.py": "e45457ec837263ad085cb820444494d2d8d6fbdae40c78bf39e210e943630e82",
+    "tools/protocol-bridge/payload-771-report.json": "21ac42fca6e869c9b66224a9b11dc344d531c10336ead7160034b9467570c5ee",
+    "tools/protocol-bridge/src/client_771.rs": "0b0d7d93d2cd1de47ab8a005d3e1083dacdbcd579deffeda3cf238b58572e3ae",
+    "tools/protocol-bridge/src/client_771_tests.rs": "505a215a36eb617f5b83b6a7883a38041858707c375984f9eb21915bf5e339a9",
+    "tools/protocol-bridge/src/generated_payload_771.rs": "315e863d4fed4e6aa14a4e173154a9e6f2fdf2ce5646447282d100ac424a9cf9"
+  },
+  "notes": [
+    "771 reuses the772 typed path with separate locked content/layout/serializer tables.92 item/64 block/1933 state/6 entity/3 particle views; canonical saves and primary gameplay unchanged.",
+    "771 uses the same sword attack equivalent as772/773; 774/776 keep jab7. No checklist gate added.",
+    "Nether/End disk persistence, custom component forms and exhaustive entity/attribute semantics remain unclaimed.",
+    "Existing pinned observations reused; one authorized copied official26.3 native777 reference run, Java25/DEVNULL/26190\u201326191, stopped by PID. No implementation sources or JAR unpacking."
+  ],
+  "retained_failures": [
+    "protocol-first: stale771 attribute refusal assertion; corrected for the new771 codec.",
+    "compile-first: generated771 block-entity view constant initially unused; production now selects that table.",
+    "completion771-live/771-gui775: chunk wrapper still rejected771; added771 to the existing772 chunk path."
+  ],
+  "artifact_sha256": {
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/build-final.log": "f5e05c9b685909d32730787e8904b1169dd686d08a37a180c176f207d05a6d89",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/client-prepare.log": "ebcdb2bd76e7519c09eab803d7d792c40fa53e011a598eb44d91367d8e92b3b0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/clippy-private.log": "bcc4ed34a888e3b8f2b9f7e8f13b9a56e775a36b710fdf5479824fac2f5d91ef",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/clippy-root-final.log": "c9ef3b68d69664e1d157e575848e4f6146e26ad39b9aa75897123cb92d2ce4bd",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/clippy-workspace-final.log": "67e7b1a2780eaa594c5a0f6082f0edf17f553dfaf099da49b11f4830c71aaa7e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/compile-chunk.log": "81cc6aa68734384f84866a1ad5f8a75601c717f703e0c2e0b86d6590142b3fb1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/compile-first.log": "cd1f78a908e52c99a41fe2cc9a92751ad470cace82783c2ca606b54a56cc8eb8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/compile-isolation.log": "aa057614b473150b1f8c80c983fafbbc519950176bf2c436fbe1dfa8a6983b58",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/compile-second.log": "f65bf3485c2880ff960eebe8adf7b1ac23775281c80b774c3de7e67a79ef221e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/export-final.log": "1ce073229a5a48bf92570b54e578bcff24a5295e1c70155f5bb54885bdd4d32a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/export-first.log": "11e7fcd9c6dd52134271975f2728226ef148c3a990d66c35022b6f0c05c7e33c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/generator.log": "cf8e8ac9538b3d410a0542d16d7f1f18a401893c9b897952507ec21a1f9886c1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/generator771-check.log": "cf8e8ac9538b3d410a0542d16d7f1f18a401893c9b897952507ec21a1f9886c1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/generator772-check.log": "fdc1ae313bde1b7fe5225cac2867fdf424423996943e3476a433b643a670d924",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/live-final.log": "c7f01bc5c7ae4e85db0c06c7716f12c97c42c1f7fa443f4ccd0a166e5284b593",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/live.log": "7d27fd3b751d9692fc1abc239443067e50838871d88f93279010c54a5b132875",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/official-reference.log": "281ad8397767c2ccf8f91cc2b016ff063aa947925e1820fc586f39f17758d349",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/protocol-first.log": "5166add9fd53a5a565ae9afee2b0c9969e18fc3888f5c2addc175bbb270f396d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/protocol-private.log": "09e9ffc7cd288221de23e65cb7300b7ec3eda362ed484e987fc228daa33bea56",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/public-final.log": "85ae7491ad69084ccc25a635f396ae437d77cd09e30faa939a070b9e46f70e1c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/python-final.log": "f31f84bfc8cd0cee716405ecf397ebddffc18095f6780d710554817236735780",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/python-first.log": "d65a69b0a927aaf407ac8b65d2bb42b34fee912628ebc04ada59590aa92629d8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/regression.log": "4c11b32ae4fdb5c1c59e34947106b0d3a7ab3bbd6ccd523e81858ee3e2dc49cb",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/run-checklist.py": "d02b842171a30c35d28a8129fcb15a8cc1a595e3c7f058cdb59a7c7a58511b66",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/run-final-checks.sh": "15cb32db8f4b943eaef36f04024664baf86977502ae5ef6072015e27090568df",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/run-public.py": "a4371360c8c37f2c7324ee46f0a11bf5a4c61cd333f6c355ea3af0ceea429e24",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/rust-final.log": "7c00e169b0247534a3158dd6245f2b3332bfe946eebaa349960201a5b020af44",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/rust-private.log": "758c56aad85470de38309888331321e116e45fc0f76f6f76f59848e019eede45",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/verify-final.log": "4751816e562b90bfadc35730cbc623cdff1418667a2a4e17a79389b149ec33fa",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-verification/verify.py": "6794d8fd32135305b44730c2b5d08c76c945ce6edcdbe53f6d4bf2c2cebc442e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live/771-gui775/client.log": "23984db41b1fbf852122ace2e10efe464474c1b3b17bec0ef0f8ae5d471693a8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live/771-gui775/result.json": "a3ec39dd072748146704a3076385e400df1ba4ebb1dc34d43ee808499e71e96c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live/771-gui775/server.log": "4124f953a1d632c69d237764be7092f82b57af0ac92eb923ffcc97bcf4237db3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live/771-gui775.log": "24178980743b1e92816754168b82756aa1b7e98d41b443bd7ed160dacdea7c06",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live/jobs.json": "1fb8f3ee14f96b3e83d63f1416395ff470207bb29bca5d191286dd20081a211c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions775/result.json": "49f4f723d14557aabe0e25fc3951311427b05447343fe1feb8fa4d705e216fda",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions775/server.log": "ed007e7b795315d71ca513f985c56638c65c7d871b1c2248a8d1a1794fbbb37e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions777/result.json": "98a10b00eb7cbb8105780848e246956fdad672376f1f3f3fb412993bef67b9b5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions777/server.log": "158e4c8ef8f64497d983abd012f8556d1fa0a545c545b884545e982f29466a9d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay775/result.json": "8af88f2cd07675c9303719c34bcdd5afcae46adfddce31b40f67c5d048799612",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay775/server.log": "f5d532ce81776dd6836c1a87cf77d58ab2e3a9df9ae536925f7055e9450dfc2d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay777/result.json": "11f77c82b204e4e56308ed6d67695fdec5490e2a3970823614b8eae52c409023",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay777/server.log": "0214a31f88a2034fef74feb3ee78f5154b4e654047536dbce2edc0d399089786",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/client.log": "db384bb8712230dd58bf8d793e7ee195b1aedfc32cc828fa6eac24e2cba536bd",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/finished-actions.png": "25863bbcb2592f2f10f87cbd2dcdd834ffc70fa086979400c9bea94b05a851bd",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/payloads-accepted.png": "c2790ee8fb839178a380f8a71a1685a919653cdea073d9eb2f942cf42bb2246c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/ready-cancel.png": "956fbcaa549185bc677624633c38e48a9edad990a187f8595e90aebbe0d48c1e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/result.json": "01bfd6c99f5513154f0e5f5b90929de89242142f92f8e2b97bd3ab271f37c925",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/server.log": "d96265a9aff3270d0b3c5d052c1c196a43ba3b6b021c58b96447ad1a5df1db41",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/statue-ready.png": "0db82b16adea38600fac9346361c339c639b3b207144cc6e746c4d8b162c6607",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/statue-running.png": "04147077da780c249164bb1ad212a9e42aba640ac31ff410d32e0d984bce3cbb",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/statue-sitting.png": "96b9e87bc02e10eb3941a2a70cf10541885f2599495868068fb893001166d456",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/statue-standing.png": "5cd348baf6d8bde7a2d3d5b8ea2eace79b19281d0f4bd1f0676bd989ccdeb653",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775/statue-star.png": "f8a03ee8ad7716b2a0e393c9fd7806445e9fb7c7e77c869225c99213a482061d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui775.log": "480ec141c7b5b18a80aaea9ea65e7af1b468016241ddcbefdbaaa10b0e07b6b4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/client.log": "7593811eba4da3ad855e24c9adc83dd0517e030a31889f8cf66c47eed2380ed9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/finished-actions.png": "8522322109494ae3ed820f7c78cc39bb61a316f15830ce1c4f01effdcb6a4e8c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/payloads-accepted.png": "d0b642bc5fb122b489306ad20912f10f7e82116b4e94a07c6a55fc70f09f1411",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/ready-cancel.png": "cb9914087d7b2bbe52fdc7fc4e2ea4f06b22fea68fa947be850632acf3976852",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/result.json": "8159d8e785ae2b5b84af871c1808d5cd0da0d1112ba1cfb2b5bd2e5531740422",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/server.log": "9492f0833f82dc2002d4a15434f2ec7fbb3c4ab58231314f8b7325b2d402c447",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/statue-ready.png": "47c94f26dbe08aac3eb766f602f86f8a77d218dce0f1f1d503ba893db6f17c70",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/statue-running.png": "642941a066c3c82b9a254fb07531742e98f3aef7a9a7eb9799d501769126394e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/statue-sitting.png": "931459adda5fb6803efc12860d6e7e1a12d67161c8a99bbefaf1c389c291c931",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/statue-standing.png": "8502bf6f6eaa598580e9f720b1a19697b96406afd871efea4bb3a2acdcd8ea5a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777/statue-star.png": "0b58f854d382dd30f84467a539347d5ccc8f57a73ff26783354c7e8800f3061a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-gui777.log": "480ec141c7b5b18a80aaea9ea65e7af1b468016241ddcbefdbaaa10b0e07b6b4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password775/result.json": "fdc1130f953d826543cec194c12473a7d5da0f8be9f21188a7e40cb97dca6b30",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password775/server.log": "b75d965b7111ab0ebf713249606306eed3e91ea3951723e42d6d86e21adbec95",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password777/result.json": "db7976c34ff497f132b1d35359374a6c16cb19572417e21b29b0dfd74d3c9931",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password777/server.log": "dc49aec37c502d7e5760434b3c29522674f97750a7adcce58897c710a28938cd",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/771-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-live-final/jobs.json": "d33838131588d1df84211cbc0d3d986685b8b0716da08569b938f8e31b495210",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions775/result.json": "74f0a04a874daf8b3593f8054c6cc622152ce327ba6d784a3bd36371615945e6",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions775/server.log": "5c3b964e45427a0492bf96508a5cd39a7fa6ecf3911faaaf07e940ff6a77fc90",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions777/result.json": "16d8e36103fc05feb82f83eedb8fea35c2da1b7b33361f9b7aa8caba1af9a795",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions777/server.log": "31578744c2034c2984bf664ac1f13aa6cbfff7173e2f38e8ae5d10bda6be33c2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay775/result.json": "75cdd0df38acf2b960edafeb5601b7d5f8a7fe1374eeec4eeb0eb9b53ab885d9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay775/server.log": "6b5a32cae1d87660dc46e8fda7863b768bbd5fc9d0f0b605eb22faedc1c03ed3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay777/result.json": "a014b064ef5848102fe8523d532923c32a0eb81c593fe608a9dce06f727a1a9d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay777/server.log": "761ca3b026d8128044649b9279600ad9e10b7332e123646acaa575a26eb10520",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/client.log": "ae2cf899fa0dd01fd95332ff7f858279670454b6c9567c67624b26395d5f3ab5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/finished-actions.png": "4b9f304970fd25a56408cc1251afd5d9f53d7887623200d452cbf8179aa025a5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/payloads-accepted.png": "b9999b4983b5d4270a9e02c55d629e7942a6c603305720b17f876b00803f19aa",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/ready-cancel.png": "b544e075fbba008db36ba16f96d6b0fb36bba3a28278761eb6950fad864dd667",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/result.json": "9e38a210ef5ffd328d23d9af843da0ba4d22f6bfb64a9367e8991e6ea7a2d11f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/server.log": "fb7146e10839e960cd04d656b99542615dddfb9bb3bde2346725f8fb64eb71db",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/statue-ready.png": "300a9dac1d2aae12ffa3c263911059904cbc0c8e7caee69ef59b3db00138a28d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/statue-running.png": "c5657edaa7ab84efec5773de473c04255970c0ed53911bc1838c5914b30a8ed8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/statue-sitting.png": "eaa479d0dc929ac2e16c23e8675030d925d3501632402a6adf22f42ddcf8c751",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/statue-standing.png": "c27499b2309258029380c11e1f09c8422cdf22898fc81314ae7f8130fef064c9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775/statue-star.png": "16fa979391e54fa5448aaf51cd0fd577e73a8b0d1134ac0eaaddf33c6cb45417",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui775.log": "480ec141c7b5b18a80aaea9ea65e7af1b468016241ddcbefdbaaa10b0e07b6b4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/client.log": "d70b0fe86a95199bc64e5a7d561dbc9913fdee8c1f84991d9dabf352a0303a99",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/finished-actions.png": "513c0b21cca0685a810fa5d35321c25794b837d8ba7103879b3e43c509a27475",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/payloads-accepted.png": "f1e3d5a2f0e102f0f35c9d61691713066f52172ea0e0c0e41f0987f059cec089",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/ready-cancel.png": "cb9914087d7b2bbe52fdc7fc4e2ea4f06b22fea68fa947be850632acf3976852",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/result.json": "3f2b3bba8ae33ddc0b354dd7020e470c303ade6d80373ecc950a6239e1bd0a43",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/server.log": "1a79656939746abea9936b9fddcdff387b55c05750c3736e0adb6a0cc09e8f6b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/statue-ready.png": "9fc975681cb3bac33cae7dfb1f9bd11e0bb260359ce8b7325593cd6274aa5ea7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/statue-running.png": "a0990e1db1f7b2b7b5ba1a22234970fc7a0696c69ed97e354df534e605608405",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/statue-sitting.png": "389faa5324e154cd3f3ab89feb04b9cb64514790e0230d8cf3ac389a7f0e7f55",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/statue-standing.png": "0d9bdc972c31bcfb7c02a0c3666b5ea3c7f9b41de9ec46eddf8f2e4852bfb7de",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777/statue-star.png": "8fd10fb0f4eafb34ddbdd0ce6119bab94c59bf897c8c0d3546940065dacb175d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-gui777.log": "480ec141c7b5b18a80aaea9ea65e7af1b468016241ddcbefdbaaa10b0e07b6b4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password775/result.json": "26384e1369b3c089579b211cbb0f0b749736e55ef49c8520d570d435a1adb959",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password775/server.log": "240ed1b6be1bc691a859547f8cc93030a8b04c29b0c8909aac8d16ed475567a4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password777/result.json": "cb5d8abe5b20bdd3dc8d2e804428dc4aeb0dcc6aca0c4c8dd2182498031ddab9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password777/server.log": "99fc4ddbc500eb99bfb9acc7e6c5ee925de1764f3ad7ad03ec13a170b641f1d4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/772-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions775/result.json": "eb420051629071136c285bbbacefcf1263b4030a00160f0b29258f33b6ef7416",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions775/server.log": "c0a1e15e46fcba98dcbcd5b132fbf65a2bca227c2042917e4855632c534be7d0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions777/result.json": "cddbc049a586528fe629525730d55f27b764a07a8ef9f127904ddb96901b123b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions777/server.log": "a58a3ed5a934e7c04e4a46b00007ea37672943a9676dd8cf74a8cec1d6c5049f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay775/result.json": "abf65eb29ba5e751bc47590e0790f6b38bdd2609e4ffcadff1d7005ed7c2b71c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay775/server.log": "f7aa12687c573f9328d549b87f675b605efc33438521d86bd28ff4efa7711cc3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay777/result.json": "57b8ef90df868ff4ac27fe43463e85cb99eb8813c2c7725bd93a1aa3c256b032",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay777/server.log": "49004c472b08a42c37ed2f00298a3fa33934496af79e4fdc69ef188984abe218",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/client.log": "9d719107e76d7807acd2a5f2e88fcb99833c4b86ed0f840f142f06e8a60acce5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/finished-actions.png": "cc5d79f0b0fea7d005183ec60ec43b33be2430dd93c14d6e264d0b20d1bf9198",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/payloads-accepted.png": "6f09dc2cd32419427b8f885ee853a21f6eb01d9f22fdd70343b7968b8d222856",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/ready-cancel.png": "a1f53f68127710a4fbfd44cb0204cb24ce5163d7e1fa42cda8127069ff5a11c2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/result.json": "1a6b51f94b9be75eb2ddc40be6ef5ce830d02d32eb80b5e3b285caacb6c441ee",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/server.log": "296afae1afcc5c1867bda43dc497d97fdcc39ed0c2914f7abb00b99961469a91",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/statue-ready.png": "d633ef93ecc1b7fb72e20a822733b2c5e5730d612cb7937f7bad8ebd6aeafffc",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/statue-running.png": "6b44de04c393f1af382397c3c11289c16571f34e3a649cea96912160fd365d83",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/statue-sitting.png": "4f919bee13c24fbf92b4a08a86b5672bdf65b5e9c5d713abf1bf96b3d97aeb2f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/statue-standing.png": "4a031ad6777308c8833eec281362cdd0c66c02d4aea255486c670359346a8772",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775/statue-star.png": "71babb390210a45562a15104c1ecd0b82f52054ed694a1a3bcac03e5e8ca99e3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui775.log": "74c78c9c5e4cd405d830ec6cae1296cbda675f29529f8c33329198cd3eb50aef",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/client.log": "6aad8d8eea3e9afddac58db1d8ebd1c153e4e5bc4e0b4a19ffdb234b6343d6ec",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/finished-actions.png": "6f9b980152219068641fe5082af54e289bee9bd7220424597be23607ef4ef221",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/payloads-accepted.png": "c20e2a94fad6a707f6cf2a2de4e4dfbe4c01dfe094a31b684965fca9a8f0b0d3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/ready-cancel.png": "cb9914087d7b2bbe52fdc7fc4e2ea4f06b22fea68fa947be850632acf3976852",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/result.json": "f89aed8a1e09cf58171d7b1ae929cd38ffef0196bd4612b87eb84faf5c0f9782",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/server.log": "990a8144551df5a18b865b40be4a9d95d4ec601adedf8e98620bcbf6fe75ae5c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/statue-ready.png": "4bf419370115ae5b055178d9fe87b119e5226a58c3bd3c78c0152ab2b2dfb4fb",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/statue-running.png": "86aabe1e21f4892d8813611ec22a74aba3ecd29fe27278d70dae61e366bf2a18",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/statue-sitting.png": "61e8625010052bcc3edc5fd6deb9ee6bdb115fcb69d4980a9f7078d4fa71bb96",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/statue-standing.png": "7fcbe815be0cff827ad64061474820a19ee24fe21836f7d47f97d472dad8f104",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777/statue-star.png": "975d09fd01d6f4122482d7ec337fd056f40baba04f10dce5875d3ce3c9397733",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-gui777.log": "74c78c9c5e4cd405d830ec6cae1296cbda675f29529f8c33329198cd3eb50aef",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password775/result.json": "f50c919c253f5abe8bf996100d795760c7a8bfab14decb5332d609c4ac9fc9ce",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password775/server.log": "8c02a7c77ac1c1f6e6357c5ebbb90ef3e35203fdba786ae07db0a18d956973a4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password777/result.json": "82c47574abaa2da5d86f449aecfca93ff871c1a2f981ffcdd197367052411a33",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password777/server.log": "35603ba1ca5a37ccb5be35e7f09d475c3e742e9e45977c88b27155a319683f91",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/773-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions775/result.json": "32f1ea38b290580626afd47561027daf376e673c81be5ec1f76de86d325c250f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions775/server.log": "7edc2d46156628871c90b21abebaa550ff0c1f52f5f6481a70eb19c222fa2676",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions777/result.json": "ec5e13b92ad3c0f3582e3cb58530675de0638c133f35c6e1c9bfc8eb1eb221f3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions777/server.log": "635b44a80c40dece7be5235bb3136a63563dc4a28ff862f7f759686d403e825b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay775/result.json": "87eeea679a9bc4aba2e727861f387ad68575d40639e294b55bb82bbc149d7f2f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay775/server.log": "5525940b471fbe264ad8bb5a85f76cf9657671f7af4fb3e42a998fc49659d14b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay777/result.json": "1f3a22dc5c5d191345ed5ea9903deaaa373ce537d551e733fdce363418dc70d7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay777/server.log": "158452add55ab8d8394928c9c0c60cff0da60c851822f8bedf6f697559ea1933",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/client.log": "b4cbdbc7cb664bbb4d24ce67f67fc46fd4d2813f277e13b84b56d186b28a6d1b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/finished-actions.png": "b9c5afbce5b57765a8f08da3e7f1e8778c3e795644c25823180d634386b9ecab",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/payloads-accepted.png": "062c3329ca31baaf98dd9c7f21bd8880020fc67dc08a21fc43b081542dd46fa0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/ready-cancel.png": "5e5dfd4df824591eb50a4045ad45b6da0391979d5f28edd652309d00c3387ef8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/result.json": "c54d7ae3f6777e5dbe651c407fda502f38114092943fea47c68f03577899e7a8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/server.log": "e48f4d90463e038997d9364961a2b49ba95645bd0a2fcf2f38aa022dba3703dc",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/statue-ready.png": "ea6c7cb1a567d26f32ac155019ba8cf35bfb66eaca57340812268d767a330124",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/statue-running.png": "bb7fa68555251ae4b7a9bcf4860ee1c629d1093c41f2ac4ec8f82d671cf8fadb",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/statue-sitting.png": "ba73cb3864e0d921779e51e0dab1ce0226f7e819743863010bd14a30b8c18059",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/statue-standing.png": "805414ebfbe20aad883f420cadad629d605f6378dabb6edd4bee0e04d63a53cf",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775/statue-star.png": "b66394613c3dfc444d534ec867707a2294f137b0c6423ea8c80301cec1e8e3e0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui775.log": "7d4afb39d866754d8834b6da0bda52f5c9aaf4372d03f8d68af00ceba83d4cc2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/client.log": "6104a8022bc9a82cd621efc7c3cf1d57242a8d34a0ac357b4583bdcf38a0f2a1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/finished-actions.png": "db81bd192b1dd96410743054a783593ff6eace32824e8c54e3113484b9b46264",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/payloads-accepted.png": "65db55a440c2459ceea612f62cfb51896523feeecb15ab38eb2bb70111cba1e0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/ready-cancel.png": "45f7c42fa049f708803ad889f0af6d65bcd1a2d3e70925375f1e910afea4cb4d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/result.json": "dfa542eb11d98911362d7370ca04b158e75a454cdd78fa8a1d11df6769b83f4b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/server.log": "578f609291654a37776827462c24fee725c0f8d2eeabc04ed67dff65a48d68f7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/statue-ready.png": "fd91ee57196fb01b8b65ba7da3aab422948be0074a9b903c7c0930831fcc3072",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/statue-running.png": "e6436edf9ef1b04d6e2791a60845edd2a1fc10c8de71a35ebb9e5067f883ab1d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/statue-sitting.png": "ee7d0ad090f446639cb8c5068114a79a180fea2760244a73bb53d04192e1b0c4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/statue-standing.png": "ca4dbda6fc801987f60293b19f872e9d51c7f0966cd3852a582e8d03073fdde7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777/statue-star.png": "e7889e42f0b7e547d8bb826f192810abb03835a274369262f6f25fada577ffb5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-gui777.log": "7d4afb39d866754d8834b6da0bda52f5c9aaf4372d03f8d68af00ceba83d4cc2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password775/result.json": "020d2f6df1decb53fd8696490ab4fa099c2f347df6177c79c05642640c8f0c59",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password775/server.log": "11efa5fe5098e6ba0ace84bd1235b38304a1af1a97acd24fa9e910955f9b1165",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password777/result.json": "c30b3e7fab4db9b001ea3f0caffc1cacacbb305600c5afbecc1a13c5b04e5790",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password777/server.log": "977a0b0d92eb99183e3a15e2db112d9f2685ba7de0b9571dd15fc2db4b368122",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/774-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions775/result.json": "388932c979c69790bfd03e476b4fc75a642de447da013c7fc9d71b512666a242",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions775/server.log": "fa2ca3b201849fd8c9c7ec191b13c7ccb2fe5cfb3ec0749a7d5fe2f67981d929",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions777/result.json": "6c8489f2f1b22be83842a69ef2f5be21b37d458e6f0d0a1d949ebf80940cb5d4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions777/server.log": "3fc286445f9237836dc59c3534aeba93a281e9cbad2bda6a4dd40441c3b8045c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay775/result.json": "a4c953ffc185c8d77632836f58f73ca904a07d83a948bf58edcf3b53ecd7cdc0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay775/server.log": "fec6119bfe1ba2d6d59f8a64c8c1866e6aa753f5d5a7e39a1d8bc39e4b849e1c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay777/result.json": "e55b8dc6937343e81a466f4f269a1032e631fed5acf56de375df5a43fd656438",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay777/server.log": "129242b80d7c597c5bb8c8bdd7eb2d395dccca04bbd25ae268acf1f0dc3fe9db",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/client.log": "b23e26d5b71eaf52f27e491f0ac98baab1553869ab483620e9fd3b9d7c670cfd",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/finished-actions.png": "0e728eb5a89e26329ac1ac27d74c424be872691f698140b44b3b51456e0a0655",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/payloads-accepted.png": "cd24106bd662e782a93be29f210dcee39aa3326f68ec93eeb77e501edb0afcd7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/ready-cancel.png": "3d56543317ba5f5d63f85e989735bf3ca2a93dfca896ad51b2301488898587c7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/result.json": "82234534460dbf92c32f0edc86d3d1872c8bfc24881079e6d6395e901f24dcfb",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/server.log": "a5130a1bd4f7a541678a57d59ba37caa8f4c284bdff78047b6ba57a606e366ba",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/statue-ready.png": "93a70bff8cf7e9b2d60faedec549ea6f904f773b09de2d8599c1578f4d01b856",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/statue-running.png": "2ae2bf3fb81e31aa57e03fb09754dd8a6207ee840056383e60e7504b5db9de80",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/statue-sitting.png": "72c8289d79dfa49bb95950a7125b4918de472dbd2121a686e839dd4cbe4b482d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/statue-standing.png": "bece6f0912effc7490eb0ed5154e01f2238a21a0a969c08e1424b6d09a10ab70",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775/statue-star.png": "6a34f6f37cbba2f48a2c62965ebf79ea5cace04a2f8882178e5efb5f749b2b9c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui775.log": "9abc70d4c7711e0ef41df6f24b878314a8fd838f487e6ff0a2279aa21359c84d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/client.log": "94b4f34b007b136e928b6fca8206fa7133959931879797384e236a73175c3310",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/finished-actions.png": "1ee5de2b3a8f41cda9b988d8360640f6302be4fa4cabd8436b910c6f373a632e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/payloads-accepted.png": "a8274304b44c0183c1fcb33f523f128c36514e927c4c832ca17ea3a2655448ab",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/ready-cancel.png": "654049f77105d86cd7e21054d4c7b9984b937a668b61be826784afddd40a8aa8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/result.json": "acadcead7ed7775cebdfd469bbd51fc1f12988bd02fd3bdb6b4c4d926b6bb99a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/server.log": "a4dfc2345eef15a46f0c09f8f33153682bc4231c8dc699398b0b1dbea872ad65",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/statue-ready.png": "423c8785e51c337e012954e02b10b30d20c96821555fc425f05200ae54752bdd",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/statue-running.png": "a1678595cd858b251cf9865bac0e499c3b48a35be4790cef0df04fa91a0f4676",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/statue-sitting.png": "b2b2d6b4eb88ec0b40a2131b00840a4af5372e0d5ec2373636b6a7f40433c6f1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/statue-standing.png": "52f6f2bc486233c7b852f0d0259d2e3b57d7a1d53cac8dcdf863cc184b4d3eb9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777/statue-star.png": "e53a61e16058d7d318f94276d12c1b7e1e24d22953e155357ca0fd7e72e122a3",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-gui777.log": "9abc70d4c7711e0ef41df6f24b878314a8fd838f487e6ff0a2279aa21359c84d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password775/result.json": "278ad95333045057dd53bf899761767e55802f1ddf097030311af111c8c01915",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password775/server.log": "ef6818aab2eac07ed4717a9a3251dc32d9ce0a30774e53463594f8c48f5af8d7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password777/result.json": "0f617dd2f7ff87667b41ccb77658bd3f5ad26670e03539b3369e383d5a12dee0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password777/server.log": "491c62d2fbfed9813d1b6b0a1558c895fe9931ec01d937fd915124dab003e587",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/776-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-regression/jobs.json": "91b908a45367c348b82edb51b259310a682590a54a61e1c6af8a31de25914207",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-public-final/primary775.log": "582c87ec9b7b6f10bb7ef5ba9a7f1e9e1d83c62cb3cdd8d5756514536ac2671c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-public-final/primary777.log": "4f2a7a5a6293b5235a8d6e89472dd261d4f44aebe546d13ab2f0cd17752a7c74",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-public-final/result.json": "4952b85393e88038df9e56de1f1b25ce261e5c9f2cf98e2fc0dbcdadd0bfd80d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-official777-reference/result.json": "900331f2b848ba3616d9e91a1ab8bbfdb491763a9743dfb4555c452c570b269c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/completion771-official777-reference/server-1.log": "b1db03e617b94313b183dc48a9e466648941eaab70c6c9c149c30a23758b6511"
+  }
+}

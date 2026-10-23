@@ -7,14 +7,15 @@ from generate_registry_26_2 import mapper,block_states
 from generate_static_776 import direct_mapping
 
 
-def generate(docs,baseline):
-    old=docs[772]; newer=docs[773]
+def generate(docs,baseline,client=772):
+    old=docs[client]; newer=docs[773]
+    if client==771:assert docs[771]['protocol']['types']==docs[772]['protocol']['types']
     a=old['protocol']['types'];b=newer['protocol']['types']
     shared=a['SlotComponent'][1][1]['type'][1]['fields'];target=b['SlotComponent'][1][1]['type'][1]['fields']
     changed={k for k in shared if shared[k]!=target.get(k)}
     assert changed=={'entity_data','block_entity_data','profile','lodestone_tracker'}
     assert all(a[k]==b[k] for k in ['Slot','UntrustedSlot','UntrustedSlotComponent'])
-    text='// Закреплённые JSON772; generate_payload_772.py. Это не живое доказательство.\n'
+    text=f'// Закреплённые JSON{client}; generate_payload_{client}.py. Это не живое доказательство.\n'
     canonical=mapper(baseline['protocol']['types']['entityMetadataEntry'][1][1]['type']);serializers=mapper(a['entityMetadataEntry'][1][1]['type'])
     for name,x,y in [('SERIALIZERS_FROM',serializers,canonical),('SERIALIZERS_TO',canonical,serializers)]:text+=f'pub(crate) const {name}: &[u16] = &{list(direct_mapping(x,y))};\n'
     lookup={r['name']:r for r in old['entities']}
@@ -26,6 +27,7 @@ def generate(docs,baseline):
     # Явные визуальные замены; серверные предметы/состояния не меняются.
     def replacement(name):
         if name in ('golden_dandelion','potted_golden_dandelion'):return name.replace('golden_','')
+        if name=='music_disc_lava_chicken':return 'music_disc_13'
         if name=='iron_chain':return 'chain'
         if name=='copper_nugget':return 'iron_nugget'
         if name=='copper_golem_spawn_egg':return 'iron_golem_spawn_egg'
@@ -85,20 +87,20 @@ def generate(docs,baseline):
     particleviews={'copper_fire_flame':'flame','pause_mob_growth':'smoke','reset_mob_growth':'happy_villager'}
     assert set(particleviews)==highparticles.keys()-lowparticles.keys()
     text+='pub(crate) const PARTICLE_VIEWS: &[(u32,u32)] = &'+str([(highparticles[n],lowparticles[t]) for n,t in particleviews.items()])+';\n'
-    report={'client':772,'changed_components':sorted(changed),'item_views':policies,'item_count':len(itemviews),'block_count':len(blockviews),'state_count':len(stateviews),'entity_views':views,'particle_views':particleviews,'live_admission':'separate checklist required'}
+    report={'client':client,'changed_components':sorted(changed),'item_views':policies,'item_count':len(itemviews),'block_count':len(blockviews),'state_count':len(stateviews),'entity_views':views,'particle_views':particleviews,'live_admission':'separate checklist required'}
     return text,json.dumps(report,indent=2)+'\n'
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--cache',type=Path,required=True);p.add_argument('--cache774',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True);p.add_argument('--check',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--client',type=int,choices=(771,772),default=772);p.add_argument('--cache',type=Path,required=True);p.add_argument('--cache774',type=Path,required=True);p.add_argument('--baseline',type=Path,required=True);p.add_argument('--check',action='store_true');args=p.parse_args()
     docs=load(args.cache,args.cache774);locks=json.loads((HERE/'candidate-sources-26.3.json').read_text());baseline={}
     for name in ['protocol','entities']:
         filename=name+'-26.1.json';record=next(r for r in locks['files']+locks['baseline_files'] if r['file']==filename);baseline[name]=locked(args.baseline,filename,record)
     from generate_registry_26_2 import LOCAL_LOCKS
     for name in ['items','blocks']:
         path='tools/data/'+name+'.json';raw=(HERE.parents[1]/path).read_bytes();assert hashlib.sha256(raw).hexdigest()==LOCAL_LOCKS[path];baseline[name]=json.loads(raw)
-    text,report=generate(docs,baseline)
-    for path,content in [(HERE/'src/generated_payload_772.rs',text),(HERE/'payload-772-report.json',report)]:
+    text,report=generate(docs,baseline,args.client)
+    for path,content in [(HERE/f'src/generated_payload_{args.client}.rs',text),(HERE/f'payload-{args.client}-report.json',report)]:
         if args.check:assert path.read_text()==content,path
         else:path.write_text(content)
     print(report)

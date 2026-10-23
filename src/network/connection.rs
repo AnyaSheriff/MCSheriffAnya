@@ -32,9 +32,9 @@ impl<S> CryptoStream<S> {
 
     pub(crate) fn probe_776_enabled(&self) -> bool {
         #[cfg(test)]
-        { self.probe_776 && matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
+        { self.probe_776 && matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
         #[cfg(not(test))]
-        { matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
+        { matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
     }
 
     /// Мир сервера в профиле Preview26_3 (биомы 26.3 в реестре).

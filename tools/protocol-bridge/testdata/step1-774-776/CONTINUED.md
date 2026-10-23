@@ -160,3 +160,7 @@ Final verification:3152 Rust PASS (2908 core +3 startup +230 protocol +11 seedma
 ## 773 follow-up, 774/776 retained
 
 773 now passes the same existing checklist and is admitted on both primaries. Fresh774/776 regressions repeat196 payloads/6GUI/4poses,11gameplay/restart,recipes/Nether,password and supplemental End for all four pairs; original payload files remain unchanged. Final3169 Rust/237 Python,clean Clippy/release and public24/24.770–772 remain closed with the existing Russian refusal; no gameplay profiles or new gates. [Full evidence, version-specific attack equivalent and retained failures](../client-chain-770-773/CONTINUED.md#773-admission-and-774776-regression).
+
+## 771 follow-up, 772/773/774/776 retained
+
+771 now passes the unchanged checklist on both primaries and is admitted through the772 typed path with separate771 tables/views. Fresh772/773/774/776 regressions preserve all eight admission cells and payload bytes.770 stays closed and untouched because its full codecs/integration/live checklist are unfinished.3183 Rust/237 Python,clean Clippy/release and public24/24; no older gameplay profile or new gate. [Raw evidence and limitations](../client-chain-770-773/CONTINUED.md#771-admission-and-772773774776-regression).

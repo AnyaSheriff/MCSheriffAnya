@@ -47,7 +47,7 @@ pub(crate) fn translate_776_fixture(payload: &[u8], context: Context) -> Result<
 }
 
 pub(crate) fn translate_776_content(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context, content: crate::content::ContentCodec) -> Result<Vec<u8>, Error> {
-    if from != JavaVersion::V26_1_2 || !matches!(to, JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_2) { return Err(Error::UnsupportedVersion(to)); }
+    if from != JavaVersion::V26_1_2 || !matches!(to, JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_2) { return Err(Error::UnsupportedVersion(to)); }
     translate_inner(from, to, payload, context, content)
 }
 

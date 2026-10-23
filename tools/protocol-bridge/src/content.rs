@@ -342,7 +342,7 @@ impl ContentCodec {
                     IdSpace::Wire(JavaVersion::V26_3) => {
                         Ok(wire + canonical - first)
                     }
-                    IdSpace::Wire(version @ (JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2)) => {
+                    IdSpace::Wire(version @ (JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2)) => {
                         // Общий объект26.2 сохраняет настоящий вид; новый объект26.3
                         // получает явно заданного775-двойника с переводом его ID.
                         if version == JavaVersion::V26_2 {
@@ -362,6 +362,20 @@ impl ContentCodec {
                 };
         }
         let version = |space| match space { IdSpace::Canonical => JavaVersion::V26_1_2, IdSpace::Wire(version) => version };
+        if from==IdSpace::Wire(JavaVersion::V1_21_6) && version(to)==JavaVersion::V26_1_2 {
+            let views=match kind {RegistryKind::Item=>crate::generated_payload_771::INPUT_ITEMS,RegistryKind::Block=>crate::generated_payload_771::INPUT_BLOCKS,RegistryKind::BlockState=>crate::generated_payload_771::INPUT_STATES,_=>&[]};
+            if let Some(row)=views.binary_search_by_key(&id,|r|r.0).ok().map(|n|views[n]){return Ok(row.1);}
+        }
+        if version(from)==JavaVersion::V26_1_2 && to==IdSpace::Wire(JavaVersion::V1_21_6) {
+            let views=match kind {
+                RegistryKind::Item=>crate::generated_payload_771::ITEM_VIEWS,
+                RegistryKind::Block=>crate::generated_payload_771::BLOCK_VIEWS,
+                RegistryKind::BlockState=>crate::generated_payload_771::STATE_VIEWS,
+                _=>&[],
+            };
+            if let Some(row)=views.binary_search_by_key(&id,|r|r.0).ok().map(|n|views[n]){return Ok(row.1);}
+            if kind==RegistryKind::Entity && let Some(row)=crate::generated_payload_771::ENTITY_VIEWS.iter().find(|r|r.0==id){return Ok(row.2);}
+        }
         if from==IdSpace::Wire(JavaVersion::V1_21_8) && version(to)==JavaVersion::V26_1_2 {
             let views=match kind {RegistryKind::Item=>crate::generated_payload_772::INPUT_ITEMS,RegistryKind::Block=>crate::generated_payload_772::INPUT_BLOCKS,RegistryKind::BlockState=>crate::generated_payload_772::INPUT_STATES,_=>&[]};
             if let Some(row)=views.binary_search_by_key(&id,|r|r.0).ok().map(|n|views[n]){return Ok(row.1);}
@@ -418,6 +432,7 @@ mod tests {
                     assert!(ContentCodec::default().map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_3),id).is_err());
                     assert!(codec.map(kind,IdSpace::Wire(JavaVersion::V26_1_2),IdSpace::Canonical,id).is_err());
                     assert!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V26_1_2),id).is_ok());
+                    assert!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V1_21_6),id).is_ok(),"{kind:?}/{id}");
                     assert!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V1_21_8),id).is_ok(),"{kind:?}/{id}");
                     assert!(matches!(codec.map(kind,IdSpace::Canonical,IdSpace::Wire(JavaVersion::V1_12_2),id),Err(Error::Unrepresentable { .. })));
                 }

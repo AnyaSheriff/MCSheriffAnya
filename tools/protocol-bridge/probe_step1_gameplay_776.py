@@ -103,10 +103,11 @@ def main():
     parser.add_argument('--peer', type=int, choices=(775,777), default=775)
     parser.add_argument('--peer-protocol', type=Path)
     parser.add_argument('--restart', action='store_true')
-    parser.add_argument('--client', type=int, choices=(772,773,774,776), default=776)
+    parser.add_argument('--client', type=int, choices=(771,772,773,774,776), default=776)
     args = parser.parse_args()
+    port=26128 if args.client==771 else PORT
     assert not args.output.exists(), 'preserve earlier evidence'
-    assert hashlib.sha256(args.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if args.client==776 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if args.client==772 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if args.client==773 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
+    assert hashlib.sha256(args.protocol.read_bytes()).hexdigest() == (PROTOCOL_SHA if args.client==776 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if args.client==771 else '11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be' if args.client==772 else '0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70' if args.client==773 else '4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab')
     protocols = {args.client: json.loads(args.protocol.read_text()), 775: json.loads(args.native_protocol.read_text())}
     if args.peer == 777:
         assert args.peer_protocol
@@ -125,7 +126,7 @@ def main():
         player_wire[777], item_wire[777] = peer_entities['player'], peer_entities['item']
     with socket.socket() as check:
         check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        check.bind(('127.0.0.1', PORT))
+        check.bind(('127.0.0.1', port))
     args.output.mkdir(parents=True)
     report = {'primary': args.primary, 'client': args.client, 'peer': args.peer if args.scenario == 'all' else None, 'public_admission': False,
               'checks': [], 'commands': [], 'status': 'failed', 'scenario': args.scenario,
@@ -140,7 +141,7 @@ def main():
             (root / 'mcsa-persistence-probe.marker').touch()
         if args.primary == 777:
             (root / 'mcsa-catalog-preview263.marker').touch()
-        test = 'serve_java_1_21_8_probe' if args.client==772 else 'serve_java_1_21_9_probe' if args.client==773 else 'serve_java_1_21_11_probe' if args.client in (772,773,774) else ('serve_java_26_2_primary_26_3_probe' if args.primary == 777 else 'serve_java_26_2_probe')
+        test = 'serve_java_1_21_6_probe' if args.client==771 else 'serve_java_1_21_8_probe' if args.client==772 else 'serve_java_1_21_9_probe' if args.client==773 else 'serve_java_1_21_11_probe' if args.client in (771,772,773,774) else ('serve_java_26_2_primary_26_3_probe' if args.primary == 777 else 'serve_java_26_2_probe')
         with (args.output / 'server.log').open('w') as log:
             try:
                 def start_server():
@@ -156,7 +157,7 @@ def main():
                 server = start_server()
 
                 def login(name, version):
-                    probe = connect(PORT, protocols[version],
+                    probe = connect(port, protocols[version],
                         lambda s, p: GameplayProbe(s, p, item_wire[version], version),
                         version=version, username=name)
                     clients.append(probe)
@@ -201,7 +202,7 @@ def main():
                     assert [client.entity, player_wire[args.peer]] in peer.spawns, peer.spawns
                     report['checks'].append(f'mixed{args.peer}-player-spawns-metadata-movement')
                     before = len(peer.health_events)
-                    client.send('use_entity' if args.client in (772,773,774) else 'attack', varint(peer.entity)+(b'\x01\x00' if args.client in (772,773,774) else b''))
+                    client.send('use_entity' if args.client in (771,772,773,774) else 'attack', varint(peer.entity)+(b'\x01\x00' if args.client in (771,772,773,774) else b''))
                     client.pump(.3)
                     peer.pump(5, lambda _: peer.health is not None and 0 < peer.health < 20)
                     assert any(0 < h < 20 for h in peer.health_events[before:]), peer.health_events
@@ -353,7 +354,7 @@ def main():
                         report['status'] = 'failed'
                 with socket.socket() as check:
                     check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    check.bind(('127.0.0.1', PORT))
+                    check.bind(('127.0.0.1', port))
                 (args.output / 'result.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
     assert report['status'] == 'pass', report.get('error')
     print(json.dumps({'checks': len(report['checks']), 'status': report['status']}))
