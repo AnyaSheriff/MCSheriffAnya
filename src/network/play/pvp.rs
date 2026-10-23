@@ -16,6 +16,10 @@ use crate::combat::{self, PlayerStrike};
 use crate::survival::Source;
 use crate::world::World;
 
+pub(super) fn broadcast_swing_after_attack(catalog: crate::gameplay_catalog::Catalog, last_attack: u64, now: u64) -> bool {
+    catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3 || last_attack != now
+}
+
 /// Досягаемость удара по существу (атрибут `entity_interaction_range`) и запас
 /// сервера: оригинал принимает удар, если ящик цели ближе 3 + 3 блоков от глаз
 /// (чёрный ящик, itemaudit-reach-scan2: удар с зазором 5,95 прошёл, с 6,1 — нет;
@@ -94,6 +98,15 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
 #[cfg(test)]
 mod itemaudit_tests {
     use super::*;
+
+    #[test]
+    fn same_tick_attack_swing_is_not_duplicated_only_on_263() {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        let old=Catalog::new(Profile::Java26_1_2);let modern=Catalog::new(Profile::Preview26_3);
+        assert!(broadcast_swing_after_attack(old,40,40));
+        assert!(!broadcast_swing_after_attack(modern,40,40));
+        assert!(broadcast_swing_after_attack(modern,40,41));
+    }
 
     #[test]
     fn effects_mounts_and_spears_prevent_critical_hits() {

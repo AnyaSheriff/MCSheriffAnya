@@ -228,6 +228,12 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
         if to==JavaVersion::V1_21_4 {out.push(1);}
         return Ok(out);
     }
+    if kind == 72 && (from == JavaVersion::V26_3 || to == JavaVersion::V26_3) {
+        // Pinned protocol777: banner_patterns сохраняет holder + цвет каждого
+        // слоя. Динамический реестр передан в Configuration, ID не статические.
+        // [проверить] Полный официальный GUI777; пока подтверждены схема и codec.
+        return crate::component_776::remap(kind,input,context,spaces);
+    }
     if matches!(kind,53|56|57|59|61|66|68|69|72|74|76|77|86|88|89|90|104) {
         if !crate::component_776::supported_pair(from,to) {return Err(Error::UnsupportedComponent(kind));}
         return crate::component_776::remap(kind,input,context,spaces);
@@ -421,3 +427,23 @@ mod tests_776;
 #[cfg(test)]
 #[path = "items_catalog_tests.rs"]
 mod catalog_tests;
+
+#[cfg(test)]
+mod banner_777_tests {
+    use super::*;
+    #[test]
+    fn patterned_banner_survives_777_slot_with_all_layers_and_checks_lengths() {
+        let layers=vec![2,5,14,7,11];
+        let stack=Stack {item:1,count:1,added:vec![Component {kind:72,data:layers.clone()}],removed:Vec::new()};
+        let context=Context::default();
+        let old=encode(JavaVersion::V26_1_2,Some(&stack),false,context).unwrap();
+        assert_eq!(old,vec![1,1,1,0,72,2,5,14,7,11]);
+        let modern=encode(JavaVersion::V26_3,Some(&stack),false,context).unwrap();
+        let (decoded,used)=decode(JavaVersion::V26_3,&modern,false,context).unwrap();
+        assert_eq!(decoded,Some(stack.clone()));assert_eq!(used,modern.len());
+        assert!(modern.ends_with(&layers));
+        for end in 0..modern.len() {assert!(decode(JavaVersion::V26_3,&modern[..end],false,context).is_err());}
+        let invalid=Stack {added:vec![Component {kind:72,data:vec![1,5,16]}],..stack};
+        assert!(encode(JavaVersion::V26_3,Some(&invalid),false,context).is_err());
+    }
+}

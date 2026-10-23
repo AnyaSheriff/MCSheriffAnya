@@ -1593,7 +1593,18 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
     // (чёрный ящик, craft-repair-tools: оригинал +1, надевание — +2).
     let applied: Vec<i32> = player.attrs_applied.iter().map(|(attribute, _)| *attribute).collect();
 
-    player.attrs_touched.extend(touched.into_iter().map(|attribute| (attribute, now + if applied.contains(&attribute) { 2 } else { 1 })));
+    //777, itemaudit4-knockback-phase: после ударов15/56/98/139 рассылка
+    // идёт16/58/100/140 — один общий двухтактовый период, не постоянные+2.
+    let tracking_phase = player.attrs_tracking_phase;
+    // Sword-sweep-secondary-motion: износ20/21 объединяется в Attributes23;
+    // второй износ не должен попадать в ещё ожидающий пакет первого.
+    let consecutive = player.attrs_equipment_tick.is_some_and(|before| now.saturating_sub(before) == 1);
+    player.attrs_equipment_tick = Some(now);
+    player.attrs_touched.extend(touched.into_iter().map(|attribute| {
+        let delay = tracking_phase.map_or_else(|| if applied.contains(&attribute) { 2 } else { 1 },
+            |phase| if !consecutive && (now + 1) % 2 == phase { 1 } else { 2 });
+        (attribute, now + delay)
+    }));
 }
 
 /// Что на игроке из вещей, дающих атрибуты: рука, вторая рука, броня.
@@ -3246,6 +3257,38 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn equipment_attribute_ticks_follow_263_cycle_and_keep_2612_delays() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let mut player=PlayerState::new_for_catalog([74;16],"AttrCycle".into(),None,None,0x7f,74,(0.5,64.0,0.5),Catalog::new(profile));
+            let sword=blocks::item_named("wooden_sword").unwrap();
+            let mut due=Vec::new();
+            for (damage,tick) in [15,56,98,139].into_iter().enumerate() {
+                let data=crate::stackdata::Data {damage:damage as i32+1,..Default::default()};
+                player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(sword,1).with_extras(data)));
+                player.attrs_touched.clear();update_equipment(&mut player,tick);
+                due.push(player.attrs_touched.iter().find(|(id,_)| *id==crate::attributes::ATTACK_SPEED).unwrap().1);
+            }
+            assert_eq!(due,if profile==Profile::Preview26_3 {vec![16,58,100,140]} else {vec![17,58,100,141]});
+        }
+    }
+
+    #[test]
+    fn repeated_equipment_wear_waits_for_the_last_change() {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        for profile in [Profile::Java26_1_2,Profile::Preview26_3] {
+            let mut player=PlayerState::new_for_catalog([75;16],"AttrMerge".into(),None,None,0x7f,75,(0.5,64.0,0.5),Catalog::new(profile));
+            let sword=blocks::item_named("wooden_sword").unwrap();
+            for tick in [20,21] {
+                let data=crate::stackdata::Data {damage:tick as i32,..Default::default()};
+                player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(sword,1).with_extras(data)));
+                update_equipment(&mut player,tick);
+            }
+            assert_eq!(player.attrs_touched.iter().filter(|(id,_)| *id==crate::attributes::ATTACK_SPEED).map(|(_,due)|*due).max(),Some(23));
+        }
+    }
 
     #[test]
     fn game_modes_update_reach_without_changing_its_base() {

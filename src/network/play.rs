@@ -7992,6 +7992,9 @@ fn handle_client_packet_inner(
         SWING_ARM => {
             let now = *shared.ticks.borrow();
 
+            // Официальный777: Attack и Swing одного такта не дают второго
+            // Animate0 наблюдателю (pvp-armor/attribute-item).
+            if !pvp::broadcast_swing_after_attack(shared.catalog(), player.last_attack, now) { return reaction; }
             shared.players.lock().expect("список игроков захвачен другим потоком").swing_at(&player.uuid, now);
         }
         SET_CARRIED_ITEM => {
@@ -11514,6 +11517,11 @@ struct PlayerState {
     /// Атрибуты, чьи модификаторы от предметов снимались и ставились заново:
     /// клиенту они уходят, даже если значение то же.
     attrs_touched: Vec<(i32, u64)>,
+    /// Период рассылки атрибутов777; None сохраняет задержки основного775.
+    /// [проверить] Начальная фаза entity tick; пока привязана к чётному такту мира.
+    attrs_tracking_phase: Option<u64>,
+    /// Повторный износ следующим тактом откладывает общий пакет модификаторов.
+    attrs_equipment_tick: Option<u64>,
 
     /// Такты, когда скорость удара повторится чужим клиентам.
     speed_due: Vec<u64>,
@@ -11729,6 +11737,8 @@ impl PlayerState {
             equip_seen: Vec::new(),
             foot_enchants: movement_enchantments::State::default(),
             attrs_touched: Vec::new(),
+            attrs_tracking_phase: (catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3).then_some(0),
+            attrs_equipment_tick: None,
             speed_due: Vec::new(),
             speed_touch: 0,
             advancement_revision: 0,
