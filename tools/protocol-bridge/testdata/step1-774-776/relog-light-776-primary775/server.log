@@ -1,0 +1,40 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[14:45:22] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[14:45:22] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[14:45:22] [Server thread/INFO]: McsaProbe[/127.0.0.1:57412 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[14:45:22] [Server thread/INFO]: McsaProbe зашёл на сервер
+[14:45:23] [Server thread/INFO]: Правило spawn_mobs: false
+[14:45:23] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[14:45:23] [Server thread/INFO]: Заполнено блоков: 90
+[14:45:23] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[14:45:23] [Server thread/INFO]: Заполнено блоков: 0
+[14:45:23] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[14:45:24] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[14:45:24] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[14:45:24] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[14:45:24] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[14:45:24] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[14:45:24] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[14:45:25] [Server thread/INFO]: Gave 3 [diamond] to McsaProbe
+[14:45:25] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[14:45:25] [Server thread/INFO]: McsaProbe has made the advancement [Diamonds!]
+[14:45:25] [Server thread/INFO]: McsaProbe has made the advancement [Diamonds!]
+[14:45:25] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[14:45:25] [Server thread/INFO]: McsaProbe вышел
+[14:45:26] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[14:45:26] [Server thread/INFO]: McsaProbe[/127.0.0.1:43458 → localhost:26028] вошёл с номером сущности 3 в (0.5, 65.0, 0.5)
+[14:45:26] [Server thread/INFO]: McsaProbe зашёл на сервер
+[14:45:27] [Server thread/INFO]: Changed the block at -16, 64, -16
+[14:45:27] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[14:45:27] [Server thread/INFO]: Changed the block at -16, 65, -16
+[14:45:27] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[14:45:28] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[14:45:28] [Server thread/INFO]: Останавливаю сервер
+[14:45:28] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[14:45:28] [Server thread/INFO]: McsaProbe вышел
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2986 filtered out; finished in 8.41s
+

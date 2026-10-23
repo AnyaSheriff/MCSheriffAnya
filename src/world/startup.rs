@@ -32,6 +32,19 @@ impl StartupGuard {
     pub(crate) fn snapshot_lock(&self) -> Option<&File> { self.lock.as_ref() }
 }
 
+impl Drop for StartupGuard {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        if let Some(lock) = &self.lock {
+            use std::os::fd::AsRawFd;
+            // Потомок между fork и exec может ещё держать тот же open description.
+            // Освобождаем замок при завершении guard, не дожидаясь закрытия копии.
+            // SAFETY: guard по-прежнему владеет действующим дескриптором.
+            unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_UN); }
+        }
+    }
+}
+
 fn world_path(world: &Path) -> io::Result<PathBuf> {
     let name = world.file_name().ok_or_else(|| io::Error::new(
         io::ErrorKind::InvalidInput, "путь мира должен содержать имя каталога",

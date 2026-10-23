@@ -390,3 +390,18 @@ fn profile_263_fresh_restart_and_unsafe_transitions() {
     assert!(prepare_for_version(&world, version).is_err());
     assert!(!world.join(profile::MANIFEST_NAME).exists());
 }
+
+#[cfg(unix)]
+#[test]
+fn guard_drop_unlocks_even_with_an_inherited_descriptor() {
+    let fixture = Fixture::new();
+    let guard = prepare_for_version(&fixture.world(), mcsa_protocol::JavaVersion::V26_3).unwrap();
+    // dup воспроизводит удержание open description дочерним процессом до exec.
+    let inherited = guard.lock.as_ref().unwrap().try_clone().unwrap();
+    assert!(prepare_for_version(&fixture.world(), mcsa_protocol::JavaVersion::V26_3).is_err());
+    drop(guard);
+    let reopened = prepare_for_version(&fixture.world(), mcsa_protocol::JavaVersion::V26_3).unwrap();
+    drop(inherited);
+    assert!(prepare_for_version(&fixture.world(), mcsa_protocol::JavaVersion::V26_3).is_err());
+    drop(reopened);
+}

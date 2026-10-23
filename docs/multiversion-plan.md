@@ -14,4 +14,4 @@
 13. Validate profile-bound saves, explicit backed-up upgrades, and refusal of unsupported downgrade before listeners open.
 14. Publish a client × primary readiness matrix with raw evidence; never infer full support from packet IDs or one successful login.
 
-Step 1 status: preparation only; 774/776 remain closed on both primaries because full gameplay is unproven.
+Step 1 status: partial private gameplay evidence for776 on primary775; 774/776 remain closed on both primaries because the required full gameplay matrix is unproven.

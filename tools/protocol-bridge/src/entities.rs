@@ -62,7 +62,7 @@ impl Tracker {
                     None => ids::translate(RegistryKind::Entity, from, wire::INTERNAL, raw)?,
                 };
                 if !self.entities.contains_key(&id) && self.entities.len() >= 65_536 { return Err(wire::Error::TooLarge); }
-                if probe_776 && kind != probe_776_item_kind() { return Err(wire::Error::PayloadUnavailable("unverified 26.2 spawned entity")); }
+                if probe_776 { metadata_layout(JavaVersion::V26_2, kind)?; }
                 spawn = Some((id, kind));
             }
             "entity_metadata" => {
@@ -76,12 +76,12 @@ impl Tracker {
                 if self.entities.get(&item) != Some(&probe_776_item_kind()) {
                     return Err(failure(Error::UnknownEntity(item)));
                 }
-                if self.player != Some(collector) { return Err(failure(Error::UnknownEntity(collector))); }
+                if self.entities.get(&collector) != Some(&entity_layouts::PLAYER) { return Err(failure(Error::UnknownEntity(collector))); }
                 if !(1..=127).contains(&count) || input.remaining() != 0 { return Err(wire::Error::Invalid); }
             }
-            "rel_entity_move" if probe_776 => {
+            "rel_entity_move" | "entity_move_look" | "sync_entity_position" | "entity_teleport" if probe_776 => {
                 let id = input.uint()?;
-                if self.entities.get(&id) != Some(&probe_776_item_kind()) {
+                if !self.entities.contains_key(&id) {
                     return Err(failure(Error::UnknownEntity(id)));
                 }
             }
@@ -127,7 +127,8 @@ pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVer
     let mut header = Cursor::new(input.rest);
     header.uint()?; header.take(16)?;
     let kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, header.uint()?)?;
-    if kind != probe_776_item_kind() { return Err(wire::Error::PayloadUnavailable("unverified 26.2 spawned entity")); }
+    // Только пять уже закреплённых раскладок, включая наблюдённых мобов и игрока.
+    metadata_layout(JavaVersion::V26_2, kind)?;
     spawn(input, out, from, to)
 }
 

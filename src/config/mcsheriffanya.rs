@@ -41,6 +41,10 @@ impl std::fmt::Display for OfflineLicenseMode {
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Проверяем лимит даже в сборках без запуска внешнего ViaProxy.
+    pub viaproxy: bool,
+    #[serde(deserialize_with="read_viaproxy_memory")]
+    pub viaproxy_memory: u64,
     /// Неизвестное значение не должно незаметно менять версию существующего мира.
     #[serde(deserialize_with="read_java_version")]
     pub java_version: Option<mcsa_protocol::JavaVersion>,
@@ -108,6 +112,10 @@ pub struct Settings {
 impl Settings {
     /// Ошибка в режиме не должна молча включать обращения к Mojang.
     pub fn validate(&self) -> std::io::Result<()> {
+        if self.viaproxy && self.viaproxy_memory < 320 * 1024 * 1024 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: при viaproxy=true требуется viaproxy-memory не менее 320M (по умолчанию 512M)"));
+        }
         if !matches!(self.java_version, Some(mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3)) {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
                 format!("config/mcsa.properties: эта сборка поддерживает java-version={}; также доступен новый мир26.3; перенос существующего мира ещё не завершён", crate::network::VERSION_NAME)));
@@ -142,6 +150,8 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            viaproxy: false,
+            viaproxy_memory: 512 * 1024 * 1024,
             java_version: Some(crate::network::NATIVE_VERSION),
             auth_enabled: true,
             auth_premium: true,
@@ -219,6 +229,8 @@ impl Settings {
             log_info!("{}: auth-provider больше не нужен — пароли всегда хранятся через Argon2id; настройка игнорируется", path.display());
         }
         Settings {
+            viaproxy: take(&values, "viaproxy", default.viaproxy, path),
+            viaproxy_memory: values.get("viaproxy-memory").map_or(default.viaproxy_memory, |value| proxy_memory_bytes(value).unwrap_or(0)),
             java_version: values.get("java-version").map_or(default.java_version, |value| mcsa_protocol::JavaVersion::from_name(value)),
             auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
@@ -261,8 +273,10 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 21] {
+    fn sections(self) -> [(&'static str, String); 23] {
         [
+            ("viaproxy", format!("# Настройка внешнего ViaProxy; запуск в этой сборке не реализован.\nviaproxy={}\n", self.viaproxy)),
+            ("viaproxy-memory", format!("# Память ViaProxy: минимум 320M при viaproxy=true; по умолчанию 512M.\nviaproxy-memory={}\n", if self.viaproxy_memory.is_multiple_of(1024 * 1024) { format!("{}M", self.viaproxy_memory / (1024 * 1024)) } else { self.viaproxy_memory.to_string() })),
             ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Поддерживаются 26.1.2 и новые миры26.3. Перед сменой версии\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
@@ -381,6 +395,22 @@ send-error-reports={}
     }
 }
 
+fn proxy_memory_bytes(value: &str) -> Option<u64> {
+    let value = value.trim();
+    let (number, multiplier) = match value.as_bytes().last()? {
+        b'k' | b'K' => (&value[..value.len()-1], 1024),
+        b'm' | b'M' => (&value[..value.len()-1], 1024 * 1024),
+        b'g' | b'G' => (&value[..value.len()-1], 1024 * 1024 * 1024),
+        _ => (value, 1),
+    };
+    number.parse::<u64>().ok()?.checked_mul(multiplier)
+}
+
+fn read_viaproxy_memory<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<u64, D::Error> {
+    let value = String::deserialize(deserializer)?;
+    Ok(proxy_memory_bytes(&value).unwrap_or(0))
+}
+
 fn read_java_version<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<mcsa_protocol::JavaVersion>, D::Error> {
     let value = String::deserialize(deserializer)?;
     Ok(mcsa_protocol::JavaVersion::from_name(&value))
@@ -422,6 +452,25 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn viaproxy_heap_minimum_is_checked_before_startup() {
+        let path = std::path::Path::new("mcsa.properties");
+        for value in ["0", "128M", "319m", "335544319", "bad", "18446744073709551615G"] {
+            let settings = super::Settings::parse(&format!("viaproxy=true\nviaproxy-memory={value}\n"), path);
+            let error = settings.validate().unwrap_err();
+            assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+            assert!(error.to_string().contains("не менее 320M"));
+            assert!(super::Settings { viaproxy: false, ..settings }.validate().is_ok());
+        }
+        for value in ["320M", "327680K", "335544320", "512M", "1g"] {
+            let settings = super::Settings::parse(&format!("viaproxy=true\nviaproxy-memory={value}\n"), path);
+            assert!(settings.validate().is_ok());
+            assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        }
+        let defaults = super::Settings::parse("viaproxy=true\n", path);
+        assert_eq!(defaults.viaproxy_memory, 512 * 1024 * 1024);
+        assert!(defaults.validate().is_ok());
+    }
     #[test]
     fn auth_settings_default_and_round_trip() {
         let defaults = super::Settings::default();

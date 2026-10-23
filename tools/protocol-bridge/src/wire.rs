@@ -118,6 +118,59 @@ pub(crate) fn translate_inner(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Serverbound, "block_place" | "use_item") if probe_776 && equal => {
+            let hand = cursor.uint()?;
+            if hand > 1 { return Err(Error::Invalid); }
+            uint(&mut out, hand);
+            if name == "block_place" {
+                out.extend(cursor.take(8)?);
+                let face = cursor.uint()?;
+                if face > 5 { return Err(Error::Invalid); }
+                uint(&mut out, face);
+            } else { uint(&mut out, cursor.uint()?); }
+            for _ in 0..if name == "block_place" { 3 } else { 2 } {
+                let bytes = cursor.take(4)?;
+                if !f32::from_be_bytes(bytes.try_into().map_err(|_| Error::Invalid)?).is_finite() { return Err(Error::Invalid); }
+                out.extend(bytes);
+            }
+            if name == "block_place" {
+                for _ in 0..2 { out.push(u8::from(cursor.boolean()?)); }
+                uint(&mut out, cursor.uint()?);
+            }
+        }
+        (State::Play, Direction::Serverbound, "use_entity") if probe_776 && equal => {
+            uint(&mut out, cursor.uint()?);
+            let hand = cursor.uint()?;
+            if hand > 1 { return Err(Error::Invalid); }
+            uint(&mut out, hand);
+            let first = cursor.take(1)?[0]; out.push(first);
+            if first != 0 {
+                if first & 7 == 0 { return Err(Error::Invalid); }
+                out.extend(cursor.take(5)?);
+                if first & 4 != 0 { uint(&mut out, cursor.uint()?); }
+            }
+            out.push(u8::from(cursor.boolean()?));
+        }
+        (State::Play, Direction::Serverbound, "attack" | "client_command") if probe_776 && equal => {
+            let value = cursor.uint()?;
+            if name == "client_command" && value > 2 { return Err(Error::Invalid); }
+            uint(&mut out, value);
+        }
+        (State::Play, Direction::Clientbound, "sync_entity_position" | "entity_teleport") if probe_776 && equal => {
+            uint(&mut out, cursor.uint()?);
+            for _ in 0..6 {
+                let bytes = cursor.take(8)?;
+                if !f64::from_be_bytes(bytes.try_into().map_err(|_| Error::Invalid)?).is_finite() { return Err(Error::Invalid); }
+                out.extend(bytes);
+            }
+            for _ in 0..2 {
+                let bytes = cursor.take(4)?;
+                if !f32::from_be_bytes(bytes.try_into().map_err(|_| Error::Invalid)?).is_finite() { return Err(Error::Invalid); }
+                out.extend(bytes);
+            }
+            if name == "entity_teleport" { out.extend(cursor.take(4)?); }
+            out.push(u8::from(cursor.boolean()?));
+        }
         (State::Play, Direction::Serverbound, "block_dig") => {
             digging(&mut cursor, &mut out, from, to)?;
         }
@@ -404,11 +457,16 @@ fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
             "flying" | "player_input" | "abilities" | "entity_action" |
             "chat_command" | "chat_message" | "chat_session_update" | "message_acknowledgement" |
             "tab_complete" | "window_click" | "close_window" | "held_item_slot" |
-            "recipe_book" | "displayed_recipe" | "advancement_tab" | "arm_animation"),
+            "recipe_book" | "displayed_recipe" | "advancement_tab" | "arm_animation" |
+            "attack" | "use_entity" | "client_command" | "block_place" | "use_item"),
         (State::Play, Direction::Clientbound) => matches!(name,
             "login" | "position" | "abilities" | "declare_commands" | "declare_recipes" |
             "player_info" | "player_remove" | "entity_metadata" | "entity_destroy" |
-            "spawn_entity" | "collect" | "rel_entity_move" |
+            "spawn_entity" | "collect" | "rel_entity_move" | "entity_move_look" |
+            "sync_entity_position" | "entity_teleport" | "entity_look" | "entity_head_rotation" |
+            "entity_equipment" | "entity_velocity" | "animation" | "entity_status" |
+            "damage_event" | "hurt_animation" | "death_combat_event" | "respawn" |
+            "acknowledge_player_digging" | "open_window" | "craft_progress_bar" |
             "initialize_world_border" | "set_ticking_state" | "step_tick" | "spawn_position" |
             "update_health" | "experience" | "game_state_change" | "update_time" |
             "update_view_position" | "update_view_distance" | "simulation_distance" |
@@ -633,7 +691,7 @@ mod tests {
             assert_eq!(cb(&denied, OLD, NEW), Err(Error::PayloadUnavailable("unverified menu type")));
         }
         assert_eq!(translate_inner(State::Play, Direction::Clientbound, OLD, JavaVersion::V26_2,
-            &body, Context::default(), true), Err(Error::PayloadUnavailable("open_window")));
+            &body, Context::default(), true), Err(Error::PayloadUnavailable("unverified menu type")));
         let mut truncated = body.clone(); truncated.pop();
         assert!(cb(&truncated, OLD, NEW).is_err());
         let mut trailing = body; trailing.push(0);

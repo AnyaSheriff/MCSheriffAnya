@@ -267,6 +267,10 @@ locked release build. Tag pushes (`v*`) publish the version without `v` and
 
 ## Configuration
 
+ViaProxy settings use `viaproxy-memory=512M` by default. With `viaproxy=true`,
+the minimum is **320M**; the core refuses smaller or invalid values at startup.
+This branch validates these settings but does not launch ViaProxy.
+
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
 - `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far[...]

@@ -38,21 +38,21 @@ fn bounded_776_item_lifecycle_tracks_spawn_metadata_move_collect_remove() {
 }
 
 #[test]
-fn bounded_776_failed_spawns_never_create_tracking_and_mobs_stay_closed() {
+fn bounded_776_failed_spawns_never_create_tracking_and_unknown_layouts_stay_closed() {
     let spawn=item_spawn(2,item_kind());
     for end in 0..spawn.len() {
         let mut tracker=joined();
         assert!(clientbound(&mut tracker,&spawn[..end],Context::default()).is_err());
         assert!(clientbound(&mut tracker,&[0x63,2,8,7,0,255],Context::default()).is_err());
     }
-    for kind in [30,155,u32::MAX] {
+    for kind in [0,154,u32::MAX] {
         assert!(clientbound(&mut joined(),&item_spawn(2,kind),Context::default()).is_err());
     }
     let mut tail=spawn;tail.push(0);
     assert!(clientbound(&mut joined(),&tail,Context::default()).is_err());
-    // Direct internal dispatcher cannot bypass item-only spawn guard either.
+    // Прямой dispatcher тоже не обходит список закреплённых раскладок.
     assert!(wire::translate_inner(State::Play,Direction::Clientbound,OLD,MID,
-        &item_spawn(2,30),Context::default(),true).is_err());
+        &item_spawn(2,0),Context::default(),true).is_err());
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn bounded_776_item_metadata_and_controls_reject_bad_context_payloads() {
     for body in [vec![0x63,2,8,8,1,255],vec![0x63,2,8,7,128,1,1,0,0,255],
         vec![0x63,2,8,7,1,1,0,0,8,7,1,1,0,0,255], vec![0x63,2,254,0,1,255],
         vec![0x7c,2,1,0],vec![0x7c,2,1,128,1],vec![0x7c,99,1,1],
-        vec![0x7c,2,99,1],vec![0x7c,2,1,1,0],vec![0x35,1,0,0,0,0,0,0,0],
+        vec![0x7c,2,99,1],vec![0x7c,2,1,1,0],vec![0x35,99,0,0,0,0,0,0,0],
         vec![0x35,2,0,0,0,0,0,0,2],vec![0x4d,1,2,0]] {
         assert!(clientbound(&mut tracker,&body,Context::default()).is_err(),"{body:?}");
     }
