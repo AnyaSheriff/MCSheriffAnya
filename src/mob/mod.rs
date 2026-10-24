@@ -1522,6 +1522,7 @@ pub enum Event {
 /// Моб в мире.
 #[derive(Clone, Debug)]
 pub struct Mob {
+    pub plugin_seen_target: Option<i32>,
     pub entity_id: i32,
     pub uuid: [u8; 16],
     pub kind: Kind,
@@ -1744,6 +1745,7 @@ impl Mob {
         let h = hostile::State { bow: kind.skeleton(), shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
 
         let mut mob = Self {
+            plugin_seen_target: None,
             entity_id,
             uuid: uuid_for(entity_id),
             kind,
@@ -3912,6 +3914,7 @@ pub fn step_all(
     next_id: &mut dyn FnMut() -> i32,
 ) -> Outcome {
     let mut outcome = Outcome::default();
+    let mut plugin_targets=Vec::new();
 
     if items.mobs().is_empty() {
         return outcome;
@@ -3966,7 +3969,11 @@ pub fn step_all(
 
         let sense = if guardian::guardian(mob.kind) { &guardian_ctx } else if mob.kind==Kind::Drowned { &drowned_ctx } else { &ctx };
         let shot_weapon = equipment::slot(mob, 0);
+        let old_cooldown=mob.h.cooldown;let old_events=mob.events.len();
         let mut plan = mob.tick(view, sense, rng);
+        if crate::plugins::active()&&mob.h.target!=mob.plugin_seen_target {
+            plugin_targets.push((mob.uuid,mob.h.target,mob.plugin_seen_target));mob.h.cooldown=old_cooldown;mob.events.truncate(old_events);continue;
+        }
         // Вики, Strength/Weakness: +3L / −4L к melee; луч стража — магия.
         if !guardian::guardian(mob.kind) && let Some(melee) = &mut plan.melee {
             let target = mates.iter().find(|target| target.id == melee.target).map(|target| target.kind);
@@ -4357,6 +4364,7 @@ pub fn step_all(
     }).collect();
     items.death_reactions.extend(due);
 
+    items.plugin_targets.extend(plugin_targets);
     items.flush_mob_events(next_id, rng);
     items.remove_mobs(|mob| mob.gone() || mob.h.despawn);
 

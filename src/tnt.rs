@@ -169,7 +169,7 @@ pub fn explode(
     spare_rails: bool,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    blast(world, items, players, centre, power, true, false, spare_rails, false, None, next_id);
+    blast(world, items, players, centre, power, true, false, spare_rails, false, None, None, next_id);
 }
 
 /// Взрыв иссушителя и его черепов (mob/wither.rs): без огня; блоки — если
@@ -186,7 +186,7 @@ pub fn explode_wither(
     cap: Option<f32>,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    blast(world, items, players, centre, power, breaks_blocks, false, false, false, cap, next_id);
+    blast(world, items, players, centre, power, breaks_blocks, false, false, false, cap, None, next_id);
 }
 
 /// Взрыв с огнём — кровать вне обычного мира, якорь вне Незера (bed.rs):
@@ -202,7 +202,7 @@ pub fn explode_with_fire(
     power: f32,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    blast(world, items, players, centre, power, true, false, false, true, None, next_id);
+    blast(world, items, players, centre, power, true, false, false, true, None, None, next_id);
 }
 
 /// Взрыв догоревшего динамита: обычный — силы 4, особый — по своему виду
@@ -224,7 +224,7 @@ pub fn explode_primed(
         return;
     };
 
-    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, false, None, next_id);
+    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, false, None, None, next_id);
 
     // Кассетный: малые обычные заряды во все стороны — из места взрыва,
     // вверх и вбок со случайной скоростью, с коротким запалом.
@@ -254,6 +254,11 @@ pub fn explode_primed(
 /// (только у особого динамита). `spare_rails` — взрыв вагонетки с
 /// динамитом: рельсы и то, на чём они лежат, целы.
 #[allow(clippy::too_many_arguments)]
+pub struct ExplosionPlan {pub blocks: Vec<Pos>, touched: Vec<Pos>}
+pub fn prepare_explosion(world: &mut World, centre: (f64,f64,f64), power: f32) -> ExplosionPlan {let (blocks,touched)=rays(world,centre,power,None);ExplosionPlan {blocks,touched}}
+#[allow(clippy::too_many_arguments)]
+pub fn explode_prepared(world: &mut World, items: &mut Items, players: &[Target], centre: (f64,f64,f64), power: f32, fire: bool, prepared: ExplosionPlan, next_id: &mut dyn FnMut()->i32) {blast(world,items,players,centre,power,true,false,false,fire,None,Some(prepared),next_id);}
+#[allow(clippy::too_many_arguments)]
 fn blast(
     world: &mut World,
     items: &mut Items,
@@ -265,10 +270,11 @@ fn blast(
     spare_rails: bool,
     fire: bool,
     cap: Option<f32>,
+    prepared: Option<ExplosionPlan>,
     next_id: &mut dyn FnMut() -> i32,
 ) {
     crate::redstone::game_event_from(world, centre, 15, None, false);
-    let (mut doomed, touched) = if breaks_blocks { rays(world, centre, power, cap) } else { (Vec::new(), Vec::new()) };
+    let (mut doomed, touched) = if let Some(plan)=prepared {(plan.blocks,plan.touched)}else if breaks_blocks {rays(world,centre,power,cap)}else {(Vec::new(),Vec::new())};
     let reached = touched.len();
 
     // Вагонетка с динамитом рельсы и то, на чём они лежат, не рушит (вики,

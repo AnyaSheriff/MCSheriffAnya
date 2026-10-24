@@ -1205,19 +1205,7 @@ pub const HOPPER_COOLDOWN: i32 = 8;
 /// влезло, возвращает обратно).
 pub fn tick_hoppers(world: &mut World, items: &mut crate::items::Items) {
     for pos in world.containers_in_order() {
-        match world.container(pos.0, pos.1, pos.2).map(|c| c.kind) {
-            Some(Kind::Hopper) => tick_hopper(world, items, pos),
-            // Проигрыватель — тоже блок-сущность со своим тактом: песня
-            // кончается в нём.
-            Some(Kind::Jukebox) => crate::redstone::tick_jukebox(world, pos),
-            // Крафтер отсчитывает такты `crafting=true`.
-            Some(Kind::Crafter) => crate::redstone::crafter::tick(world, pos),
-            // Печи и варочная стойка — свой такт (furnace.rs).
-            Some(Kind::Furnace | Kind::BlastFurnace | Kind::Smoker) => crate::furnace::tick_oven(world, pos),
-            Some(Kind::BrewingStand) => crate::furnace::tick_brewing(world, pos),
-            Some(Kind::Campfire) => crate::campfire::tick(world, pos),
-            _ => {}
-        }
+        tick_block_entity(world,items,pos);
     }
 
     after_change(world);
@@ -1834,6 +1822,23 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
         }
         _ => return None,
     })
+}
+
+/// Один шаг блочной сущности; событие печи вызывается снаружи замков.
+pub fn tick_block_entity(world: &mut World, items: &mut crate::items::Items, pos: Pos) {
+        match world.container(pos.0, pos.1, pos.2).map(|c| c.kind) {
+            Some(Kind::Hopper) => tick_hopper(world, items, pos),
+            // Проигрыватель — тоже блок-сущность со своим тактом: песня
+            // кончается в нём.
+            Some(Kind::Jukebox) => crate::redstone::tick_jukebox(world, pos),
+            // Крафтер отсчитывает такты `crafting=true`.
+            Some(Kind::Crafter) => crate::redstone::crafter::tick(world, pos),
+            // Печи и варочная стойка — свой такт (furnace.rs).
+            Some(Kind::Furnace | Kind::BlastFurnace | Kind::Smoker) => crate::furnace::tick_oven(world, pos),
+            Some(Kind::BrewingStand) => crate::furnace::tick_brewing(world, pos),
+            Some(Kind::Campfire) => crate::campfire::tick(world, pos),
+            _ => {}
+        }
 }
 
 #[cfg(test)]

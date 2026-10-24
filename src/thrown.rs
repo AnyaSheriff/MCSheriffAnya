@@ -424,8 +424,11 @@ pub struct Impact {
 }
 
 /// Все снаряды и облака сервера.
+type FireballBlast = (i32, (f64, f64, f64), f32, bool);
 #[derive(Default, Clone)]
 pub struct Thrown {
+    plugin_blasts: Vec<(Dimension,[u8;16],FireballBlast)>,
+    plugin_applications: Vec<PendingApplication>,
     pub flying: Vec<Flying>,
     /// Последний снимок до удара: throw3-egg-sync-impact.md:19–22.
     pub landed: Vec<Flying>,
@@ -452,6 +455,8 @@ impl Thrown {
     /// Снимок такта: отложенная рассылка не читает уже изменившийся полёт.
     pub fn snapshot(&self, dimension: Dimension) -> Self {
         Self {
+            plugin_applications: Vec::new(),
+            plugin_blasts: Vec::new(),
             flying: self.flying.iter().filter(|v| v.dimension == dimension).cloned().collect(),
             landed: self.landed.iter().filter(|v| v.dimension == dimension).cloned().collect(),
             clouds: self.clouds.iter().filter(|v| v.dimension == dimension).cloned().collect(),
@@ -765,12 +770,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut landed = Vec::new();
     let mut new_clouds: Vec<Cloud> = Vec::new();
     let mut impacts: Vec<Impact> = Vec::new();
-    type FireballBlast = (i32, (f64, f64, f64), f32, bool);
+
     let mut blasts: Vec<FireballBlast> = Vec::new();
     let mut skull_hits: Vec<SkullHit> = Vec::new();
     let mut winds: Vec<((f64, f64, f64), bool)> = Vec::new();
     let height = |sneaking: bool| if sneaking { 1.5 } else { 1.8 };
 
+    let mut potion_applications=Vec::new();
+    let mut blast_sources=Vec::new();
     for flying in thrown.flying.iter_mut().filter(|f| f.dimension == dimension) {
         if !world.has_chunk((flying.x.floor() as i32).div_euclid(16), (flying.z.floor() as i32).div_euclid(16)) {
             continue;
@@ -1102,6 +1109,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 _ => at,
             };
 
+            blast_sources.push(flying.uuid);
             blasts.push((flying.owner, centre, flying.plugin_yield.unwrap_or(flying.power.max(1) as f32), flying.plugin_incendiary.unwrap_or(true)));
             continue;
         }
@@ -1164,7 +1172,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
                 let scale = splash_scale(distance, struck == Some(Struck::Player(*id)));
 
-                apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));
+                if crate::plugins::active() {potion_applications.push(PendingApplication {dimension,source:flying.uuid,cloud:false,target:Struck::Player(*id),uuid:*uuid,effects:effects.clone(),scale,owner:members.iter().find(|m|m.0==flying.owner).map(|m|(m.0,m.4)),origin:Some((flying.entity_id,at))});}
+                else {apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));}
             }
 
             let targets: Vec<(i32, f64)> = items
@@ -1180,7 +1189,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 .collect();
 
             for (id, scale) in targets {
-                apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));
+                if crate::plugins::active() {if let Some(uuid)=items.mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid) {potion_applications.push(PendingApplication {dimension,source:flying.uuid,cloud:false,target:Struck::Mob(id),uuid,effects:effects.clone(),scale,owner:members.iter().find(|m|m.0==flying.owner).map(|m|(m.0,m.4)),origin:Some((flying.entity_id,at))});}}
+                else {apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));}
             }
         }
 
@@ -1312,6 +1322,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
     // Облака: ожидание, таяние, наложение раз в 5 тактов [проверить период].
     let mut faded = Vec::new();
+    let mut cloud_applications=Vec::new();
 
     for cloud in thrown.clouds.iter_mut().filter(|c| c.dimension == dimension) {
         cloud.prev = (cloud.radius, cloud.waiting);
@@ -1363,6 +1374,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 Struck::Player(id) | Struck::Mob(id) => id,
             };
 
+            if crate::plugins::active() {let uuid=if let Struck::Mob(id)=target {items.mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid).unwrap_or(uuid)}else {uuid};cloud_applications.push(PendingApplication {dimension,source:cloud.uuid,cloud:true,target,uuid,effects:cloud.effects.clone(),scale:0.5,owner:members.iter().find(|m|m.0==cloud.owner).map(|m|(m.0,m.4)),origin:None});continue;}
             cloud.victims.push((id, age + cloud.delay));
             // Облако даёт четверть срока и половину мгновенного (вики,
             // Area Effect Cloud).
@@ -1379,6 +1391,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         }
     }
 
+    thrown.plugin_applications.extend(potion_applications);
+    thrown.plugin_applications.extend(cloud_applications);
     let (kept, gone_clouds): (Vec<Cloud>, Vec<Cloud>) = std::mem::take(&mut thrown.clouds).into_iter().partition(|c| !faded.contains(&c.entity_id));
 
     thrown.clouds = kept;
@@ -1393,8 +1407,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     skull_blasts(shared, dimension, world, skull_hits);
 
     // Взрывы шаров гаста: сила 1, огонь (вики, Fireball).
-    for (owner, centre, power, fire) in fireball_blasts {
+    for ((owner, centre, power, fire),source) in fireball_blasts.into_iter().zip(blast_sources) {
         if power == 0.0 {continue;}
+        if crate::plugins::active() {shared.thrown.lock().expect("взрывы").plugin_blasts.push((dimension,source,(owner,centre,power,fire)));continue;}
         let players = crate::tick::blast_targets(shared, dimension);
         let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
         let mut next_id = || shared.next_entity_id();
@@ -1742,3 +1757,41 @@ mod resistance_itemaudit_tests {
 #[cfg(test)]
 #[path = "potion_audit_tests.rs"]
 mod itemaudit4_tests;
+
+#[derive(Clone)]
+struct PendingApplication {dimension:Dimension,source:[u8;16],cloud:bool,target:Struck,uuid:[u8;16],effects:Vec<Effect>,scale:f64,owner:Option<(i32,[u8;16])>,origin:Option<(i32,(f64,f64,f64))>}
+
+/// Событие и его решение проходят без замков; эффекты применяются после проверки.
+pub fn deliver_pending(shared: &Shared, dimension: Dimension) {
+    let blasts={let mut thrown=shared.thrown.lock().expect("взрывы");let (take,keep):(Vec<_>,Vec<_>)=std::mem::take(&mut thrown.plugin_blasts).into_iter().partition(|p|p.0==dimension);thrown.plugin_blasts=keep;take};
+    for (_,source,(owner,centre,power,fire)) in blasts {
+        let mut prepared=crate::tnt::prepare_explosion(&mut shared.world_in(dimension).lock().expect("мир"),centre,power);
+        let mut fields=vec![crate::network::login::format_uuid(&source),(match dimension {Dimension::Overworld=>0,Dimension::Nether=>1,Dimension::End=>2}).to_string()];for (x,y,z) in &prepared.blocks {fields.push(format!("{x} {y} {z}"));}
+        let Some(result)=crate::plugins::native_event(7,fields.clone()) else {continue;};
+        if result.len()<2||result[..2]!=fields[..2]||result[2..].iter().any(|p|!fields[2..].contains(p)) {continue;}
+        let kept:std::collections::HashSet<_>=result.into_iter().skip(2).collect();let filtered=kept.len()!=prepared.blocks.len();prepared.blocks.retain(|(x,y,z)|kept.contains(&format!("{x} {y} {z}")));
+        let players=crate::tick::blast_targets(shared,dimension);let mut world=shared.world_in(dimension).lock().expect("мир");let mut items=shared.items_in(dimension).lock().expect("сущности");world.blast_source=owner;world.blast_killer=crate::mob::hostile::killer_key(crate::mob::Kind::Ghast);
+        crate::tnt::explode_prepared(&mut world,&mut items,&players,centre,power,fire&&!filtered,prepared,&mut ||shared.next_entity_id());world.blast_killer="";
+    }
+
+    let pending={let mut thrown=shared.thrown.lock().expect("зелья");let (take,keep):(Vec<_>,Vec<_>)=std::mem::take(&mut thrown.plugin_applications).into_iter().partition(|p|p.dimension==dimension);thrown.plugin_applications=keep;take};
+    let mut groups=std::collections::BTreeMap::<(bool,[u8;16]),Vec<PendingApplication>>::new();for p in pending {groups.entry((p.cloud,p.source)).or_default().push(p);}
+    let mut accepted=Vec::new();for ((cloud,source),mut targets) in groups {
+        let mut fields=vec![crate::network::login::format_uuid(&source)];for p in &targets {fields.extend([crate::network::login::format_uuid(&p.uuid),p.scale.to_string()]);}
+        let Some(result)=crate::plugins::native_event(if cloud {9}else {8},fields.clone()) else {continue;};
+        if result.len()!=fields.len()||result[0]!=fields[0] {continue;}
+        for (i,p) in targets.iter_mut().enumerate() {if result[1+i*2]!=fields[1+i*2] {continue;}
+            if let Ok(scale)=result[2+i*2].parse::<f64>()&&scale.is_finite()&&(0.0..=1.0).contains(&scale) {p.scale=scale;}
+            if p.scale>0.0 {accepted.push(p.clone());}}
+    }
+    let mut deeds=Vec::new();
+    {let mut items=shared.items_in(dimension).lock().expect("сущности");for p in accepted {
+        if p.cloud {let mut thrown=shared.thrown.lock().expect("облака");let Some(cloud)=thrown.clouds.iter_mut().find(|c|c.uuid==p.source) else {continue;};if cloud.radius<0.5 {continue;}let id=match p.target {Struck::Player(id)|Struck::Mob(id)=>id};cloud.victims.push((id,cloud.age+cloud.delay));cloud.radius+=cloud.on_use;}
+        apply(&mut deeds,items.mobs_mut(),p.target,p.uuid,&p.effects,p.scale,if p.cloud {0.5}else {1.0},p.owner,p.origin);
+    }}
+    let mut world=shared.world_in(dimension).lock().expect("мир");for deed in deeds {match deed {
+        Deed::Effect(id,effect)=>world.note_potion_effect(id,effect),Deed::Heal(id,amount)=>world.note_potion_heal(id,amount),
+        Deed::Progress(uuid,event)=>shared.players.lock().expect("игроки").order(&uuid,crate::players::Order::Progress(event)),
+        Deed::Hurt(uuid,amount,owner,from)=>{let mut players=shared.players.lock().expect("игроки");let killer=owner.and_then(|(id,uuid)|players.members().iter().find(|m|m.entity_id==id).map(|m|(m.name.clone(),uuid)));players.order(&uuid,crate::players::Order::MagicHit {amount,killer,from});},
+    }}
+}

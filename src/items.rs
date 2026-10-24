@@ -285,7 +285,12 @@ pub enum Change {
 }
 
 /// Все предметы, лежащие в мире, и журнал изменений.
+pub type PluginDeath = (String,(f64,f64,f64),bool,Vec<Stack>);
 pub struct Items {
+    pub plugin_targets: Vec<([u8;16],Option<i32>,Option<i32>)>,
+    pub plugin_spawned: Vec<[u8;16]>,
+    pub plugin_loaded: Vec<(i32,i32,[u8;16])>,
+    pub plugin_deaths: Vec<PluginDeath>,
     items: Vec<Dropped>,
 
     /// Вагонетки в порядке появления: у них своя физика (minecart.rs), но
@@ -331,6 +336,10 @@ impl Items {
     }
     pub fn new() -> Self {
         Self {
+            plugin_deaths: Vec::new(),
+            plugin_targets: Vec::new(),
+            plugin_spawned: Vec::new(),
+            plugin_loaded: Vec::new(),
             items: Vec::new(),
             carts: Vec::new(),
             bolts: Vec::new(),
@@ -354,7 +363,12 @@ impl Items {
     }
 
     /// Ставит моба в мир: клиентам его покажет конец такта (`send_mob_ticks`).
+    pub fn add_loaded_mob(&mut self, mob: crate::mob::Mob) {
+        if crate::plugins::active() {self.plugin_loaded.push(((mob.x.floor() as i32).div_euclid(16),(mob.z.floor() as i32).div_euclid(16),mob.uuid));}
+        self.mobs.push(mob);
+    }
     pub fn add_mob(&mut self, mob: crate::mob::Mob) {
+        if crate::plugins::active() {self.plugin_spawned.push(mob.uuid);}
         self.mobs.push(mob);
     }
 
@@ -367,7 +381,12 @@ impl Items {
             let (entity_id, silent) = (self.mobs[index].entity_id, self.mobs[index].silent);
             let at = (self.mobs[index].x, self.mobs[index].y, self.mobs[index].z);
 
-            for event in std::mem::take(&mut self.mobs[index].events) {
+            let mut events=std::mem::take(&mut self.mobs[index].events);
+            if crate::plugins::active()&&events.iter().any(|e|matches!(e,crate::mob::Event::Death)) {
+                let mut drops=Vec::new();events.retain(|e|if let crate::mob::Event::Loot(stacks)=e {drops.extend_from_slice(stacks);false}else {true});
+                self.plugin_deaths.push((crate::network::login::format_uuid(&self.mobs[index].uuid),at,self.mobs[index].kind==crate::mob::Kind::ArmorStand,drops));
+            }
+            for event in events {
                 if self.mobs[index].kind != crate::mob::Kind::Warden {
                     let frequency = match &event {
                         crate::mob::Event::Hurt { .. } => Some(7),
@@ -603,11 +622,13 @@ impl Items {
         self.changes.push(Change::Dropped(item));
     }
 
-    pub fn drop_from_player(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), velocity: (f64, f64, f64), thrower: [u8; 16]) {
+    pub fn drop_from_player(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), velocity: (f64, f64, f64), thrower: [u8; 16]) -> [u8;16] {
         let mut dropped = Self::new_item(entity_id, stack, at, velocity, THROWN_DELAY);
         dropped.thrower = Some(thrower);
+        let uuid=dropped.uuid;
         self.items.push(dropped.clone());
         self.changes.push(Change::Dropped(dropped));
+        uuid
     }
 
     /// Выпавший предмет, ещё не положенный в мир.
@@ -1071,17 +1092,23 @@ impl Items {
         Some(value)
     }
 
-    pub fn take_near<A>(&mut self, (x, y, z): (f64, f64, f64), by: i32, mut accept: A) -> Vec<Dropped>
+    pub fn take_near<A>(&mut self, (x, y, z): (f64, f64, f64), by: i32, accept: A) -> Vec<Dropped>
     where
         A: FnMut(Stack) -> i32,
     {
+        self.take_near_allowed((x,y,z),by,|_|true,accept)
+    }
+    pub fn pickup_candidates(&self, at: (f64,f64,f64), by: i32) -> Vec<Dropped> {
+        self.items.iter().filter(|item|item.block.is_none()&&item.age>=item.pickup_delay&&item.owner.is_none_or(|owner|owner==by)&&item.reaches(at.0,at.1,at.2)).take(256).cloned().collect()
+    }
+    pub fn take_near_allowed<A,F>(&mut self, (x,y,z): (f64,f64,f64), by: i32, mut allowed: F, mut accept: A) -> Vec<Dropped> where A: FnMut(Stack)->i32,F: FnMut(&Dropped)->bool {
         let mut taken = Vec::new();
         let mut index = 0;
 
         while index < self.items.len() {
             let item = &self.items[index];
 
-            if item.block.is_some() || item.age < item.pickup_delay || item.owner.is_some_and(|owner| owner != by) || !item.reaches(x, y, z) {
+            if !allowed(item) || item.block.is_some() || item.age < item.pickup_delay || item.owner.is_some_and(|owner| owner != by) || !item.reaches(x, y, z) {
                 index += 1;
                 continue;
             }
@@ -2134,5 +2161,19 @@ mod progress_tests {
         items.add_mob(mob);
         items.flush_mob_events(&mut || 100, &mut Rng::new(1));
         assert!(items.take_progress_kills().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod plugin_pickup_tests {
+    use super::*;
+    #[test]
+    fn cancelled_pickups_keep_their_native_stack_and_uuid() {
+        let mut items=Items::new();let stack=Stack::new(crate::blocks::item_named("diamond").unwrap(),3);
+        items.drop_item(90,stack,(0.0,64.0,0.0),(0.0,0.0,0.0),0);items.drop_item(91,stack,(0.0,64.0,0.0),(0.0,0.0,0.0),0);
+        for item in items.items_mut() {item.touchable=Some((0.0,64.0,0.0));}
+        let denied=items.items()[0].uuid;let allowed=items.items()[1].uuid;
+        let taken=items.take_near_allowed((0.0,64.0,0.0),1,|item|item.uuid==allowed,|stack|stack.count);
+        assert_eq!(taken.len(),1);assert_eq!(taken[0].uuid,allowed);assert_eq!(items.items().len(),1);assert_eq!(items.items()[0].uuid,denied);assert_eq!(items.items()[0].stack,stack);
     }
 }

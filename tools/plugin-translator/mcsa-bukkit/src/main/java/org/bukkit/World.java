@@ -1,5 +1,6 @@
 package org.bukkit;
-public interface World {
+public interface World extends org.bukkit.generator.WorldInfo {
+ java.util.List<org.bukkit.generator.BlockPopulator> getPopulators();
  <T extends org.bukkit.entity.Entity> T spawn(Location at,Class<T> type,java.util.function.Consumer<? super T> configure);
  <T extends org.bukkit.entity.Entity> java.util.Collection<T> getEntitiesByClass(Class<T> type);
  org.bukkit.util.RayTraceResult rayTrace(Location start,org.bukkit.util.Vector direction,double maxDistance,FluidCollisionMode fluids,boolean ignorePassable,double raySize,java.util.function.Predicate<? super org.bukkit.entity.Entity> filter);

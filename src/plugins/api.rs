@@ -313,6 +313,9 @@ impl mcsa::api::server::Host for PluginCtx {
         }
     }
 
+    fn ready_players(&mut self) -> Vec<wit::Player> {
+        let players=self.shared.players.lock().expect("игроки");players.members().iter().filter(|p|players.ui.info.contains_key(&p.uuid)).map(member_to_wit).collect()
+    }
     fn online_players(&mut self) -> Vec<wit::Player> {
         self.shared.players.lock().expect("список игроков захвачен другим потоком").members().iter().map(member_to_wit).collect()
     }
@@ -325,6 +328,22 @@ impl mcsa::api::server::Host for PluginCtx {
 }
 
 impl mcsa::api::player::Host for PluginCtx {
+    fn get_silent(&mut self, uuid: String) -> Result<bool,String> {let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let players=self.shared.players.lock().expect("игроки");Ok(players.ui.info.get(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state.silent)}
+    fn set_silent(&mut self, uuid: String, silent: bool) -> Result<(),String> {let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let mut players=self.shared.players.lock().expect("игроки");let state=&mut players.ui.info.get_mut(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state;state.silent=silent;state.silent_owner=Some(self.name.clone());players.order(&uuid,Order::PluginSilent {owner:self.name.clone(),value:Some(silent)});Ok(())}
+
+    fn vehicle(&mut self, uuid: String) -> Result<Option<String>,String> {
+        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let (entity_id,dimension)=self.shared.players.lock().expect("игроки").members().iter().find(|p|p.uuid==uuid).map(|p|(p.entity_id,p.dimension)).ok_or("Игрока нет на сервере")?;
+        let Some(vehicle)=self.shared.riding.lock().expect("седоки").vehicle_of(entity_id) else {return Ok(None);};
+        let items=self.shared.items_in(dimension).lock().expect("сущности");
+        Ok(items.mobs().iter().find(|m|m.entity_id==vehicle).map(|m|crate::network::login::format_uuid(&m.uuid)).or_else(||items.carts().iter().find(|c|c.entity_id==vehicle).map(|c|crate::network::login::format_uuid(&c.uuid))))
+    }
+    fn inside_vehicle(&mut self, uuid: String) -> Result<bool,String> {
+        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let entity_id=self.shared.players.lock().expect("игроки").members().iter().find(|p|p.uuid==uuid).map(|p|p.entity_id).ok_or("Игрока нет на сервере")?;
+        Ok(self.shared.riding.lock().expect("седоки").vehicle_of(entity_id).is_some())
+    }
+
     fn get_flight(&mut self, uuid: String) -> Result<mcsa::api::player::Flight, String> {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         let players = self.shared.players.lock().expect("игроки");

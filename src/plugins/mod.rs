@@ -362,6 +362,16 @@ mod enabled {
     pub fn enchant_event(who: &PlayerView, item: crate::inventory::Stack, result: crate::inventory::Stack, button: u32, cost: i32, hint: String, level: i32) -> Option<crate::inventory::Stack> {
         let who=who.clone();with_host(Some(result),move |host|host.enchant_event(&who,item,result,button,cost,hint,level))
     }
+    pub fn world_init(dimension: crate::dimension::Dimension) {with_host((),move |host|host.world_init(dimension))}
+    pub fn populate(dimension: crate::dimension::Dimension, x: i32, z: i32, seed: i64, chunk: crate::world::Chunk) -> crate::world::Chunk {with_host(chunk.clone(),move |host|host.populate(dimension,x,z,seed,chunk))}
+    pub fn entity_death(who: Option<&PlayerView>, uuid: &str, keep: bool, drops: Vec<crate::inventory::Stack>) -> Vec<crate::inventory::Stack> {let (who,uuid)=(who.cloned(),uuid.to_string());with_host(drops.clone(),move |host|host.entity_death(who.as_ref(),&uuid,keep,drops))}
+    pub fn native_event(kind: u32, fields: Vec<String>) -> Option<Vec<String>> {with_host(Some(fields.clone()),move |host|host.native_event(kind,fields))}
+    pub fn block_drop(who: &PlayerView, pos: (i32,i32,i32), data: String, items: Vec<String>) -> Vec<String> {let who=who.clone();with_host(items.clone(),move |host|host.block_drop(&who,pos,&data,items))}
+    pub fn ground_item(who: &PlayerView, uuid: &str, pickup: bool, remaining: i32) -> bool {let (who,uuid)=(who.clone(),uuid.to_string());with_host(false,move |host|host.ground_item(&who,&uuid,pickup,remaining))}
+    pub fn furnace_event(dimension: crate::dimension::Dimension, pos: (i32,i32,i32), total: i32) -> i32 {with_host(total,move |host|host.furnace_event(dimension,pos,total))}
+    pub fn trade_event(who: &PlayerView, closed: bool, slots: &[Option<crate::inventory::Stack>], offers: &mut Vec<crate::villager::Offer>) -> bool {
+        let (who,slots,copy)=(who.clone(),slots.to_vec(),offers.clone());let (cancelled,updated)=with_host((false,copy.clone()),move |host|{let mut copy=copy;let cancelled=host.trade_event(&who,closed,&slots,&mut copy);(cancelled,copy)});*offers=updated;cancelled
+    }
     pub fn food_level(who: &PlayerView, level: i32, item: Option<crate::inventory::Stack>) -> Option<i32> {
         let who=who.clone();with_host(Some(level),move |host|host.food_level(&who,level,item))
     }
@@ -376,7 +386,7 @@ mod enabled {
 
     pub fn death(who: &PlayerView, keep_inventory: bool) {
         let who = who.clone();
-        with_host((), move |host| host.death(&who, keep_inventory));
+        with_host((), move |host| host.death_legacy(&who, keep_inventory));
     }
 
     pub fn command_names(shared: &Shared, uuid: &[u8;16]) -> Vec<String> {
@@ -454,7 +464,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{world_init, populate, entity_death, native_event, block_drop, ground_item, furnace_event, trade_event, food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -527,6 +537,14 @@ mod disabled {
     pub fn prepare_anvil(_who: &PlayerView, _inputs: &[Option<crate::inventory::Stack>], _result: Option<crate::inventory::Stack>, cost: i32) -> i32 {cost}
     pub fn prepare_enchant(_who: &PlayerView, _item: crate::inventory::Stack, properties: Vec<i16>) -> Vec<i16> {properties}
     pub fn enchant_event(_who: &PlayerView, _item: crate::inventory::Stack, result: crate::inventory::Stack, _button: u32, _cost: i32, _hint: String, _level: i32) -> Option<crate::inventory::Stack> {Some(result)}
+    pub fn world_init(_dimension: crate::dimension::Dimension) {}
+    pub fn populate(_dimension: crate::dimension::Dimension, _x: i32, _z: i32, _seed: i64, chunk: crate::world::Chunk) -> crate::world::Chunk {chunk}
+    pub fn entity_death(_who: Option<&PlayerView>, _uuid: &str, _keep: bool, drops: Vec<crate::inventory::Stack>) -> Vec<crate::inventory::Stack> {drops}
+    pub fn native_event(_kind: u32, fields: Vec<String>) -> Option<Vec<String>> {Some(fields)}
+    pub fn block_drop(_who: &PlayerView, _pos: (i32,i32,i32), _data: String, items: Vec<String>) -> Vec<String> {items}
+    pub fn ground_item(_who: &PlayerView, _uuid: &str, _pickup: bool, _remaining: i32) -> bool {false}
+    pub fn furnace_event(_dimension: crate::dimension::Dimension, _pos: (i32,i32,i32), total: i32) -> i32 {total}
+    pub fn trade_event(_who: &PlayerView, _closed: bool, _slots: &[Option<crate::inventory::Stack>], _offers: &mut Vec<crate::villager::Offer>) -> bool {false}
     pub fn food_level(_who: &PlayerView, level: i32, _item: Option<crate::inventory::Stack>) -> Option<i32> {Some(level)}
     pub fn item_event(_who: &PlayerView, _kind: u32, _slot: i32) -> bool {false}
 
@@ -543,7 +561,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{world_init, populate, entity_death, native_event, block_drop, ground_item, furnace_event, trade_event, food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

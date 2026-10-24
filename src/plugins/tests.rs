@@ -834,3 +834,14 @@ fn entity_snapshots_launch_potions_and_horse_mutations_reach_native_state() {
     let frame=crate::frame::Frame::new(611,(0,70,0),crate::frame::NORTH,false);let frame_uuid=crate::network::login::format_uuid(&frame.uuid);shared.items_in(Dimension::Overworld).lock().unwrap().add_frame(frame);assert!(ctx.valid(frame_uuid.clone()));assert_eq!(ctx.describe(frame_uuid.clone()).unwrap().kind,"item_frame");ctx.remove(frame_uuid.clone()).unwrap();assert!(!ctx.valid(frame_uuid));
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn bukkit_ready_players_hide_incomplete_login_without_changing_generic_online_list() {
+    use super::api::mcsa::api::server::Host as _;
+    let root=server_root("ready-players");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();
+    assert_eq!(ctx.online_players().len(),1);assert!(ctx.ready_players().is_empty());
+    shared.players.lock().unwrap().ui.info.insert([1;16],crate::presentation::Info::default());
+    assert_eq!(ctx.ready_players().len(),1);assert_eq!(ctx.online_players().len(),1);
+    shared.players.lock().unwrap().ui.info.remove(&[1;16]);assert!(ctx.ready_players().is_empty());
+}

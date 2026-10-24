@@ -5,12 +5,14 @@ public final class ChestInventory implements Inventory {
  public ChestInventory(InventoryHolder holder,int size,net.kyori.adventure.text.Component title){if(size<9||size>54||size%9!=0)throw new IllegalArgumentException("Сундук: 9..54 ячейки, кратно 9");this.holder=holder;items=new ItemStack[size];this.title=java.util.Objects.requireNonNull(title);}
  public InventoryHolder getHolder(){return holder;}public int getSize(){return items.length;}
  private void check(int slot){if(slot<0||slot>=items.length)throw new IllegalArgumentException("Ячейка вне сундука");}
- public ItemStack getItem(int slot){check(slot);if(handle!=0)refresh();return items[slot];}
- public ItemStack[] getContents(){if(handle!=0)refresh();return items.clone();}
- void refresh(){String[] a=Host.call(52,""+handle);for(int i=0;i<items.length;i++){int n=i*3;Material m=Material.matchMaterial(a[n]);int count=Integer.parseInt(a[n+1]);items[i]=m==null||m.isAir()||count==0?null:ItemStack.fromHost(m,count,a[n+2]);}}
+ // Один игровой callback видит согласованный снимок; собственные записи обновляют его сразу.
+ private long refreshedEpoch=-1;
+ public ItemStack getItem(int slot){check(slot);if(handle!=0&&refreshedEpoch!=RuntimeState.callbackEpoch)refresh();return items[slot];}
+ public ItemStack[] getContents(){if(handle!=0&&refreshedEpoch!=RuntimeState.callbackEpoch)refresh();return items.clone();}
+ void refresh(){refreshedEpoch=RuntimeState.callbackEpoch;String[] a=Host.call(52,""+handle);for(int i=0;i<items.length;i++){int n=i*3;int count=Integer.parseInt(a[n+1]);if(count<=0||a[n].equals("air")){items[i]=null;continue;}Material m=Material.matchMaterial(a[n]);items[i]=m==null||m.isAir()?null:ItemStack.fromHost(m,count,a[n+2]);}}
  public void setItem(int slot,ItemStack item){check(slot);items[slot]=item==null?null:item.clone();if(handle!=0)send(slot);}
  private void send(int slot){ItemStack item=items[slot];Host.call(51,""+handle,""+slot,item==null||item.isEmpty()?"air":Ascii.lower(item.getType().name()),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());}
- int prepare(){if(handle==0){handle=Integer.parseInt(Host.text(50,""+items.length,Text.json(title)));for(int i=0;i<items.length;i++)send(i);}return handle;}
+ int prepare(){if(handle==0){handle=Integer.parseInt(Host.text(50,""+items.length,Text.json(title)));for(int i=0;i<items.length;i++)if(items[i]!=null&&!items[i].isEmpty())send(i);refreshedEpoch=RuntimeState.callbackEpoch;}return handle;}
  public boolean contains(Material material){for(ItemStack item:getContents())if(item!=null&&item.getType()==material)return true;return false;}
  public boolean containsAtLeast(ItemStack stack,int count){for(ItemStack item:getContents())if(item!=null&&item.isSimilar(stack))count-=item.getAmount();return count<=0;}
  public java.util.HashMap<Integer,ItemStack> addItem(ItemStack... stacks){return transfer(true,stacks);}public java.util.HashMap<Integer,ItemStack> removeItem(ItemStack... stacks){return transfer(false,stacks);}

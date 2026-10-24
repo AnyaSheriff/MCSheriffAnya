@@ -109,12 +109,18 @@ interface server {
 
     /// Кто сейчас на сервере.
     online-players: func() -> list<player>;
+    /// Игроки Java с опубликованным снимком, доступные Bukkit во время входа.
+    ready-players: func() -> list<player>;
 
     /// Игрок по нику (без учёта регистра).
     find-player: func(name: string) -> option<player>;
 }
 
 interface player {
+    set-silent: func(uuid: string, silent: bool) -> result<_, string>;
+    get-silent: func(uuid: string) -> result<bool, string>;
+    vehicle: func(uuid: string) -> result<option<string>, string>;
+    inside-vehicle: func(uuid: string) -> result<bool, string>;
     record flight { allowed: bool, flying: bool, fall-damage: s8 }
     get-flight: func(uuid: string) -> result<flight, string>;
     /// Поле: 0 — разрешение, 1 — полёт, 2 — урон (-1: обычные правила).
@@ -509,9 +515,17 @@ world bukkit-plugin {
     export inventory-events;
     export player-events;
     export item-events;
+    export trading-events;
+    export generation-events;
+    export native-events;
 }
 
 interface item-events {
+    on-entity-death: func(who: option<player>, entity: string, keep: bool, drops: list<item>) -> list<item>;
+    on-block-drop: func(who: player, pos: block-pos, data: string, items: list<string>) -> list<string>;
+    on-ground-item: func(who: player, item: string, pickup: bool, remaining: s32) -> bool;
+    use types.{block-pos};
+    on-furnace: func(pos: block-pos, total: s32) -> s32;
     use inventory.{item};
     on-prepare-enchant: func(who: player, stack: item, properties: list<s32>) -> list<s32>;
     on-enchant: func(who: player, stack: item, output: item, button: u32, cost: s32, hint: string, level: s32) -> option<item>;
@@ -558,3 +572,23 @@ interface player-events {
     /// 0 — разрешить, 1 — запретить блок, 2 — запретить предмет, 3 — оба.
     on-interact: func(who: player, action: u32, hand: u32, block: option<block-pos>, face: u32) -> u32;
 }
+
+/// Необязательные события нативной торговли; список результата: отмена, затем цены.
+interface trading-events {
+    use types.{player};
+    on-trade: func(who: player, closed: bool, slots: list<string>, offers: list<string>) -> list<s32>;
+}
+
+/// Необязательные callbacks генерации: центральный чанк, сжатая палитра типов.
+interface generation-events {
+    use types.{block-pos};
+    use inventory.{item};
+    on-loot: func(pos: block-pos, slots: list<option<item>>) -> list<option<item>>;
+    use types.{dimension};
+    wants-population: func(dimension: dimension) -> bool;
+    on-populate: func(dimension: dimension, x: s32, z: s32, seed: s64, palette: list<string>, runs: list<u32>) -> list<string>;
+    on-world-init: func(dimension: dimension);
+}
+
+/// Дополнительные нативные события. Первый ответ — флаг отмены, затем поля события.
+interface native-events {on-event: func(kind: u32, fields: list<string>) -> list<string>;}

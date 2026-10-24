@@ -12,6 +12,7 @@ public final class Normalize {
  private static final Set<String> MAPPED=Set.of("Executor","ExecutorService","Executors","Future","Callable");
  static String mapped(String name){String prefix="java/util/concurrent/";if(name.startsWith(prefix)&&Set.of("RejectedExecutionException","ExecutionException","CancellationException","TimeoutException").contains(name.substring(prefix.length())))return "ru/mcsa/bukkit/errors/"+name.substring(prefix.length());if(name.startsWith(prefix)&&MAPPED.contains(name.substring(prefix.length())))return "ru/mcsa/bukkit/concurrent/"+name.substring(prefix.length());if(name.equals("java/util/logging/Logger"))return "ru/mcsa/bukkit/logging/Logger";if(name.equals("java/io/File"))return "ru/mcsa/bukkit/fs/File";if(Set.of("Path","Files","CopyOption","StandardCopyOption","LinkOption","OpenOption","AtomicMoveNotSupportedException").stream().anyMatch(value->name.equals("java/nio/file/"+value)))return "ru/mcsa/bukkit/fs/"+name.substring("java/nio/file/".length());if(name.equals("java/nio/file/attribute/FileAttribute"))return "ru/mcsa/bukkit/fs/FileAttribute";return name;}
  static String mappedDescriptor(String desc){return new Remapper(){@Override public String map(String name){return mapped(name);}}.mapMethodDesc(desc);}
+ private static Handle numericHandle(Handle handle){return handle.getOwner().equals("java/lang/Integer")&&handle.getName().equals("sum")&&handle.getDesc().equals("(II)I")?new Handle(Opcodes.H_INVOKESTATIC,"ru/mcsa/bukkit/Numbers","sum","(II)I",false):handle;}
  private static byte[] transform(byte[] bytes,boolean remap){
   ClassNode c=new ClassNode();new ClassReader(bytes).accept(c,0);
   if(!remap){
@@ -39,6 +40,7 @@ public final class Normalize {
    }
    c.methods.removeAll(unused);
   }
+  if(remap)for(MethodNode method:c.methods)for(AbstractInsnNode insn:method.instructions){if(insn instanceof MethodInsnNode){MethodInsnNode call=(MethodInsnNode)insn;if(call.owner.equals("java/lang/Integer")&&call.name.equals("sum")&&call.desc.equals("(II)I"))call.owner="ru/mcsa/bukkit/Numbers";else if(!c.name.equals("ru/mcsa/bukkit/Strings")&&call.owner.equals("java/lang/String")&&(call.name.equals("toLowerCase")||call.name.equals("toUpperCase"))&&call.desc.equals("(Ljava/util/Locale;)Ljava/lang/String;")){call.name=call.name.equals("toLowerCase")?"lower":"upper";call.owner="ru/mcsa/bukkit/Strings";call.desc="(Ljava/lang/String;Ljava/util/Locale;)Ljava/lang/String;";call.setOpcode(Opcodes.INVOKESTATIC);call.itf=false;}}else if(insn instanceof InvokeDynamicInsnNode){InvokeDynamicInsnNode dynamic=(InvokeDynamicInsnNode)insn;for(int i=0;i<dynamic.bsmArgs.length;i++)if(dynamic.bsmArgs[i] instanceof Handle)dynamic.bsmArgs[i]=numericHandle((Handle)dynamic.bsmArgs[i]);}else if(insn instanceof LdcInsnNode&&((LdcInsnNode)insn).cst instanceof Handle)((LdcInsnNode)insn).cst=numericHandle((Handle)((LdcInsnNode)insn).cst);}
   ClassWriter out=new ClassWriter(0);
   if(remap)c.accept(new ClassRemapper(out,new Remapper(){@Override public String map(String name){return mapped(name);}}));else c.accept(out);
   return out.toByteArray();

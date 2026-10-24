@@ -105,10 +105,14 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         .find(|mob| mob.entity_id == villager_id)
         .map(|mob| (mob.villager.clone(), mob.kind == crate::mob::Kind::WanderingTrader));
 
-    let Some((state, wandering)) = found else {
+    let Some((mut state, wandering)) = found else {
         return Ok(());
     };
 
+    if crate::plugins::active() {
+        if crate::plugins::trade_event(&plugin_view(player),false,&[None;3],&mut state.offers) {release(shared,player.dimension,villager_id);return Ok(());}
+        if let Some(mob)=shared.items_in(player.dimension).lock().expect("торговец").mobs_mut().iter_mut().find(|m|m.entity_id==villager_id) {mob.villager.offers=state.offers.clone();}
+    }
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
 
     let id = player.window_counter;
@@ -548,6 +552,7 @@ pub(super) fn close(shared: &Shared, player: &mut PlayerState) -> (Vec<i32>, Vec
         window.merchant = Some(Merchant::new(merchant.villager));
     }
 
+    notify_close(shared,player,&merchant);
     release(shared, player.dimension, merchant.villager);
     changed.sort_unstable();
     changed.dedup();
@@ -574,4 +579,14 @@ pub(super) fn villager_gone(shared: &Shared, player: &PlayerState, villager_id: 
         .mobs()
         .iter()
         .any(|mob| mob.entity_id == villager_id && !mob.is_dead())
+}
+
+// Замки мира и сущностей отпущены до вызова обработчика.
+pub(super) fn notify_close(shared: &Shared, player: &PlayerState, merchant: &Merchant) {
+    if !crate::plugins::active() {return;}
+    let offers=shared.items_in(player.dimension).lock().expect("торговец").mobs().iter().find(|m|m.entity_id==merchant.villager).map(|m|m.villager.offers.clone());
+    if let Some(mut offers)=offers {
+        crate::plugins::trade_event(&plugin_view(player),true,&merchant.slots,&mut offers);
+        if let Some(mob)=shared.items_in(player.dimension).lock().expect("торговец").mobs_mut().iter_mut().find(|m|m.entity_id==merchant.villager) {mob.villager.offers=offers;}
+    }
 }

@@ -114,7 +114,7 @@ def translate(jar, output, check_only=False, report=None):
         run("java", "-cp", cp, "ru.mcsa.translator.Normalize", TARGET / "mcsa-bukkit.jar", mapped_sdk, "remap")
         classes = work / "classes"
         classes.mkdir()
-        run("javac", "-proc:none", "--release", "11", "-encoding", "UTF-8", "-cp", str(TARGET / "mcsa-bukkit.jar") + os.pathsep + str(compiler_jar), "-d", classes, work / "src/mcsa/generated/Main.java")
+        run(os.environ.get("MCSA_TRANSLATOR_JAVAC", "javac"), "-proc:none", "--release", "11", "-encoding", "UTF-8", "-cp", str(TARGET / "mcsa-bukkit.jar") + os.pathsep + str(compiler_jar), "-d", classes, work / "src/mcsa/generated/Main.java")
         run("java", "-Xmx1g", "-cp", cp, "ru.mcsa.translator.Compile", work / "c", classes, mapped_sdk, compiler_jar)
         port_runtime(work / "c")
         wit = work / "wit"

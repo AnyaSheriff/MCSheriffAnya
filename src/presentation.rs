@@ -27,6 +27,8 @@ pub struct Info {
 
 #[derive(Clone, Default)]
 pub struct PlayerState {
+    pub silent: bool,
+    pub silent_owner: Option<String>,
     pub flight_owners: [Option<String>;3],
     pub flight_allowed: bool,
     pub flying: bool,

@@ -405,7 +405,7 @@ pub enum Gust {
 /// сначала по Y (снизу вверх), внутри — по Z, внутри — по X. Поэтому секцию
 /// не приходится перекладывать при отправке.
 #[derive(Clone)]
-struct Chunk {
+pub(crate) struct Chunk {
     /// Секции снизу вверх. None — секция целиком из воздуха.
     ///
     /// Состояние блока хранится в двух байтах, а не в четырёх: номеров
@@ -1224,6 +1224,8 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    pub plugin_events_enabled: bool,
+    pub plugin_game_events: Vec<crate::redstone::sculk_family::GameEvent>,
     /// Предел монстров по владельцам; последняя правка действует до выгрузки.
     pub plugin_monster_limits: Vec<(String, usize)>,
     pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
@@ -1549,6 +1551,8 @@ impl World {
     pub fn in_memory() -> Self {
         Self {
             plugin_monster_limits: Vec::new(),
+            plugin_game_events: Vec::new(),
+            plugin_events_enabled: false,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1709,6 +1713,8 @@ impl World {
 
         let mut world = Self {
             plugin_monster_limits: Vec::new(),
+            plugin_game_events: Vec::new(),
+            plugin_events_enabled: false,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1824,6 +1830,7 @@ impl World {
             world.save_level();
         }
 
+        crate::plugins::world_init(if world.is_nether() {crate::dimension::Dimension::Nether}else if world.is_end() {crate::dimension::Dimension::End}else {crate::dimension::Dimension::Overworld});
         Ok(world)
     }
 
@@ -4645,10 +4652,13 @@ pub struct ChunkSource {
 impl ChunkSource {
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
-        ReadyChunk {
-            taken: take_chunk(&self.path, &self.generator, chunk_x, chunk_z),
-            epoch: self.epoch,
+        let mut taken=take_chunk(&self.path,&self.generator,chunk_x,chunk_z);
+        if crate::plugins::active() && let Taken::Loaded {chunk,from_disk:false,..}=&mut taken {
+            let (dimension,seed)=match self.generator.as_ref() {Generator::Normal(t)=>(crate::dimension::Dimension::Overworld,t.seed()),Generator::Nether(t)=>(crate::dimension::Dimension::Nether,t.seed()),Generator::End(t)=>(crate::dimension::Dimension::End,t.seed()),Generator::Flat=>(crate::dimension::Dimension::Overworld,0)};
+            *chunk=crate::plugins::populate(dimension,chunk_x,chunk_z,seed,chunk.clone());
+            if let Taken::Loaded {chunk,wake,..}=&mut taken {*wake=chunk.fluids_to_wake(chunk_x,chunk_z);}
         }
+        ReadyChunk {taken,epoch:self.epoch}
     }
 }
 
@@ -8191,3 +8201,43 @@ mod structures_audit;
 
 #[cfg(test)]
 mod structure_fix_tests;
+
+type PopulationLoot = Vec<((i32,i32,i32),Vec<Option<crate::inventory::Stack>>)>;
+impl Chunk {
+    pub(crate) fn population_loot(&self) -> PopulationLoot {let mut containers:Vec<_>=self.containers.iter().filter(|(_,c)|c.slots.iter().any(Option::is_some)).map(|(pos,c)|(*pos,c.slots.clone())).collect();containers.sort_by_key(|(p,_)|*p);containers}
+    pub(crate) fn replace_population_loot(&mut self, pos: (i32,i32,i32), slots: Vec<Option<crate::inventory::Stack>>) {if let Some(container)=self.containers.get_mut(&pos) {container.slots=slots;}}
+    pub(crate) fn population_snapshot(&self) -> (Vec<String>,Vec<u32>) {
+        let mut palette=Vec::new();let mut indices=std::collections::HashMap::new();let mut runs=Vec::<u32>::new();
+        for x in 0..16 {for z in 0..16 {for y in MIN_Y..MIN_Y+WORLD_HEIGHT {
+            let name=crate::blocks::block_at_state(self.block(x,y,z)).unwrap_or("air");
+            let index=*indices.entry(name).or_insert_with(||{let id=palette.len() as u32;palette.push(name.to_string());id});
+            let n=runs.len();if n>=2&&runs[n-1]==index {runs[n-2]+=1;}else {runs.extend([1,index]);}
+        }}}
+        (palette,runs)
+    }
+    pub(crate) fn apply_population(&mut self, edits: Vec<String>) -> Result<(),String> {
+        if edits.len()>98304 {return Err("Слишком много изменений генерации".into());}
+        let mut changes=Vec::with_capacity(edits.len());for edit in edits {
+            let (index,name)=edit.split_once(' ').ok_or("Неверное изменение генерации")?;let index=index.parse::<i32>().map_err(|_|"Неверный индекс генерации")?;
+            if !(0..98304).contains(&index) {return Err("За пределами области генерации".into());}
+            let state=crate::blocks::state_by_name(name).ok_or("Неизвестный блок генерации")?;changes.push((index,state));
+        }
+        for (index,state) in changes {self.set(index/384/16,index%384+MIN_Y,index/384%16,state);}
+        self.light_up();Ok(())
+    }
+}
+
+#[cfg(test)]
+mod plugin_population_tests {
+    use super::*;
+    #[test]
+    fn population_edits_are_bounded_atomic_and_cover_negative_height() {
+        let mut chunk=Chunk::new();let old=chunk.block(0,-64,0);
+        assert!(chunk.apply_population(vec!["0 diamond_block".into(),"98304 stone".into()]).is_err());
+        assert_eq!(chunk.block(0,-64,0),old);
+        assert!(chunk.apply_population(vec!["0 not_a_real_block".into()]).is_err());
+        chunk.apply_population(vec!["0 diamond_block".into(),"98303 gold_block".into()]).unwrap();
+        assert_eq!(crate::blocks::block_at_state(chunk.block(0,-64,0)),Some("diamond_block"));assert_eq!(crate::blocks::block_at_state(chunk.block(15,319,15)),Some("gold_block"));
+        let (palette,runs)=chunk.population_snapshot();assert_eq!(runs.as_chunks::<2>().0.iter().map(|r|r[0]).sum::<u32>(),98304);assert_eq!(palette[runs[1] as usize],"diamond_block");
+    }
+}

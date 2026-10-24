@@ -2,6 +2,7 @@ package ru.mcsa.bukkit;
 import org.bukkit.*;
 public final class RemoteWorld implements World {
  @Override public boolean equals(Object value){return value instanceof RemoteWorld&&dimension==((RemoteWorld)value).dimension;}@Override public int hashCode(){return dimension;}
+ public java.util.List<org.bukkit.generator.BlockPopulator> getPopulators(){return Population.list(dimension);}
  public final int dimension; public RemoteWorld(int d){dimension=d;} public String getName(){return dimension==0?"world":dimension==1?"world_nether":"world_the_end";}
  private org.bukkit.entity.Item drop(Location loc,org.bukkit.inventory.ItemStack item,boolean natural){java.util.Objects.requireNonNull(item);if(loc.getWorld()==null||!loc.getWorld().getName().equals(getName()))throw new IllegalArgumentException("Разные миры");return new RemoteItem(Host.text(79,""+dimension,""+loc.getX(),""+loc.getY(),""+loc.getZ(),Ascii.lower(item.getType().name()),""+item.getAmount(),item.metadata(),""+natural));}
  public org.bukkit.entity.Item dropItem(Location loc,org.bukkit.inventory.ItemStack item){return drop(loc,item,false);}public org.bukkit.entity.Item dropItemNaturally(Location loc,org.bukkit.inventory.ItemStack item){return drop(loc,item,true);}

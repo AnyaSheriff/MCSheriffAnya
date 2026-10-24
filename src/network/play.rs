@@ -615,6 +615,7 @@ const SAME_POSITION: f64 = 0.001;
 /// подключения этот список свой.
 #[derive(Clone, Copy, PartialEq)]
 struct Shown {
+    silent: bool,
     position: Position,
     skin_parts: u8,
     main_hand: u8,
@@ -1123,6 +1124,7 @@ async fn enter_world(
                     worn: [None; 5],
                     speed_bits: 0,
                     sprinting: false,
+                    silent: false,
                     living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
@@ -1569,7 +1571,7 @@ async fn send_add_entity(stream: &mut Outgoing<'_>, member: &Member) -> io::Resu
 /// Летит он не по дуге, как в игре, — сервер сразу считает, где предмет ляжет:
 /// от места броска вниз до первой опоры. Поднять его можно не сразу, иначе он
 /// тут же вернулся бы в руки тому, кто бросил.
-fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
+fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) -> [u8;16] {
     // Бросок идёт туда, куда игрок смотрит, — с наклоном: в небо предмет
     // летит вверх, под ноги падает сразу. Дальше он летит сам, по дуге.
     let (look_x, look_y, look_z) = looking(player.yaw, player.pitch);
@@ -1590,7 +1592,7 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
         look_z * items::THROW_SPEED,
     );
 
-    shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").drop_from_player(shared.next_entity_id(), stack, from, velocity, player.uuid);
+    let uuid=shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").drop_from_player(shared.next_entity_id(), stack, from, velocity, player.uuid);
 
     log_debug!(
         "Play: {} выбросил предмет {} ({} шт.)",
@@ -1598,6 +1600,15 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
         stack.item,
         stack.count
     );
+    uuid
+}
+
+// Предмет доступен обработчику как нативная сущность; отмена удаляет только этот бросок.
+fn throw_out_cancelled(shared: &Shared, player: &PlayerState, stack: Stack) -> bool {
+    let uuid=throw_out(shared,player,stack);
+    if crate::plugins::ground_item(&plugin_view(player),&crate::network::login::format_uuid(&uuid),false,0) {
+        shared.items_in(player.dimension).lock().expect("предметы").remove_items(|item|item.uuid==uuid);true
+    } else {false}
 }
 
 /// Взгляд как у оригинала: синус и косинус по таблице на 65536 делений
@@ -1639,12 +1650,23 @@ fn drop_into_world(
     at: (f64, f64, f64),
     velocity: (f64, f64, f64),
     delay: u64,
-) {
-    shared
-        .items_in(dimension)
-        .lock()
-        .expect("предметы захвачены другим потоком")
-        .drop_item(shared.next_entity_id(), stack, at, velocity, delay);
+) -> [u8;16] {
+    let entity_id=shared.next_entity_id();let mut items=shared.items_in(dimension).lock().expect("предметы");
+    items.drop_item(entity_id,stack,at,velocity,delay);
+    items.items().iter().find(|item|item.entity_id==entity_id).expect("новый предмет").uuid
+}
+
+// Guard создан до замка мира: при выходе замки освобождаются раньше события.
+struct BlockDropGuard<'a> {shared: &'a Shared,who: crate::plugins::PlayerView,pos: (i32,i32,i32),data: String,items: Vec<[u8;16]>,enabled: bool}
+impl BlockDropGuard<'_> {
+    fn spawn(&mut self, stack: Stack, at: (f64,f64,f64), velocity: (f64,f64,f64), delay: u64) {self.items.push(drop_into_world(self.shared,self.who.dimension,stack,at,velocity,delay));}
+}
+impl Drop for BlockDropGuard<'_> {
+    fn drop(&mut self) {
+        if !self.enabled||!crate::plugins::active()||std::thread::panicking() {return;}
+        let originals:Vec<_>=self.items.iter().map(crate::network::login::format_uuid).collect();let kept=crate::plugins::block_drop(&self.who,self.pos,self.data.clone(),originals);
+        self.shared.items_in(self.who.dimension).lock().expect("предметы").remove_items(|item|self.items.contains(&item.uuid)&&!kept.contains(&crate::network::login::format_uuid(&item.uuid)));
+    }
 }
 
 /// Подбирает то, до чего игрок дотянулся.
@@ -1654,12 +1676,20 @@ fn drop_into_world(
 fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
     let mut slots = Vec::new();
 
+    let mut allowed=std::collections::HashSet::new();
+    if crate::plugins::active() {
+        let candidates=shared.items_in(player.dimension).lock().expect("предметы").pickup_candidates((player.x,player.y,player.z),player.entity_id);
+        let mut predicted=player.inventory.clone();
+        for item in candidates {let mut probe=predicted.clone();let remaining=probe.put(item.stack).1.map_or(0,|s|s.count);if remaining==item.stack.count {continue;}
+            if !crate::plugins::ground_item(&plugin_view(player),&crate::network::login::format_uuid(&item.uuid),true,remaining) {allowed.insert(item.uuid);predicted=probe;}
+        }
+    }
     // Поднимается столько, сколько влезает: остальное остаётся лежать.
     let taken = shared
         .items_in(player.dimension)
         .lock()
         .expect("предметы захвачены другим потоком")
-        .take_near((player.x, player.y, player.z), player.entity_id, |stack| {
+        .take_near_allowed((player.x, player.y, player.z), player.entity_id, |item|!crate::plugins::active()||allowed.contains(&item.uuid), |stack| {
             let (changed, left) = player.inventory.put(stack);
 
             slots.extend(changed);
@@ -3022,6 +3052,9 @@ async fn send_look(
     write_body(stream, body).await
 }
 
+async fn send_silent(stream: &mut Outgoing<'_>, entity: i32, silent: bool) -> io::Result<()> {let mut body=encode_varint(SET_ENTITY_DATA);body.extend_from_slice(&encode_varint(entity));body.push(4);body.extend_from_slice(&encode_varint(8));body.push(u8::from(silent));body.push(PROPERTIES_END);write_body(stream,body).await}
+fn silent_sound(shared: &Shared, dimension: crate::dimension::Dimension, at: Option<(f64,f64,f64)>, entity: Option<i32>) -> bool {let players=shared.players.lock().expect("игроки");players.members().iter().any(|p|p.dimension==dimension&&players.gear(&p.uuid).silent&&(entity==Some(p.entity_id)||at.is_some_and(|at|(p.position.x-at.0).abs()<0.01&&(p.position.y-at.1).abs()<2.0&&(p.position.z-at.2).abs()<0.01)))}
+
 /// Отправляет Entity Animation: чужой игрок взмахнул рукой.
 async fn send_swing(stream: &mut Outgoing<'_>, entity_id: i32) -> io::Result<()> {
     let mut body = encode_varint(ENTITY_ANIMATION);
@@ -3061,6 +3094,7 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
     let plugin_state = if crate::plugins::active() { crate::presentation::PlayerState {
+        silent: player.silent, silent_owner: player.silent_owner.clone(),
         flight_owners: player.flight_owners.clone(), flight_allowed: player.flight_allowed(), flying: player.creative_flying, flight_fall_damage: player.flight_fall_damage,
         velocity: player.net.last_delta, fire_ticks: player.vit.fire, in_water: player.net.in_water, in_lava: player.net.in_lava,
         in_rain: shared.world_in(player.dimension).lock().expect("мир").in_rain(player.x, player.y, player.z, 1.8),
@@ -3199,6 +3233,7 @@ async fn send_other_moves(
                 worn: gear.worn,
                 speed_bits: u64::from(gear.speed_touch),
                 sprinting: gear.sprinting,
+                silent: gear.silent,
                 living: gear.living,
                 effect_colors: gear.effect_colors,
                 health_bits: gear.health.to_bits(),
@@ -3218,10 +3253,11 @@ async fn send_other_moves(
     for (now, entity_id, here, new, gear) in others {
         // Видно только тех, кто в том же измерении: пришёл — показать,
         // ушёл в другое — убрать.
-        let Some(shown) = seen.get(&entity_id).copied() else {
+        let Some(mut shown) = seen.get(&entity_id).copied() else {
             if let Some(member) = new {
                 send_add_entity(stream, &member).await?;
                 send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
+                if now.silent {send_silent(stream,entity_id,true).await?;}
                 let mut slots = vec![(EQUIPMENT_MAIN_HAND, member.held)];
 
                 slots.extend(worn_slots(&now.worn).into_iter().filter(|(_, stack)| stack.is_some()));
@@ -3238,6 +3274,7 @@ async fn send_other_moves(
             continue;
         }
 
+        if phase==Phase::Moves&&now.silent!=shown.silent {send_silent(stream,entity_id,now.silent).await?;shown.silent=now.silent;if let Some(old)=seen.get_mut(&entity_id){old.silent=now.silent;}}
         // Взмах и экипировка идут отдельными проходами, после событий мира:
         // взмах — перед здоровьем, экипировка — после него (чёрный ящик,
         // pvp-fist, pvp-sword-charged).
@@ -4294,8 +4331,9 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::Sound(sound) if sound.except == Some(player.entity_id) => {}
-            WorldEvent::Sound(sound) => send_sound(stream, sound).await?,
+            WorldEvent::Sound(sound) => {if !sound.of_player||!silent_sound(shared,player.dimension,sound.exact,None) {send_sound(stream,sound).await?;}},
             WorldEvent::EntitySound { entity_id, name, volume, pitch } => {
+                if silent_sound(shared,player.dimension,None,Some(*entity_id)) {continue;}
                 let mut body = encode_varint(ENTITY_SOUND);
 
                 body.extend_from_slice(&encode_varint(0));
@@ -5042,6 +5080,7 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
 
     // Окно торговли: житель свободен; оплата, если осталась, — в инвентарь.
     if let Some(trade) = window.merchant {
+        merchant::notify_close(shared,player,&trade);
         for stack in trade.slots[..2].iter().flatten() {
             player.inventory.put(*stack);
         }
@@ -5378,6 +5417,7 @@ async fn send_pending_player_changes(
                 // второй раз в мир не добавляется: клиент заменил бы сущность
                 // новой, а она и так на месте.
                 let shown = Shown {
+                    silent: false,
                     position: member.position,
                     skin_parts: member.skin_parts,
                     main_hand: member.main_hand,
@@ -5426,6 +5466,7 @@ async fn send_pending_player_changes(
 
                 if shown {
                     let now = Shown {
+                        silent: false,
                         position: member.position,
                         skin_parts: member.skin_parts,
                         main_hand: member.main_hand,
@@ -6399,6 +6440,7 @@ async fn read_and_log_play_packets(
                     if !player.fall_damage_allowed() {player.vit.fall=0.0;}
                     send_player_abilities(stream, player).await?;
                 },
+                Order::PluginSilent {owner,value} => {if value.is_none()&&player.silent_owner.as_deref()!=Some(&owner) {continue;}player.silent=value.unwrap_or(false);player.silent_owner=value.map(|_|owner);send_silent(stream,player.entity_id,player.silent).await?;},
                 Order::PluginFire { ticks } => player.vit.fire = ticks,
                 Order::PluginVelocity { value } => {player.net.velocity = Some(value);send_velocity(stream, player.entity_id, value).await?;},
                 Order::Effect(effect) => {
@@ -7917,6 +7959,7 @@ fn handle_client_packet_inner(
             // Что бы клиент ни нащёлкал, ответом идёт содержимое инвентаря
             // с сервера: если щелчок понят — новое, если нет — прежнее.
             // Так картинка у клиента не разойдётся с сервером.
+            let before=crate::plugins::active().then(||player.inventory.clone());
             let click = read_click(payload, player);
 
             if !click.understood {
@@ -7925,8 +7968,7 @@ fn handle_client_packet_inner(
 
             // Выброшенное падает на землю рядом с игроком.
             if let Some(stack) = click.thrown {
-                player.progress.dropped(stack.item, stack.count);
-                throw_out(shared, player, stack);
+                if crate::plugins::active() {if throw_out_cancelled(shared,player,stack) {player.inventory=before.expect("снимок инвентаря");}else {player.progress.dropped(stack.item,stack.count);}}else {player.progress.dropped(stack.item,stack.count);throw_out(shared,player,stack);}
             }
 
             reaction.inventory = true;
@@ -8911,6 +8953,8 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             return Some(Reaction::default());
         };
 
+        let notified=crate::plugins::active();
+        if notified && throw_out_cancelled(shared,player,if status==DROP_STACK {held}else {held.with_count(1)}) {return Some(Reaction {inventory:true,..Reaction::default()});}
         let thrown = if status == DROP_STACK {
             player.inventory.set(
                 inventory::FIRST_HOTBAR + player.inventory.selected(),
@@ -8923,7 +8967,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         };
 
         player.progress.dropped(thrown.item, thrown.count);
-        throw_out(shared, player, thrown);
+        if !notified {throw_out(shared, player, thrown);}
 
         return Some(Reaction {
             slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected()],
@@ -9017,6 +9061,9 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         }
     }
 
+    let mut data=format!("minecraft:{}",blocks::block_at_state(state).unwrap_or("air"));
+    if let Some(block)=blocks::orientation_of(state) {let props:Vec<_>=block.properties.iter().filter_map(|p|Some(format!("{}={}",p.name,block.value(state,p.name)?))).collect();if !props.is_empty(){data.push_str(&format!("[{}]",props.join(",")));}}
+    let mut block_drops=BlockDropGuard {shared,who:plugin_view(player),pos:(x,y,z),data,items:Vec::new(),enabled:false};
     if blocks::block_at_state(state) == Some("turtle_egg") {
         let silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
         let drop_egg = !creative && silk && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
@@ -9025,8 +9072,9 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         else { crate::mob::water::eggs::break_one(&mut world,(x,y,z)); }
         redstone::settle(&mut world);
         drop(world);
+        block_drops.enabled=!creative&&shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
         if drop_egg && let Some(item) = blocks::item_named("turtle_egg") {
-            drop_into_world(shared,player.dimension,Stack::new(item,1),(f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),(0.0,0.2,0.0),items::MINED_DELAY);
+            block_drops.spawn(Stack::new(item,1),(f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),(0.0,0.2,0.0),items::MINED_DELAY);
         }
         return Some(answer);
     }
@@ -9101,6 +9149,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         return Some(if creative { answer } else { Reaction::accepted(sequence) });
     };
 
+    block_drops.enabled=!creative&&drops;
     *mined = Some(broken);
     crate::frost::broken(&mut world, (x, y, z), broken, creative, hive_silk);
 
@@ -9108,7 +9157,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         if player.game_mode != GAME_MODE_CREATIVE && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
             for stack in crate::pottery::drops(sides,player.inventory.held()) {
                 let scattered = crate::tick::scattered((x,y,z),|| f64::from(world.random_unit()));
-                drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY);
+                block_drops.spawn(stack,scattered.0,scattered.1,items::MINED_DELAY);
             }
         }
         return Some(Reaction::accepted(sequence));
@@ -9120,7 +9169,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         if !creative { player.progress.mined(broken); }
         let scattered=crate::tick::scattered((x,y,z),||f64::from(world.random_unit()));
         drop(world);
-        if let Some(stack)=stack { drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY); }
+        if let Some(stack)=stack { block_drops.spawn(stack,scattered.0,scattered.1,items::MINED_DELAY); }
         return Some(Reaction::accepted(sequence));
     }
 
@@ -9139,7 +9188,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         drop(world);
 
         if let Some((stack, (at, velocity))) = placed {
-            drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+            block_drops.spawn(stack, at, velocity, items::MINED_DELAY);
         }
 
         return Some(Reaction::accepted(sequence));
@@ -9157,7 +9206,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             }
             player.progress.mined(broken);
             drop(world);
-            if let Some(stack)=stack {drop_into_world(shared,player.dimension,stack,(f64::from(x)+0.5,f64::from(y)+0.25,f64::from(z)+0.5),(0.0,0.0,0.0),items::MINED_DELAY);}
+            if let Some(stack)=stack {block_drops.spawn(stack,(f64::from(x)+0.5,f64::from(y)+0.25,f64::from(z)+0.5),(0.0,0.0,0.0),items::MINED_DELAY);}
         }
         return Some(Reaction::accepted(sequence));
     }
@@ -9205,7 +9254,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             drop(world);
 
             for (stack, (at, velocity)) in placed {
-                drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+                block_drops.spawn(stack, at, velocity, items::MINED_DELAY);
             }
 
             return Some(Reaction::accepted(sequence));
@@ -9216,7 +9265,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         // Мир отпускаем: класть предметы будем под другим замком.
         drop(world);
         for (stack, (at, velocity)) in placed {
-            drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+            block_drops.spawn(stack, at, velocity, items::MINED_DELAY);
             log_debug!("Play: из блока в {} {} {} выпал предмет {} × {}", x, y, z, stack.item, stack.count);
         }
     }
@@ -11364,6 +11413,8 @@ struct PlayerState {
     shoulder_health: f32,
     shoulder_shown: HashMap<i32, [i32; 2]>,
     creative_flying: bool,
+    silent: bool,
+    silent_owner: Option<String>,
     plugin_flight: Option<bool>,
     flight_owners: [Option<String>;3],
     flight_fall_damage: Option<bool>,
@@ -11756,6 +11807,8 @@ impl PlayerState {
             shoulder_health: vit.health,
             shoulder_shown: HashMap::new(),
             creative_flying: false,
+            silent: false,
+            silent_owner: None,
             plugin_flight: None,
             flight_owners: Default::default(),
             flight_fall_damage: None,
@@ -11839,6 +11892,7 @@ impl PlayerState {
         let points = |source| armor_data.iter().map(|data| crate::combat::protection_points(data, source)).sum::<i32>();
 
         crate::players::Gear {
+            silent: self.silent,
             worn: [slot(inventory::OFFHAND), slot(5), slot(6), slot(7), slot(8)],
             view: crate::players::CombatView {
                 invulnerable: self.vit.invulnerable,

@@ -512,7 +512,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                 }
             }
 
-            if strike.fire_ticks > 0 {
+            if strike.fire_ticks > 0&&vitals::allow_ignite(shared,player,strike.attacker,strike.fire_ticks) {
                 vitals::ignite(player, strike.fire_ticks);
             }
 

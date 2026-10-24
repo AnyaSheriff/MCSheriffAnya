@@ -26,24 +26,25 @@ impl PluginCtx {
             let mut state=snapshot(player.uuid,"player",dimension,(player.position.x,player.position.y,player.position.z),(0.6,if player.sneaking {1.5} else {1.8}));state.living=true;result.push(state);
         }}
         {let items=self.shared.items_in(dimension).lock().expect("сущности");
-            for mob in items.mobs().iter().filter(|m|!m.is_dead()) {
+            for mob in items.mobs() {
                 ids.insert(mob.entity_id,crate::network::login::format_uuid(&mob.uuid));
                 let mut state=snapshot(mob.uuid,mob.kind.name(),dimension,(mob.x,mob.y,mob.z),mob.size());state.living= !matches!(mob.kind,crate::mob::Kind::EndCrystal|crate::mob::Kind::LeashKnot|crate::mob::Kind::ShulkerBullet|crate::mob::Kind::EvokerFangs);state.health=f64::from(mob.vitals.health);state.hostile=mob.kind.hostile();
                 state.animal=matches!(mob.kind,crate::mob::Kind::Cow|crate::mob::Kind::Pig|crate::mob::Kind::Sheep|crate::mob::Kind::Chicken|crate::mob::Kind::Horse|crate::mob::Kind::Donkey|crate::mob::Kind::Mule|crate::mob::Kind::Wolf|crate::mob::Kind::Cat|crate::mob::Kind::Rabbit|crate::mob::Kind::Fox|crate::mob::Kind::Bee|crate::mob::Kind::Turtle|crate::mob::Kind::Axolotl|crate::mob::Kind::Frog|crate::mob::Kind::Sniffer|crate::mob::Kind::Armadillo|crate::mob::Kind::Strider|crate::mob::Kind::Panda|crate::mob::Kind::PolarBear|crate::mob::Kind::Ocelot|crate::mob::Kind::Mooshroom|crate::mob::Kind::Llama|crate::mob::Kind::TraderLlama|crate::mob::Kind::Camel|crate::mob::Kind::Goat|crate::mob::Kind::Parrot);
                 state.at.yaw=Some(mob.yaw);state.at.pitch=Some(mob.pitch);result.push(state);
             }
+            for cart in items.carts() {let mut state=snapshot(cart.uuid,cart.kind.name(),dimension,(cart.x,cart.y,cart.z),(if cart.kind.is_boat() {1.375}else {0.98},if cart.kind.is_boat() {0.5625}else {0.7}));state.at.yaw=Some(cart.yaw);result.push(state);}
             for frame in items.frames().iter().filter(|f|f.painting.is_none()) {result.push(snapshot(frame.uuid,if frame.glow {"glow_item_frame"} else {"item_frame"},dimension,(f64::from(frame.pos.0)+0.5,f64::from(frame.pos.1)+0.125,f64::from(frame.pos.2)+0.5),(0.75,0.75)));}
             for item in items.items().iter().filter(|i|i.fuse.is_none()&&i.block.is_none()) {result.push(snapshot(item.uuid,"item",dimension,(item.x,item.y,item.z),(0.25,0.25)));}
         }
         {let arrows=self.shared.arrows.lock().expect("стрелы");for arrow in arrows.list.iter().filter(|a|a.dimension==dimension) {
             let mut state=snapshot(arrow.uuid,if arrow.trident.is_some() {"trident"} else if arrow.spectral() {"spectral_arrow"} else {"arrow"},dimension,(arrow.x,arrow.y,arrow.z),(0.5,0.5));state.shooter=ids.get(&arrow.owner).cloned().unwrap_or_default();state.embedded=arrow.in_ground;result.push(state);
         }}
-        {let thrown=self.shared.thrown.lock().expect("снаряды");for shot in thrown.flying.iter().filter(|p|p.dimension==dimension) {
+        {let thrown=self.shared.thrown.lock().expect("снаряды");for shot in thrown.flying.iter().chain(thrown.landed.iter()).filter(|p|p.dimension==dimension) {
             use crate::thrown::Kind;
             let name=match shot.kind {Kind::Splash=>"splash_potion",Kind::Lingering=>"lingering_potion",Kind::DragonFireball=>"dragon_fireball",Kind::SmallFireball=>"small_fireball",Kind::GhastFireball=>"fireball",Kind::Snowball=>"snowball",Kind::Egg=>"egg",Kind::EnderPearl=>"ender_pearl",Kind::ExperienceBottle=>"experience_bottle",Kind::WitherSkull=>"wither_skull",Kind::LlamaSpit=>"llama_spit",Kind::WindCharge=>"wind_charge",Kind::BreezeWindCharge=>"breeze_wind_charge"};
             let mut state=snapshot(shot.uuid,name,dimension,(shot.x,shot.y,shot.z),(0.25,0.25));state.shooter=ids.get(&shot.owner).cloned().unwrap_or_default();result.push(state);
         }}
-        {let thrown=self.shared.thrown.lock().expect("снаряды");for cloud in thrown.clouds.iter().filter(|c|c.dimension==dimension) {let mut state=snapshot(cloud.uuid,"area_effect_cloud",dimension,(cloud.x,cloud.y,cloud.z),(f64::from(cloud.radius)*2.0,0.5));state.shooter=ids.get(&cloud.owner).cloned().unwrap_or_default();result.push(state);}for rocket in thrown.rockets.iter().filter(|r|r.dimension==dimension) {let mut state=snapshot(rocket.uuid,"firework_rocket",dimension,(rocket.x,rocket.y,rocket.z),(0.25,0.25));state.shooter=ids.get(&rocket.owner).cloned().unwrap_or_default();result.push(state);}}
+        {let thrown=self.shared.thrown.lock().expect("снаряды");for cloud in thrown.clouds.iter().chain(thrown.faded.iter()).filter(|c|c.dimension==dimension) {let mut state=snapshot(cloud.uuid,"area_effect_cloud",dimension,(cloud.x,cloud.y,cloud.z),(f64::from(cloud.radius)*2.0,0.5));state.shooter=ids.get(&cloud.owner).cloned().unwrap_or_default();result.push(state);}for rocket in thrown.rockets.iter().filter(|r|r.dimension==dimension) {let mut state=snapshot(rocket.uuid,"firework_rocket",dimension,(rocket.x,rocket.y,rocket.z),(0.25,0.25));state.shooter=ids.get(&rocket.owner).cloned().unwrap_or_default();result.push(state);}}
         if result.len()>8192 {return Err("Слишком много сущностей для одного запроса (8192)".into());}Ok(result)
     }
 }
@@ -142,14 +143,14 @@ impl entities::Host for PluginCtx {
     }
     fn in_world(&mut self, dimension: types::Dimension) -> Result<Vec<entities::Snapshot>,String> {self.entity_snapshots(dimension_from_wit(dimension))}
     fn cloud_potion(&mut self, uuid: String) -> Result<Option<String>,String> {
-        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let thrown=self.shared.thrown.lock().expect("снаряды");let cloud=thrown.clouds.iter().find(|c|c.uuid==uuid).ok_or("Облако больше не существует")?;
+        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let thrown=self.shared.thrown.lock().expect("снаряды");let cloud=thrown.clouds.iter().chain(thrown.faded.iter()).find(|c|c.uuid==uuid).ok_or("Облако больше не существует")?;
         Ok(cloud.base_potion.and_then(|id|crate::survival::POTIONS.get(usize::from(id))).map(|name|(*name).into()))
     }
     fn effects(&mut self, uuid: String) -> Result<Vec<super::api::mcsa::api::player::PotionEffect>,String> {
         let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         for dimension in Dimension::ALL {let items=self.shared.items_in(dimension).lock().expect("сущности");if let Some(mob)=items.mobs().iter().find(|m|m.uuid==uuid) {return Ok(mob.vitals.effects.iter().map(potion).collect());}}
-        let thrown=self.shared.thrown.lock().expect("снаряды");if let Some(cloud)=thrown.clouds.iter().find(|p|p.uuid==uuid) {return Ok(cloud.custom_effects.iter().map(potion).collect());}
-        if let Some(shot)=thrown.flying.iter().find(|p|p.uuid==uuid) {return Ok(shot.effects().iter().map(potion).collect());}
+        let thrown=self.shared.thrown.lock().expect("снаряды");if let Some(cloud)=thrown.clouds.iter().chain(thrown.faded.iter()).find(|p|p.uuid==uuid) {return Ok(cloud.custom_effects.iter().map(potion).collect());}
+        if let Some(shot)=thrown.flying.iter().chain(thrown.landed.iter()).find(|p|p.uuid==uuid) {return Ok(shot.effects().iter().map(potion).collect());}
         Err("Живая сущность или зелье больше не существует".into())
     }
     fn equipment(&mut self, uuid: String, slot: u8) -> Result<Option<inventory::Item>,String> {
@@ -189,7 +190,7 @@ impl entities::Host for PluginCtx {
         if self.shared.players.lock().expect("игроки").members().iter().any(|p| p.uuid == uuid) {return true;}
         for dimension in Dimension::ALL {
             let items = self.shared.items_in(dimension).lock().expect("сущности");
-            if items.frames().iter().any(|f|f.uuid==uuid) || items.items().iter().any(|i| i.uuid == uuid) || items.mobs().iter().any(|m| m.uuid == uuid && !m.is_dead()) {return true;}
+            if items.carts().iter().any(|c|c.uuid==uuid) || items.frames().iter().any(|f|f.uuid==uuid) || items.items().iter().any(|i| i.uuid == uuid) || items.mobs().iter().any(|m| m.uuid == uuid && !m.is_dead()) {return true;}
         }
         if self.shared.arrows.lock().expect("стрелы").list.iter().any(|a|a.uuid==uuid) {return true;}
         let thrown=self.shared.thrown.lock().expect("снаряды");thrown.flying.iter().any(|p|p.uuid==uuid)||thrown.clouds.iter().any(|p|p.uuid==uuid)||thrown.rockets.iter().any(|p|p.uuid==uuid)

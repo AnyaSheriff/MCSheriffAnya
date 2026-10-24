@@ -4,6 +4,9 @@ public final class RemotePlayer implements Player {
  private final String uuid,name;private final Location location;private final GameMode mode;
  public RemotePlayer(String[] a,int i){uuid=a[i];name=a[i+1];mode=GameMode.values()[Integer.parseInt(a[i+2])];location=new Location(new RemoteWorld(Integer.parseInt(a[i+3])),Double.parseDouble(a[i+4]),Double.parseDouble(a[i+5]),Double.parseDouble(a[i+6]),Float.parseFloat(a[i+7]),Float.parseFloat(a[i+8]));}
  @Override public boolean equals(Object other){return other instanceof RemotePlayer&&uuid.equals(((RemotePlayer)other).uuid);}@Override public int hashCode(){return uuid.hashCode();}
+ public void setSilent(boolean value){Host.call(117,uuid,value?"1":"0");}public boolean isSilent(){return Host.yes(118,uuid);}
+ public org.bukkit.entity.Entity getVehicle(){String id=Host.text(116,uuid);return id.isEmpty()?null:RemoteEntity.find(id);}
+ public boolean isInsideVehicle(){return Host.yes(115,uuid);}
  public boolean getAllowFlight(){return Host.call(89,uuid)[0].equals("1");}
  public boolean isFlying(){return Host.call(89,uuid)[1].equals("1");}
  public net.kyori.adventure.util.TriState hasFlyingFallDamage(){return net.kyori.adventure.util.TriState.values()[Integer.parseInt(Host.call(89,uuid)[2])+1];}

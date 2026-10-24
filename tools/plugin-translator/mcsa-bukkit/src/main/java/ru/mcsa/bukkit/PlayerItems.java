@@ -5,12 +5,18 @@ public final class PlayerItems implements PlayerInventory {
  private int slot(int slot){if(slot<0||slot>40)throw new IllegalArgumentException("Ячейка: 0..40");return slot<9?slot+36:slot<36?slot:slot==40?45:44-slot;}
  public org.bukkit.event.inventory.InventoryType getType(){return org.bukkit.event.inventory.InventoryType.PLAYER;}
  public int getSize(){return 41;}public InventoryHolder getHolder(){return owner;}
- private ItemStack read(String[] data,int index){int n=slot(index)*3;if(n+2>=data.length)return null;Material material=Material.matchMaterial(data[n]);int count=Integer.parseInt(data[n+1]);return material==null||material.isAir()||count<=0?null:ItemStack.fromHost(material,count,data[n+2]);}
- public ItemStack[] getContents(){String[] data=Host.call(37,uuid);ItemStack[] result=new ItemStack[41];for(int i=0;i<result.length;i++)result[i]=read(data,i);return result;}
- public ItemStack getItem(int index){slot(index);return read(Host.call(37,uuid),index);}
- public void setItem(int index,ItemStack item){Host.call(38,uuid,""+slot(index),item==null||item.isEmpty()?"air":Ascii.lower(item.getType().name()),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());}
- public ItemStack getItemInMainHand(){return getItem(Integer.parseInt(Host.text(39,uuid)));}public ItemStack getItemInOffHand(){return getItem(40);}public void setItemInOffHand(ItemStack item){setItem(40,item);}public ItemStack getHelmet(){return getItem(39);}
- public ItemStack[] getArmorContents(){String[] data=Host.call(37,uuid);return new ItemStack[]{read(data,36),read(data,37),read(data,38),read(data,39)};}public void setArmorContents(ItemStack[] armor){if(armor==null)armor=new ItemStack[0];if(armor.length>4)throw new IllegalArgumentException("Броня: до четырёх ячеек");for(int i=0;i<4;i++)setItem(36+i,i<armor.length?armor[i]:null);}
+ private ItemStack read(String[] data,int index){int n=slot(index)*3;if(n+2>=data.length)return null;int count=Integer.parseInt(data[n+1]);if(count<=0||data[n].equals("air"))return null;Material material=Material.matchMaterial(data[n]);return material==null||material.isAir()?null:ItemStack.fromHost(material,count,data[n+2]);}
+ public ItemStack[] getContents(){String[] data=snapshot();ItemStack[] result=new ItemStack[41];for(int i=0;i<result.length;i++)result[i]=read(data,i);return result;}
+ private static final java.util.Map<String,Snapshot> snapshots=new java.util.HashMap<>();private static long snapshotEpoch=-1;
+ private static final class Snapshot {String[] items;int selected=-1;}
+ private Snapshot view(){if(snapshotEpoch!=RuntimeState.callbackEpoch){snapshots.clear();snapshotEpoch=RuntimeState.callbackEpoch;}Snapshot view=snapshots.get(uuid);if(view==null){view=new Snapshot();snapshots.put(uuid,view);}return view;}
+ private String[] snapshot(){Snapshot view=view();if(view.items==null)try{view.items=Host.call(37,uuid);}catch(IllegalStateException error){throw new IllegalStateException("Снимок инвентаря "+owner.getName()+" / "+uuid+": "+error.getMessage());}return view.items;}
+ private int selected(){Snapshot view=view();if(view.selected<0)view.selected=Integer.parseInt(Host.text(39,uuid));return view.selected;}
+
+ public ItemStack getItem(int index){slot(index);return read(snapshot(),index);}
+ public void setItem(int index,ItemStack item){Host.call(38,uuid,""+slot(index),item==null||item.isEmpty()?"air":Ascii.lower(item.getType().name()),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());snapshots.remove(uuid);}
+ public ItemStack getItemInMainHand(){ItemStack item=getItem(selected());return item==null?new ItemStack(Material.AIR):item;}public ItemStack getItemInOffHand(){ItemStack item=getItem(40);return item==null?new ItemStack(Material.AIR):item;}public void setItemInOffHand(ItemStack item){setItem(40,item);}public ItemStack getHelmet(){return getItem(39);}
+ public ItemStack[] getArmorContents(){return new ItemStack[]{getItem(36),getItem(37),getItem(38),getItem(39)};}public void setArmorContents(ItemStack[] armor){if(armor==null)armor=new ItemStack[0];if(armor.length>4)throw new IllegalArgumentException("Броня: до четырёх ячеек");for(int i=0;i<4;i++)setItem(36+i,i<armor.length?armor[i]:null);}
  public boolean contains(Material material){for(ItemStack item:getContents())if(item!=null&&item.getType()==material)return true;return false;}
  public boolean containsAtLeast(ItemStack stack,int count){if(stack==null)return false;for(ItemStack item:getContents())if(item!=null&&item.isSimilar(stack)){count-=item.getAmount();if(count<=0)return true;}return count<=0;}
  public java.util.HashMap<Integer,ItemStack> addItem(ItemStack... items){return transfer(true,items);}public java.util.HashMap<Integer,ItemStack> removeItem(ItemStack... items){return transfer(false,items);}

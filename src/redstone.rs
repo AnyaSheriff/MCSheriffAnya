@@ -43,7 +43,7 @@ pub use lectern::lectern_reading;
 
 pub use components::{Occupant, ambient_sky, daylight_tick, disarm_tripwire, hook_broken_by_player, punched, random_ticks};
 pub use rails::{Cart, holds_rail};
-pub use sculk::{game_event, game_event_from, sensors_tick};
+pub use sculk::{deliver_game_event, game_event, game_event_from, sensors_tick};
 
 /// Место в мире.
 pub type Pos = (i32, i32, i32);

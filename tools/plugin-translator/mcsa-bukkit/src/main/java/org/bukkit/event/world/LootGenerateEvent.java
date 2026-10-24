@@ -1,0 +1,5 @@
+package org.bukkit.event.world;
+public class LootGenerateEvent extends org.bukkit.event.Event implements org.bukkit.event.Cancellable {
+ private final org.bukkit.inventory.InventoryHolder holder;private final java.util.List<org.bukkit.inventory.ItemStack> loot=new java.util.ArrayList<>();private boolean cancelled;
+ public LootGenerateEvent(org.bukkit.inventory.InventoryHolder holder,java.util.Collection<org.bukkit.inventory.ItemStack> loot){this.holder=holder;setLoot(loot);}public org.bukkit.inventory.InventoryHolder getInventoryHolder(){return holder;}public java.util.List<org.bukkit.inventory.ItemStack> getLoot(){return loot;}public void setLoot(java.util.Collection<org.bukkit.inventory.ItemStack> value){java.util.List<org.bukkit.inventory.ItemStack> copy=new java.util.ArrayList<>();for(org.bukkit.inventory.ItemStack item:value==null?java.util.Collections.<org.bukkit.inventory.ItemStack>emptyList():value)if(item!=null&&!item.isEmpty())copy.add(item.clone());loot.clear();loot.addAll(copy);}public boolean isCancelled(){return cancelled;}public void setCancelled(boolean value){cancelled=value;}
+}

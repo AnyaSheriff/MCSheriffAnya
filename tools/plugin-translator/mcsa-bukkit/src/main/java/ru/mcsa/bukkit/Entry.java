@@ -9,7 +9,7 @@ import org.bukkit.event.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.block.*;
 public final class Entry {
- @Export(name="mcsa_dispatch") public static int dispatch(int kind,Address data,int len){try{return dispatchEvent(kind,data,len);}catch(RuntimeException|Error failure){Host.call(23,"Ошибка обработчика Bukkit: "+failure);throw failure;}}
+ @Export(name="mcsa_dispatch") public static int dispatch(int kind,Address data,int len){RuntimeState.callbackEpoch++;try{return dispatchEvent(kind,data,len);}catch(RuntimeException|Error failure){Host.call(23,"Ошибка обработчика Bukkit: "+failure);throw failure;}}
  private static int dispatchEvent(int kind,Address data,int len){
   byte[] bytes=new byte[len];for(int i=0;i<len;i++)bytes[i]=data.add(i).getByte();String[] a=Host.split(new String(bytes,StandardCharsets.UTF_8));
   if(kind==0){RuntimeState.plugin.onDisable();EntityDataStore.flush();return 0;}
@@ -20,6 +20,13 @@ public final class Entry {
    else {final String name=a[2];final boolean console=a[0].equals("1");sender=new CommandSender(){public String getName(){return name;}public void sendMessage(String m){Host.call(23,m);}public boolean isOp(){return console;}public boolean hasPermission(String p){return console;}};}
    PluginCommand command=RuntimeState.plugin.getCommand(a[3]);if(kind==9){if(command!=null)for(String value:command.tabComplete(sender,a[3],Arrays.copyOfRange(a,4,a.length)))Host.call(25,value);return 0;}return command!=null&&command.execute(sender,a[3],Arrays.copyOfRange(a,4,a.length))?1:0;
   }
+  if(kind==34){GeneratedLoot.run(a);return 0;}
+  if(kind==33){DeathEvents.run(a);return 0;}
+  if(kind==32){NativeEvents.dispatch(a);return 0;}
+  if(kind==27){return Population.wanted(Integer.parseInt(a[0]))?1:0;}
+  if(kind==28){Population.run(a);return 0;}
+  if(kind==29){RuntimeState.fire(new org.bukkit.event.world.WorldInitEvent(new RemoteWorld(Integer.parseInt(a[0]))));return 0;}
+  if(kind==26){org.bukkit.event.inventory.FurnaceStartSmeltEvent event=new org.bukkit.event.inventory.FurnaceStartSmeltEvent(new RemoteBlock(new RemoteWorld(Integer.parseInt(a[0])),Integer.parseInt(a[1]),Integer.parseInt(a[2]),Integer.parseInt(a[3])),Integer.parseInt(a[4]));RuntimeState.fire(event);Host.call(22,""+event.getTotalCookTime());return 0;}
   Player p=Host.player(a,0);Event e;
   switch(kind){
    case 15:{Location to=new Location(new RemoteWorld(Integer.parseInt(a[9])),Double.parseDouble(a[10]),Double.parseDouble(a[11]),Double.parseDouble(a[12]),Float.parseFloat(a[13]),Float.parseFloat(a[14]));PlayerRespawnEvent respawn=new PlayerRespawnEvent(p,to,a[15].equals("1"),a[16].equals("1"));RuntimeState.fire(respawn);Location result=respawn.getRespawnLocation();Host.call(22,((RemoteWorld)result.getWorld()).dimension+" "+result.getX()+" "+result.getY()+" "+result.getZ()+" "+result.getYaw()+" "+result.getPitch());return 2;}
@@ -31,6 +38,9 @@ public final class Entry {
     PlayerInteractEvent interact=new PlayerInteractEvent(p,Action.values()[Integer.parseInt(a[9])],item,clicked,org.bukkit.block.BlockFace.values()[Integer.parseInt(a[16])],hand==0?org.bukkit.inventory.EquipmentSlot.HAND:org.bukkit.inventory.EquipmentSlot.OFF_HAND);RuntimeState.fire(interact);
     if(interact.useInteractedBlock()!=Event.Result.DENY&&clicked!=null&&interact.getAction()==Action.RIGHT_CLICK_BLOCK&&BedActions.cancelled(p,clicked))return 3;
     return (interact.useInteractedBlock()==Event.Result.DENY?1:0)|(interact.useItemInHand()==Event.Result.DENY?2:0);}
+   case 31:{RemoteBlock block=new RemoteBlock(new RemoteWorld(Integer.parseInt(a[9])),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]));java.util.List<org.bukkit.entity.Item> items=new java.util.ArrayList<>();java.util.Set<String> originals=new java.util.HashSet<>();for(int i=14;i<a.length;i++){items.add(new RemoteItem(a[i]));originals.add(a[i]);}org.bukkit.event.block.BlockDropItemEvent drops=new org.bukkit.event.block.BlockDropItemEvent(block,new BlockSnapshot(block,new String[]{a[13],"0","0","0","0","-1","-1"}),p,items);RuntimeState.fire(drops);StringBuilder kept=new StringBuilder();if(!drops.isCancelled())for(org.bukkit.entity.Item item:drops.getItems()){String id=item.getUniqueId().toString();if(!originals.contains(id))throw new UnsupportedOperationException("Добавление посторонней сущности в добычу блока пока не поддерживается; используйте World.dropItem");kept.append(id).append('\n');}Host.call(22,kept.toString());return 0;}
+   case 30:e=a[10].equals("1")?new org.bukkit.event.entity.EntityPickupItemEvent(p,new RemoteItem(a[9]),Integer.parseInt(a[11])):new PlayerDropItemEvent(p,new RemoteItem(a[9]));break;
+   case 25:MerchantEvents.event(p,a);return 0;
    case 24:{org.bukkit.inventory.ItemStack item=a[10].equals("air")?null:org.bukkit.inventory.ItemStack.fromHost(Material.matchMaterial(a[10]),Integer.parseInt(a[11]),a[12]);org.bukkit.event.entity.FoodLevelChangeEvent food=new org.bukkit.event.entity.FoodLevelChangeEvent(p,Integer.parseInt(a[9]),item);RuntimeState.fire(food);if(food.isCancelled())return 1;Host.call(22,""+food.getFoodLevel());return 0;}
    case 22:EnchantEvents.prepare(p,a);return 0;
    case 23:EnchantEvents.enchant(p,a);return 0;

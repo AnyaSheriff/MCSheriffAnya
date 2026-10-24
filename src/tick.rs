@@ -255,6 +255,7 @@ async fn run(shared: Arc<Shared>) {
 
         for dimension in Dimension::ALL.into_iter().filter(|_| plan.run_world) {
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+            world.plugin_events_enabled=crate::plugins::active();
 
             // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
             // с них.
@@ -363,12 +364,26 @@ async fn run(shared: Arc<Shared>) {
             // Мобы: мысли, движение, разведение, добыча погибших.
             step_mobs(&shared, dimension, &mut world, &mut mob_rng, ticks);
 
+            if crate::plugins::active() {
+                drop(world);
+                let (loaded,spawned,targets)={let mut items=shared.items_in(dimension).lock().expect("сущности");(std::mem::take(&mut items.plugin_loaded),std::mem::take(&mut items.plugin_spawned),std::mem::take(&mut items.plugin_targets))};
+                let mut groups=std::collections::BTreeMap::<(i32,i32),Vec<String>>::new();for (x,z,uuid) in loaded {groups.entry((x,z)).or_default().push(crate::network::login::format_uuid(&uuid));}
+                for entities in groups.into_values() {let mut fields=vec![(match dimension {Dimension::Overworld=>0,Dimension::Nether=>1,Dimension::End=>2}).to_string()];fields.extend(entities);crate::plugins::native_event(1,fields);}
+                for uuid in spawned {if crate::plugins::native_event(2,vec![crate::network::login::format_uuid(&uuid)]).is_none() {shared.items_in(dimension).lock().expect("сущности").remove_mobs(|mob|mob.uuid==uuid);}}
+                for (uuid,target,old) in targets {
+                    let target_uuid=target.and_then(|id| {if let Some(uuid)=shared.players.lock().expect("игроки").members().iter().find(|p|p.entity_id==id).map(|p|p.uuid) {return Some(uuid);}shared.items_in(dimension).lock().expect("сущности").mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid)}).map(|uuid|crate::network::login::format_uuid(&uuid)).unwrap_or_default();
+                    let accepted=crate::plugins::native_event(4,vec![crate::network::login::format_uuid(&uuid),target_uuid]).is_some();
+                    if let Some(mob)=shared.items_in(dimension).lock().expect("сущности").mobs_mut().iter_mut().find(|m|m.uuid==uuid)&&mob.h.target==target {if accepted {mob.plugin_seen_target=target;}else {mob.h.target=old;}}
+                }
+                world=shared.world_in(dimension).lock().expect("мир");
+            } else {let mut items=shared.items_in(dimension).lock().expect("сущности");items.plugin_loaded.clear();items.plugin_spawned.clear();items.plugin_targets.clear();}
             // Стрелы: полёт, попадание, застревание (arrow.rs).
             crate::arrow::step(&shared, dimension, &mut world);
             crate::fishing::step(&shared, dimension, &mut world);
 
             // Брошенные зелья, огненные шары, облака (thrown.rs).
             crate::thrown::step(&shared, dimension, &mut world);
+            if crate::plugins::active() {drop(world);crate::thrown::deliver_pending(&shared,dimension);world=shared.world_in(dimension).lock().expect("мир");}
             let kills = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").take_progress_kills();
             if !kills.is_empty() {
                 let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
@@ -499,11 +514,35 @@ async fn run(shared: Arc<Shared>) {
             crate::beacon::tick(&shared, dimension, &mut world);
             redstone::daylight_tick(&mut world);
             redstone::sensors_tick(&mut world);
+            if !world.plugin_game_events.is_empty() {
+                let pending=std::mem::take(&mut world.plugin_game_events);drop(world);let mut accepted=Vec::new();
+                for event in pending {
+                    let source=event.source.and_then(|id| {
+                        if let Some(uuid)=shared.players.lock().expect("игроки").members().iter().find(|p|p.entity_id==id).map(|p|p.uuid) {return Some(uuid);}
+                        let items=shared.items_in(dimension).lock().expect("сущности");items.mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid).or_else(||items.carts().iter().find(|m|m.entity_id==id).map(|m|m.uuid)).or_else(||items.items().iter().find(|m|m.entity_id==id).map(|m|m.uuid))
+                    }).map(|uuid|crate::network::login::format_uuid(&uuid)).unwrap_or_default();
+                    if crate::plugins::native_event(11,vec![source]).is_some() {accepted.push(event);}
+                }
+                world=shared.world_in(dimension).lock().expect("мир");for event in accepted {redstone::deliver_game_event(&mut world,event.at,event.frequency,event.source,event.projectile);}
+            }
             sculk_finish(&shared, dimension, &mut world, ticks);
+            if crate::plugins::active() {
+                for pos in world.containers_in_order() {
+                    if let Some(before)=crate::furnace::starting(&world,pos) {
+                        drop(world);
+                        let total=crate::plugins::furnace_event(dimension,pos,before.0.cook_total.max(1));
+                        world=shared.world_in(dimension).lock().expect("мир");
+                        if crate::furnace::starting(&world,pos).as_ref()==Some(&before) {world.with_container(pos.0,pos.1,pos.2,|c|c.heat.cook_total=total);}
+                    }
+                    containers::tick_block_entity(&mut world,&mut shared.items_in(dimension).lock().expect("предметы"),pos);
+                }
+                containers::after_change(&mut world);
+            } else {
             containers::tick_hoppers(
                 &mut world,
                 &mut shared.items_in(dimension).lock().expect("предметы захвачены другим потоком"),
             );
+            }
             redstone::settle(&mut world);
             shove_entities(&shared, dimension, &world);
             redstone::finish_due_moves(&mut world);
@@ -522,6 +561,14 @@ async fn run(shared: Arc<Shared>) {
             phases.add(5, &mut clock);
         }
 
+        for dimension in Dimension::ALL {
+            let deaths=std::mem::take(&mut shared.items_in(dimension).lock().expect("сущности").plugin_deaths);
+            for (uuid,at,stand,drops) in deaths {
+                let drops=crate::plugins::entity_death(None,&uuid,false,drops);
+                let mut items=shared.items_in(dimension).lock().expect("предметы");
+                for stack in drops {let at=if stand {(at.0.floor()+0.5+(mob_rng.unit()-0.5)*0.5,at.1.floor()+0.375+(mob_rng.unit()-0.5)*0.5,at.2.floor()+0.5+(mob_rng.unit()-0.5)*0.5)}else {at};let velocity=(mob_rng.unit()*0.2-0.1,0.2,mob_rng.unit()*0.2-0.1);items.drop_item(shared.next_entity_id(),stack,at,velocity,items::MINED_DELAY);}
+            }
+        }
         // Работа такта сделана: подключения рассылают, что случилось.
         // Долгий такт — повод разобраться: подключения узнают о нём позже,
         // и схемы у игроков начинают запаздывать.
@@ -1239,7 +1286,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         mob.entity_id = shared.next_entity_id();
         mob.uuid = mob.land.saved_uuid.unwrap_or_else(|| crate::mob::uuid_for(mob.entity_id));
         mob.brain = crate::mob::ai::Brain::new(mob.entity_id);
-        items.add_mob(mob);
+        items.add_loaded_mob(mob);
     }
 
     for mut mob in natural {

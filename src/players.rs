@@ -133,6 +133,7 @@ pub const GLIDE_BIT: u8 = 0x40;
 /// нагрудник, штаны, ботинки) — их клиенты показывают на чужом игроке.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Gear {
+    pub silent: bool,
     pub worn: [Option<Stack>; 5],
     pub view: CombatView,
     /// Скорость удара: её меняет оружие в руке, и остальным она уходит атрибутом.
@@ -199,6 +200,7 @@ pub struct PluginChest {
 
 #[derive(Clone, Debug)]
 pub enum Order {
+    PluginSilent {owner: String, value: Option<bool>},
     PluginFire { ticks: i32 },
     PluginFlight { owner: String, field: u8, value: i8 },
     PluginVelocity { value: (f64, f64, f64) },

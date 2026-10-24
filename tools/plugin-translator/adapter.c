@@ -18,7 +18,12 @@ static void bytes(const void *p,size_t len) {
 }
 static void text(const char *s) { bytes(s,strlen(s)); }
 static void string(plugin_string_t s) { bytes(s.ptr,s.len); }
-static void number(double n) { char s[64]; snprintf(s,sizeof(s),"%.17g",n); text(s); }
+static void integer(int64_t n) {char s[32];snprintf(s,sizeof(s),"%lld",(long long)n);text(s);}
+static void number(double n) {
+    // Целые поля моста не требуют дорогого десятичного форматирования double.
+    if(n>=INT32_MIN&&n<=INT32_MAX&&n==(int32_t)n&&!(n==0&&__builtin_signbit(n))){integer((int32_t)n);return;}
+    char s[64];snprintf(s,sizeof(s),"%.17g",n);text(s);
+}
 static plugin_string_t str(const char *s) { return (plugin_string_t){(uint8_t*)s,strlen(s)}; }
 static void error(plugin_string_t s) { text("!"); string(s); plugin_string_free(&s); }
 static void player(mcsa_api_types_player_t *p) {
@@ -47,7 +52,7 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     plugin_string_t err={0};clear();
     switch(op) {
     case 0: mcsa_api_server_broadcast(&s[0]);break;
-    case 1: {mcsa_api_server_list_player_t list;mcsa_api_server_online_players(&list);for(size_t i=0;i<list.len;i++)player(&list.ptr[i]);mcsa_api_server_list_player_free(&list);break;}
+    case 1: {mcsa_api_server_list_player_t list;mcsa_api_server_ready_players(&list);for(size_t i=0;i<list.len;i++)player(&list.ptr[i]);mcsa_api_server_list_player_free(&list);break;}
     case 2: number(mcsa_api_player_send_message(&s[0],&s[1]));break;
     case 3: {mcsa_api_types_location_t loc={.dimension=atoi(a[1]),.x=atof(a[2]),.y=atof(a[3]),.z=atof(a[4]),.yaw={true,atof(a[5])},.pitch={true,atof(a[6])}};number(mcsa_api_player_teleport(&s[0],&loc));break;}
     case 4: {mcsa_api_command_command_spec_t spec={.name=s[0],.description=s[1],.usage=s[2],.level=atoi(a[3])};if(!mcsa_api_command_register(&spec,&err))error(err);break;}
@@ -88,6 +93,7 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 40: {size_t n=s[2].len;if(n>65536||n%2){text("!");text("HTTPS: неверное тело");break;}plugin_list_u8_t body={.ptr=malloc(n/2?n/2:1),.len=n/2};if(!body.ptr)abort();bool valid=true;for(size_t i=0;i<body.len;i++){int hi=hex_digit(a[2][i*2]),lo=hex_digit(a[2][i*2+1]);if(hi<0||lo<0){valid=false;break;}body.ptr[i]=(uint8_t)((hi<<4)|lo);}uint32_t handle;if(!valid){text("!");text("HTTPS: неверное тело");}else if(!mcsa_api_https_start(&s[0],&s[1],&body,&handle,&err))error(err);else number(handle);free(body.ptr);break;}
     case 41: {mcsa_api_https_option_response_t response;if(!mcsa_api_https_poll(strtoul(a[0],NULL,10),&response,&err))error(err);else {if(response.is_some){number(response.val.status);hex_bytes(response.val.body.ptr,response.val.body.len);}mcsa_api_https_option_response_free(&response);}break;}
     case 42: {mcsa_api_attributes_snapshot_t value;if(!mcsa_api_attributes_get(&s[0],&s[1],&value,&err))error(err);else {number(value.base);number(value.value);for(size_t i=0;i<value.modifiers.len;i++){string(value.modifiers.ptr[i].id);number(value.modifiers.ptr[i].amount);number(value.modifiers.ptr[i].operation);}mcsa_api_attributes_snapshot_free(&value);}break;}
+    case 122: {mcsa_api_attributes_snapshot_t value;if(!mcsa_api_attributes_get(&s[0],&s[1],&value,&err))error(err);else {for(size_t i=0;i<value.modifiers.len;i++){string(value.modifiers.ptr[i].id);number(value.modifiers.ptr[i].amount);number(value.modifiers.ptr[i].operation);}mcsa_api_attributes_snapshot_free(&value);}break;}
     case 43: if(!mcsa_api_attributes_set_base(&s[0],&s[1],atof(a[2]),&err))error(err);break;
     case 44: {mcsa_api_attributes_modifier_t modifier={.id=s[2],.amount=atof(a[3]),.operation=atoi(a[4])};if(!mcsa_api_attributes_add(&s[0],&s[1],&modifier,&err))error(err);break;}
     case 45: if(!mcsa_api_attributes_remove(&s[0],&s[1],&s[2],&err))error(err);break;
@@ -153,6 +159,10 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 111: {plugin_option_string_t target;if(!mcsa_api_entities_get_target(&s[0],&target,&err))error(err);else {if(target.is_some)string(target.val);plugin_option_string_free(&target);}break;}
     case 112: if(!mcsa_api_entities_set_target(&s[0],s[1].len?&s[1]:NULL,&err))error(err);break;
     case 113: {mcsa_api_inventory_item_t stack={.kind=s[0],.count=atoi(a[1]),.metadata=s[2]},result;if(!mcsa_api_inventory_enchant_with_levels(&stack,atoi(a[3]),!strcmp(a[4],"true"),strtoll(a[5],NULL,10),&result,&err))error(err);else {string(result.kind);number(result.count);string(result.metadata);mcsa_api_inventory_item_free(&result);}break;}
+    case 117: if(!mcsa_api_player_set_silent(&s[0],atoi(a[1]),&err))error(err);break;
+    case 118: {bool silent;if(!mcsa_api_player_get_silent(&s[0],&silent,&err))error(err);else number(silent);break;}
+    case 116: {plugin_option_string_t uuid;if(!mcsa_api_player_vehicle(&s[0],&uuid,&err))error(err);else {if(uuid.is_some)string(uuid.val);plugin_option_string_free(&uuid);}break;}
+    case 115: {bool inside;if(!mcsa_api_player_inside_vehicle(&s[0],&inside,&err))error(err);else number(inside);break;}
     case 114: {plugin_option_string_t type;if(!mcsa_api_entities_cloud_potion(&s[0],&type,&err))error(err);else {if(type.is_some)string(type.val);plugin_option_string_free(&type);}break;}
     default: abort();
     }
@@ -180,7 +190,9 @@ void exports_mcsa_api_events_on_command(mcsa_api_types_sender_t *caller,plugin_s
     clear();number(caller->kind);if(caller->uuid.is_some)string(caller->uuid.val);else text("");string(caller->name);string(*name);
     for(size_t i=0;i<args->len;i++)string(args->ptr[i]);ret->success=dispatch(7)!=0;ret->message.is_some=false;
 }
-void exports_mcsa_api_events_on_task(uint32_t task) {clear();number(task);dispatch(8);}
+void exports_mcsa_api_events_on_task(uint32_t task) {
+ clear();number(task);dispatch(8);
+}
 
 bool exports_mcsa_api_combat_events_on_damage(exports_mcsa_api_combat_events_player_t *who,plugin_string_t *cause,double damage,double *ret) {
     clear();player(who);string(*cause);number(damage);int result=dispatch(10);
@@ -246,3 +258,37 @@ bool exports_mcsa_api_item_events_on_enchant(mcsa_api_types_player_t *who,mcsa_a
 }
 
 bool exports_mcsa_api_item_events_on_food(mcsa_api_types_player_t *who,int32_t level,mcsa_api_inventory_item_t *item,int32_t *ret) {clear();player(who);number(level);if(item){string(item->kind);number(item->count);string(item->metadata);}else {text("air");text("0");text("");}if(dispatch(24)==1)return false;*ret=event_text?atoi(event_text):level;return true;}
+
+void exports_mcsa_api_trading_events_on_trade(mcsa_api_types_player_t *who,bool closed,plugin_list_string_t *slots,plugin_list_string_t *offers,plugin_list_s32_t *ret) {
+ clear();player(who);number(closed);for(size_t i=0;i<slots->len;i++)string(slots->ptr[i]);for(size_t i=0;i<offers->len;i++)string(offers->ptr[i]);dispatch(25);
+ ret->len=0;ret->ptr=NULL;if(!event_text)return;size_t count=offers->len/10+1;ret->ptr=malloc(count*sizeof(int32_t));if(!ret->ptr)abort();char *p=event_text;for(size_t i=0;i<count;i++){char *end;long value=strtol(p,&end,10);if(end==p||value<INT32_MIN||value>INT32_MAX)abort();ret->ptr[i]=value;p=end;}ret->len=count;
+}
+
+int32_t exports_mcsa_api_item_events_on_furnace(mcsa_api_types_block_pos_t *pos,int32_t total) {clear();number(pos->dimension);number(pos->x);number(pos->y);number(pos->z);number(total);dispatch(26);return event_text?atoi(event_text):total;}
+
+bool exports_mcsa_api_generation_events_wants_population(mcsa_api_types_dimension_t dimension) {clear();number(dimension);return dispatch(27)==1;}
+void exports_mcsa_api_generation_events_on_world_init(mcsa_api_types_dimension_t dimension) {clear();number(dimension);dispatch(29);}
+void exports_mcsa_api_generation_events_on_populate(mcsa_api_types_dimension_t dimension,int32_t x,int32_t z,int64_t seed,plugin_list_string_t *palette,plugin_list_u32_t *runs,plugin_list_string_t *ret) {
+ clear();number(dimension);number(x);number(z);integer(seed);number(palette->len);for(size_t i=0;i<palette->len;i++)string(palette->ptr[i]);for(size_t i=0;i<runs->len;i++)number(runs->ptr[i]);dispatch(28);ret->ptr=NULL;ret->len=0;if(!event_text||!*event_text)return;
+ size_t count=0;for(char *p=event_text;*p;p++)if(*p=='\n')count++;if(count>98304)abort();ret->ptr=calloc(count,sizeof(plugin_string_t));if(!ret->ptr)abort();char *start=event_text;for(char *p=start;*p;p++)if(*p=='\n'){*p=0;plugin_string_dup(&ret->ptr[ret->len++],start);start=p+1;}
+}
+
+bool exports_mcsa_api_item_events_on_ground_item(mcsa_api_types_player_t *who,plugin_string_t *item,bool pickup,int32_t remaining) {clear();player(who);string(*item);number(pickup);number(remaining);return dispatch(30)==1;}
+
+void exports_mcsa_api_item_events_on_block_drop(mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *data,plugin_list_string_t *items,plugin_list_string_t *ret) {
+ clear();player(who);number(pos->dimension);number(pos->x);number(pos->y);number(pos->z);string(*data);for(size_t i=0;i<items->len;i++)string(items->ptr[i]);dispatch(31);ret->ptr=NULL;ret->len=0;if(!event_text||!*event_text)return;ret->ptr=calloc(items->len,sizeof(plugin_string_t));if(!ret->ptr)abort();char *start=event_text;for(char *p=start;*p;p++)if(*p=='\n'){if(ret->len>=items->len)abort();*p=0;plugin_string_dup(&ret->ptr[ret->len++],start);start=p+1;}
+}
+
+void exports_mcsa_api_native_events_on_event(uint32_t kind,plugin_list_string_t *fields,plugin_list_string_t *ret) {
+ clear();number(kind);for(size_t i=0;i<fields->len;i++)string(fields->ptr[i]);dispatch(32);ret->ptr=NULL;ret->len=0;if(!event_text||!*event_text)return;
+ size_t count=0;for(char *p=event_text;*p;p++)if(*p=='\n')count++;if(count>100000)abort();ret->ptr=calloc(count,sizeof(plugin_string_t));if(!ret->ptr)abort();char *start=event_text;for(char *p=start;*p;p++)if(*p=='\n'){*p=0;plugin_string_dup(&ret->ptr[ret->len++],start);start=p+1;}
+}
+
+void exports_mcsa_api_item_events_on_entity_death(mcsa_api_types_player_t *who,plugin_string_t *entity,bool keep,exports_mcsa_api_item_events_list_item_t *drops,exports_mcsa_api_item_events_list_item_t *ret) {
+ clear();number(who!=NULL);if(who)player(who);string(*entity);number(keep);for(size_t i=0;i<drops->len;i++){string(drops->ptr[i].kind);number(drops->ptr[i].count);string(drops->ptr[i].metadata);}dispatch(33);ret->ptr=NULL;ret->len=0;if(!event_text||!*event_text)return;
+ size_t count=0;for(char *p=event_text;*p;p++)if(*p=='\n')count++;if(count%3||count>1536)abort();ret->ptr=calloc(count/3,sizeof(mcsa_api_inventory_item_t));if(!ret->ptr)abort();char *start=event_text;size_t field=0;for(char *p=start;*p;p++)if(*p=='\n'){*p=0;mcsa_api_inventory_item_t *item=&ret->ptr[field/3];if(field%3==0)plugin_string_dup(&item->kind,start);else if(field%3==1)item->count=strtoul(start,NULL,10);else {plugin_string_dup(&item->metadata,start);ret->len++;}field++;start=p+1;}
+}
+
+void exports_mcsa_api_generation_events_on_loot(mcsa_api_types_block_pos_t *pos,exports_mcsa_api_generation_events_list_option_item_t *slots,exports_mcsa_api_generation_events_list_option_item_t *ret) {
+ clear();number(pos->dimension);number(pos->x);number(pos->y);number(pos->z);for(size_t i=0;i<slots->len;i++){if(slots->ptr[i].is_some){string(slots->ptr[i].val.kind);number(slots->ptr[i].val.count);string(slots->ptr[i].val.metadata);}else{text("air");text("0");text("");}}dispatch(34);ret->len=slots->len;ret->ptr=calloc(ret->len,sizeof(*ret->ptr));if(!ret->ptr)abort();if(!event_text)abort();char *p=event_text;for(size_t i=0;i<ret->len;i++){char *type=p,*count=strchr(p,'\n');if(!count)abort();*count++=0;char *metadata=strchr(count,'\n');if(!metadata)abort();*metadata++=0;char *end=strchr(metadata,'\n');if(!end)abort();*end=0;p=end+1;ret->ptr[i].is_some=strcmp(type,"air")&&atoi(count)>0;if(ret->ptr[i].is_some){plugin_string_dup(&ret->ptr[i].val.kind,type);ret->ptr[i].val.count=strtoul(count,NULL,10);plugin_string_dup(&ret->ptr[i].val.metadata,metadata);}}
+}

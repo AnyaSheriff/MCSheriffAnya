@@ -90,6 +90,16 @@ type DragEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, 
 type EntityInteract = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, u32, Option<u32>), (bool,)>;
 type PrepareEnchant = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::inventory::Item, Vec<i32>), (Vec<i32>,)>;
 type EnchantEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::inventory::Item, mcsa::api::inventory::Item, u32, i32, String, i32), (Option<mcsa::api::inventory::Item>,)>;
+type WantsPopulation = wasmtime::component::TypedFunc<(mcsa::api::types::Dimension,), (bool,)>;
+type Populate = wasmtime::component::TypedFunc<(mcsa::api::types::Dimension,i32,i32,i64,Vec<String>,Vec<u32>), (Vec<String>,)>;
+type WorldInit = wasmtime::component::TypedFunc<(mcsa::api::types::Dimension,), ()>;
+type GeneratedLoot = wasmtime::component::TypedFunc<(mcsa::api::types::BlockPos,Vec<Option<mcsa::api::inventory::Item>>),(Vec<Option<mcsa::api::inventory::Item>>,)>;
+type EntityDeath = wasmtime::component::TypedFunc<(Option<mcsa::api::types::Player>,String,bool,Vec<mcsa::api::inventory::Item>),(Vec<mcsa::api::inventory::Item>,)>;
+type NativeEvent = wasmtime::component::TypedFunc<(u32,Vec<String>),(Vec<String>,)>;
+type BlockDropEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player,mcsa::api::types::BlockPos,String,Vec<String>),(Vec<String>,)>;
+type GroundItemEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player,String,bool,i32),(bool,)>;
+type FurnaceEvent = wasmtime::component::TypedFunc<(mcsa::api::types::BlockPos, i32), (i32,)>;
+type TradeEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, bool, Vec<String>, Vec<String>), (Vec<i32>,)>;
 type FoodEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, i32, Option<mcsa::api::inventory::Item>), (Option<i32>,)>;
 type PrepareAnvil = wasmtime::component::TypedFunc<(mcsa::api::types::Player, Vec<Option<mcsa::api::inventory::Item>>, Option<mcsa::api::inventory::Item>, i32), (i32,)>;
 type PrepareCraft = wasmtime::component::TypedFunc<(mcsa::api::types::Player, Vec<Option<mcsa::api::inventory::Item>>, Option<mcsa::api::inventory::Item>, bool, bool), (Option<mcsa::api::inventory::Item>,)>;
@@ -117,6 +127,16 @@ pub struct Loaded {
     prepare_enchant: Option<PrepareEnchant>,
     enchant_event: Option<EnchantEvent>,
     food_event: Option<FoodEvent>,
+    trade_event: Option<TradeEvent>,
+    furnace_event: Option<FurnaceEvent>,
+    ground_item: Option<GroundItemEvent>,
+    block_drop: Option<BlockDropEvent>,
+    native_event: Option<NativeEvent>,
+    entity_death: Option<EntityDeath>,
+    generated_loot: Option<GeneratedLoot>,
+    wants_population: Option<WantsPopulation>,
+    populate: Option<Populate>,
+    world_init: Option<WorldInit>,
     entity_interact: Option<EntityInteract>,
     drag_event: Option<DragEvent>,
     move_event: Option<MoveEvent>,
@@ -436,6 +456,21 @@ impl Host {
         let enchant_event = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
             .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-enchant"))
             .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,mcsa::api::inventory::Item,mcsa::api::inventory::Item,u32,i32,String,i32),(Option<mcsa::api::inventory::Item>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let generation=raw.get_export_index(&mut store,None,"mcsa:api/generation-events@0.1.0");
+        let generated_loot=generation.as_ref().and_then(|p|raw.get_export_index(&mut store,Some(p),"on-loot")).map(|i|raw.get_typed_func::<(mcsa::api::types::BlockPos,Vec<Option<mcsa::api::inventory::Item>>),(Vec<Option<mcsa::api::inventory::Item>>,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let wants_population=generation.as_ref().and_then(|p|raw.get_export_index(&mut store,Some(p),"wants-population")).map(|i|raw.get_typed_func::<(mcsa::api::types::Dimension,),(bool,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let populate=generation.as_ref().and_then(|p|raw.get_export_index(&mut store,Some(p),"on-populate")).map(|i|raw.get_typed_func::<(mcsa::api::types::Dimension,i32,i32,i64,Vec<String>,Vec<u32>),(Vec<String>,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let world_init=generation.as_ref().and_then(|p|raw.get_export_index(&mut store,Some(p),"on-world-init")).map(|i|raw.get_typed_func::<(mcsa::api::types::Dimension,),()>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let entity_death=raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0").and_then(|p|raw.get_export_index(&mut store,Some(&p),"on-entity-death")).map(|i|raw.get_typed_func::<(Option<mcsa::api::types::Player>,String,bool,Vec<mcsa::api::inventory::Item>),(Vec<mcsa::api::inventory::Item>,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let native_event=raw.get_export_index(&mut store,None,"mcsa:api/native-events@0.1.0").and_then(|p|raw.get_export_index(&mut store,Some(&p),"on-event")).map(|i|raw.get_typed_func::<(u32,Vec<String>),(Vec<String>,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let block_drop=raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0").and_then(|p|raw.get_export_index(&mut store,Some(&p),"on-block-drop")).map(|i|raw.get_typed_func::<(mcsa::api::types::Player,mcsa::api::types::BlockPos,String,Vec<String>),(Vec<String>,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let ground_item=raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0").and_then(|p|raw.get_export_index(&mut store,Some(&p),"on-ground-item")).map(|i|raw.get_typed_func::<(mcsa::api::types::Player,String,bool,i32),(bool,)>(&mut store,&i)).transpose().map_err(|e|short(&e))?;
+        let furnace_event = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-furnace"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::BlockPos,i32),(i32,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let trade_event = raw.get_export_index(&mut store,None,"mcsa:api/trading-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-trade"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,bool,Vec<String>,Vec<String>),(Vec<i32>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
         let food_event = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
             .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-food"))
             .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,i32,Option<mcsa::api::inventory::Item>),(Option<i32>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
@@ -461,10 +496,13 @@ impl Host {
         let interact_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-interact"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, entity_interact, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, trade_event, furnace_event, ground_item, block_drop, native_event, entity_death, generated_loot, wants_population, populate, world_init, entity_interact, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
-        if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
+        // Холодная инициализация классов и конфигурации не входит в бюджет такта.
+        // Память и права прежние; отдельный конечный предел — 400 млн / 2 с.
+        let startup_fuel=plugin.limits.fuel.max(400_000_000);let startup_epochs=plugin.limits.epochs.max(200);
+        if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| {store.set_fuel(startup_fuel)?;store.set_epoch_deadline(startup_epochs);instance.mcsa_api_lifecycle().call_enable(store)}) {
             crate::presentation::release(&self.shared, &plugin.manifest.name);
             self.drop_registrations(&plugin.manifest.name);
             return Err(format!("{}: enable не удался: {reason}", plugin.manifest.name));
@@ -491,6 +529,8 @@ impl Host {
             match field {0=>{info.plugin_state.flight_allowed=modes.get(uuid).is_some_and(|mode|matches!(mode,1|3));if !info.plugin_state.flight_allowed {info.plugin_state.flying=false;}},1=>info.plugin_state.flying=false,_=>info.plugin_state.flight_fall_damage=None}
             resets.push((*uuid,field as u8));
         }}}
+        let mut silent_resets=Vec::new();for (uuid,info) in &mut players.ui.info {if info.plugin_state.silent_owner.as_deref()==Some(name) {info.plugin_state.silent=false;info.plugin_state.silent_owner=None;silent_resets.push(*uuid);}}
+        for uuid in silent_resets {players.order(&uuid,crate::players::Order::PluginSilent {owner:name.into(),value:None});}
         for (uuid,field) in resets {players.order(&uuid,crate::players::Order::PluginFlight {owner:name.into(),field,value: -2});}drop(players);
 
         for dimension in crate::dimension::Dimension::ALL {self.shared.world_in(dimension).lock().expect("мир").plugin_monster_limits.retain(|(owner,_)|owner!=name); }
@@ -801,6 +841,75 @@ impl Host {
         }self.bury(crashes);(!cancelled).then_some(result)
     }
 
+    pub fn world_init(&mut self, dimension: crate::dimension::Dimension) {
+        let now=self.shared_tick();let mut crashes=Vec::new();for plugin in &mut self.loaded {let Some(function)=plugin.world_init else {continue;};if let Err(reason)=plugin.call(now,|_,store|function.call(store,(super::api::dimension_to_wit(dimension),))) {crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason});}}self.bury(crashes);
+    }
+    pub fn populate(&mut self, dimension: crate::dimension::Dimension, x: i32, z: i32, seed: i64, mut chunk: crate::world::Chunk) -> crate::world::Chunk {
+        let now=self.shared_tick();let mut crashes=Vec::new();let dimension=super::api::dimension_to_wit(dimension);
+        for plugin in &mut self.loaded {let (Some(wants),Some(populate))=(plugin.wants_population,plugin.populate) else {continue;};
+            let result=plugin.call(now,|_,store|{let (wanted,)=wants.call(&mut *store,(dimension,))?;if !wanted {return Ok(Vec::new());}
+                let (palette,runs)=chunk.population_snapshot();
+                // Полный проход 98304 блоков имеет отдельный конечный бюджет.
+                store.set_fuel(400_000_000)?;store.set_epoch_deadline(200);
+                let (edits,)=populate.call(&mut *store,(dimension,x,z,seed.wrapping_add((x as i64).wrapping_mul(341873128712)).wrapping_add((z as i64).wrapping_mul(132897987541)),palette,runs))?;Ok(edits)
+            });
+            let result=result.and_then(|edits|if edits.is_empty() {Ok(())}else {chunk.apply_population(edits)});
+            if let Err(reason)=result {crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:format!("Генерация чанка {x} {z}: {reason}")});}
+        }
+        for (pos,mut slots) in chunk.population_loot() {
+            for plugin in &mut self.loaded {let Some(function)=plugin.generated_loot else {continue;};let encoded=plugin.store.data_mut().inventory_items(&slots);let block=mcsa::api::types::BlockPos {dimension,x:x*16+pos.0,y:pos.1,z:z*16+pos.2};
+                let result=plugin.call(now,|_,store|{let (items,)=function.call(&mut *store,(block,encoded))?;Ok(items)}).and_then(|items|{if items.len()!=slots.len() {return Err("Неверный размер сгенерированной добычи".into());}items.into_iter().map(|item|plugin.store.data_mut().inventory_stack(item)).collect::<Result<Vec<_>,String>>()});
+                match result {Ok(items)=>slots=items,Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})}
+            }
+            chunk.replace_population_loot(pos,slots);
+        }
+        self.bury(crashes);chunk
+    }
+
+    pub fn entity_death(&mut self, who: Option<&PlayerView>, uuid: &str, keep: bool, mut drops: Vec<crate::inventory::Stack>) -> Vec<crate::inventory::Stack> {
+        let now=self.shared_tick();let mut crashes=Vec::new();for plugin in &mut self.loaded {let Some(function)=plugin.entity_death else {continue;};let encoded=plugin.store.data_mut().inventory_items(&drops.iter().copied().map(Some).collect::<Vec<_>>()).into_iter().flatten().collect();
+            let result=plugin.call(now,|_,store|{let (items,)=function.call(&mut *store,(who.map(PlayerView::to_wit),uuid.to_string(),keep,encoded))?;Ok(items)}).and_then(|items|{if items.len()>512 {return Err("Слишком много предметов смерти".into());}items.into_iter().map(|item|plugin.store.data_mut().inventory_stack(Some(item)).and_then(|item|item.ok_or("Пустой предмет смерти".into()))).collect::<Result<Vec<_>,String>>()});
+            match result {Ok(items)=>drops=items,Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})}
+        }self.bury(crashes);drops
+    }
+    pub fn native_event(&mut self, kind: u32, mut fields: Vec<String>) -> Option<Vec<String>> {
+        let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;for plugin in &mut self.loaded {let Some(function)=plugin.native_event else {continue;};
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(kind,fields.clone()))?;Ok(value)}) {
+                Ok(value) if !value.is_empty()&&value.len()<=100000&&value.iter().map(String::len).sum::<usize>()<=4*1024*1024&&(value[0]=="0"||value[0]=="1") => {if value[0]=="1" {cancelled=true;break;}fields=value.into_iter().skip(1).collect();},
+                Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"Неверный ответ нативного события".into()}),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);(!cancelled).then_some(fields)
+    }
+    pub fn block_drop(&mut self, who: &PlayerView, pos: (i32,i32,i32), data: &str, mut items: Vec<String>) -> Vec<String> {
+        let now=self.shared_tick();let mut crashes=Vec::new();for plugin in &mut self.loaded {let Some(function)=plugin.block_drop else {continue;};let block=mcsa::api::types::BlockPos {dimension:super::api::dimension_to_wit(who.dimension),x:pos.0,y:pos.1,z:pos.2};
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),block,data.to_string(),items.clone()))?;Ok(value)}) {Ok(value) if value.len()<=items.len()&&value.iter().all(|i|items.contains(i))=>items=value,Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"В добычу блока добавлена посторонняя сущность".into()}),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})}
+        }self.bury(crashes);items
+    }
+    pub fn ground_item(&mut self, who: &PlayerView, uuid: &str, pickup: bool, remaining: i32) -> bool {
+        let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;for plugin in &mut self.loaded {let Some(function)=plugin.ground_item else {continue;};match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),uuid.to_string(),pickup,remaining))?;Ok(value)}) {Ok(true)=>{cancelled=true;break;},Ok(false)=>{},Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})}}self.bury(crashes);cancelled
+    }
+    pub fn furnace_event(&mut self, dimension: crate::dimension::Dimension, pos: (i32,i32,i32), mut total: i32) -> i32 {
+        let now=self.shared_tick();let mut crashes=Vec::new();
+        for plugin in &mut self.loaded {let Some(function)=plugin.furnace_event else {continue;};let block=mcsa::api::types::BlockPos {dimension:super::api::dimension_to_wit(dimension),x:pos.0,y:pos.1,z:pos.2};
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(block,total))?;Ok(value)}) {Ok(value) if (1..=72000).contains(&value)=>total=value,Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"Время плавки вне диапазона 1..72000".into()}),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})}
+        }self.bury(crashes);total
+    }
+
+    pub fn trade_event(&mut self, who: &PlayerView, closed: bool, slots: &[Option<crate::inventory::Stack>], offers: &mut [crate::villager::Offer]) -> bool {
+        let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;
+        for plugin in &mut self.loaded {let Some(function)=plugin.trade_event else {continue;};
+            let mut flat=Vec::new();let mut cells=Vec::new();
+            for (destination,stacks) in [(&mut cells,slots.to_vec()),(&mut flat,offers.iter().flat_map(|o|[Some(o.buy),o.buy_b,Some(o.sell)]).collect())] {
+                for item in plugin.store.data_mut().inventory_items(&stacks) {let item=item.unwrap_or(mcsa::api::inventory::Item {kind:"air".into(),count:0,metadata:String::new()});destination.extend([item.kind,item.count.to_string(),item.metadata]);}
+            }
+            let mut encoded=Vec::new();for (offer,items) in offers.iter().zip(flat.chunks(9)) {encoded.extend_from_slice(items);encoded.push(offer.special.to_string());}
+            match plugin.call(now,|_,store| {let (value,)=function.call(&mut *store,(who.to_wit(),closed,cells,encoded))?;Ok(value)}) {
+                Ok(values) if values.len()==offers.len()+1&&(0..=1).contains(&values[0]) => {cancelled|=values[0]!=0;for (offer,value) in offers.iter_mut().zip(&values[1..]) {offer.special = *value;}},
+                Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"Неверные цены торгового события".into()}),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);cancelled
+    }
+
     pub fn food_level(&mut self, who: &PlayerView, mut level: i32, item: Option<crate::inventory::Stack>) -> Option<i32> {
         let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;
         for plugin in &mut self.loaded {let Some(function)=plugin.food_event else {continue;};let item=plugin.store.data_mut().inventory_items(&[item]).pop().flatten();
@@ -838,10 +947,13 @@ impl Host {
         }
     }
 
-    pub fn death(&mut self, who: &PlayerView, keep_inventory: bool) {
+    #[cfg(test)]
+    pub fn death(&mut self, who: &PlayerView, keep_inventory: bool) {self.death_legacy(who,keep_inventory);self.entity_death(Some(who),&crate::network::login::format_uuid(&who.uuid),keep_inventory,Vec::new());}
+    pub fn death_legacy(&mut self, who: &PlayerView, keep_inventory: bool) {
         let now = self.shared_tick();
         let mut crashes = Vec::new();
         for plugin in &mut self.loaded {
+            if plugin.entity_death.is_some() {continue;}
             let Some(function) = plugin.death else { continue };
             if let Err(reason) = plugin.call(now, |_, store| function.call(&mut *store, (who.to_wit(), keep_inventory))) {
                 crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason });
@@ -999,7 +1111,7 @@ impl Host {
 
             for task in due {
                 if let Err(reason) = plugin.call(now, |instance, store| instance.mcsa_api_events().call_on_task(store, task)) {
-                    crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason });
+                    crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason:format!("Задача {task}: {reason}") });
                     break;
                 }
             }

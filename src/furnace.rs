@@ -817,6 +817,16 @@ pub fn read_heat(take: &mut dyn FnMut(usize) -> Option<Vec<u8>>) -> Option<Heat>
     Some(Heat { lit, lit_total, cook, cook_total, xp, ingredient })
 }
 
+/// Снимок начала плавки: не зажигаем пустую или забитую печь ради события.
+pub fn starting(world: &World, pos: Pos) -> Option<(Heat,Vec<Option<Stack>>)> {
+    let c=world.container(pos.0,pos.1,pos.2)?;
+    if !is_oven(c.kind)||c.heat.cook!=0 {return None;}
+    let input=c.slots[INPUT]?;let (result,_)=smelt(c.kind,input.item)?;
+    if c.slots[OUTPUT].is_some_and(|out|out.item!=result||out.data.is_some()||out.tnt.is_some()||out.count>=blocks::stack_size(result)) {return None;}
+    if c.heat.lit<=1 && !c.slots[FUEL].is_some_and(|stack|burn_in(c.kind,stack.item).is_some()) {return None;}
+    Some((c.heat,c.slots.clone()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -923,5 +933,26 @@ mod tests {
 
         heat_from_text(&mut container, "{Items:[],lit_time_remaining:30s,cooking_total_time:200s}");
         assert_eq!(properties(&container), vec![30, 0, 0, 200]);
+    }
+}
+
+
+
+#[cfg(test)]
+mod plugin_start_tests {
+    use super::*;
+    #[test]
+    fn start_snapshot_requires_recipe_fuel_and_room_and_applies_new_duration() {
+        let mut world=World::in_memory();let pos=(0,64,0);
+        world.set_block(pos.0,pos.1,pos.2,blocks::state_by_name("furnace").unwrap());
+        let ore=blocks::item_named("iron_ore").unwrap();let coal=blocks::item_named("coal").unwrap();let iron=blocks::item_named("iron_ingot").unwrap();
+        world.with_container(pos.0,pos.1,pos.2,|c| {c.slots[INPUT]=Some(Stack::new(ore,2));c.heat.cook_total=200;});
+        assert!(starting(&world,pos).is_none());
+        world.with_container(pos.0,pos.1,pos.2,|c| {c.slots[FUEL]=Some(Stack::new(coal,1));c.slots[OUTPUT]=Some(Stack::new(iron,64));});
+        assert!(starting(&world,pos).is_none());
+        world.with_container(pos.0,pos.1,pos.2,|c| {c.slots[OUTPUT]=None;c.heat.cook_total=2;});
+        let before=starting(&world,pos).unwrap();tick_oven(&mut world,pos);assert!(starting(&world,pos).is_none());tick_oven(&mut world,pos);
+        assert_eq!(world.container(pos.0,pos.1,pos.2).unwrap().slots[OUTPUT],Some(Stack::new(iron,1)));
+        assert_ne!(starting(&world,pos),Some(before));
     }
 }
