@@ -112,6 +112,15 @@ pub(crate) fn translate_inner(
     };
     let mut cursor = Cursor::new(body);
     let id = cursor.uint()?;
+    // Сетевой blackbox777 через внешний ViaProxy: после Use Item On идёт
+    // пустой Punch0x2e. Это взмах основной руки; отказ разрывал соединение
+    // до отправки результата щелчка. Имена в таблице ID остаются разными.
+    if state == State::Play && direction == Direction::Serverbound
+        && from == JavaVersion::V26_3 && to == INTERNAL && id == 0x2e
+    {
+        if !cursor.rest.is_empty() { return Err(Error::Invalid); }
+        return Ok(Cow::Owned(vec![0x3f, 0]));
+    }
     let standard_id = if probe_776 { None } else { Some(ids::translate(registry, from, to, id)?) };
     let info = crate::packet_layouts::packet_info(registry, from, if native_view { JavaVersion::V26_3 } else { to }, id as usize).ok_or(Error::Invalid)?;
     let mapped = if probe_776 {
@@ -1299,5 +1308,21 @@ mod combat_777_enchanted_animation_tests {
             assert_eq!(translate(State::Play,Direction::Clientbound,
                 JavaVersion::V26_1_2,client,&legacy).unwrap().as_ref(),legacy);
         }
+    }
+
+    #[test]
+    fn observed_777_punch_becomes_a_main_hand_swing_without_aliasing_ids() {
+        assert_eq!(translate(State::Play, Direction::Serverbound,
+            JavaVersion::V26_3, INTERNAL, &[0x2e]).unwrap().as_ref(), &[0x3f, 0]);
+        assert_eq!(translate(State::Play, Direction::Serverbound,
+            JavaVersion::V26_3, INTERNAL, &[0x2e, 0]), Err(Error::Invalid));
+        // Старый основной маршрут сохраняет обе руки без нового толкования.
+        for hand in [0, 1] {
+            let body = [0x3f, hand];
+            assert_eq!(translate(State::Play, Direction::Serverbound,
+                INTERNAL, INTERNAL, &body).unwrap().as_ref(), body);
+        }
+        assert_eq!(crate::packet_layouts::packet_info(RegistryKind::PlayServerbound,
+            JavaVersion::V26_3, INTERNAL, 0x2e).unwrap().target_id, None);
     }
 }

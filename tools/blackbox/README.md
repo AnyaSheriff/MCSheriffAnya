@@ -16,6 +16,20 @@
 
 ## Запуск
 
+Для основного26.3 `via_harness.py` запускает две отдельные копии серверов и
+одинаковый внешний ViaProxy перед каждой. Код JAR не читается; используется
+[документированный CLI](https://github.com/ViaVersion/ViaProxy#usage-for-server-owners-cli).
+`--output DIR --binary FILE --jar FILE --proxy FILE --port 26170 SCENARIO…`
+задают пути и шесть локальных портов26170–26175; JAR ViaProxy закреплён3.4.14.
+`--repeat 3` проверяет шум, `--names FILE` берёт JSON-массив имён.
+Штатные `bot.js` и `compare.js` не меняются; `via_ticks.js` добавляет Client
+Tick End через `physicsTick` обеим сторонам и обнаруживает ранний обрыв.
+Без `--proxy`, с `--primary 26.1.2`, тот же запуск проверяет обычный маршрут775.
+Пары, журнал сравнения, SHA и итоги сохраняются в DIR; `--wire` дополнительно
+пишет оба направления сетевого потока перед сервером, без изменения пакетов.
+`--official-recordings DIR` повторяет только нашу сторону по сохранённым
+официальным JSON, не запуская официальный сервер повторно.
+
 ```sh
 tools/blackbox/setup.sh            # один раз: скачать server.jar, eula, настройки, права роботу
 cd tools/blackbox/vanilla && java -Xmx1G -jar server.jar nogui   # оригинал на порту 25566
