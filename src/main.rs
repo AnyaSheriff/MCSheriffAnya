@@ -566,6 +566,8 @@ async fn handle_connection_inner(
     }
 
     let mut socket = network::connection::Connection::new(socket);
+    // Каталог нужен уже Configuration, до входа в Play.
+    socket.content = shared.catalog().content_codec();
     let handshake = read_handshake(&mut socket).await?;
 
     log_debug!(

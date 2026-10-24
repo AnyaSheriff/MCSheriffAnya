@@ -7,6 +7,7 @@
 // идёт VarInt идентификатор пакета.
 
 use std::io;
+use std::sync::Arc;
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::time::{Duration, Instant, timeout_at};
@@ -319,6 +320,7 @@ const OUTGOING_LIMIT: usize = 64 * 1024;
 /// (`OUTGOING_LIMIT`). Порядок пакетов прежний; у оригинала пакеты такта
 /// тоже копятся и сбрасываются разом, в конце такта.
 pub struct Outgoing<'a> {
+    chunk_biomes: Option<Arc<super::configuration::ChunkBiomes>>,
     content: mcsa_protocol::content::ContentCodec,
     stream: Transport<'a>,
     buffer: Vec<u8>,
@@ -356,12 +358,12 @@ impl<'a> Outgoing<'a> {
         let legacy = stream.legacy.clone();
         let probe_776 = stream.probe_776_enabled();
         let content = stream.content;
-        Self { content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
+        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
+    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
     pub(crate) fn capture_content(version: JavaVersion, content: mcsa_protocol::content::ContentCodec) -> Self {
@@ -370,12 +372,20 @@ impl<'a> Outgoing<'a> {
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
+        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
     pub async fn send(&mut self, body: &[u8]) -> io::Result<()> {
         self.send_with_context(body, wire::Context::default()).await
+    }
+
+    pub(crate) fn chunk_biomes(&self) -> io::Result<Arc<super::configuration::ChunkBiomes>> {
+        if let Some(biomes) = &self.chunk_biomes { return Ok(biomes.clone()); }
+        #[cfg(test)]
+        return Ok(Arc::new(super::configuration::test_chunk_biomes(self.version, self.content.is_preview())));
+        #[cfg(not(test))]
+        Err(io::Error::other("Чанк до согласования реестров Configuration"))
     }
 
     pub async fn send_chunk(&mut self, body: &[u8], context: mcsa_protocol::chunk::Context) -> io::Result<()> {

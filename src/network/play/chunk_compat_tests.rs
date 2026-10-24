@@ -333,3 +333,131 @@ fn export_legacy_chunk_client_probe() {
     std::fs::create_dir_all("tmp").unwrap();
     std::fs::write("tmp/legacy-chunk-client.json",serde_json::to_vec_pretty(&report).unwrap()).unwrap();
 }
+
+
+#[tokio::test]
+async fn generated_palette_ids_match_every_client_configuration() {
+    check_generated_palettes(0, None).await;
+}
+
+#[tokio::test]
+#[ignore = "полный обход четырёх семян, трёх измерений, радиус16; экспорт наших пакетов для recorder777"]
+async fn generated_palette_radius16_recorder_export() {
+    let export = std::env::var_os("MCSA_PALETTE_EXPORT").map(std::path::PathBuf::from);
+    check_generated_palettes(16, export.as_deref()).await;
+}
+
+async fn check_generated_palettes(radius: i32, export: Option<&std::path::Path>) {
+    use mcsa_protocol::{content::{ContentCodec, IdSpace}, ids::RegistryKind};
+    use std::io::Write;
+    let versions = [JavaVersion::V26_3, JavaVersion::V26_2, JavaVersion::V26_1_2,
+        JavaVersion::V1_21_11, JavaVersion::V1_21_9, JavaVersion::V1_21_8,
+        JavaVersion::V1_21_6, JavaVersion::V1_21_5, JavaVersion::V1_21_4];
+    let content = ContentCodec::white_slab_preview();
+    let registries: Vec<_> = versions.iter().map(|v| configuration::test_chunk_biomes(*v, true)).collect();
+    let mut seen_blocks = HashSet::new();
+    let mut seen_biomes = HashSet::new();
+    let mut chunks = 0usize;
+    let mut sections_checked = 0usize;
+    if let Some(path) = export {
+        std::fs::create_dir_all(path).unwrap();
+        let mut file = std::fs::File::create(path.join("configuration.frames")).unwrap();
+        for registry in configuration::registry_bundle_for(JavaVersion::V26_3, true).unwrap() {
+            let body = registry.encode().unwrap();
+            file.write_all(&encode_varint(body.len() as i32)).unwrap();
+            file.write_all(&body).unwrap();
+        }
+    }
+    for seed in [1792855987123998292i64, 1, -987654321, 8675309] {
+        for dimension in 0..3 {
+            let world = World::palette_test_world(seed, dimension);
+            let spawn = world.spawn_position();
+            let center = ((spawn.0.floor() as i32).div_euclid(16), (spawn.2.floor() as i32).div_euclid(16));
+            let world = Mutex::new(world);
+            let mut file = export.map(|path| flate2::write::GzEncoder::new(
+                std::fs::File::create(path.join(format!("{seed}-{dimension}.frames.gz"))).unwrap(), flate2::Compression::fast()));
+            if let Some(file) = &mut file {
+                let mut startup = Outgoing::capture_content(JavaVersion::V26_3, content);
+                let dimension = [Dimension::Overworld, Dimension::Nether, Dimension::End][dimension];
+                send_login(&mut startup, dimension, GAME_MODE_CREATIVE, 1, 16, 2, false).await.unwrap();
+                send_abilities(&mut startup, GAME_MODE_CREATIVE).await.unwrap();
+                file.write_all(startup.queued()).unwrap();
+            }
+            let mut positions: Vec<_> = (-radius..=radius).flat_map(|z| (-radius..=radius).map(move |x| (center.0+x,center.1+z))).collect();
+            if seed == 1792855987123998292 && dimension == 0 && !positions.contains(&(3,-3)) { positions.push((3,-3)); }
+            for (x,z) in positions {
+                {
+                let mut world = world.lock().unwrap();
+                world.palette_test_generate(x,z);
+                world.chunk_packet(x,z, |sections,biomes| {
+                    // Проверяем каждую ячейку, включая редкие состояния и все вертикальные биомы.
+                    for section in sections.iter().flatten() {
+                        for &id in section.iter() {
+                            if seen_blocks.insert(id) {
+                                for version in versions {
+                                    let mapped = content.map(RegistryKind::BlockState, IdSpace::Canonical, IdSpace::Wire(version), u32::from(id))
+                                        .unwrap_or_else(|e| panic!("seed{seed} dim{dimension} chunk{x},{z} block{id} client{version:?}: {e:?}"));
+                                    content.map(RegistryKind::BlockState, IdSpace::Wire(version), IdSpace::Wire(version), mapped).unwrap();
+                                }
+                            }
+                        }
+                    }
+                    for &id in biomes {
+                        seen_biomes.insert(id);
+                        for registry in &registries { assert!(usize::from(registry.map(id).unwrap()) < registry.count); }
+                    }
+                    if radius == 0 {
+                        let registry = &registries[0];
+                        let mut bytes = Vec::new();
+                        for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
+                            let mapped: Vec<_> = biomes.iter().map(|id| registry.map(*id).unwrap()).collect();
+                            push_section(&mut bytes, section.as_deref(), Some(&mapped), registry);
+                        }
+                        let canonical = mcsa_protocol::chunk_sections::decode_with_content(wire::INTERNAL,
+                            &bytes, world::SECTIONS as usize, registry.count as u32, IdSpace::Canonical, content).unwrap();
+                        for (version, registry) in versions.iter().zip(&registries) {
+                            let mut translated = canonical.clone();
+                            for section in &mut translated {
+                                for id in &mut section.blocks {
+                                    *id = content.map(RegistryKind::BlockState, IdSpace::Canonical, IdSpace::Wire(*version), *id).unwrap();
+                                }
+                            }
+                            let bytes = mcsa_protocol::chunk_sections::encode(*version, &translated, registry.count as u32).unwrap();
+                            assert_eq!(mcsa_protocol::chunk_sections::decode(*version, &bytes,
+                                world::SECTIONS as usize, registry.count as u32).unwrap(), translated);
+                        }
+                    }
+                    sections_checked += sections.len();
+                }).unwrap();
+                }
+                let mut outgoing = Outgoing::capture_content(JavaVersion::V26_3, content);
+                send_chunk(&mut outgoing, &world, x,z,&ChunkLight::open_sky()).await.unwrap();
+                let (length, offset) = decode_varint(outgoing.queued()).unwrap();
+                let body = &outgoing.queued()[offset..];
+                assert_eq!(body.len(), length as usize);
+                let (_, id_size) = decode_varint(body).unwrap();
+                let mut cursor = Cursor::new(&body[id_size + 8..]);
+                assert_eq!(cursor.varint(), Some(0));
+                let size = cursor.varint().unwrap() as usize;
+                let decoded = mcsa_protocol::chunk_sections::decode(JavaVersion::V26_3, cursor.bytes(size).unwrap(), world::SECTIONS as usize, registries[0].count as u32).unwrap();
+                assert_eq!(decoded.len(), world::SECTIONS as usize);
+                if let Some(file) = &mut file { file.write_all(outgoing.queued()).unwrap(); }
+                chunks += 1;
+            }
+            if let Some(file) = file { file.finish().unwrap(); }
+            eprintln!("palette seed={seed} dimension={dimension} radius={radius} chunks={chunks} sections={sections_checked} unique_blocks={} unique_biomes={}", seen_blocks.len(), seen_biomes.len());
+        }
+    }
+    if radius == 16 { assert!(seen_biomes.contains(&66), "серные пещеры должны встретиться"); }
+}
+
+
+#[tokio::test]
+async fn unknown_biome_is_rejected_before_any_chunk_bytes_are_queued() {
+    let mut world = World::in_memory();
+    world.set_block(0, 64, 0, 1);
+    world.fill_biome((0,-64,0), (15,319,15), u16::MAX, None);
+    let mut outgoing = Outgoing::capture();
+    assert!(send_chunk(&mut outgoing, &Mutex::new(world), 0,0,&ChunkLight::open_sky()).await.is_err());
+    assert!(outgoing.queued().is_empty());
+}

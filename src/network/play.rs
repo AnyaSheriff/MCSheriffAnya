@@ -5694,6 +5694,7 @@ async fn send_chunk(
         let chunk = legacy_chunks::snapshot(world, chunk_x, chunk_z, light, window, sky)?;
         return stream.send_legacy_chunk(&chunk).await;
     }
+    let biome_registry = stream.chunk_biomes()?;
     let mut body = encode_varint(CHUNK_DATA);
 
     push_i32(&mut body, chunk_x);
@@ -5757,13 +5758,17 @@ async fn send_chunk(
         (taken, entities, shelves)
     };
 
+    let taken = taken.map(|(sections, biomes)| {
+        let mapped = biomes.into_iter().map(|id| biome_registry.map(id)).collect::<io::Result<Vec<_>>>()?;
+        Ok::<_, io::Error>((sections, mapped))
+    }).transpose()?;
     let sections = taken.map(|(sections, biomes)| {
         let mut out = Vec::new();
 
         // У каждой секции свои 64 клетки биома: пещерные биомы лежат
         // только в толще.
         for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
-            push_section(&mut out, section.as_deref(), Some(biomes));
+            push_section(&mut out, section.as_deref(), Some(biomes), &biome_registry);
         }
 
         // Самая высокая секция, где есть хоть один блок: свет выше неё
@@ -5805,7 +5810,7 @@ async fn send_chunk(
             let mut empty = Vec::new();
 
             for _ in 0..world::SECTIONS {
-                push_section(&mut empty, None, None);
+                push_section(&mut empty, None, None, &biome_registry);
             }
 
             body.extend_from_slice(&encode_varint(empty.len() as i32));
@@ -5839,11 +5844,8 @@ async fn send_chunk(
 
     push_light(&mut body, top, light);
 
-    let biome_count = super::configuration::REQUIRED_REGISTRIES.iter()
-        .find(|(name, _)| *name == "minecraft:worldgen/biome")
-        .expect("реестр биомов задан при Configuration").1.len();
     stream.send_chunk(&body, mcsa_protocol::chunk::Context {
-        min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: biome_count as u32,
+        min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: biome_registry.count as u32,
     }).await
 }
 
@@ -5855,7 +5857,7 @@ async fn send_chunk(
 /// Формат: количество непустых блоков, количество блоков с жидкостью, затем
 /// состояния блоков и биомы. Состояния кодируются либо одним значением, либо
 /// палитрой, либо напрямую — что короче.
-fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]>) {
+fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]>, registry: &configuration::ChunkBiomes) {
     /// Больше этого числа разных состояний (восемь битов на блок) палитра
     /// не бывает — дальше номера пишутся прямо, как и у оригинала.
     const MAX_PALETTE: usize = 256;
@@ -5892,7 +5894,7 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]
         push_direct_container(out, states);
     }
 
-    push_biomes(out, biomes);
+    push_biomes(out, biomes, registry);
 }
 
 /// Добавляет биомы секции.
@@ -5904,14 +5906,14 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]
 /// больше — и номера пишутся прямо, битов столько, сколько нужно на номер
 /// любого биома реестра (страница протокола, «Chunk Format» → Paletted
 /// Container).
-fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
+fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>, registry: &configuration::ChunkBiomes) {
     /// Больше битов на клетку палитра не берёт.
     const MAX_PALETTE_BITS: usize = 3;
 
     let Some(biomes) = biomes else {
         // Чанка ещё нет — пусть будет равнина: она в реестре первой... а
         // точнее, под тем номером, под каким её объявил сервер.
-        push_single_value_container(out, plains_number());
+        push_single_value_container(out, i32::from(registry.plains));
         return;
     };
 
@@ -5932,7 +5934,7 @@ fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
     let bits = bits_for(palette.len());
 
     if bits > MAX_PALETTE_BITS {
-        let bits = bits_for(world::terrain::biome_registry_size());
+        let bits = bits_for(registry.count);
         let numbers: Vec<u32> = biomes.iter().map(|biome| *biome as u32).collect();
 
         out.push(bits as u8);
@@ -5970,12 +5972,6 @@ fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
 /// (не меньше одного).
 fn bits_for(count: usize) -> usize {
     (usize::BITS - count.saturating_sub(1).leading_zeros()).max(1) as usize
-}
-
-/// Номер равнины в реестре биомов: под ним клиенту уходят места, которых
-/// сервер ещё не сложил.
-fn plains_number() -> i32 {
-    world::terrain::Biome::Plains.number()
 }
 
 /// Добавляет контейнер состояний блоков с палитрой: 4 бита на блок, палитра
@@ -12257,13 +12253,13 @@ mod tests {
         let one = [5u16; 64];
         let mut out = Vec::new();
 
-        push_biomes(&mut out, Some(&one));
+        push_biomes(&mut out, Some(&one), &configuration::test_chunk_biomes(mcsa_protocol::wire::INTERNAL, false));
         assert_eq!(out, vec![0, 5]);
 
         let two: Vec<u16> = (0..64).map(|cell| if cell < 16 { 1 } else { 7 }).collect();
         let mut out = Vec::new();
 
-        push_biomes(&mut out, Some(&two));
+        push_biomes(&mut out, Some(&two), &configuration::test_chunk_biomes(mcsa_protocol::wire::INTERNAL, false));
         // Один бит, палитра [1, 7], 64 записи — один long.
         assert_eq!(&out[..4], &[1, 2, 1, 7]);
         assert_eq!(out.len(), 4 + 8);
@@ -12272,7 +12268,7 @@ mod tests {
         let many: Vec<u16> = (0..64).map(|cell| cell % 10).collect();
         let mut out = Vec::new();
 
-        push_biomes(&mut out, Some(&many));
+        push_biomes(&mut out, Some(&many), &configuration::test_chunk_biomes(mcsa_protocol::wire::INTERNAL, false));
         // Прямо: в реестре 65 биомов — семь битов, девять записей на long,
         // восемь long'ов, палитры нет.
         assert_eq!(out[0], 7);

@@ -522,15 +522,48 @@ pub async fn read_known_packs(
 /// Содержимое остальных записей сервер тоже задаёт сам (модуль registries).
 /// Раньше они шли без содержимого, и клиент брал его из своего набора
 /// ресурсов; тогда войти мог только клиент ровно такой же версии.
+#[derive(Clone, Debug)]
+pub(crate) struct ChunkBiomes {
+    pub count: usize,
+    ids: Vec<Option<u16>>,
+    pub plains: u16,
+}
+
+impl ChunkBiomes {
+    pub fn new(entries: &[mcsa_protocol::registry::Entry]) -> io::Result<Self> {
+        use crate::world::terrain::{Biome, CUSTOM_BIOMES};
+        let names = Biome::ALL.iter().map(|b| b.name())
+            .chain(CUSTOM_BIOMES.iter().copied())
+            .chain(Biome::NETHER.iter().chain(&Biome::END).chain(&Biome::PREVIEW).map(|b| b.name()));
+        let lookup = |name: &str| entries.iter().position(|e| e.name == entry_id(name)).map(|id| id as u16);
+        let plains = lookup("plains").ok_or_else(|| io::Error::other("Нет plains в реестре соединения"))?;
+        Ok(Self { count: entries.len(), ids: names.map(lookup).collect(), plains })
+    }
+
+    pub fn map(&self, id: u16) -> io::Result<u16> {
+        self.ids.get(usize::from(id)).copied().flatten()
+            .ok_or_else(|| io::Error::other(format!("Биом {id} не объявлен в Configuration соединения")))
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn test_chunk_biomes(version: mcsa_protocol::JavaVersion, preview: bool) -> ChunkBiomes {
+    let bundle = registry_bundle_for(version, preview).unwrap();
+    ChunkBiomes::new(&bundle.iter().find(|r| r.name == "minecraft:worldgen/biome").unwrap().entries).unwrap()
+}
+
 pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
     // Сначала собираем весь набор: неизвестная запись/версия не должна
     // оставлять клиенту половину реестров перед ошибкой.
     let registries = registry_bundle_for(stream.client_version(), stream.world_is_preview())?;
+    let biomes = ChunkBiomes::new(&registries.iter().find(|r| r.name == "minecraft:worldgen/biome")
+        .expect("обязательный реестр биомов").entries)?;
     let mut entries = 0;
     for registry in registries {
         entries += registry.entries.len();
         super::packet::write_registry(stream, &registry).await?;
     }
+    stream.chunk_biomes = Some(std::sync::Arc::new(biomes));
     Ok(entries)
 }
 
@@ -542,7 +575,7 @@ fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_p
 /// `preview` — мир в профиле Preview26_3: в реестр биомов входят пятнистый лес и серные пещеры
 /// (`Biome::PREVIEW`), которые встречаются в чанках только этого мира. Для мира 26.1.2 реестр биомов
 /// остаётся прежним, байт в байт, для клиента любой версии.
-fn registry_bundle_for(version: mcsa_protocol::JavaVersion, preview: bool) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
+pub(crate) fn registry_bundle_for(version: mcsa_protocol::JavaVersion, preview: bool) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
     use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
     if !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
@@ -919,6 +952,25 @@ mod tests {
 
     /// Реестр биомов мира 26.1.2: 65 записей, без биомов 26.3, и свёртка всего пакета реестров
     /// закреплена — на проводе для 775 ничего не изменилось. В мире 26.3 биомов на два больше.
+    #[test]
+    fn chunk_biomes_follow_names_in_the_sent_registry_and_reject_missing_ids() {
+        use mcsa_protocol::{JavaVersion, registry::Entry};
+        let mut entries = registry_bundle_for(JavaVersion::V26_3, true).unwrap()
+            .into_iter().find(|r| r.name == "minecraft:worldgen/biome").unwrap().entries;
+        entries.reverse();
+        let mapping = ChunkBiomes::new(&entries).unwrap();
+        for biome in crate::world::terrain::Biome::ALL.iter()
+            .chain(&crate::world::terrain::Biome::NETHER).chain(&crate::world::terrain::Biome::END)
+            .chain(&crate::world::terrain::Biome::PREVIEW) {
+            assert_eq!(entries[usize::from(mapping.map(biome.number() as u16).unwrap())].name, entry_id(biome.name()));
+        }
+        assert!(mapping.map(u16::MAX).is_err());
+        let only_plains = ChunkBiomes::new(&[Entry { name: "minecraft:plains".into(), data: None }]).unwrap();
+        assert_eq!(only_plains.map(crate::world::terrain::Biome::Plains.number() as u16).unwrap(), 0);
+        assert!(only_plains.map(66).is_err());
+        assert!(ChunkBiomes::new(&[]).is_err());
+    }
+
     #[test]
     fn native_biome_registry_is_pinned_and_preview_adds_two() {
         use mcsa_protocol::JavaVersion;

@@ -1583,6 +1583,27 @@ fn chunk_in_limits(chunk_x: i32, chunk_z: i32) -> bool {
 }
 
 impl World {
+    #[cfg(test)]
+    pub(crate) fn palette_test_world(seed: i64, dimension: usize) -> Self {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = Self::in_memory_with_catalog(catalog);
+        world.seed = seed;
+        world.generator = Arc::new(match dimension {
+            0 => Generator::Normal(Terrain::new(seed, Style::Vanilla).with_preview(true)),
+            1 => Generator::Nether(nether::Nether::new(seed)),
+            2 => Generator::End(the_end::End::new(seed)),
+            _ => panic!("неизвестное измерение"),
+        });
+        world
+    }
+
+    #[cfg(test)]
+    pub(crate) fn palette_test_generate(&mut self, x: i32, z: i32) {
+        // Один чанк в памяти: большой обход не удерживает целый мир.
+        self.chunks.clear();
+        self.chunks.insert((x, z), Chunk::generated(&self.generator, x, z));
+    }
+
     /// Каталог принадлежит миру, а не версии подключившегося клиента.
     pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
 
