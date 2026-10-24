@@ -553,7 +553,7 @@ fn biome_cell(layer: usize, cell_x: usize, cell_z: usize) -> usize {
 }
 
 impl Chunk {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             sections: (0..SECTIONS).map(|_| None).collect(),
             biomes: vec![0; BIOME_LAYERS * BIOME_LAYER],

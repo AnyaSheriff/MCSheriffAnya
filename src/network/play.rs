@@ -901,8 +901,10 @@ fn forget_reader(shared: &Shared,
 pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
     crate::commands_admin::forget_address(uuid);
 
-    // Снимок — до ухода из списка; вызов плагина — после отпускания замков.
+    // Во время quit игрок и его снимок ещё доступны Bukkit-обработчикам.
+    // Вызов идёт без замков; удаляем запись только после завершения события.
     let view = if crate::plugins::active() { crate::plugins::PlayerView::find(shared, name) } else { None };
+    if let Some(view) = view { crate::plugins::player_quit(&view); }
 
     let removed = shared
         .players
@@ -919,9 +921,6 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
             .expect("чат захвачен другим потоком")
             .push(format!("{} вышел", name));
 
-        if let Some(view) = view {
-            crate::plugins::player_quit(&view);
-        }
     }
 }
 
@@ -5633,7 +5632,6 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
             }, def.title);
 
             shared.chat.lock().expect("чат захвачен другим потоком").push_rich(line.clone(), None, Some(crate::scoreboard::encode_component(&component)));
-            log_info!("{}", line);
         }
     }
 

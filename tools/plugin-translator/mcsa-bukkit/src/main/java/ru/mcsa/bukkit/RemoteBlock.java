@@ -4,10 +4,10 @@ public final class RemoteBlock implements org.bukkit.block.Block { private final
  public RemoteBlock(World w,int x,int y,int z,String proposed){this(w,x,y,z);this.proposed=proposed;}
  public World getWorld(){return world;} public int getX(){return x;}public int getY(){return y;}public int getZ(){return z;} public Location getLocation(){return new Location(world,x,y,z);}
  public String[] arguments(String... extra){String[] result=java.util.Arrays.copyOf(args(),4+extra.length);System.arraycopy(extra,0,result,4,extra.length);return result;}
- private String[] details(){return Host.call(69,args());}
+ private String[] details(){return BlockReads.details(((RemoteWorld)world).dimension,x,y,z);}
  public boolean breakNaturally(){return Host.yes(87,args());}
  public byte getLightFromSky(){return Byte.parseByte(details()[1]);}public byte getLightLevel(){return Byte.parseByte(details()[2]);}
- public boolean isLiquid(){return details()[3].equals("1");}public boolean isPassable(){return details()[4].equals("1");}
+ public boolean isLiquid(){Material type=getType();return type==Material.WATER||type==Material.LAVA;}public boolean isPassable(){Material type=getType();return type.isAir()||type==Material.WATER||type==Material.LAVA||details()[4].equals("1");}
  public void randomTick(){Host.call(71,args());}public org.bukkit.block.BlockState getState(){return new BlockSnapshot(this,details());}
  private String[] args(){return new String[]{""+((RemoteWorld)world).dimension,""+x,""+y,""+z};}
  public Material getType(){String name=proposed==null?BlockReads.type(((RemoteWorld)world).dimension,x,y,z):proposed;Material m=Material.matchMaterial(name);if(m==null)throw new IllegalStateException("Материал вне подмножества: "+name);return m;}

@@ -68,6 +68,7 @@ pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
 
 /// Состояние одного плагина (`Store<PluginCtx>`).
 pub struct PluginCtx {
+    pub(super) native_wait: Arc<super::host::NativeWait>,
     pub pending_mobs: HashMap<[u8;16], (Dimension,crate::mob::Mob)>,
     pub network: super::network::Access,
     pub chests: super::inventory::Chests,
@@ -98,6 +99,24 @@ impl WasiView for PluginCtx {
 }
 
 impl PluginCtx {
+    // Синхронный Bukkit-запрос ждёт только нужный чанк; генерация и чтение
+    // идут без замка мира, как при отправке чанков подключению.
+    fn load_block_chunk(&self, dimension: Dimension, x: i32, z: i32) -> bool {
+        if x.abs_diff(0) > 30_000_000 || z.abs_diff(0) > 30_000_000 { return false; }
+        let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
+        for _ in 0..2 {
+            let source = {
+                let world = self.shared.world_in(dimension).lock().expect("мир");
+                if world.has_chunk(cx, cz) { return true; }
+                world.source()
+            };
+            let _wait = self.native_wait.enter();
+            let ready = source.take(cx, cz);
+            if self.shared.world_in(dimension).lock().expect("мир").accept_prepared(cx, cz, ready) { return true; }
+        }
+        false
+    }
+
     /// Задачи, чей час пришёл на такте `now`, в порядке номеров. Одноразовые
     /// удаляются, повторяющиеся переносятся.
     pub fn due_tasks(&mut self, now: u64) -> Vec<u32> {
@@ -271,7 +290,8 @@ fn write_file(path: &Path, data: &[u8]) -> Result<(), String> {
     let result = (|| {
         let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&temporary).map_err(|error| error.to_string())?;
         file.write_all(data).map_err(|error| error.to_string())?;
-        file.sync_all().map_err(|error| error.to_string())?;
+        // Обычная запись плагина не требует отдельного дискового барьера:
+        // fsync здесь задерживал общий поток плагинов на сотни миллисекунд.
         std::fs::rename(&temporary, path).map_err(|error| error.to_string())
     })();
     if result.is_err() { let _ = std::fs::remove_file(temporary); }
@@ -499,12 +519,14 @@ impl mcsa::api::player::Host for PluginCtx {
             return false;
         }
 
+        let dimension = dimension_from_wit(to.dimension);
+        if !self.shared.players.lock().expect("игроки").members().iter().any(|member| member.uuid == uuid)
+            || !self.load_block_chunk(dimension, to.x.floor() as i32, to.z.floor() as i32) { return false; }
+
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
         let Some(member) = players.members().iter().find(|member| member.uuid == uuid).cloned() else {
             return false;
         };
-
-        let dimension = dimension_from_wit(to.dimension);
 
         if dimension == member.dimension {
             players.order(&uuid, Order::Teleport { x: to.x, y: to.y, z: to.z });
@@ -645,12 +667,14 @@ impl mcsa::api::world::Host for PluginCtx {
         self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").has_chunk(x, z)
     }
     fn highest_block(&mut self, dimension: wit::Dimension, x: i32, z: i32) -> Result<i32, String> {
+        if !self.load_block_chunk(dimension_from_wit(dimension), x, z) { return Err("Не удалось загрузить чанк".into()); }
         let world = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
         if !world.has_chunk(x.div_euclid(16), z.div_euclid(16)) {return Err("чанк не загружен".into());}
         Ok((-64..320).rev().find(|y| !matches!(crate::blocks::block_at_state(world.get_block(x, *y, z)), Some("air" | "cave_air" | "void_air"))).unwrap_or(-64))
     }
     fn random_tick_speed(&mut self) -> u32 { crate::farming::random_tick_speed() }
     fn block_details(&mut self, pos: wit::BlockPos) -> Result<mcsa::api::world::BlockState, String> {
+        if !self.load_block_chunk(dimension_from_wit(pos.dimension), pos.x, pos.z) { return Err("Не удалось загрузить чанк".into()); }
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
         let state = world.get_block(pos.x, pos.y, pos.z);
@@ -735,6 +759,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn get_block(&mut self, pos: wit::BlockPos) -> Option<String> {
+        if !self.load_block_chunk(dimension_from_wit(pos.dimension), pos.x, pos.z) { return None; }
         let world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
 
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {
@@ -850,6 +875,7 @@ impl mcsa::api::command::Host for PluginCtx {
 
 impl mcsa::api::storage::Host for PluginCtx {
     fn config(&mut self, default_text: String) -> Result<String, String> {
+        let _wait = self.native_wait.enter();
         let path = self.folder.join("config.toml");
 
         match read_limited(&path)? {
@@ -862,18 +888,22 @@ impl mcsa::api::storage::Host for PluginCtx {
     }
 
     fn save_config(&mut self, text: String) -> Result<(), String> {
+        let _wait = self.native_wait.enter();
         write_file(&self.folder.join("config.toml"), text.as_bytes())
     }
 
     fn read(&mut self, name: String) -> Result<Option<Vec<u8>>, String> {
+        let _wait = self.native_wait.enter();
         read_limited(&data_path(&self.data_dir(), &name)?)
     }
 
     fn write(&mut self, name: String, data: Vec<u8>) -> Result<(), String> {
+        let _wait = self.native_wait.enter();
         write_file(&data_path(&self.data_dir(), &name)?, &data)
     }
 
     fn transfer(&mut self, source: String, target: String, replace: bool, move_file: bool) -> Result<(), String> {
+        let _wait = self.native_wait.enter();
         let source = data_path(&self.data_dir(), &source)?;
         let target = data_path(&self.data_dir(), &target)?;
         if source == target { return Ok(()); }
@@ -888,6 +918,7 @@ impl mcsa::api::storage::Host for PluginCtx {
     }
 
     fn delete(&mut self, name: String) -> Result<bool, String> {
+        let _wait = self.native_wait.enter();
         match std::fs::remove_file(data_path(&self.data_dir(), &name)?) {
             Ok(()) => Ok(true),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),

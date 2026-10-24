@@ -1,10 +1,10 @@
 # FourLegacy feature checks
 
-Strict feature gates: **30 PASS / 181 FAIL**. FAIL includes unproven behaviour; zero translation diagnostics are not a gameplay pass.
+Strict feature gates: **50 PASS / 161 FAIL**. FAIL includes unproven behaviour; zero translation diagnostics are not a gameplay pass.
 
-GUI/race fuel blocker fixed: compact block runs, less cache-key churn, measured finite 240-million callback fuel allowance; 200 ms/32 MiB boundaries retained. Full-config real-JAR bot passes with selection teleport disabled. An extra probe with the original teleport default fails on unloaded Nether chunk reads; owner-test disables that option. Native inventory open/close and top writes, player scale physics and full forced ALLOW semantics remain incomplete.
+Default selection teleport now passes: direct block/height reads and teleports prepare their destination chunk outside the world mutex with a separate capped 1 s native chunk/storage wait allowance; bulk block cubes remain non-generating. Read-only block metadata shares a bounded callback snapshot; material name lookups reuse one table instead of repeatedly cloning the enum. Population bridge inputs are freed after serialization and run numbers cross as one packed field, preventing memory leaks and excessive Java allocation without raising limits. Quit handlers retain access to the player snapshot until they return; queued entity events discard retired sources. Scheduled entity-PDC writes drain one file per task; plugin file replacement remains atomic without a synchronous fsync per write. Native inventory open/close and top writes, player scale physics and full forced ALLOW semantics remain incomplete.
 
-Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](../tmp/fourlegacy/gc-final-real-tests.log), [Rust checks](../tmp/fourlegacy/gc-final-rust-checks.log), [translator](../tmp/fourlegacy/gc-final-translator-checks.log).
+Evidence: [default bot](../tmp/fourlegacy/teleport-default-bot.log), [core](../tmp/fourlegacy/teleport-default-core.log), [Rust and real-component checks](../tmp/fourlegacy/teleport-final-rust-checks.log), [advancement regression](../tmp/fourlegacy/advancement-once-bot.log), [translator](../tmp/fourlegacy/teleport-translator-checks.log).
 
 | Result | Feature | Evidence / remaining gate |
 |---|---|---|
@@ -123,7 +123,7 @@ Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](
 | FAIL | `config.config-version`: config-version = 2 | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.debug`: debug = false | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.selection.force`: selection.force = true | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.selection.teleport-on-select`: selection.teleport-on-select = true | Default-config probe FAIL: Nether spawn search reads unloaded chunks; synchronous reentrant generation is unsupported. Disabled in owner-test config; gc-default-core.log. |
+| PASS | `config.selection.teleport-on-select`: selection.teleport-on-select = true | Default-config unchanged-JAR bot on 26219: safe Nether destination and loaded terrain; generation input ownership also covered by 160-chunk real-component regression. teleport-default-bot.log. |
 | FAIL | `config.selection.active-days`: selection.active-days = 14 | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.clans.friendly-fire`: clans.friendly-fire = false | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.clans.switch.enabled`: clans.switch.enabled = true | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
@@ -141,16 +141,16 @@ Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](
 | FAIL | `config.world.hostile-buff.enabled`: world.hostile-buff.enabled = true | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.world.hostile-buff.health-percent`: world.hostile-buff.health-percent = 25 | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.world.hostile-buff.damage-percent`: world.hostile-buff.damage-percent = 20 | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.world.border.enabled`: world.border.enabled = true | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.world.border.world`: world.border.world = "world" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.world.border.size`: world.border.size = 10000 | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.world.border.nether-divider`: world.border.nether-divider = 8 | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.prefix`: messages.prefix = "&8[&6FourLegacy&8] &7" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.world.border.enabled`: world.border.enabled = true | Default-config unchanged-JAR bot on 26219: native worldborder query confirms overworld 10000 / Nether 1250. teleport-default-bot.log. |
+| PASS | `config.world.border.world`: world.border.world = "world" | Default-config unchanged-JAR bot on 26219: native worldborder query confirms overworld 10000 / Nether 1250. teleport-default-bot.log. |
+| PASS | `config.world.border.size`: world.border.size = 10000 | Default-config unchanged-JAR bot on 26219: native worldborder query confirms overworld 10000 / Nether 1250. teleport-default-bot.log. |
+| PASS | `config.world.border.nether-divider`: world.border.nether-divider = 8 | Default-config unchanged-JAR bot on 26219: native worldborder query confirms overworld 10000 / Nether 1250. teleport-default-bot.log. |
+| PASS | `config.messages.prefix`: messages.prefix = "&8[&6FourLegacy&8] &7" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.no-permission`: messages.no-permission = "&cНедостаточно прав." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.players-only`: messages.players-only = "&cКоманда только для игроков." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.player-not-found`: messages.player-not-found = "&cИгрок не найден." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.clan-not-found`: messages.clan-not-found = "&cКлан не найден." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.race-not-found`: messages.race-not-found = "&cРаса не найдена." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.messages.player-not-found`: messages.player-not-found = "&cИгрок не найден." | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.clan-not-found`: messages.clan-not-found = "&cКлан не найден." | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.race-not-found`: messages.race-not-found = "&cРаса не найдена." | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.no-clan`: messages.no-clan = "&cВы не состоите в клане." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.no-race`: messages.no-race = "&cУ вас нет расы." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.clan-selected`: messages.clan-selected = "&aВы вступили в клан {clan}&a." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
@@ -171,7 +171,7 @@ Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](
 | FAIL | `config.messages.repair-no-emeralds`: messages.repair-no-emeralds = "&cНужно изумрудов: {cost}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.repair-done`: messages.repair-done = "&aПочинено за {cost} изум." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.kit-locked`: messages.kit-locked = "&cПредмет расы нельзя отдать или спрятать." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.no-ability`: messages.no-ability = "&cУ вашей расы нет этой способности." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.messages.no-ability`: messages.no-ability = "&cУ вашей расы нет этой способности." | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.reloaded`: messages.reloaded = "&aКонфиги перезагружены." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.menu-clan-title`: messages.menu-clan-title = "&8Выберите клан" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.menu-race-title`: messages.menu-race-title = "&8Раса: {clan}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
@@ -189,9 +189,9 @@ Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](
 | FAIL | `config.messages.category-pvp`: messages.category-pvp = "&cПвП" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.category-farm`: messages.category-farm = "&aФерма" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.category-common`: messages.category-common = "&7Обычная" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.admin-help`: messages.admin-help = ["&7/fl setclan <игрок> <клан> &8— сменить клан (раса сбросится)", "&7/fl setrace <игрок> <раса> &8— выдать расу (без лимитов)", "&7/fl sethead <игрок> &8— сделать главой своего клана", "&7/fl reset <игрок> &8— снять клан и расу", "&7/fl info <игрок> &8/ /fl menu <игрок> &8/ /fl reload"] | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.admin-need-player`: messages.admin-need-player = "&7Укажите игрока." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.admin-info`: messages.admin-info = "&7{player}: клан {clan}&7, раса {race}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.messages.admin-help`: messages.admin-help = ["&7/fl setclan <игрок> <клан> &8— сменить клан (раса сбросится)", "&7/fl setrace <игрок> <раса> &8— выдать расу (без лимитов)", "&7/fl sethead <игрок> &8— сделать главой своего клана", "&7/fl reset <игрок> &8— снять клан и расу", "&7/fl info <игрок> &8/ /fl menu <игрок> &8/ /fl reload"] | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.admin-need-player`: messages.admin-need-player = "&7Укажите игрока." | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.admin-info`: messages.admin-info = "&7{player}: клан {clan}&7, раса {race}" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.admin-none`: messages.admin-none = "&8нет" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.admin-setclan-done`: messages.admin-setclan-done = "&a{player} → {clan}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.admin-setrace-done`: messages.admin-setrace-done = "&a{player} → {race}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
@@ -199,11 +199,11 @@ Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](
 | FAIL | `config.messages.admin-no-head-race`: messages.admin-no-head-race = "&cУ клана нет расы-главы (category: HEAD)." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.admin-head-done`: messages.admin-head-done = "&a{player} теперь глава клана." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.admin-reset-done`: messages.admin-reset-done = "&aКлан и раса {player} сброшены." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.admin-unknown`: messages.admin-unknown = "&cНеизвестная подкоманда." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.clan-usage`: messages.clan-usage = "&7/clan [list/info [клан]/switch <клан>], /cc <сообщение>" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.clan-switch-usage`: messages.clan-switch-usage = "&7/clan switch <клан>" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.clan-chat-usage`: messages.clan-chat-usage = "&7/cc <сообщение>" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.clan-list-header`: messages.clan-list-header = "&6&l=== Кланы ===" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.messages.admin-unknown`: messages.admin-unknown = "&cНеизвестная подкоманда." | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.clan-usage`: messages.clan-usage = "&7/clan [list/info [клан]/switch <клан>], /cc <сообщение>" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.clan-switch-usage`: messages.clan-switch-usage = "&7/clan switch <клан>" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.clan-chat-usage`: messages.clan-chat-usage = "&7/cc <сообщение>" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
+| PASS | `config.messages.clan-list-header`: messages.clan-list-header = "&6&l=== Кланы ===" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.clan-list-line`: messages.clan-list-line = " &7▶ {clan} &8(&a{online}&8/&f{total}&8) &7id: &f{id}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.clan-info-header`: messages.clan-info-header = "&6&l=== {clan} &6&l===" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.clan-info-head`: messages.clan-info-head = "&7Глава: &f{head}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
@@ -214,8 +214,8 @@ Evidence: [full bot](../tmp/fourlegacy/gc-full-bot.log), [real-component tests](
 | FAIL | `config.messages.clan-member-separator`: messages.clan-member-separator = "&7, " | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.time-days`: messages.time-days = "{days} д. {hours} ч." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.time-hours`: messages.time-hours = "{hours} ч." | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.race-usage`: messages.race-usage = "&7/race [list [клан]/info <раса>/repair]" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.messages.race-usage`: messages.race-usage = "&7/race [list [клан]/info <раса>/repair]" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.race-list-clan`: messages.race-list-clan = "&6{clan}&6:" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
 | FAIL | `config.messages.race-list-line`: messages.race-list-line = "  &7▶ {race} &8— {category} &8(id: &7{id}&8)" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
-| FAIL | `config.messages.race-info-header`: messages.race-info-header = "&6&l=== {race} &6&l===" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |
+| PASS | `config.messages.race-info-header`: messages.race-info-header = "&6&l=== {race} &6&l===" | Default-config unchanged-JAR bot on 26219: exact configured text, colors and decorations. teleport-default-bot.log. |
 | FAIL | `config.messages.race-info-clan`: messages.race-info-clan = "&7Клан: {clan} &8/ {category}" | Loaded by the plugin; this option has no independent behaviour/boundary assertion yet. |

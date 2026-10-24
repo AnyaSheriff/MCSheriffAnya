@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -55,6 +55,19 @@ pub const MODULE_LIMITS: Limits = Limits { fuel: 400_000_000, epochs: 20, memory
 
 /// Длительность эпохи часов.
 const EPOCH: Duration = Duration::from_millis(10);
+
+// Не более секунды на подготовку чанков и файловый ввод-вывод ядра; время гостя ограничено отдельно.
+const NATIVE_WAIT_EPOCHS: u64 = 100;
+#[derive(Default)]
+pub(super) struct NativeWait { active: AtomicBool, left: AtomicU64 }
+impl NativeWait {
+    fn reset(&self) { self.left.store(NATIVE_WAIT_EPOCHS,Ordering::Relaxed); }
+    pub(super) fn enter(&self) -> NativeWaitGuard<'_> { self.active.store(true,Ordering::Relaxed);NativeWaitGuard(self) }
+    fn consume(&self) -> bool { self.active.load(Ordering::Relaxed) && self.left.fetch_update(Ordering::Relaxed,Ordering::Relaxed,|left|left.checked_sub(1)).is_ok() }
+}
+pub(super) struct NativeWaitGuard<'a>(&'a NativeWait);
+impl Drop for NativeWaitGuard<'_> { fn drop(&mut self) { self.0.active.store(false,Ordering::Relaxed); } }
+
 
 /// Самый большой `.wasm`.
 const MAX_WASM: u64 = 64 << 20;
@@ -181,6 +194,7 @@ pub struct Host {
     registry: CommandRegistry,
     names: Arc<Mutex<Vec<String>>>,
     epochs: Option<Arc<AtomicBool>>,
+    native_wait: Arc<NativeWait>,
     /// Сколько хозяин тратит на такт целиком (задачи всех плагинов).
     pub tick_stats: Stats,
 }
@@ -257,6 +271,7 @@ impl Host {
             registry: Arc::new(Mutex::new(HashMap::new())),
             names: Arc::new(Mutex::new(Vec::new())),
             epochs: None,
+            native_wait: Arc::new(NativeWait::default()),
             tick_stats: Stats::default(),
         })
     }
@@ -270,12 +285,13 @@ impl Host {
 
         let stop = Arc::new(AtomicBool::new(false));
         let engine = self.engine.clone();
+        let native_wait = Arc::clone(&self.native_wait);
         let flag = Arc::clone(&stop);
 
         let started = std::thread::Builder::new().name("plugin clock".into()).spawn(move || {
             while !flag.load(Ordering::Relaxed) {
                 std::thread::sleep(EPOCH);
-                engine.increment_epoch();
+                if !native_wait.consume() { engine.increment_epoch(); }
             }
         });
 
@@ -354,6 +370,7 @@ impl Host {
         let network = super::network::Access::new(&manifest.network_hosts, self.shared.settings.plugin_network_hosts.get(&manifest.name).map(Vec::as_slice).unwrap_or_default());
         crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
         let ctx = PluginCtx {
+            native_wait: Arc::clone(&self.native_wait),
             pending_mobs: HashMap::new(),
             network,
             chests: Default::default(),
@@ -881,6 +898,19 @@ impl Host {
         }self.bury(crashes);drops
     }
     pub fn native_event(&mut self, kind: u32, mut fields: Vec<String>) -> Option<Vec<String>> {
+        // Очередь переживает шаг сущностей: до доставки моб мог исчезнуть.
+        // Не передаём Bukkit обработчик с уже неразрешимым UUID.
+        if let Some(plugin)=self.loaded.first_mut() {
+            let ctx=plugin.store.data_mut();
+            let mut exists=|id: &str| super::api::mcsa::api::entities::Host::valid(ctx,id.to_string());
+            match kind {
+                1 => {let mut index=0;fields.retain(|id| {index+=1;index==1||exists(id)});if fields.len()<=1 {return Some(fields);}},
+                2 | 4 if fields.first().is_some_and(|id|!exists(id)) => return Some(fields),
+                4 if fields.get(1).is_some_and(|id|!id.is_empty()&&!exists(id)) => fields[1].clear(),
+                11 if fields.first().is_some_and(|id|!id.is_empty()&&!exists(id)) => fields[0].clear(),
+                _ => {},
+            }
+        }
         let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;for plugin in &mut self.loaded {let Some(function)=plugin.native_event else {continue;};
             match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(kind,fields.clone()))?;Ok(value)}) {
                 Ok(value) if !value.is_empty()&&value.len()<=100000&&value.iter().map(String::len).sum::<usize>()<=4*1024*1024&&(value[0]=="0"||value[0]=="1") => {if value[0]=="1" {cancelled=true;break;}fields=value.into_iter().skip(1).collect();},
@@ -1137,6 +1167,7 @@ impl Loaded {
     /// Один вызов плагина с топливом, сроком и охраной от возврата в хозяина.
     fn call<R>(&mut self, now: u64, call: impl FnOnce(&Module, &mut Store<PluginCtx>) -> wasmtime::Result<R>) -> Result<R, String> {
         self.store.data_mut().tick = now;
+        self.store.data().native_wait.reset();
 
         self.store.set_fuel(self.limits.fuel).map_err(|error| error.to_string())?;
         self.store.set_epoch_deadline(self.limits.epochs);
@@ -1248,5 +1279,22 @@ mod movement_tests {
         for value in [f64::NAN, f64::INFINITY, 30_000_001.0] {assert!(!valid_move(&mcsa::api::types::Location {x: value, ..valid}, crate::dimension::Dimension::Overworld));}
         assert!(!valid_move(&mcsa::api::types::Location {yaw: Some(f32::NAN), ..valid}, crate::dimension::Dimension::Overworld));
         assert!(!valid_move(&valid, crate::dimension::Dimension::Nether));
+    }
+}
+
+#[cfg(test)]
+mod native_wait_tests {
+    use super::*;
+    #[test]
+    fn native_wait_credit_is_finite_and_never_pauses_guest_execution() {
+        let wait=NativeWait::default();wait.reset();assert!(!wait.consume());
+        {
+            let _guard=wait.enter();
+            for _ in 0..NATIVE_WAIT_EPOCHS {assert!(wait.consume());}
+            for _ in 0..100 {assert!(!wait.consume());}
+        }
+        wait.reset();
+        {let _guard=wait.enter();assert!(wait.consume());}
+        assert!(!wait.consume());
     }
 }

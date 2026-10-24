@@ -83,3 +83,20 @@ fn plugin_chest_without_live_handler_cannot_give_out_items_and_close_keeps_curso
     assert!(p.window.is_none() && p.inventory.cursor().is_none());
     assert_eq!(p.inventory.slots().iter().flatten().filter(|s| s.item == item("stone").item).map(|s| s.count).sum::<i32>(), 3);
 }
+
+#[tokio::test]
+async fn advancement_completion_enqueues_one_announcement_for_console_and_chat() {
+    let shared=shared();let mut p=player();
+    p.progress.adv=crate::advancements::AdvState::new();
+    for id in ["adventure/kill_a_mob","story/smelt_iron"] {assert!(p.progress.adv.grant_all(id));}
+    let mut out=Outgoing::capture();
+    progress_tick(&mut out,&shared,&mut p).await.unwrap();
+    progress_tick(&mut out,&shared,&mut p).await.unwrap();
+    let chat=shared.chat.lock().unwrap();
+    for title in ["Monster Hunter","Acquire Hardware"] {
+        assert_eq!(chat.since(0).iter().filter(|line|line.contains(title)).count(),1);
+        for who in [&p.uuid,&[31;16]] {
+            assert_eq!(chat.since_for_rich(0,who).iter().filter(|(line,rich)|line.contains(title)&&rich.is_some()).count(),1);
+        }
+    }
+}

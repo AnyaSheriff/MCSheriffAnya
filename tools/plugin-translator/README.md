@@ -53,7 +53,7 @@ PotionMeta, свет/возраст/состояние блоков и их во
   узлы разрешены только оператору уровня 4, как в текущем ядре.
 - Location, World, Block, ограниченный Material enum, ItemStack,
   Inventory/PlayerInventory.setItem: обычные ячейки 0..35 (hotbar 0..8).
-  Миры: world, world_nether, world_the_end; блоки только в загруженных чанках,
+  Миры: world, world_nether, world_the_end; прямое чтение блоков/высоты и teleport загружают целевой чанк без удержания замка мира; пакетный снимок block-cube не генерирует соседние чанки,
   время суток, погода и мгновенная смена центра/размера WorldBorder. Полного чтения инвентаря и addItem пока нет.
 - NamespacedKey, Adventure Component/TextComponent: text/empty/append, цвета,
   декорации, legacyAmpersand/legacySection; JSON идёт в проверяемый presentation

@@ -1,8 +1,10 @@
 package ru.mcsa.bukkit;
 // Ограниченный снимок для последовательных чтений; любой иной вызов хозяина сбрасывает его.
 public final class BlockReads {
- private static long epoch=-1;private static int reads;private static int lastDimension,lastX,lastY,lastZ;private static String[] lastCube;private static final java.util.Map<String,String[]> cubes=new java.util.HashMap<>();
- public static void hostCall(int op){if(epoch!=RuntimeState.callbackEpoch||op!=13&&op!=161){epoch=RuntimeState.callbackEpoch;reads=0;cubes.clear();lastCube=null;}}
+ private static long epoch=-1;private static int reads;private static int lastDimension,lastX,lastY,lastZ;private static String[] lastCube;private static final java.util.Map<String,String[]> cubes=new java.util.HashMap<>(),details=new java.util.HashMap<>();
+ public static void hostCall(int op){if(epoch!=RuntimeState.callbackEpoch||op!=13&&op!=161&&op!=69){epoch=RuntimeState.callbackEpoch;reads=0;cubes.clear();details.clear();lastCube=null;}}
+ // Метаданные тоже читаются согласованно до следующего изменяющего вызова.
+ public static String[] details(int dimension,int x,int y,int z){hostCall(69);String key=dimension+":"+x+":"+y+":"+z;String[] value=details.get(key);if(value==null){value=Host.call(69,""+dimension,""+x,""+y,""+z);if(details.size()>=512)details.clear();details.put(key,value);}return value;}
  public static String type(int dimension,int x,int y,int z){
   hostCall(13);if(++reads<16||y< -2048||y>2040)return Host.text(13,""+dimension,""+x,""+y,""+z);
   int bx=x&~7,by=y&~7,bz=z&~7;String[] cube=lastCube;

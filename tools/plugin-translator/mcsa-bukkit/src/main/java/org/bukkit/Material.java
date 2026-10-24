@@ -1667,5 +1667,8 @@ public enum Material implements Keyed {
  public NamespacedKey getKey(){return NamespacedKey.minecraft(ru.mcsa.bukkit.Ascii.lower(name()));}
  public boolean isEdible(){return java.util.Arrays.asList("APPLE","BAKED_POTATO","BEEF","BEETROOT","BEETROOT_SOUP","BREAD","CARROT","CHICKEN","CHORUS_FRUIT","COD","COOKED_BEEF","COOKED_CHICKEN","COOKED_COD","COOKED_MUTTON","COOKED_PORKCHOP","COOKED_RABBIT","COOKED_SALMON","COOKIE","DRIED_KELP","GLOW_BERRIES","GOLDEN_APPLE","ENCHANTED_GOLDEN_APPLE","GOLDEN_CARROT","MELON_SLICE","MUSHROOM_STEW","SUSPICIOUS_STEW","MUTTON","PORKCHOP","POTATO","POISONOUS_POTATO","PUFFERFISH","PUMPKIN_PIE","RABBIT","RABBIT_STEW","ROTTEN_FLESH","SALMON","SPIDER_EYE","SWEET_BERRIES","TROPICAL_FISH").contains(name());}
  public int getMaxStackSize(){return Integer.parseInt(STACK[ordinal()]);}public short getMaxDurability(){return Short.parseShort(DURABILITY[ordinal()]);}public boolean isSolid(){return SOLID[ordinal()].equals("1");}public boolean isAir(){return this==AIR||this==CAVE_AIR||this==VOID_AIR;}
- public static Material matchMaterial(String name){if(name==null)return null;try{return valueOf(ru.mcsa.bukkit.Ascii.upper(name.replace("minecraft:","")));}catch(IllegalArgumentException e){return null;}}
+ // Enum.valueOf в TeaVM копирует большую таблицу; поиск блоков не должен создавать её на каждом чтении.
+ private static final java.util.Map<String,Material> BY_NAME=names();
+ private static java.util.Map<String,Material> names(){java.util.Map<String,Material> names=new java.util.HashMap<>();for(Material value:values())names.put(value.name(),value);return names;}
+ public static Material matchMaterial(String name){return name==null?null:BY_NAME.get(ru.mcsa.bukkit.Ascii.upper(name.replace("minecraft:","")));}
 }

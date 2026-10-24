@@ -962,3 +962,48 @@ fn player_attributes_do_not_wait_for_mob_tick_locks() {
     });
     let result=receive.recv_timeout(std::time::Duration::from_secs(1));drop(locked);worker.join().unwrap();assert_eq!(result.unwrap(),40.0);
 }
+
+#[test]
+fn plugin_block_reads_and_teleports_load_only_the_target_chunk() {
+    use super::api::mcsa::api::{world::Host as _,player::Host as _};
+    let root=server_root("unloaded-teleport");assert!(install(&root,"plugins","hello","hello",""));let shared=shared();
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();
+    let at=wit::Location {dimension:wit::Dimension::Nether,x:-800.5,y:70.0,z:1600.5,yaw:Some(10.0),pitch:Some(20.0)};
+    assert!(ctx.teleport(crate::network::login::format_uuid(&[1;16]),at));
+    {let world=shared.world_in(crate::dimension::Dimension::Nether).lock().unwrap();assert!(world.has_chunk(-51,100));assert!(!world.has_chunk(-50,100));}
+    assert!(matches!(shared.players.lock().unwrap().take_orders(&[1;16]).first(),Some(crate::players::Order::ChangeDimension {dimension:crate::dimension::Dimension::Nether,..})));
+    let pos=||wit::BlockPos {dimension:wit::Dimension::Nether,x:3200,y:64,z:-3201};
+    assert!(ctx.get_block(pos()).is_some());assert!(ctx.block_details(pos()).is_ok());assert!(ctx.highest_block(wit::Dimension::Nether,3200,-3201).is_ok());
+    assert!(ctx.get_block(wit::BlockPos {x:i32::MAX,..pos()}).is_none());
+    assert!(ctx.highest_block(wit::Dimension::Nether,i32::MIN,0).is_err());
+}
+
+#[test]
+#[ignore = "нужен переведённый FourLegacy с исправленным владением входов генерации"]
+fn fourlegacy_population_releases_canonical_inputs_between_chunks() {
+    let source=fourlegacy_component();let root=server_root("fourlegacy-population-memory");let folder=root.join("plugins/fourlegacy");std::fs::create_dir_all(folder.join("data")).unwrap();
+    for name in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(name),folder.join(name)).unwrap();}
+    std::fs::write(folder.join("data/config.yml"),"config-version: 2\nworld:\n  ore-generation: 1.0\n").unwrap();
+    let shared=shared();let mut host=Host::new(shared,root).unwrap();host.load("fourlegacy").unwrap();
+    let mut chunk=crate::world::Chunk::new();
+    chunk.apply_population((0..32768).step_by(2).map(|i|format!("{i} netherrack")).collect()).unwrap();
+    // Одни входные runs заняли бы свыше 32 МиБ за этот проход без free.
+    for x in 0..160 {
+        host.populate(crate::dimension::Dimension::Nether,x,0,123,chunk.clone());
+        assert!(host.is_loaded("fourlegacy"),"Компонент выгружен на чанке {x}");
+    }
+    host.unload("fourlegacy").unwrap();
+}
+
+#[test]
+#[ignore = "нужен переведённый FourLegacy"]
+fn fourlegacy_queued_entity_events_discard_retired_sources() {
+    let source=fourlegacy_component();let root=server_root("fourlegacy-retired-events");let folder=root.join("plugins/fourlegacy");std::fs::create_dir_all(folder.join("data")).unwrap();
+    for name in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(name),folder.join(name)).unwrap();}
+    let shared=shared();let mut host=Host::new(shared,root).unwrap();host.load("fourlegacy").unwrap();
+    let retired=crate::network::login::format_uuid(&[99;16]);
+    for (kind,fields) in [(1,vec!["1".into(),retired.clone()]),(2,vec![retired.clone()]),(4,vec![retired.clone(),String::new()]),(11,vec![retired])] {
+        assert!(host.native_event(kind,fields).is_some());assert!(host.is_loaded("fourlegacy"));
+    }
+    host.unload("fourlegacy").unwrap();
+}

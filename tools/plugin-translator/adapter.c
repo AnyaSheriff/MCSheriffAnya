@@ -271,7 +271,13 @@ int32_t exports_mcsa_api_item_events_on_furnace(mcsa_api_types_block_pos_t *pos,
 bool exports_mcsa_api_generation_events_wants_population(mcsa_api_types_dimension_t dimension) {clear();number(dimension);return dispatch(27)==1;}
 void exports_mcsa_api_generation_events_on_world_init(mcsa_api_types_dimension_t dimension) {clear();number(dimension);dispatch(29);}
 void exports_mcsa_api_generation_events_on_populate(mcsa_api_types_dimension_t dimension,int32_t x,int32_t z,int64_t seed,plugin_list_string_t *palette,plugin_list_u32_t *runs,plugin_list_string_t *ret) {
- clear();number(dimension);number(x);number(z);integer(seed);number(palette->len);for(size_t i=0;i<palette->len;i++)string(palette->ptr[i]);for(size_t i=0;i<runs->len;i++)number(runs->ptr[i]);dispatch(28);ret->ptr=NULL;ret->len=0;if(!event_text||!*event_text)return;
+ clear();number(dimension);number(x);number(z);integer(seed);number(palette->len);for(size_t i=0;i<palette->len;i++)string(palette->ptr[i]);// Числа серий идут одним полем: без десятков тысяч временных Java-строк.
+ char *packed=malloc(runs->len*12+1);if(!packed)abort();size_t used=0;
+ for(size_t i=0;i<runs->len;i++){uint32_t value=runs->ptr[i];char digits[10];size_t n=0;do{digits[n++]=(char)('0'+value%10);value/=10;}while(value);while(n)packed[used++]=digits[--n];packed[used++]=',';}
+ bytes(packed,used);free(packed);
+ // Канонический ABI передаёт входные списки во владение гостю.
+ // После сериализации они больше не нужны; иначе каждый чанк оставляет утечку.
+ plugin_list_string_free(palette);plugin_list_u32_free(runs);dispatch(28);ret->ptr=NULL;ret->len=0;if(!event_text||!*event_text)return;
  size_t count=0;for(char *p=event_text;*p;p++)if(*p=='\n')count++;if(count>98304)abort();ret->ptr=calloc(count,sizeof(plugin_string_t));if(!ret->ptr)abort();char *start=event_text;for(char *p=start;*p;p++)if(*p=='\n'){*p=0;plugin_string_dup(&ret->ptr[ret->len++],start);start=p+1;}
 }
 
