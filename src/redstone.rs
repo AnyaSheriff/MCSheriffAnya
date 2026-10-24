@@ -2697,6 +2697,7 @@ fn shape_changed(world: &mut World, pos: Pos, from: Dir) {
 /// Обновление формы; `loud` — ломается ли отвалившееся с событием слома
 /// (при постановке командой — нет).
 fn shape_update(world: &mut World, pos: Pos, from: Dir, loud: bool) {
+    if from.is_horizontal() && crate::placing::refresh_stair(world, pos) { return; }
     if crate::block_behaviour::shape_changed(world, pos, loud) { return; }
     let block = Block::at(world, pos);
     let fall_off = |world: &mut World| if loud { pop_breaking(world, pos) } else { pop(world, pos) };
