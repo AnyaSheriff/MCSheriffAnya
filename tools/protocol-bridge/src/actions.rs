@@ -130,8 +130,13 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
             if !older_to {out.extend(count);}}else if !older_to {out.extend(0i32.to_be_bytes());}
             let knockback=input.boolean()?;out.push(u8::from(knockback));if knockback{floats(input,out,3,true)?;}
             crate::particles::particle(input,out,from,to,context.items)?;sound(input,out)?;
-            if !older_from {let n=input.count(4096)?;let target=if older_to{&mut discarded}else{out};uint(target,n as u32);
+            if !older_from {let n=input.count(4096)?;let target=if older_to{&mut discarded}else{&mut *out};uint(target,n as u32);
             for _ in 0..n{crate::particles::particle(input,target,from,to,context.items)?;floats(input,target,2,false)?;uint(target,input.uint()?);}}else if !older_to {uint(out,0);}
+            // Wiki Packets777/Explosion: завершающий Play Sound. В записи
+            // Wind Burst777 у обоих получателей true;775 поля ещё не имеет.
+            let play_sound = if from == JavaVersion::V26_3 { input.boolean()? } else { true };
+            if to == JavaVersion::V26_3 { out.push(u8::from(play_sound)); }
+            else if !play_sound { return Err(Error::PayloadUnavailable("silent explosion before777")); }
         }
         "world_event"=>{
             let effect=input.take(4)?;let kind=i32::from_be_bytes(effect.try_into().map_err(|_|Error::Invalid)?);out.extend(effect);out.extend(input.take(8)?);
@@ -196,6 +201,30 @@ mod tests {
         let context=Context {metadata_registry_counts:&[("minecraft:damage_type",1)],..Default::default()};
         let mut result=Vec::new();effects("damage_event",&mut Cursor::new(&body),&mut result,OLD,NEW,context).unwrap();assert_eq!(result,body);
         assert!(effects("damage_event",&mut Cursor::new(&[1,1,0,0,0]),&mut Vec::new(),OLD,NEW,context).is_err());
+    }
+    #[test]
+    fn observed_wind_burst_explosions_translate_the_final_sound_flag() {
+        let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/wind-burst-explosion-777.json")).unwrap();
+        for row in fixture["packets"].as_array().unwrap() {
+            let captured:Vec<u8>=row["hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+                .map(|s|u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect();
+            // Статический sound holder пока не переводится; проверяем форму
+            // с тем же звуком inline, не угадывая межверсионный sound ID.
+            assert!(matches!(effects("explosion",&mut Cursor::new(&captured),&mut Vec::new(),NEW,OLD,Context::default()),Err(Error::PayloadUnavailable("static sound registry"))));
+            assert_eq!(&captured[captured.len()-4..], &[0xf1,0x0d,0,1]);
+            let mut raw=captured[..captured.len()-4].to_vec();
+            uint(&mut raw,0);let name="minecraft:entity.wind_charge.wind_burst";
+            uint(&mut raw,name.len() as u32);raw.extend(name.as_bytes());raw.extend([0,0,1]);
+            let mut input=Cursor::new(&raw);let mut old=Vec::new();
+            effects("explosion",&mut input,&mut old,NEW,OLD,Context::default()).unwrap();
+            assert!(input.rest.is_empty());assert_eq!(old.len()+1,raw.len());
+            let mut restored=Vec::new();effects("explosion",&mut Cursor::new(&old),&mut restored,OLD,NEW,Context::default()).unwrap();
+            assert_eq!(restored,raw);
+            for tail in [None,Some(2)] {
+                let mut invalid=raw[..raw.len()-1].to_vec();if let Some(value)=tail {invalid.push(value);}
+                assert!(effects("explosion",&mut Cursor::new(&invalid),&mut Vec::new(),NEW,OLD,Context::default()).is_err());
+            }
+        }
     }
     #[test]
     fn negative_click_revision_reaches_the_authoritative_inventory() {

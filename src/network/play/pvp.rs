@@ -496,6 +496,16 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             // Износ надетой брони: каждой детали 1 за каждые 4 единицы урона.
             if !combat::bypasses_armor(strike.source) {
                 wear_armor(shared, player, strike.damage);
+                // Оригинал777 itemaudit4-shield: износ брони сообщается
+                // вместе с отложенными Metadata/скоростью, через такт после стрелы.
+                if strike.source.is_projectile() && shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                    for (slot, _) in combat::ARMOR_SLOTS {
+                        if player.net.slots_dirty.contains(&slot) {
+                            player.net.slots_dirty.retain(|dirty| *dirty != slot);
+                            player.net.slot_changed_later(slot);
+                        }
+                    }
+                }
             }
 
             // Шипы (вики, Thorns): сработавшие детали теряют по 2 прочности;
@@ -545,6 +555,9 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                     let friction = if player.on_ground { 0.546 } else { 0.91 };
 
                     player.net.delayed_velocity = Some((now + 1, (velocity.0 * friction, (velocity.1 - 0.08) * 0.98, velocity.2 * friction)));
+                    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                        player.net.check_support = Some(now);
+                    }
                     player.net.meta_hold = now + 1;
                     // Пробивающая стрела и трезубец в теле не застревают
                     // (чёрный ящик, crossbow-piercing: Metadata без 12=1).
@@ -930,6 +943,26 @@ mod combat_777_projectile_tests {
                 if packet.id==0x19 {actual.push(packet.body);}
             }
             assert_eq!(actual,vec![expected]);
+            player.vit.invulnerable=0;
+            shared.ticks.send_replace(20);
+            player.inventory.set(6,Some(Stack::new(blocks::item_named("diamond_chestplate").unwrap(),1)));
+            take_strike(&mut Outgoing::capture(),&shared,&mut player,&strike).await.unwrap();
+            assert_eq!(player.inventory.slot(6).unwrap().extras().damage,1);
+            let mut slot_ticks=Vec::new();
+            for now in 20..=21 {
+                shared.ticks.send_replace(now);
+                let mut out=Outgoing::capture();
+                vitals::tick(&mut out,&shared,&mut player).await.unwrap();
+                let mut bytes=out.queued();
+                while !bytes.is_empty() {
+                    let packet=read_packet(&mut bytes).await.unwrap();
+                    if packet.id==SET_CONTAINER_SLOT {
+                        let mut cursor=Cursor::new(packet.payload());cursor.varint();cursor.varint();
+                        if cursor.u16()==Some(6) {slot_ticks.push(now);}
+                    }
+                }
+            }
+            assert_eq!(slot_ticks,vec![if profile==Profile::Preview26_3 {21}else{20}]);
         }
     }
 }

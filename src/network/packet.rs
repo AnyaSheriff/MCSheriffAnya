@@ -412,6 +412,19 @@ impl<'a> Outgoing<'a> {
     }
 
     async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
+        // Configuration777: sulfur_cube_hot занимает42, прежние виды от
+        // sweet_berry_bush сдвинуты на1. Внутренние Source остаются775;
+        // основной26.1.2 сохраняет прежние пакеты для любого клиента.
+        let remapped;
+        let body = if self.content.is_preview() && body.first() == Some(&0x19) {
+            let (_, entity_len) = decode_varint(&body[1..])?;
+            let at = 1 + entity_len;
+            let (kind, len) = decode_varint(&body[at..])?;
+            if (42..50).contains(&kind) {
+                remapped = [&body[..at], super::varint::encode_varint(kind + 1).as_slice(), &body[at + len..]].concat();
+                remapped.as_slice()
+            } else { body }
+        } else { body };
         context.items = item_context(if self.version == JavaVersion::V26_1_2 { self.content.native_view() } else { self.content });
         if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !self.probe_776 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
@@ -611,6 +624,30 @@ mod tests {
         outgoing.send(&[1]).await.unwrap();assert!(!outgoing.buffer.is_empty());
     }
     use crate::network::varint::encode_varint;
+
+    #[tokio::test]
+    async fn preview_damage_events_use_the_configuration_registry_for_both_clients() {
+        use mcsa_protocol::content::ContentCodec;
+        // Configuration официального777,24.10.2026: вставка sulfur_cube_hot42.
+        for version in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+            for preview in [false, true] {
+                let content = if preview { ContentCodec::white_slab_preview() } else { ContentCodec::default() };
+                for (old, name) in [(0,"arrow"),(41,"sting"),(42,"sweet_berry_bush"),(43,"thorns"),(44,"thrown"),(45,"trident"),(49,"wither_skull")] {
+                    let mut out = Outgoing::capture_content(version, content);
+                    out.send(&[0x19, 5, old, 7, 9, 0]).await.unwrap();
+                    let mut bytes = out.queued();
+                    let packet = read_packet(&mut bytes).await.unwrap();
+                    let (_, used) = decode_varint(packet.payload()).unwrap();
+                    let (kind, used_kind) = decode_varint(&packet.payload()[used..]).unwrap();
+                    assert_eq!(&packet.payload()[used + used_kind..], &[7,9,0]);
+                    assert!(bytes.is_empty());
+                    if preview {
+                        assert_eq!(super::super::configuration::DAMAGE_TYPES[kind as usize], format!("minecraft:{name}"));
+                    } else { assert_eq!(kind, i32::from(old)); }
+                }
+            }
+        }
+    }
 
     fn modern_profile() -> mcsa_protocol::Negotiated {
         mcsa_protocol::Negotiated { client: JavaVersion::V26_3, native: wire::INTERNAL }

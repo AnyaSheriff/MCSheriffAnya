@@ -20,12 +20,21 @@ class Decoder:
         self.protocol=protocol
         self.types=protocol['types']|protocol['play'][direction]['types']
         self.entity_names={v['id']:v['name'] for v in entities}
+        # Wiki Packets777/Explosion + оба получателя Wind Burst24.10:
+        # закреплённый candidate JSON пропустил завершающий Play Sound.
+        if direction=='toClient' and 'entityDelta' in protocol['types']:
+            op,fields=self.types['packet_explosion']
+            if fields[-1]['name']=='blockParticles':
+                self.types['packet_explosion']=[op,fields+[{'name':'playSound','type':'bool'}]]
     def read(self, data, kind, parent=None):
         parent=parent or {}
         if isinstance(kind,str):
             if kind=='void':return None
             if kind in ('varint','varlong','optvarint'):return read_varint(data.read)
-            if kind=='bool':return bool(struct.unpack('>B',data.read(1))[0])
+            if kind=='bool':
+                value=struct.unpack('>B',data.read(1))[0]
+                if value>1:raise ValueError('invalid boolean')
+                return bool(value)
             if kind in ('i8','u8','i16','u16','i32','u32','i64','u64','f32','f64'):
                 fmt={'i8':'b','u8':'B','i16':'h','u16':'H','i32':'i','u32':'I','i64':'q','u64':'Q','f32':'f','f64':'d'}[kind]
                 return struct.unpack('>'+fmt,data.read(struct.calcsize(fmt)))[0]

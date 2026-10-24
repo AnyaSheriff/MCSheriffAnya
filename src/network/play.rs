@@ -3285,6 +3285,17 @@ async fn send_other_moves(
                 continue;
             }
 
+            // Оригинал777 повторяет предмет при начале использования, даже
+            // без изменения Slot (pvp-bow, itemaudit4-shield). До Metadata8.
+            if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+                && phase == Phase::Swings && shown.living & 1 == 0 && only.living & 1 != 0
+            {
+                let (slot, stack) = if only.living & 2 != 0 {
+                    (EQUIPMENT_OFF_HAND, now.worn[0])
+                } else { (EQUIPMENT_MAIN_HAND, now.held) };
+                send_equipment(stream, entity_id, &[(slot, stack)]).await?;
+            }
+
             if only.swings != shown.swings {
                 send_swing(stream, entity_id).await?;
             }
@@ -7667,6 +7678,12 @@ fn handle_client_packet_inner(
 
             // Прыжок, бег и приземление считает здоровье (vitals.rs).
             vitals::moved(player, shared, from);
+            if player.net.check_support.is_some_and(|due| *shared.ticks.borrow() >= due) {
+                player.net.check_support = None;
+                if player.on_ground {
+                    reaction.confirm.push((x.floor() as i32, (y - 0.2).floor() as i32, z.floor() as i32));
+                }
+            }
         }
         SET_PLAYER_ROTATION => {
             if let Some((yaw, pitch)) = read_rotation(payload, 0) {

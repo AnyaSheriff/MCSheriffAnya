@@ -246,6 +246,8 @@ pub(super) struct Net {
     /// (чёрный ящик, void-death: скорость на такт позже удара несёт шаг этого
     /// же такта).
     pub(super) velocity_due: bool,
+    /// После отложенного толчка777 повторно сверяется опора под ногами.
+    pub(super) check_support: Option<u64>,
     prev_ground: bool,
     pub last_delta: (f64, f64, f64),
     /// fall-mode-teleport-motion: инерция creative → survival доживает
@@ -366,6 +368,7 @@ impl Net {
             velocity: None,
             pin: None,
             velocity_due: false,
+            check_support: None,
             prev_ground: false,
             last_delta: (0.0, 0.0, 0.0),
             mode_fall_velocity: None,
@@ -2045,6 +2048,7 @@ pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, play
         let angle = f64::from(world_random(shared, player.dimension)) * std::f64::consts::TAU;
         let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
         knock_back(player, (angle.cos(), angle.sin()), crate::mob::BASE_KNOCKBACK, resistance);
+        player.net.check_support = Some(*shared.ticks.borrow() + 1);
     }
     player.net.command_origin = None;
     player.net.hurt_from = None;
@@ -2385,7 +2389,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
     // Творческий игрок сыт полностью: насыщение 20 (чёрный ящик, pvp-thorns:
     // после возврата из творческого режима у оригинала saturation=20, у нас 5).
-    if player.game_mode == GAME_MODE_CREATIVE {
+    if player.game_mode == GAME_MODE_CREATIVE && shared.catalog().profile() != crate::gameplay_catalog::Profile::Preview26_3 {
         player.vit.food = 20;
         player.vit.saturation = 20.0;
     }
@@ -2642,6 +2646,16 @@ async fn orbs_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Play
 /// Творческий режим: тонуть не тонет, но бездна бьёт и здесь.
 async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     player.vit.age = player.vit.age.wrapping_add(1);
+    // Оригинал263: creative не ставит насыщение20 сразу (mace:12/16).
+    // saturation-ticks: восстановление по1, с выключенной natural_health_regeneration
+    // значение сохраняется. [проверить] Фаза20 тактов вне этой записи.
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)
+        && player.vit.age.is_multiple_of(20)
+    {
+        player.vit.heal(1.0);
+        player.vit.saturation = (player.vit.saturation + 1.0).min(player.vit.food as f32);
+    }
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
     if player.y < void_below(player.dimension) {
         hit(stream, shared, player, 4.0, Source::OutOfWorld, 0).await?;
@@ -4070,6 +4084,25 @@ mod hot_block_enchantment_tests {
 mod combat_777_command_tests {
     use super::*;
     use crate::gameplay_catalog::{Catalog, Profile};
+
+    #[tokio::test]
+    async fn creative_263_preserves_saturation_when_natural_regeneration_is_disabled() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog=Catalog::new(profile);
+            let shared=Shared::new(World::in_memory_with_catalog(catalog),World::in_memory_with_catalog(catalog),
+                Default::default(),Default::default(),Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/combat777-creative/ops.json")),crate::skins::Settings::default());
+            shared.natural_regeneration.store(false,std::sync::atomic::Ordering::Relaxed);
+            let mut player=PlayerState::new_for_catalog([76;16],"Creative".into(),None,None,0,76,(0.5,64.0,0.5),catalog);
+            player.game_mode=GAME_MODE_CREATIVE;
+            player.vit.saturation=6.0;
+            for now in 0..340 {
+                shared.ticks.send_replace(now);
+                tick(&mut Outgoing::capture(),&shared,&mut player).await.unwrap();
+            }
+            assert_eq!(player.vit.saturation,if profile==Profile::Preview26_3 {6.0} else {20.0});
+        }
+    }
 
     #[tokio::test]
     async fn unattributed_magic_has_hurt_feedback_only_in_the_263_primary() {

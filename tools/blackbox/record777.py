@@ -75,6 +75,7 @@ class Recorder(Client):
         self.entities = []
         self.age_samples = []
         self.attribute_samples = []
+        self.speed_attribute = None
         self.calibration = []
         self.calibrating = False
         self.observing_sounds = False
@@ -129,7 +130,7 @@ class Recorder(Client):
 
     def observe_packet(self, name, payload):
         data = io.BytesIO(payload)
-        if name == 'entity_update_attributes' and read_varint(io.BytesIO(payload).read)==self.entity:
+        if name == 'entity_update_attributes' and attribute_sample(payload,self.entity,self.speed_attribute):
             self.attribute_samples.append(time.monotonic())
         if name in ('set_slot','set_player_inventory') and self.observing_sounds:
             self.item_samples.append((name,payload))
@@ -211,6 +212,38 @@ def window_click_payload(window,state,action):
     return varint(window)+varint(state)+struct.pack('>hb',action['slot'],action.get('button',0))+varint(action.get('mode',0))+b'\0\0'
 
 
+def tracking_origin(packets,entities,kind):
+    # Первый нулевой сдвиг отмечает начало60-тактового цикла слежения.
+    # Подготовка команд может занять разное время; это состояние начала,
+    # а не допуск compare.js. ID вида берётся из закреплённого entities.json.
+    candidates={entity for entity,entity_kind in entities if entity_kind==kind}
+    for packet in packets:
+        if packet['name']!='rel_entity_move':continue
+        data=io.BytesIO(bytes.fromhex(packet['hex']))
+        entity=read_varint(data.read)
+        if entity not in candidates:continue
+        flags=read_varint(data.read)
+        if flags>>1==0 and data.read()==bytes(6):return packet['at']
+    return None
+
+
+def attribute_sample(payload,entity,speed_attribute=None):
+    data=io.BytesIO(payload)
+    if read_varint(data.read)!=entity:return False
+    if speed_attribute is None:return True
+    allowed=tuple(speed_attribute) if isinstance(speed_attribute,tuple) else (speed_attribute,)
+    count=read_varint(data.read)
+    if not 1<=count<=len(allowed):return False
+    keys=[]
+    for _ in range(count):
+        keys.append(read_varint(data.read));data.read(8)
+        for _ in range(read_varint(data.read)):
+            data.read(read_varint(data.read));data.read(9)
+    # Sweeping Edge повторяется в том же пакете, полный пакет смены режима
+    # сюда не относится. Оба ID — из закреплённых Slot-наблюдений.
+    return allowed[0] in keys and set(keys)<=set(allowed)
+
+
 def validate(scenario):
     supported = {'after','cmd','bot','attack','which','target','use','release','hand','hotbar','control','look','fly','set','click','face','cursor','dig','status','respawn','window_click','close','inventory'}
     for a in scenario['actions']:
@@ -221,7 +254,7 @@ def validate(scenario):
             raise ValueError('unsupported setup '+c)
 
 
-def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None):
+def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None):
     clients=[]; commands=[]
     origin=s.get('origin',[100,-59,100])
     def command(text, delay=True):
@@ -236,7 +269,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         clients=[None]*len(usernames)
         def join_client(entry):
             i,username=entry
-            c=connect(port,protocol,lambda sock,table: make_recorder(sock,table,version),version=version,username=username)
+            c=connect(port,protocol,lambda sock,table: make_recorder(sock,table,version,speed_attribute),version=version,username=username)
             clients[i]=c;c.pump(15,lambda row:row['name']=='position');c.pump(6);c.start()
         # bot.js тоже впускает обоих игроков одновременно.
         with ThreadPoolExecutor(max_workers=len(usernames)) as pool:
@@ -334,11 +367,25 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             desired_phase=0
             if reference:
                 samples=[t for t in reference.get('attribute_phase_samples',[[]]*len(clients))[attacker] if t<reference['start']]
+                # Полный пакет после смены режима не отмечает фазу слежения.
+                # Для777 берём настоящий повтор attack_speed после износа.
+                tracked=[e['at'] for e in reference['clients'][attacker]['events']
+                    if speed_attribute is not None and e['name']=='entity_update_attributes'
+                    and e['at']>reference['start']+first_attack.get('after',0)*.05
+                    and attribute_sample(bytes.fromhex(e['hex']),reference['initial'][attacker]['entity'],speed_attribute)]
+                if tracked:samples=tracked[:1]
                 if samples:
                     before=math.floor((samples[-1]-reference['clock'])/.05)
                     reference_start=round((reference['start']-reference['clock'])/.05)
                     desired_phase=(reference_start+first_attack.get('after',0)-before)%2
             start_tick+=(phase_tick-start_tick-first_attack.get('after',0)+desired_phase)%2
+        if version==777 and reference and s.get('track_mobs') and tracking_kind is not None:
+            before=tracking_origin(reference['clients'][0].get('preroll',[]),reference['initial'][0]['entities'],tracking_kind)
+            current=tracking_origin(clients[0].preroll,clients[0].entities,tracking_kind)
+            if before is not None and current is not None:
+                phase=(round((reference['start']-reference['clock'])/.05)-math.floor((before-reference['clock'])/.05))%60
+                current_tick=math.floor((current-clock)/.05)
+                start_tick+=(phase-(start_tick-current_tick))%60
         start=clock+start_tick*.05
         initial=[{'entity':c.entity,'entities':c.entities.copy(),'position':c.position.copy()} for c in clients]
         for c in clients:c.recording=True;c.events=[];c.external_ticks=True
@@ -398,8 +445,8 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             if c is not None:c.close()
 
 
-def make_recorder(sock,protocol,version):
-    client=Recorder(sock,protocol);client.version=version;return client
+def make_recorder(sock,protocol,version,speed_attribute=None):
+    client=Recorder(sock,protocol);client.version=version;client.speed_attribute=speed_attribute;return client
 
 
 class Console:
@@ -418,11 +465,23 @@ def main():
     p.add_argument('--core-port',type=int,default=26142)
     p.add_argument('--skip-recorded-core',action='store_true')
     p.add_argument('--resume',action='store_true');p.add_argument('--core-only',action='store_true')
+    p.add_argument('--official-only',action='store_true')
     p.add_argument('scenarios',nargs='*')
     a=p.parse_args();assert a.binary.is_file(), 'build binary first'
+    speed_attribute=None
     if a.version==777:
         assert hashlib.sha1(a.jar.read_bytes()).hexdigest()==JAR_SHA1, 'pinned official JAR hash mismatch'
         tables=inputs(a.data)
+        from analyze777 import Decoder
+        decoder=Decoder(tables['protocol.json'])
+        evidence=json.loads((ROOT/'tools/protocol-bridge/testdata/attribute-id-observations.json').read_text())
+        tracked_attributes={}
+        for row in evidence['new']['cases']:
+            name=row['name'].removeprefix('minecraft:')
+            if name in ('attack_speed','sweeping_damage_ratio'):
+                slot=decoder.read(io.BytesIO(bytes.fromhex(row['slot_hex'])),'Slot')
+                tracked_attributes[name]=next(c['data'][0]['typeId'] for c in slot['components'] if c['type']=='attribute_modifiers')
+        speed_attribute=tuple(tracked_attributes[name] for name in ('attack_speed','sweeping_damage_ratio'))
     else:
         raw=(a.data/'protocol.json').read_bytes()
         assert hashlib.sha256(raw).hexdigest()=='0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3','pinned775 protocol mismatch'
@@ -437,7 +496,8 @@ def main():
     try:
         assert 26100<=a.core_port<=26198 and 26100<=a.official_port<=26198
         assert not ({a.core_port,a.core_port+1}&{a.official_port,a.official_port+1})
-        labels=[('ours',a.core_port)] if a.core_only else [('official',a.official_port),('ours',a.core_port)]
+        assert not (a.core_only and a.official_only)
+        labels=[('ours',a.core_port)] if a.core_only else [('official',a.official_port)] if a.official_only else [('official',a.official_port),('ours',a.core_port)]
         for label,port in labels:
             for n in (port,port+1):
                 with socket.socket() as check:
@@ -484,7 +544,8 @@ def main():
                     print(label,name,flush=True)
                     reference_path=a.output/f'{name}-official.json'
                     reference=json.loads(reference_path.read_text()) if label=='ours' and a.core_only and reference_path.exists() else None
-                    record(port,tables['protocol.json'],s,rcon,a.output/f'{name}-{label}.json',a.version,a.output/'sound-observations.json' if label=='official' and a.version==777 else None,reference)
+                    tracking_kind=next(row['id'] for row in json.loads((a.data/'entities.json').read_text()) if row['name']=='cow')
+                    record(port,tables['protocol.json'],s,rcon,a.output/f'{name}-{label}.json',a.version,a.output/'sound-observations.json' if label=='official' and a.version==777 else None,reference,tracking_kind,speed_attribute)
                 if a.parallel:
                     with ThreadPoolExecutor(max_workers=2) as pool:
                         futures=[pool.submit(run_side,label,rcon,port) for (label,_),(_,_,rcon,port) in zip(labels,servers)]
