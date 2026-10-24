@@ -437,8 +437,7 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
         // ступенька достаётся той половине блока, по которой пришёлся щелчок.
         //
         // Форма ступени (прямая, угловая) зависит от соседних ступеней и здесь
-        // не считается: одиночная ступень всегда прямая, а углы между соседними
-        // ступенями пока не срастаются.
+        // не считается: её подставляет state_in_world по окружению.
         Family::Stairs => orientation.state(&[
             ("facing", direction_from_yaw(click.yaw)),
             ("half", half_name(click)),
@@ -829,6 +828,20 @@ fn with_neighbours(
     }
 
     Some(updated)
+}
+
+/// Вики, https://minecraft.wiki/w/Stairs: «change their shape».
+/// Общая очередь обновлений вызывает это и после команд, и после слома.
+pub fn refresh_stair(world: &mut World, p: (i32, i32, i32)) -> bool {
+    let state = world.get_block(p.0, p.1, p.2);
+    let Some(o) = world.catalog().orientation_of(state).ok().flatten() else { return false; };
+    if o.family != Family::Stairs { return false; }
+    if let Some(next) = with_neighbours(o, world, p.0, p.1, p.2, state)
+        && next != state
+    {
+        world.set_block(p.0, p.1, p.2, next);
+    }
+    true
 }
 
 /// Значения свойств, которые зависят не от щелчка, а от соседей.
@@ -1371,6 +1384,110 @@ mod tests {
             state("oak_log", &click(2, 0.5, 0.0)),
             state("oak_log", &click(2, 0.5, 180.0))
         );
+    }
+
+    fn stair_state(facing: &str, half: &str) -> i32 {
+        blocks::orientation("oak_stairs").unwrap().state(&[("facing", facing), ("half", half)]).unwrap()
+    }
+
+    #[test]
+    fn stairs_all_shapes_rotations_halves_and_materials() {
+        for (i, (facing, dx, dz)) in SIDES.into_iter().enumerate() {
+            for half in ["bottom", "top"] {
+                for (back, left, expected) in [
+                    (false, true, "outer_left"), (false, false, "outer_right"),
+                    (true, true, "inner_left"), (true, false, "inner_right"),
+                ] {
+                    let mut w = World::in_memory();
+                    let turn = (i + if left { 3 } else { 1 }) % 4;
+                    let (nx, nz) = if back { (-dx, -dz) } else { (dx, dz) };
+                    let other = blocks::orientation("stone_stairs").unwrap();
+                    w.set_block(nx, 64, nz, other.state(&[("facing", SIDES[turn].0), ("half", half)]).unwrap());
+                    let o = blocks::orientation("oak_stairs").unwrap();
+                    let c = click(if half == "top" { 0 } else { 1 }, 0.5, [180.0, 270.0, 0.0, 90.0][i]);
+                    let placed = state_in_world(o, &c, &w, 0, 64, 0).unwrap();
+                    assert_eq!(property("oak_stairs", placed, "shape"), expected, "{facing} {half}");
+                    w.set_block(0, 64, 0, stair_state(facing, half));
+                    refresh_neighbours(&mut w, nx, 64, nz);
+                    assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), expected);
+                    let guard = (turn + if back { 0 } else { 2 }) % 4;
+                    let (_, gx, gz) = SIDES[guard];
+                    for (guard_facing, guard_half) in [
+                        (facing, if half == "top" { "bottom" } else { "top" }),
+                        (opposite_direction(facing), half), (SIDES[turn].0, half),
+                    ] {
+                        w.set_block(gx, 64, gz, stair_state(guard_facing, guard_half));
+                        crate::redstone::settle(&mut w);
+                        assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), expected);
+                    }
+                    w.set_block(gx, 64, gz, stair_state(facing, half));
+                    crate::redstone::settle(&mut w);
+                    assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), "straight");
+                    break_block(&mut w, gx, 64, gz);
+                    assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), expected);
+                    break_block(&mut w, nx, 64, nz);
+                    assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), "straight");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn stairs_ignore_other_halves_parallel_stairs_and_non_stairs() {
+        for (i, (facing, dx, dz)) in SIDES.into_iter().enumerate() {
+            for half in ["bottom", "top"] {
+                for back in [false, true] {
+                    for (turn, (turn_facing, _, _)) in SIDES.into_iter().enumerate() {
+                        for other_half in ["bottom", "top"] {
+                            if half == other_half && turn % 2 != i % 2 { continue; }
+                            let mut w = World::in_memory();
+                            let (nx, nz) = if back { (-dx, -dz) } else { (dx, dz) };
+                            w.set_block(nx, 64, nz, stair_state(turn_facing, other_half));
+                            w.set_block(0, 64, 0, stair_state(facing, half));
+                            crate::redstone::settle(&mut w);
+                            assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), "straight");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn stairs_outer_precedes_inner_and_unrelated_placement_preserves_shape() {
+        for half in ["bottom", "top"] {
+            let mut w = World::in_memory();
+            w.set_block(0, 64, 0, stair_state("north", half));
+            w.set_block(0, 64, -1, stair_state("west", half));
+            w.set_block(0, 64, 1, stair_state("east", half));
+            crate::redstone::settle(&mut w);
+            assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), "outer_left");
+            let before = w.get_block(0, 64, 0);
+            assert_eq!(place(&mut w, "stone", blocks::state_by_name("stone").unwrap(), (-1, 63, 0), &click(1, 0.5, 0.0), (4.0, 64.0, 4.0)), Placement::Placed);
+            assert_eq!(w.get_block(0, 64, 0), before);
+            break_block(&mut w, 0, 64, -1);
+            assert_eq!(property("oak_stairs", w.get_block(0, 64, 0), "shape"), "inner_right");
+        }
+    }
+
+    #[test]
+    fn stairs_player_placement_updates_existing_stairs_and_keeps_water() {
+        for half in ["bottom", "top"] {
+            let mut w = World::in_memory();
+            let o = blocks::orientation("oak_stairs").unwrap();
+            let wet = o.with(stair_state("north", half), "waterlogged", "true").unwrap();
+            w.set_block(0, 64, 0, wet);
+            let c = click(if half == "top" { 0 } else { 1 }, 0.5, 90.0);
+            let support_y = if half == "top" { 65 } else { 63 };
+            assert_eq!(place(&mut w, "oak_stairs", blocks::state_by_name("oak_stairs").unwrap(),
+                (0, support_y, -1), &c, (4.0, 64.0, 4.0)), Placement::Placed);
+            let current = w.get_block(0, 64, 0);
+            assert_eq!(property("oak_stairs", current, "shape"), "outer_left");
+            assert_eq!(property("oak_stairs", current, "waterlogged"), "true");
+            assert_eq!(property("oak_stairs", current, "half"), half);
+            break_block(&mut w, 0, 64, -1);
+            assert_eq!(w.get_block(0, 64, 0), wet);
+        }
     }
 
     /// Ступени поворачиваются по взгляду: высокая сторона — от игрока.
@@ -1944,6 +2061,31 @@ mod stairs_shape_tests {
             refresh_neighbours(&mut world, 8, 70, 9);
             assert_eq!(rule.value(world.get_block(8, 70, 8), "shape"), Some("straight"));
             world.set_block(8, 70, 8, world::AIR);
+        }
+    }
+
+    #[test]
+    fn queued_neighbour_changes_reshape_catalog_and_base_stairs() {
+        for name in ["oak_stairs", "white_wool_stairs", "white_concrete_stairs", "poplar_stairs"] {
+            for half in ["bottom", "top"] {
+                let mut world = World::in_memory_with_catalog(Catalog::new(Profile::Preview26_3));
+                let rule = world.catalog().orientation(name).unwrap().unwrap();
+                let own = rule.state(&[("facing", "north"), ("half", half), ("waterlogged", "true")]).unwrap();
+                world.set_block_silently(CENTER.0, CENTER.1, CENTER.2, own);
+                let side = world.catalog().state_from_text(&format!("stone_stairs[facing=west,half={half}]")).unwrap().unwrap();
+                world.set_block(CENTER.0, CENTER.1, CENTER.2 - 1, side);
+                crate::redstone::settle(&mut world);
+                let corner = world.get_block(CENTER.0, CENTER.1, CENTER.2);
+                assert_eq!(rule.value(corner, "shape"), Some("outer_left"), "{name} {half}");
+                assert_eq!(rule.value(corner, "waterlogged"), Some("true"));
+                // Посторонний сосед не сбрасывает угол даже при очередном обновлении формы.
+                world.set_block(CENTER.0 - 1, CENTER.1, CENTER.2, blocks::state_by_name("stone").unwrap());
+                crate::redstone::settle(&mut world);
+                assert_eq!(world.get_block(CENTER.0, CENTER.1, CENTER.2), corner);
+                world.set_block(CENTER.0, CENTER.1, CENTER.2 - 1, world::AIR);
+                crate::redstone::settle(&mut world);
+                assert_eq!(world.get_block(CENTER.0, CENTER.1, CENTER.2), own);
+            }
         }
     }
 
