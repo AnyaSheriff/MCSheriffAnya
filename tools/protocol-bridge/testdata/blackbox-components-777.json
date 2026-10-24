@@ -1,0 +1,73 @@
+[
+  {
+    "component": "fireworks",
+    "slot_hex": "01f10a0100470101000100ff0000000000",
+    "decoded": {
+      "itemCount": 1,
+      "itemId": 1393,
+      "addedComponentCount": 1,
+      "removedComponentCount": 0,
+      "components": [
+        {
+          "type": "fireworks",
+          "data": {
+            "flightDuration": 1,
+            "explosions": [
+              {
+                "shape": "small_ball",
+                "colors": [
+                  16711680
+                ],
+                "fadeColors": [],
+                "hasTrail": false,
+                "hasTwinkle": false
+              }
+            ]
+          }
+        }
+      ],
+      "removeComponents": []
+    },
+    "capture": "tools/blackbox/reports/wide777/shard1/firework-crossbow-official.json"
+  },
+  {
+    "component": "trim",
+    "slot_hex": "01b80803000d011c02030a3a0509",
+    "decoded": {
+      "itemCount": 1,
+      "itemId": 1080,
+      "addedComponentCount": 3,
+      "removedComponentCount": 0,
+      "components": [
+        {
+          "type": "enchantments",
+          "data": {
+            "enchantments": [
+              {
+                "id": 28,
+                "level": 2
+              }
+            ]
+          }
+        },
+        {
+          "type": "damage",
+          "data": 10
+        },
+        {
+          "type": "trim",
+          "data": {
+            "material": {
+              "materialId": 4
+            },
+            "pattern": {
+              "patternId": 8
+            }
+          }
+        }
+      ],
+      "removeComponents": []
+    },
+    "capture": "tools/blackbox/reports/wide777/shard1/smithing-trim-official.json"
+  }
+]

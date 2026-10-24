@@ -1,0 +1,16 @@
+{
+  "events": [
+    {
+      "effect_id": 1010,
+      "data": 0,
+      "payload_hex": "000003f20000190000064fc50000000000",
+      "scenario": "jukebox-disc"
+    },
+    {
+      "effect_id": 1010,
+      "data": 5,
+      "payload_hex": "000003f20000190000068fc50000000500",
+      "scenario": "jukebox-disc"
+    }
+  ]
+}

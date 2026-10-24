@@ -17,6 +17,16 @@ fn normalize_uuid(mut packet: Vec<u8>) -> Vec<u8> {
 }
 
 #[test]
+fn removed_bed_updates_are_validated_then_omitted_only_for_777() {
+    let mut body=vec![6];body.extend([0;8]);body.extend([25,0]);
+    let mut tracker=Tracker::default();
+    assert!(tracker.translate_packets(OLD,NEW,&body,context()).unwrap().is_empty());
+    assert_eq!(tracker.translate_packets(OLD,OLD,&body,context()).unwrap()[0],body);
+    body.pop();
+    assert!(tracker.translate_packets(OLD,NEW,&body,context()).is_err());
+}
+
+#[test]
 fn official_spawns_and_metadata_match_in_both_directions() {
     let data = records();
     assert_eq!(data["old"]["entities"].as_array().unwrap().len(),11);

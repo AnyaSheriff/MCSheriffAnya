@@ -31,6 +31,8 @@ const sandbox = { console, Buffer, setTimeout, process: { argv: ['node', 'bot.js
     if (name.endsWith('/mineflayer')) return { createBot: () => bots[nextBot++] };
     if (name.endsWith('/minecraft-data')) return () => data;
     if (name.endsWith('/vec3')) return { Vec3: class {} };
+    // Наш Decoder уже вернул обычные значения NBT без оболочек типов.
+    if (name === 'prismarine-nbt') return { simplify: value => value };
     if (name === 'fs') return { ...fs, readFileSync: (file, ...args) => String(file) === scenarioFile && saved.origin ? JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), origin: saved.origin }) : String(file).endsWith('/sounds.json') && saved.sounds ? JSON.stringify(saved.sounds) : fs.readFileSync(file, ...args) };
     return require(name);
   } };

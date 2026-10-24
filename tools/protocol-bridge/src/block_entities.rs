@@ -48,10 +48,11 @@ pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,da
     if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
     // golem-statue-2026-10-02-0835.md: оригинал775 прислал48 {}.
     // В776 кровать удалена; отдельная живая проба проверяет47 и смену позы.
-    if (from==JavaVersion::V26_1_2 && to==JavaVersion::V26_2 && kind==48)
-        || (from==JavaVersion::V26_2 && to==JavaVersion::V26_1_2 && kind==47) {
+    // wide777/golem-statue подтверждает тот же47 и пустой compound.
+    if (from==JavaVersion::V26_1_2 && matches!(to,JavaVersion::V26_2|JavaVersion::V26_3) && kind==48)
+        || (matches!(from,JavaVersion::V26_2|JavaVersion::V26_3) && to==JavaVersion::V26_1_2 && kind==47) {
         if !matches!(data,[0]|[10,0]){return Err(Error::UnsupportedData);}
-        return Ok(Some((if to==JavaVersion::V26_2{47}else{48},data.to_vec())));
+        return Ok(Some((if to==JavaVersion::V26_1_2{48}else{47},data.to_vec())));
     }
     let row = crate::block_entity_ids::OBSERVED.iter().find(|(old, new, _)| {
         if from == JavaVersion::V26_1_2 { *old == kind } else { *new == Some(kind) }
@@ -175,6 +176,18 @@ mod tests {
             assert_eq!(translate(NEW, OLD, kind, new).unwrap(), Some((kind, old.to_vec())));
         }
     }
+    #[test]
+    fn observed_statue_777_is_valid_in_updates_and_chunks() {
+        let observed:serde_json::Value=serde_json::from_str(include_str!("../testdata/blackbox-statue-be-777.json")).unwrap();
+        let kind=observed["kind"].as_u64().unwrap() as u32;
+        let bytes=observed["nbt_hex"].as_str().unwrap();
+        let data:Vec<u8>=bytes.as_bytes().as_chunks::<2>().0.iter()
+            .map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect();
+        assert_eq!(translate(OLD,NEW,48,&data).unwrap(),Some((kind,data.clone())));
+        assert_eq!(translate(NEW,OLD,kind,&data).unwrap(),Some((48,data)));
+        assert!(translate(OLD,NEW,48,&[10]).is_err());
+    }
+
     #[test]
     fn observed_types_and_validated_data_use_the_post_bed_776_table() {
         for &(old, new, _) in crate::block_entity_ids::OBSERVED {

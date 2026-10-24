@@ -284,7 +284,10 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
     let body = wire::translate_with_context(State::Play, Direction::Serverbound,
         version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(content), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
-    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12, legacy_inventory: None })
+    // Родной клиент777 основного263 получает обычные поячеечные ответы;
+    // полный снимок нужен при переходе между каталогами предметов.
+    let foreign_inventory = id == 0x12 && !(version == JavaVersion::V26_3 && content.is_preview());
+    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory, legacy_inventory: None })
 }
 
 /// Предел одной записи вместе со сбросом. Это защита транспорта, а не
@@ -624,6 +627,22 @@ mod tests {
         outgoing.send(&[1]).await.unwrap();assert!(!outgoing.buffer.is_empty());
     }
     use crate::network::varint::encode_varint;
+
+    #[tokio::test]
+    async fn native_777_click_keeps_incremental_inventory_updates() {
+        use mcsa_protocol::content::ContentCodec;
+        for version in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+            for preview in [false, true] {
+                let content = if preview { ContentCodec::white_slab_preview() } else { ContentCodec::default() };
+                let mut framed = Vec::new();
+                // Окно0, state0, ячейка36, обычный щелчок, без предсказаний.
+                frame(&mut framed, &[0x12,0,0,0,36,0,0,0,0], compression_threshold());
+                let packet = read_play_packet_with_content(&mut framed.as_slice(), version, None, false, content).await.unwrap();
+                assert_eq!(packet.id, 0x12);
+                assert_eq!(packet.foreign_inventory, preview != (version == JavaVersion::V26_3));
+            }
+        }
+    }
 
     #[tokio::test]
     async fn preview_damage_events_use_the_configuration_registry_for_both_clients() {

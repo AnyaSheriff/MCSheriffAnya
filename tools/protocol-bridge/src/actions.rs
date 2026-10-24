@@ -118,7 +118,10 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
             let position=input.boolean()?;out.push(u8::from(position));if position{floats(input,out,3,true)?;}
         }
         "sound_effect"|"entity_sound_effect"=>{
-            sound(input,out)?;uint(out,input.count(9)? as u32);
+            // Категория ui10 наблюдалась в cmd-playsound777; старые
+            // маршруты сохраняют прежнюю границу до отдельной проверки.
+            let category_limit=if from==JavaVersion::V26_3 || to==JavaVersion::V26_3 {10}else{9};
+            sound(input,out)?;uint(out,input.count(category_limit)? as u32);
             if name=="sound_effect"{out.extend(input.take(12)?);}else{uint(out,input.uint()?);}
             floats(input,out,2,false)?;out.extend(input.take(8)?);
         }
@@ -145,10 +148,15 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // Wiki Java Edition protocol/Packets, Level Event:
                 // 2001/3008: «Block state ID» (слом и завершение археологии).
                 2001|3008=>context.items.content.packet_id(RegistryKind::BlockState,from,to,u32::try_from(data).map_err(|_|Error::Invalid)?)? as i32,
-                // Обычный автокрафтер777: успех/неудача с data0, не ссылка на реестр.
+                // Обычные звуковые события777 (wide777 + автокрафтер):
+                // data0 не является ссылкой на реестр.
                 // Другие данные/версии этим наблюдением не разрешаются.
-                1049|1050 if data == 0 && matches!((from,to),
+                1000|1011|1035|1038|1043|1044|1049|1050|1053 if data == 0 && matches!((from,to),
                     (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
+                // Jukebox использует общий префикс согласованного реестра
+                // песен, не item ID; новая bounce добавлена в его конец.
+                1010 if data >= 0 && context.metadata_registry_counts.iter()
+                    .any(|(name,count)| *name=="minecraft:jukebox_song" && (data as u32)<*count) => data,
                 // Цвета, направления и число частиц, а не ID содержимого.
                 1500..=1505|2000|2002..=2004|2006..=2013|3000..=3007|3009=>data,
                 _=>return Err(Error::PayloadUnavailable("unverified level event data")),
@@ -268,6 +276,50 @@ mod tests {
         for n in 0..body.len(){assert!(effects("sound_effect",&mut Cursor::new(&body[..n]),&mut Vec::new(),OLD,NEW,Context::default()).is_err());}
         body[0]=1;assert!(effects("sound_effect",&mut Cursor::new(&body),&mut Vec::new(),OLD,NEW,Context::default()).is_err());
     }
+    #[test]
+    fn observed_ui_sound_category_777_survives_translation() {
+        let hex=include_str!("../testdata/blackbox-ui-sound-777.txt").trim();
+        let body:Vec<u8>=hex.as_bytes().as_chunks::<2>().0.iter()
+            .map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect();
+        for (from,to) in [(JavaVersion::V26_1_2,JavaVersion::V26_3),(JavaVersion::V26_3,JavaVersion::V26_1_2)] {
+            let mut output=Vec::new();
+            effects("sound_effect",&mut Cursor::new(&body),&mut output,from,to,Context::default()).unwrap();
+            assert_eq!(body,output);
+        }
+    }
+    #[test]
+    fn observed_jukebox_events_use_the_negotiated_song_registry() {
+        let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/blackbox-jukebox-events-777.json")).unwrap();
+        let context=Context {metadata_registry_counts:&[("minecraft:jukebox_song",19)],..Default::default()};
+        for row in fixture["events"].as_array().unwrap() {
+            let body:Vec<u8>=row["payload_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+                .map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect();
+            for (from,to) in [(OLD,NEW),(NEW,OLD)] {
+                let mut output=Vec::new();effects("world_event",&mut Cursor::new(&body),&mut output,from,to,context).unwrap();
+                assert_eq!(output,body);
+                let mut invalid=body.clone();invalid[12..16].copy_from_slice(&255i32.to_be_bytes());
+                assert!(effects("world_event",&mut Cursor::new(&invalid),&mut Vec::new(),from,to,context).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn observed_level_sound_packets_do_not_disconnect_777_clients() {
+        let fixture:serde_json::Value = serde_json::from_str(include_str!("../testdata/blackbox-level-sounds-777.json")).unwrap();
+        for row in fixture["events"].as_array().unwrap() {
+            let hex = row["payload_hex"].as_str().unwrap();
+            let body:Vec<u8> = hex.as_bytes().as_chunks::<2>().0.iter()
+                .map(|pair|u8::from_str_radix(std::str::from_utf8(pair).unwrap(),16).unwrap()).collect();
+            for (from,to) in [(OLD,NEW),(NEW,OLD)] {
+                let mut output=Vec::new();let mut input=Cursor::new(&body);
+                effects("world_event",&mut input,&mut output,from,to,Context::default()).unwrap();
+                assert!(input.rest.is_empty());assert_eq!(output,body);
+                let mut invalid=body.clone();invalid[12..16].copy_from_slice(&1i32.to_be_bytes());
+                assert!(effects("world_event",&mut Cursor::new(&invalid),&mut Vec::new(),from,to,Context::default()).is_err());
+            }
+        }
+    }
+
     #[test]
     fn observed_crafter_events_preserve_data_and_reject_unobserved_sound_values() {
         let fixture:serde_json::Value = serde_json::from_str(include_str!("../testdata/white-slab-autocrafting-events-777.json")).unwrap();

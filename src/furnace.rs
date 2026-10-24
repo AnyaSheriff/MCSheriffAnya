@@ -589,6 +589,16 @@ pub fn properties(container: &Container) -> Vec<i16> {
     }
 }
 
+pub fn properties_for_catalog(container: &Container, catalog: crate::gameplay_catalog::Catalog) -> Vec<i16> {
+    let mut props = properties(container);
+    if container.kind == Kind::BrewingStand && catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        // Оригинал777, brewing-awkward/swiftness: кроме остатка/топлива,
+        // свойства2/3 содержат полное время варки и ёмкость порошка.
+        props.extend([container.heat.cook_total.clamp(0, i16::MAX as i32) as i16, POWDER_CHARGES as i16]);
+    }
+    props
+}
+
 /// Игрок забрал выплавленное: весь накопленный опыт уходит ему, дробная
 /// часть — шансом на ещё одно очко (вики, Smelting: «0.2×6 = 1.2, so this
 /// grants 1 point, plus a 20% chance of another 1 point»). Возвращает очки.
@@ -743,6 +753,9 @@ pub fn tick_brewing(world: &mut World, pos: Pos) {
         heat.lit_total -= 1;
         heat.lit = BREW_TIME;
         heat.ingredient = ingredient;
+        if world.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+            heat.cook_total = BREW_TIME;
+        }
     }
 
     if world.container(x, y, z).is_some_and(|c| c.slots != slots || c.heat != heat) {
@@ -890,6 +903,31 @@ mod tests {
         assert_eq!(splash.extras().potion, crate::survival::potion_number("swiftness"));
         assert_eq!(brew_bottle(splash, id("dragon_breath")).map(|stack| stack.item), Some(id("lingering_potion")));
         assert_eq!(brew_bottle(swift, id("dragon_breath")), None);
+    }
+
+    #[test]
+    fn brewing_263_publishes_total_duration_and_fuel_capacity() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog=Catalog::new(profile);
+            let mut world=World::in_memory_with_catalog(catalog);
+            world.set_block(0,0,0,blocks::state_by_name("brewing_stand").unwrap());
+            world.with_container(0,0,0,|container| {
+                container.slots[0]=Some(Stack::new(id("potion"),1).with_extras(crate::stackdata::Data {
+                    potion:crate::survival::potion_number("water"),..Default::default()
+                }));
+                container.slots[INGREDIENT]=Some(Stack::new(id("nether_wart"),1));
+                container.slots[POWDER]=Some(Stack::new(id("blaze_powder"),1));
+            });
+            tick_brewing(&mut world,(0,0,0));
+            let expected=if profile==Profile::Preview26_3 {vec![400,19,400,20]} else {vec![400,19]};
+            assert_eq!(properties_for_catalog(world.container(0,0,0).unwrap(),catalog),expected);
+            for _ in 0..400 {tick_brewing(&mut world,(0,0,0));}
+            let container=world.container(0,0,0).unwrap();
+            assert_eq!(container.slots[0].unwrap().extras().potion,crate::survival::potion_number("awkward"));
+            let expected=if profile==Profile::Preview26_3 {vec![0,19,400,20]} else {vec![0,19]};
+            assert_eq!(properties_for_catalog(container,catalog),expected);
+        }
     }
 
     #[test]

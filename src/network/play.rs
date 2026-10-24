@@ -817,7 +817,10 @@ pub async fn play_session(
     if let Err(error) = &result { eprintln!("MCSA play probe failure: {error}"); }
     match &result {
         Ok(()) => log_info!("{} потерял соединение: отключился", player.name),
-        Err(error) => log_info!("{} потерял соединение: {}", player.name, error.kind()),
+        Err(error) => {
+            log_debug!("Play: ошибка соединения {}: {error}", player.name);
+            log_info!("{} потерял соединение: {}", player.name, error.kind());
+        }
     }
 
     finish_play(shared, &mut player);
@@ -3372,7 +3375,24 @@ async fn send_other_moves(
             }
 
             // Частицы эффектов: цвет в свойстве 10 (пустой список — сняты).
-            if only.effect_colors != shown.effect_colors {
+            let combined_metadata = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
+            if combined_metadata && (only.effect_colors != shown.effect_colors || only.health_bits != shown.health_bits) {
+                // Оригинал777 объединяет здоровье9 и частицы10 в одном
+                // снимке (pvp-mace-landing-motion, снятие Instant Health).
+                let mut data = encode_varint(SET_ENTITY_DATA);
+                data.extend_from_slice(&encode_varint(entity_id));
+                if only.health_bits != shown.health_bits {
+                    data.push(9);
+                    data.extend_from_slice(&encode_varint(3));
+                    data.extend_from_slice(&f32::from_bits(only.health_bits).to_be_bytes());
+                }
+                if only.effect_colors != shown.effect_colors {
+                    vitals::push_effect_particles(&mut data, &only.effect_colors);
+                }
+                data.push(PROPERTIES_END);
+                write_body(stream, data).await?;
+            }
+            if !combined_metadata && only.effect_colors != shown.effect_colors {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
@@ -3382,7 +3402,7 @@ async fn send_other_moves(
             }
 
             // Здоровье чужого игрока: свойство 9 с числом.
-            if only.health_bits != shown.health_bits {
+            if !combined_metadata && only.health_bits != shown.health_bits {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
@@ -4740,7 +4760,7 @@ async fn open_window(
     let props = {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-        world.container(at.0, at.1, at.2).map(crate::furnace::properties).unwrap_or_default()
+        world.container(at.0, at.1, at.2).map(|container| crate::furnace::properties_for_catalog(container, world.catalog())).unwrap_or_default()
     };
 
     player.window = Some(OpenWindow {
@@ -6408,6 +6428,11 @@ async fn read_and_log_play_packets(
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
                 Order::Effect(effect) => {
                     vitals::give_effect(stream, player, effect).await?;
+                    // Мгновенный эффект виден соседям до его удаления в ходе
+                    // сущности (777, pvp-mace-landing-motion).
+                    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                        publish_player(shared, player);
+                    }
                     // Маяк (фоновый эффект) обновляет частицы и атрибуты на такт
                     // позже каждый раз (чёрный ящик, beacon-effect: +158 эффект,
                     // +159 Metadata 10 и Attributes).

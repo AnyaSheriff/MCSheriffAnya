@@ -23,6 +23,10 @@ class Decoder:
         # Wiki Packets777/Explosion + оба получателя Wind Burst24.10:
         # закреплённый candidate JSON пропустил завершающий Play Sound.
         if direction=='toClient' and 'entityDelta' in protocol['types']:
+            # Wiki Packets777 + villager-claim: On Ground перенесён перед
+            # углами; pinned JSON оставил порядок775.
+            op,fields=self.types['packet_entity_look']
+            self.types['packet_entity_look']=[op,[fields[0],fields[3],fields[1],fields[2]]]
             op,fields=self.types['packet_explosion']
             if fields[-1]['name']=='blockParticles':
                 self.types['packet_explosion']=[op,fields+[{'name':'playSound','type':'bool'}]]
@@ -47,7 +51,7 @@ class Decoder:
                 steps=[{'tickOffset':read_varint(data.read),'delta':list(struct.unpack('>hhh',data.read(6)))} for _ in range(count)] if count else [{'delta':list(struct.unpack('>hhh',data.read(6)))}]
                 return {'onGround':bool(flags&1),'steps':steps}
 
-            if kind in ('anonymousNbt','nbt'):return nbt(data)
+            if kind in ('anonymousNbt','nbt','anonOptionalNbt'):return nbt(data)
             if kind=='position':return self.read(data,self.types[kind],parent)
             if kind not in self.types or self.types[kind]=='native':raise ValueError('unimplemented '+kind)
             return self.read(data,self.types[kind],parent)
@@ -159,7 +163,9 @@ def project_record(record,decoder,scenario,data,output,sounds):
             for e in client.get('moves',[]):packets.append({'client':i,'name':'move','at':e['at'],'value':e,'move':True})
         if (scenario.get('track_client_moves') or scenario.get('track_second_pos')) and 'moves' not in client:
             errors.append({'client':i,'error':'client movement observations missing'})
-    payload={**record,'packets':packets,'last':scenario['record_ticks'],'sounds':sounds}
+    # bot.js записывает record_ticks+10 и слушает ещё3 такта. Эти пакеты
+    # уже есть в сырой записи; не обрезаем завершающие десять тактов.
+    payload={**record,'packets':packets,'last':scenario['record_ticks']+10,'sounds':sounds}
     temp=output.with_suffix('.replay.json');temp.write_text(json.dumps(payload))
     subprocess.run(['node',str(Path(__file__).parent/'replay777.js'),str(temp),str(Path(__file__).parent/'scenarios'/f"{scenario['name']}.json"),str(data),str(output)],check=True)
     temp.unlink()

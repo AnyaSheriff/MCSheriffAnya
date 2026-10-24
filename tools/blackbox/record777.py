@@ -33,6 +33,7 @@ class Rcon:
     def __init__(self, port, password):
         self.sock=socket.create_connection(('127.0.0.1',port),timeout=10)
         self.number=0
+        self.lock=threading.RLock()
         self.call(3,password)
     def receive(self,size):
         data=b''
@@ -42,11 +43,14 @@ class Rcon:
             data+=part
         return data
     def call(self,kind,text):
-        self.number+=1;body=text.encode()+b'\0\0'
-        self.sock.sendall(struct.pack('<iii',len(body)+8,self.number,kind)+body)
-        data=self.receive(struct.unpack('<i',self.receive(4))[0])
-        assert struct.unpack('<i',data[:4])[0]==self.number, 'RCON request failed'
-        return data[8:-2].decode('utf8','replace')
+        # Два одновременных входа делят одно RCON-соединение: запрос и ответ
+        # должны оставаться одной операцией, включая проверку request ID.
+        with self.lock:
+            self.number+=1;body=text.encode()+b'\0\0'
+            self.sock.sendall(struct.pack('<iii',len(body)+8,self.number,kind)+body)
+            data=self.receive(struct.unpack('<i',self.receive(4))[0])
+            assert struct.unpack('<i',data[:4])[0]==self.number, 'RCON request failed'
+            return data[8:-2].decode('utf8','replace')
     def run(self,text):return self.call(2,text)
 
 
@@ -60,6 +64,14 @@ def velocity(data):
     return [(((packed >> (3 + 15*i)) & 32767) / 32766 * 2 - 1) * scale for i in range(3)]
 
 
+def pack_interact_location():
+    # Та же точка щелчка, что у bot.js; масштаб1 в общем формате775/777.
+    packed = 1
+    for i, value in enumerate((0., .35, 0.)):
+        packed |= math.floor((value * .5 + .5) * 32766 + .5) << (3 + 15*i)
+    return (packed & 65535).to_bytes(2, 'little') + (packed >> 16).to_bytes(4, 'big')
+
+
 class Recorder(Client):
     def __init__(self, sock, protocol):
         super().__init__(sock, protocol)
@@ -71,8 +83,11 @@ class Recorder(Client):
         self.events = []
         self.preroll = []
         self.outbound = []
+        self.wire_sent = []
         self.moves = []
         self.entities = []
+        self.targets = []
+        self.target_filter = None
         self.age_samples = []
         self.attribute_samples = []
         self.speed_attribute = None
@@ -88,12 +103,17 @@ class Recorder(Client):
         self.recording = False
         self.external_ticks = False
         self.failure = None
+        self.respawns = 0
+        self.health = None
+        self.respawn_pending = False
         self.running = True
         self.lock = threading.RLock()
 
     def send(self, name, payload=b'', *, scheduled=False):
         if name=='tick_end' and self.external_ticks and not scheduled:return
         with self.lock:
+            if name != 'tick_end':
+                self.wire_sent.append({'at':time.monotonic(),'name':name,'hex':payload.hex()})
             if name == 'tick_end' and self.position:
                 x,y,z,yaw,pitch = self.position
                 grounded = y <= self.floor + 1e-7
@@ -107,7 +127,9 @@ class Recorder(Client):
                         self.motion[1] = .42
                     x += self.motion[0]; y += self.motion[1]; z += self.motion[2]
                     if y <= self.floor:
-                        y = self.floor; self.motion[1] = 0.; grounded = True
+                        # Respawn может быть ниже площадки: до команды tp
+                        # не переносим клиента вверх на десятки блоков.
+                        y = min(self.floor,self.position[1]); self.motion[1] = 0.; grounded = True
                     else:
                         grounded = False
                     self.motion[1] = (self.motion[1] - .08) * .98
@@ -143,18 +165,27 @@ class Recorder(Client):
         if name == 'login':
             self.entity = struct.unpack('>i', data.read(4))[0]
         elif name == 'respawn':
+            self.respawns += 1
             self.send('player_loaded')
-        elif name == 'update_health' and struct.unpack('>f', payload[:4])[0] <= 0:
-            self.send('client_command', b'\0')
+        elif name == 'update_health':
+            self.health = struct.unpack('>f', payload[:4])[0]
+            if self.health > 0:
+                self.respawn_pending = False
+            elif not self.respawn_pending:
+                self.respawn_pending = True
+                self.send('client_command', b'\0')
         elif name == 'update_time':
             age = struct.unpack('>q', payload[:8])[0]
             self.age_samples.append((age, time.monotonic()))
         elif name == 'spawn_entity':
             entity = read_varint(data.read); data.read(16); kind = read_varint(data.read)
             self.entities.append((entity, kind))
+            if self.target_filter and self.target_filter(kind, struct.unpack('>ddd', data.read(24)), self.recording):
+                self.targets.append(entity)
         elif name == 'entity_destroy':
             removed={read_varint(data.read) for _ in range(read_varint(data.read))}
             self.entities=[row for row in self.entities if row[0] not in removed]
+            self.targets=[entity for entity in self.targets if entity not in removed]
         # bot.js26.1 получает Entity Velocity, но его физика не переносит этот
         # импульс в движение: BB_TRACE_POS/pvp-armor остаётся на земле. Пакет
         # сохраняем и сравниваем; не добавляем клиенту отсутствующий у него шаг.
@@ -245,7 +276,7 @@ def attribute_sample(payload,entity,speed_attribute=None):
 
 
 def validate(scenario):
-    supported = {'after','cmd','bot','attack','which','target','use','release','hand','hotbar','control','look','fly','set','click','face','cursor','dig','status','respawn','window_click','close','inventory'}
+    supported = {'after','cmd','bot','attack','which','target','use','release','hand','hotbar','control','look','fly','set','click','face','cursor','dig','status','respawn','window_click','close','inventory','interact','sneaking','leave_bed','button','slot_state','select_trade'}
     for a in scenario['actions']:
         if set(a)-supported:
             raise ValueError('unsupported actions: '+str(sorted(set(a)-supported)))
@@ -254,7 +285,7 @@ def validate(scenario):
             raise ValueError('unsupported setup '+c)
 
 
-def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None):
+def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False):
     clients=[]; commands=[]
     origin=s.get('origin',[100,-59,100])
     def command(text, delay=True):
@@ -270,7 +301,26 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         def join_client(entry):
             i,username=entry
             c=connect(port,protocol,lambda sock,table: make_recorder(sock,table,version,speed_attribute),version=version,username=username)
-            clients[i]=c;c.pump(15,lambda row:row['name']=='position');c.pump(6);c.start()
+            clients[i]=c
+            # Те же наборы и границы, что у исходного bot.js: случайный
+            # предмет/игрок не должен становиться целью Attack.
+            source=(ROOT/'tools/blackbox/bot.js').read_text()
+            def kinds(name):
+                values=re.search(r'const '+name+r" = new Set\(\[(.*?)\]\)",source).group(1)
+                return set(re.findall(r"'([^']+)'",values))
+            mobs=kinds('MOB_TYPES')
+            for values in re.findall(r"for \(const t of \[(.*?)\]\) MOB_TYPES.add",source):mobs.update(re.findall(r"'([^']+)'",values))
+            mobs.add('warden');carts=kinds('CART_TYPES');projectiles=kinds('PROJECTILE_TYPES')
+            def target_filter(kind,pos,recording):
+                name=(entity_names or {}).get(kind)
+                inside=abs(pos[0]-origin[0])<=s.get('pad_wide',8) and -8<=pos[1]-origin[1]<=s.get('pad_up',8) and abs(pos[2]-origin[2])<=s.get('pad_wide',8)
+                return inside and ((recording and name in carts) or (s.get('track_mobs') and name in mobs|{'experience_orb'}) or (s.get('track_items') and name=='item') or (s.get('track_projectiles') and name in projectiles) or (s.get('track_fishing') and name=='fishing_bobber'))
+            c.target_filter=target_filter
+            c.pump(15,lambda row:row['name']=='position')
+            # Прошлый сценарий мог оставить survival над пустотой. Не ждём
+            # шесть секунд до creative: оригинал иначе отключает за полёт.
+            rcon.run('gamemode creative '+username)
+            c.pump(6);c.start()
         # bot.js тоже впускает обоих игроков одновременно.
         with ThreadPoolExecutor(max_workers=len(usernames)) as pool:
             list(pool.map(join_client,enumerate(usernames)))
@@ -280,7 +330,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             for username in usernames:rcon.run('gamemode creative '+username)
             time.sleep(.2)
             known=json.loads((ROOT/'tools/blackbox/data/sounds.json').read_text())
-            names=sorted({v for v in known.values() if re.search(r'(entity\.(player|cow|arrow|trident|experience_orb|item|generic|wind_charge|breeze_wind_charge)\.|item\.(shield|armor|crossbow|mace|trident)\.|block\.stone\.)',v)})
+            names=sorted(set(known.values()))
             from analyze777 import Decoder
             decoder=Decoder(protocol)
             c=clients[0];c.observing_sounds=True;sounds={};unobserved={};evidence={}
@@ -303,6 +353,23 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             sound_output.write_text(json.dumps({'sounds':sounds,'unobserved':unobserved,'slots':evidence,'method':'ordinary stone consumable.sound; captured Slot bytes'},indent=2)+'\n')
         command('gamerule spawn_mobs false'); command('gamerule natural_health_regeneration false')
         command('difficulty peaceful'); command('kill @e[type=!player]')
+        if isolate_vitals:
+            # Начальные здоровье/еда обоих игроков одинаковы: длительность
+            # RCON и консоли между сценариями иначе меняет мирное лечение.
+            for i, (name, client) in enumerate(zip(usernames, clients)):
+                token='$(bot2)' if i else '$(bot)'
+                if 'kill '+token in s.get('setup',[]):continue
+                before = client.respawns
+                rcon.run('gamemode survival '+name)
+                rcon.run('kill '+name)
+                deadline = time.monotonic()+10
+                while (client.respawns == before or not client.health or client.health <= 0) and time.monotonic() < deadline:
+                    time.sleep(.05)
+                if client.respawns == before or not client.health or client.health <= 0:
+                    raise RuntimeError('initial vitals reset did not respawn '+name)
+            # После неудачного предыдущего сценария выбранная ячейка могла
+            # разойтись. Явные !hotbar в setup по-прежнему имеют приоритет.
+            for client in clients:client.send('held_item_slot',struct.pack('>h',0))
         command(f'forceload add {origin[0]-8} {origin[2]-8} {origin[0]+8} {origin[2]+8}')
         for i,c in enumerate(clients):
             name='blackboxb' if i else 'blackbox'
@@ -362,7 +429,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             # наблюдённой рассылкой атрибутов; допуск compare.js не расширяем.
             first_attack=next((action for action in s['actions'] if action.get('attack')),{})
             attacker=first_attack.get('bot',1)-1
-            phase_client=clients[attacker] if clients[attacker].attribute_samples else clients[0]
+            phase_client=clients[attacker] if clients[attacker].attribute_samples else next(c for c in clients if c.attribute_samples)
             phase_tick=math.floor((phase_client.attribute_samples[-1]-clock)/.05)
             desired_phase=0
             if reference:
@@ -403,8 +470,22 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             sent.append({'tick':action.get('after',0),'at':time.monotonic(),'action':action,'pose':c.position.copy()})
             if 'cmd' in action: command(action['cmd'], delay=False)
             if action.get('attack'):
-                target=clients[0].entity if action.get('bot')==2 else clients[1].entity if action.get('target')=='second' else c.entities[action.get('which',-1)][0]
-                c.send('attack',varint(target)); c.send('arm_animation',b'\0')
+                target=clients[0].entity if action.get('bot')==2 else clients[1].entity if action.get('target')=='second' else next(iter(c.targets[action.get('which',len(c.targets)-1):][:1]),None)
+                if target is not None:c.send('attack',varint(target+action.get('part',0))); c.send('arm_animation',b'\0')
+            if action.get('interact'):
+                target=next(iter(c.targets[action.get('which',len(c.targets)-1):][:1]),None)
+                # В777/775 Interact уже не содержит прежнего action enum.
+                if target is None:continue
+                c.send('use_entity',varint(target)+b'\0'+pack_interact_location()+bytes([bool(action.get('sneaking'))]))
+                c.send('arm_animation',b'\0')
+            if action.get('leave_bed'):c.send('entity_action',varint(c.entity)+b'\0\0')
+            if 'button' in action:
+                if c.window is None:raise ValueError('button without open window')
+                c.send('enchant_item',varint(c.window)+varint(action['button']))
+            if 'select_trade' in action:c.send('select_trade',varint(action['select_trade']))
+            if 'slot_state' in action:
+                if c.window is None:raise ValueError('slot_state without open window')
+                w=action['slot_state'];c.send('set_slot_state',varint(w['slot'])+varint(c.window)+bytes([bool(w['state'])]))
             if 'hotbar' in action: c.send('held_item_slot',struct.pack('>h',action['hotbar']))
             if 'control' in action:
                 key,value=action['control'];c.controls[key]=value
@@ -434,13 +515,16 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                 c.send('block_dig',varint(action.get('status',0))+pack_position(pos)+bytes([action.get('face',1)])+varint(c.sequence))
         time.sleep(max(0,start+(s['record_ticks']+13)*.05-time.monotonic()))
         for c in clients:c.recording=False;c.external_ticks=False
-        result={'scenario':s['name'],'protocol':version,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scope':'raw flat stone physics; original bot.js comparison projection'}
+        result={'scenario':s['name'],'protocol':version,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
         output.write_text(json.dumps(result,indent=1)+'\n')
         for text in s.get('cleanup',[]):
             special(text,clients) if text.startswith('!') else command(text)
         if any(c.failure for c in clients):raise RuntimeError(str([c.failure for c in clients]))
         return result
     finally:
+        if not output.exists():
+            failed={'scenario':s['name'],'commands':commands,'clients':[{'events':c.events,'records':c.records,'wire_sent':c.wire_sent,'failure':c.failure} for c in clients if c is not None]}
+            output.with_name(output.stem+'-failed.json').write_text(json.dumps(failed,indent=1)+'\n')
         for c in clients:
             if c is not None:c.close()
 
@@ -466,6 +550,8 @@ def main():
     p.add_argument('--skip-recorded-core',action='store_true')
     p.add_argument('--resume',action='store_true');p.add_argument('--core-only',action='store_true')
     p.add_argument('--official-only',action='store_true')
+    p.add_argument('--isolate-vitals',action='store_true')
+    p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
     a=p.parse_args();assert a.binary.is_file(), 'build binary first'
     speed_attribute=None
@@ -488,7 +574,7 @@ def main():
         tables={'protocol.json':json.loads(raw)}
     a.output.mkdir(parents=True,exist_ok=a.resume)
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
-    manifest={'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
+    manifest={'isolate_vitals':a.isolate_vitals,'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
     manifest['comparison_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ('bot.js','compare.js','analyze777.py','replay777.js')}
     (a.output/f'run-{time.time_ns()}.json').write_text(json.dumps(manifest,indent=2)+'\n')
     servers=[]
@@ -506,9 +592,11 @@ def main():
             if label=='official':shutil.copyfile(a.jar,folder/'server.jar')
             else:
                 (folder/'config/mcsa.properties').write_text(('java-version=26.3' if a.version==777 else 'java-version=26.1.2')+'\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
+                if a.core_debug:
+                    with (folder/'config/mcsa.properties').open('a') as config:config.write('debug=true\n')
                 (folder/'config/skins.toml').write_text('mojang=false\nely=false\n')
             (folder/'eula.txt').write_text('eula=true\n')
-            (folder/('server.properties' if label=='official' else 'config/server.properties')).write_text(f'server-ip=127.0.0.1\nserver-port={port}\nenable-rcon=true\nrcon.port={port+1}\nrcon.password=local-blackbox\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\nmax-tick-time=0\n')
+            (folder/('server.properties' if label=='official' else 'config/server.properties')).write_text(f'server-ip=127.0.0.1\nserver-port={port}\nenable-rcon=true\nrcon.port={port+1}\nrcon.password=local-blackbox\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\nallow-flight=true\ngamemode=creative\nmax-tick-time=0\n')
             ops=[]
             for name in ('blackbox','blackboxb'):
                 value=bytearray(hashlib.md5(('OfflinePlayer:'+name).encode()).digest());value[6]=(value[6]&15)|48;value[8]=(value[8]&63)|128
@@ -545,7 +633,7 @@ def main():
                     reference_path=a.output/f'{name}-official.json'
                     reference=json.loads(reference_path.read_text()) if label=='ours' and a.core_only and reference_path.exists() else None
                     tracking_kind=next(row['id'] for row in json.loads((a.data/'entities.json').read_text()) if row['name']=='cow')
-                    record(port,tables['protocol.json'],s,rcon,a.output/f'{name}-{label}.json',a.version,a.output/'sound-observations.json' if label=='official' and a.version==777 else None,reference,tracking_kind,speed_attribute)
+                    record(port,tables['protocol.json'],s,rcon,a.output/f'{name}-{label}.json',a.version,a.output/'sound-observations.json' if label=='official' and a.version==777 else None,reference,tracking_kind,speed_attribute,{row['id']:row['name'] for row in json.loads((a.data/'entities.json').read_text())},a.isolate_vitals)
                 if a.parallel:
                     with ThreadPoolExecutor(max_workers=2) as pool:
                         futures=[pool.submit(run_side,label,rcon,port) for (label,_),(_,_,rcon,port) in zip(labels,servers)]

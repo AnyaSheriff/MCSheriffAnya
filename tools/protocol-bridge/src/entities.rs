@@ -40,6 +40,18 @@ impl Tracker {
         if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 && body.first()==Some(&0x23){
             return Ok(crate::entity_sync::upgrade(body)?.into_iter().map(Cow::Owned).collect());
         }
+        if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 && body.first()==Some(&6) {
+            let mut input=Cursor::new(body);input.uint()?;input.take(8)?;
+            let kind=input.uint()?;
+            if kind==25 {
+                // Bed BE удалён в26.2; проверенный пустой/валидный NBT
+                // от775 не является пакетом для777. Сами блоки остаются.
+                let translated=crate::block_entities::translate_with_content(from,to,kind,input.take(input.remaining())?,context.items.content)
+                    .map_err(wire::Error::BlockEntity)?;
+                if translated.is_some() {return Err(wire::Error::Invalid);}
+                return Ok(Vec::new());
+            }
+        }
         Ok(vec![self.translate(from,to,body,context)?])
     }
 

@@ -2647,9 +2647,12 @@ async fn orbs_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Play
 async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     player.vit.age = player.vit.age.wrapping_add(1);
     // Оригинал263: creative не ставит насыщение20 сразу (mace:12/16).
-    // saturation-ticks: восстановление по1, с выключенной natural_health_regeneration
-    // значение сохраняется. [проверить] Фаза20 тактов вне этой записи.
+    // saturation-ticks: мирное восстановление по1; свежий pvp-thorns263
+    // на easy сохраняет5, пока прежнее ядро ошибочно накапливало8.
+    // С выключенной natural_health_regeneration значение сохраняется.
+    // [проверить] Фаза20 тактов вне этой записи.
     if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && difficulty == survival::PEACEFUL
         && shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)
         && player.vit.age.is_multiple_of(20)
     {
@@ -2657,6 +2660,11 @@ async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         player.vit.saturation = (player.vit.saturation + 1.0).min(player.vit.food as f32);
     }
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        // Creative тоже лечится едой: после thorns/падения оригинал263
+        // расходует насыщение, а мирное восстановление восполняет его.
+        player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed));
+    }
     if player.y < void_below(player.dimension) {
         hit(stream, shared, player, 4.0, Source::OutOfWorld, 0).await?;
     }
@@ -4102,6 +4110,20 @@ mod combat_777_command_tests {
             }
             assert_eq!(player.vit.saturation,if profile==Profile::Preview26_3 {6.0} else {20.0});
         }
+    }
+
+    #[tokio::test]
+    async fn creative_263_does_not_gain_saturation_on_easy() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+            Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/combat777-creative/ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new_for_catalog([77;16], "CreativeEasy".into(), None, None, 0, 77, (0.5,64.0,0.5), catalog);
+        player.game_mode = GAME_MODE_CREATIVE;
+        for _ in 0..340 {
+            creative_tick(&mut Outgoing::capture(), &shared, &mut player, survival::EASY).await.unwrap();
+        }
+        assert_eq!(player.vit.saturation, 5.0);
     }
 
     #[tokio::test]

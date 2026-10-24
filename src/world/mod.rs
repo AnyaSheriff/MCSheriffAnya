@@ -3112,7 +3112,7 @@ impl World {
 
         self.published_props = places
             .iter()
-            .filter_map(|&(x, y, z)| Some(((x, y, z), crate::furnace::properties(self.container(x, y, z)?))))
+            .filter_map(|&(x, y, z)| Some(((x, y, z), crate::furnace::properties_for_catalog(self.container(x, y, z)?, self.catalog()))))
             .filter(|(_, props)| !props.is_empty())
             .collect();
 

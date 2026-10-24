@@ -262,7 +262,8 @@ pub(crate) fn translate_inner(
             uint(&mut out,cursor.uint()?);let menu=cursor.uint()?;
             // Обычные взаимодействия с блоками и жителем: menu/trading-observations.json.
             // Autocraft777: фактический OpenScreen menu7; для776 ещё не наблюдён.
-            let observed_crafter = menu == 7 && matches!((from, to),
+            // wide777: двойной сундук5 и кафедра с книгой17.
+            let observed_crafter = matches!(menu,5|7|17) && matches!((from, to),
                 (JavaVersion::V26_1_2, JavaVersion::V26_3) | (JavaVersion::V26_3, JavaVersion::V26_1_2));
             if !matches!(menu,2|6|8..=16|18..=24) && !observed_crafter {
                 return Err(Error::PayloadUnavailable("unverified menu type"));
@@ -365,6 +366,21 @@ pub(crate) fn translate_inner(
         }
         (State::Play, Direction::Clientbound, "rel_entity_move" | "entity_move_look") => {
             entity_move(&mut cursor, &mut out, from, to, name == "entity_move_look")?;
+        }
+        (State::Play, Direction::Clientbound, "entity_look") if from == JavaVersion::V26_3 || to == JavaVersion::V26_3 => {
+            // Wiki Packets777/Update Entity Rotation и villager-claim:
+            // On Ground теперь стоит до углов, а не после них.
+            uint(&mut out, cursor.uint()?);
+            let (angles, grounded) = if from == JavaVersion::V26_3 {
+                let grounded = cursor.boolean()?;
+                (cursor.take(2)?, grounded)
+            } else {
+                let angles = cursor.take(2)?;
+                (angles, cursor.boolean()?)
+            };
+            if to == JavaVersion::V26_3 { out.push(u8::from(grounded)); }
+            out.extend(angles);
+            if to != JavaVersion::V26_3 { out.push(u8::from(grounded)); }
         }
         (State::Play, Direction::Clientbound, "block_change" | "block_action") => {
             let action = name == "block_action";
@@ -788,6 +804,18 @@ mod tests {
         translate(State::Play, Direction::Clientbound, from, to, body).map(Cow::into_owned)
     }
     #[test]
+    fn observed_double_chest_and_lectern_menus_roundtrip() {
+        let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/blackbox-menus-777.json")).unwrap();
+        for row in fixture["menus"].as_array().unwrap() {
+            let payload:Vec<u8>=row["payload_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+                .map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect();
+            let mut old=vec![0x3b];old.extend(&payload);
+            let new=cb(&old,OLD,NEW).unwrap();assert_eq!(&new[1..],payload);
+            assert_eq!(cb(&new,NEW,OLD).unwrap(),old);
+        }
+    }
+
+    #[test]
     fn observed_crafter_menu_roundtrips_without_opening_unobserved_menus_or_776() {
         // Настоящий OpenScreen official777, autocraft777-observation-02.
         let payload = b"\x01\x07\x0a\x08\x00\x09translate\x00\x11container.crafter\x00";
@@ -795,7 +823,7 @@ mod tests {
         let mapped = cb(&body, OLD, NEW).unwrap();
         assert_eq!(&mapped[1..], payload);
         assert_eq!(cb(&mapped, NEW, OLD).unwrap(), body);
-        for menu in [0, 1, 3, 4, 5, 17, 25, 127] {
+        for menu in [0, 1, 3, 4, 25, 127] {
             let mut denied = body.clone(); denied[2] = menu;
             assert_eq!(cb(&denied, OLD, NEW), Err(Error::PayloadUnavailable("unverified menu type")));
         }
@@ -1165,6 +1193,21 @@ mod dig_action_tests;
 #[cfg(test)]
 mod combat_777_tests {
     use super::*;
+
+    #[test]
+    fn observed_rotation_777_places_ground_before_angles() {
+        const OLD: JavaVersion = JavaVersion::V26_1_2;
+        const NEW: JavaVersion = JavaVersion::V26_3;
+        let cb = |body:&[u8],from,to| translate(State::Play,Direction::Clientbound,from,to,body).map(|packet|packet.into_owned());
+        let old = [0x38, 19, 0, 28, 1];
+        let observed = [0x39, 19, 1, 0, 28];
+        assert_eq!(cb(&old, OLD, NEW).unwrap(), observed);
+        assert_eq!(cb(&observed, NEW, OLD).unwrap(), old);
+        for n in 0..observed.len() {
+            assert!(cb(&observed[..n], NEW, OLD).is_err());
+        }
+        assert!(cb(&[0x39,19,2,0,28], NEW, OLD).is_err());
+    }
 
     #[test]
     fn observed_critical_animation_changes_only_for_the_263_primary_view() {

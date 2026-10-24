@@ -228,10 +228,13 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
         if to==JavaVersion::V1_21_4 {out.push(1);}
         return Ok(out);
     }
-    if kind == 72 && (from == JavaVersion::V26_3 || to == JavaVersion::V26_3) {
+    let observed_777 = matches!(kind,56|69) && matches!((from,to),
+        (JavaVersion::V26_1_2,JavaVersion::V26_3)|(JavaVersion::V26_3,JavaVersion::V26_1_2));
+    if observed_777 || (kind == 72 && (from == JavaVersion::V26_3 || to == JavaVersion::V26_3)) {
         // Pinned protocol777: banner_patterns сохраняет holder + цвет каждого
         // слоя. Динамический реестр передан в Configuration, ID не статические.
-        // [проверить] Полный официальный GUI777; пока подтверждены схема и codec.
+        // wide777: fireworks/trim подтверждены настоящими Slot; графы
+        // pinned775/777 совпадают, прежний codec проверяет все поля/границы.
         return crate::component_776::remap(kind,input,context,spaces);
     }
     if matches!(kind,53|56|57|59|61|66|68|69|72|74|76|77|86|88|89|90|104) {
@@ -431,6 +434,25 @@ mod catalog_tests;
 #[cfg(test)]
 mod banner_777_tests {
     use super::*;
+    #[test]
+    fn observed_fireworks_and_trim_slots_roundtrip_without_losing_components() {
+        let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/blackbox-components-777.json")).unwrap();
+        for row in fixture.as_array().unwrap() {
+            let slot:Vec<u8>=row["slot_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+                .map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect();
+            // Тот же общий реестр43 зачарований, что в item-observations
+            // и в Configuration ядра; образец trim содержит protection II.
+            let context=Context{shared_enchantment_count:Some(43),..Default::default()};
+            let (stack,used)=decode(JavaVersion::V26_3,&slot,false,context).unwrap();
+            assert_eq!(used,slot.len());
+            let old=encode(JavaVersion::V26_1_2,stack.as_ref(),false,context).unwrap();
+            let (restored,used)=decode(JavaVersion::V26_1_2,&old,false,context).unwrap();
+            assert_eq!(used,old.len());assert_eq!(restored,stack);
+            assert_eq!(encode(JavaVersion::V26_3,restored.as_ref(),false,context).unwrap(),slot);
+            for end in 0..slot.len() {assert!(decode(JavaVersion::V26_3,&slot[..end],false,context).is_err());}
+        }
+    }
+
     #[test]
     fn patterned_banner_survives_777_slot_with_all_layers_and_checks_lengths() {
         let layers=vec![2,5,14,7,11];

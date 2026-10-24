@@ -1,0 +1,47 @@
+{
+  "source": "ordinary World Event packets, official 26.3, wide777 observation",
+  "events": [
+    {
+      "effect_id": 1000,
+      "data": 0,
+      "payload_hex": "000003e80000190000064fc50000000000",
+      "scenario": "dispenser-water"
+    },
+    {
+      "effect_id": 1035,
+      "data": 0,
+      "payload_hex": "0000040b0000194000065fc50000000000",
+      "scenario": "brewing-swiftness"
+    },
+    {
+      "effect_id": 1044,
+      "data": 0,
+      "payload_hex": "000004140000190000064fc50000000000",
+      "scenario": "smithing-upgrade"
+    },
+    {
+      "effect_id": 1053,
+      "data": 0,
+      "payload_hex": "0000041d000019c00006cfc50000000000",
+      "scenario": "lingering-potion-feet"
+    },
+    {
+      "effect_id": 1011,
+      "data": 0,
+      "payload_hex": "000003f30000190000064fc50000000000",
+      "scenario": "jukebox-disc"
+    },
+    {
+      "effect_id": 1043,
+      "data": 0,
+      "payload_hex": "000004130000190000064fc50000000000",
+      "scenario": "lectern-page"
+    },
+    {
+      "effect_id": 1038,
+      "data": 0,
+      "payload_hex": "0000040e00001b0000068fc50000000001",
+      "scenario": "end-portal"
+    }
+  ]
+}
