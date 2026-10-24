@@ -121,15 +121,16 @@ pub(crate) fn prepare_for_version(world: &Path, version: mcsa_protocol::JavaVers
     check_directory(&world)?;
     #[cfg(target_os = "linux")]
     super::migration::recover(&world)?;
-    let catalog = crate::gameplay_catalog::Catalog::for_version(version);
-    let target = profile::ProfileDescriptor {
-        gameplay_version: version.name().into(), release_order: 2,
-        save_format: profile::current_profile().save_format, registry_id: catalog.registry_id().into_owned(),
-    };
+    let target = profile::storage_profile(version.name()).map_err(profile_error)?;
+    let mut pending = false;
     let manifest = match profile::read_manifest(&world).map_err(profile_error)? {
         Some(manifest) => {
-            let plan = profile::plan_transition(Some(&manifest), version.name(), &[target]).map_err(profile_error)?;
-            if plan.requires_migration() { return Err(profile_error(profile::Error::TransitionRequired)); }
+            let plan = profile::plan_transition(Some(&manifest), version.name(), std::slice::from_ref(&target)).map_err(profile_error)?;
+            pending = match plan.kind {
+                profile::TransitionKind::NoChange => false,
+                profile::TransitionKind::StorageUpgrade => true,
+                _ => return Err(profile_error(profile::Error::TransitionRequired)),
+            };
             manifest
         }
         None => {
@@ -137,7 +138,7 @@ pub(crate) fn prepare_for_version(world: &Path, version: mcsa_protocol::JavaVers
             fs::create_dir_all(&world)?;
             let manifest = profile::Manifest {
                 schema: profile::MANIFEST_SCHEMA, save_format: target.save_format,
-                registry_id: target.registry_id, gameplay_version: target.gameplay_version,
+                registry_id: target.registry_id.clone(), gameplay_version: target.gameplay_version.clone(),
                 // Нули обозначают новый мир, исходного снимка для него нет.
                 snapshot_id: "00000000000000000000000000000000".into(),
             };
@@ -155,9 +156,19 @@ pub(crate) fn prepare_for_version(world: &Path, version: mcsa_protocol::JavaVers
         let metadata = fs::metadata(&world)?;
         Some((metadata.dev(), metadata.ino()))
     };
-    Ok(StartupGuard { lock, #[cfg(target_os = "linux")] world,
+    let mut guard = StartupGuard { lock, #[cfg(target_os = "linux")] world: world.clone(),
         #[cfg(target_os = "linux")] identity,
-        check: StartupCheck::ManifestMatches { snapshot_id: manifest.snapshot_id } })
+        check: if pending {
+            StartupCheck::StorageUpgradePending { snapshot_id: manifest.snapshot_id.clone() }
+        } else { StartupCheck::ManifestMatches { snapshot_id: manifest.snapshot_id.clone() } } };
+    if pending {
+        super::snapshot::create_storage_upgrade(&guard, &manifest).map_err(io::Error::other)?;
+        let updated = profile::read_manifest(&world).map_err(profile_error)?.ok_or_else(|| profile_error(profile::Error::UnknownSource))?;
+        let plan = profile::plan_transition(Some(&updated), version.name(), &[target]).map_err(profile_error)?;
+        if plan.requires_migration() { return Err(profile_error(profile::Error::TransitionRequired)); }
+        guard.check = StartupCheck::ManifestMatches { snapshot_id: updated.snapshot_id };
+    }
+    Ok(guard)
 }
 
 fn prepare_with_upgrade(world: &Path,

@@ -698,6 +698,69 @@ mod tests {
         assert_eq!(parse(&bytes), Some(data));
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn legacy_players_upgrade_through_real_startup_with_inventory_and_mode_preserved() {
+        use crate::world::{profile, startup};
+        for (version, catalog) in [
+            (mcsa_protocol::JavaVersion::V26_1_2, Catalog::new(Profile::Java26_1_2)),
+            (mcsa_protocol::JavaVersion::V26_3, Catalog::new(Profile::Preview26_3)),
+        ] {
+            for layout in [10u32, 11] {
+                for mode in 0..=3 {
+                    let root = test_directory(&format!("startup-{}-{layout}-{mode}", version.name()));
+                    let world = root.join("world");
+                    let directory = world.join("playerdata");
+                    fs::create_dir_all(&directory).unwrap();
+                    // Реальный манифест предыдущей сборки, включая нулевой snapshot_id.
+                    let mut manifest = profile::decode(include_bytes!("../testdata/world-profile/26.3-playerdata11.json")).unwrap();
+                    if version == mcsa_protocol::JavaVersion::V26_1_2 {
+                        let base = profile::current_profile();
+                        manifest.gameplay_version = base.gameplay_version;
+                        manifest.registry_id = base.registry_id;
+                    }
+                    manifest.save_format.playerdata_layout = layout;
+                    let original_manifest = serde_json::to_vec(&manifest).unwrap();
+                    fs::write(world.join(profile::MANIFEST_NAME), &original_manifest).unwrap();
+                    let mut expected = sample();
+                    expected.game_mode = mode;
+                    expected.abilities = Abilities::for_mode(mode);
+                    expected.inventory.set(36, Some(crate::inventory::Stack::new(1, 17)));
+                    expected.inventory.set_cursor(Some(crate::inventory::Stack::new(1, 7)));
+                    expected.vitals.experience_total = 42;
+                    let uuid = [123; 16];
+                    let path = path_for(&directory, &uuid);
+                    let mut legacy = encode_inner(&expected, catalog).unwrap();
+                    // Раскладки10/11 отличаются от12 отсутствием способностей.
+                    legacy.truncate(legacy.len() - ABILITIES_SIZE);
+                    legacy[4..8].copy_from_slice(&layout.to_be_bytes());
+                    fs::write(&path, &legacy).unwrap();
+                    let guard = startup::prepare_for_version(&world, version).unwrap();
+                    let updated = profile::read_manifest(&world).unwrap().unwrap();
+                    assert_eq!(updated.save_format.playerdata_layout, FORMAT_VERSION);
+                    assert_eq!(updated.gameplay_version, manifest.gameplay_version);
+                    assert_eq!(updated.registry_id, manifest.registry_id);
+                    assert_ne!(updated.snapshot_id, manifest.snapshot_id);
+                    let snapshot = root.join("backups/world").join(&updated.snapshot_id);
+                    assert_eq!(crate::world::snapshot::verify_backup(&snapshot).unwrap().snapshot_id(), updated.snapshot_id);
+                    let backup = snapshot.join("world");
+                    assert_eq!(fs::read(backup.join(profile::MANIFEST_NAME)).unwrap(), original_manifest);
+                    assert_eq!(fs::read(backup.join("playerdata").join(path.file_name().unwrap())).unwrap(), legacy);
+                    assert_eq!(fs::read(&path).unwrap(), legacy);
+                    let loaded = load_checked_for_catalog(&directory, &uuid, catalog).unwrap().unwrap();
+                    assert_eq!(loaded, expected);
+                    save_for_catalog(&directory, &uuid, &loaded, catalog).unwrap();
+                    assert_eq!(load_checked_for_catalog(&directory, &uuid, catalog).unwrap(), Some(expected));
+                    assert_eq!(&fs::read(&path).unwrap()[8..legacy.len()], &legacy[8..]);
+                    drop(guard);
+                    drop(startup::prepare_for_version(&world, version).unwrap());
+                    assert_eq!(fs::read_dir(root.join("backups/world")).unwrap().count(), 1);
+                    fs::remove_dir_all(root).unwrap();
+                }
+            }
+        }
+    }
+
     #[test]
     fn corrupt_or_truncated_abilities_are_rejected() {
         let bytes = encode(&sample()).unwrap();

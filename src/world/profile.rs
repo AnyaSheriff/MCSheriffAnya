@@ -284,6 +284,20 @@ pub fn current_profile() -> ProfileDescriptor {
     }
 }
 
+/// Доверенный профиль для обновления раскладки без смены игрового содержимого.
+pub(crate) fn storage_profile(version: &str) -> Result<ProfileDescriptor, Error> {
+    match version {
+        "26.1.2" => Ok(current_profile()),
+        "26.3" => Ok(ProfileDescriptor {
+            gameplay_version: version.into(), release_order: 2,
+            save_format: current_profile().save_format,
+            registry_id: crate::gameplay_catalog::Catalog::for_version(mcsa_protocol::JavaVersion::V26_3)
+                .registry_id().into_owned(),
+        }),
+        _ => Err(Error::UnsupportedProfile(version.into())),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StartupCheck {
     /// Разрешён прежний путь запуска, но источник всё ещё не установлен.

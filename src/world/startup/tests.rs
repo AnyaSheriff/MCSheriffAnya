@@ -440,3 +440,32 @@ fn old_unidentified_receipts_upgrade_after_backup_without_assigning_gameplay() {
         assert_eq!(fs::read_dir(fixture.0.join("backups/world")).unwrap().count(), 1);
     }
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn preview_storage_upgrade_refuses_bad_identity_and_failed_backup_without_relabeling() {
+    use std::os::unix::fs::symlink;
+    let fixture = Fixture::new();
+    let (world, _) = old_storage_world(&fixture);
+    let original = include_bytes!("../../../testdata/world-profile/26.3-playerdata11.json");
+    let manifest = profile::decode(original).unwrap();
+    for bad in [
+        profile::Manifest { registry_id: "different-registry".into(), ..manifest.clone() },
+        profile::Manifest { save_format: profile::SaveFormat { region_layout: 2, playerdata_layout: 11 }, ..manifest.clone() },
+    ] {
+        let bytes = serde_json::to_vec(&bad).unwrap();
+        fs::write(world.join(profile::MANIFEST_NAME), &bytes).unwrap();
+        assert!(prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_3).is_err());
+        assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), bytes);
+        assert!(!fixture.0.join("backups").exists());
+    }
+    fs::write(world.join(profile::MANIFEST_NAME), original).unwrap();
+    let outside = fixture.0.join("outside");
+    fs::write(&outside, b"preserve-outside").unwrap();
+    symlink(&outside, world.join("unsupported-link")).unwrap();
+    assert!(prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_3).is_err());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), original);
+    assert_eq!(fs::read(world.join("playerdata/fixture.dat")).unwrap(), b"old-player-bytes-preserved");
+    assert_eq!(fs::read(outside).unwrap(), b"preserve-outside");
+    assert!(!fixture.0.join("backups").exists());
+}

@@ -257,7 +257,7 @@ fn tree_fingerprint(root:&File,held_memory:usize)->io::Result<String> {
 
 struct LockedWorld<'a> { guard: &'a StartupGuard, parent: File, root: File, name: Vec<u8>, locks: Vec<(Vec<u8>, Option<File>)> }
 impl<'a> LockedWorld<'a> {
-    fn acquire(guard: &'a StartupGuard) -> io::Result<Self> {
+    fn acquire(guard: &'a StartupGuard, create_missing_locks: bool) -> io::Result<Self> {
         if !guard.has_exclusive_lock() { return Err(invalid("исключительный StartupGuard обязателен")); }
         let world = guard.world_path();
         let name = world.file_name().ok_or_else(|| invalid("нет имени мира"))?.as_bytes().to_vec();
@@ -276,7 +276,20 @@ impl<'a> LockedWorld<'a> {
                     Err(e) => return Err(e),
                 }
             }
-            let lock = regular(&root, path).map_err(|e| io::Error::new(e.kind(), format!("нужен существующий session.lock {}: {e}", OsStr::from_bytes(path).to_string_lossy())))?;
+            let lock = match regular(&root, path) {
+                Ok(lock) => lock,
+                Err(error) if create_missing_locks && error.kind() == io::ErrorKind::NotFound => {
+                    // Копия остановленного мира может не содержать session.lock.
+                    // Создаём без подмены существующего inode и без записи PID;
+                    // старое ядро также обязано взять этот flock перед писателями.
+                    let lock = new_file(&root, path)?;
+                    lock.sync_all()?;
+                    if let Some(parent) = dir { directory(&root, parent)?.sync_all()?; }
+                    else { root.sync_all()?; }
+                    lock
+                }
+                Err(error) => return Err(io::Error::new(error.kind(), format!("нужен существующий session.lock {}: {error}", OsStr::from_bytes(path).to_string_lossy()))),
+            };
             metadata_supported(&lock, path)?;
             // SAFETY: lock держится до конца LockedWorld; без create/truncate/PID write.
             if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 { return Err(io::Error::last_os_error()); }
@@ -530,7 +543,9 @@ fn create_with_completion(
     let mut published = false;
     let mut parent_synced = false;
     let attempt = (|| -> io::Result<VerifiedBackup> {
-        let source = LockedWorld::acquire(guard)?;
+        let create_missing_locks = expected.is_some()
+            && matches!(guard.check, super::super::profile::StartupCheck::StorageUpgradePending { .. });
+        let source = LockedWorld::acquire(guard, create_missing_locks)?;
         hook(Point::LocksAcquired)?;
         source.check_anchor()?;
         if let Some(expected) = expected { checked_manifest(&source, expected)?; }
@@ -675,7 +690,8 @@ mod tests;
 // внешнем и всех существующих session.lock; прежние байты уже проверены.
 pub(super) fn create_storage_upgrade(guard: &StartupGuard, expected: &super::super::profile::Manifest) -> Result<VerifiedBackup, BackupError> {
     use super::super::profile;
-    let target = profile::current_profile();
+    let target = profile::storage_profile(&expected.gameplay_version)
+        .map_err(|error| BackupError { retained: None, publication_uncertain: false, cause: invalid(error.to_string()) })?;
     let plan = profile::plan_transition(Some(expected), &target.gameplay_version, std::slice::from_ref(&target))
         .map_err(|error| BackupError { retained: None, publication_uncertain: false, cause: invalid(error.to_string()) })?;
     if plan.kind != profile::TransitionKind::StorageUpgrade
@@ -699,7 +715,7 @@ fn checked_manifest(source: &LockedWorld<'_>, expected: &super::super::profile::
 fn publish_storage_manifest(source: &LockedWorld<'_>, expected: &super::super::profile::Manifest,
     backup: &VerifiedBackup, uncertain: &mut bool) -> io::Result<()> {
     use super::super::profile;
-    let target = profile::current_profile();
+    let target = profile::storage_profile(&expected.gameplay_version).map_err(|error| invalid(error.to_string()))?;
     let plan = profile::plan_transition(Some(expected), &target.gameplay_version, std::slice::from_ref(&target))
         .map_err(|error| invalid(error.to_string()))?;
     if plan.kind != profile::TransitionKind::StorageUpgrade { return Err(invalid("требуется точный переход playerdata10/11→12")); }
