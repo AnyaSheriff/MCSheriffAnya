@@ -910,8 +910,11 @@ fn team_command(words: &[&str], source: &Source, shared: &Shared) -> Result<Out,
             let targets = holders(who, source, shared, true)?;
             let mut board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
             let keys: Vec<String> = targets.iter().map(|holder| holder.key.clone()).collect();
-            // Оригинал не отказывает, если игрок и так вне команд [проверить].
-            board.leave_team(&keys);
+            let removed = board.leave_team(&keys);
+            // team-basic777: повторный leave сообщает multiple/0.
+            if shared.catalog().changed_rules() && removed == 0 {
+                return Ok(Out::ok("commands.team.leave.success.multiple", vec![number(0)], 0));
+            }
             let count = targets.len() as i32;
             Ok(match targets.as_slice() {
                 [one] => Out::ok("commands.team.leave.success.single", vec![holder_text(&board, one)], count),
@@ -1058,6 +1061,10 @@ fn tag_command(words: &[&str], source: &Source, shared: &Shared) -> Result<Out, 
                 }
             }
             let count = all.len() as i32;
+            // tag-selectors777: пустой список даже одного игрока — multiple/0.
+            if count == 0 && shared.catalog().changed_rules() {
+                return Ok(Out::ok("commands.tag.list.multiple.empty", vec![number(0)], 0));
+            }
             let list = joined(in_java_order(&all).iter().map(|tag| green(tag)).collect());
             Ok(match (targets.len(), all.is_empty()) {
                 (1, true) => Out::ok("commands.tag.list.single.empty", vec![one(&board)], 0),

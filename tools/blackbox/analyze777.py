@@ -27,6 +27,15 @@ class Decoder:
             # углами; pinned JSON оставил порядок775.
             op,fields=self.types['packet_entity_look']
             self.types['packet_entity_look']=[op,[fields[0],fields[3],fields[1],fields[2]]]
+            # team-basic777: три компонента, два enum, optional color, flags.
+            # Порядок и отсутствие цвета сняты с обычных /team add/modify.
+            import copy
+            team=copy.deepcopy(self.types['packet_teams'])
+            for mode,fields in team[1][2]['type'][1]['fields'].items():
+                by_name={field['name']:field for field in fields[1]}
+                by_name['formatting']['type']=['option','varint']
+                fields[1]=[by_name[name] for name in ('name','prefix','suffix','nameTagVisibility','collisionRule','formatting','flags')]
+            self.types['packet_teams']=team
             op,fields=self.types['packet_explosion']
             if fields[-1]['name']=='blockParticles':
                 self.types['packet_explosion']=[op,fields+[{'name':'playSound','type':'bool'}]]
@@ -54,7 +63,10 @@ class Decoder:
             if kind in ('anonymousNbt','nbt','anonOptionalNbt'):return nbt(data)
             if kind=='position':return self.read(data,self.types[kind],parent)
             if kind not in self.types or self.types[kind]=='native':raise ValueError('unimplemented '+kind)
-            return self.read(data,self.types[kind],parent)
+            result=self.read(data,self.types[kind],parent)
+            if kind=='packet_teams' and 'entityDelta' in self.protocol['types'] and 'formatting' in result and result['formatting'] is None:
+                result['formatting']=21
+            return result
         op,arg=kind
         if op=='bitfield':
             total=sum(f['size'] for f in arg);value=int.from_bytes(data.read((total+7)//8),'big');out={}

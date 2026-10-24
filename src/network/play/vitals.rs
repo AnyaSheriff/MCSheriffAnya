@@ -301,6 +301,8 @@ pub(super) struct Net {
     /// Среда игрока по последнему такту: лава, вода.
     pub(super) in_lava: bool,
     pub in_water: bool,
+    /// Drowning777: первое погружение создаёт синхронизируемый oxygen_bonus.
+    oxygen_seen: bool,
     /// Ключ имени того, кто нанёс последний удар (моб, стрела, крипер):
     /// для сообщения о смерти; пусто — никто.
     pub killer: &'static str,
@@ -398,6 +400,7 @@ impl Net {
             teleported: false,
             in_lava: false,
             in_water: false,
+            oxygen_seen: false,
             killer: "",
             hurt_from: None,
             command_origin: None,
@@ -2711,6 +2714,13 @@ pub(super) async fn struck(stream: &mut Outgoing<'_>, shared: &Shared, player: &
     Ok(())
 }
 
+fn observe_oxygen(shared: &Shared, player: &mut PlayerState, submerged: bool) {
+    if submerged && !player.net.oxygen_seen && shared.catalog().changed_rules() {
+        player.net.oxygen_seen = true;
+        player.attrs_touched.push((ATTRIBUTE_OXYGEN, *shared.ticks.borrow() + 1));
+    }
+}
+
 async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     let entity = player.entity_id;
     let at = (player.x, player.y, player.z);
@@ -2846,6 +2856,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         give_effect(stream, player, effect).await?;
     }
 
+    observe_oxygen(shared, player, env.eyes_in_water && !env.in_bubbles);
     let oxygen = player.attrs.value(crate::attributes::OXYGEN_BONUS);
     let oxygen_roll = if env.eyes_in_water && !env.in_bubbles && oxygen > 0.0 { world_random(shared, player.dimension) } else { 0.0 };
     if !player.vit.dead && player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, oxygen_roll) {
@@ -3873,6 +3884,7 @@ pub(super) fn bedrock_environment(shared: &Shared, player: &mut PlayerState) -> 
     if env.in_lava { ignite(player, survival::LAVA_FIRE_TICKS); player.vit.fall *= 0.5; hits.push((4.0, Source::Lava)); }
     if let Some(amount) = crate::commands_world::border_of(shared, player.dimension).damage_at(player.x, player.z) { hits.push((amount, Source::OutsideBorder)); }
     if let Some(effect) = turtle_shell_effect(player, env.eyes_in_water) { player.vit.give_effect_shown(effect); }
+    observe_oxygen(shared, player, env.eyes_in_water && !env.in_bubbles);
     let oxygen = player.attrs.value(crate::attributes::OXYGEN_BONUS);
     let roll = if oxygen > 0.0 && env.eyes_in_water && !env.in_bubbles { world_random(shared, player.dimension) } else { 0.0 };
     if player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, roll) { hits.push((2.0, Source::Drown)); }

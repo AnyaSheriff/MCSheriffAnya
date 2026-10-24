@@ -219,6 +219,17 @@ def expand(text, origin):
                   lambda m:' '.join(format(float(m[i+1])+origin[i], '.10g') for i in range(3)), text)
 
 
+def protocol_rotation(yaw, pitch):
+    # bot.js хранит радианы mineflayer; в Position/Use Item идут градусы.
+    return [(math.pi-yaw)*180/math.pi, -pitch*180/math.pi]
+
+
+def aim_at(client, pos):
+    # Обычная стоячая поза; [проверить] высоту глаз при sneaking/swimming.
+    dx=pos[0]-client.position[0];dy=pos[1]-client.position[1]-1.62;dz=pos[2]-client.position[2]
+    client.position[3:]=[math.degrees(math.atan2(-dx,dz)), -math.degrees(math.atan2(dy,math.hypot(dx,dz)))]
+
+
 def special(text, clients):
     parts = text.split(); op = parts[0]
     if op == '!wait':
@@ -230,7 +241,7 @@ def special(text, clients):
     elif op in ('!stopfly','!startfly'):
         c.flying = op == '!startfly'; c.send('abilities', bytes([2 if c.flying else 0]))
     elif op in ('!look','!look2'):
-        c.position[3:] = list(map(float,parts[1:]))
+        c.position[3:] = protocol_rotation(*map(float,parts[1:]))
     elif op == '!respawn':
         c.send('client_command', b'\0')
     else:
@@ -283,6 +294,14 @@ def validate(scenario):
     for c in scenario.get('setup', []) + scenario.get('cleanup', []):
         if c.startswith('!') and c.split()[0] not in ('!wait','!hotbar','!hotbar2','!look','!look2','!stopfly','!startfly','!respawn'):
             raise ValueError('unsupported setup '+c)
+
+
+def dig_status(status, version):
+    # Сценарии bot.js используют enum775; actual777-dig + wire::digging:
+    # Cancel1→2, Finish2→3, остальные подтверждённые действия тоже сдвинуты.
+    if not 0 <= status <= 7:
+        raise ValueError('unsupported digging action '+str(status))
+    return status + int(version == 777 and status > 0)
 
 
 def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False):
@@ -353,6 +372,15 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             sound_output.write_text(json.dumps({'sounds':sounds,'unobserved':unobserved,'slots':evidence,'method':'ordinary stone consumable.sound; captured Slot bytes'},indent=2)+'\n')
         command('gamerule spawn_mobs false'); command('gamerule natural_health_regeneration false')
         command('difficulty peaceful'); command('kill @e[type=!player]')
+        # Те же сбросы, что перед setup исходного bot.js. Измерение, опыт,
+        # ячейка и остановленное время переживают предыдущий сценарий.
+        for name, client in zip(usernames, clients):
+            command(f'gamemode creative {name}')
+            command(f'execute in minecraft:overworld run tp {name} $(3.5,1,3.5)')
+            command(f'experience set {name} 0 levels')
+            command(f'experience set {name} 0 points')
+            client.send('held_item_slot',struct.pack('>h',0))
+        command('gamerule advance_time true')
         if isolate_vitals:
             # Начальные здоровье/еда обоих игроков одинаковы: длительность
             # RCON и консоли между сценариями иначе меняет мирное лечение.
@@ -396,6 +424,12 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         for c in clients:
             c.flying=False
         time.sleep(6)
+        # Исходный bot.js заранее смотрит в центр первой цели. Без этого
+        # размещение зависело от поворота, оставшегося после возрождения.
+        first_click=next((a for a in s['actions'] if 'click' in a and a.get('bot')!=2),None)
+        if first_click:
+            aim_at(clients[0],[origin[i]+first_click['click'][i]+.5 for i in range(3)])
+            time.sleep(.5)
         for c in clients:
             if c.failure: raise RuntimeError(c.failure)
             deadline=time.monotonic()+10
@@ -490,17 +524,21 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
             if 'control' in action:
                 key,value=action['control'];c.controls[key]=value
                 if key=='sprint':c.send('entity_action',varint(c.entity)+varint(1 if value else 2)+b'\0')
-            if 'look' in action:c.position[3:]=action['look']
+            if 'look' in action:c.position[3:]=protocol_rotation(*action['look'])
             if action.get('use'):
                 c.sequence+=1;c.send('use_item',varint(action.get('hand',0))+varint(c.sequence)+struct.pack('>ff',*c.position[3:]))
             if action.get('release'):c.send('block_dig',bytes([6 if version==777 else 5])+bytes(8)+b'\0\0')
             if 'fly' in action:c.flying=action['fly'];c.send('abilities',bytes([2 if c.flying else 0]))
             if action.get('respawn'):c.send('client_command',b'\0')
             if 'set' in action:
-                b=action['set'];command('setblock $('+','.join(map(str,b['at']))+') '+b['state'])
+                b=action['set'];command('setblock $('+','.join(map(str,b['at']))+') '+b['state'], delay=False)
             if 'click' in action:
                 pos=[int(origin[i]+action['click'][i]) for i in range(3)];c.sequence+=1
+                if action.get('bot')!=2:
+                    aim_at(c,[v+.5 for v in pos])
+                    c.send('look',struct.pack('>ffB',*c.position[3:],int(c.position[1]<=c.floor+1e-7)))
                 c.send('block_place',b'\0'+pack_position(pos)+varint(action.get('face',1))+struct.pack('>fff',*action.get('cursor',[.5,.5,.5]))+b'\0\0'+varint(c.sequence))
+                c.send('arm_animation',b'\0')
             if action.get('close'):
                 window=0 if action.get('inventory') else c.window
                 if window is None:raise ValueError('close without open window')
@@ -512,7 +550,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                 c.send('window_click',window_click_payload(window,c.state_id,w))
             if 'dig' in action:
                 pos=[int(origin[i]+action['dig'][i]) for i in range(3)];c.sequence+=1
-                c.send('block_dig',varint(action.get('status',0))+pack_position(pos)+bytes([action.get('face',1)])+varint(c.sequence))
+                c.send('block_dig',varint(dig_status(action.get('status',0),version))+pack_position(pos)+bytes([action.get('face',1)])+varint(c.sequence))
         time.sleep(max(0,start+(s['record_ticks']+13)*.05-time.monotonic()))
         for c in clients:c.recording=False;c.external_ticks=False
         result={'scenario':s['name'],'protocol':version,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}

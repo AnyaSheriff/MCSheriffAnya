@@ -126,13 +126,23 @@ pub(crate) fn translate_inner(
     match (state, direction, name) {
         (State::Play, Direction::Clientbound, "animation") if context.items.content.is_preview()
             && from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 => {
-            uint(&mut out, cursor.uint()?);
+            let entity = cursor.uint()?;
             let kind = cursor.take(1)?[0];
             // Официальный777: cow-crit и cow-crit-fist, крит на +13 имеет
             // animation=1; pvp-sharpness имеет2 вместо внутреннего5.
             // Внутренний775 и прежний основной профиль сохраняют прежний enum.
-            // [проверить] Остальные изменённые значения enum отдельными сценариями.
-            out.push(match kind { 4 => 1, 5 => 2, other => other });
+            // bed-leave/bed-sleep-day777: взмах теперь отдельным пакетом
+            // Swing Animation (ID из pinned JSON), пробуждение — animation0.
+            // [проверить] Длительность взмаха при haste/mining_fatigue и вторая рука.
+            if kind == 0 {
+                out.clear();
+                uint(&mut out, 0x7b);
+                uint(&mut out, entity);
+                out.extend_from_slice(&[0, 1, 6]);
+            } else {
+                uint(&mut out, entity);
+                out.push(match kind { 2 => 0, 4 => 1, 5 => 2, other => other });
+            }
         }
         (State::Play, Direction::Clientbound, "start_configuration") |
         (State::Play, Direction::Serverbound, "configuration_acknowledged") => {},
@@ -273,6 +283,10 @@ pub(crate) fn translate_inner(
         }
         (State::Play, Direction::Clientbound, "sound_effect" | "entity_sound_effect" | "explosion" | "world_event" | "entity_effect" | "remove_entity_effect" | "damage_event") => {
             crate::actions::effects(name,&mut cursor,&mut out,from,to,context)?;
+        }
+        (State::Play, Direction::Clientbound, "teams") if matches!((from,to),
+            (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => {
+            crate::actions::teams(&mut cursor,&mut out,from)?;
         }
         (State::Play, Direction::Clientbound, "declare_recipes" | "recipe_book_add" | "craft_recipe_response" | "advancements") => {
             crate::recipes::translate(name, &mut cursor, &mut out, from, to, context)?;
@@ -1239,6 +1253,35 @@ mod combat_777_tests {
 #[cfg(test)]
 mod combat_777_enchanted_animation_tests {
     use super::*;
+
+    #[test]
+    fn observed_bed_swings_and_wake_use_separate_777_packets() {
+        let context = Context {
+            items: crate::items::Context {
+                content: crate::content::ContentCodec::white_slab_preview(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        // Сырые bed-leave777: entity1, swing 01000106 и wake 0100.
+        for (legacy, observed) in [
+            (&[0x02, 1, 0][..], &[0x7b, 1, 0, 1, 6][..]),
+            (&[0x02, 1, 2][..], &[0x02, 1, 0][..]),
+        ] {
+            assert_eq!(translate_with_context(State::Play, Direction::Clientbound,
+                JavaVersion::V26_1_2, JavaVersion::V26_3, legacy, context).unwrap().as_ref(), observed);
+            for client in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+                assert_eq!(translate(State::Play, Direction::Clientbound,
+                    JavaVersion::V26_1_2, client, legacy).unwrap().as_ref(), legacy);
+            }
+            assert!(translate_with_context(State::Play, Direction::Clientbound,
+                JavaVersion::V26_1_2, JavaVersion::V26_3, &legacy[..2], context).is_err());
+            let mut extra = legacy.to_vec();
+            extra.push(0);
+            assert!(translate_with_context(State::Play, Direction::Clientbound,
+                JavaVersion::V26_1_2, JavaVersion::V26_3, &extra, context).is_err());
+        }
+    }
 
     #[test]
     fn observed_sharpness_animation_uses_two_only_for_the_263_primary() {

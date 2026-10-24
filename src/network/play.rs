@@ -5620,7 +5620,18 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         }
 
         if announce && !def.is_root() {
-            let component = crate::advancements::announcement(&player.name, def);
+            let mut component = crate::advancements::announcement(&player.name, def);
+            if shared.catalog().changed_rules() {
+                // Bed-leave777: имя в объявлении — компонент игрока, включая
+                // suggest_command/show_entity; прежний основной сохраняет строку.
+                let words: Vec<i32> = player.uuid.as_chunks::<4>().0.iter()
+                    .map(|part| i32::from_be_bytes(*part)).collect();
+                component["with"][0] = serde_json::json!({
+                    "click_event": {"action": "suggest_command", "command": format!("/tell {} ", player.name)},
+                    "insertion": player.name, "text": player.name,
+                    "hover_event": {"name": player.name, "action": "show_entity", "id": "minecraft:player", "uuid": words}
+                });
+            }
             let line = format!("{} has made the {} [{}]", player.name, match def.frame {
                 1 => "challenge",
                 2 => "goal",

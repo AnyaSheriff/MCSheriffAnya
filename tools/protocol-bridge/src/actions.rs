@@ -2,6 +2,48 @@
 use std::collections::BTreeSet;
 use crate::{JavaVersion,ids::{self,RegistryKind},wire::{Cursor,Error,Context,uint}};
 fn string(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{let value=input.string()?;uint(out,value.len() as u32);out.extend(value.as_bytes());Ok(())}
+
+pub(crate) fn teams(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion) -> Result<(), Error> {
+    string(input,out)?;
+    let mode=input.take(1)?[0];
+    if mode>4 {return Err(Error::Invalid);}
+    out.push(mode);
+    if matches!(mode,0|2) {
+        let text=|input: &mut Cursor<'_>| -> Result<Vec<u8>,Error> {
+            let n=crate::registry::nbt_length(input.rest).map_err(|_|Error::Invalid)?;
+            Ok(input.take(n)?.to_vec())
+        };
+        let name=text(input)?;
+        // team-basic777: name/prefix/suffix, visibility/collision,
+        // optional color, flags. Pinned JSON ошибочно оставил порядок775.
+        let (prefix,suffix,visibility,collision,color,flags)=if from==JavaVersion::V26_3 {
+            let prefix=text(input)?;let suffix=text(input)?;
+            let visibility=input.count(3)?;let collision=input.count(3)?;
+            let color=if input.boolean()? {input.count(15)? as u32}else{21};
+            (prefix,suffix,visibility,collision,color,input.take(1)?[0])
+        } else {
+            let flags=input.take(1)?[0];let visibility=input.count(3)?;let collision=input.count(3)?;
+            let color=input.count(21)? as u32;
+            if color>15 && color!=21 {return Err(Error::Invalid);}
+            (text(input)?,text(input)?,visibility,collision,color,flags)
+        };
+        if flags&!3!=0 {return Err(Error::Invalid);}
+        out.extend(name);
+        if from==JavaVersion::V26_3 {
+            out.push(flags);uint(out,visibility as u32);uint(out,collision as u32);uint(out,color);
+            out.extend(prefix);out.extend(suffix);
+        } else {
+            out.extend(prefix);out.extend(suffix);uint(out,visibility as u32);uint(out,collision as u32);
+            out.push(u8::from(color!=21));if color!=21 {uint(out,color);}
+            out.push(flags);
+        }
+    }
+    if matches!(mode,0|3|4) {
+        let count=input.count(65536)?;uint(out,count as u32);
+        for _ in 0..count {string(input,out)?;}
+    }
+    Ok(())
+}
 // Равенство графов775/776 проверяет dispatcher; здесь границы и семантика полей.
 // ID эффектов относятся к общему динамическому реестру этого соединения.
 pub(crate) fn gui(name: &str, input: &mut Cursor<'_>, out: &mut Vec<u8>) -> Result<(), Error> {
@@ -151,7 +193,7 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // Обычные звуковые события777 (wide777 + автокрафтер):
                 // data0 не является ссылкой на реестр.
                 // Другие данные/версии этим наблюдением не разрешаются.
-                1000|1011|1035|1038|1043|1044|1049|1050|1053 if data == 0 && matches!((from,to),
+                1000|1011|1035|1038|1043|1044|1049|1050|1053|1054 if data == 0 && matches!((from,to),
                     (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
                 // Jukebox использует общий префикс согласованного реестра
                 // песен, не item ID; новая bounce добавлена в его конец.
@@ -170,6 +212,22 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
 mod tests {
     use super::*;
     use JavaVersion::{V26_1_2 as OLD,V26_3 as NEW};
+    #[test]
+    fn observed_777_teams_reorder_components_and_use_optional_color() {
+        let evidence: serde_json::Value=serde_json::from_str(include_str!("../testdata/team-layout-777.json")).unwrap();
+        let bytes=|hex: &str| (0..hex.len()).step_by(2).map(|i|u8::from_str_radix(&hex[i..i+2],16).unwrap()).collect::<Vec<_>>();
+        for row in evidence["cases"].as_array().unwrap() {
+            let old=bytes(row["legacy"].as_str().unwrap());let modern=bytes(row["modern"].as_str().unwrap());
+            for (from,input,want) in [(OLD,&old,&modern),(NEW,&modern,&old)] {
+                let mut cursor=Cursor::new(input);let mut output=Vec::new();
+                teams(&mut cursor,&mut output,from).unwrap();
+                assert!(cursor.rest.is_empty());assert_eq!(&output,want);
+                for end in 0..input.len() {
+                    assert!(teams(&mut Cursor::new(&input[..end]),&mut Vec::new(),from).is_err());
+                }
+            }
+        }
+    }
     #[test]
     fn nineteen_official_block_menus_match_in_both_directions() {
         let data:serde_json::Value=serde_json::from_str(include_str!("../testdata/menu-observations.json")).unwrap();

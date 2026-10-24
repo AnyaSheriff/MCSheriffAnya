@@ -571,6 +571,20 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
             push_i32(&mut body, data);
             body.push(0);
             write_body(stream, body).await?;
+
+            // Splash/lingering777: после частиц2002/2007 идёт отдельный
+            // Level Event1053/0, у мгновенного зелья1054/0, до удаления.
+            // Старые клиенты играют звук по прежнему событию частиц.
+            if matches!(effect, 2002 | 2007) && shared.catalog().changed_rules()
+                && stream.client_version() == mcsa_protocol::JavaVersion::V26_3
+            {
+                let mut sound = encode_varint(WORLD_EVENT);
+                push_i32(&mut sound, if effect == 2007 { 1054 } else { 1053 });
+                push_packed_position(&mut sound, x, y, z);
+                push_i32(&mut sound, 0);
+                sound.push(0);
+                write_body(stream, sound).await?;
+            }
         }
 
         if player.seen_thrown.remove(&impact.flying).is_some() {

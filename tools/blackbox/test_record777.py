@@ -7,11 +7,29 @@ import subprocess
 import tempfile
 import unittest
 from analyze777 import Decoder, project_record
-from record777 import make_recorder, validate, window_click_payload, pack_interact_location, velocity
+from record777 import aim_at, dig_status, make_recorder, protocol_rotation, validate, window_click_payload, pack_interact_location, velocity
 from smoke import read_varint
 
 
 class HarnessTests(unittest.TestCase):
+    def test_bot_radians_and_block_aim_use_protocol_degrees(self):
+        import math
+        self.assertEqual(protocol_rotation(0,0),[180.,0.])
+        self.assertEqual(protocol_rotation(math.pi,-math.pi/2),[0.,90.])
+        class Actor:
+            position=[3.5,0.,3.5,180.,0.]
+        actor=Actor()
+        aim_at(actor,[3.5,1.62,4.5])
+        self.assertEqual(actor.position[3:],[0.,0.])
+        aim_at(actor,[3.5,.62,3.5])
+        self.assertEqual(actor.position[3:],[0.,90.])
+
+    def test_scenario_dig_actions_use_the_observed_wire_enum(self):
+        self.assertEqual([dig_status(n,775) for n in range(8)],list(range(8)))
+        self.assertEqual([dig_status(n,777) for n in range(8)],[0,2,3,4,5,6,7,8])
+        for n in (-1,8):
+            with self.assertRaises(ValueError):dig_status(n,777)
+
     def test_projection_keeps_the_original_bots_ten_tick_tail(self):
         with tempfile.TemporaryDirectory() as folder:
             data=Path(folder)

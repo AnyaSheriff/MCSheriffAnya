@@ -382,6 +382,8 @@ impl<'a> Outgoing<'a> {
         self.send_with_context(body, wire::Context { chunk: Some(context), ..wire::Context::default() }).await
     }
 
+    pub(super) fn client_version(&self) -> JavaVersion { self.version }
+
     pub fn legacy_view(&self) -> io::Result<Option<(mcsa_protocol::legacy_chunk::HeightWindow, bool)>> {
         self.legacy.as_ref().map(|legacy| {
             let legacy = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?;

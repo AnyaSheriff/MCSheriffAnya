@@ -42,6 +42,12 @@
       "data": 0,
       "payload_hex": "0000040e00001b0000068fc50000000001",
       "scenario": "end-portal"
+    },
+    {
+      "effect_id": 1054,
+      "data": 0,
+      "payload_hex": "0000041e000019c000067fc70000000000",
+      "scenario": "splash-potion-heal; authorized ordinary777 observation 2026-10-24"
     }
   ]
 }
