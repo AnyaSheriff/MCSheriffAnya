@@ -166,15 +166,16 @@ fn pour_mud(world: &mut World, p: Pos, held: Stack) -> Option<Used> {
     Some(Used { swap: blocks::item_named("glass_bottle"), ..Used::default() })
 }
 
-pub(super) fn use_block(player: &mut PlayerState, shared: &Shared, p: Pos, face: i32, cursor_y: f32, sequence: i32) -> Option<Reaction> {
-    let held = player.inventory.held();
+#[allow(clippy::too_many_arguments)]
+pub(super) fn use_block(player: &mut PlayerState, shared: &Shared, p: Pos, face: i32, cursor_y: f32, sequence: i32, interaction:u32) -> Option<Reaction> {
+    let held = if interaction & 2 == 0 {player.inventory.held()} else {None};
     let held_name = held.and_then(|s| blocks::item_name(s.item));
     let creative = player.game_mode == GAME_MODE_CREATIVE;
     let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
     world.actor = Some(player.entity_id);
     let used = held.and_then(|stack| pour_mud(&mut world, p, stack))
         .or_else(|| (held_name == Some("shears")).then(|| carve_pumpkin(&mut world, p, face, player.yaw)).flatten())
-        .or_else(|| interact(&mut world, p, held_name, creative || player.vit.hungry(), player.sneaking, cursor_y, face));
+        .or_else(|| interact(&mut world, p, held_name, creative || player.vit.hungry(), player.sneaking && interaction & 4 == 0, cursor_y, face));
     world.actor = None;
     let used = used?;
     let beyond = offset_towards(p.0, p.1, p.2, face);
@@ -255,10 +256,32 @@ mod tests {
             player.game_mode = if creative { GAME_MODE_CREATIVE } else { GAME_MODE_SURVIVAL };
             player.inventory.set(inventory::FIRST_HOTBAR, Some(water));
             put(&mut shared.world_in(player.dimension).lock().unwrap(), "dirt");
-            let reaction = use_block(&mut player, &shared, (0, 10, 0), 1, 0.5, 1).unwrap();
+            let reaction = use_block(&mut player, &shared, (0, 10, 0), 1, 0.5, 1, 0).unwrap();
             assert_eq!(player.inventory.held(), Some(if creative { water } else { stack("glass_bottle").unwrap() }));
             assert_eq!(reaction.slots.is_empty(), creative);
         }
+    }
+
+    #[test]
+    fn independent_interaction_results_control_native_lever_and_block_placement() {
+        for decision in 0..4 {
+            let shared=Shared::new(World::in_memory(),World::in_memory(),Default::default(),Default::default(),Default::default(),crate::ops::Ops::open(std::path::Path::new("tmp/block3-ops.json")),crate::skins::Settings::default());
+            let mut player=PlayerState::new([33;16],"IndependentUse".into(),None,None,0x7f,33,(0.5,10.0,2.5));player.game_mode=GAME_MODE_CREATIVE;
+            let stone=Stack::new(blocks::item_named("stone").unwrap(),2);player.inventory.set(inventory::FIRST_HOTBAR,Some(stone));
+            {let mut world=shared.world_in(player.dimension).lock().unwrap();world.set_block_silently(0,9,0,blocks::state_by_name("stone").unwrap());put(&mut world,"lever[face=floor,facing=north,powered=false]");}
+            let mut packet=encode_varint(0);push_packed_position(&mut packet,0,10,0);packet.extend(encode_varint(1));for _ in 0..3 {push_f32(&mut packet,0.5);}packet.push(0);packet.extend(encode_varint(1));
+            assert!(place_with_main_hand(&packet,&mut player,&shared,decision).is_some());
+            let world=shared.world_in(player.dimension).lock().unwrap();assert_eq!(prop(world.get_block(0,10,0),"powered"),Some(if decision&1==0 {"true"}else {"false"}));
+            assert_eq!(blocks::block_at_state(world.get_block(0,11,0)),Some(if decision==1 {"stone"}else {"air"}));assert_eq!(player.inventory.held(),Some(stone));
+        }
+    }
+
+    #[test]
+    fn denied_item_use_keeps_water_bottle_and_native_block_state() {
+        let shared=Shared::new(World::in_memory(),World::in_memory(),Default::default(),Default::default(),Default::default(),crate::ops::Ops::open(std::path::Path::new("tmp/block3-ops.json")),crate::skins::Settings::default());
+        let mut player=PlayerState::new([32;16],"DeniedItem".into(),None,None,0x7f,32,(0.5,10.0,2.5));
+        let water=Stack::new(blocks::item_named("potion").unwrap(),1).with_extras(crate::stackdata::Data {potion:crate::survival::potion_number("water"),..Default::default()});player.inventory.set(inventory::FIRST_HOTBAR,Some(water));put(&mut shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap(),"dirt");
+        assert!(use_block(&mut player,&shared,(0,10,0),1,0.5,1,2).is_none());assert_eq!(player.inventory.held(),Some(water));assert_eq!(blocks::block_at_state(shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap().get_block(0,10,0)),Some("dirt"));
     }
 
     #[test]

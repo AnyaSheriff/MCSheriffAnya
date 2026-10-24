@@ -35,6 +35,10 @@ pub(super) fn packet(payload:&[u8],player:&mut PlayerState,shared:&Shared)->Opti
 pub(super) fn plugin_target(payload: &[u8], player: &PlayerState, shared: &Shared) -> Option<(String,u32,Option<u32>)> {
     let mut cursor=Cursor::new(payload);let (target,hand)=(cursor.varint()?,cursor.varint()?);if !(0..=1).contains(&hand) {return None;}
     let items=shared.items_in(player.dimension).lock().expect("сущности");
+    if let Some(frame)=items.frames().iter().find(|f|f.entity_id==target) {
+        let (x,y,z)=frame.place();if (x-player.x).powi(2)+(y-player.y).powi(2)+(z-player.z).powi(2)>36.0 {return None;}
+        return Some((crate::network::login::format_uuid(&frame.uuid),hand as u32,None));
+    }
     let mob=items.mobs().iter().find(|m|m.entity_id==target&&!m.is_dead())?;
     if (mob.x-player.x).powi(2)+(mob.y-player.y).powi(2)+(mob.z-player.z).powi(2)>36.0 {return None;}
     let uuid=crate::network::login::format_uuid(&mob.uuid);let mut changed=None;

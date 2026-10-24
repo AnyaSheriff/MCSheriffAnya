@@ -439,6 +439,7 @@ impl mcsa::api::player::Host for PluginCtx {
             return Err("здоровье: конечное число от 0 до максимума игрока".into());
         }
         if players.gear(&uuid).view.dead { return Err("игрок уже умер".into()); }
+        if let Some(info)=players.ui.info.get_mut(&uuid) {info.health=health as f32;}
         players.order(&uuid, Order::Health { value: health as f32 });
         Ok(())
     }
@@ -721,6 +722,13 @@ impl mcsa::api::world::Host for PluginCtx {
         let targets: Vec<_> = players.members().iter().filter(|member| member.dimension == dimension).map(|member| member.uuid).collect();
         for uuid in targets { players.order(&uuid, Order::Packet(packet.clone())); }
         Ok(())
+    }
+
+    // Снимок 8³ без генерации: пустая строка означает отсутствующий чанк.
+    fn block_cube(&mut self, start: wit::BlockPos) -> Result<Vec<String>,String> {
+        if start.x.abs_diff(0)>30_000_000 || start.z.abs_diff(0)>30_000_000 || !(-2048..=2040).contains(&start.y) {return Err("Куб блоков вне границ мира".into());}
+        let world=self.shared.world_in(dimension_from_wit(start.dimension)).lock().expect("мир");let mut result=Vec::with_capacity(512);
+        for x in start.x..start.x+8 {for y in start.y..start.y+8 {for z in start.z..start.z+8 {result.push(if world.has_chunk(x.div_euclid(16),z.div_euclid(16)) {block_text(world.get_block(x,y,z))}else {String::new()});}}}Ok(result)
     }
 
     fn get_block(&mut self, pos: wit::BlockPos) -> Option<String> {

@@ -1468,6 +1468,10 @@ pub fn forget_attributes(shared: &Shared, uuid: &[u8; 16]) {
 
 /// Типизированное чтение атрибута плагином с учётом ожидающих правок.
 pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) -> Option<crate::attributes::Attribute> {
+    for dimension in crate::dimension::Dimension::ALL {
+        let items=shared.items_in(dimension).lock().expect("сущности");
+        if let Some(mob)=items.mobs().iter().find(|mob|mob.uuid==*uuid) {return mob.plugin_attribute(attribute);}
+    }
     if !player_has(attribute) || !shared.players.lock().expect("игроки").members().iter().any(|member| member.uuid == *uuid) { return None; }
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты");
     let attributes = known.entry(*uuid).or_default().projected();
@@ -1476,12 +1480,19 @@ pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) 
 
 /// Поручение подключениям; вызывается только после проверки данных WIT.
 pub(crate) fn plugin_attribute_edit(shared: &Shared, uuid: &[u8;16], edit: AttributeEdit) -> Result<(), String> {
+    for dimension in crate::dimension::Dimension::ALL {
+        let mut items=shared.items_in(dimension).lock().expect("сущности");
+        if let Some(mob)=items.mobs_mut().iter_mut().find(|mob|mob.uuid==*uuid) {return mob.edit_plugin_attribute(&edit);}
+    }
     if plugin_attribute(shared,uuid,edited_attribute(&edit)).is_none() { return Err("игрок или атрибут отсутствует".into()); }
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты");
     let snapshot = known.entry(*uuid).or_default();
     if snapshot.pending.len() >= 256 { return Err("слишком много ожидающих правок атрибутов".into()); }
     snapshot.pending.push_back(edit.clone());
-    shared.players.lock().expect("игроки").order(uuid,Order::Attribute(edit));
+    let maximum=(edited_attribute(&edit)==crate::attributes::MAX_HEALTH).then(||snapshot.projected().value(crate::attributes::MAX_HEALTH) as f32);
+    let mut players=shared.players.lock().expect("игроки");
+    if let Some(maximum)=maximum&&let Some(info)=players.ui.info.get_mut(uuid) {info.max_health=maximum;info.health=info.health.min(maximum);}
+    players.order(uuid,Order::Attribute(edit));
     Ok(())
 }
 
@@ -1907,11 +1918,9 @@ fn forceload(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
             if adding && changed > 0 {
                 // Удержанный чанк загружается сразу.
-                let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
                 for chunk_x in low.0..=high.0 {
                     for chunk_z in low.1..=high.1 {
-                        world.ensure(chunk_x, chunk_z);
+                        shared.ensure_chunk(dimension,chunk_x,chunk_z);
                     }
                 }
             }
@@ -2197,10 +2206,9 @@ fn spreadplayers(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
                 continue;
             }
 
-            let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
             let (block_x, block_z) = (px.floor() as i32, pz.floor() as i32);
-
-            world.ensure(block_x.div_euclid(16), block_z.div_euclid(16));
+            shared.ensure_chunk(dimension,block_x.div_euclid(16),block_z.div_euclid(16));
+            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
             let ground = (crate::world::MIN_Y..top).rev().find(|y| crate::blocks::block_at_state(world.get_block(block_x, *y, block_z)).is_some_and(|name| name != "air" && name != "cave_air" && name != "void_air"));
 

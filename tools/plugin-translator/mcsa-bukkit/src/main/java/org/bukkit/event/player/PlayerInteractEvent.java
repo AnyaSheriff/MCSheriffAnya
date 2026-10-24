@@ -8,5 +8,7 @@ public class PlayerInteractEvent extends PlayerEvent implements org.bukkit.event
  public Action getAction(){return action;}public ItemStack getItem(){return item;}public Block getClickedBlock(){return block;}public BlockFace getBlockFace(){return face;}public EquipmentSlot getHand(){return hand;}
  public boolean hasBlock(){return block!=null;}public boolean hasItem(){return item!=null&&!item.getType().isAir();}
  public Result useInteractedBlock(){return useBlock;}public Result useItemInHand(){return useItem;}
+ public void setUseInteractedBlock(Result value){useBlock=java.util.Objects.requireNonNull(value);}
+ public void setUseItemInHand(Result value){useItem=java.util.Objects.requireNonNull(value);}
  public boolean isCancelled(){return useBlock==Result.DENY;}public void setCancelled(boolean value){useBlock=value?Result.DENY:Result.DEFAULT;useItem=useBlock;}
 }

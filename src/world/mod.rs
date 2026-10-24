@@ -3204,27 +3204,19 @@ impl World {
     /// успели загрузить, изменить, записать и снова выгрузить — тогда на
     /// диске уже новее. Такой чанк не кладётся, а читается заново, здесь же.
     /// Так же — если чанк в стороне прочитать не удалось.
+    #[cfg(test)]
     pub fn accept(&mut self, chunk_x: i32, chunk_z: i32, ready: ReadyChunk) {
-        let key = (chunk_x, chunk_z);
+        if !self.accept_prepared(chunk_x,chunk_z,ready) {self.ensure(chunk_x,chunk_z);}
+    }
 
-        if self.chunks.contains_key(&key) {
-            return;
-        }
-
-        let stale = ready.epoch + UNLOAD_MEMORY < self.unload_epoch
-            || self.unloaded.get(&key).is_some_and(|at| *at > ready.epoch);
-
+    // Возврат false требует повторной подготовки вне замка мира.
+    pub(crate) fn accept_prepared(&mut self,chunk_x:i32,chunk_z:i32,ready:ReadyChunk)->bool {
+        let key=(chunk_x,chunk_z);
+        if self.chunks.contains_key(&key) {return true;}
+        let stale=ready.epoch+UNLOAD_MEMORY<self.unload_epoch||self.unloaded.get(&key).is_some_and(|at|*at>ready.epoch);
         match ready.taken {
-            Taken::Loaded { chunk, from_disk, wake } if !stale => {
-                self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
-            }
-            Taken::Loaded { .. } => {
-                log_debug!("Мир: чанк {} {} выгружался, пока читался, — читаю заново", chunk_x, chunk_z);
-                self.ensure(chunk_x, chunk_z);
-            }
-            Taken::Unavailable => {
-                self.ensure(chunk_x, chunk_z);
-            }
+            Taken::Loaded {chunk,from_disk,wake} if !stale => {self.insert_chunk(chunk_x,chunk_z,chunk,from_disk,&wake);true},
+            _ => false,
         }
     }
 
@@ -4652,10 +4644,13 @@ pub struct ChunkSource {
 impl ChunkSource {
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
+        self.take_with(chunk_x,chunk_z,crate::plugins::active(),crate::plugins::populate)
+    }
+    fn take_with(&self,chunk_x:i32,chunk_z:i32,enabled:bool,populate:impl FnOnce(crate::dimension::Dimension,i32,i32,i64,Chunk)->Chunk)->ReadyChunk {
         let mut taken=take_chunk(&self.path,&self.generator,chunk_x,chunk_z);
-        if crate::plugins::active() && let Taken::Loaded {chunk,from_disk:false,..}=&mut taken {
+        if enabled && let Taken::Loaded {chunk,from_disk:false,..}=&mut taken {
             let (dimension,seed)=match self.generator.as_ref() {Generator::Normal(t)=>(crate::dimension::Dimension::Overworld,t.seed()),Generator::Nether(t)=>(crate::dimension::Dimension::Nether,t.seed()),Generator::End(t)=>(crate::dimension::Dimension::End,t.seed()),Generator::Flat=>(crate::dimension::Dimension::Overworld,0)};
-            *chunk=crate::plugins::populate(dimension,chunk_x,chunk_z,seed,chunk.clone());
+            *chunk=populate(dimension,chunk_x,chunk_z,seed,chunk.clone());
             if let Taken::Loaded {chunk,wake,..}=&mut taken {*wake=chunk.fluids_to_wake(chunk_x,chunk_z);}
         }
         ReadyChunk {taken,epoch:self.epoch}
@@ -8230,6 +8225,17 @@ impl Chunk {
 #[cfg(test)]
 mod plugin_population_tests {
     use super::*;
+    #[test]
+    fn population_precedes_synchronous_insertion_and_does_not_revisit_saved_chunks() {
+        let path=std::env::temp_dir().join(format!("mcsa-population-sync-{}",std::process::id()));let _=std::fs::remove_dir_all(&path);
+        let mut world=World::open(&path,Some(1),crate::config::server_properties::WorldKind::Flat).unwrap();
+        let source=world.source();let mut calls=0;
+        let ready=source.take_with(7,-8,true,|_,x,z,_,mut chunk| {calls+=1;assert_eq!((x,z),(7,-8));chunk.apply_population(vec!["0 diamond_block".into()]).unwrap();chunk});
+        assert_eq!(calls,1);assert!(!world.has_chunk(7,-8));assert!(world.accept_prepared(7,-8,ready));assert_eq!(crate::blocks::block_at_state(world.get_block(112,-64,-128)),Some("diamond_block"));
+        world.save_if_needed();drop(world);
+        let world=World::open(&path,Some(1),crate::config::server_properties::WorldKind::Flat).unwrap();
+        let _ready=world.source().take_with(7,-8,true,|_,_,_,_,_|panic!("сохранённый чанк попал в популятор"));drop(world);let _=std::fs::remove_dir_all(path);
+    }
     #[test]
     fn population_edits_are_bounded_atomic_and_cover_negative_height() {
         let mut chunk=Chunk::new();let old=chunk.block(0,-64,0);

@@ -361,6 +361,8 @@ pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f6
             return (Dimension::Overworld, spawn);
         }
 
+        let (px,_,pz)=crate::world::the_end::PLATFORM;
+        for x in (px-2).div_euclid(16)..=(px+2).div_euclid(16) {for z in (pz-2).div_euclid(16)..=(pz+2).div_euclid(16) {shared.ensure_chunk(Dimension::End,x,z);}}
         let mut world = shared.world_in(Dimension::End).lock().expect("мир захвачен другим потоком");
         let place = build_end_platform(&mut world);
         crate::redstone::settle(&mut world);
@@ -369,6 +371,11 @@ pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f6
     }
 
     let (dimension, rough) = destination(from, at);
+    let (px,pz)=(rough.0.floor() as i32,rough.2.floor() as i32);
+    let radius=search_radius(dimension);
+    let known={let world=shared.world_in(dimension).lock().expect("мир");world.portals().iter().filter(|(x,_,z)|(*x-px).abs()<=radius&&(*z-pz).abs()<=radius).map(|(x,_,z)|(x.div_euclid(16),z.div_euclid(16))).collect::<Vec<_>>()};
+    for (x,z) in known {shared.ensure_chunk(dimension,x,z);}
+    for x in (px-16).div_euclid(16)..=(px+16).div_euclid(16) {for z in (pz-16).div_euclid(16)..=(pz+16).div_euclid(16) {shared.ensure_chunk(dimension,x,z);}}
     let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
     let place = arrive(&mut world, dimension, rough);
     crate::redstone::settle(&mut world);

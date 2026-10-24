@@ -223,7 +223,7 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
 
     let nether = matches!(mob.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
     // Бит 16 — «не взрослеть» (AgeLocked), без своих байтов.
-    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3) | (u8::from(mob.age_locked) << 4) | (u8::from(village_uuid(mob).is_some()) << 5) | (u8::from(mob.equipment.is_some()) << 6));
+    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3) | (u8::from(mob.age_locked) << 4) | (u8::from(village_uuid(mob).is_some()) << 5) | (u8::from(mob.equipment.is_some()) << 6) | (u8::from(!mob.plugin_attributes.is_empty()) << 7));
     out.extend_from_slice(&(name.len() as u16).to_be_bytes());
     out.extend_from_slice(name.as_bytes());
 
@@ -251,6 +251,7 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
         super::equipment::write(&super::equipment::all(mob),out);
         for chance in mob.equipment_drop_chances {out.extend(chance.to_be_bytes());}
     }
+    if !mob.plugin_attributes.is_empty() {super::plugin_attributes::write(mob,out);}
 }
 
 /// Прочитанный хвост.
@@ -262,6 +263,7 @@ pub struct Tail {
     leash: Option<Holder>,
     nether: Option<(i32,bool)>,
     trial_gear: Option<super::trial_gear::Gear>,
+    attributes: Vec<crate::attributes::Attribute>,
     equipment: Option<super::equipment::Gear>,
     equipment_drop_chances: super::equipment::Chances,
 }
@@ -293,17 +295,20 @@ pub fn read_tail(bytes: &mut &[u8]) -> Option<Tail> {
     };
 
     let nether=if flags & 4 != 0 {Some((i32::from_be_bytes(take(4)?.try_into().ok()?),take(1)?[0]!=0))} else {None};
-    let uuid=if flags & 32 != 0 {Some(take(16)?.try_into().ok()?)} else {None};
+    let mut uuid=if flags & 32 != 0 {Some(take(16)?.try_into().ok()?)} else {None};
     let trial_gear=if flags & 8 != 0 {Some(super::trial_gear::read(bytes)?)} else {None};
     let equipment=if flags & 64 != 0 {Some(super::equipment::read(bytes)?)} else {None};
     let equipment_drop_chances=if flags & 64 != 0 {super::equipment::read_chances(bytes)?} else {[super::DEFAULT_DROP;6]};
-    Some(Tail { uuid, trial_gear, equipment, equipment_drop_chances, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, age_locked: flags & 16 != 0, leash, nether })
+    let attributes=if flags & 128 != 0 {let (head,rest)=bytes.split_at_checked(16)?;uuid=Some(head.try_into().ok()?);*bytes=rest;super::plugin_attributes::read(bytes)?} else {Vec::new()};
+    Some(Tail { attributes, uuid, trial_gear, equipment, equipment_drop_chances, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, age_locked: flags & 16 != 0, leash, nether })
 }
 
 /// Кладёт прочитанный хвост в моба.
 pub fn apply_tail(mob: &mut Mob, tail: Tail) {
     if let Some(uuid)=tail.uuid {mob.uuid=uuid;mob.land.saved_uuid=Some(uuid);}
     mob.h.trial_gear=tail.trial_gear;
+    mob.plugin_attributes=tail.attributes;
+    if let Some(attribute)=mob.plugin_attributes.iter().find(|a|a.id==crate::attributes::MAX_HEALTH) {mob.vitals.max_health=attribute.value() as f32;}
     mob.equipment=tail.equipment;
     mob.equipment_drop_chances=tail.equipment_drop_chances;
     mob.name = tail.name;

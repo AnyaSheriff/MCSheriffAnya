@@ -3957,14 +3957,12 @@ impl BedrockWorld {
                 continue;
             }
 
-            let mut world = self.shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
             for (_, x, z, ready) in arrived.extract_if(.., |chunk| chunk.0 == dimension) {
                 if dimension == self.dimension {
                     self.loading.remove(&(x, z));
                     self.chunks_missing = true;
                 }
-                world.accept(x, z, ready);
+                self.shared.accept_chunk(dimension,x,z,ready);
             }
         }
 

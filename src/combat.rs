@@ -618,6 +618,7 @@ pub fn death_drops(inventory: &mut Inventory, keep: bool) -> Vec<Stack> {
             }
         }
     }
+    drops.extend(inventory.take_retained().into_iter().filter(|stack|stack.extras().level("vanishing_curse")==0));
     drops
 }
 

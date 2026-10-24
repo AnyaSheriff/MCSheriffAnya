@@ -5,7 +5,7 @@ public final class PlayerItems implements PlayerInventory {
  private int slot(int slot){if(slot<0||slot>40)throw new IllegalArgumentException("Ячейка: 0..40");return slot<9?slot+36:slot<36?slot:slot==40?45:44-slot;}
  public org.bukkit.event.inventory.InventoryType getType(){return org.bukkit.event.inventory.InventoryType.PLAYER;}
  public int getSize(){return 41;}public InventoryHolder getHolder(){return owner;}
- private ItemStack read(String[] data,int index){int n=slot(index)*3;if(n+2>=data.length)return null;int count=Integer.parseInt(data[n+1]);if(count<=0||data[n].equals("air"))return null;Material material=Material.matchMaterial(data[n]);return material==null||material.isAir()?null:ItemStack.fromHost(material,count,data[n+2]);}
+ private ItemStack read(String[] data,int index){int n=slot(index)*3;if(n+2>=data.length)return null;int count=Integer.parseInt(data[n+1]);if(count<=0||data[n].equals("air"))return null;Material material=Material.matchMaterial(data[n]);return material==null||material.isAir()?null:ItemStack.fromHost(material,count,data[n+2]).observe(item->setItem(index,item));}
  public ItemStack[] getContents(){String[] data=snapshot();ItemStack[] result=new ItemStack[41];for(int i=0;i<result.length;i++)result[i]=read(data,i);return result;}
  private static final java.util.Map<String,Snapshot> snapshots=new java.util.HashMap<>();private static long snapshotEpoch=-1;
  private static final class Snapshot {String[] items;int selected=-1;}

@@ -2,9 +2,9 @@ package ru.mcsa.bukkit;
 import org.bukkit.inventory.*;import org.bukkit.entity.*;import org.bukkit.event.inventory.InventoryType;
 // Нативное окно читается по снимку подключения; запись без события транзакции запрещена.
 public final class NativeInventoryView implements InventoryView {
- private final Player player;public NativeInventoryView(Player p){player=p;}
+ private final Player player;private final Inventory top=new Top();public NativeInventoryView(Player p){player=p;}
  public HumanEntity getPlayer(){return player;}public Inventory getBottomInventory(){return player.getInventory();}
- public Inventory getTopInventory(){return new Top();}
+ public Inventory getTopInventory(){return top;}
  public int countSlots(){Inventory top=getTopInventory();return top.getSize()+(top.getType()==InventoryType.CRAFTING?41:36);}
  public int convertSlot(int raw){if(getType()!=InventoryType.CRAFTING){int n=raw-getTopInventory().getSize();return n<0?raw:n<27?n+9:n-27;}return raw<5?raw:raw<9?44-raw:raw<36?raw:raw<45?raw-36:40;}
  private final class Top implements Inventory {

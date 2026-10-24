@@ -1571,7 +1571,7 @@ async fn send_add_entity(stream: &mut Outgoing<'_>, member: &Member) -> io::Resu
 /// Летит он не по дуге, как в игре, — сервер сразу считает, где предмет ляжет:
 /// от места броска вниз до первой опоры. Поднять его можно не сразу, иначе он
 /// тут же вернулся бы в руки тому, кто бросил.
-fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) -> [u8;16] {
+fn throw_out_raw(shared: &Shared, player: &PlayerState, stack: Stack) -> [u8;16] {
     // Бросок идёт туда, куда игрок смотрит, — с наклоном: в небо предмет
     // летит вверх, под ноги падает сразу. Дальше он летит сам, по дуге.
     let (look_x, look_y, look_z) = looking(player.yaw, player.pitch);
@@ -1603,12 +1603,19 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) -> [u8;16] {
     uuid
 }
 
+// Вынужденные выбросы тоже отменяемы; переполнение сохраняется в файле владельца.
+fn throw_out(shared:&Shared,player:&mut PlayerState,stack:Stack)->[u8;16] {
+    let uuid=throw_out_raw(shared,player,stack);
+    if crate::plugins::active()&&cancel_thrown(shared,player,uuid) {player.inventory.retain_drop(stack);player.inventory_after_window=true;}
+    uuid
+}
+fn cancel_thrown(shared:&Shared,player:&PlayerState,uuid:[u8;16])->bool {
+    if crate::plugins::ground_item(&plugin_view(player),&crate::network::login::format_uuid(&uuid),false,0) {shared.items_in(player.dimension).lock().expect("предметы").remove_items(|item|item.uuid==uuid);true} else {false}
+}
+
 // Предмет доступен обработчику как нативная сущность; отмена удаляет только этот бросок.
 fn throw_out_cancelled(shared: &Shared, player: &PlayerState, stack: Stack) -> bool {
-    let uuid=throw_out(shared,player,stack);
-    if crate::plugins::ground_item(&plugin_view(player),&crate::network::login::format_uuid(&uuid),false,0) {
-        shared.items_in(player.dimension).lock().expect("предметы").remove_items(|item|item.uuid==uuid);true
-    } else {false}
+    let uuid=throw_out_raw(shared,player,stack);cancel_thrown(shared,player,uuid)
 }
 
 /// Взгляд как у оригинала: синус и косинус по таблице на 65536 делений
@@ -2844,11 +2851,7 @@ async fn send_chunks_around(
                 continue;
             };
 
-            shared
-                .world_in(dimension)
-                .lock()
-                .expect("мир захвачен другим потоком")
-                .accept(chunk_x, chunk_z, ready);
+            shared.accept_chunk(dimension,chunk_x,chunk_z,ready);
         }
 
         // Свет — тоже вне захвата мира и сразу несколькими руками: миру
@@ -2930,14 +2933,9 @@ impl Prefetch {
             return;
         }
 
-        let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
         for (chunk_x, chunk_z, ready) in arrived {
             self.pending.remove(&(chunk_x, chunk_z));
-
-            if !world.has_chunk(chunk_x, chunk_z) {
-                world.accept(chunk_x, chunk_z, ready);
-            }
+            shared.accept_chunk(dimension,chunk_x,chunk_z,ready);
         }
     }
 
@@ -7588,7 +7586,8 @@ fn handle_client_packet(
     shared: &Shared,
 ) -> Reaction {
     let before = (player.x, player.y, player.z, player.yaw, player.pitch);
-    let reaction = handle_client_packet_inner(packet, player, shared);
+    let mut reaction = handle_client_packet_inner(packet, player, shared);
+    if player.inventory.restore_retained() {reaction.inventory=true;reaction.window_content=player.window.is_some();}
 
     // Бездействие (`setidletimeout`): движение и повороты считаются делом,
     // только если место или взгляд правда изменились; ответы на Keep Alive и
@@ -7613,6 +7612,7 @@ fn handle_client_packet_inner(
     let payload = packet.payload();
     let mut reaction = Reaction::default();
 
+    if packet.id==CLICK_CONTAINER && crate::plugins::active() && native_inventory_cancelled(shared,player,payload) {reaction.inventory=true;reaction.window_content=player.window.is_some();reaction.cursor=Some(player.inventory.cursor());return reaction;}
     match packet.id {
         SERVERBOUND_ABILITIES => {
             if let Some(flags)=payload.first() {
@@ -8934,7 +8934,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     );
 
     if status == STARTED_DIGGING && crate::plugins::active() && face <= 5 && within_reach(player, (x, y, z))
-        && crate::plugins::interact(&plugin_view(player), 0, 0, Some((x, y, z)), u32::from(face)) != 0
+        && crate::plugins::interact(&plugin_view(player), 0, 0, Some((x, y, z)), u32::from(face)) & 1 != 0
     {
         return Some(Reaction { confirm: vec![(x, y, z)], ..Reaction::accepted(sequence) });
     }
@@ -9311,18 +9311,20 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     /// Вторая рука в поле `hand`.
     const OFF_HAND: i32 = 1;
 
+    let mut interaction=0;
     if crate::plugins::active() {
         let mut cursor = Cursor::new(payload);
         let hand = cursor.varint()?;let clicked = cursor.position()?;let face = cursor.varint()?;
         cursor.f32()?;cursor.f32()?;cursor.f32()?;cursor.u8()?;let sequence = cursor.sequence()?;
         if !(0..=1).contains(&hand) || !(0..=5).contains(&face) { return Some(Reaction::accepted(sequence)); }
-        if crate::plugins::interact(&plugin_view(player), 1, hand as u32, Some(clicked), face as u32) != 0 {
+        interaction=crate::plugins::interact(&plugin_view(player), 1, hand as u32, Some(clicked), face as u32);
+        if interaction & 3 == 3 {
             let adjacent = offset_towards(clicked.0, clicked.1, clicked.2, face);
             return Some(Reaction { confirm: vec![clicked, adjacent], slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected(), inventory::OFFHAND], ..Reaction::accepted(sequence) });
         }
     }
     if Cursor::new(payload).varint()? != OFF_HAND {
-        return place_with_main_hand(payload, player, shared);
+        return place_with_main_hand(payload, player, shared, interaction);
     }
 
     let main = inventory::FIRST_HOTBAR + player.inventory.selected();
@@ -9334,7 +9336,7 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     };
 
     swap(player);
-    let mut reaction = place_with_main_hand(payload, player, shared);
+    let mut reaction = place_with_main_hand(payload, player, shared, interaction);
     swap(player);
 
     if let Some(reaction) = &mut reaction {
@@ -9359,7 +9361,7 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
 ///
 /// Возвращает ответ клиенту: подтверждение и, если блок не поставлен, —
 /// настоящее состояние того места, куда он его ставил.
-fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Shared, interaction:u32) -> Option<Reaction> {
     let mut cursor = Cursor::new(payload);
 
     let hand = cursor.varint()?;
@@ -9414,14 +9416,14 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         return Some(Reaction::accepted(sequence));
     }
 
-    if let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence) {
+    if interaction & 1 == 0 && let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence, interaction) {
         return Some(reaction);
     }
 
     // Щелчок по рычагу, кнопке, двери, повторителю — это не установка, а
     // действие с ними, и рука тут ни при чём: щёлкают и пустой. Присев,
     // игрок всё-таки ставит блок.
-    if !player.sneaking {
+    if interaction & 1 == 0 && (!player.sneaking || interaction & 4 != 0) {
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         // Командный блок: оператору в творческом режиме — его данные (окно
@@ -9459,7 +9461,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Око в рамку портала, светокамень в якорь, кусок торта. Порядок —
         // как у прочих щелчков (чёрный ящик, comparator-click): повтор
         // блока, повтор за гранью, потом общая рассылка.
-        let held_name = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
+        let held_stack = if interaction & 2 == 0 {player.inventory.held()} else {None};
+        let held_name = held_stack.and_then(|stack| blocks::item_name(stack.item));
 
         // Кровать: сон, точка возрождения, взрыв вне обычного мира; якорь:
         // точка возрождения в Незере, взрыв вне его (play/sleep.rs).
@@ -9497,7 +9500,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // внутри. Окна у него нет; пустой и без пластинки в руке — щелчок
         // идёт дальше, как по обычному блоку.
         if kind == Some(containers::Kind::Jukebox)
-            && let Some(took) = redstone::use_jukebox(&mut world, clicked, player.inventory.held())
+            && let Some(took) = redstone::use_jukebox(&mut world, clicked, held_stack)
         {
             world.tell_directly(clicked_x, clicked_y, clicked_z);
             world.tell_directly(bx, by, bz);
@@ -9517,7 +9520,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Яйцо призыва по спавнеру меняет его вид; яйцо тратится в выживании
         // (вики, Monster Spawner; чёрный ящик, spawner-egg: блок, блок за гранью,
         // блок, данные блока, ячейка).
-        if let Some(entity) = player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).and_then(crate::spawner::egg_entity).map(str::to_string)
+        if let Some(entity) = held_name.and_then(crate::spawner::egg_entity).map(str::to_string)
             && blocks::block_at_state(world.get_block(clicked_x, clicked_y, clicked_z)) == Some("spawner")
             && crate::mob::Kind::from_name(&entity).is_some()
         {
@@ -9550,7 +9553,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         let mut kind = kind.filter(|kind| !matches!(kind, containers::Kind::Jukebox | containers::Kind::Campfire));
 
         if kind == Some(containers::Kind::Lectern) {
-            match redstone::lectern::place_book(&mut world, clicked, player.inventory.held(), 0) {
+            match redstone::lectern::place_book(&mut world, clicked, held_stack, 0) {
                 Some(true) => {
                     world.tell_directly(clicked_x, clicked_y, clicked_z);
                     world.tell_directly(bx, by, bz);
@@ -9568,7 +9571,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Полка: ячейка по точке щелчка меняется с рукой, под током —
         // сцепка с правой частью панели (redstone/shelf.rs). Порядок как
         // у прочих щелчков: звук, повтор блока и за гранью, пачка, данные.
-        if kind == Some(containers::Kind::Shelf) {
+        if interaction & 2 == 0 && kind == Some(containers::Kind::Shelf) {
             let hotbar: Vec<Option<inventory::Stack>> =
                 (0..9).map(|index| player.inventory.slot(inventory::FIRST_HOTBAR + index)).collect();
             let selected = player.inventory.selected() as usize;
@@ -9614,7 +9617,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Резной книжный шкаф: книга из руки — в ячейку под точкой щелчка,
         // из занятой ячейки — игроку (redstone/bookshelf.rs).
         if kind == Some(containers::Kind::ChiseledBookshelf) {
-            match redstone::bookshelf::use_bookshelf(&mut world, clicked, face, (cursor_x, cursor_y, cursor_z), player.inventory.held()) {
+            match redstone::bookshelf::use_bookshelf(&mut world, clicked, face, (cursor_x, cursor_y, cursor_z), held_stack) {
                 Some(used) => {
                     world.tell_directly(clicked_x, clicked_y, clicked_z);
                     world.tell_directly(bx, by, bz);
@@ -9688,7 +9691,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         }
 
-        if let Some(held)=player.inventory.held()
+        if interaction & 2 == 0 && let Some(held)=player.inventory.held()
             && let Some(name)=blocks::item_name(held.item)
             && crate::mob::newblocks::statue_use(&mut world,clicked,name)
         {
@@ -9780,6 +9783,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
     }
+
+    if interaction & 2 != 0 {return Some(refused);}
 
     if let Some(reaction) = debug_stick::interact(shared, player, (clicked_x,clicked_y,clicked_z), face, false, sequence) {
         return Some(reaction);
@@ -10945,6 +10950,27 @@ fn distribute_plugin_drag(inventory: &mut Inventory, slots: &mut [Option<Stack>]
     view.inventory.set_cursor(inventory::remainder(held, left));
 }
 
+// Снимок и отмена до любой транзакции нативного окна, без замков мира.
+fn native_inventory_cancelled(shared:&Shared,player:&mut PlayerState,payload:&[u8])->bool {
+    if player.window.as_ref().is_some_and(|w|w.plugin_chest.is_some()) {return false;}
+    let mut cursor=Cursor::new(payload);
+    let (Some(id),Some(_),Some(slot),Some(button),Some(mode))=(cursor.varint(),cursor.varint(),cursor.u16(),cursor.u8(),cursor.varint()) else {return false;};
+    if id!=player.window.as_ref().map_or(0,|w|w.id) {return false;}
+    publish_ui(shared,player);
+    if mode==5 {
+        let (kind,phase)=((button as i8)>>2,button&3);
+        if phase==0 {player.plugin_native_drag=Some((id,kind,Vec::new()));return false;}
+        let Some((_,_,mut slots))=player.plugin_native_drag.take().filter(|(w,k,_)|*w==id&&*k==kind) else {return false;};
+        if phase==1 {let raw=i32::from(slot as i16);if raw>=0&&!slots.contains(&raw) {slots.push(raw);}player.plugin_native_drag=Some((id,kind,slots));return false;}
+        if phase!=2||slots.is_empty() {return false;}
+        let mut fields=vec![crate::network::login::format_uuid(&player.uuid)];fields.extend(slots.iter().map(ToString::to_string));
+        let denied=crate::plugins::native_event(13,fields).is_none();
+        if denied {player.crafting_drag=None;}return denied;
+    }
+    player.plugin_native_drag=None;
+    crate::plugins::native_event(12,vec![crate::network::login::format_uuid(&player.uuid),(slot as i16).to_string(),(button as i8).to_string(),mode.to_string()]).is_none()
+}
+
 fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
     // В окне кафедры ячейку не трогают — книгу берут кнопкой.
     if player.window.as_ref().is_some_and(|window| window.lectern) {
@@ -11083,6 +11109,15 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             slots.clone_from(&slots_before);
             player.inventory = inventory_before.clone();
             click.thrown = None;
+        }
+
+        if crate::plugins::active() && let Some(stack)=click.thrown {
+            drop(world);
+            let denied=throw_out_cancelled(shared,player,stack);
+            world=shared.world_in(player.dimension).lock().expect("мир");
+            if denied {slots.clone_from(&slots_before);player.inventory=inventory_before.clone();}
+            else {player.progress.dropped(stack.item,stack.count);}
+            click.thrown=None;
         }
 
         match cart {
@@ -11615,6 +11650,7 @@ struct PlayerState {
     /// Номер последнего открытого окна — следующее получит номер на один
     /// больше.
     window_counter: i32,
+    plugin_native_drag: Option<(i32,i8,Vec<i32>)>,
     crafting_drag: Option<(i32, i8, Vec<i32>)>,
 
     /// Здоровье, еда, воздух, огонь (survival.rs).
@@ -11840,6 +11876,7 @@ impl PlayerState {
             inventory_after_window: false,
             late_slots: Vec::new(),
             window_counter: 0,
+            plugin_native_drag: None,
             crafting_drag: None,
             net: vitals::Net::synced(&vit),
             vit,
@@ -12085,9 +12122,8 @@ impl PlayerState {
 /// плоского мира точка появления берётся по обычной высоте и висела бы над
 /// землёй — выжившему это стоило бы жизни).
 pub(crate) fn on_the_ground(shared: &Shared, (x, y, z): (f64, f64, f64)) -> (f64, f64, f64) {
-    let mut world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
-
-    world.ensure((x.floor() as i32).div_euclid(CHUNK_SIZE), (z.floor() as i32).div_euclid(CHUNK_SIZE));
+    shared.ensure_chunk(Dimension::Overworld,(x.floor() as i32).div_euclid(CHUNK_SIZE),(z.floor() as i32).div_euclid(CHUNK_SIZE));
+    let world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
 
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
     let mut by = y.floor() as i32;

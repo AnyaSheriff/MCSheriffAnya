@@ -15,7 +15,7 @@ public class RemoteEntity implements Entity {
   if(kind.equals("fireball"))return new Fire(uuid);if(kind.equals("small_fireball"))return new SmallFire(uuid);
   if(kind.equals("wind_charge"))return new Wind(uuid);
   if(java.util.Arrays.asList("fireball","small_fireball","dragon_fireball","snowball","egg","ender_pearl","experience_bottle","wither_skull","llama_spit","breeze_wind_charge").contains(kind))return new Shot(uuid);
-  if(java.util.Arrays.asList("horse","skeleton_horse","zombie_horse").contains(kind))return new Horse(uuid);if(kind.equals("donkey")||kind.equals("mule"))return new Chested(uuid);
+  if(java.util.Arrays.asList("horse","skeleton_horse","zombie_horse").contains(kind))return new Horse(uuid);if(kind.equals("donkey")||kind.equals("mule")||kind.equals("llama")||kind.equals("trader_llama"))return new Chested(uuid);if(kind.equals("camel"))return new Horse(uuid);
   if(s[i+11].equals("1")){if(kind.equals("vex"))return new VexEntity(uuid);if(kind.equals("armor_stand"))return new Stand(uuid);if(kind.equals("allay"))return new AllayEntity(uuid);if(s[i+12].equals("1"))return new Hostile(uuid);if(s[i+13].equals("1"))return new Animal(uuid);return new BasicMob(uuid);}
   return new RemoteEntity(uuid);
  }
@@ -27,11 +27,11 @@ public class RemoteEntity implements Entity {
  @Override public boolean equals(Object other){return other instanceof Entity&&getUniqueId().equals(((Entity)other).getUniqueId());}@Override public int hashCode(){return getUniqueId().hashCode();}
  private static class Living extends RemoteEntity implements LivingEntity {
   Living(String uuid){super(uuid);}public double getHealth(){return Double.parseDouble(snapshot()[10]);}public void setHealth(double value){Host.call(98,uuid,""+value);}
-  public org.bukkit.attribute.AttributeInstance getAttribute(org.bukkit.attribute.Attribute type){throw new UnsupportedOperationException("Атрибуты мобов пока зашиты в виды ядра; изменение через Bukkit не поддерживается");}
+  public org.bukkit.attribute.AttributeInstance getAttribute(org.bukkit.attribute.Attribute type){if(type==org.bukkit.attribute.Attribute.MAX_HEALTH||type==org.bukkit.attribute.Attribute.ATTACK_DAMAGE||type==org.bukkit.attribute.Attribute.MOVEMENT_SPEED)return new RemoteAttribute(uuid,type);return null;}
   public Collection<org.bukkit.potion.PotionEffect> getActivePotionEffects(){return effects(uuid);}public org.bukkit.potion.PotionEffect getPotionEffect(org.bukkit.potion.PotionEffectType type){for(org.bukkit.potion.PotionEffect effect:getActivePotionEffects())if(effect.getType()==type)return effect;return null;}
   public boolean addPotionEffect(org.bukkit.potion.PotionEffect effect){return Host.yes(30,uuid,effect.getType().getKey().getKey(),""+effect.getDuration(),""+effect.getAmplifier(),""+effect.isAmbient(),""+effect.hasParticles(),""+effect.hasIcon());}public void removePotionEffect(org.bukkit.potion.PotionEffectType type){Host.call(31,uuid,type.getKey().getKey());}
   public double getEyeHeight(){return Double.parseDouble(snapshot()[9])*0.85;}public Location getEyeLocation(){return getLocation().add(0,getEyeHeight(),0);}
-  public org.bukkit.inventory.EntityEquipment getEquipment(){return slot->{if(slot.ordinal()>5)return null;String[] item=Host.call(97,uuid,""+slot.ordinal());return item.length==0?null:org.bukkit.inventory.ItemStack.fromHost(Material.matchMaterial(item[0]),Integer.parseInt(item[1]),item[2]);};}
+  public org.bukkit.inventory.EntityEquipment getEquipment(){return slot->{if(slot.ordinal()>5)throw new IllegalArgumentException("Ячейка экипировки отсутствует у сущности");String[] item=Host.call(97,uuid,""+slot.ordinal());return item.length==0?new org.bukkit.inventory.ItemStack(Material.AIR):org.bukkit.inventory.ItemStack.fromHost(Material.matchMaterial(item[0]),Integer.parseInt(item[1]),item[2]);};}
  }
  private static class Horse extends BasicMob implements AbstractHorse {Horse(String uuid){super(uuid);}public boolean isTamed(){return Host.call(104,uuid)[0].equals("1");}public void setTamed(boolean value){Host.call(106,uuid,"0",value?"1":"0");}public void setOwner(AnimalTamer owner){Host.call(106,uuid,"1",owner==null?"":owner.getUniqueId().toString());}public org.bukkit.inventory.AbstractHorseInventory getInventory(){return new HorseItems(this);}}
  private static final class Chested extends Horse implements ChestedHorse {Chested(String uuid){super(uuid);}public boolean isCarryingChest(){return Host.call(104,uuid)[1].equals("1");}}

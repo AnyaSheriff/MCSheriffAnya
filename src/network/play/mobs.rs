@@ -867,7 +867,7 @@ async fn send_max_health(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     body.extend_from_slice(&encode_varint(mob.entity_id));
     body.extend_from_slice(&encode_varint(1));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
-    push_f64(&mut body, f64::from(mob.vitals.max_health));
+    push_f64(&mut body, super::mob_effects::base(mob,ATTRIBUTE_MAX_HEALTH,f64::from(mob.vitals.max_health)));
     super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
     write_body(stream, body).await
 }
@@ -888,6 +888,7 @@ async fn send_leash(stream: &mut Outgoing<'_>, entity_id: i32, holder: i32) -> i
 /// порядком; остальным — одна скорость (после 3-го такта и после правки).
 async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order: bool) -> io::Result<()> {
     let explicit = mob.horse.explicit;
+    let plugin_health=mob.plugin_attributes.iter().any(|a|a.id==ATTRIBUTE_MAX_HEALTH);
     let health = (ATTRIBUTE_MAX_HEALTH, f64::from(mob.vitals.max_health));
     let jump = (crate::attributes::JUMP_STRENGTH, mob.horse.jump);
     let speed = (ATTRIBUTE_MOVEMENT_SPEED, mob.horse.speed);
@@ -896,9 +897,9 @@ async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order
     if first_order {
         if explicit & 4 != 0 { list.push(jump); }
         list.push(speed);
-        if explicit & 1 != 0 { list.push(health); }
+        if explicit & 1 != 0 || plugin_health { list.push(health); }
     } else {
-        if explicit & 1 != 0 { list.push(health); }
+        if explicit & 1 != 0 || plugin_health { list.push(health); }
         if explicit & 4 != 0 { list.push(jump); }
         list.push(speed);
     }
@@ -910,7 +911,7 @@ async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order
 
     for (id, value) in list {
         body.extend_from_slice(&encode_varint(id));
-        push_f64(&mut body, value);
+        push_f64(&mut body, super::mob_effects::base(mob,id,value));
         super::mob_effects::push(&mut body, mob, id, None);
     }
 
@@ -953,10 +954,10 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
             push_modifiers(&mut body, None);
         }
         body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
-        push_f64(&mut body, crate::mob::slime::speed(mob.nether.size));
+        push_f64(&mut body, super::mob_effects::base(mob,ATTRIBUTE_MOVEMENT_SPEED,crate::mob::slime::speed(mob.nether.size)));
         super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, None);
         body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
-        push_f64(&mut body, size * size);
+        push_f64(&mut body, super::mob_effects::base(mob,ATTRIBUTE_MAX_HEALTH,size*size));
         super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
 
         return write_body(stream, body).await;
@@ -968,7 +969,9 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // Железный шлем на мобе: к скорости добавляются стойкость и броня с
     // модификатором «minecraft:armor.helmet» (0 и +2) — чёрный ящик,
     // stray-slowness, bogged-shear.
-    body.extend_from_slice(&encode_varint(if dolphin { 2 + if mob.equipment.is_some() { 2 } else { 0 } } else if mob.h.helmet || mob.h.trial_gear.is_some() || mob.equipment.is_some() { 3 } else { 1 }));
+    let plugin_health=mob.plugin_attributes.iter().any(|a|a.id==ATTRIBUTE_MAX_HEALTH);
+    let count=if dolphin {2+if mob.equipment.is_some() {2} else {0}} else if mob.h.helmet||mob.h.trial_gear.is_some()||mob.equipment.is_some() {3} else {1};
+    body.extend_from_slice(&encode_varint(count+i32::from(plugin_health)));
     if dolphin && !mob.is_baby() {
         body.extend_from_slice(&encode_varint(ATTRIBUTE_OXYGEN_BONUS));
         push_f64(&mut body, 0.0);
@@ -976,7 +979,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     }
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
     // У иссушителя скорость — ровно 0,6 в двойной точности (wither-summon).
-    push_f64(&mut body, if crate::mob::horse::equine(mob.kind) { mob.horse.speed } else if mob.kind == Kind::Wither { 0.6 } else { f64::from(attribute_speed(mob.kind) as f32) });
+    push_f64(&mut body, super::mob_effects::speed_base(mob));
 
     // Пьющая ведьма: модификатор «minecraft:drinking» −0,25; сердитый
     // эндермен — «minecraft:attacking» +0,15; оба — сложением (чёрный ящик,
@@ -1000,6 +1003,11 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         push_f64(&mut body, 0.0);
         push_modifiers(&mut body, None);
     }
+    if plugin_health {
+        body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
+        push_f64(&mut body,super::mob_effects::base(mob,ATTRIBUTE_MAX_HEALTH,f64::from(mob.vitals.max_health)));
+        super::mob_effects::push(&mut body,mob,ATTRIBUTE_MAX_HEALTH,None);
+    }
     write_body(stream, body).await
 }
 
@@ -1014,7 +1022,7 @@ async fn send_wolf_reload(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()
     body.extend_from_slice(&encode_varint(mob.entity_id));
     body.extend_from_slice(&encode_varint(if armored { 4 } else { 2 }));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
-    push_f64(&mut body, f64::from(mob.vitals.max_health));
+    push_f64(&mut body, super::mob_effects::base(mob,ATTRIBUTE_MAX_HEALTH,f64::from(mob.vitals.max_health)));
     super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
     push_f64(&mut body, f64::from(attribute_speed(mob.kind) as f32));

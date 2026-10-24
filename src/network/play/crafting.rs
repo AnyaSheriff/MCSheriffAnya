@@ -128,6 +128,8 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
         }
         if readable { predicted = Some((list, read_hashed_slot(&mut reader))); }
     }
+    let inventory_before=crate::plugins::active().then(||player.inventory.clone());
+    let original_grid=grid(player);
     let (before, cursor_before) = (snapshot(player), player.inventory.cursor());
     let slot = slot as i16 as i32; let button = button as i8;
     let mut slots = grid(player); let mut dropped = Vec::new(); let mut trace = Vec::new();
@@ -195,8 +197,13 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
             if emptied_here && slot as usize - 1 == i { trace.push(*trace.last().unwrap()); }
         }
     }
+    if crate::plugins::active() {
+        let mut staged=Vec::new();let mut denied=false;
+        for stack in &dropped {let uuid=throw_menu(shared,player,*stack);staged.push(uuid);if super::cancel_thrown(shared,player,uuid) {denied=true;break;}}
+        if denied {shared.items_in(player.dimension).lock().expect("предметы").remove_items(|i|staged.contains(&i.uuid));player.inventory=inventory_before.expect("снимок");store(player,&original_grid);refresh(shared,player);reaction.inventory=true;reaction.window_content=table;reaction.cursor=Some(player.inventory.cursor());return;}
+    }
     store(player, &slots); refresh(shared, player); sync(player, &before, cursor_before, &predicted, trace, reaction);
-    for stack in dropped { player.progress.dropped(stack.item, stack.count); throw_menu(shared, player, stack); }
+    for stack in dropped { player.progress.dropped(stack.item, stack.count); if !crate::plugins::active() {throw_menu(shared, player, stack);} }
 }
 
 pub(super) fn place(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
@@ -225,10 +232,10 @@ pub(super) fn place(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
 
 /// Бросок из окна: предмет появляется у самых ног, на уровне глаз − 0,3, и уходит в случайную сторону
 /// (чёрный ящик, craft-grid-clicks: появление в (0,5; 1,32; 2,5) при игроке в (0,5; 2,5)).
-fn throw_menu(shared: &Shared, player: &PlayerState, stack: Stack) {
+fn throw_menu(shared: &Shared, player: &PlayerState, stack: Stack)->[u8;16] {
     let (spread, angle) = { let mut world = shared.world_in(player.dimension).lock().expect("мир"); (f64::from(world.random_unit()) * 0.5, f64::from(world.random_unit()) * std::f64::consts::TAU) };
     let velocity = (-angle.sin() * spread, 0.2, angle.cos() * spread);
-    shared.items_in(player.dimension).lock().expect("предметы").drop_from_player(shared.next_entity_id(), stack, (player.x, player.y + 1.32, player.z), velocity, player.uuid);
+    shared.items_in(player.dimension).lock().expect("предметы").drop_from_player(shared.next_entity_id(), stack, (player.x, player.y + 1.32, player.z), velocity, player.uuid)
 }
 fn get(player: &PlayerState, slots: &[Option<Stack>], slot: i32) -> Option<Stack> {
     if (1..=slots.len() as i32).contains(&slot) { slots[slot as usize - 1] }

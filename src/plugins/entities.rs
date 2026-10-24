@@ -69,7 +69,7 @@ impl entities::Host for PluginCtx {
             match field {0=>mob.persistent=value!=0,1=>mob.illager.plugin_limited_life=Some(value!=0),_=>mob.illager.life=value}Ok(())})
     }
     fn get_target(&mut self, uuid: String) -> Result<Option<String>,String> {
-        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let target=self.edit_mob(uuid,|mob|Ok(mob.h.target))?;let Some(target)=target else {return Ok(None);};
+        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let target=self.edit_mob(uuid,|mob|Ok(mob.plugin_targets()[0]))?;let Some(target)=target else {return Ok(None);};
         if let Some(player)=self.shared.players.lock().expect("игроки").members().iter().find(|p|p.entity_id==target) {return Ok(Some(crate::network::login::format_uuid(&player.uuid)));}
         for dimension in Dimension::ALL {if let Some(mob)=self.shared.items_in(dimension).lock().expect("сущности").mobs().iter().find(|m|m.entity_id==target) {return Ok(Some(crate::network::login::format_uuid(&mob.uuid)));}}Ok(None)
     }
@@ -78,19 +78,21 @@ impl entities::Host for PluginCtx {
         let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         let target=target.map(|uuid| {let uuid=parse_uuid(&uuid).ok_or("UUID цели не разобрать")?;self.shared.players.lock().expect("игроки").members().iter().find(|p|p.uuid==uuid).map(|p|(p.entity_id,p.dimension)).ok_or("Принудительная цель моба пока должна быть игроком")}).transpose()?;
         if target.is_some_and(|(_,dimension)|dimension_to_wit(dimension)!=mob_dimension) {return Err("Цель должна находиться в мире моба".into());}
-        self.edit_mob(uuid,|mob|{mob.h.target=target.map(|p|p.0);Ok(())})
+        self.edit_mob(uuid,|mob|{mob.set_plugin_target(0,target.map(|p|p.0));Ok(())})
     }
 
     fn horse(&mut self, uuid: String) -> Result<entities::HorseState,String> {
         let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         for dimension in Dimension::ALL {
-            let state={let items=self.shared.items_in(dimension).lock().expect("сущности");items.mobs().iter().find(|m|m.uuid==uuid&&crate::mob::horse::equine(m.kind)).map(|m|(m.horse.tamed,m.horse.chest,m.horse.inventory()))};
+            let state={let items=self.shared.items_in(dimension).lock().expect("сущности");items.mobs().iter().find(|m|m.uuid==uuid&&(crate::mob::horse::equine(m.kind)||crate::mob::land::rideable(m.kind))).map(|m|if crate::mob::horse::equine(m.kind) {(m.horse.tamed,m.horse.chest,m.horse.inventory())}else {(m.land.tamed,m.land.chest,crate::mob::land::inventory(m))})};
             if let Some((tamed,chest,stacks))=state {return Ok(entities::HorseState {tamed,chest,items:self.inventory_items(&stacks)});}
         }Err("Инвентарь этого вида ездового животного пока не поддерживается".into())
     }
     fn set_horse_item(&mut self, uuid: String, slot: u32, stack: Option<inventory::Item>) -> Result<(),String> {
         let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let stack=self.inventory_stack(stack)?;
-        for dimension in Dimension::ALL {let mut items=self.shared.items_in(dimension).lock().expect("сущности");if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&crate::mob::horse::equine(m.kind)) {
+        for dimension in Dimension::ALL {let mut items=self.shared.items_in(dimension).lock().expect("сущности");
+            if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&crate::mob::land::rideable(m.kind)) {let mut slots=crate::mob::land::inventory(mob);let place=slots.get_mut(slot as usize).ok_or("Ячейка вне инвентаря животного")?;*place=stack;if !crate::mob::land::valid_inventory(mob,&slots) {return Err("Предмет не подходит для этой ячейки животного".into());}crate::mob::land::store_inventory(mob,&slots);return Ok(());}
+            if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&crate::mob::horse::equine(m.kind)) {
             if slot>=if mob.horse.chest {17} else {2} {return Err("Ячейка вне инвентаря лошади".into());}
             if stack.is_some_and(|s|!crate::mob::horse::may_place(mob.kind,slot as usize,s.item)||slot<2&&s.count!=1) {return Err("Предмет не подходит для этой ячейки лошади".into());}
             let old=mob.horse.slots;mob.horse.slots[slot as usize]=stack;crate::mob::horse::equipment_changed(mob,old);return Ok(());

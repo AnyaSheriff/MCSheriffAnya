@@ -845,3 +845,99 @@ fn bukkit_ready_players_hide_incomplete_login_without_changing_generic_online_li
     assert_eq!(ctx.ready_players().len(),1);assert_eq!(ctx.online_players().len(),1);
     shared.players.lock().unwrap().ui.info.remove(&[1;16]);assert!(ctx.ready_players().is_empty());
 }
+
+#[test]
+fn mob_attribute_host_edits_are_live_owned_and_do_not_change_other_mobs() {
+    use super::api::mcsa::api::attributes::{self,Host as _};
+    let root=server_root("mob-attributes");assert!(install(&root,"plugins","hello","hello",""));let shared=shared();
+    let mob=crate::mob::Mob::new(101,crate::mob::Kind::Zombie,(0.0,64.0,0.0));let uuid=crate::network::login::format_uuid(&mob.uuid);
+    {let mut items=shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap();items.add_mob(mob);items.add_mob(crate::mob::Mob::new(102,crate::mob::Kind::Zombie,(2.0,64.0,0.0)));}
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();
+    assert_eq!(ctx.get(uuid.clone(),"max_health".into()).unwrap().base,20.0);
+    for (name,amount) in [("max_health",0.25),("attack_damage",0.2)] {
+        let modifier=attributes::Modifier {id:"hello:buff".into(),amount,operation:1};ctx.add(uuid.clone(),name.into(),modifier.clone()).unwrap();assert!(ctx.add(uuid.clone(),name.into(),modifier).is_err());
+    }
+    assert_eq!(ctx.get(uuid.clone(),"max_health".into()).unwrap().value,25.0);
+    assert!(ctx.add(uuid.clone(),"max_health".into(),attributes::Modifier {id:"other:buff".into(),amount:1.0,operation:1}).is_err());
+    {let items=shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap();assert_eq!(items.mobs()[0].vitals.max_health,25.0);assert!((items.mobs()[0].effect_melee_damage(3.0)-3.6).abs()<0.0001);assert_eq!(items.mobs()[1].vitals.max_health,20.0);assert_eq!(items.mobs()[1].effect_melee_damage(3.0),3.0);}
+    ctx.remove(uuid,"attack_damage".into(),"hello:buff".into()).unwrap();assert_eq!(shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap().mobs()[0].effect_melee_damage(3.0),3.0);
+}
+
+fn fourlegacy_component()->PathBuf {std::env::var_os("MCSA_FOURLEGACY_COMPONENT").map(PathBuf::from).unwrap_or_else(||Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/fourlegacy/runtime-bulk-translated/fourlegacy"))}
+
+// Требуется неизменённый JAR, переведённый в указанный каталог; выполняется только в WASI.
+#[test]
+#[ignore = "нужен tmp/fourlegacy/runtime-bulk-translated/fourlegacy"]
+fn fourlegacy_runtime_world_features_use_the_real_component() {
+    let source=fourlegacy_component();
+    let root=server_root("fourlegacy-world");let folder=root.join("plugins/fourlegacy");std::fs::create_dir_all(folder.join("data")).unwrap();
+    for name in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(name),folder.join(name)).unwrap();}
+    std::fs::write(folder.join("data/config.yml"),"config-version: 2\nworld:\n  chest-loot: 0.0\n  animal-drops: 0.0\n  hostile-buff:\n    enabled: true\n    health-percent: 25\n    damage-percent: 20\n").unwrap();
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("fourlegacy").unwrap();
+    let (zombie,cow)=(crate::mob::Mob::new(110,crate::mob::Kind::Zombie,(0.0,64.0,0.0)),crate::mob::Mob::new(111,crate::mob::Kind::Cow,(2.0,64.0,0.0)));
+    let cow_max=cow.vitals.max_health;
+    let (zombie_uuid,cow_uuid)=(crate::network::login::format_uuid(&zombie.uuid),crate::network::login::format_uuid(&cow.uuid));
+    {let mut items=shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap();items.add_mob(zombie);items.add_mob(cow);}
+    assert!(host.native_event(2,vec![zombie_uuid]).is_some());assert!(host.is_loaded("fourlegacy"));
+    {let items=shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap();let mob=&items.mobs()[0];assert_eq!((mob.vitals.max_health,mob.vitals.health),(25.0,25.0));assert!((mob.effect_melee_damage(3.0)-3.6).abs()<0.0001);assert_eq!(items.mobs()[1].vitals.max_health,cow_max);}
+    let emerald=crate::inventory::Stack::new(crate::blocks::item_named("emerald").unwrap(),64);
+    let loot=host.generated_loot(crate::dimension::Dimension::Overworld,(0,64,0),vec![Some(emerald);27]);assert!(host.is_loaded("fourlegacy"));assert!(loot.iter().all(Option::is_none));
+    let drops=host.entity_death(None,&cow_uuid,false,vec![crate::inventory::Stack::new(crate::blocks::item_named("beef").unwrap(),3)]);assert!(host.is_loaded("fourlegacy"));assert!(drops.is_empty());
+    let emerald=crate::inventory::Stack::new(crate::blocks::item_named("emerald").unwrap(),5);let chest=crate::inventory::Stack::new(crate::blocks::item_named("chest").unwrap(),1);
+    let mut llama=crate::mob::Mob::new(112,crate::mob::Kind::Llama,(4.0,64.0,0.0));llama.land.chest=true;llama.land.cargo=vec![Some(emerald),None,None];let llama_uuid=crate::network::login::format_uuid(&llama.uuid);shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap().add_mob(llama);
+    let drops=host.entity_death(None,&llama_uuid,false,vec![emerald,chest,crate::inventory::Stack::new(crate::blocks::item_named("leather").unwrap(),2)]);assert!(host.is_loaded("fourlegacy"));assert_eq!(drops,vec![emerald,chest]);
+    host.unload("fourlegacy").unwrap();
+}
+
+#[test]
+fn player_health_uses_the_projected_maximum_within_the_same_callback() {
+    use super::api::mcsa::api::{attributes::Host as _,player::Host as _};
+    let root=server_root("projected-max-health");assert!(install(&root,"plugins","hello","hello",""));let shared=shared();java_info(&shared);
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();let uuid=crate::network::login::format_uuid(&[1;16]);
+    ctx.set_base(uuid.clone(),"max_health".into(),100.0).unwrap();ctx.set_health(uuid.clone(),100.0).unwrap();assert!(ctx.set_health(uuid.clone(),101.0).is_err());
+    assert_eq!(shared.players.lock().unwrap().ui.info[&[1;16]].health,100.0);
+    ctx.set_base(uuid,"max_health".into(),40.0).unwrap();let players=shared.players.lock().unwrap();assert_eq!((players.ui.info[&[1;16]].health,players.ui.info[&[1;16]].max_health),(40.0,40.0));
+}
+
+#[test]
+#[ignore = "нужны runtime-bulk-translated и bundled-races.json из проверки владельческого JAR"]
+fn fourlegacy_all_default_races_apply_native_attributes() {
+    let source=fourlegacy_component();
+    let root=server_root("fourlegacy-races");let folder=root.join("plugins/fourlegacy");std::fs::create_dir_all(folder.join("data")).unwrap();
+    for name in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(name),folder.join(name)).unwrap();}
+    std::fs::write(folder.join("data/config.yml"),"config-version: 2\nselection:\n  teleport-on-select: false\n").unwrap();
+    let shared=shared();java_info(&shared);{let mut world=shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap();for x in -1..=1 {for z in -1..=1 {world.ensure(x,z);}}world.set_block_silently(0,69,0,crate::blocks::state_by_name("stone").unwrap());}
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("fourlegacy").unwrap();let mut native=crate::attributes::Attributes::player();
+    let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/fourlegacy/bundled-races.json");let races:serde_json::Value=serde_json::from_str(&std::fs::read_to_string(source).unwrap()).unwrap();let races=races.as_array().unwrap();assert_eq!(races.len(),35);
+    for race in races {
+        let name=race["id"].as_str().unwrap();assert!(host.run_command(console(),"fl",&["setrace".into(),"Первый".into(),name.into()]).unwrap().0);assert!(host.is_loaded("fourlegacy"),"{name}");
+        for (key,value) in race["attributes"].as_object().unwrap() {
+            let id=crate::attributes::by_name(key).unwrap();let projected=crate::commands_world::plugin_attribute(&shared,&[1;16],id).unwrap().value();assert!((projected-value.as_f64().unwrap()).abs()<0.000001,"{name}.{key}: {projected}, expected {value}");
+        }
+        for order in shared.players.lock().unwrap().take_orders(&[1;16]) {if let crate::players::Order::Attribute(edit)=order {crate::commands_world::apply_attribute_edit(&mut native,&edit);crate::commands_world::finish_attribute_edit(&shared,&[1;16],&native);}}
+        println!("PASS: native race attributes {name}");
+    }
+    host.unload("fourlegacy").unwrap();
+}
+
+#[test]
+fn block_cube_reads_do_not_generate_missing_chunks_and_return_fresh_state() {
+    use super::api::mcsa::api::{types::BlockPos,world::Host as _};
+    let root=server_root("block-cube");assert!(install(&root,"plugins","hello","hello",""));let shared=shared();
+    {let mut world=shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap();world.ensure(0,0);world.set_block_silently(0,64,0,crate::blocks::state_by_name("brewing_stand").unwrap());}
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();
+    let start=||BlockPos {dimension:super::api::mcsa::api::types::Dimension::Overworld,x:-1,y:64,z:0};let before=ctx.block_cube(start()).unwrap();assert_eq!(before.len(),512);assert!(before[0].is_empty());assert_eq!(before[64],"minecraft:brewing_stand");
+    ctx.set_block(BlockPos {x:0,..start()},"minecraft:stone".into()).unwrap();assert_eq!(ctx.block_cube(start()).unwrap()[64],"minecraft:stone");assert_eq!(before[64],"minecraft:brewing_stand");
+    assert!(ctx.block_cube(BlockPos {x:i32::MAX,..start()}).is_err());assert!(ctx.block_cube(BlockPos {y:2041,..start()}).is_err());assert!(!shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap().has_chunk(-1,0));
+}
+
+#[test]
+#[ignore = "нужен tmp/fourlegacy/runtime-bulk-translated/fourlegacy"]
+fn fourlegacy_default_human_menu_stays_within_callback_limits() {
+    let source=fourlegacy_component();let root=server_root("fourlegacy-menu");let folder=root.join("plugins/fourlegacy");std::fs::create_dir_all(folder.join("data")).unwrap();
+    for name in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(name),folder.join(name)).unwrap();}
+    std::fs::write(folder.join("data/config.yml"),"config-version: 2\nselection:\n  teleport-on-select: false\n").unwrap();
+    let shared=shared();java_info(&shared);let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("fourlegacy").unwrap();
+    assert!(host.run_command(console(),"fl",&["setclan".into(),"Первый".into(),"humans".into()]).unwrap().0);assert!(host.is_loaded("fourlegacy"));
+    assert!(!host.loaded[0].store.data().chests.viewers.is_empty());host.unload("fourlegacy").unwrap();
+}

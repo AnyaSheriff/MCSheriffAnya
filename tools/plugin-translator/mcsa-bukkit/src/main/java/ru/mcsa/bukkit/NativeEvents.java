@@ -1,8 +1,11 @@
 package ru.mcsa.bukkit;
 import java.util.*;import org.bukkit.entity.*;import org.bukkit.event.*;import org.bukkit.event.entity.*;import org.bukkit.potion.*;
 public final class NativeEvents {
+ private static Player BukkitPlayer(String uuid){return org.bukkit.Bukkit.getPlayer(java.util.UUID.fromString(uuid));}
  public static void dispatch(String[] a){int kind=Integer.parseInt(a[0]);String[] payload=Arrays.copyOfRange(a,1,a.length);boolean cancelled=false;
   switch(kind){
+   case 12:{org.bukkit.inventory.InventoryView view=new NativeInventoryView(BukkitPlayer(payload[0]));cancelled=ChestViews.click(view,Integer.parseInt(payload[1]),Integer.parseInt(payload[2]),Integer.parseInt(payload[3]))!=0;break;}
+   case 13:{org.bukkit.inventory.InventoryView view=new NativeInventoryView(BukkitPlayer(payload[0]));java.util.Set<Integer> slots=new java.util.LinkedHashSet<>();for(int i=1;i<payload.length;i++)slots.add(Integer.parseInt(payload[i]));org.bukkit.event.inventory.InventoryDragEvent event=new org.bukkit.event.inventory.InventoryDragEvent(view,view.getCursor(),slots);RuntimeState.fire(event);cancelled=event.isCancelled();break;}
    case 0:{PotionEffectType type=PotionEffectType.getByName(payload[2]);if(type==null)throw new IllegalArgumentException("Неизвестный эффект");PotionEffect effect=new PotionEffect(type,Integer.parseInt(payload[3]),Integer.parseInt(payload[4]),payload[5].equals("1"),payload[6].equals("1"),payload[7].equals("1"));EntityPotionEffectEvent event=new EntityPotionEffectEvent(RemoteEntity.find(payload[0]),effect,EntityPotionEffectEvent.Action.valueOf(payload[1]));RuntimeState.fire(event);cancelled=event.isCancelled();break;}
    case 1:{List<Entity> entities=new ArrayList<>();for(int i=1;i<payload.length;i++)entities.add(RemoteEntity.find(payload[i]));RuntimeState.fire(new org.bukkit.event.world.EntitiesLoadEvent(new RemoteWorld(Integer.parseInt(payload[0])),entities));break;}
    case 2:{CreatureSpawnEvent event=new CreatureSpawnEvent((LivingEntity)RemoteEntity.find(payload[0]));RuntimeState.fire(event);cancelled=event.isCancelled();break;}

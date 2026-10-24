@@ -10,6 +10,6 @@ public final class RemoteBlock implements org.bukkit.block.Block { private final
  public boolean isLiquid(){return details()[3].equals("1");}public boolean isPassable(){return details()[4].equals("1");}
  public void randomTick(){Host.call(71,args());}public org.bukkit.block.BlockState getState(){return new BlockSnapshot(this,details());}
  private String[] args(){return new String[]{""+((RemoteWorld)world).dimension,""+x,""+y,""+z};}
- public Material getType(){String name=proposed==null?Host.text(13,args()):proposed;Material m=Material.matchMaterial(name);if(m==null)throw new IllegalStateException("Материал вне подмножества: "+name);return m;}
+ public Material getType(){String name=proposed==null?BlockReads.type(((RemoteWorld)world).dimension,x,y,z):proposed;Material m=Material.matchMaterial(name);if(m==null)throw new IllegalStateException("Материал вне подмножества: "+name);return m;}
  public void setType(Material m){String[] a=args();Host.call(14,a[0],a[1],a[2],a[3],Ascii.lower(m.name()));}
 }

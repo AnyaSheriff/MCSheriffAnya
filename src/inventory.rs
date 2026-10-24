@@ -181,6 +181,7 @@ pub struct Inventory {
     /// игрока). Лежат хвостом записи инвентаря — своего места в файле игрока
     /// у них нет.
     seen_attributes: Vec<u8>,
+    retained_drops: Vec<Stack>,
 }
 
 impl Inventory {
@@ -190,6 +191,7 @@ impl Inventory {
             selected: 0,
             cursor: None,
             seen_attributes: Vec::new(),
+            retained_drops: Vec::new(),
         }
     }
 
@@ -203,6 +205,15 @@ impl Inventory {
         if let Err(at) = self.seen_attributes.binary_search(&attribute) {
             self.seen_attributes.insert(at, attribute);
         }
+    }
+
+    /// Отменённый вынужденный выброс остаётся у владельца, даже при полном рюкзаке.
+    pub fn retain_drop(&mut self,stack:Stack) {if let Some(left)=self.put(stack).1 {self.retained_drops.push(left);}}
+    pub fn take_retained(&mut self)->Vec<Stack> {std::mem::take(&mut self.retained_drops)}
+    pub fn restore_retained(&mut self)->bool {
+        let pending=std::mem::take(&mut self.retained_drops);let mut changed=false;
+        for stack in pending {let (slots,left)=self.put(stack);changed|=!slots.is_empty();if let Some(left)=left {self.retained_drops.push(left);}}
+        changed
     }
 
     /// Все слоты по порядку — для отправки клиенту.
@@ -688,9 +699,13 @@ impl Inventory {
         }
 
         // Хвост: сколько и какие атрибуты когда-либо имели модификаторы.
-        if !self.seen_attributes.is_empty() {
+        if !self.seen_attributes.is_empty() || !self.retained_drops.is_empty() {
             out.push(self.seen_attributes.len() as u8);
             out.extend_from_slice(&self.seen_attributes);
+        }
+        if !self.retained_drops.is_empty() {
+            out.extend(b"PDRO");out.extend((self.retained_drops.len() as u32).to_be_bytes());
+            for stack in &self.retained_drops {out.extend(stack.stored_item().to_be_bytes());out.extend(stack.count.to_be_bytes());stack.write_extras(&mut out);}
         }
 
         out
@@ -734,6 +749,18 @@ impl Inventory {
             for id in bytes.get(at + 1..at + 1 + usize::from(number)).unwrap_or_default() {
                 inventory.note_attribute(*id);
             }
+            at+=1+usize::from(number);
+        }
+        if bytes.get(at..at+4)==Some(b"PDRO") {
+            at+=4;
+            let mut take=|n:usize|->Option<&[u8]> {let value=bytes.get(at..at.checked_add(n)?)?;at+=n;Some(value)};
+            let count=u32::from_be_bytes(take(4)?.try_into().ok()?) as usize;
+            if count>bytes.len()/8 {return None;}
+            for _ in 0..count {
+                let item=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
+                let extras=Stack::read_extras(item,&mut take)?;let mut stack=Stack::from_stored(item,count);if let Some(data)=extras {stack=stack.with_extras(data);}
+                if count<=0||count>stack.limit() {return None;}inventory.retained_drops.push(stack);
+            }
         }
 
         Some(inventory)
@@ -754,6 +781,13 @@ pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
 
 #[cfg(test)]
 mod tests {
+    #[test] fn cancelled_overflow_is_persisted_and_restored_when_space_returns() {
+        let mut inventory=super::Inventory::new();let stone=crate::blocks::item_named("stone").unwrap();let kit=super::Stack::new(crate::blocks::item_named("bow").unwrap(),1).with_extras(crate::stackdata::Data {damage:7,..Default::default()});
+        for slot in super::FIRST_MAIN..=super::LAST_HOTBAR {inventory.set(slot,Some(super::Stack::new(stone,64)));}
+        inventory.retain_drop(kit);assert!(!inventory.restore_retained());
+        let mut restored=super::Inventory::from_bytes(&inventory.to_bytes()).unwrap();assert_eq!(restored,inventory);
+        restored.set(super::FIRST_MAIN,None);assert!(restored.restore_retained());assert_eq!(restored.slot(super::FIRST_MAIN),Some(kit));assert!(!restored.restore_retained());
+    }
     #[test]
     fn binding_blocks_every_supported_way_out_of_an_armor_slot() {
         let mut data = crate::stackdata::Data::default();

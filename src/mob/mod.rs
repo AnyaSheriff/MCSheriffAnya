@@ -15,6 +15,8 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod plugin_attributes;
+pub mod plugin_targets;
 pub mod armor_stand;
 pub mod movement_enchantments;
 pub mod trial_gear;
@@ -1522,7 +1524,8 @@ pub enum Event {
 /// Моб в мире.
 #[derive(Clone, Debug)]
 pub struct Mob {
-    pub plugin_seen_target: Option<i32>,
+    pub plugin_seen_targets: [Option<i32>;3],
+    pub plugin_attributes: Vec<crate::attributes::Attribute>,
     pub entity_id: i32,
     pub uuid: [u8; 16],
     pub kind: Kind,
@@ -1745,7 +1748,8 @@ impl Mob {
         let h = hostile::State { bow: kind.skeleton(), shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
 
         let mut mob = Self {
-            plugin_seen_target: None,
+            plugin_seen_targets: [None;3],
+            plugin_attributes: Vec::new(),
             entity_id,
             uuid: uuid_for(entity_id),
             kind,
@@ -1869,7 +1873,7 @@ impl Mob {
 
     pub fn movement_speed(&self) -> f64 {
         let base = if horse::equine(self.kind) { self.horse.speed } else { self.kind.speed() };
-        base + crate::soul::bonus(self.foot_enchants.soul)
+        self.plugin_attribute_value(crate::attributes::MOVEMENT_SPEED, base) + crate::soul::bonus(self.foot_enchants.soul)
     }
 
     pub fn is_baby(&self) -> bool {
@@ -2661,7 +2665,7 @@ impl Mob {
 
     pub fn effect_melee_damage(&self, base: f32) -> f32 {
         use crate::survival::EffectKind;
-        (base + 3.0 * self.vitals.effect_level(EffectKind::Strength) as f32
+        (self.plugin_attack_damage(base) + 3.0 * self.vitals.effect_level(EffectKind::Strength) as f32
             - 4.0 * self.vitals.effect_level(EffectKind::Weakness) as f32).max(0.0)
     }
 
@@ -3051,7 +3055,7 @@ impl Mob {
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
+        save::write_head(out, id, !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -3096,7 +3100,7 @@ impl Mob {
         if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
+        if !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
             leash::write_tail(self, out);
         }
     }
@@ -3209,6 +3213,7 @@ impl Mob {
 
         if let Some(tail) = tail {
             leash::apply_tail(&mut mob, tail);
+            mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
         }
 
         // Снаряд без цели не живёт: прочитанный из файла гаснет.
@@ -3971,8 +3976,11 @@ pub fn step_all(
         let shot_weapon = equipment::slot(mob, 0);
         let old_cooldown=mob.h.cooldown;let old_events=mob.events.len();
         let mut plan = mob.tick(view, sense, rng);
-        if crate::plugins::active()&&mob.h.target!=mob.plugin_seen_target {
-            plugin_targets.push((mob.uuid,mob.h.target,mob.plugin_seen_target));mob.h.cooldown=old_cooldown;mob.events.truncate(old_events);continue;
+        if crate::plugins::active() {
+            let targets=mob.plugin_targets();
+            let mut changed=false;
+            for (slot,target) in targets.into_iter().enumerate() {if target!=mob.plugin_seen_targets[slot] {plugin_targets.push((mob.uuid,slot,target,mob.plugin_seen_targets[slot]));changed=true;}}
+            if changed {mob.h.cooldown=old_cooldown;mob.events.truncate(old_events);continue;}
         }
         // Вики, Strength/Weakness: +3L / −4L к melee; луч стража — магия.
         if !guardian::guardian(mob.kind) && let Some(melee) = &mut plan.melee {

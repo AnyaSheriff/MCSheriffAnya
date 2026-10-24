@@ -353,7 +353,7 @@ pub fn drive(mob: &mut Mob, view: &dyn super::View, to: (f64, f64, f64), look: (
     let elapsed = mob.ticks.saturating_sub(mob.horse.last_move_tick).min(5) as f64;
     // Скорость атрибута соответствует примерно 43 блокам/с на единицу.
     // Кнопка sprint не добавляет лошади множитель бега игрока.
-    let per_tick = mob.horse.speed * 2.2 + 0.15;
+    let per_tick = mob.plugin_attribute_value(crate::attributes::MOVEMENT_SPEED, mob.horse.speed) * 2.2 + 0.15;
     let budget = (mob.horse.move_budget + elapsed * per_tick).min(per_tick * 5.0);
     let distance = delta.0.hypot(delta.2);
     if distance > budget + 1.0e-6 || delta.1.abs() > 10.0 { return false; }

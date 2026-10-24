@@ -6,11 +6,12 @@ public final class ChestInventory implements Inventory {
  public InventoryHolder getHolder(){return holder;}public int getSize(){return items.length;}
  private void check(int slot){if(slot<0||slot>=items.length)throw new IllegalArgumentException("Ячейка вне сундука");}
  // Один игровой callback видит согласованный снимок; собственные записи обновляют его сразу.
- private long refreshedEpoch=-1;
- public ItemStack getItem(int slot){check(slot);if(handle!=0&&refreshedEpoch!=RuntimeState.callbackEpoch)refresh();return items[slot];}
- public ItemStack[] getContents(){if(handle!=0&&refreshedEpoch!=RuntimeState.callbackEpoch)refresh();return items.clone();}
- void refresh(){refreshedEpoch=RuntimeState.callbackEpoch;String[] a=Host.call(52,""+handle);for(int i=0;i<items.length;i++){int n=i*3;int count=Integer.parseInt(a[n+1]);if(count<=0||a[n].equals("air")){items[i]=null;continue;}Material m=Material.matchMaterial(a[n]);items[i]=m==null||m.isAir()?null:ItemStack.fromHost(m,count,a[n+2]);}}
- public void setItem(int slot,ItemStack item){check(slot);items[slot]=item==null?null:item.clone();if(handle!=0)send(slot);}
+ private long refreshedEpoch=-1;private String[] pending;
+ public ItemStack getItem(int slot){check(slot);if(handle!=0&&refreshedEpoch!=RuntimeState.callbackEpoch)refresh();decode(slot);return items[slot];}
+ public ItemStack[] getContents(){if(handle!=0&&refreshedEpoch!=RuntimeState.callbackEpoch)refresh();for(int i=0;i<items.length;i++)decode(i);return items.clone();}
+ void refresh(){refreshedEpoch=RuntimeState.callbackEpoch;pending=Host.call(52,""+handle);}
+ private void decode(int slot){if(pending==null)return;int n=slot*3;if(pending[n]==null)return;String name=pending[n];pending[n]=null;int count=Integer.parseInt(pending[n+1]);if(count<=0||name.equals("air")){items[slot]=null;return;}Material m=Material.matchMaterial(name);items[slot]=m==null||m.isAir()?null:ItemStack.fromHost(m,count,pending[n+2]);}
+ public void setItem(int slot,ItemStack item){check(slot);if(pending!=null)pending[slot*3]=null;items[slot]=item==null?null:item.clone();if(handle!=0)send(slot);}
  private void send(int slot){ItemStack item=items[slot];Host.call(51,""+handle,""+slot,item==null||item.isEmpty()?"air":Ascii.lower(item.getType().name()),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());}
  int prepare(){if(handle==0){handle=Integer.parseInt(Host.text(50,""+items.length,Text.json(title)));for(int i=0;i<items.length;i++)if(items[i]!=null&&!items[i].isEmpty())send(i);refreshedEpoch=RuntimeState.callbackEpoch;}return handle;}
  public boolean contains(Material material){for(ItemStack item:getContents())if(item!=null&&item.getType()==material)return true;return false;}

@@ -366,17 +366,20 @@ async fn run(shared: Arc<Shared>) {
 
             if crate::plugins::active() {
                 drop(world);
+                let carts={let mut items=shared.items_in(dimension).lock().expect("сущности");std::mem::take(&mut items.plugin_cart_loot).into_iter().filter_map(|(id,pos)|items.carts().iter().find(|c|c.entity_id==id).map(|c|(id,pos,c.slots.clone()))).collect::<Vec<_>>()};
+                for (id,pos,before) in carts {let slots=crate::plugins::generated_loot(dimension,pos,before.clone());let mut items=shared.items_in(dimension).lock().expect("сущности");if let Some(cart)=items.carts_mut().iter_mut().find(|c|c.entity_id==id&&c.slots==before) {cart.slots=slots;}}
                 let (loaded,spawned,targets)={let mut items=shared.items_in(dimension).lock().expect("сущности");(std::mem::take(&mut items.plugin_loaded),std::mem::take(&mut items.plugin_spawned),std::mem::take(&mut items.plugin_targets))};
                 let mut groups=std::collections::BTreeMap::<(i32,i32),Vec<String>>::new();for (x,z,uuid) in loaded {groups.entry((x,z)).or_default().push(crate::network::login::format_uuid(&uuid));}
                 for entities in groups.into_values() {let mut fields=vec![(match dimension {Dimension::Overworld=>0,Dimension::Nether=>1,Dimension::End=>2}).to_string()];fields.extend(entities);crate::plugins::native_event(1,fields);}
                 for uuid in spawned {if crate::plugins::native_event(2,vec![crate::network::login::format_uuid(&uuid)]).is_none() {shared.items_in(dimension).lock().expect("сущности").remove_mobs(|mob|mob.uuid==uuid);}}
-                for (uuid,target,old) in targets {
+                for (uuid,slot,target,old) in targets {
                     let target_uuid=target.and_then(|id| {if let Some(uuid)=shared.players.lock().expect("игроки").members().iter().find(|p|p.entity_id==id).map(|p|p.uuid) {return Some(uuid);}shared.items_in(dimension).lock().expect("сущности").mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid)}).map(|uuid|crate::network::login::format_uuid(&uuid)).unwrap_or_default();
                     let accepted=crate::plugins::native_event(4,vec![crate::network::login::format_uuid(&uuid),target_uuid]).is_some();
-                    if let Some(mob)=shared.items_in(dimension).lock().expect("сущности").mobs_mut().iter_mut().find(|m|m.uuid==uuid)&&mob.h.target==target {if accepted {mob.plugin_seen_target=target;}else {mob.h.target=old;}}
+                    let old_player=old.is_some_and(|id|shared.players.lock().expect("игроки").members().iter().any(|p|p.entity_id==id));
+                    if let Some(mob)=shared.items_in(dimension).lock().expect("сущности").mobs_mut().iter_mut().find(|m|m.uuid==uuid)&&mob.plugin_targets()[slot]==target {if accepted {mob.plugin_seen_targets[slot]=target;}else {mob.set_plugin_target_kind(slot,old,old_player);}}
                 }
                 world=shared.world_in(dimension).lock().expect("мир");
-            } else {let mut items=shared.items_in(dimension).lock().expect("сущности");items.plugin_loaded.clear();items.plugin_spawned.clear();items.plugin_targets.clear();}
+            } else {let mut items=shared.items_in(dimension).lock().expect("сущности");items.plugin_loaded.clear();items.plugin_spawned.clear();items.plugin_targets.clear();items.plugin_cart_loot.clear();}
             // Стрелы: полёт, попадание, застревание (arrow.rs).
             crate::arrow::step(&shared, dimension, &mut world);
             crate::fishing::step(&shared, dimension, &mut world);
@@ -1351,6 +1354,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 let mut cart = crate::minecart::Minecart::new(shared.next_entity_id(), crate::minecart::Kind::Chest, place);
 
                 cart.slots = crate::loot::fill(crate::loot::Table::Mineshaft.pools(), cart.slots.len(), &mut crate::loot::Dice::new(luck));
+                if crate::plugins::active() {items.plugin_cart_loot.push((cart.entity_id,(x,y,z)));}
                 items.add_cart(cart);
             }
         }

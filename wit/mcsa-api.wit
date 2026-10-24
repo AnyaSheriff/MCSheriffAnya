@@ -266,6 +266,7 @@ interface %world {
 
     use types.{block-pos, location, dimension};
     record block-state { data: string, sky: u8, light: u8, liquid: bool, passable: bool, age: s32, max-age: s32 }
+    block-cube: func(start: block-pos) -> result<list<string>, string>;
     block-details: func(pos: block-pos) -> result<block-state, string>;
     update-block: func(pos: block-pos, data: string, force: bool, physics: bool) -> result<bool, string>;
     random-tick: func(pos: block-pos) -> result<_, string>;

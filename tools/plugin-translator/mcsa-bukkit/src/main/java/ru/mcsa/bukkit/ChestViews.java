@@ -13,9 +13,12 @@ public final class ChestViews implements InventoryView {
  public static int event(Player p,int handle,int kind,int slot,int button,int mode){ChestViews view=views.get(key(p,handle));if(view==null)return 1;
   if(kind==1){view.inventory.refresh();RuntimeState.fire(new InventoryCloseEvent(view));views.remove(key(p,handle));boolean used=false;for(ChestViews other:views.values())if(other.inventory==view.inventory)used=true;if(!used){Host.call(56,""+handle);view.inventory.handle=0;}return 0;}
   if(mode==5){InventoryDragEvent event=new InventoryDragEvent(view);RuntimeState.fire(event);return event.isCancelled()?1:0;}
+  return click(view,slot,button,mode);
+ }
+ public static int click(InventoryView view,int slot,int button,int mode){
   ClickType click=mode==0?(slot==-999?(button==0?ClickType.WINDOW_BORDER_LEFT:ClickType.WINDOW_BORDER_RIGHT):(button==0?ClickType.LEFT:ClickType.RIGHT)):mode==1?(button==0?ClickType.SHIFT_LEFT:ClickType.SHIFT_RIGHT):mode==2?(button==40?ClickType.SWAP_OFFHAND:ClickType.NUMBER_KEY):mode==3?ClickType.MIDDLE:mode==4?(button==0?ClickType.DROP:ClickType.CONTROL_DROP):mode==6?ClickType.DOUBLE_CLICK:ClickType.UNKNOWN;
   ItemStack item=view.getItem(slot);InventoryAction action=mode==1?InventoryAction.MOVE_TO_OTHER_INVENTORY:mode==2?InventoryAction.HOTBAR_SWAP:mode==3?InventoryAction.CLONE_STACK:mode==4?(button==0?InventoryAction.DROP_ONE_SLOT:InventoryAction.DROP_ALL_SLOT):mode==6?InventoryAction.COLLECT_TO_CURSOR:InventoryAction.UNKNOWN;
   if(mode==0){ItemStack cursor=view.getCursor();if(slot==-999)action=cursor==null?InventoryAction.NOTHING:button==0?InventoryAction.DROP_ALL_CURSOR:InventoryAction.DROP_ONE_CURSOR;else if(cursor==null)action=item==null?InventoryAction.NOTHING:button==0?InventoryAction.PICKUP_ALL:InventoryAction.PICKUP_HALF;else if(item==null)action=button==0?InventoryAction.PLACE_ALL:InventoryAction.PLACE_ONE;else if(item.isSimilar(cursor)){int room=item.getMaxStackSize()-item.getAmount();action=room<=0?InventoryAction.NOTHING:button!=0?InventoryAction.PLACE_ONE:room>=cursor.getAmount()?InventoryAction.PLACE_ALL:InventoryAction.PLACE_SOME;}else action=InventoryAction.SWAP_WITH_CURSOR;}
-  InventoryClickEvent event=new InventoryClickEvent(view,slot<0?InventoryType.SlotType.OUTSIDE:slot>=view.inventory.getSize()+27?InventoryType.SlotType.QUICKBAR:InventoryType.SlotType.CONTAINER,slot,click,action,mode==2&&button<9?button:-1);RuntimeState.fire(event);return event.isCancelled()?1:0;
+  InventoryClickEvent event=new InventoryClickEvent(view,slot<0?InventoryType.SlotType.OUTSIDE:slot>=view.getTopInventory().getSize()+27?InventoryType.SlotType.QUICKBAR:InventoryType.SlotType.CONTAINER,slot,click,action,mode==2&&button<9?button:-1);RuntimeState.fire(event);return event.isCancelled()?1:0;
  }
 }

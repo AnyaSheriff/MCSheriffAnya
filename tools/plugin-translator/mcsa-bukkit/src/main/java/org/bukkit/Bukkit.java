@@ -1,6 +1,8 @@
 package org.bukkit;
 import org.bukkit.entity.Player;import ru.mcsa.bukkit.*;
 public final class Bukkit {
+ // Один callback читает один согласованный список, без повторного разбора координат и UUID.
+ private static long onlineEpoch=-1;private static java.util.Collection<? extends Player> online=java.util.List.of();
  private static final org.bukkit.inventory.ItemFactory itemFactory=new RemoteItemFactory();public static org.bukkit.inventory.ItemFactory getItemFactory(){return itemFactory;}
  private static final Server server=new Server(){
   public java.util.Collection<? extends Player> getOnlinePlayers(){return Bukkit.getOnlinePlayers();}public Player getPlayer(String n){return Bukkit.getPlayer(n);}public Player getPlayer(java.util.UUID u){return Bukkit.getPlayer(u);}
@@ -12,7 +14,7 @@ public final class Bukkit {
  public static org.bukkit.scoreboard.ScoreboardManager getScoreboardManager(){return ()->MainScoreboard.INSTANCE;}
  public static int getCurrentTick(){return (int)Long.parseLong(Host.text(60));}
  public static boolean isStopping(){return Host.yes(88);}
- public static Server getServer(){return server;} public static java.util.Collection<? extends Player> getOnlinePlayers(){String[] a=Host.call(1);java.util.List<Player> r=new java.util.ArrayList<>();for(int i=0;i<a.length;i+=9)r.add(Host.player(a,i));return r;}
+ public static Server getServer(){return server;} public static java.util.Collection<? extends Player> getOnlinePlayers(){if(onlineEpoch!=RuntimeState.callbackEpoch){String[] a=Host.call(1);java.util.List<Player> r=new java.util.ArrayList<>();for(int i=0;i<a.length;i+=9)r.add(Host.player(a,i));online=java.util.Collections.unmodifiableList(r);onlineEpoch=RuntimeState.callbackEpoch;}return online;}
  public static Player getPlayer(String n){for(Player p:getOnlinePlayers())if(p.getName().equalsIgnoreCase(n))return p;return null;}
  public static Player getPlayer(java.util.UUID u){for(Player p:getOnlinePlayers())if(p.getUniqueId().equals(u))return p;return null;}
  public static int broadcastMessage(String m){Host.call(0,m);return getOnlinePlayers().size();}

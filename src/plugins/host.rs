@@ -748,7 +748,7 @@ impl Host {
                 let (result,) = function.call(&mut *store, (who.to_wit(), action, hand, block, face))?;
                 Ok(result)
             }) {
-                Ok(value @ 0..=3) => denied |= value,
+                Ok(value @ 0..=15) => denied |= value,
                 Ok(_) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason: "Недопустимый ответ обработчика взаимодействия".into() }),
                 Err(reason) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason }),
             }
@@ -856,14 +856,20 @@ impl Host {
             let result=result.and_then(|edits|if edits.is_empty() {Ok(())}else {chunk.apply_population(edits)});
             if let Err(reason)=result {crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:format!("Генерация чанка {x} {z}: {reason}")});}
         }
-        for (pos,mut slots) in chunk.population_loot() {
-            for plugin in &mut self.loaded {let Some(function)=plugin.generated_loot else {continue;};let encoded=plugin.store.data_mut().inventory_items(&slots);let block=mcsa::api::types::BlockPos {dimension,x:x*16+pos.0,y:pos.1,z:z*16+pos.2};
+        self.bury(crashes);
+        for (pos,slots) in chunk.population_loot() {
+            let slots=self.generated_loot(super::api::dimension_from_wit(dimension),(x*16+pos.0,pos.1,z*16+pos.2),slots);
+            chunk.replace_population_loot(pos,slots);
+        }
+        chunk
+    }
+    pub fn generated_loot(&mut self,dimension:crate::dimension::Dimension,pos:(i32,i32,i32),mut slots:Vec<Option<crate::inventory::Stack>>)->Vec<Option<crate::inventory::Stack>> {
+        let now=self.shared_tick();let mut crashes=Vec::new();let dimension=super::api::dimension_to_wit(dimension);
+            for plugin in &mut self.loaded {let Some(function)=plugin.generated_loot else {continue;};let encoded=plugin.store.data_mut().inventory_items(&slots);let block=mcsa::api::types::BlockPos {dimension,x:pos.0,y:pos.1,z:pos.2};
                 let result=plugin.call(now,|_,store|{let (items,)=function.call(&mut *store,(block,encoded))?;Ok(items)}).and_then(|items|{if items.len()!=slots.len() {return Err("Неверный размер сгенерированной добычи".into());}items.into_iter().map(|item|plugin.store.data_mut().inventory_stack(item)).collect::<Result<Vec<_>,String>>()});
                 match result {Ok(items)=>slots=items,Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})}
             }
-            chunk.replace_population_loot(pos,slots);
-        }
-        self.bury(crashes);chunk
+        self.bury(crashes);slots
     }
 
     pub fn entity_death(&mut self, who: Option<&PlayerView>, uuid: &str, keep: bool, mut drops: Vec<crate::inventory::Stack>) -> Vec<crate::inventory::Stack> {
@@ -1135,7 +1141,12 @@ impl Loaded {
 
         let _inside = InsideGuard::enter();
         let started = std::time::Instant::now();
-        let result = call(&self.instance, &mut self.store).map_err(|error| short(&error));
+        let result = call(&self.instance, &mut self.store).map_err(|error| {
+            // Интеграционная проверка сохраняет стек Wasm до сокращения причины выгрузки.
+            #[cfg(test)]
+            eprintln!("{}",format!("{error:?}").chars().take(4000).collect::<String>());
+            short(&error)
+        });
 
         self.stats.add(started.elapsed().as_nanos() as u64);
         result

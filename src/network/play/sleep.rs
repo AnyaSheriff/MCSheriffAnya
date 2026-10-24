@@ -382,9 +382,8 @@ pub(super) fn respawn_target(shared: &Shared, player: &mut PlayerState) -> Targe
     let mut missing = false;
 
     if let Some(point) = player.respawn {
+        shared.ensure_chunk(point.dimension,point.pos.0.div_euclid(CHUNK_SIZE),point.pos.2.div_euclid(CHUNK_SIZE));
         let mut world = shared.world_in(point.dimension).lock().expect("мир захвачен другим потоком");
-
-        world.ensure(point.pos.0.div_euclid(CHUNK_SIZE), point.pos.2.div_euclid(CHUNK_SIZE));
 
         let state = world.get_block(point.pos.0, point.pos.1, point.pos.2);
         let charges = bed::anchor_charges(state).filter(|_| bed::is_anchor(state)).unwrap_or(0);

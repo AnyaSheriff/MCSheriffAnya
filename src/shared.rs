@@ -183,6 +183,20 @@ impl Shared {
         &self.worlds[dimension.index()]
     }
 
+    /// Подготовка с популяторами выполняется без замка мира и до публикации чанка.
+    pub fn ensure_chunk(&self,dimension:Dimension,x:i32,z:i32)->bool {
+        if !crate::plugins::active() {let mut world=self.world_in(dimension).lock().expect("мир");world.ensure(x,z);return world.has_chunk(x,z);}
+        for _ in 0..2 {
+            let source={let world=self.world_in(dimension).lock().expect("мир");if world.has_chunk(x,z) {return true;}world.source()};
+            let ready=source.take(x,z);
+            if self.world_in(dimension).lock().expect("мир").accept_prepared(x,z,ready) {return true;}
+        }false
+    }
+    pub fn accept_chunk(&self,dimension:Dimension,x:i32,z:i32,ready:crate::world::ReadyChunk) {
+        let accepted=self.world_in(dimension).lock().expect("мир").accept_prepared(x,z,ready);
+        if !accepted {self.ensure_chunk(dimension,x,z);}
+    }
+
     /// Выпавшие предметы этого измерения.
     pub fn items_in(&self, dimension: Dimension) -> &Mutex<Items> {
         &self.items[dimension.index()]

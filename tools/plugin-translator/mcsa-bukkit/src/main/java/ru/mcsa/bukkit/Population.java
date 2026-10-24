@@ -11,6 +11,7 @@ public final class Population implements LimitedRegion {
  private int index(int x,int y,int z){if(!active)throw new IllegalStateException("Область генерации уже закрыта");if(!isInRegion(x,y,z))throw new IllegalArgumentException("Вне области генерации: доступен только центральный чанк, buffer=0");return ((x-cx*16)*16+z-cz*16)*384+y+64;}
  public boolean isInRegion(int x,int y,int z){return x>=cx*16&&x<cx*16+16&&z>=cz*16&&z<cz*16+16&&y>=-64&&y<320;}public int getBuffer(){return 0;}
  public Material getType(int x,int y,int z){return blocks[index(x,y,z)];}public void setType(int x,int y,int z,Material type){int i=index(x,y,z);if(type==null)throw new IllegalArgumentException("Нужен материал блока");blocks[i]=type;changed[i]=true;}
- public static void run(String[] a){Host.call(22,apply(a));}
+ // Большие массивы области убираем в конечном бюджете генерации, до обычных callback.
+ public static void run(String[] a){Host.call(22,apply(a));System.gc();}
  public static String apply(String[] a){Population region=new Population(a);int dimension=Integer.parseInt(a[0]);long seed=Long.parseLong(a[3]);try{for(BlockPopulator populator:new java.util.ArrayList<>(list(dimension)))populator.populate(new RemoteWorld(dimension),new java.util.Random(seed),region.cx,region.cz,region);StringBuilder edits=new StringBuilder();for(int i=0;i<region.blocks.length;i++)if(region.changed[i])edits.append(i).append(' ').append(Ascii.lower(region.blocks[i].name())).append('\n');return edits.toString();}finally{region.active=false;}}
 }

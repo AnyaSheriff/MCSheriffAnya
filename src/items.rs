@@ -285,9 +285,11 @@ pub enum Change {
 }
 
 /// Все предметы, лежащие в мире, и журнал изменений.
+pub type PluginTarget = ([u8;16],usize,Option<i32>,Option<i32>);
 pub type PluginDeath = (String,(f64,f64,f64),bool,Vec<Stack>);
 pub struct Items {
-    pub plugin_targets: Vec<([u8;16],Option<i32>,Option<i32>)>,
+    pub plugin_cart_loot: Vec<(i32,(i32,i32,i32))>,
+    pub plugin_targets: Vec<PluginTarget>,
     pub plugin_spawned: Vec<[u8;16]>,
     pub plugin_loaded: Vec<(i32,i32,[u8;16])>,
     pub plugin_deaths: Vec<PluginDeath>,
@@ -337,6 +339,7 @@ impl Items {
     pub fn new() -> Self {
         Self {
             plugin_deaths: Vec::new(),
+            plugin_cart_loot: Vec::new(),
             plugin_targets: Vec::new(),
             plugin_spawned: Vec::new(),
             plugin_loaded: Vec::new(),

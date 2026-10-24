@@ -115,18 +115,9 @@ impl crate::mob::View for MobWorld<'_> { fn block(&self,x:i32,y:i32,z:i32)->i32 
 
 // Окно ламы: две ячейки снаряжения, затем 3·Strength грузовых ячеек.
 // [проверить] 26.1 horse-screen после переноса седла в отдельный слот.
-pub(super) fn slots(mob: &crate::mob::Mob) -> Vec<Option<Stack>> {
-    let decor=mob.land.decor.and_then(|c| blocks::item_named(&crate::mob::WOOL[usize::from(c)].replace("_wool","_carpet"))).map(|id| Stack::new(id,1));
-    let mut slots=vec![None,decor];
-    slots.extend((0..mob.land.slots()).map(|i| mob.land.cargo.get(i).copied().flatten())); slots
-}
-pub(super) fn valid(mob:&crate::mob::Mob, slots:&[Option<Stack>])->bool {
-    slots.len()==mob.land.slots()+2 && slots[0].is_none() && slots[1].is_none_or(|s| s.count==1 && blocks::item_name(s.item).is_some_and(|n| n.ends_with("_carpet")))
-}
-pub(super) fn store(mob:&mut crate::mob::Mob, slots:&[Option<Stack>]) {
-    mob.land.decor=slots[1].and_then(|s| blocks::item_name(s.item)).and_then(|name| crate::mob::WOOL.iter().position(|w| w.replace("_wool","_carpet")==name)).map(|i| i as u8);
-    mob.land.cargo=slots[2..].to_vec(); mob.attr_changes=mob.attr_changes.wrapping_add(1);
-}
+pub(super) fn slots(mob:&crate::mob::Mob)->Vec<Option<Stack>> {land::inventory(mob)}
+pub(super) fn valid(mob:&crate::mob::Mob,slots:&[Option<Stack>])->bool {land::valid_inventory(mob,slots)}
+pub(super) fn store(mob:&mut crate::mob::Mob,slots:&[Option<Stack>]) {land::store_inventory(mob,slots)}
 
 // Shift: груз идёт в грузовые ячейки, а ковёр — в единственную ячейку декора.
 pub(super) fn quick_move(slots:&mut [Option<Stack>], inventory:&mut Inventory, slot:i32)->inventory::Click {

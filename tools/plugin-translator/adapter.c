@@ -164,6 +164,7 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 116: {plugin_option_string_t uuid;if(!mcsa_api_player_vehicle(&s[0],&uuid,&err))error(err);else {if(uuid.is_some)string(uuid.val);plugin_option_string_free(&uuid);}break;}
     case 115: {bool inside;if(!mcsa_api_player_inside_vehicle(&s[0],&inside,&err))error(err);else number(inside);break;}
     case 114: {plugin_option_string_t type;if(!mcsa_api_entities_cloud_potion(&s[0],&type,&err))error(err);else {if(type.is_some)string(type.val);plugin_option_string_free(&type);}break;}
+    case 161: {mcsa_api_types_block_pos_t pos={atoi(a[0]),atoi(a[1]),atoi(a[2]),atoi(a[3])};plugin_list_string_t blocks;if(!mcsa_api_world_block_cube(&pos,&blocks,&err))error(err);else {for(size_t i=0;i<blocks.len;i++)string(blocks.ptr[i]);plugin_list_string_free(&blocks);}break;}
     default: abort();
     }
     free(copy);return output;

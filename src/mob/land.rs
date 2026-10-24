@@ -71,6 +71,20 @@ pub fn animal(kind: Kind) -> bool {
     matches!(kind, Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::PolarBear | Kind::Panda | Kind::Ocelot | Kind::Mooshroom)
 }
 pub fn llama(kind: Kind) -> bool { matches!(kind, Kind::Llama | Kind::TraderLlama) }
+/// Содержимое ездового животного; тот же порядок ячеек у нативного окна и Bukkit.
+pub fn inventory(mob:&super::Mob)->Vec<Option<Stack>> {
+    if mob.kind==Kind::Camel {return vec![mob.land.saddle.then(||Stack::new(blocks::item_named("saddle").expect("седло"),1)),None];}
+    let decor=mob.land.decor.and_then(|c|blocks::item_named(&super::WOOL[usize::from(c)].replace("_wool","_carpet"))).map(|id|Stack::new(id,1));
+    let mut slots=vec![None,decor];slots.extend((0..mob.land.slots()).map(|i|mob.land.cargo.get(i).copied().flatten()));slots
+}
+pub fn valid_inventory(mob:&super::Mob,slots:&[Option<Stack>])->bool {
+    if mob.kind==Kind::Camel {return slots.len()==2&&slots[1].is_none()&&slots[0].is_none_or(|s|s.count==1&&blocks::item_name(s.item)==Some("saddle"));}
+    slots.len()==mob.land.slots()+2&&slots[0].is_none()&&slots[1].is_none_or(|s|s.count==1&&blocks::item_name(s.item).is_some_and(|n|n.ends_with("_carpet")))
+}
+pub fn store_inventory(mob:&mut super::Mob,slots:&[Option<Stack>]) {
+    if mob.kind==Kind::Camel {mob.land.saddle=slots[0].is_some();}else {mob.land.decor=slots[1].and_then(|s|blocks::item_name(s.item)).and_then(|name|super::WOOL.iter().position(|w|w.replace("_wool","_carpet")==name)).map(|i|i as u8);mob.land.cargo=slots[2..].to_vec();}
+    mob.attr_changes=mob.attr_changes.wrapping_add(1);
+}
 pub fn rideable(kind: Kind) -> bool { llama(kind) || kind == Kind::Camel }
 pub fn health(mob: &mut Mob) {
     if llama(mob.kind) { mob.vitals.max_health = mob.land.max_health; }
