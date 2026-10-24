@@ -6,12 +6,28 @@ import struct
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from analyze777 import Decoder, project_record
 from record777 import aim_at, dig_status, make_recorder, protocol_rotation, validate, window_click_payload, pack_interact_location, velocity
 from smoke import read_varint
 
 
 class HarnessTests(unittest.TestCase):
+    def test_stationary_client_keeps_twenty_tick_heartbeat_and_moves_immediately(self):
+        class Socket:
+            def setsockopt(self,*args):pass
+        protocol={'play':{direction:{'types':{'packet':['container',[{'type':['mapper',{'mappings':{}}]}]]}} for direction in ('toClient','toServer')}}
+        client=make_recorder(Socket(),protocol,777)
+        client.position=[3.5,-59.,3.5,0.,0.]
+        sent=[]
+        with patch('record777.Client.send',lambda self,name,payload=b'':sent.append((name,payload))):
+            for _ in range(21):client.send('tick_end')
+            self.assertEqual(sum(n=='tick_end' for n,p in sent),21)
+            self.assertEqual(sum(n=='position_look' for n,p in sent),2)
+            client.position[0]+=1
+            client.send('tick_end')
+            self.assertEqual(sum(n=='position_look' for n,p in sent),3)
+
     def test_bot_radians_and_block_aim_use_protocol_degrees(self):
         import math
         self.assertEqual(protocol_rotation(0,0),[180.,0.])

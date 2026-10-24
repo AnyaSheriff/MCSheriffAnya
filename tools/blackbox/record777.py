@@ -98,6 +98,8 @@ class Recorder(Client):
         self.motion = [0., 0., 0.]
         self.floor = -59.
         self.flying = True
+        self.last_movement = None
+        self.movement_ticks = 0
         self.controls = {}
         self.sequence = 0
         self.recording = False
@@ -137,14 +139,22 @@ class Recorder(Client):
                     self.motion[0] *= drag; self.motion[2] *= drag
                     self.position = [x,y,z,yaw,pitch]
                 movement=struct.pack('>dddffB', x,y,z,yaw,pitch,int(grounded))
-                if self.recording:
+                self.movement_ticks += 1
+                # Неподвижный bot.js присылает место раз в20тактов (см.
+                # piston-push-player); движение и поворот отправляются сразу.
+                due = movement != self.last_movement or self.movement_ticks >= 20
+                if self.recording and due:
                     self.outbound.append({'at':time.monotonic(),'name':'position_look','hex':movement.hex()})
                     self.moves.append({'at':time.monotonic(),'position':dict(zip(('x','y','z'),(x,y,z))),'velocity':dict(zip(('x','y','z'),self.motion)),'onGround':grounded})
-                super().send('position_look',movement)
+                if due:
+                    super().send('position_look',movement)
+                    self.last_movement = movement
+                    self.movement_ticks = 0
             super().send(name, payload)
 
     def confirm_teleport(self, teleport, values):
         self.motion = [0., 0., 0.]
+        self.last_movement = None
         if self.version == 775:
             self.send('teleport_confirm',varint(teleport))
         else:

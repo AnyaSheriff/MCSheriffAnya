@@ -3,6 +3,39 @@ use JavaVersion::{V26_1_2 as OLD, V26_3 as NEW};
 
 fn bytes(hex: &str) -> Vec<u8> { hex.as_bytes().as_chunks::<2>().0.iter().map(|s| u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect() }
 fn records() -> serde_json::Value { serde_json::from_str(include_str!("../testdata/entity-observations.json")).unwrap() }
+
+fn sync_with_speed(speed:[f64;3])->Vec<u8> {
+    let mut body=vec![0x23,7];
+    for value in [3.5,0.0,3.5].into_iter().chain(speed) {body.extend(value.to_be_bytes());}
+    body.extend(0f32.to_be_bytes());body.extend(0f32.to_be_bytes());body.push(1);body
+}
+
+#[test]
+fn sync_does_not_duplicate_an_explicit_velocity_but_preserves_a_stop() {
+    let mut tracker=Tracker::default();tracker.entities.insert(7,0);
+    let mut motion=vec![0x65,7];crate::entity_sync::push_velocity(&mut motion,0.0,-0.078,0.0);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&motion,context()).unwrap().len(),1);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&sync_with_speed([0.0,-0.078,0.0]),context()).unwrap().len(),1);
+    let stop=sync_with_speed([0.0;3]);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&stop,context()).unwrap().len(),2);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&stop,context()).unwrap().len(),2);
+    // Явные повторные толчки сохраняются: подавляется только синтетический motion.
+    assert_eq!(tracker.translate_packets(OLD,NEW,&motion,context()).unwrap().len(),1);
+    assert_eq!(tracker.translate_packets(OLD,OLD,&stop,context()).unwrap()[0],stop);
+}
+
+#[test]
+fn destroyed_entity_does_not_leave_a_velocity_for_a_reused_id() {
+    let mut tracker=Tracker::default();tracker.entities.insert(7,0);
+    let stop=sync_with_speed([0.0;3]);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&stop,context()).unwrap().len(),2);
+    tracker.translate_packets(OLD,NEW,&[0x65,7,0],context()).unwrap();
+    let (id,_)=(0..141).find_map(|id| crate::generated_ids::packet_info(RegistryKind::PlayClientbound,false,id).filter(|(n,_)| *n=="entity_destroy").map(|info|(id,info))).unwrap();
+    let mut destroy=Vec::new();uint(&mut destroy,id as u32);destroy.extend([1,7]);
+    tracker.translate_packets(OLD,NEW,&destroy,context()).unwrap();
+    tracker.entities.insert(7,0);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&stop,context()).unwrap().len(),2);
+}
 fn context() -> wire::Context {
     // Проба согласовала Known Packs официального сервера. Kebab имеет index24
     // в обоих наборах; это разрешение относится только к данной записи.

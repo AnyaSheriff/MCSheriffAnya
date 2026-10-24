@@ -594,7 +594,10 @@ pub fn properties_for_catalog(container: &Container, catalog: crate::gameplay_ca
     if container.kind == Kind::BrewingStand && catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 {
         // Оригинал777, brewing-awkward/swiftness: кроме остатка/топлива,
         // свойства2/3 содержат полное время варки и ёмкость порошка.
-        props.extend([container.heat.cook_total.clamp(0, i16::MAX as i32) as i16, POWDER_CHARGES as i16]);
+        // brewing-awkward: до первой заправки ёмкость0, после неё20;
+        // остаток может стать0, но полное время уже начатой варки сохраняется.
+        let capacity = if container.heat.lit_total > 0 || container.heat.cook_total > 0 { POWDER_CHARGES } else { 0 };
+        props.extend([container.heat.cook_total.clamp(0, i16::MAX as i32) as i16, capacity as i16]);
     }
     props
 }
@@ -912,6 +915,8 @@ mod tests {
             let catalog=Catalog::new(profile);
             let mut world=World::in_memory_with_catalog(catalog);
             world.set_block(0,0,0,blocks::state_by_name("brewing_stand").unwrap());
+            let initial=if profile==Profile::Preview26_3 {vec![0,0,0,0]} else {vec![0,0]};
+            assert_eq!(properties_for_catalog(world.container(0,0,0).unwrap(),catalog),initial);
             world.with_container(0,0,0,|container| {
                 container.slots[0]=Some(Stack::new(id("potion"),1).with_extras(crate::stackdata::Data {
                     potion:crate::survival::potion_number("water"),..Default::default()

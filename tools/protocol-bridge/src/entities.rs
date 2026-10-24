@@ -21,6 +21,7 @@ pub struct Tracker {
     player: Option<u32>,
     dimension: Option<String>,
     clock_774: Option<(i64,i64,bool)>,
+    motion_777: Option<(u32, Vec<u8>)>,
 }
 
 fn supported_payload(from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
@@ -38,7 +39,16 @@ impl Tracker {
     pub fn translate_packets<'a>(&mut self,from:JavaVersion,to:JavaVersion,body:&'a [u8],context:wire::Context)->Result<Vec<Cow<'a,[u8]>>,wire::Error>{
         supported_payload(from, to)?;
         if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 && body.first()==Some(&0x23){
-            return Ok(crate::entity_sync::upgrade(body)?.into_iter().map(Cow::Owned).collect());
+            let mut packets=crate::entity_sync::upgrade(body)?;
+            let mut motion=Cursor::new(&packets[1]);motion.uint()?;
+            let entity=motion.uint()?;let speed=motion.rest.to_vec();
+            // Абсолютная позиция775 несла скорость сама. Если отдельная
+            // скорость отправлена непосредственно перед ним, второй motion777
+            // не нужен: chicken-fall и villager-claim дают velocity→position.
+            // Поздний sync сохраняет motion: клиент мог уже замедлиться.
+            if self.motion_777.as_ref()==Some(&(entity,speed)) {packets.truncate(1);}
+            self.motion_777=None;
+            return Ok(packets.into_iter().map(Cow::Owned).collect());
         }
         if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 && body.first()==Some(&6) {
             let mut input=Cursor::new(body);input.uint()?;input.take(8)?;
@@ -52,7 +62,14 @@ impl Tracker {
                 return Ok(Vec::new());
             }
         }
-        Ok(vec![self.translate(from,to,body,context)?])
+        let translated=self.translate(from,to,body,context)?;
+        if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 {
+            self.motion_777=if body.first()==Some(&0x65) {
+                let mut motion=Cursor::new(body);motion.uint()?;
+                Some((motion.uint()?,motion.rest.to_vec()))
+            } else {None};
+        }
+        Ok(vec![translated])
     }
 
     pub fn translate<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], context: wire::Context) -> Result<Cow<'a, [u8]>, wire::Error> {
@@ -146,13 +163,13 @@ impl Tracker {
         }
         if let Some(dimension) = dimension {
             // В том же измерении остальные сущности остаются известны клиенту.
-            if player.is_some() || self.dimension.as_ref() != Some(&dimension) { self.entities.clear(); self.block_views.clear(); }
+            if player.is_some() || self.dimension.as_ref() != Some(&dimension) { self.entities.clear(); self.block_views.clear(); self.motion_777=None; }
             self.dimension = Some(dimension);
         }
         if let Some(id) = player { self.player = Some(id); }
         if let Some(id) = self.player { self.entities.insert(id, entity_layouts::PLAYER); }
         if let Some((id, kind)) = spawn { self.entities.insert(id, kind); }
-        for id in removed { self.entities.remove(&id); }
+        for id in removed { self.entities.remove(&id); if self.motion_777.as_ref().is_some_and(|(entity,_)| *entity==id) {self.motion_777=None;} }
         Ok(translated)
     }
 }
