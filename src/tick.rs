@@ -2188,6 +2188,9 @@ fn strike_villager(items: &mut items::Items, world: &mut World, strike: &crate::
         return false;
     };
 
+    // Официальный263: Silent у нападающего подавляет1026; Silent
+    // у жителя сам по себе звук превращения не подавляет (s26i-silent2).
+    let silent = items.mobs().iter().any(|mob| mob.entity_id == strike.attacker && mob.silent);
     let damage = strike.melee.damage;
     let mob = &mut items.mobs_mut()[index];
 
@@ -2230,7 +2233,7 @@ fn strike_villager(items: &mut items::Items, world: &mut World, strike: &crate::
     let (id, (x, y, z)) = (mob.entity_id, mob.cell());
 
     items.flush_mob_events(next_id, rng);
-    world.note_level_event(x, y, z, 1026, 0);
+    if !silent { world.note_level_event(x, y, z, 1026, 0); }
     items.remove_mobs(|gone| gone.entity_id == id);
     items.add_mob_late(zombie);
     true
@@ -3226,6 +3229,33 @@ mod tests {
         let wrong_item = mob_projectiles(&fired, Dimension::Overworld, 3, &mut crate::mob::Rng::new(42), &mut || 20);
         assert_eq!(wrong_item.len(), 1);
         assert_eq!(wrong_item[0].pierce_left, 0);
+    }
+
+    #[test]
+    fn infection_sound_depends_on_attacker_silence_and_keeps_villager_data() {
+        use crate::mob::{Kind, Mob, Strike, hostile::Melee};
+        for (attacker_silent, victim_silent) in [(false,false),(true,false),(false,true),(true,true)] {
+            let mut items = crate::items::Items::new();
+            let mut attacker = Mob::new(1, Kind::Zombie, (0.5,64.0,0.5));
+            attacker.silent = attacker_silent;
+            items.add_mob(attacker);
+            let mut villager = Mob::new(2, Kind::Villager, (1.5,64.0,0.5));
+            villager.silent = victim_silent;
+            villager.vitals.health = 1.0;
+            villager.villager.level = 2;
+            items.add_mob(villager);
+            let strike = Strike { attacker: 1, at: (0.5,64.0,0.5), kind: Kind::Zombie,
+                melee: Melee { target: 2, damage: 3.0, push: (1.0,0.0), wither: false, hunger: false },
+                enchantments: Default::default() };
+            let mut world = World::in_memory();
+            let from = world.watch_events(1);
+            assert!(strike_villager(&mut items, &mut world, &strike, 3, &mut crate::mob::Rng::new(1), &mut || 3));
+            let converted = items.mobs().iter().find(|mob| mob.kind == Kind::ZombieVillager).unwrap();
+            assert_eq!((converted.villager.level, converted.silent), (2,victim_silent));
+            assert!(!items.mobs().iter().any(|mob| mob.entity_id == 2));
+            let (events,_) = world.events_since(from,1);
+            assert_eq!(events.iter().filter(|event| matches!(event, crate::world::WorldEvent::Level { effect: 1026, data: 0, .. })).count(), usize::from(!attacker_silent));
+        }
     }
 
     /// Камень.

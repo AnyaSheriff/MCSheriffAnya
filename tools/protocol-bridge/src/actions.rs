@@ -197,7 +197,7 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // Обычные звуковые события777 (wide777 + автокрафтер):
                 // data0 не является ссылкой на реестр.
                 // Другие данные/версии этим наблюдением не разрешаются.
-                1000|1011|1035|1038|1043|1044|1049|1050|1053|1054 if data == 0 && matches!((from,to),
+                1000|1011|1026|1035|1038|1043|1044|1049|1050|1053|1054 if data == 0 && matches!((from,to),
                     (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
                 // Jukebox использует общий префикс согласованного реестра
                 // песен, не item ID; новая bounce добавлена в его конец.
@@ -404,6 +404,31 @@ mod tests {
                         Err(Error::PayloadUnavailable("unverified level event data")));
                     assert_eq!(effects("world_event",&mut Cursor::new(&body),&mut Vec::new(),OLD,JavaVersion::V26_2,Context::default()),
                         Err(Error::PayloadUnavailable("unverified level event data")));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn observed_infection_sound_preserves_zero_data_only() {
+        // Официальный777: неслышимые сущности события не прислали;
+        // без Silent превращение прислало1026/0, global=false.
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/infection-event-777.json")).unwrap();
+        let rows = fixture["events"].as_array().unwrap();
+        assert!(!rows.is_empty());
+        for row in rows {
+            let hex = row["payload_hex"].as_str().unwrap();
+            let body: Vec<u8> = (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i+2],16).unwrap()).collect();
+            for (from,to) in [(OLD,NEW),(NEW,OLD)] {
+                let mut input = Cursor::new(&body);
+                let mut output = Vec::new();
+                effects("world_event", &mut input, &mut output, from, to, Context::default()).unwrap();
+                assert!(input.rest.is_empty());
+                assert_eq!(output, body);
+                let mut invalid = body.clone(); invalid[15] = 1;
+                assert!(effects("world_event", &mut Cursor::new(&invalid), &mut Vec::new(), from, to, Context::default()).is_err());
+                for end in 0..body.len() {
+                    assert!(effects("world_event", &mut Cursor::new(&body[..end]), &mut Vec::new(), from, to, Context::default()).is_err());
                 }
             }
         }
