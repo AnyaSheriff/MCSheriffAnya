@@ -433,13 +433,15 @@ impl mcsa::api::player::Host for PluginCtx {
 
     fn set_health(&mut self, uuid: String, health: f64) -> Result<(), String> {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let maximum=crate::commands_world::plugin_attribute(&self.shared,&uuid,crate::attributes::MAX_HEALTH).ok_or("игрока Java нет на сервере")?.value();
         let mut players = self.shared.players.lock().expect("игроки");
-        let info = players.ui.info.get(&uuid).ok_or("игрока Java нет на сервере")?;
-        if !health.is_finite() || health < 0.0 || health > f64::from(info.max_health) {
+        if !players.ui.info.contains_key(&uuid) {return Err("игрока Java нет на сервере".into());}
+        if !health.is_finite() || health < 0.0 || health > maximum {
             return Err("здоровье: конечное число от 0 до максимума игрока".into());
         }
         if players.gear(&uuid).view.dead { return Err("игрок уже умер".into()); }
-        if let Some(info)=players.ui.info.get_mut(&uuid) {info.health=health as f32;}
+        // Снимок подключения может ещё содержать максимум до ожидающих правок.
+        if let Some(info)=players.ui.info.get_mut(&uuid) {info.max_health=maximum as f32;info.health=health as f32;}
         players.order(&uuid, Order::Health { value: health as f32 });
         Ok(())
     }

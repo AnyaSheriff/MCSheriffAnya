@@ -366,8 +366,7 @@ async fn run(shared: Arc<Shared>) {
 
             if crate::plugins::active() {
                 drop(world);
-                let carts={let mut items=shared.items_in(dimension).lock().expect("сущности");std::mem::take(&mut items.plugin_cart_loot).into_iter().filter_map(|(id,pos)|items.carts().iter().find(|c|c.entity_id==id).map(|c|(id,pos,c.slots.clone()))).collect::<Vec<_>>()};
-                for (id,pos,before) in carts {let slots=crate::plugins::generated_loot(dimension,pos,before.clone());let mut items=shared.items_in(dimension).lock().expect("сущности");if let Some(cart)=items.carts_mut().iter_mut().find(|c|c.entity_id==id&&c.slots==before) {cart.slots=slots;}}
+                generated_cart_loot(&shared,dimension,|pos,slots|crate::plugins::generated_loot(dimension,pos,slots));
                 let (loaded,spawned,targets)={let mut items=shared.items_in(dimension).lock().expect("сущности");(std::mem::take(&mut items.plugin_loaded),std::mem::take(&mut items.plugin_spawned),std::mem::take(&mut items.plugin_targets))};
                 let mut groups=std::collections::BTreeMap::<(i32,i32),Vec<String>>::new();for (x,z,uuid) in loaded {groups.entry((x,z)).or_default().push(crate::network::login::format_uuid(&uuid));}
                 for entities in groups.into_values() {let mut fields=vec![(match dimension {Dimension::Overworld=>0,Dimension::Nether=>1,Dimension::End=>2}).to_string()];fields.extend(entities);crate::plugins::native_event(1,fields);}
@@ -918,6 +917,12 @@ fn shove_entities(shared: &Shared, dimension: Dimension, world: &World) {
 
 /// Где стоят вагонетки этого мира и что покажет сравнитель за каждой — для
 /// детекторных рельс, в порядке появления.
+// Обработчик работает без замка сущностей; устаревший снимок не затирает новую добычу.
+pub(crate) fn generated_cart_loot(shared:&Shared,dimension:Dimension,mut generate:impl FnMut((i32,i32,i32),Vec<Option<crate::inventory::Stack>>)->Vec<Option<crate::inventory::Stack>>) {
+    let carts={let mut items=shared.items_in(dimension).lock().expect("сущности");std::mem::take(&mut items.plugin_cart_loot).into_iter().filter_map(|(id,pos)|items.carts().iter().find(|c|c.entity_id==id).map(|c|(id,pos,c.slots.clone()))).collect::<Vec<_>>()};
+    for (id,pos,before) in carts {let slots=generate(pos,before.clone());let mut items=shared.items_in(dimension).lock().expect("сущности");if let Some(cart)=items.carts_mut().iter_mut().find(|c|c.entity_id==id&&c.slots==before) {cart.slots=slots;}}
+}
+
 fn cart_marks(shared: &Shared, dimension: Dimension) -> Vec<redstone::Cart> {
     shared
         .items_in(dimension)

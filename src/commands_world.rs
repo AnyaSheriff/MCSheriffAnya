@@ -1468,11 +1468,15 @@ pub fn forget_attributes(shared: &Shared, uuid: &[u8; 16]) {
 
 /// Типизированное чтение атрибута плагином с учётом ожидающих правок.
 pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) -> Option<crate::attributes::Attribute> {
-    for dimension in crate::dimension::Dimension::ALL {
-        let items=shared.items_in(dimension).lock().expect("сущности");
-        if let Some(mob)=items.mobs().iter().find(|mob|mob.uuid==*uuid) {return mob.plugin_attribute(attribute);}
+    // Игрока ищем первым: такт мобов не должен задерживать чтение его атрибутов.
+    if !shared.players.lock().expect("игроки").members().iter().any(|member|member.uuid==*uuid) {
+        for dimension in crate::dimension::Dimension::ALL {
+            let items=shared.items_in(dimension).lock().expect("сущности");
+            if let Some(mob)=items.mobs().iter().find(|mob|mob.uuid==*uuid) {return mob.plugin_attribute(attribute);}
+        }
+        return None;
     }
-    if !player_has(attribute) || !shared.players.lock().expect("игроки").members().iter().any(|member| member.uuid == *uuid) { return None; }
+    if !player_has(attribute) {return None;}
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты");
     let attributes = known.entry(*uuid).or_default().projected();
     Some(attributes.get(attribute).cloned().unwrap_or(crate::attributes::Attribute { id: attribute, base: crate::attributes::player_base(attribute), modifiers: Vec::new() }))
@@ -1480,11 +1484,14 @@ pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) 
 
 /// Поручение подключениям; вызывается только после проверки данных WIT.
 pub(crate) fn plugin_attribute_edit(shared: &Shared, uuid: &[u8;16], edit: AttributeEdit) -> Result<(), String> {
-    for dimension in crate::dimension::Dimension::ALL {
-        let mut items=shared.items_in(dimension).lock().expect("сущности");
-        if let Some(mob)=items.mobs_mut().iter_mut().find(|mob|mob.uuid==*uuid) {return mob.edit_plugin_attribute(&edit);}
+    if !shared.players.lock().expect("игроки").members().iter().any(|member|member.uuid==*uuid) {
+        for dimension in crate::dimension::Dimension::ALL {
+            let mut items=shared.items_in(dimension).lock().expect("сущности");
+            if let Some(mob)=items.mobs_mut().iter_mut().find(|mob|mob.uuid==*uuid) {return mob.edit_plugin_attribute(&edit);}
+        }
+        return Err("игрок или атрибут отсутствует".into());
     }
-    if plugin_attribute(shared,uuid,edited_attribute(&edit)).is_none() { return Err("игрок или атрибут отсутствует".into()); }
+    if !player_has(edited_attribute(&edit)) {return Err("игрок или атрибут отсутствует".into());}
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты");
     let snapshot = known.entry(*uuid).or_default();
     if snapshot.pending.len() >= 256 { return Err("слишком много ожидающих правок атрибутов".into()); }

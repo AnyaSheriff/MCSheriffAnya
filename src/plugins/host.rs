@@ -42,11 +42,13 @@ pub struct Limits {
     pub memory: usize,
 }
 
-/// Лимиты обычного плагина: работу ограничивает топливо (~20 мс счёта на
-/// вызов); часы — только страховка от зависания. Срок по часам щедрый
+/// Лимит включает работу управляемого рантайма: полный GC TeaVM на реальном
+/// наборе конфигураций требует до 190 млн команд вместе с обработчиком.
+/// Запас ограничен 240 млн; память и срок 200 мс остаются независимыми границами.
+/// Срок по часам щедрый
 /// (200 мс): на одноядерной машине система может ненадолго снять процесс с
 /// ядра, и при сроке в 20 мс исправный плагин выгружался бы за чужую паузу.
-pub const PLUGIN_LIMITS: Limits = Limits { fuel: 20_000_000, epochs: 20, memory: 32 << 20 };
+pub const PLUGIN_LIMITS: Limits = Limits { fuel: 240_000_000, epochs: 20, memory: 32 << 20 };
 
 /// Лимиты модуля: он доверенный и может делать больше.
 pub const MODULE_LIMITS: Limits = Limits { fuel: 400_000_000, epochs: 20, memory: 256 << 20 };
@@ -1142,6 +1144,8 @@ impl Loaded {
         let _inside = InsideGuard::enter();
         let started = std::time::Instant::now();
         let result = call(&self.instance, &mut self.store).map_err(|error| {
+            // Подробный лог сохраняет место ловушки и остаток бюджета, не текст данных плагина.
+            log_debug!("Ловушка {}: elapsed_us={}, fuel_left={}, {error:?}",self.manifest.name,started.elapsed().as_micros(),self.store.get_fuel().unwrap_or(0));
             // Интеграционная проверка сохраняет стек Wasm до сокращения причины выгрузки.
             #[cfg(test)]
             eprintln!("{}",format!("{error:?}").chars().take(4000).collect::<String>());
