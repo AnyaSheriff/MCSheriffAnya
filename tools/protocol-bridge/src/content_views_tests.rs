@@ -30,3 +30,21 @@
         assert_eq!(size,result.len()-2);let decoded=decoded.unwrap();assert_eq!(decoded.count,3);
         assert_eq!(Some(decoded.item),substitute(RegistryKind::Item,1506));assert_eq!(stack.item,1506);
     }
+
+    #[test]
+    fn preview_775_retains_transport_and_state_packet_ids() {
+        use crate::{wire, State, Direction};
+        let context = wire::Context { items: crate::items::Context {
+            content: ContentCodec::white_slab_preview().native_view(), ..Default::default()
+        }, ..Default::default() };
+        // Эти пакеты не несут ID каталога. Нельзя переводить их в777 только
+        // из-за профиля мира: соседний ID может переключить фазу клиента.
+        for name in ["keep_alive", "start_configuration", "update_time", "system_chat", "position", "abilities", "chunk_batch_start", "chunk_batch_finished"] {
+            let id = (0..256).find(|id| crate::packet_layouts::packet_info(RegistryKind::PlayClientbound,
+                JavaVersion::V26_1_2, JavaVersion::V26_3, *id).is_some_and(|info| info.name == name)).unwrap();
+            let mut packet = Vec::new(); wire::uint(&mut packet, id as u32);
+            packet.extend([0xa5; 32]);
+            assert_eq!(wire::translate_with_context(State::Play, Direction::Clientbound,
+                JavaVersion::V26_1_2, JavaVersion::V26_1_2, &packet, context).unwrap().as_ref(), packet);
+        }
+    }

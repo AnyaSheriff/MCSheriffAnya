@@ -621,6 +621,51 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn preview_keep_alive_uses_client_ids_and_replies_reach_the_canonical_handler() {
+        use mcsa_protocol::{content::ContentCodec, ids::{self, RegistryKind}};
+        use crate::network::keep_alive::{KeepAlive, KEEP_ALIVE_INTERVAL};
+        for content in [ContentCodec::default(), ContentCodec::white_slab_preview()] {
+            for version in [JavaVersion::V26_1_2, JavaVersion::V26_3, JavaVersion::V26_2, JavaVersion::V1_21_4] {
+                let foreign = matches!(version, JavaVersion::V26_2 | JavaVersion::V1_21_4);
+                let mut out = Outgoing::capture_content(version, content);
+                out.probe_776 = foreign;
+                let mut keep_alive = KeepAlive::new();
+                // Используем настоящий pending ID, а не только проверку таблицы.
+                tokio::time::pause();
+                tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+                let id = keep_alive.send_due().unwrap();
+                let mut request = vec![0x2c]; request.extend(id.to_be_bytes());
+                out.send(&request).await.unwrap();
+                let mut bytes = out.queued();
+                let sent = read_packet(&mut bytes).await.unwrap();
+                assert!(bytes.is_empty());
+                let request_id = match version {
+                    JavaVersion::V26_2 => 0x2c,
+                    JavaVersion::V1_21_4 => 0x27,
+                    _ => ids::translate(RegistryKind::PlayClientbound, wire::INTERNAL, version, 0x2c).unwrap(),
+                };
+                assert_eq!(sent.id as u32, request_id);
+                assert_eq!(sent.payload(), id.to_be_bytes());
+                // Общий wire-маршрут775→776/769 закрыт;
+                // это реальные ID клиентов из закреплённых JSON, как в ботах.
+                let response_id = match version {
+                    JavaVersion::V26_2 => 0x1c,
+                    JavaVersion::V1_21_4 => 0x1a,
+                    _ => ids::translate(RegistryKind::PlayServerbound, wire::INTERNAL, version, 0x1c).unwrap() as i32,
+                };
+                let mut response = encode_varint(response_id);
+                response.extend(sent.payload());
+                let mut framed = Vec::new(); frame(&mut framed, &response, compression_threshold());
+                let received = read_play_packet_with_content(&mut framed.as_slice(), version, None, foreign, content).await.unwrap();
+                assert_eq!(received.id, 0x1c);
+                assert!(keep_alive.answer(received.payload()));
+                assert!(keep_alive.deadline().is_none());
+                tokio::time::resume();
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn native_outgoing_keeps_packet_size_guards() {
         let mut outgoing=Outgoing::capture();
         assert_eq!(outgoing.send(&[]).await.unwrap_err().kind(),io::ErrorKind::InvalidData);
@@ -779,7 +824,7 @@ mod tests {
             let mut client = CryptoStream::new(client);
             server.enable_encryption(&[17; 16]);
             client.enable_encryption(&[17; 16]);
-            for size in [1, 127, 256, 16000] {
+            for size in [1, 127, 256, 16000, 64000] {
                 let body: Vec<_> = (0..size).map(|i| (i % 251) as u8).collect();
                 let mut framed = Vec::new();
                 frame(&mut framed, &body, threshold);

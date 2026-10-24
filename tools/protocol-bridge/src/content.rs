@@ -314,6 +314,15 @@ impl ContentCodec {
     pub const fn white_slab_preview() -> Self { Self { white_slab: true, native_view: false } }
 
     fn extension(kind: RegistryKind, space: IdSpace, id: u32) -> Option<(u32, u32, u32)> {
+        // Расширения добавлены после базового каталога775. Воздух и прочие
+        // базовые состояния встречаются по4096раз в секции: не сканируем
+        // весь каталог для каждой ячейки при проверке и переводе чанка.
+        if !matches!(kind, RegistryKind::Item | RegistryKind::Block | RegistryKind::BlockState | RegistryKind::Entity)
+            || !matches!(space, IdSpace::Canonical | IdSpace::Wire(JavaVersion::V26_3))
+            || (space == IdSpace::Canonical && (id as usize) < crate::generated_ids::tables(kind).0.len())
+        {
+            return None;
+        }
         entries().find_map(|row| {
             let (first, last, wire) = match kind {
                 RegistryKind::Item if !row.has_item() => return None,

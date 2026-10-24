@@ -183,6 +183,22 @@ mod tests {
         let size = input.count(MAX_BYTES).unwrap(); input.take(size).unwrap(); input.count(100).unwrap()
     }
     #[test]
+    fn preview_775_chunk_batch_does_not_starve_keep_alive() {
+        let payload = original();
+        let content = crate::content::ContentCodec::white_slab_preview().native_view();
+        let start = std::time::Instant::now();
+        // Размер обычной пачки сервера. Прежний поиск расширений для каждой
+        // ячейки держал соединение занятым дольше интервала KeepAlive5с.
+        for _ in 0..64 {
+            let translated = translate_with_content(OLD, OLD, &payload, context(), content).unwrap();
+            assert_eq!(translated, payload);
+        }
+        if !cfg!(debug_assertions) {
+            assert!(start.elapsed() < std::time::Duration::from_secs(5), "пачка чанков задержала KeepAlive: {:?}", start.elapsed());
+        }
+    }
+
+    #[test]
     fn full_chunk_preserves_header_light_signs_and_restores_legacy_bed_entities() {
         let old = original(); let new = translate(OLD, NEW, &old, context()).unwrap();
         assert_eq!(&old[..307], &new[..307]);
