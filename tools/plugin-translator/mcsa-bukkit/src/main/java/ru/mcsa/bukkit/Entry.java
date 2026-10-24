@@ -31,12 +31,15 @@ public final class Entry {
     PlayerInteractEvent interact=new PlayerInteractEvent(p,Action.values()[Integer.parseInt(a[9])],item,clicked,org.bukkit.block.BlockFace.values()[Integer.parseInt(a[16])],hand==0?org.bukkit.inventory.EquipmentSlot.HAND:org.bukkit.inventory.EquipmentSlot.OFF_HAND);RuntimeState.fire(interact);
     if(interact.useInteractedBlock()!=Event.Result.DENY&&clicked!=null&&interact.getAction()==Action.RIGHT_CLICK_BLOCK&&BedActions.cancelled(p,clicked))return 3;
     return (interact.useInteractedBlock()==Event.Result.DENY?1:0)|(interact.useItemInHand()==Event.Result.DENY?2:0);}
+   case 17:{java.util.Set<Integer> slots=new java.util.LinkedHashSet<>();for(int i=10;i<a.length;i++)slots.add(Integer.parseInt(a[i]));return ChestViews.drag(p,Integer.parseInt(a[9]),slots);}
+   case 16:if(a[9].equals("2")){e=new PlayerSwapHandItemsEvent(p,p.getInventory().getItemInOffHand(),p.getInventory().getItemInMainHand());}else if(a[9].equals("0")){e=new PlayerItemHeldEvent(p,Integer.parseInt(Host.text(39,p.getUniqueId().toString())),Integer.parseInt(a[10]));}else {int slot=Integer.parseInt(a[10]);int index=slot==45?40:slot>=36?slot-36:slot;org.bukkit.inventory.ItemStack item=p.getInventory().getItem(index);if(item==null)throw new IllegalStateException("Предмет еды исчез до события");e=new PlayerItemConsumeEvent(p,item,slot==45?org.bukkit.inventory.EquipmentSlot.OFF_HAND:org.bukkit.inventory.EquipmentSlot.HAND);}break;
    case 12:return ChestViews.event(p,Integer.parseInt(a[9]),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),Integer.parseInt(a[13]));
    case 1:e=new PlayerJoinEvent(p,null);break;
    case 2:e=new PlayerQuitEvent(p,null);break;
    case 3:e=new AsyncPlayerChatEvent(p,a[9]);break;
    case 4:case 5:org.bukkit.block.Block b=new RemoteBlock(new RemoteWorld(Integer.parseInt(a[9])),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),kind==5?a[13]:null);e=kind==4?new BlockBreakEvent(b,p):new BlockPlaceEvent(b,p);break;
    case 6:e=new PlayerCommandPreprocessEvent(p,"/"+a[9]);break;
+   case 18:e=a[11].equals("1")?new org.bukkit.event.entity.EntityDamageByEntityEvent(Host.player(a,12),p,org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(a[9]),Double.parseDouble(a[10])):new org.bukkit.event.entity.EntityDamageEvent(p,org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(a[9]),Double.parseDouble(a[10]));break;
    case 10:e=new org.bukkit.event.entity.EntityDamageEvent(p,org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(a[9]),Double.parseDouble(a[10]));break;
    case 11:e=new org.bukkit.event.entity.PlayerDeathEvent(p,a[9].equals("1"));break;
    default:throw new IllegalArgumentException("Неизвестное событие");
@@ -44,7 +47,8 @@ public final class Entry {
   if(kind==1){MainScoreboard.INSTANCE.sync(p);}if(kind==2)ArmorChanges.leave(p);
   RuntimeState.fire(e);
   if(e instanceof Cancellable&&((Cancellable)e).isCancelled())return 1;
-  if(kind==10){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}
+  if(kind==5&&!((BlockPlaceEvent)e).canBuild())return 1;
+  if(kind==10||kind==18){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}
   if(kind==3){AsyncPlayerChatEvent legacy=(AsyncPlayerChatEvent)e;io.papermc.paper.event.player.AsyncChatEvent modern=new io.papermc.paper.event.player.AsyncChatEvent(p,net.kyori.adventure.text.Component.text(legacy.getMessage()));RuntimeState.fire(modern);if(modern.isCancelled())return 1;if(modern.hasCustomDelivery()){modern.deliver();return 1;}}
   if(kind==3&&!((AsyncPlayerChatEvent)e).getMessage().equals(a[9])){Host.call(22,((AsyncPlayerChatEvent)e).getMessage());return 2;}
   return 0;

@@ -38,6 +38,8 @@ mod network;
 #[cfg(feature = "plugins")]
 mod inventory;
 #[cfg(feature = "plugins")]
+mod entities;
+#[cfg(feature = "plugins")]
 mod attributes;
 #[cfg(feature = "plugins")]
 mod host;
@@ -120,6 +122,8 @@ mod enabled {
     /// Очередь работ потоку плагинов.
     static JOBS: OnceLock<mpsc::Sender<Job>> = OnceLock::new();
     static ACTIVE: AtomicBool = AtomicBool::new(false);
+    static STOPPING: AtomicBool = AtomicBool::new(false);
+    pub fn stopping() -> bool {STOPPING.load(Ordering::Relaxed)}
 
     /// Есть ли что вызывать: без загруженных плагинов события обходятся
     /// одной проверкой флага.
@@ -175,6 +179,7 @@ mod enabled {
 
     /// То же, но папки `plugins/` и `modules/` — внутри `root`.
     pub fn start_in(shared: Arc<Shared>, root: PathBuf) {
+        STOPPING.store(false, Ordering::Relaxed);
         for dir in [host::PLUGINS_DIR, host::MODULES_DIR] {
             if let Err(error) = std::fs::create_dir_all(root.join(dir)) {
                 log_warn!("Плагины: не создать папку {}: {}", dir, error);
@@ -231,6 +236,7 @@ mod enabled {
 
     /// Остановка сервера: всех выгрузить, чтобы плагины сохранились.
     pub fn shutdown() {
+        STOPPING.store(true, Ordering::Relaxed);
         call((), |slot| {
             if let Some(host) = slot.host.as_mut()
                 && !host.is_empty()
@@ -327,9 +333,22 @@ mod enabled {
         with_host(0, move |host| host.interact(&who, action, hand, block, face))
     }
 
+    pub fn damage_from(who: &PlayerView, attacker: Option<&PlayerView>, cause: &str, amount: f32) -> Option<f32> {
+        let Some(attacker)=attacker else {return damage(who,cause,amount);};
+        let (who,attacker,cause)=(who.clone(),attacker.clone(),cause.to_string());with_host(Some(amount),move |host| host.damage_from(&who,Some(&attacker),&cause,amount))
+    }
+
     pub fn damage(who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {
         let (who, cause) = (who.clone(), cause.to_string());
         with_host(Some(amount), move |host| host.damage(&who, &cause, amount))
+    }
+
+    pub fn drag_event(owner: &str, who: &PlayerView, handle: u32, slots: Vec<i32>, legacy: (i32,i32,i32)) -> bool {
+        let (owner,who)=(owner.to_string(),who.clone());with_host(true,move |host| host.drag_event(&owner,&who,handle,slots,legacy))
+    }
+
+    pub fn item_event(who: &PlayerView, kind: u32, slot: i32) -> bool {
+        let who = who.clone();with_host(false, move |host| host.item_event(&who, kind, slot))
     }
 
     pub fn inventory_event(owner: &str, who: &PlayerView, handle: u32, kind: u32, click: (i32, i32, i32)) -> bool {
@@ -417,11 +436,11 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
-    fn of_member(member: &crate::players::Member) -> PlayerView {
+    pub(crate) fn of_member(member: &crate::players::Member) -> PlayerView {
         PlayerView {
             uuid: member.uuid,
             name: member.name.clone(),
@@ -454,6 +473,7 @@ mod disabled {
     pub fn start(_shared: Arc<Shared>) {}
 
     pub fn shutdown() {}
+    pub fn stopping() -> bool {false}
 
     pub fn tick(_now: u64) {}
 
@@ -480,7 +500,12 @@ mod disabled {
     pub fn respawn(_who: &PlayerView, destination: &PlayerView, _bed: bool, _anchor: bool) -> PlayerView { destination.clone() }
     pub fn player_move(_who: &PlayerView, destination: &PlayerView, _jump: bool) -> Option<PlayerView> { Some(destination.clone()) }
     pub fn interact(_who: &PlayerView, _action: u32, _hand: u32, _block: Option<(i32, i32, i32)>, _face: u32) -> u32 { 0 }
-    pub fn damage(_who: &PlayerView, _cause: &str, amount: f32) -> Option<f32> { Some(amount) }
+    pub fn damage_from(_who: &PlayerView, _attacker: Option<&PlayerView>, _cause: &str, amount: f32) -> Option<f32> {Some(amount)}
+
+    pub fn drag_event(_owner: &str, _who: &PlayerView, _handle: u32, _slots: Vec<i32>, _legacy: (i32,i32,i32)) -> bool {false}
+
+    pub fn item_event(_who: &PlayerView, _kind: u32, _slot: i32) -> bool {false}
+
     pub fn inventory_event(_owner: &str, _who: &PlayerView, _handle: u32, _kind: u32, _click: (i32, i32, i32)) -> bool { true }
     pub fn death(_who: &PlayerView, _keep_inventory: bool) {}
 
@@ -494,7 +519,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

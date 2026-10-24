@@ -84,7 +84,10 @@ impl Drop for InsideGuard {
 }
 
 type Completion = wasmtime::component::TypedFunc<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>;
+type DamageFrom = wasmtime::component::TypedFunc<(mcsa::api::types::Player, Option<mcsa::api::types::Player>, String, f64), (Option<f64>,)>;
 type Damage = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, f64), (Option<f64>,)>;
+type DragEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, Vec<i32>), (bool,)>;
+type ItemEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, i32), (bool,)>;
 type InventoryEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>;
 type RespawnEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool, bool), (mcsa::api::types::Location,)>;
 type MoveEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool), (Option<mcsa::api::types::Location>,)>;
@@ -99,8 +102,11 @@ pub struct Loaded {
     instance: Module,
     completion: Option<Completion>,
     damage: Option<Damage>,
+    damage_from: Option<DamageFrom>,
     death: Option<Death>,
     inventory_event: Option<InventoryEvent>,
+    item_event: Option<ItemEvent>,
+    drag_event: Option<DragEvent>,
     move_event: Option<MoveEvent>,
     respawn_event: Option<RespawnEvent>,
     interact_event: Option<InteractEvent>,
@@ -171,6 +177,7 @@ fn linkers(engine: &Engine) -> wasmtime::Result<(Linker<PluginCtx>, Linker<Plugi
         mcsa::api::command::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::attributes::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::inventory::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
+        mcsa::api::entities::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::https::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::storage::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         Ok(())
@@ -372,6 +379,13 @@ impl Host {
                 short(&error)
             })?;
         let combat = raw.get_export_index(&mut store, None, "mcsa:api/combat-events@0.1.0");
+        let damage_from = combat.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-damage-from"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, Option<mcsa::api::types::Player>, String, f64), (Option<f64>,)>(&mut store, &index))
+            .transpose().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared, &manifest.name);
+                short(&error)
+            })?;
         let damage = combat.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-damage"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, String, f64), (Option<f64>,)>(&mut store, &index))
             .transpose().map_err(|error| {
@@ -381,6 +395,22 @@ impl Host {
             })?;
         let death = combat.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-death"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, bool), ()>(&mut store, &index))
+            .transpose().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared, &manifest.name);
+                short(&error)
+            })?;
+        let drag_event = raw.get_export_index(&mut store, None, "mcsa:api/item-events@0.1.0")
+            .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-drag"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, Vec<i32>), (bool,)>(&mut store, &index))
+            .transpose().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared, &manifest.name);
+                short(&error)
+            })?;
+        let item_event = raw.get_export_index(&mut store, None, "mcsa:api/item-events@0.1.0")
+            .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-item"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, i32), (bool,)>(&mut store, &index))
             .transpose().map_err(|error| {
                 self.drop_registrations(&manifest.name);
                 crate::presentation::release(&self.shared, &manifest.name);
@@ -400,7 +430,7 @@ impl Host {
         let interact_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-interact"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, death, inventory_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, damage_from, death, inventory_event, item_event, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
@@ -646,17 +676,19 @@ impl Host {
         denied
     }
 
-    pub fn damage(&mut self, who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {
+    pub fn damage(&mut self, who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {self.damage_from(who,None,cause,amount)}
+    pub fn damage_from(&mut self, who: &PlayerView, attacker: Option<&PlayerView>, cause: &str, amount: f32) -> Option<f32> {
         let now = self.shared_tick();
         let mut damage = f64::from(amount);
         let mut crashes = Vec::new();
         let mut cancelled = false;
         for plugin in &mut self.loaded {
-            let Some(function) = plugin.damage else { continue };
-            match plugin.call(now, |_, store| {
-                let (result,) = function.call(&mut *store, (who.to_wit(), cause.to_string(), damage))?;
-                Ok(result)
-            }) {
+            let result = if let Some(function) = plugin.damage_from {
+                plugin.call(now, |_,store| {let (result,) = function.call(&mut *store,(who.to_wit(),attacker.map(PlayerView::to_wit),cause.to_string(),damage))?;Ok(result)})
+            } else if let Some(function) = plugin.damage {
+                plugin.call(now, |_,store| {let (result,) = function.call(&mut *store,(who.to_wit(),cause.to_string(),damage))?;Ok(result)})
+            } else {continue};
+            match result {
                 Ok(None) => { cancelled = true; break; }
                 Ok(Some(value)) if value.is_finite() && (0.0..=f64::from(f32::MAX)).contains(&value) => damage = value,
                 Ok(_) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason: "обработчик урона вернул некорректное число".into() }),
@@ -665,6 +697,28 @@ impl Host {
         }
         self.bury(crashes);
         if cancelled { None } else { Some(damage as f32) }
+    }
+
+    pub fn drag_event(&mut self, owner: &str, who: &PlayerView, handle: u32, slots: Vec<i32>, legacy: (i32,i32,i32)) -> bool {
+        let now = self.shared_tick();
+        let Some(plugin) = self.loaded.iter_mut().find(|p| p.manifest.name == owner) else {return true;};
+        let Some(function) = plugin.drag_event else {return self.inventory_event(owner,who,handle,0,legacy);};
+        match plugin.call(now, |_,store| {let (result,) = function.call(&mut *store,(who.to_wit(),handle,slots))?;Ok(result)}) {
+            Ok(result) => result,
+            Err(reason) => {let name=plugin.manifest.name.clone();self.bury(vec![Crash {plugin:name,reason}]);true},
+        }
+    }
+
+    pub fn item_event(&mut self, who: &PlayerView, kind: u32, slot: i32) -> bool {
+        let now = self.shared_tick();let mut crashes = Vec::new();let mut cancelled = false;
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.item_event else { continue };
+            match plugin.call(now, |_, store| {let (result,) = function.call(&mut *store, (who.to_wit(), kind, slot))?;Ok(result)}) {
+                Ok(true) => {cancelled = true;break;}, Ok(false) => (),
+                Err(reason) => crashes.push(Crash {plugin: plugin.manifest.name.clone(), reason}),
+            }
+        }
+        self.bury(crashes);cancelled
     }
 
     pub fn inventory_event(&mut self, owner: &str, who: &PlayerView, handle: u32, kind: u32, click: (i32, i32, i32)) -> bool {

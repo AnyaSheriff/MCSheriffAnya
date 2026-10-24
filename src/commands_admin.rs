@@ -1867,7 +1867,7 @@ fn stopsound(ctx: &mut Ctx, rd: &mut Rd) -> R<()> {
 // ───────────────────────────── Частицы ─────────────────────────────
 
 /// Частицы 26.1 по номерам (minecraft-data, particles.json).
-const PARTICLES: [&str; 117] = [
+pub(crate) const PARTICLES: [&str; 117] = [
     "angry_villager", "block", "block_marker", "bubble", "cloud", "copper_fire_flame", "crit", "damage_indicator", "dragon_breath", "dripping_lava",
     "falling_lava", "landing_lava", "dripping_water", "falling_water", "dust", "dust_color_transition", "effect", "elder_guardian", "enchanted_hit",
     "enchant", "end_rod", "entity_effect", "explosion_emitter", "explosion", "gust", "small_gust", "gust_emitter_large", "gust_emitter_small",

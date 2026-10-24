@@ -73,6 +73,23 @@ public final class SdkContracts {
   check(new ru.mcsa.bukkit.RemoteWorld(0).getEnvironment()==org.bukkit.World.Environment.NORMAL&&new ru.mcsa.bukkit.RemoteWorld(1).getEnvironment()==org.bukkit.World.Environment.NETHER&&new ru.mcsa.bukkit.RemoteWorld(2).getEnvironment()==org.bukkit.World.Environment.THE_END);
   check(new ru.mcsa.bukkit.RemoteWorld(0).getMinHeight()==-64&&new ru.mcsa.bukkit.RemoteWorld(0).getMaxHeight()==320);
   org.bukkit.block.Block relative=new ru.mcsa.bukkit.RemoteWorld(0).getBlockAt(-1,70,2).getRelative(2,-3,4);check(relative.getX()==1&&relative.getY()==67&&relative.getZ()==6);
-  System.out.println("PASS: 67 контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
+  org.bukkit.potion.PotionType poison=org.bukkit.potion.PotionType.LONG_POISON;
+  check(org.bukkit.Registry.POTION.get(org.bukkit.NamespacedKey.minecraft("long_poison"))==poison);
+  check(poison.getPotionEffects().size()==1&&poison.getPotionEffects().get(0).getDuration()==1800);
+  check(org.bukkit.potion.PotionType.STRONG_TURTLE_MASTER.getPotionEffects().size()==2);
+  check(org.bukkit.potion.PotionType.HEALING.getPotionEffects().get(0).getType()==org.bukkit.potion.PotionEffectType.INSTANT_HEALTH);
+  check(org.bukkit.potion.PotionEffectType.POISON.getCategory()==org.bukkit.potion.PotionEffectTypeCategory.HARMFUL);
+  check(org.bukkit.potion.PotionEffectType.GLOWING.getCategory()==org.bukkit.potion.PotionEffectTypeCategory.NEUTRAL);
+  check(org.bukkit.potion.PotionEffectType.SPEED.getCategory()==org.bukkit.potion.PotionEffectTypeCategory.BENEFICIAL);
+  org.bukkit.inventory.ItemStack bottle=new org.bukkit.inventory.ItemStack(org.bukkit.Material.POTION);
+  org.bukkit.inventory.meta.PotionMeta potionMeta=(org.bukkit.inventory.meta.PotionMeta)bottle.getItemMeta();potionMeta.setBasePotionType(poison);bottle.setItemMeta(potionMeta);potionMeta.setBasePotionType(org.bukkit.potion.PotionType.HEALING);
+  check(((org.bukkit.inventory.meta.PotionMeta)bottle.getItemMeta()).getBasePotionType()==poison);
+  check(((org.bukkit.inventory.meta.PotionMeta)org.bukkit.inventory.ItemStack.fromHost(org.bukkit.Material.POTION,1,bottle.metadata()).getItemMeta()).getBasePotionType()==poison);
+  org.bukkit.block.BlockState crop=new ru.mcsa.bukkit.BlockSnapshot(new ru.mcsa.bukkit.RemoteBlock(new ru.mcsa.bukkit.RemoteWorld(0),0,70,0),new String[]{"minecraft:wheat[age=4]","15","15","0","1","4","7"});
+  check(crop.getType()==org.bukkit.Material.WHEAT&&crop.getBlockData() instanceof org.bukkit.block.data.Ageable);
+  check(((org.bukkit.block.data.Ageable)crop.getBlockData()).getAge()==4&&((org.bukkit.block.data.Ageable)crop.getBlockData()).getMaximumAge()==7);
+  org.bukkit.event.player.PlayerItemConsumeEvent eating=new org.bukkit.event.player.PlayerItemConsumeEvent(null,bottle,org.bukkit.inventory.EquipmentSlot.HAND);eating.getItem().setAmount(99);check(eating.getItem().getAmount()==1);eating.setCancelled(true);check(eating.isCancelled());
+  check(org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.minecraft("zombie_horse"))==org.bukkit.entity.EntityType.ZOMBIE_HORSE);
+  System.out.println("PASS: 81 контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
  }
 }

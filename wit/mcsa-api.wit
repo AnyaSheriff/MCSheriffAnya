@@ -102,6 +102,7 @@ interface server {
 
     /// Номер текущего такта мира с запуска.
     current-tick: func() -> u64;
+    is-stopping: func() -> bool;
 
     /// Сообщение всем в чат (и в консоль).
     broadcast: func(message: string);
@@ -151,6 +152,23 @@ interface player {
     }
     add-potion-effect: func(uuid: string, effect: potion-effect) -> result<_, string>;
     remove-potion-effect: func(uuid: string, kind: string) -> result<_, string>;
+    record state {
+        fire-ticks: s32,
+        dead: bool,
+        sneaking: bool,
+        on-ground: bool,
+        in-water: bool,
+        in-lava: bool,
+        in-rain: bool,
+        eye-height: f64,
+        effects: list<potion-effect>,
+        using-item: bool,
+        off-hand: bool,
+    }
+    get-state: func(uuid: string) -> result<state, string>;
+    set-fire-ticks: func(uuid: string, ticks: s32) -> result<_, string>;
+    damage: func(uuid: string, amount: f64) -> result<_, string>;
+    give-experience: func(uuid: string, amount: s32) -> result<_, string>;
 
     /// Выгнать с сервера.
     kick: func(uuid: string, reason: string) -> bool;
@@ -231,6 +249,16 @@ interface presentation {
 
 interface %world {
     use types.{block-pos, location, dimension};
+    record block-state { data: string, sky: u8, light: u8, liquid: bool, passable: bool, age: s32, max-age: s32 }
+    block-details: func(pos: block-pos) -> result<block-state, string>;
+    update-block: func(pos: block-pos, data: string, force: bool, physics: bool) -> result<bool, string>;
+    random-tick: func(pos: block-pos) -> result<_, string>;
+    chunk-loaded: func(dimension: dimension, x: s32, z: s32) -> bool;
+    highest-block: func(dimension: dimension, x: s32, z: s32) -> result<s32, string>;
+    random-tick-speed: func() -> u32;
+    spawn-particle: func(at: location, name: string, count: u32, dx: f64, dy: f64, dz: f64) -> result<_, string>;
+    break-naturally: func(pos: block-pos) -> result<bool, string>;
+    play-sound: func(at: location, sound: string, volume: f32, pitch: f32) -> result<_, string>;
 
     record border { size: f64, center-x: f64, center-z: f64 }
     get-border: func(dimension: dimension) -> border;
@@ -265,6 +293,21 @@ interface scheduler {
 
     /// Отменить задачу по номеру. false — такой уже нет.
     cancel: func(handle: u32) -> bool;
+}
+
+interface entities {
+    use types.{location};
+    use inventory.{item};
+    record vector { x: f64, y: f64, z: f64 }
+    velocity: func(uuid: string) -> result<vector, string>;
+    set-velocity: func(uuid: string, value: vector) -> result<_, string>;
+    remove: func(uuid: string) -> result<_, string>;
+    drop-item: func(at: location, stack: item, natural: bool) -> result<string, string>;
+    item-stack: func(uuid: string) -> result<item, string>;
+    set-item-stack: func(uuid: string, stack: item) -> result<_, string>;
+    item-location: func(uuid: string) -> result<location, string>;
+    item-teleport: func(uuid: string, at: location) -> result<bool, string>;
+    valid: func(uuid: string) -> bool;
 }
 
 interface command {
@@ -403,6 +446,7 @@ world plugin {
     import command;
     import attributes;
     import inventory;
+    import entities;
     import storage;
     import https;
 
@@ -428,6 +472,14 @@ world bukkit-plugin {
     export combat-events;
     export inventory-events;
     export player-events;
+    export item-events;
+}
+
+interface item-events {
+    use types.{player};
+    /// 0 — смена выбранной ячейки, 1 — завершение еды/питья, 2 — обмен рук; true отменяет.
+    on-item: func(who: player, kind: u32, slot: s32) -> bool;
+    on-drag: func(who: player, handle: u32, slots: list<s32>) -> bool;
 }
 
 /// Необязательные события игроков: старым компонентам экспорт не нужен.
@@ -435,6 +487,7 @@ interface combat-events {
     use types.{player};
     /// Базовый урон до брони; none отменяет удар. Результат проверяется хозяином.
     on-damage: func(who: player, cause: string, damage: f64) -> option<f64>;
+    on-damage-from: func(who: player, attacker: option<player>, cause: string, damage: f64) -> option<f64>;
     /// Уведомление о смерти до выпадения вещей; keep-inventory только для чтения.
     on-death: func(who: player, keep-inventory: bool);
 }

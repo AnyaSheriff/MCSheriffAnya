@@ -11,6 +11,7 @@ type Uuid = [u8; 16];
 
 #[derive(Clone, Default)]
 pub struct Info {
+    pub plugin_state: PlayerState,
     pub inventory: Vec<Option<crate::inventory::Stack>>,
     pub selected: u32,
     pub cursor: Option<crate::inventory::Stack>,
@@ -22,6 +23,17 @@ pub struct Info {
     pub food: i32,
     pub level: i32,
     pub exp: f32,
+}
+
+#[derive(Clone, Default)]
+pub struct PlayerState {
+    pub velocity: (f64, f64, f64),
+    pub fire_ticks: i32,
+    pub in_water: bool,
+    pub in_lava: bool,
+    pub in_rain: bool,
+    pub eye_height: f64,
+    pub effects: Vec<crate::survival::Effect>,
 }
 
 #[derive(Default)]

@@ -293,6 +293,7 @@ impl mcsa::api::log::Host for PluginCtx {
 }
 
 impl mcsa::api::server::Host for PluginCtx {
+    fn is_stopping(&mut self) -> bool {super::stopping()}
     fn api_version(&mut self) -> String {
         super::manifest::API_VERSION.to_string()
     }
@@ -323,6 +324,44 @@ impl mcsa::api::server::Host for PluginCtx {
 }
 
 impl mcsa::api::player::Host for PluginCtx {
+    fn get_state(&mut self, uuid: String) -> Result<mcsa::api::player::State, String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let players = self.shared.players.lock().expect("игроки");
+        let member = players.members().iter().find(|member| member.uuid == uuid).ok_or("игрока нет на сервере")?;
+        let gear = players.gear(&uuid);
+        let state = &players.ui.info.get(&uuid).ok_or("Состояние доступно только для Java")?.plugin_state;
+        Ok(mcsa::api::player::State {
+            fire_ticks: state.fire_ticks, dead: gear.view.dead, sneaking: member.sneaking,
+            on_ground: member.position.on_ground, in_water: state.in_water, in_lava: state.in_lava,
+            in_rain: state.in_rain, eye_height: state.eye_height,
+            using_item: gear.living & 1 != 0, off_hand: gear.living & 2 != 0,
+            effects: state.effects.iter().map(|effect| mcsa::api::player::PotionEffect {
+                kind: effect.kind.name().into(), duration: effect.ticks_left, amplifier: effect.amplifier,
+                ambient: effect.ambient, particles: effect.visible, icon: effect.show_icon,
+            }).collect(),
+        })
+    }
+    fn set_fire_ticks(&mut self, uuid: String, ticks: i32) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        let info = players.ui.info.get_mut(&uuid).ok_or("игрока Java нет на сервере")?;
+        info.plugin_state.fire_ticks = ticks.max(0);
+        players.order(&uuid, Order::PluginFire { ticks: ticks.max(0) });Ok(())
+    }
+    fn damage(&mut self, uuid: String, amount: f64) -> Result<(), String> {
+        if !amount.is_finite() || amount < 0.0 || amount > f64::from(f32::MAX) { return Err("Урон должен быть конечным неотрицательным числом".into()); }
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.ui.info.contains_key(&uuid) { return Err("игрока Java нет на сервере".into()); }
+        players.order(&uuid, Order::Hurt { amount: amount as f32, source: crate::survival::Source::Generic });Ok(())
+    }
+    fn give_experience(&mut self, uuid: String, amount: i32) -> Result<(), String> {
+        if amount < 0 {return Err("Количество выдаваемого опыта не может быть отрицательным".into());}
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.ui.info.contains_key(&uuid) { return Err("игрока Java нет на сервере".into()); }
+        players.order(&uuid, Order::Experience { set: false, amount, levels: false });Ok(())
+    }
     fn set_respawn(&mut self, uuid: String, to: Option<wit::Location>) -> Result<(), String> {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         let point = match to {
@@ -495,6 +534,86 @@ impl mcsa::api::player::Host for PluginCtx {
 }
 
 impl mcsa::api::world::Host for PluginCtx {
+    fn spawn_particle(&mut self, at: wit::Location, name: String, count: u32, dx: f64, dy: f64, dz: f64) -> Result<(), String> {
+        if ![at.x,at.y,at.z,dx,dy,dz].iter().all(|v| v.is_finite()) || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || [dx,dy,dz].iter().any(|v| !(0.0..=64.0).contains(v)) || count > 4096 {return Err("Недопустимые параметры частиц".into());}
+        if !matches!(name.as_str(), "happy_villager" | "heart") {return Err("Частица вне поддерживаемого каталога".into());}
+        let kind = crate::commands_admin::PARTICLES.iter().position(|n| *n == name).ok_or("Неизвестная частица")? as i32;
+        self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_particle(kind,None,(at.x,at.y,at.z),(dx as f32,dy as f32,dz as f32),0.0,count as i32);Ok(())
+    }
+    fn break_naturally(&mut self, pos: wit::BlockPos) -> Result<bool, String> {
+        let dimension = dimension_from_wit(pos.dimension);
+        let drops = {
+            let mut world = self.shared.world_in(dimension).lock().expect("мир");
+            if !world.has_chunk(pos.x.div_euclid(16),pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+            let state = world.get_block(pos.x,pos.y,pos.z);
+            if crate::mining::properties(state).0 < 0.0 || matches!(crate::blocks::block_at_state(state),Some("air"|"cave_air"|"void_air")) {return Ok(false);}
+            // Шалкер с содержимым уже выпадает через обычную очередь spill_containers.
+            let packed = world.container(pos.x,pos.y,pos.z).is_some_and(|c| c.kind == crate::containers::Kind::ShulkerBox);
+            let drops = if packed {Vec::new()} else {crate::mining::block_drops(state,None,||world.random_unit())};
+            crate::placing::break_block(&mut world,pos.x,pos.y,pos.z);drops
+        };
+        let mut items=self.shared.items_in(dimension).lock().expect("предметы");
+        for stack in drops {items.drop_item(self.shared.next_entity_id(),stack,(f64::from(pos.x)+0.5,f64::from(pos.y)+0.5,f64::from(pos.z)+0.5),(0.0,0.2,0.0),10);}
+        Ok(true)
+    }
+
+    fn chunk_loaded(&mut self, dimension: wit::Dimension, x: i32, z: i32) -> bool {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").has_chunk(x, z)
+    }
+    fn highest_block(&mut self, dimension: wit::Dimension, x: i32, z: i32) -> Result<i32, String> {
+        let world = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
+        if !world.has_chunk(x.div_euclid(16), z.div_euclid(16)) {return Err("чанк не загружен".into());}
+        Ok((-64..320).rev().find(|y| !matches!(crate::blocks::block_at_state(world.get_block(x, *y, z)), Some("air" | "cave_air" | "void_air"))).unwrap_or(-64))
+    }
+    fn random_tick_speed(&mut self) -> u32 { crate::farming::random_tick_speed() }
+    fn block_details(&mut self, pos: wit::BlockPos) -> Result<mcsa::api::world::BlockState, String> {
+        let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
+        if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+        let state = world.get_block(pos.x, pos.y, pos.z);
+        let mut data = block_text(state);
+        let mut age = -1; let mut max_age = -1;
+        if let Some(block) = crate::blocks::orientation_of(state) {
+            let props: Vec<_> = block.properties.iter().filter_map(|p| Some(format!("{}={}", p.name, block.value(state, p.name)?))).collect();
+            if !props.is_empty() {data.push_str(&format!("[{}]", props.join(",")));}
+            if let Some(property) = block.properties.iter().find(|p| p.name == "age") {
+                age = block.value(state, "age").and_then(|v| v.parse().ok()).unwrap_or(-1);
+                max_age = property.values.iter().filter_map(|v| v.parse::<i32>().ok()).max().unwrap_or(-1);
+            }
+        }
+        let (sky, light) = world.light_full(pos.x, pos.y, pos.z);
+        Ok(mcsa::api::world::BlockState {data, sky, light: sky.max(light), liquid: matches!(crate::blocks::block_at_state(state), Some("water" | "lava")), passable: !crate::blocks::has_box(state), age, max_age})
+    }
+    fn update_block(&mut self, pos: wit::BlockPos, data: String, force: bool, physics: bool) -> Result<bool, String> {
+        let state = crate::blocks::state_from_text(&data).ok_or("неизвестное состояние блока")?;
+        if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
+        let dimension = dimension_from_wit(pos.dimension);
+        {
+            let mut world = self.shared.world_in(dimension).lock().expect("мир");
+            if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+            let current = world.get_block(pos.x, pos.y, pos.z);
+            if !force && crate::blocks::block_at_state(current) != crate::blocks::block_at_state(state) {return Ok(false);}
+            if !physics {world.set_block(pos.x, pos.y, pos.z, state);return Ok(true);}
+        }
+        self.set_block(pos, data)?;Ok(true)
+    }
+    fn random_tick(&mut self, pos: wit::BlockPos) -> Result<(), String> {
+        let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
+        if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+        if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
+        let state = world.get_block(pos.x, pos.y, pos.z);
+        crate::farming::random_tick(&mut world, (pos.x, pos.y, pos.z), state);Ok(())
+    }
+    fn play_sound(&mut self, at: wit::Location, sound: String, volume: f32, pitch: f32) -> Result<(), String> {
+        if !at.x.is_finite() || !at.y.is_finite() || !at.z.is_finite() || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || !volume.is_finite() || !(0.0..=16.0).contains(&volume) || !pitch.is_finite() || !(0.0..=2.0).contains(&pitch) {return Err("Недопустимые параметры звука".into());}
+        if !sound.starts_with("minecraft:") || sound.len() > 256 || !sound.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"_:./-".contains(&b)) {return Err("Недопустимый ключ звука".into());}
+        let sound = match sound.as_str() {
+            "minecraft:block.anvil.use" => "block.anvil.use", "minecraft:entity.enderman.teleport" => "entity.enderman.teleport",
+            "minecraft:entity.evoker.prepare_summon" => "entity.evoker.prepare_summon", "minecraft:entity.magma_cube.squish" => "entity.magma_cube.squish",
+            "minecraft:entity.piglin.admiring_item" => "entity.piglin.admiring_item", "minecraft:entity.player.attack.crit" => "entity.player.attack.crit",
+            _ => return Err("Звук вне поддерживаемого каталога".into()),
+        };
+        self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_sound_player_at((at.x, at.y, at.z), sound, volume, pitch);Ok(())
+    }
     fn get_border(&mut self, dimension: wit::Dimension) -> mcsa::api::world::Border {
         let border = crate::commands_world::border_of(&self.shared, dimension_from_wit(dimension));
         mcsa::api::world::Border { size: border.size(), center_x: border.center_x, center_z: border.center_z }

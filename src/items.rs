@@ -323,6 +323,12 @@ pub struct Items {
 }
 
 impl Items {
+    #[cfg(feature = "plugins")]
+    pub fn plugin_set_item(&mut self, uuid: [u8; 16], stack: Stack) -> bool {
+        let Some(item) = self.items.iter_mut().find(|item| item.uuid == uuid && item.fuse.is_none() && item.block.is_none()) else { return false; };
+        item.stack = stack;
+        self.changes.push(Change::Stack { entity_id: item.entity_id, stack, no_gravity: item.no_gravity });true
+    }
     pub fn new() -> Self {
         Self {
             items: Vec::new(),

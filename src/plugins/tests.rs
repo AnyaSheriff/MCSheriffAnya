@@ -731,3 +731,36 @@ fn plugin_respawn_points_are_validated_and_queued_without_changing_worlds() {
     assert_eq!(shared.players.lock().unwrap().members()[0].dimension, crate::dimension::Dimension::Overworld);
     assert!(ctx.set_respawn(uuid, None).is_ok());
 }
+
+#[test]
+fn entity_host_mutates_native_items_and_rejects_invalid_motion() {
+    use super::api::mcsa::api::{entities::Host as _, inventory::Item};
+    let root=server_root("entity-api");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();
+    let at=wit::Location {dimension:wit::Dimension::Overworld,x:3.0,y:80.0,z:4.0,yaw:None,pitch:None};
+    let item=Item {kind:"potion".into(),count:1,metadata:r#"{"potion":"minecraft:long_poison"}"#.into()};
+    let uuid=ctx.drop_item(at,item,false).unwrap();assert!(ctx.valid(uuid.clone()));
+    let stack=ctx.item_stack(uuid.clone()).unwrap();assert!(stack.metadata.contains("minecraft:long_poison"));
+    let native=shared.items_in(crate::dimension::Dimension::Overworld).lock().unwrap().items()[0].stack;
+    assert_eq!(native.extras().potion,crate::survival::potion_number("long_poison"));
+    assert!(ctx.set_velocity(uuid.clone(),super::api::mcsa::api::entities::Vector {x:f64::NAN,y:0.0,z:0.0}).is_err());
+    ctx.set_velocity(uuid.clone(),super::api::mcsa::api::entities::Vector {x:0.2,y:0.4,z:-0.3}).unwrap();assert_eq!(ctx.velocity(uuid.clone()).unwrap().y,0.4);
+    ctx.set_item_stack(uuid.clone(),Item {kind:"diamond".into(),count:2,metadata:String::new()}).unwrap();assert_eq!(ctx.item_stack(uuid.clone()).unwrap().count,2);
+    assert!(ctx.item_teleport(uuid.clone(),wit::Location {x:9.0,..at}).unwrap());assert_eq!(ctx.item_location(uuid.clone()).unwrap().x,9.0);
+    assert!(ctx.item_teleport(uuid.clone(),wit::Location {dimension:wit::Dimension::Nether,..at}).is_err());
+    assert!(ctx.remove(crate::network::login::format_uuid(&[1;16])).is_err());ctx.remove(uuid.clone()).unwrap();assert!(!ctx.valid(uuid.clone()));assert!(ctx.item_stack(uuid).is_err());
+    assert!(ctx.drop_item(wit::Location {y:f64::INFINITY,..at},Item {kind:"stone".into(),count:1,metadata:String::new()},true).is_err());
+}
+
+#[test]
+fn player_state_and_mutations_use_the_connection_snapshot() {
+    use super::api::mcsa::api::player::Host as _;
+    let root=server_root("player-state-api");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();shared.players.lock().unwrap().ui.info.insert([1;16],crate::presentation::Info {plugin_state:crate::presentation::PlayerState {fire_ticks:80,in_water:true,eye_height:1.27,effects:vec![crate::survival::Effect {kind:crate::survival::EffectKind::Poison,amplifier:1,ticks_left:90,ambient:false,visible:true,show_icon:false}],..Default::default()},..Default::default()});
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();let ctx=host.loaded[0].store.data_mut();let uuid=crate::network::login::format_uuid(&[1;16]);
+    let state=ctx.get_state(uuid.clone()).unwrap();assert!(state.in_water&&state.on_ground);assert_eq!(state.fire_ticks,80);assert_eq!(state.effects[0].kind,"poison");assert_eq!(state.effects[0].duration,90);assert!(!state.effects[0].icon);
+    ctx.set_fire_ticks(uuid.clone(),0).unwrap();assert_eq!(ctx.get_state(uuid.clone()).unwrap().fire_ticks,0);
+    assert!(ctx.damage(uuid.clone(),-1.0).is_err());assert!(ctx.damage(uuid.clone(),f64::NAN).is_err());assert!(ctx.give_experience(uuid.clone(),-1).is_err());ctx.damage(uuid.clone(),3.0).unwrap();ctx.give_experience(uuid.clone(),8).unwrap();
+    let orders=shared.players.lock().unwrap().take_orders(&[1;16]);assert!(orders.iter().any(|o| matches!(o,crate::players::Order::Hurt {amount,..} if *amount==3.0)));assert!(orders.iter().any(|o| matches!(o,crate::players::Order::Experience {amount:8,levels:false,set:false})));
+    assert!(ctx.get_state("не UUID".into()).is_err());
+}

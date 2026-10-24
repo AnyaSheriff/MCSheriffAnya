@@ -3060,8 +3060,13 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
+    let plugin_state = if crate::plugins::active() { crate::presentation::PlayerState {
+        velocity: player.net.last_delta, fire_ticks: player.vit.fire, in_water: player.net.in_water, in_lava: player.net.in_lava,
+        in_rain: shared.world_in(player.dimension).lock().expect("мир").in_rain(player.x, player.y, player.z, 1.8),
+        eye_height: if player.sneaking { 1.27 } else { 1.62 }, effects: player.vit.effects.clone(),
+    } } else { crate::presentation::PlayerState::default() };
     let mut players = shared.players.lock().expect("игроки");
-    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { open_top: player.window.as_ref().map_or_else(|| player.inventory.slots()[..5].to_vec(), |open| open.shown.clone()), open_kind: player.window.as_ref().map_or("CRAFTING", |open| {
+    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { plugin_state, open_top: player.window.as_ref().map_or_else(|| player.inventory.slots()[..5].to_vec(), |open| open.shown.clone()), open_kind: player.window.as_ref().map_or("CRAFTING", |open| {
         if crafting::is_table(player) { "WORKBENCH" } else if open.merchant.is_some() { "MERCHANT" } else if let Some(station) = &open.station { match station.kind { crate::enchanting::Station::Anvil => "ANVIL", crate::enchanting::Station::Grindstone => "GRINDSTONE", crate::enchanting::Station::Smithing => "SMITHING", crate::enchanting::Station::Stonecutter => "STONECUTTER", crate::enchanting::Station::Loom => "LOOM", crate::enchanting::Station::Cartography => "CARTOGRAPHY", crate::enchanting::Station::Crafting => "WORKBENCH", crate::enchanting::Station::Enchanting => "ENCHANTING" } } else { match open.kind {
             Some(containers::Kind::Furnace) => "FURNACE", Some(containers::Kind::BlastFurnace) => "BLAST_FURNACE", Some(containers::Kind::Smoker) => "SMOKER", Some(containers::Kind::Hopper) => "HOPPER", Some(containers::Kind::Dispenser) => "DISPENSER", Some(containers::Kind::Dropper) => "DROPPER", Some(containers::Kind::BrewingStand) => "BREWING", Some(containers::Kind::Beacon) => "BEACON", Some(containers::Kind::Lectern) => "LECTERN", Some(containers::Kind::Crafter) => "CRAFTER", Some(containers::Kind::ShulkerBox) => "SHULKER_BOX", Some(containers::Kind::EnderChest) => "ENDER_CHEST", _ => "CHEST",
         } }
@@ -6372,6 +6377,8 @@ async fn read_and_log_play_packets(
                 }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
                 Order::Health { value } => vitals::set_health(stream, shared, player, value).await?,
+                Order::PluginFire { ticks } => player.vit.fire = ticks,
+                Order::PluginVelocity { value } => {player.net.velocity = Some(value);send_velocity(stream, player.entity_id, value).await?;},
                 Order::Effect(effect) => {
                     vitals::give_effect(stream, player, effect).await?;
                     // Маяк (фоновый эффект) обновляет частицы и атрибуты на такт
@@ -7747,6 +7754,16 @@ fn handle_client_packet_inner(
         }
         // Разобрать пакет могло и не получиться: тогда отвечать не на что.
         PLAYER_ACTION => {
+            if Cursor::new(payload).varint() == Some(6) && crate::plugins::active() {
+                publish_ui(shared,player);
+                let slot=player.inventory.selected_slot();
+                if !crate::plugins::item_event(&plugin_view(player),2,0) {
+                    let main=player.inventory.slot(slot);let off=player.inventory.slot(inventory::OFFHAND);
+                    player.inventory.set(slot,off);player.inventory.set(inventory::OFFHAND,main);
+                    player.net.using=None;vitals::stop_eating(player);
+                }
+                reaction.slots=vec![slot,inventory::OFFHAND];return reaction;
+            }
             // Статус 5 — «отпустил кнопку использования»: еда прервана.
             if Cursor::new(payload).varint() == Some(5) {
                 vitals::stop_eating(player);
@@ -8007,6 +8024,14 @@ fn handle_client_packet_inner(
             let mut cursor = Cursor::new(payload);
 
             if let Some(slot) = cursor.u16() {
+                if slot < 9 && i32::from(slot) != player.inventory.selected() && crate::plugins::active() {
+                    publish_ui(shared, player);
+                    if crate::plugins::item_event(&plugin_view(player), 0, i32::from(slot)) {
+                        let mut body = encode_varint(SET_HELD_ITEM);body.extend(encode_varint(player.inventory.selected()));
+                        shared.players.lock().expect("игроки").order(&player.uuid, Order::Packet(body));
+                        return reaction;
+                    }
+                }
                 log_debug!(
                     "Play: игрок выбрал слот {} (байты: {})",
                     slot,
@@ -10896,7 +10921,9 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             prepare_plugin_drag(player, _window, slot as i16 as i32, button as i8, &slots)
         } else { player.crafting_drag = None; None };
         let notify = mode != 5 || drag.is_some();
-        let cancelled = !active || notify && crate::plugins::inventory_event(&owner, &plugin_view(player), handle, 0, (slot as i16 as i32, button as i8 as i32, mode));
+        let cancelled = !active || if let Some((_, selected)) = &drag {
+            crate::plugins::drag_event(&owner,&plugin_view(player),handle,selected.clone(),(slot as i16 as i32, button as i8 as i32, mode))
+        } else {notify && crate::plugins::inventory_event(&owner, &plugin_view(player), handle, 0, (slot as i16 as i32, button as i8 as i32, mode))};
         let mut chest = chest.lock().expect("сундук");
         let thrown = if cancelled { None } else if let Some((kind, selected)) = drag {
             distribute_plugin_drag(&mut player.inventory, &mut chest.slots, kind, &selected);

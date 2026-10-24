@@ -59,6 +59,7 @@ fn apply_metadata(data: &mut crate::stackdata::Data, text: &str) -> Result<(), S
             "name" if super::presentation::component(&value.to_string()).is_some() => (),
             "lore" if value.as_array().is_some_and(|lines| lines.len() <= 256 && lines.iter().all(|line| super::presentation::component(&line.to_string()).is_some())) => (),
             "pdc" if valid_pdc(value) => (),
+            "potion" if value.as_str().is_some_and(|name| crate::survival::potion_number(name.strip_prefix("minecraft:").unwrap_or(name)).is_some()) => (),
             "damage" if value.as_i64().is_some_and(|v| (0..=i32::MAX as i64).contains(&v)) => (),
             "maxDamage" if value.as_i64().is_some_and(|v| (1..=i32::MAX as i64).contains(&v)) => (),
             "flags" if value.as_array().is_some_and(|flags| flags.len() <= 32 && flags.iter().all(|flag| flag.as_str().is_some_and(|s| ["HIDE_ENCHANTS","HIDE_ATTRIBUTES","HIDE_UNBREAKABLE","HIDE_DESTROYS","HIDE_PLACED_ON","HIDE_ADDITIONAL_TOOLTIP","HIDE_DYE","HIDE_ARMOR_TRIM","HIDE_STORED_ENCHANTS"].contains(&s)))) => (),
@@ -67,6 +68,7 @@ fn apply_metadata(data: &mut crate::stackdata::Data, text: &str) -> Result<(), S
         }
     }
     data.damage = map.get("damage").and_then(Value::as_i64).unwrap_or(0) as i32;
+    data.potion = map.get("potion").and_then(Value::as_str).and_then(|name| crate::survival::potion_number(name.strip_prefix("minecraft:").unwrap_or(name)));
     for field in ["enchants", "stored"] {
         let enchants = if field == "enchants" { &mut data.enchants } else { &mut data.stored };
         enchants.clear();
@@ -82,6 +84,8 @@ fn metadata(stack: Stack, token: Option<u32>) -> String {
     let data = stack.extras();
     let mut map: Map<String,Value> = data.plugin_meta.as_ref().and_then(|s| serde_json::from_str::<Value>(s).ok()).and_then(|v| v.as_object().cloned()).unwrap_or_default();
     if data.damage != 0 { map.insert("damage".into(), json!(data.damage)); } else { map.remove("damage"); }
+    map.remove("potion");
+    if let Some(name) = data.potion.and_then(|id| crate::survival::POTIONS.get(usize::from(id))) { map.insert("potion".into(), json!(format!("minecraft:{name}"))); }
     for (key, enchants) in [("enchants", data.enchants), ("stored", data.stored)] {
         map.remove(key);
         if !enchants.is_empty() { let values: Map<String,Value> = enchants.iter().filter_map(|(id, level)| crate::stackdata::ENCHANTMENTS.get(*id as usize).map(|(name, _)| (format!("minecraft:{name}"), json!(*level)))).collect(); map.insert(key.into(), Value::Object(values)); }
@@ -107,7 +111,7 @@ impl Drop for Chests {
     fn drop(&mut self) { for chest in self.entries.values() { chest.lock().expect("сундук").active = false; } }
 }
 impl PluginCtx {
-    fn inventory_stack(&mut self, item: Option<inventory::Item>) -> Result<Option<Stack>, String> {
+    pub(super) fn inventory_stack(&mut self, item: Option<inventory::Item>) -> Result<Option<Stack>, String> {
         let stack = match item {
             Some(item) => {
                 let number = crate::blocks::item_named(&item.kind).ok_or("неизвестный предмет")?;
@@ -122,7 +126,7 @@ impl PluginCtx {
         };
         Ok(stack)
     }
-    fn inventory_items(&mut self, slots: &[Option<Stack>]) -> Vec<Option<inventory::Item>> {
+    pub(super) fn inventory_items(&mut self, slots: &[Option<Stack>]) -> Vec<Option<inventory::Item>> {
         slots.iter().map(|slot| slot.and_then(|stack| crate::blocks::item_name(stack.item).map(|name| {
             let token = self.native_items.remember(stack);
             inventory::Item { kind: name.into(), count: stack.count as u32, metadata: metadata(stack, Some(token)) }

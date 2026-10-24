@@ -199,6 +199,8 @@ pub struct PluginChest {
 
 #[derive(Clone, Debug)]
 pub enum Order {
+    PluginFire { ticks: i32 },
+    PluginVelocity { value: (f64, f64, f64) },
     PluginOpen { chest: std::sync::Arc<std::sync::Mutex<PluginChest>> },
     PluginClose { owner: String },
     /// Выгнать с сервера, показав причину.

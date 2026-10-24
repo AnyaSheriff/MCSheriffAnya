@@ -4,6 +4,18 @@ public final class RemotePlayer implements Player {
  private final String uuid,name;private final Location location;private final GameMode mode;
  public RemotePlayer(String[] a,int i){uuid=a[i];name=a[i+1];mode=GameMode.values()[Integer.parseInt(a[i+2])];location=new Location(new RemoteWorld(Integer.parseInt(a[i+3])),Double.parseDouble(a[i+4]),Double.parseDouble(a[i+5]),Double.parseDouble(a[i+6]),Float.parseFloat(a[i+7]),Float.parseFloat(a[i+8]));}
  @Override public boolean equals(Object other){return other instanceof RemotePlayer&&uuid.equals(((RemotePlayer)other).uuid);}@Override public int hashCode(){return uuid.hashCode();}
+ private String[] state(){return Host.call(65,uuid);}
+ public int getFireTicks(){return Integer.parseInt(state()[0]);}public void setFireTicks(int ticks){Host.call(66,uuid,""+ticks);}
+ public void damage(double amount){if(!Double.isFinite(amount)||amount<0)throw new IllegalArgumentException("Недопустимый урон");Host.call(67,uuid,""+amount);}
+ public void giveExp(int amount){Host.call(68,uuid,""+amount);}
+ public boolean isDead(){return state()[1].equals("1");}public boolean isSneaking(){return state()[2].equals("1");}public boolean isOnGround(){return state()[3].equals("1");}
+ public boolean isInWater(){return state()[4].equals("1");}public boolean isInLava(){return state()[5].equals("1");}public boolean isInRain(){return state()[6].equals("1");}
+ public double getEyeHeight(){return Double.parseDouble(state()[7]);}public Location getEyeLocation(){return getLocation().add(0,getEyeHeight(),0);}
+ public boolean isValid(){return isOnline();}public boolean canSee(Player player){return player!=null&&player.isOnline();}
+ public ItemStack getActiveItem(){String[] s=state();if(!s[8].equals("1"))return new ItemStack(Material.AIR);return s[9].equals("1")?getInventory().getItemInOffHand():getInventory().getItemInMainHand();}
+ public java.util.Collection<org.bukkit.potion.PotionEffect> getActivePotionEffects(){String[] s=state();java.util.List<org.bukkit.potion.PotionEffect> result=new java.util.ArrayList<>();for(int i=10;i<s.length;i+=6){org.bukkit.potion.PotionEffectType type=org.bukkit.potion.PotionEffectType.getByName(s[i]);if(type!=null)result.add(new org.bukkit.potion.PotionEffect(type,Integer.parseInt(s[i+1]),Integer.parseInt(s[i+2]),s[i+3].equals("1"),s[i+4].equals("1"),s[i+5].equals("1")));}return result;}
+ public org.bukkit.potion.PotionEffect getPotionEffect(org.bukkit.potion.PotionEffectType type){for(org.bukkit.potion.PotionEffect effect:getActivePotionEffects())if(effect.getType()==type)return effect;return null;}
+ public org.bukkit.entity.EntityType getType(){return org.bukkit.entity.EntityType.PLAYER;}
  public String getName(){return name;}public java.util.UUID getUniqueId(){return java.util.UUID.fromString(uuid);}
  public Location snapshotLocation(){return location.clone();}
  public Location getLocation(){for(Player p:Bukkit.getOnlinePlayers())if(p.getUniqueId().toString().equals(uuid))return ((RemotePlayer)p).location.clone();return location.clone();}

@@ -42,6 +42,11 @@ public final class PotionEffectType implements org.bukkit.Keyed {
  public static final PotionEffectType WIND_CHARGED=new PotionEffectType("wind_charged");
  public static final PotionEffectType WITHER=new PotionEffectType("wither");
  private static final PotionEffectType[] VALUES={ABSORPTION,BAD_OMEN,BLINDNESS,BREATH_OF_THE_NAUTILUS,CONDUIT_POWER,DARKNESS,DOLPHINS_GRACE,FIRE_RESISTANCE,GLOWING,HASTE,HEALTH_BOOST,HERO_OF_THE_VILLAGE,HUNGER,INFESTED,INSTANT_DAMAGE,INSTANT_HEALTH,INVISIBILITY,JUMP_BOOST,LEVITATION,LUCK,MINING_FATIGUE,NAUSEA,NIGHT_VISION,OOZING,POISON,RAID_OMEN,REGENERATION,RESISTANCE,SATURATION,SLOW_FALLING,SLOWNESS,SPEED,STRENGTH,TRIAL_OMEN,UNLUCK,WATER_BREATHING,WEAKNESS,WEAVING,WIND_CHARGED,WITHER};
+ public PotionEffectTypeCategory getCategory(){
+ if(java.util.Set.of("blindness","darkness","hunger","instant_damage","levitation","mining_fatigue","nausea","poison","slowness","unluck","weakness","wither").contains(key.getKey()))return PotionEffectTypeCategory.HARMFUL;
+ if(java.util.Set.of("bad_omen","glowing","raid_omen","trial_omen","wind_charged","weaving","oozing","infested").contains(key.getKey()))return PotionEffectTypeCategory.NEUTRAL;
+ return PotionEffectTypeCategory.BENEFICIAL;
+ }
  public static PotionEffectType[] values(){return VALUES.clone();}
  public static PotionEffectType getByName(String name){if(name==null)return null;for(PotionEffectType t:VALUES)if(t.getName().equalsIgnoreCase(name))return t;return null;}
  public static PotionEffectType getByKey(org.bukkit.NamespacedKey key){for(PotionEffectType t:VALUES)if(t.key.equals(key))return t;return null;}

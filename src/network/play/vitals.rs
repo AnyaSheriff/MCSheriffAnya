@@ -2123,7 +2123,11 @@ pub(super) async fn hit_by_breached(
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
 
     if crate::plugins::active() {
-        let Some(changed) = crate::plugins::damage(&super::plugin_view(player), plugin_damage_cause(source), amount) else { return Ok(None); };
+        let attacker = {
+            let players=shared.players.lock().expect("игроки");
+            players.members().iter().find(|p| p.entity_id == direct).map(|p| crate::plugins::PlayerView {uuid:p.uuid,name:p.name.clone(),game_mode:p.game_mode,dimension:p.dimension,x:p.position.x,y:p.position.y,z:p.position.z,yaw:p.position.yaw,pitch:p.position.pitch})
+        };
+        let Some(changed) = crate::plugins::damage_from(&super::plugin_view(player), attacker.as_ref(), plugin_damage_cause(source), amount) else { return Ok(None); };
         amount = changed;
     }
 
@@ -2958,6 +2962,13 @@ async fn effects_and_eating_tick(stream: &mut Outgoing<'_>, shared: &Shared, pla
             let effects = std::mem::take(&mut eating.effects);
 
             player.net.eating = None;
+            if crate::plugins::active() {
+                super::publish_ui(shared, player);
+                if crate::plugins::item_event(&super::plugin_view(player), 1, slot) {
+                    send_container_slot(stream, player, slot).await?;
+                    return Ok(());
+                }
+            }
             {
                 let mut world = shared.world_in(player.dimension).lock().expect("мир");
                 crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 8, Some(player.entity_id), false);

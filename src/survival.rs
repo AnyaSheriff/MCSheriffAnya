@@ -790,6 +790,51 @@ impl EffectKind {
         Self::ALL.into_iter().find(|kind| kind.id() == id)
     }
 
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Hunger => "hunger",
+            Self::Saturation => "saturation",
+            Self::Speed => "speed",
+            Self::Slowness => "slowness",
+            Self::Strength => "strength",
+            Self::Weakness => "weakness",
+            Self::Resistance => "resistance",
+            Self::Haste => "haste",
+            Self::MiningFatigue => "mining_fatigue",
+            Self::InstantHealth => "instant_health",
+            Self::InstantDamage => "instant_damage",
+            Self::JumpBoost => "jump_boost",
+            Self::Nausea => "nausea",
+            Self::Regeneration => "regeneration",
+            Self::FireResistance => "fire_resistance",
+            Self::WaterBreathing => "water_breathing",
+            Self::ConduitPower => "conduit_power",
+            Self::DolphinsGrace => "dolphins_grace",
+            Self::BreathOfTheNautilus => "breath_of_the_nautilus",
+            Self::Invisibility => "invisibility",
+            Self::Blindness => "blindness",
+            Self::NightVision => "night_vision",
+            Self::Poison => "poison",
+            Self::Wither => "wither",
+            Self::HealthBoost => "health_boost",
+            Self::Absorption => "absorption",
+            Self::Glowing => "glowing",
+            Self::Levitation => "levitation",
+            Self::Luck => "luck",
+            Self::Unluck => "unluck",
+            Self::SlowFalling => "slow_falling",
+            Self::Darkness => "darkness",
+            Self::BadOmen => "bad_omen",
+            Self::TrialOmen => "trial_omen",
+            Self::WindCharged => "wind_charged",
+            Self::Weaving => "weaving",
+            Self::Oozing => "oozing",
+            Self::Infested => "infested",
+            Self::RaidOmen => "raid_omen",
+            Self::HeroOfTheVillage => "hero_of_the_village",
+        }
+    }
+
     pub fn from_name(name: &str) -> Option<Self> {
         match name.strip_prefix("minecraft:").unwrap_or(name) {
             "hunger" => Some(EffectKind::Hunger),

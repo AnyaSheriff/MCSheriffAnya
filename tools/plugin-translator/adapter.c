@@ -103,6 +103,29 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 62: {mcsa_api_presentation_player_info_t info;if(mcsa_api_presentation_get_player_info(&s[0],&info)){number(info.food);number(info.level);number(info.exp);mcsa_api_presentation_player_info_free(&info);}break;}
     case 63: {mcsa_api_types_block_pos_t pos={atoi(a[1]),atoi(a[2]),atoi(a[3]),atoi(a[4])};mcsa_api_player_bed_action_t action;if(mcsa_api_player_get_bed_action(&s[0],&pos,&action)){number(action.bed.dimension);number(action.bed.x);number(action.bed.y);number(action.bed.z);number(action.problem);number(action.can_spawn);number(action.can_sleep);}break;}
     case 64: {mcsa_api_types_location_t to={.dimension=atoi(a[1]),.x=atof(a[2]),.y=atof(a[3]),.z=atof(a[4]),.yaw={true,atof(a[5])},.pitch={true,0}};if(!mcsa_api_player_set_respawn(&s[0],!strcmp(a[6],"1")?&to:NULL,&err))error(err);break;}
+    case 65: {mcsa_api_player_state_t state;if(!mcsa_api_player_get_state(&s[0],&state,&err))error(err);else {number(state.fire_ticks);number(state.dead);number(state.sneaking);number(state.on_ground);number(state.in_water);number(state.in_lava);number(state.in_rain);number(state.eye_height);number(state.using_item);number(state.off_hand);for(size_t i=0;i<state.effects.len;i++){mcsa_api_player_potion_effect_t e=state.effects.ptr[i];string(e.kind);number(e.duration);number(e.amplifier);number(e.ambient);number(e.particles);number(e.icon);}mcsa_api_player_state_free(&state);}break;}
+    case 66: if(!mcsa_api_player_set_fire_ticks(&s[0],atoi(a[1]),&err))error(err);break;
+    case 67: if(!mcsa_api_player_damage(&s[0],atof(a[1]),&err))error(err);break;
+    case 68: if(!mcsa_api_player_give_experience(&s[0],atoi(a[1]),&err))error(err);break;
+    case 69: {mcsa_api_types_block_pos_t pos={atoi(a[0]),atoi(a[1]),atoi(a[2]),atoi(a[3])};mcsa_api_world_block_state_t state;if(!mcsa_api_world_block_details(&pos,&state,&err))error(err);else {string(state.data);number(state.sky);number(state.light);number(state.liquid);number(state.passable);number(state.age);number(state.max_age);mcsa_api_world_block_state_free(&state);}break;}
+    case 70: {mcsa_api_types_block_pos_t pos={atoi(a[0]),atoi(a[1]),atoi(a[2]),atoi(a[3])};bool result;if(!mcsa_api_world_update_block(&pos,&s[4],!strcmp(a[5],"true"),!strcmp(a[6],"true"),&result,&err))error(err);else number(result);break;}
+    case 71: {mcsa_api_types_block_pos_t pos={atoi(a[0]),atoi(a[1]),atoi(a[2]),atoi(a[3])};if(!mcsa_api_world_random_tick(&pos,&err))error(err);break;}
+    case 72: number(mcsa_api_world_chunk_loaded(atoi(a[0]),atoi(a[1]),atoi(a[2])));break;
+    case 73: {int32_t y;if(!mcsa_api_world_highest_block(atoi(a[0]),atoi(a[1]),atoi(a[2]),&y,&err))error(err);else number(y);break;}
+    case 74: number(mcsa_api_world_random_tick_speed());break;
+    case 75: {mcsa_api_types_location_t at={.dimension=atoi(a[0]),.x=atof(a[1]),.y=atof(a[2]),.z=atof(a[3])};if(!mcsa_api_world_play_sound(&at,&s[4],atof(a[5]),atof(a[6]),&err))error(err);break;}
+    case 76: {mcsa_api_entities_vector_t v;if(!mcsa_api_entities_velocity(&s[0],&v,&err))error(err);else {number(v.x);number(v.y);number(v.z);}break;}
+    case 77: {mcsa_api_entities_vector_t v={atof(a[1]),atof(a[2]),atof(a[3])};if(!mcsa_api_entities_set_velocity(&s[0],&v,&err))error(err);break;}
+    case 78: if(!mcsa_api_entities_remove(&s[0],&err))error(err);break;
+    case 79: {mcsa_api_types_location_t at={.dimension=atoi(a[0]),.x=atof(a[1]),.y=atof(a[2]),.z=atof(a[3])};mcsa_api_inventory_item_t item={.kind=s[4],.count=atoi(a[5]),.metadata=s[6]};plugin_string_t uuid;if(!mcsa_api_entities_drop_item(&at,&item,!strcmp(a[7],"true"),&uuid,&err))error(err);else {string(uuid);plugin_string_free(&uuid);}break;}
+    case 80: {mcsa_api_inventory_item_t item;if(!mcsa_api_entities_item_stack(&s[0],&item,&err))error(err);else {string(item.kind);number(item.count);string(item.metadata);mcsa_api_inventory_item_free(&item);}break;}
+    case 81: {mcsa_api_inventory_item_t item={.kind=s[1],.count=atoi(a[2]),.metadata=s[3]};if(!mcsa_api_entities_set_item_stack(&s[0],&item,&err))error(err);break;}
+    case 82: {mcsa_api_types_location_t at;if(!mcsa_api_entities_item_location(&s[0],&at,&err))error(err);else {number(at.dimension);number(at.x);number(at.y);number(at.z);}break;}
+    case 83: {mcsa_api_types_location_t at={.dimension=atoi(a[1]),.x=atof(a[2]),.y=atof(a[3]),.z=atof(a[4])};bool result;if(!mcsa_api_entities_item_teleport(&s[0],&at,&result,&err))error(err);else number(result);break;}
+    case 84: number(mcsa_api_entities_valid(&s[0]));break;
+    case 86: {mcsa_api_types_location_t at={.dimension=atoi(a[0]),.x=atof(a[1]),.y=atof(a[2]),.z=atof(a[3])};if(!mcsa_api_world_spawn_particle(&at,&s[4],atoi(a[5]),atof(a[6]),atof(a[7]),atof(a[8]),&err))error(err);break;}
+    case 87: {mcsa_api_types_block_pos_t pos={atoi(a[0]),atoi(a[1]),atoi(a[2]),atoi(a[3])};bool result;if(!mcsa_api_world_break_naturally(&pos,&result,&err))error(err);else number(result);break;}
+    case 88: number(mcsa_api_server_is_stopping());break;
     default: abort();
     }
     free(copy);return output;
@@ -136,6 +159,10 @@ bool exports_mcsa_api_combat_events_on_damage(exports_mcsa_api_combat_events_pla
     if(result==1)return false;
     *ret=result==2&&event_text?atof(event_text):damage;return true;
 }
+bool exports_mcsa_api_combat_events_on_damage_from(exports_mcsa_api_combat_events_player_t *who,exports_mcsa_api_combat_events_player_t *attacker,plugin_string_t *cause,double damage,double *ret) {
+    clear();player(who);string(*cause);number(damage);number(attacker!=NULL);if(attacker)player(attacker);int result=dispatch(18);
+    if(result==1)return false;*ret=result==2&&event_text?atof(event_text):damage;return true;
+}
 void exports_mcsa_api_combat_events_on_death(exports_mcsa_api_combat_events_player_t *who,bool keep_inventory) {
     clear();player(who);number(keep_inventory);dispatch(11);
 }
@@ -148,6 +175,14 @@ void exports_mcsa_api_completion_on_tab_complete(mcsa_api_types_sender_t *caller
 
 bool exports_mcsa_api_inventory_events_on_inventory(mcsa_api_types_player_t *who,uint32_t handle,uint32_t kind,int32_t slot,int32_t button,int32_t mode) {
     clear();player(who);number(handle);number(kind);number(slot);number(button);number(mode);return dispatch(12)!=0;
+}
+
+bool exports_mcsa_api_item_events_on_item(mcsa_api_types_player_t *who,uint32_t kind,int32_t slot) {
+    clear();player(who);number(kind);number(slot);return dispatch(16)!=0;
+}
+
+bool exports_mcsa_api_item_events_on_drag(mcsa_api_types_player_t *who,uint32_t handle,plugin_list_s32_t *slots) {
+    clear();player(who);number(handle);for(size_t i=0;i<slots->len;i++)number(slots->ptr[i]);return dispatch(17)!=0;
 }
 
 bool exports_mcsa_api_player_events_on_move(mcsa_api_types_player_t *who,mcsa_api_types_location_t *destination,bool jump,mcsa_api_types_location_t *ret) {

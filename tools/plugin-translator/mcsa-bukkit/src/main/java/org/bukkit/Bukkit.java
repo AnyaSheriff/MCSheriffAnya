@@ -10,6 +10,7 @@ public final class Bukkit {
  public static Player getPlayerExact(String name){for(Player p:getOnlinePlayers())if(p.getName().equalsIgnoreCase(name))return p;return null;}
  public static org.bukkit.scoreboard.ScoreboardManager getScoreboardManager(){return ()->MainScoreboard.INSTANCE;}
  public static int getCurrentTick(){return (int)Long.parseLong(Host.text(60));}
+ public static boolean isStopping(){return Host.yes(88);}
  public static Server getServer(){return server;} public static java.util.Collection<? extends Player> getOnlinePlayers(){String[] a=Host.call(1);java.util.List<Player> r=new java.util.ArrayList<>();for(int i=0;i<a.length;i+=9)r.add(Host.player(a,i));return r;}
  public static Player getPlayer(String n){for(Player p:getOnlinePlayers())if(p.getName().equalsIgnoreCase(n))return p;return null;}
  public static Player getPlayer(java.util.UUID u){for(Player p:getOnlinePlayers())if(p.getUniqueId().equals(u))return p;return null;}

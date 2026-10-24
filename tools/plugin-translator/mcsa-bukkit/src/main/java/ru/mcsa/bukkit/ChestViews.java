@@ -9,6 +9,7 @@ public final class ChestViews implements InventoryView {
  public static InventoryView current(Player p){String value=Host.text(55,p.getUniqueId().toString());InventoryView view=value.isEmpty()?null:views.get(key(p,Integer.parseInt(value)));return view==null?new NativeInventoryView(p):view;}
  public static void close(Player p){Host.call(54,p.getUniqueId().toString());}
  public HumanEntity getPlayer(){return player;}public Inventory getTopInventory(){return inventory;}public Inventory getBottomInventory(){return player.getInventory();}
+ public static int drag(Player p,int handle,java.util.Set<Integer> slots){ChestViews view=views.get(key(p,handle));if(view==null)return 1;view.inventory.refresh();InventoryDragEvent event=new InventoryDragEvent(view,view.getCursor(),slots);RuntimeState.fire(event);return event.isCancelled()?1:0;}
  public static int event(Player p,int handle,int kind,int slot,int button,int mode){ChestViews view=views.get(key(p,handle));if(view==null)return 1;
   if(kind==1){view.inventory.refresh();RuntimeState.fire(new InventoryCloseEvent(view));views.remove(key(p,handle));boolean used=false;for(ChestViews other:views.values())if(other.inventory==view.inventory)used=true;if(!used){Host.call(56,""+handle);view.inventory.handle=0;}return 0;}
   if(mode==5){InventoryDragEvent event=new InventoryDragEvent(view);RuntimeState.fire(event);return event.isCancelled()?1:0;}
