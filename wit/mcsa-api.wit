@@ -288,14 +288,45 @@ interface storage {
     save-config: func(text: string) -> result<_, string>;
 
     /// Прочитать файл из папки данных плагина (`<плагин>/data/`).
-    /// Имя — без путей и без `..`; размер файла — не больше 4 МиБ.
+    /// Путь относительный, без `..` и символических ссылок; размер до 4 МиБ.
     read: func(name: string) -> result<option<list<u8>>, string>;
 
     /// Записать файл в папку данных.
     write: func(name: string, data: list<u8>) -> result<_, string>;
 
+    /// Копировать или атомарно переместить внутри папки данных.
+    transfer: func(source: string, target: string, replace: bool, move-file: bool) -> result<_, string>;
+
     /// Удалить файл из папки данных. false — его не было.
     delete: func(name: string) -> result<bool, string>;
+}
+
+/// Атрибуты игроков: основа и именованные модификаторы.
+interface attributes {
+    record modifier { id: string, amount: f64, operation: u8 }
+    record snapshot { base: f64, value: f64, modifiers: list<modifier> }
+    get: func(uuid: string, name: string) -> result<snapshot, string>;
+    set-base: func(uuid: string, name: string, value: f64) -> result<_, string>;
+    add: func(uuid: string, name: string, modifier: modifier) -> result<_, string>;
+    remove: func(uuid: string, name: string, id: string) -> result<_, string>;
+}
+
+/// Снимок и изменения инвентаря игрока; метаданные проверяет ядро.
+interface inventory {
+    record item { kind: string, count: u32, metadata: string }
+    snapshot: func(uuid: string) -> result<list<option<item>>, string>;
+    selected: func(uuid: string) -> result<u32, string>;
+    set: func(uuid: string, slot: u32, stack: option<item>) -> result<_, string>;
+}
+
+/// HTTPS выполняет ядро: без cookies, credentials, прокси и перенаправлений.
+interface https {
+    record response { status: u16, body: list<u8> }
+    /// Только GET/POST: тело до 32 КиБ, ответ до 64 КиБ, срок 10 секунд.
+    /// Хост должен быть объявлен плагином И разрешён администратором.
+    start: func(method: string, url: string, body: list<u8>) -> result<u32, string>;
+    /// none — запрос ещё идёт; готовый результат забирается ровно один раз.
+    poll: func(handle: u32) -> result<option<response>, string>;
 }
 
 /// Только для `modules/` (доверенных). Песочница `plugins/` этого
@@ -356,7 +387,10 @@ world plugin {
     import %world;
     import scheduler;
     import command;
+    import attributes;
+    import inventory;
     import storage;
+    import https;
 
     export lifecycle;
     export events;

@@ -68,6 +68,8 @@ pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
 
 /// Состояние одного плагина (`Store<PluginCtx>`).
 pub struct PluginCtx {
+    pub network: super::network::Access,
+    pub native_items: super::inventory::NativeItems,
     pub name: String,
     /// Модуль из `modules/` — доверенный.
     pub trusted: bool,
@@ -225,6 +227,23 @@ pub fn safe_file_name(name: &str) -> Result<&str, String> {
     if bad { Err(format!("имя файла «{name}» не годится: без путей и точки в начале")) } else { Ok(name) }
 }
 
+// Каждая часть относительного пути проверяется; ссылки из data/ не разыменовываем.
+fn data_path(root: &Path, name: &str) -> Result<PathBuf, String> {
+    if name.is_empty() || name.len() > 512 { return Err("пустой или слишком длинный путь данных".into()); }
+    let mut path = root.to_path_buf();
+    let mut paths = vec![path.clone()];
+    for part in name.split('/') { path.push(safe_file_name(part)?); paths.push(path.clone()); }
+    for candidate in paths {
+        match std::fs::symlink_metadata(candidate) {
+            Ok(meta) if meta.file_type().is_symlink() => return Err("символические ссылки в data/ запрещены".into()),
+            Ok(_) => (),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    Ok(path)
+}
+
 fn read_limited(path: &Path) -> Result<Option<Vec<u8>>, String> {
     match std::fs::metadata(path) {
         Ok(meta) if meta.len() > MAX_FILE as u64 => Err(format!("файл больше {} МиБ", MAX_FILE / 1024 / 1024)),
@@ -244,10 +263,17 @@ fn write_file(path: &Path, data: &[u8]) -> Result<(), String> {
     }
 
     // Через временный файл: оборванная запись не оставит половину.
-    let temporary = path.with_extension("tmp");
-
-    std::fs::write(&temporary, data).map_err(|error| error.to_string())?;
-    std::fs::rename(&temporary, path).map_err(|error| error.to_string())
+    use std::io::Write;
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let temporary = path.with_file_name(format!(".mcsa-write-{}-{}", std::process::id(), NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+    let result = (|| {
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&temporary).map_err(|error| error.to_string())?;
+        file.write_all(data).map_err(|error| error.to_string())?;
+        file.sync_all().map_err(|error| error.to_string())?;
+        std::fs::rename(&temporary, path).map_err(|error| error.to_string())
+    })();
+    if result.is_err() { let _ = std::fs::remove_file(temporary); }
+    result
 }
 
 impl mcsa::api::types::Host for PluginCtx {}
@@ -600,15 +626,29 @@ impl mcsa::api::storage::Host for PluginCtx {
     }
 
     fn read(&mut self, name: String) -> Result<Option<Vec<u8>>, String> {
-        read_limited(&self.data_dir().join(safe_file_name(&name)?))
+        read_limited(&data_path(&self.data_dir(), &name)?)
     }
 
     fn write(&mut self, name: String, data: Vec<u8>) -> Result<(), String> {
-        write_file(&self.data_dir().join(safe_file_name(&name)?), &data)
+        write_file(&data_path(&self.data_dir(), &name)?, &data)
+    }
+
+    fn transfer(&mut self, source: String, target: String, replace: bool, move_file: bool) -> Result<(), String> {
+        let source = data_path(&self.data_dir(), &source)?;
+        let target = data_path(&self.data_dir(), &target)?;
+        if source == target { return Ok(()); }
+        if target.exists() && !replace { return Err("целевой файл уже существует".into()); }
+        if move_file {
+            if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|error| error.to_string())?; }
+            std::fs::rename(source, target).map_err(|error| error.to_string())
+        } else {
+            let data = read_limited(&source)?.ok_or("исходный файл отсутствует")?;
+            write_file(&target, &data)
+        }
     }
 
     fn delete(&mut self, name: String) -> Result<bool, String> {
-        match std::fs::remove_file(self.data_dir().join(safe_file_name(&name)?)) {
+        match std::fs::remove_file(data_path(&self.data_dir(), &name)?) {
             Ok(()) => Ok(true),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
             Err(error) => Err(error.to_string()),
@@ -666,6 +706,20 @@ mod tests {
         assert!(safe_file_name(".hidden").is_err());
         assert!(safe_file_name("").is_err());
         assert!(safe_file_name("c:evil").is_err());
+    }
+
+    #[test]
+    fn relative_data_paths_reject_traversal_and_symlinks() {
+        let root = std::env::temp_dir().join(format!("mcsa-path-test-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        assert_eq!(data_path(&root, "races/humans.yml").unwrap(), root.join("races/humans.yml"));
+        for name in ["", "/absolute", "a/../b", "a//b", "a/", "../outside", "a/hidden:stream"] { assert!(data_path(&root, name).is_err(), "{name}"); }
+        #[cfg(unix)] {
+            std::os::unix::fs::symlink(std::env::temp_dir(), root.join("escape")).unwrap();
+            assert!(data_path(&root, "escape/file").is_err());
+            std::fs::remove_file(root.join("escape")).unwrap();
+        }
+        std::fs::remove_dir(root).unwrap();
     }
 
     #[test]

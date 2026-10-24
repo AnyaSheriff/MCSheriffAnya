@@ -1,2 +1,2 @@
 package org.bukkit;
-public interface Keyed { NamespacedKey getKey(); }
+public interface Keyed {NamespacedKey getKey();}

@@ -543,7 +543,7 @@ pub fn anvil(left: Option<Stack>, right: Option<Stack>, name: Option<&str>, crea
     let mut data = left_data.clone();
     let mut cost = 0;
     let mut repair_items = 0;
-    let max = crate::combat::info(left.item).map_or(0, |info| info.max_damage);
+    let max = crate::combat::max_durability(&left);
     let damageable = max > 0 && !left_data.unbreakable;
     let mut base = left_data.repair_cost;
     let right_data = right.map(|right| right.extras()).unwrap_or_default();
@@ -716,7 +716,7 @@ pub fn grind(top: Option<Stack>, bottom: Option<Stack>) -> Option<Stack> {
     let mut data = base.extras();
 
     if let Some(other) = other {
-        let max = crate::combat::info(base.item).map_or(0, |info| info.max_damage);
+        let max = crate::combat::max_durability(&base);
 
         if other.item != base.item || max <= 0 || base.count > 1 || other.count > 1 {
             return None;

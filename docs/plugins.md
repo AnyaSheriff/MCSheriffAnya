@@ -160,7 +160,9 @@ Java SDK сохраняет имена `org.bukkit` в поддерживаем�
 | `world` | `get-block(pos)` (none — чанк не загружен), `set-block(pos, block)`, `spawn-location(dimension)` |
 | `scheduler` | `run-later(delay, task)`, `run-repeating(delay, period, task)`, `cancel(handle)` |
 | `command` | `register(spec)` — имя, описание, использование, `level` (0 — всем … 4), `permission` (поле зарезервировано API; хозяин пока проверяет только `level`) |
-| `storage` | `config(default-text)`, `save-config(text)`, `read/write/delete(name)` в `data/` (без путей, файл до 4 МиБ) |
+| `storage` | `config(default-text)`, `save-config(text)`, `read/write/delete/transfer` в `data/` (путь относительный, без `..` и ссылок; до 4 МиБ) |
+| `https` | GET/POST через ядро, только объявленные И разрешённые администратором хосты; [настройка](../tools/plugin-translator/README.md#разрешения-https-и-настройки-мира) |
+| `inventory` / `attributes` | Проверенные предметы/PDC, снимки слотов и именованные атрибуты игроков; Java UI |
 | `privileged` (модули) | `run-console-command(command)`, `loaded-plugins()` |
 
 Ограничения 0.1, о которых надо знать:

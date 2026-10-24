@@ -161,6 +161,9 @@ fn linkers(engine: &Engine) -> wasmtime::Result<(Linker<PluginCtx>, Linker<Plugi
         mcsa::api::world::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::scheduler::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::command::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
+        mcsa::api::attributes::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
+        mcsa::api::inventory::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
+        mcsa::api::https::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::storage::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         Ok(())
     }
@@ -299,7 +302,11 @@ impl Host {
 
         let limits = if trusted { MODULE_LIMITS } else { PLUGIN_LIMITS };
 
+        let network = super::network::Access::new(&manifest.network_hosts, self.shared.settings.plugin_network_hosts.get(&manifest.name).map(Vec::as_slice).unwrap_or_default());
+        crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
         let ctx = PluginCtx {
+            network,
+            native_items: Default::default(),
             name: manifest.name.clone(),
             trusted,
             shared: Arc::clone(&self.shared),

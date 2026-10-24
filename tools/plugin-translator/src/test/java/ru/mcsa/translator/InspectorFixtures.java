@@ -21,7 +21,7 @@ public final class InspectorFixtures implements Opcodes {
     case "bridge":m.visitMethodInsn(INVOKESTATIC,"ru/mcsa/bukkit/Host","text","(I[Ljava/lang/String;)Ljava/lang/String;",false);break;
     case "inherited":m.visitMethodInsn(INVOKEVIRTUAL,"fixture/Rejected","getUnsupported","()V",false);break;
     case "adventure-overload":m.visitMethodInsn(INVOKESTATIC,"net/kyori/adventure/text/Component","text","(Ljava/io/File;)Lnet/kyori/adventure/text/TextComponent;",true);break;
-    case "executor":m.visitMethodInsn(INVOKESTATIC,"java/util/concurrent/Executors","newSingleThreadExecutor","()Ljava/util/concurrent/ExecutorService;",false);break;
+    case "executor":m.visitMethodInsn(INVOKESTATIC,"java/util/concurrent/Executors","newCachedThreadPool","()Ljava/util/concurrent/ExecutorService;",false);break;
     case "unit-sleep":m.visitMethodInsn(INVOKEVIRTUAL,"java/util/concurrent/TimeUnit","sleep","(J)V",false);break;
     case "parallel-map":m.visitMethodInsn(INVOKEVIRTUAL,"java/util/concurrent/ConcurrentHashMap","forEach","(JLjava/util/function/BiConsumer;)V",false);break;
    }

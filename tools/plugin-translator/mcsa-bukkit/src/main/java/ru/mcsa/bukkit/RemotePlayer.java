@@ -10,13 +10,12 @@ public final class RemotePlayer implements Player {
  public void sendMessage(String m){Host.call(2,uuid,m);}public boolean isOp(){return Integer.parseInt(Host.text(10,uuid))>0;}
  public void sendMessage(net.kyori.adventure.text.Component m){if(!Host.yes(27,uuid,Text.json(m)))throw new IllegalStateException("Компонент сообщения отклонён хозяином");}
  public void sendActionBar(net.kyori.adventure.text.Component m){if(!Host.yes(28,uuid,Text.json(m)))throw new IllegalStateException("Компонент action bar отклонён хозяином");}
+ public org.bukkit.attribute.AttributeInstance getAttribute(org.bukkit.attribute.Attribute attribute){if(java.util.Arrays.asList("follow_range","flying_speed","spawn_reinforcements","tempt_range").contains(attribute.getKey().getKey()))return null;return new RemoteAttribute(uuid,attribute);}
  public void setHealth(double health){if(!Double.isFinite(health)||health<0)throw new IllegalArgumentException("Здоровье должно быть конечным и неотрицательным");Host.call(29,uuid,""+health);}
  public boolean addPotionEffect(org.bukkit.potion.PotionEffect effect){return Host.yes(30,uuid,effect.getType().getKey().getKey(),""+effect.getDuration(),""+effect.getAmplifier(),""+effect.isAmbient(),""+effect.hasParticles(),""+effect.hasIcon());}
  public void removePotionEffect(org.bukkit.potion.PotionEffectType type){Host.call(31,uuid,type.getKey().getKey());}
  public boolean hasPermission(String p){return Integer.parseInt(Host.text(10,uuid))>=4;}
  public boolean teleport(Location l){return Host.yes(3,uuid,""+((RemoteWorld)l.getWorld()).dimension,""+l.getX(),""+l.getY(),""+l.getZ(),""+l.getYaw(),""+l.getPitch());}
  public void kickPlayer(String r){Host.call(20,uuid,r);}
- public PlayerInventory getInventory(){return new PlayerInventory(){
-  public void setItem(int slot,ItemStack s){if(slot<0||slot>=36)throw new IllegalArgumentException("Ячейка: 0..35");Host.call(21,uuid,""+(slot<9?slot+36:slot),s==null?"air":s.getType().name().toLowerCase(java.util.Locale.ROOT),""+(s==null?0:s.getAmount()));}
- };}
+ public PlayerInventory getInventory(){return new PlayerItems(this);}
 }

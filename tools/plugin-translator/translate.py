@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 import urllib.request
 import zipfile
+from build_guard import run as guarded_run
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent.parent
@@ -24,7 +25,7 @@ PACKAGES = {
 }
 
 def run(*args, **kwargs):
-    subprocess.run([str(a) for a in args], check=True, **kwargs)
+    guarded_run([str(a) for a in args], check=True, **kwargs)
 
 
 def bootstrap(toolchain=True):
@@ -88,7 +89,9 @@ def translate(jar, output, check_only=False, report=None):
     with tempfile.TemporaryDirectory(prefix="translate-", dir=TARGET) as temp:
         work = Path(temp)
         cp = str(TARGET / "tool") + os.pathsep + str(TARGET / "lib/*")
-        run("java", "-cp", cp, "ru.mcsa.translator.Inspect", jar, work, TARGET / "mcsa-bukkit.jar", *([report.resolve()] if report else []))
+        normalized = work / "normalized.jar"
+        run("java", "-cp", cp, "ru.mcsa.translator.Normalize", jar, normalized)
+        run("java", "-cp", cp, "ru.mcsa.translator.Inspect", normalized, work, TARGET / "mcsa-bukkit.jar", *([report.resolve()] if report else []))
         if check_only:
             return
         import tomllib
@@ -99,14 +102,18 @@ def translate(jar, output, check_only=False, report=None):
         # Убираем манифест Class-Path и service providers: TeaVM не должен загружать
         # расширения компилятора из входного JAR на JVM переводчика.
         compiler_jar = work / "input-classes.jar"
-        with zipfile.ZipFile(jar) as source, zipfile.ZipFile(compiler_jar, "w") as clean:
+        mapped = work / "mapped.jar"
+        run("java", "-cp", cp, "ru.mcsa.translator.Normalize", normalized, mapped, "remap")
+        with zipfile.ZipFile(mapped) as source, zipfile.ZipFile(compiler_jar, "w") as clean:
             for entry in source.infolist():
                 if entry.filename.endswith(".class") and not entry.filename.startswith("META-INF/"):
                     clean.writestr(entry.filename, source.read(entry))
+        mapped_sdk = work / "sdk.jar"
+        run("java", "-cp", cp, "ru.mcsa.translator.Normalize", TARGET / "mcsa-bukkit.jar", mapped_sdk, "remap")
         classes = work / "classes"
         classes.mkdir()
         run("javac", "-proc:none", "--release", "11", "-encoding", "UTF-8", "-cp", str(TARGET / "mcsa-bukkit.jar") + os.pathsep + str(compiler_jar), "-d", classes, work / "src/mcsa/generated/Main.java")
-        run("java", "-Xmx1g", "-cp", cp, "ru.mcsa.translator.Compile", work / "c", classes, TARGET / "mcsa-bukkit.jar", compiler_jar)
+        run("java", "-Xmx1g", "-cp", cp, "ru.mcsa.translator.Compile", work / "c", classes, mapped_sdk, compiler_jar)
         port_runtime(work / "c")
         wit = work / "wit"
         run(CHAIN / "wit-bindgen-0.63.0-x86_64-linux/wit-bindgen", "c", "--world", "bukkit-plugin", "--rename-world", "plugin", "--out-dir", wit, REPO / "wit/mcsa-api.wit")

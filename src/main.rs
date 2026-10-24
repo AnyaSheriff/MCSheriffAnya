@@ -202,6 +202,7 @@ async fn server() -> io::Result<()> {
     let mut settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
     log::set_debug(settings.debug);
     log::set_console_colors(settings.console_colors);
+    world::ORE_RETENTION_PERCENT.store(settings.ore_retention_percent, std::sync::atomic::Ordering::Relaxed);
     world::terrain::AUTUMN_FORESTS.store(settings.autumn_forests, std::sync::atomic::Ordering::Relaxed);
     world::terrain::PINK_CHERRY_GROVES.store(settings.pink_cherry_groves, std::sync::atomic::Ordering::Relaxed);
 

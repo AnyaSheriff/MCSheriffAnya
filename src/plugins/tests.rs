@@ -411,7 +411,7 @@ fn benchmark_host() {
 }
 
 fn java_info(shared: &Shared) {
-    shared.players.lock().unwrap().ui.info.insert([1;16], crate::presentation::Info {ping:42,health:17.0,max_health:24.0,food:18,level:3,exp:0.5});
+    shared.players.lock().unwrap().ui.info.insert([1;16], crate::presentation::Info {ping:42,health:17.0,max_health:24.0,food:18,level:3,exp:0.5,..Default::default()});
 }
 
 #[test]
@@ -653,4 +653,30 @@ fn bukkit_host_operations_remain_typed_and_bounded() {
         let spec = super::api::mcsa::api::command::CommandSpec { name: name.into(), description: String::new(), usage: String::new(), level: 0, permission: None };
         assert!(ctx.register(spec).is_err(), "имя ядра нельзя занимать");
     }
+}
+
+#[test]
+fn translated_items_and_attributes_are_checked_and_project_pending_edits() {
+    use super::api::mcsa::api::{inventory::{self,Host as _},attributes::{self,Host as _}};
+    let root=server_root("item-attributes");install(&root,"plugins","hello","hello","");
+    let shared=shared();java_info(&shared);
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();
+    let ctx=host.loaded[0].store.data_mut();let uuid=crate::network::login::format_uuid(&[1;16]);
+    let item=inventory::Item {kind:"diamond_sword".into(),count:1,metadata:r#"{"damage":3,"maxDamage":10,"pdc":{"hello:ability":{"type":"string","value":"blink"}}}"#.into()};
+    assert!(ctx.set(uuid.clone(),36,Some(item.clone())).is_ok());
+    let snapshot=ctx.snapshot(uuid.clone()).unwrap();assert!(snapshot[36].as_ref().unwrap().metadata.contains("blink"));
+    let stack=shared.players.lock().unwrap().ui.info[&[1;16]].inventory[36].unwrap();
+    assert_eq!(crate::combat::max_damage(&stack),10);
+    let mut forged=item.clone();forged.metadata=r#"{"_native":99999}"#.into();assert!(ctx.set(uuid.clone(),36,Some(forged)).is_err());
+    let mut excessive=item;excessive.count=2;assert!(ctx.set(uuid.clone(),36,Some(excessive)).is_err());
+    assert!(ctx.set(uuid.clone(),0,None).is_err());
+    assert!(ctx.set_base(uuid.clone(),"attack_damage".into(),7.0).is_ok());
+    let modifier=attributes::Modifier {id:"hello:race".into(),amount:0.5,operation:1};
+    assert!(ctx.add(uuid.clone(),"attack_damage".into(),modifier.clone()).is_ok());
+    assert_eq!(ctx.get(uuid.clone(),"attack_damage".into()).unwrap().value,10.5);
+    assert!(ctx.add(uuid.clone(),"attack_damage".into(),modifier).is_err());
+    assert!(ctx.remove(uuid.clone(),"attack_damage".into(),"minecraft:sprinting".into()).is_err());
+    assert!(ctx.remove(uuid.clone(),"attack_damage".into(),"hello:race".into()).is_ok());
+    assert_eq!(ctx.get(uuid.clone(),"attack_damage".into()).unwrap().value,7.0);
+    assert!(ctx.set_base(uuid,"attack_damage".into(),f64::NAN).is_err());
 }

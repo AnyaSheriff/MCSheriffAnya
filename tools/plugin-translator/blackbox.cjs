@@ -24,6 +24,9 @@ bot.once('spawn',async()=>{
   bot.chat('/gamerule natural_health_regeneration false');await waitFor('Правило natural_health_regeneration: false');
   bot.chat('/javahello api');await waitFor('Компонент из Java работает');await sleep(600);
   await waitHealth(18);
+  await waitFor('Item meta/PDC round trip');await waitFor('Attribute queue round trip');await waitFor('HTTPS denied without approval');await waitFor('Data folder confinement works');
+  assert.equal(bot.inventory.slots[44]?.name,'diamond_sword');
+  bot.chat('/plugman reload java-command');await sleep(600);bot.chat('/javahello persistent');await waitFor('Entity PDC survived reload');
   assert(actionBar,'Пакет action bar отсутствует');
   assert(Object.keys(bot.entity.effects).length>0,'Эффект зелья отсутствует');
   bot.chat('/gamemode survival');await sleep(300);
@@ -34,6 +37,8 @@ bot.once('spawn',async()=>{
   bot.chat('cancel-java');await waitFor('Отмена чата из Java работает');
   bot.chat('/java-blocked');await waitFor('Отмена команды из Java работает');
   await waitFor('Задача с конфигом из Java работает');
+  await waitFor('Ordered executor saved');
+  assert(messages.findIndex(m=>m.includes('Ordered executor first'))<messages.findIndex(m=>m.includes('Ordered executor second')));
   bot.chat('/gamemode creative');await sleep(400);
   bot.chat('/fill -3 62 -3 5 62 3 stone');await sleep(400);
   bot.chat('/tp 0 63 0');await sleep(400);

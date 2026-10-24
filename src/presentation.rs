@@ -11,6 +11,8 @@ type Uuid = [u8; 16];
 
 #[derive(Clone, Default)]
 pub struct Info {
+    pub inventory: Vec<Option<crate::inventory::Stack>>,
+    pub selected: u32,
     pub ping: u32,
     pub health: f32,
     pub max_health: f32,

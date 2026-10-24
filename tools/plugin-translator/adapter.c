@@ -12,7 +12,7 @@ static plugin_list_string_t completions;
 static size_t output_len, output_cap;
 static void clear(void) { output_len=0; }
 static void bytes(const void *p,size_t len) {
-    if (output_len+len+1>4*1024*1024) abort();
+    if (output_len+len+1>4*1024*1024+1024) abort();
     if (output_len+len+1>output_cap) { output_cap=(output_len+len+1)*2; output=realloc(output,output_cap); if(!output)abort(); }
     if(len)memcpy(output+output_len,p,len); output_len+=len; output[output_len++]=0;
 }
@@ -24,6 +24,16 @@ static void error(plugin_string_t s) { text("!"); string(s); plugin_string_free(
 static void player(mcsa_api_types_player_t *p) {
     string(p->uuid);string(p->name);number(p->game_mode);number(p->dimension);
     number(p->x);number(p->y);number(p->z);number(p->yaw);number(p->pitch);
+}
+static void hex_bytes(const uint8_t *data,size_t len) {char *s=malloc(len*2+1);if(!s)abort();for(size_t i=0;i<len;i++){s[i*2]="0123456789abcdef"[data[i]>>4];s[i*2+1]="0123456789abcdef"[data[i]&15];}s[len*2]=0;text(s);free(s);}
+static int hex_digit(char c) {return c>='0'&&c<='9'?c-'0':c>='a'&&c<='f'?c-'a'+10:-1;}
+static bool utf8_text(const uint8_t *data,size_t len) {
+    for(size_t i=0;i<len;i++){uint8_t c=data[i];if(!c)return false;if(c<128)continue;
+        size_t rest;uint8_t low=128,high=191;
+        if(c>=194&&c<=223)rest=1;else if(c>=224&&c<=239){rest=2;if(c==224)low=160;if(c==237)high=159;}else if(c>=240&&c<=244){rest=3;if(c==240)low=144;if(c==244)high=143;}else return false;
+        if(i+rest>=len||data[i+1]<low||data[i+1]>high)return false;
+        for(size_t j=2;j<=rest;j++)if(data[i+j]<128||data[i+j]>191)return false;i+=rest;
+    }return true;
 }
 int32_t mcsa_length(void) { return (int32_t)output_len; }
 void *mcsa_call(int32_t op,void *data,int32_t len) {
@@ -41,7 +51,7 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 5: number(mcsa_api_scheduler_run_later(atoi(a[0]),atoi(a[2])));break;
     case 6: number(mcsa_api_scheduler_run_repeating(atoi(a[0]),atoi(a[1]),atoi(a[2])));break;
     case 7: number(mcsa_api_scheduler_cancel(atoi(a[0])));break;
-    case 8: {plugin_option_list_u8_t value;if(!mcsa_api_storage_read(&s[0],&value,&err))error(err);else {if(value.is_some)bytes(value.val.ptr,value.val.len);else text("");plugin_option_list_u8_free(&value);}break;}
+    case 8: {plugin_option_list_u8_t value;if(!mcsa_api_storage_read(&s[0],&value,&err))error(err);else {if(value.is_some){if(!utf8_text(value.val.ptr,value.val.len)){text("!");text("Файл не является текстом UTF-8 без NUL");}else bytes(value.val.ptr,value.val.len);}else text("");plugin_option_list_u8_free(&value);}break;}
     case 26: {plugin_option_list_u8_t value;if(!mcsa_api_storage_read(&s[0],&value,&err))error(err);else {if(!value.is_some){plugin_list_u8_t initial={s[1].ptr,s[1].len};if(!mcsa_api_storage_write(&s[0],&initial,&err))error(err);}plugin_option_list_u8_free(&value);}break;}
     case 9: {plugin_list_u8_t value={s[1].ptr,s[1].len};if(!mcsa_api_storage_write(&s[0],&value,&err))error(err);break;}
     case 10: {uint8_t level=0;mcsa_api_player_operator_level(&s[0],&level);number(level);break;}
@@ -66,6 +76,18 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 31: if(!mcsa_api_player_remove_potion_effect(&s[0],&s[1],&err))error(err);break;
     case 32: {mcsa_api_world_border_t border;mcsa_api_world_get_border(atoi(a[0]),&border);number(border.size);number(border.center_x);number(border.center_z);break;}
     case 33: {mcsa_api_world_border_t border={atof(a[1]),atof(a[2]),atof(a[3])};if(!mcsa_api_world_set_border(atoi(a[0]),&border,&err))error(err);break;}
+    case 34: {plugin_option_list_u8_t value;if(!mcsa_api_storage_read(&s[0],&value,&err))error(err);else {number(value.is_some);plugin_option_list_u8_free(&value);}break;}
+    case 35: {bool removed;if(!mcsa_api_storage_delete(&s[0],&removed,&err))error(err);else number(removed);break;}
+    case 36: if(!mcsa_api_storage_transfer(&s[0],&s[1],!strcmp(a[2],"true"),!strcmp(a[3],"true"),&err))error(err);break;
+    case 37: {mcsa_api_inventory_list_option_item_t items;if(!mcsa_api_inventory_snapshot(&s[0],&items,&err))error(err);else {for(size_t i=0;i<items.len;i++){if(items.ptr[i].is_some){string(items.ptr[i].val.kind);number(items.ptr[i].val.count);string(items.ptr[i].val.metadata);}else {text("air");text("0");text("");}}mcsa_api_inventory_list_option_item_free(&items);}break;}
+    case 38: {mcsa_api_inventory_item_t item={.kind=s[2],.count=atoi(a[3]),.metadata=s[4]};if(!mcsa_api_inventory_set(&s[0],atoi(a[1]),item.count?&item:NULL,&err))error(err);break;}
+    case 39: {uint32_t selected;if(!mcsa_api_inventory_selected(&s[0],&selected,&err))error(err);else number(selected);break;}
+    case 40: {size_t n=s[2].len;if(n>65536||n%2){text("!");text("HTTPS: неверное тело");break;}plugin_list_u8_t body={.ptr=malloc(n/2?n/2:1),.len=n/2};if(!body.ptr)abort();bool valid=true;for(size_t i=0;i<body.len;i++){int hi=hex_digit(a[2][i*2]),lo=hex_digit(a[2][i*2+1]);if(hi<0||lo<0){valid=false;break;}body.ptr[i]=(uint8_t)((hi<<4)|lo);}uint32_t handle;if(!valid){text("!");text("HTTPS: неверное тело");}else if(!mcsa_api_https_start(&s[0],&s[1],&body,&handle,&err))error(err);else number(handle);free(body.ptr);break;}
+    case 41: {mcsa_api_https_option_response_t response;if(!mcsa_api_https_poll(strtoul(a[0],NULL,10),&response,&err))error(err);else {if(response.is_some){number(response.val.status);hex_bytes(response.val.body.ptr,response.val.body.len);}mcsa_api_https_option_response_free(&response);}break;}
+    case 42: {mcsa_api_attributes_snapshot_t value;if(!mcsa_api_attributes_get(&s[0],&s[1],&value,&err))error(err);else {number(value.base);number(value.value);for(size_t i=0;i<value.modifiers.len;i++){string(value.modifiers.ptr[i].id);number(value.modifiers.ptr[i].amount);number(value.modifiers.ptr[i].operation);}mcsa_api_attributes_snapshot_free(&value);}break;}
+    case 43: if(!mcsa_api_attributes_set_base(&s[0],&s[1],atof(a[2]),&err))error(err);break;
+    case 44: {mcsa_api_attributes_modifier_t modifier={.id=s[2],.amount=atof(a[3]),.operation=atoi(a[4])};if(!mcsa_api_attributes_add(&s[0],&s[1],&modifier,&err))error(err);break;}
+    case 45: if(!mcsa_api_attributes_remove(&s[0],&s[1],&s[2],&err))error(err);break;
     default: abort();
     }
     free(copy);return output;

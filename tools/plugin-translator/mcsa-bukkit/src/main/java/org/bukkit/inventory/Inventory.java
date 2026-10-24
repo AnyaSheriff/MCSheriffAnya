@@ -1,2 +1,2 @@
 package org.bukkit.inventory;
-public interface Inventory { void setItem(int slot,ItemStack stack); }
+public interface Inventory {void setItem(int slot,ItemStack stack);ItemStack getItem(int slot);int getSize();ItemStack[] getContents();InventoryHolder getHolder();java.util.HashMap<Integer,ItemStack> addItem(ItemStack... items);java.util.HashMap<Integer,ItemStack> removeItem(ItemStack... items);boolean contains(org.bukkit.Material material);boolean containsAtLeast(ItemStack stack,int count);}

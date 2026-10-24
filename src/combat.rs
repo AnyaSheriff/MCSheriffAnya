@@ -112,11 +112,19 @@ pub fn info(item: i32) -> Option<&'static ItemInfo> {
 
 /// Наибольший износ стопки (0 — не изнашивается).
 pub fn max_damage(stack: &Stack) -> i32 {
-    if stack.extras().unbreakable {
-        return 0;
-    }
+    let data = stack.extras();
+    if data.unbreakable { return 0; }
+    configured_durability(stack.item, &data)
+}
 
-    info(stack.item).map_or(0, |info| info.max_damage)
+/// Прочность для починки: неизнашиваемость не должна запрещать старые рецепты.
+pub(crate) fn max_durability(stack: &Stack) -> i32 {
+    configured_durability(stack.item, &stack.extras())
+}
+
+fn configured_durability(item: i32, data: &crate::stackdata::Data) -> i32 {
+    if let Some(max) = data.plugin_meta.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()).and_then(|value| value.get("maxDamage").and_then(serde_json::Value::as_i64)).filter(|value| (1..=i32::MAX as i64).contains(value)) { return max as i32; }
+    info(item).map_or(0, |info| info.max_damage)
 }
 
 // ---------------------------------------------------------------------------
@@ -762,6 +770,12 @@ mod tests {
 
     fn stack_of(name: &str) -> Stack {
         Stack::new(crate::blocks::item_named(name).expect("предмет есть"), 1)
+    }
+
+    #[test]
+    fn unbreakable_items_keep_their_repair_limit() {
+        let sword=stack_of("diamond_sword");let mut data=sword.extras();data.unbreakable=true;let sword=sword.with_extras(data);
+        assert_eq!(max_damage(&sword),0);assert_eq!(max_durability(&sword),1561);
     }
 
     #[test]

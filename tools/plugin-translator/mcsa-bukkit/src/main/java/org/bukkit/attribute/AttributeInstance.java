@@ -1,0 +1,2 @@
+package org.bukkit.attribute;
+public interface AttributeInstance {double getBaseValue();void setBaseValue(double value);double getValue();java.util.Collection<AttributeModifier> getModifiers();AttributeModifier getModifier(net.kyori.adventure.key.Key key);void addModifier(AttributeModifier modifier);void addTransientModifier(AttributeModifier modifier);void removeModifier(AttributeModifier modifier);void removeModifier(net.kyori.adventure.key.Key key);}

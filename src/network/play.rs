@@ -3061,7 +3061,7 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
     let mut players = shared.players.lock().expect("игроки");
-    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
+    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { inventory: player.inventory.slots().to_vec(), selected: player.inventory.selected() as u32, ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
     if first {
         let packets: Vec<_> = players.ui.list_names.iter().map(|(uuid, (_, name))| crate::presentation::list_packet(uuid, Some(name))).collect();
         for packet in packets { players.order(&player.uuid, Order::Packet(packet)); }

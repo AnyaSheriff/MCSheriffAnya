@@ -9,12 +9,14 @@ import org.objectweb.asm.signature.*;
 import org.yaml.snakeyaml.*;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 public final class Inspect {
- private Path report;
- private static final Set<String> MAIN_THREAD_CONCURRENT=Set.of("java/util/concurrent/TimeUnit","java/util/concurrent/RejectedExecutionException","java/util/concurrent/ThreadLocalRandom","java/util/concurrent/ConcurrentMap","java/util/concurrent/ConcurrentHashMap","java/util/concurrent/ConcurrentHashMap$KeySetView","java/util/concurrent/atomic/AtomicBoolean","java/util/concurrent/atomic/AtomicInteger","java/util/concurrent/atomic/AtomicLong","java/util/concurrent/atomic/AtomicReference");
- private boolean api(String name){return name.startsWith("org/bukkit/")||name.startsWith("net/kyori/adventure/");}
+ private Path report;private boolean placeholderAbsent;
+ private static final Set<String> MAIN_THREAD_CONCURRENT=Set.of("java/util/concurrent/Executor","java/util/concurrent/ExecutorService","java/util/concurrent/Executors","java/util/concurrent/Future","java/util/concurrent/Callable","java/util/concurrent/ExecutionException","java/util/concurrent/TimeoutException","java/util/concurrent/CancellationException","java/util/concurrent/TimeUnit","java/util/concurrent/RejectedExecutionException","java/util/concurrent/ThreadLocalRandom","java/util/concurrent/ConcurrentMap","java/util/concurrent/ConcurrentHashMap","java/util/concurrent/ConcurrentHashMap$KeySetView","java/util/concurrent/atomic/AtomicBoolean","java/util/concurrent/atomic/AtomicInteger","java/util/concurrent/atomic/AtomicLong","java/util/concurrent/atomic/AtomicReference");
+ private static final Set<String> SAFE_IO=Set.of("java/io/IOException","java/io/InputStream","java/io/Reader","java/io/InputStreamReader","java/io/ByteArrayInputStream","java/io/StringReader","java/io/Closeable");
+ private boolean api(String name){return placeholderAbsent&&name.equals("me/clip/placeholderapi/expansion/PlaceholderExpansion")||name.startsWith("org/mcsa/api/")||name.equals("io/papermc/paper/persistence/PersistentDataContainerView")||name.equals("io/papermc/paper/plugin/configuration/PluginMeta")||name.startsWith("org/bukkit/")||name.startsWith("net/kyori/adventure/");}
  private final Map<String,ClassNode> sdk=new HashMap<>(),classes=new TreeMap<>();
  private final Set<String> errors=new TreeSet<>();private final List<String> handlers=new ArrayList<>();
  private static String quote(String s){StringBuilder b=new StringBuilder("\"");for(char c:s.toCharArray()){if(c=='"'||c=='\\')b.append('\\').append(c);else if(c=='\n')b.append("\\n");else if(c=='\r')b.append("\\r");else if(c=='\t')b.append("\\t");else if(c=='\b')b.append("\\b");else if(c=='\f')b.append("\\f");else if(c<32||c>126)b.append(String.format("\\u%04x",(int)c));else b.append(c);}return b.append('"').toString();}
+ private static boolean validNetworkHost(String host){if(host.length()>253||!host.contains(".")||host.matches("[0-9]+(\\.[0-9]+){3}"))return false;for(String part:host.split("\\.",-1))if(!part.matches("[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"))return false;return true;}
  private void error(String where,String message){errors.add(where+": "+message);}
  private void load(JarFile jar,Map<String,ClassNode> map)throws IOException{
   long total=0;Enumeration<JarEntry> entries=jar.entries();while(entries.hasMoreElements()){JarEntry e=entries.nextElement();if(e.getSize()>8*1024*1024)throw new IOException("Слишком большая запись JAR: "+e.getName());
@@ -40,12 +42,12 @@ public final class Inspect {
   if(name.startsWith("ru/mcsa/")||name.startsWith("org/teavm/"))error(where,"прямой доступ к мосту запрещён: "+name);
   if(name.startsWith("java/lang/reflect/"))error(where,"рефлексия запрещена: "+name);
   if(name.equals("java/lang/Thread")||name.equals("java/lang/ThreadGroup")||(name.startsWith("java/util/concurrent/")&&!MAIN_THREAD_CONCURRENT.contains(name))||name.equals("java/util/Timer")||name.equals("java/util/TimerTask"))error(where,"собственные потоки запрещены: "+name+"; плагины исполняются на одном потоке; используйте синхронный BukkitScheduler");
-  if(name.startsWith("java/io/")||name.startsWith("java/nio/file/")||name.startsWith("java/nio/channels/")||name.startsWith("javax/net/")||name.startsWith("java/beans/")||name.equals("java/util/ServiceLoader")||name.startsWith("java/net/")||name.startsWith("sun/")||name.startsWith("jdk/")||name.equals("java/lang/Runtime")||name.equals("java/lang/ProcessBuilder")||name.equals("java/lang/ClassLoader"))error(where,"доступ к системе запрещён: "+name);
+  if((name.startsWith("java/io/")&&!SAFE_IO.contains(name)&&Normalize.mapped(name).equals(name))||(name.startsWith("java/nio/file/")&&Normalize.mapped(name).equals(name))||name.startsWith("java/nio/channels/")||name.startsWith("javax/net/")||name.startsWith("java/beans/")||name.equals("java/util/ServiceLoader")||name.startsWith("java/net/")||name.startsWith("sun/")||name.startsWith("jdk/")||name.equals("java/lang/Runtime")||name.equals("java/lang/ProcessBuilder")||name.equals("java/lang/ClassLoader"))error(where,"доступ к системе запрещён: "+name);
   if(!name.startsWith("java/")&&!name.startsWith("javax/")&&!name.startsWith("org/bukkit/")&&!classes.containsKey(name))error(where,"внешняя зависимость отсутствует: "+name);
  }
  private void descriptor(String desc,String where){if(desc==null)return;Type t=Type.getType(desc);if(t.getSort()==Type.METHOD){for(Type a:t.getArgumentTypes())typed(a,where);typed(t.getReturnType(),where);}else typed(t,where);}
  private void typed(Type t,String w){while(t.getSort()==Type.ARRAY)t=t.getElementType();if(t.getSort()==Type.OBJECT)type(t.getInternalName(),w);}
- private ClassNode node(String name){ClassNode n=sdk.containsKey(name)?sdk.get(name):classes.get(name);if(n==null&&name.startsWith("java/")){try(InputStream in=ClassLoader.getSystemResourceAsStream(name+".class")){if(in!=null){n=new ClassNode();new ClassReader(in).accept(n,ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);sdk.put(name,n);}}catch(IOException e){return null;}}return n;}
+ private ClassNode node(String name){if(Set.of("Executor","ExecutorService","Executors","Future","Callable").stream().anyMatch(value->name.equals("java/util/concurrent/"+value))){ClassNode mapped=sdk.get("ru/mcsa/bukkit/concurrent/"+name.substring("java/util/concurrent/".length()));return mapped;}ClassNode n=sdk.containsKey(name)?sdk.get(name):classes.get(name);if(n==null&&name.startsWith("java/")){try(InputStream in=ClassLoader.getSystemResourceAsStream(name+".class")){if(in!=null){n=new ClassNode();new ClassReader(in).accept(n,ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);sdk.put(name,n);}}catch(IOException e){return null;}}return n;}
  private boolean bukkitParent(String owner,Set<String> seen){if(owner==null||!seen.add(owner))return false;if(api(owner))return true;ClassNode n=classes.get(owner);if(n==null)return false;if(bukkitParent(n.superName,seen))return true;for(String i:n.interfaces)if(bukkitParent(i,seen))return true;return false;}
  private boolean member(String owner,String name,String desc,boolean field,Set<String> seen){
   if(!seen.add(owner))return false;ClassNode n=node(owner);if(n==null)return false;
@@ -56,7 +58,15 @@ public final class Inspect {
  }
  private void ref(String owner,String name,String desc,boolean field,String where){type(owner,where);descriptor(desc,where);
   if(bukkitParent(owner,new HashSet<>())&&!member(owner,name,desc,field,new HashSet<>()))error(where,"не поддерживается "+owner+"."+name+desc);
+  if(owner.startsWith("java/util/concurrent/")&&!Normalize.mapped(owner).equals(owner)){
+   String mapped=field?new org.objectweb.asm.commons.Remapper(){public String map(String name){return Normalize.mapped(name);}}.mapDesc(desc):Normalize.mappedDescriptor(desc);
+   if(!member(Normalize.mapped(owner),name,mapped,field,new HashSet<>()))error(where,"не поддерживается упорядоченный executor: "+owner+"."+name+desc);
+  }
   if(owner.equals("java/util/concurrent/ConcurrentHashMap")&&(name.endsWith("Async")||name.endsWith("Parallelism")||(!field&&desc.startsWith("(J"))))error(where,"параллельные операции карты запрещены: "+owner+"."+name);
+  if(!owner.startsWith("java/util/concurrent/")&&!Normalize.mapped(owner).equals(owner)){
+   String mapped=field?new org.objectweb.asm.commons.Remapper(){public String map(String name){return Normalize.mapped(name);}}.mapDesc(desc):Normalize.mappedDescriptor(desc);
+   if(!member(Normalize.mapped(owner),name,mapped,field,new HashSet<>()))error(where,"не поддерживается файловый API: "+owner+"."+name+desc);
+  }
   if(owner.equals("java/util/concurrent/TimeUnit")&&Set.of("sleep","timedJoin","timedWait").contains(name))error(where,"ожидание потоков запрещено: TimeUnit."+name);
   if(owner.startsWith("java/lang/invoke/")&&!owner.equals("java/lang/invoke/LambdaMetafactory")&&!owner.equals("java/lang/invoke/StringConcatFactory"))error(where,"рефлексия запрещена: "+owner+"."+name);
   if(owner.equals("java/lang/Class")&&!Set.of("getName","getSimpleName","isInstance","cast","desiredAssertionStatus").contains(name))error(where,"рефлексия запрещена: Class."+name);
@@ -67,7 +77,7 @@ public final class Inspect {
  private void annotations(List<AnnotationNode> list,String w){if(list==null)return;for(AnnotationNode a:list){descriptor(a.desc,w);if(a.values!=null)for(Object v:a.values)annotationValue(v,w);}}
  private void annotationValue(Object v,String w){if(v instanceof Type)typed((Type)v,w);else if(v instanceof AnnotationNode)annotations(List.of((AnnotationNode)v),w);else if(v instanceof List)for(Object x:(List<?>)v)annotationValue(x,w);else if(v instanceof String[])descriptor(((String[])v)[0],w);}
  private void scan(){for(ClassNode c:classes.values()){
-  String w=c.name;signature(c.signature,false,w);if(api(c.name)||c.name.startsWith("ru/mcsa/")||c.name.startsWith("java/")||c.name.startsWith("org/teavm/"))error(w,"подмена API запрещена");
+  String w=c.name;signature(c.signature,false,w);if(c.name.equals("me/clip/placeholderapi/expansion/PlaceholderExpansion")||api(c.name)||c.name.startsWith("ru/mcsa/")||c.name.startsWith("java/")||c.name.startsWith("org/teavm/"))error(w,"подмена API запрещена");
   type(c.superName,w);for(String i:c.interfaces)type(i,w);annotations(c.visibleAnnotations,w);annotations(c.invisibleAnnotations,w);
   for(FieldNode f:c.fields){descriptor(f.desc,w);signature(f.signature,true,w);annotations(f.visibleAnnotations,w);annotations(f.invisibleAnnotations,w);constant(f.value,w);}
   for(MethodNode m:c.methods){String at=w+"."+m.name;descriptor(m.desc,at);signature(m.signature,false,at);if(m.localVariables!=null)for(LocalVariableNode local:m.localVariables){descriptor(local.desc,at);signature(local.signature,true,at);}if(m.exceptions!=null)for(String ex:m.exceptions)type(ex,at);annotations(m.visibleAnnotations,at);annotations(m.invisibleAnnotations,at);
@@ -91,7 +101,9 @@ public final class Inspect {
    Object yaml=new Yaml(new SafeConstructor(options)).load(jar.getInputStream(entry));if(!(yaml instanceof Map))throw new IOException("plugin.yml должен быть отображением");meta=(Map<String,Object>)yaml;
    for(String key:List.of("name","version","main"))if(!(meta.get(key) instanceof String)&&!(meta.get(key) instanceof Number))error("plugin.yml","нет поля "+key);
    for(String key:List.of("depend","loadbefore","libraries","permissions"))if(meta.containsKey(key))error("plugin.yml","поле "+key+" пока не поддерживается");
+   Object network=meta.get("network-hosts");if(network!=null&&(!(network instanceof List)||((List<?>)network).size()>32||((List<?>)network).stream().anyMatch(value->!(value instanceof String)||!validNetworkHost((String)value))))error("plugin.yml","network-hosts должен быть списком точных DNS-имён");
    Object optional=meta.get("softdepend");if(optional!=null&&(!(optional instanceof List)||((List<?>)optional).size()>128||((List<?>)optional).stream().anyMatch(value->!(value instanceof String)||!((String)value).matches("[A-Za-z0-9_.-]{1,128}"))))error("plugin.yml","softdepend должен быть списком имён плагинов");
+   placeholderAbsent=optional instanceof List&&((List<?>)optional).stream().anyMatch(value->"PlaceholderAPI".equalsIgnoreCase(String.valueOf(value)));
    if(!String.valueOf(meta.get("main")).matches("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*"))error("plugin.yml","недопустимый главный класс");
    if(!classes.containsKey(String.valueOf(meta.get("main")).replace('.','/')))error("plugin.yml","главный класс отсутствует");
    for(ClassNode n:classes.values()){try(InputStream in=jar.getInputStream(jar.getJarEntry(n.name+".class"))){pool(new ClassReader(in),n.name);}}
@@ -108,10 +120,13 @@ public final class Inspect {
     Map<?,?> spec=e.getValue() instanceof Map?(Map<?,?>)e.getValue():Collections.emptyMap();for(Object k:spec.keySet())if(!List.of("description","usage").contains(k))throw new IOException("Не поддерживается поле команды: "+k);
     source.append("ru.mcsa.bukkit.RuntimeState.plugin.declareCommand(").append(quote(command)).append(',').append(quote(Objects.toString(spec.get("description"),""))).append(',').append(quote(Objects.toString(spec.get("usage"),""))).append(",0);\n");
    }
+   source.append("ru.mcsa.bukkit.RuntimeState.plugin.setVersion(").append(quote(String.valueOf(meta.get("version")))).append(");\n");
+   Enumeration<JarEntry> resources=jar.entries();long resourceSize=0;while(resources.hasMoreElements()){JarEntry resource=resources.nextElement();String path=resource.getName();if(resource.isDirectory()||!path.matches("[A-Za-z0-9_/-][A-Za-z0-9_./-]*\\.(yml|yaml|json|txt|properties)"))continue;byte[] raw=jar.getInputStream(resource).readNBytes(4*1024*1024+1);resourceSize+=raw.length;if(raw.length>4*1024*1024||resourceSize>8*1024*1024)throw new IOException("Слишком много ресурсов JAR");String text=new String(raw,java.nio.charset.StandardCharsets.UTF_8);source.append("ru.mcsa.bukkit.RuntimeState.plugin.embedResource(").append(quote(path)).append(",new StringBuilder()");for(int i=0;i<text.length();i+=8000)source.append(".append(").append(quote(text.substring(i,Math.min(i+8000,text.length())))).append(")");source.append(".toString());\n");}
    JarEntry embedded=jar.getJarEntry("config.yml");if(embedded!=null){byte[] raw=jar.getInputStream(embedded).readNBytes(4*1024*1024+1);if(raw.length>4*1024*1024)throw new IOException("config.yml больше 4 МиБ");String configText=new String(raw,java.nio.charset.StandardCharsets.UTF_8);source.append("ru.mcsa.bukkit.RuntimeState.defaultConfig=new StringBuilder()");for(int i=0;i<configText.length();i+=8000)source.append(".append(").append(quote(configText.substring(i,Math.min(i+8000,configText.length())))).append(")");source.append(".toString();\n");}
    source.append("ru.mcsa.bukkit.RuntimeState.plugin.onLoad();ru.mcsa.bukkit.RuntimeState.plugin.onEnable();ru.mcsa.bukkit.Host.call(24);if(args.length==123456)ru.mcsa.bukkit.Entry.keep();}}\n");
    Path java=out.resolve("src/mcsa/generated/Main.java");Files.createDirectories(java.getParent());Files.writeString(java,source);
    Files.writeString(out.resolve("plugin.toml"),"name = "+quote(name)+"\nversion = "+quote(String.valueOf(meta.get("version")))+"\napi = \"0.1\"\nmain = \"plugin.wasm\"\n");
+   if(network instanceof List){StringJoiner hosts=new StringJoiner(", ","network_hosts = [","]\n");for(Object host:(List<?>)network)hosts.add(quote((String)host));Files.writeString(out.resolve("plugin.toml"),hosts.toString(),StandardOpenOption.APPEND);}
    JarEntry config=jar.getJarEntry("config.yml");if(config!=null){Path data=out.resolve("data");Files.createDirectories(data);byte[] bytes=jar.getInputStream(config).readNBytes(4*1024*1024+1);if(bytes.length>4*1024*1024)throw new IOException("config.yml больше 4 МиБ");Files.write(out.resolve("default-config.yml"),bytes);}
    System.out.println("Проверка завершена: "+name+", классов "+classes.size()+", обработчиков "+handlers.size()+". Подмножество совместимо; требуется компиляция TeaVM.");
   }

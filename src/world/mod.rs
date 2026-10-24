@@ -18,6 +18,9 @@
 // терять постройки при падении не хочется.
 
 mod codec;
+mod plugin_controls;
+/// Настройка ядра применяется только к вновь сгенерированным чанкам.
+pub static ORE_RETENTION_PERCENT: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(100);
 mod spawn_search;
 #[cfg(test)]
 #[allow(dead_code)]
@@ -4529,7 +4532,9 @@ fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) ->
     }
 
     let generated = || {
-        let chunk = Chunk::generated(generator, chunk_x, chunk_z);
+        let mut chunk = Chunk::generated(generator, chunk_x, chunk_z);
+        let seed = match generator {Generator::Normal(terrain)=>terrain.seed(),Generator::Nether(nether)=>nether.seed(),Generator::End(end)=>end.seed(),Generator::Flat=>0};
+        plugin_controls::retain_ores(&mut chunk,chunk_x,chunk_z,seed,ORE_RETENTION_PERCENT.load(std::sync::atomic::Ordering::Relaxed));
         let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
         Taken::Loaded { chunk, from_disk: false, wake }

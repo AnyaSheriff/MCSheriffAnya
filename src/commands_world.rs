@@ -1466,6 +1466,25 @@ pub fn forget_attributes(shared: &Shared, uuid: &[u8; 16]) {
     shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком").remove(uuid);
 }
 
+/// Типизированное чтение атрибута плагином с учётом ожидающих правок.
+pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) -> Option<crate::attributes::Attribute> {
+    if !player_has(attribute) || !shared.players.lock().expect("игроки").members().iter().any(|member| member.uuid == *uuid) { return None; }
+    let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты");
+    let attributes = known.entry(*uuid).or_default().projected();
+    Some(attributes.get(attribute).cloned().unwrap_or(crate::attributes::Attribute { id: attribute, base: crate::attributes::player_base(attribute), modifiers: Vec::new() }))
+}
+
+/// Поручение подключениям; вызывается только после проверки данных WIT.
+pub(crate) fn plugin_attribute_edit(shared: &Shared, uuid: &[u8;16], edit: AttributeEdit) -> Result<(), String> {
+    if plugin_attribute(shared,uuid,edited_attribute(&edit)).is_none() { return Err("игрок или атрибут отсутствует".into()); }
+    let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты");
+    let snapshot = known.entry(*uuid).or_default();
+    if snapshot.pending.len() >= 256 { return Err("слишком много ожидающих правок атрибутов".into()); }
+    snapshot.pending.push_back(edit.clone());
+    shared.players.lock().expect("игроки").order(uuid,Order::Attribute(edit));
+    Ok(())
+}
+
 /// Есть ли атрибут у игрока (вики, Attribute: у игрока нет «follow_range»,
 /// «flying_speed», «spawn_reinforcements», «tempt_range») [проверить].
 fn player_has(attribute: i32) -> bool {

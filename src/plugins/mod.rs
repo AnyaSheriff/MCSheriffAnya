@@ -34,6 +34,12 @@ mod api;
 #[cfg(feature = "plugins")]
 mod presentation;
 #[cfg(feature = "plugins")]
+mod network;
+#[cfg(feature = "plugins")]
+mod inventory;
+#[cfg(feature = "plugins")]
+mod attributes;
+#[cfg(feature = "plugins")]
 mod host;
 #[cfg(feature = "plugins")]
 mod manifest;

@@ -152,6 +152,8 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 /// Довески одной стопки.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Data {
+    /// Проверенные метаданные API плагинов (включая PDC); хвост файла 20.
+    pub plugin_meta: Option<String>,
     /// Цвет брони и стороны горшка; метки файла 18, 19 (1–17 заняты).
     pub dyed_color: Option<i32>,
     pub pot_decorations: Option<[i32; 4]>,
@@ -400,8 +402,26 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
 
     if let Some(name) = &data.name {
         out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_NAME));
-        out.extend_from_slice(&crate::network::nbt::text_component(name));
+        let styled = data.plugin_meta.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()).and_then(|map| map.get("name").cloned());
+        if let Some(component) = styled.filter(|component| crate::scoreboard::plain_text(component) == *name) { out.extend(crate::scoreboard::encode_component(&component)); }
+        else { out.extend_from_slice(&crate::network::nbt::text_component(name)); }
         count += 1;
+    }
+
+    if let Some(meta) = data.plugin_meta.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()) {
+        if let Some(max) = meta.get("maxDamage").and_then(serde_json::Value::as_i64).filter(|max| (1..=i32::MAX as i64).contains(max)) { out.extend(encode_varint(2)); out.extend(encode_varint(max as i32)); count += 1; }
+        if !data.ominous_banner && let Some(flags) = meta.get("flags").and_then(serde_json::Value::as_array) {
+            let mut hidden = Vec::new();
+            for flag in flags.iter().filter_map(serde_json::Value::as_str) {
+                for component in match flag { "HIDE_ENCHANTS"=>&[13][..],"HIDE_ATTRIBUTES"=>&[16][..],"HIDE_UNBREAKABLE"=>&[4][..],"HIDE_DYE"=>&[44][..],"HIDE_ARMOR_TRIM"=>&[56][..],"HIDE_STORED_ENCHANTS"=>&[42][..],"HIDE_ADDITIONAL_TOOLTIP"=>&[51,72][..],_=>&[][..] } { if !hidden.contains(component) { hidden.push(*component); } }
+            }
+            if !hidden.is_empty() { out.extend(encode_varint(COMPONENT_TOOLTIP_DISPLAY)); out.push(0); out.extend(encode_varint(hidden.len() as i32)); for component in hidden { out.extend(encode_varint(component)); } count += 1; }
+        }
+        if let Some(lore) = meta.get("lore").and_then(serde_json::Value::as_array).filter(|lines| !lines.is_empty()) {
+            out.extend(encode_varint(11)); out.extend(encode_varint(lore.len() as i32));
+            for line in lore { out.extend(crate::scoreboard::encode_component(line)); }
+            count += 1;
+        }
     }
 
     if data.repair_cost != 0 {
@@ -987,7 +1007,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || data.plugin_meta.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -1080,6 +1100,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&value.to_be_bytes());
             }
         }
+        if let Some(meta) = &data.plugin_meta { out.push(20); out.extend((meta.len() as u32).to_be_bytes()); out.extend(meta.as_bytes()); }
         if let Some(color) = data.dyed_color { out.push(18); out.extend(color.to_be_bytes()); }
         if let Some(sides) = data.pot_decorations { out.push(19); for item in sides { out.extend(item.to_be_bytes()); } }
         if let Some(book)=&data.book {
@@ -1270,6 +1291,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
+                20 => { let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize; if length > 16384 { return None; } let text = String::from_utf8(reader.take(length)?.to_vec()).ok()?; let _: serde_json::Value = serde_json::from_str(&text).ok()?; data.plugin_meta = Some(text); }
                 18 => { data.dyed_color = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
                 19 => { let mut sides = [0; 4]; for item in &mut sides { *item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?); } data.pot_decorations = Some(sides); }
 

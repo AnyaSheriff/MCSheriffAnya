@@ -56,34 +56,60 @@ TeaVM при полной компиляции. Ненулевой код вых
 - runTask, runTaskLater, runTaskTimer, scheduleSyncDelayedTask,
   scheduleSyncRepeatingTask, отмена задач и BukkitRunnable. Задача с delay=0
   выполняется на следующем такте; period должен быть положительным.
-- FileConfiguration: вложенные YAML-секции, скаляры без кавычек или в одинарных
-  кавычках, String/int/long/boolean, contains/set, сохранение и перезагрузка.
-  `config.yml` хранится в изолированном `data/`, исходный конфиг копируется из JAR.
-  Списки, anchors, multiline и двойные кавычки пока отклоняются; это YAML-like,
-  не полный YAML. Комментарии при saveConfig не сохраняются.
+- FileConfiguration/YamlConfiguration: вложенные секции, типизированные скаляры,
+  одинарные/двойные кавычки, block/flow списки и карты, getKeys/getConfigurationSection,
+  сохранение и перезагрузка. YAML без тегов, anchors, merge keys и block-строк;
+  неизвестный синтаксис отклоняется, комментарии при записи не сохраняются.
+  Все 13 YAML-ресурсов FourLegacy сверены с безопасным SnakeYAML на JVM переводчика.
+- getDataFolder/getResource/saveResource, ограниченные File/Path/Files:
+  только относительные пути внутри `data/`, до 4 МиБ, без ссылок и `..`.
+  Чтение/запись/копирование/атомарное перемещение выполняет хозяин.
+- ItemStack/ItemMeta: копирование, имена/описания Adventure, износ/максимальная
+  прочность, зачарования, PDC (Byte/int/long/double/String, списки String/double).
+  PDC сохраняется с предметом; Entity/Player PDC сохраняется по UUID в data/
+  компонента, с объединением записей между тактами и flush при выгрузке; JSON метаданных до 16 КиБ проверяет хозяин.
+  PlayerInventory читает Java-снимок, меняет слоты, броню и вторую руку,
+  добавляет/удаляет стопки; неизвестные довески сохраняются через токены хозяина.
+  Токены ограничены 1024 записями на плагин; устаревший токен даёт явную ошибку.
+- Attribute/AttributeInstance/AttributeModifier: основа, значение, модификаторы
+  игрока; pending-правки видны сразу, выполнение — через очередь подключения.
+  Модификаторы только в namespace плагина. Атрибуты пока живут до переподключения;
+  scale и некоторые иные атрибуты передаются клиенту, но не полностью учитываются физикой.
 - ChatColor: стандартные legacy цвета/форматирование, translate/strip.
 
 Точный список методов — в самостоятельно написанных классах `mcsa-bukkit/src`.
-Рефлексия, NMS/CraftBukkit, собственные потоки, native/synchronized,
-файловый/сетевой API Java, загрузчики классов и прямой доступ к мосту отклоняются.
+Рефлексия, NMS/CraftBukkit, собственные потоки, native, произвольный файловый/
+сетевой API Java, загрузчики классов и прямой доступ к мосту отклоняются.
+Методы synchronized раскрываются в однопоточном компоненте; явные мониторы запрещены.
+Стандартные equals/hashCode/toString record раскрываются без ObjectMethods/рефлексии.
 ConcurrentMap/ConcurrentHashMap и AtomicBoolean/Integer/Long/Reference допускаются
 на потоке плагина; также допускаются ThreadLocalRandom, преобразования TimeUnit
 и RejectedExecutionException. sleep/timedJoin/timedWait и bulk-операции карты
 с порогом параллелизма запрещены.
-Executor/Thread/Timer и прочие concurrent API по-прежнему дают русский отказ.
+newSingleThreadExecutor, newFixedThreadPool(1), execute/submit, Future и shutdown/close имеют shim:
+все такие executors компонента отправляют работу в общую FIFO-очередь хозяина.
+До 256 задач, до 64 задач за callback между тактами; новые задачи не выполняются
+в том же callback. awaitTermination после shutdown ограниченно опустошает очередь
+при выгрузке, без ожидания потока. Незавершённый Future.get не блокирует хозяина.
+Неиспользуемая lambda-фабрика ThreadFactory удаляется; её Thread
+никогда не создаётся. Прямой new Thread(...).start(), Timer, другие executors
+и реальные параллельные операции по-прежнему дают русский отказ.
 softdepend принимается как список отсутствующих необязательных интеграций;
-PluginManager видит только текущий Java-плагин. Классы внешних интеграций всё
-равно проверяются: отсутствующий PlaceholderExpansion не подменяется заглушкой.
+PluginManager видит только текущий Java-плагин. При объявленной softdepend
+PlaceholderAPI доступен только тип отсутствующего расширения: создание/
+регистрация дают явную ошибку; PluginManager.isPluginEnabled возвращает false.
+Реальная PlaceholderAPI и её callbacks не предоставляются.
 Проверяются владельцы, имена и **полные дескрипторы** методов/полей, constant pool,
 лямбды, аннотации и наследование Bukkit. Все классы JAR проверяются, включая
 недостижимые методы. Код плагина не исполняется на JVM переводчика;
 META-INF/services и Class-Path не передаются компилятору, annotation processing выключен.
-Проверка не заменяет песочницу Wasmtime: компоненту по-прежнему недоступны
-файлы, сеть, окружение и privileged; действуют топливо, эпохи и память 32 МиБ.
+Проверка не заменяет песочницу Wasmtime: WASI не даёт файлов, сети, окружения
+или privileged; файловые операции идут через ограниченный storage, HTTPS —
+только через явно разрешённые вызовы хозяина; действуют топливо, эпохи и память 32 МиБ.
 Имена команд ядра и auth зарезервированы также на стороне хозяина.
 
 Пока нет зависимостей от других плагинов, aliases и деклараций permissions в
-plugin.yml, произвольных ресурсов/data-folder через java.io,
+plugin.yml, полного java.io/произвольного YAML, GUI-инвентарей,
 interact/move/inventory событий, entity damage с прямым виновником, спавна сущностей и Java-обёрток bossbar/scoreboard.
 Существующий WIT presentation и Rust SDK сохраняют bossbar/scoreboard/actionbar.
 Причины урона сведены к поддерживаемым типам ядра: точное соответствие Paper
@@ -106,7 +132,7 @@ Mineflayer берётся из `tools/blackbox/node_modules`, при отсут�
 команда с Tab, join+отмена чата/команды/ломания/установки, repeating с config.yml.
 `blackbox.cjs` проверяет реальные сообщения и неизменившийся отменённый блок.
 Для теста хозяина положите три результата в `tmp/java-test/plugins`, затем
-`CARGO_BUILD_JOBS=6 cargo test --release plugins::tests::translated_bukkit_jars -- --ignored --exact`.
+`CARGO_BUILD_JOBS=4 nice -n 19 cargo test --release plugins::tests::translated_bukkit_jars -- --ignored --exact`.
 
 Контракты сверялись только с публичной документацией:
 [JavaPlugin](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/plugin/java/JavaPlugin.html),
@@ -122,3 +148,34 @@ Mineflayer берётся из `tools/blackbox/node_modules`, при отсут�
 [PotionEffect](https://jd.papermc.io/paper/1.21.11/org/bukkit/potion/PotionEffect.html),
 [EntityDamageEvent](https://jd.papermc.io/paper/1.21.11/org/bukkit/event/entity/EntityDamageEvent.html),
 [WorldBorder](https://jd.papermc.io/paper/1.21.11/org/bukkit/WorldBorder.html).
+
+## Разрешения HTTPS и настройки мира
+
+В plugin.yml объявляется `network-hosts: [api.example.org]`; переводчик переносит
+список в `network_hosts` plugin.toml. По умолчанию доступа нет. Администратор
+добавляет в **config/mcsa.properties** строку
+`plugin-network-hosts=fourlegacy:api.example.org|other.example.org` и перезапускает
+ядро. Работает только пересечение декларации и разрешения; при загрузке консоль
+печатает разрешённые хосты каждого плагина. Маски, IP, порты и URL в декларации
+не допускаются. Изменение plugin.yml самим плагином разрешения ядра не меняет.
+
+Java API: `org.mcsa.api.Https.get(url)`, `post(url, byte[])` возвращают handle;
+`poll(handle)` возвращает null до завершения, затем Response.status()/body()/text().
+Только HTTPS GET/POST, порт 443, без credentials/redirects/cookies/system proxies.
+DNS закрепляется за проверенными публичными адресами; внутренние адреса запрещены.
+Тело до 32 КиБ, ответ до 64 КиБ, срок вместе с DNS — 10 секунд; один старт в секунду,
+до четырёх незабранных ответов на плагин и до 64 активных запросов на всё ядро.
+Окружение, auth/password данные и файлы вне data/ не передаются.
+Настоящий внешний TLS-запрос пока не является частью автоматических тестов.
+
+Настройки ядра: `monster-spawn-multiplier=1` — множитель лимита естественных
+монстров (0..16, без спавнеров/команд); `ore-retention-percent=100` — доля руды
+только в новых чанках (0..100). Значения по умолчанию сохраняют прежнее поведение.
+Это независимые настройки ядра, пока не зеркалирующие конфиг FourLegacy.
+
+Публичные контракты: [PersistentDataContainer](https://jd.papermc.io/paper/1.21.11/org/bukkit/persistence/PersistentDataContainer.html),
+[ItemStack](https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/ItemStack.html),
+[ItemMeta](https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/meta/ItemMeta.html),
+[reqwest ClientBuilder](https://docs.rs/reqwest/0.13.5/reqwest/struct.ClientBuilder.html).
+
+[Attribute (Paper)](https://jd.papermc.io/paper/1.21.11/org/bukkit/attribute/Attribute.html), [значения и пределы](https://minecraft.wiki/w/Attribute).

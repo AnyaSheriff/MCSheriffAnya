@@ -8,6 +8,7 @@ import shutil
 import signal
 import socket
 import subprocess
+from build_guard import run as guarded_run, wait_for_idle
 import sys
 import tempfile
 import time
@@ -23,11 +24,11 @@ if not 26200 <= args.port <= 26299:
 port = args.port
 binary = repo / 'target/release/mcsheriffanya'
 if not binary.is_file():
-    raise SystemExit('Сначала соберите ядро: CARGO_BUILD_JOBS=6 cargo build --release')
+    raise SystemExit('Сначала соберите ядро: CARGO_BUILD_JOBS=4 nice -n 19 cargo build --release')
 with socket.socket() as probe:
     if probe.connect_ex(('127.0.0.1', port)) == 0:
         raise SystemExit(f'Порт {port} занят; выберите другой тестовый порт')
-subprocess.run([sys.executable, str(root / 'build-fixtures.py')], check=True)
+guarded_run([sys.executable, str(root / 'build-fixtures.py')], check=True)
 (repo / 'tmp').mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as temp:
     work = Path(temp)
@@ -39,11 +40,12 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
     identity[8] = (identity[8] & 63) | 128
     (work / 'ops.json').write_text(json.dumps([{'uuid': str(uuid.UUID(bytes=bytes(identity))), 'name': 'JavaTester', 'level': 4}]))
     for name in ('command', 'events', 'scheduler'):
-        subprocess.run([sys.executable, str(root / 'translate.py'), str(root / 'target' / (name + '.jar')), '--output', str(work / 'plugins')], check=True)
+        guarded_run([sys.executable, str(root / 'translate.py'), str(root / 'target' / (name + '.jar')), '--output', str(work / 'plugins')], check=True)
     # Проверяем восстановление config.yml из встроенного ресурса saveDefaultConfig.
     config = work / 'plugins/java-scheduler/data/config.yml'
     config.unlink()
     log_path = root / 'target/blackbox-core.log'
+    wait_for_idle()
     with log_path.open('w') as log:
         server = subprocess.Popen([str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         try:
@@ -55,7 +57,9 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут запуска ядра')
-            subprocess.run(['node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=60)
+            guarded_run(['node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=60)
+            player_pdc=list((work/'plugins/java-command/data').glob('entity-*.pdc.json'));assert len(player_pdc)==1 and 'java-command:probe' in player_pdc[0].read_text(), 'PDC сущности не сохранён в data/'
+            assert (config.parent / 'queue.yml').read_text() == 'order: [first, second]', 'очередь не сохранила файл через хозяина'
             assert config.read_text() == (root / 'fixtures/scheduler/config.yml').read_text(), 'config.yml не восстановлен из JAR'
         finally:
             server.send_signal(signal.SIGINT)

@@ -21,6 +21,7 @@ pub const BLOCK_INTERACTION_RANGE: i32 = 6;
 pub const BURNING_TIME: i32 = 7;
 pub const EXPLOSION_KNOCKBACK_RESISTANCE: i32 = 9;
 pub const ENTITY_INTERACTION_RANGE: i32 = 10;
+pub const FALL_DAMAGE_MULTIPLIER: i32 = 11;
 pub const GRAVITY: i32 = 14;
 pub const JUMP_STRENGTH: i32 = 15;
 pub const KNOCKBACK_RESISTANCE: i32 = 16;
@@ -32,7 +33,9 @@ pub const MOVEMENT_EFFICIENCY: i32 = 21;
 pub const MOVEMENT_SPEED: i32 = 22;
 pub const OXYGEN_BONUS: i32 = 23;
 pub const SAFE_FALL_DISTANCE: i32 = 24;
+pub const SCALE: i32 = 25;
 pub const SNEAKING_SPEED: i32 = 26;
+pub const STEP_HEIGHT: i32 = 28;
 pub const SUBMERGED_MINING_SPEED: i32 = 29;
 pub const SWEEPING_DAMAGE_RATIO: i32 = 30;
 pub const WATER_MOVEMENT_EFFICIENCY: i32 = 32;
@@ -109,6 +112,9 @@ pub fn limits(attribute: i32) -> (f64, f64) {
         BURNING_TIME => (0.0, 1024.0),
         MAX_ABSORPTION => (0.0, 2048.0),
         MAX_HEALTH => (1.0, 1024.0),
+        SCALE => (0.0625, 16.0),
+        FALL_DAMAGE_MULTIPLIER => (0.0, 100.0),
+        STEP_HEIGHT => (0.0, 10.0),
         MOVEMENT_SPEED => (0.0, 1024.0),
         SWEEPING_DAMAGE_RATIO => (0.0, 1.0),
         SNEAKING_SPEED | MOVEMENT_EFFICIENCY | WATER_MOVEMENT_EFFICIENCY => (0.0, 1.0),
@@ -164,6 +170,9 @@ pub fn player_base(attribute: i32) -> f64 {
         GRAVITY => 0.08,
         JUMP_STRENGTH => f64::from(0.42f32),
         MAX_HEALTH => 20.0,
+        // Вики Attribute: значения нужны при первом запросе/правке этих атрибутов.
+        SCALE | FALL_DAMAGE_MULTIPLIER => 1.0,
+        STEP_HEIGHT => 0.6,
         SAFE_FALL_DISTANCE => 3.0,
         // Скорость шага одинарной точности — как её знает клиент.
         MOVEMENT_SPEED => f64::from(0.1f32),
@@ -390,6 +399,14 @@ const NAMES: [(i32, &str); 35] = [
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn optional_player_attributes_keep_their_defaults_when_modifiers_are_removed() {
+        let mut attributes=Attributes::player();assert!(attributes.get(SCALE).is_none());
+        assert_eq!(attributes.value(SCALE),1.0);assert_eq!(attributes.value(FALL_DAMAGE_MULTIPLIER),1.0);assert_eq!(attributes.value(STEP_HEIGHT),0.6);
+        attributes.set_modifier(SCALE,Modifier::new("test:race",0.67,Operation::AddValue));assert_eq!(attributes.value(SCALE),1.67);
+        attributes.remove_modifier(SCALE,"test:race");assert_eq!(attributes.value(SCALE),1.0);
+    }
 
     #[test]
     fn a_fresh_player_has_the_wiki_base_values() {

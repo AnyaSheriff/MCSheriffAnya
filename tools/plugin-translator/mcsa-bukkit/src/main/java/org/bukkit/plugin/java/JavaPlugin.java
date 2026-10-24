@@ -1,6 +1,13 @@
 package org.bukkit.plugin.java;
 import org.bukkit.*; import org.bukkit.command.*; import org.bukkit.configuration.file.FileConfiguration; import ru.mcsa.bukkit.Host;
 public abstract class JavaPlugin implements org.bukkit.plugin.Plugin, CommandExecutor, TabCompleter {
+ private final java.util.Map<String,String> resources=new java.util.LinkedHashMap<>();private String version="";
+ public final void embedResource(String path,String text){resources.put(path,text);}public final void setVersion(String value){version=value;}
+ public java.io.File getDataFolder(){return new java.io.File("__plugin_data__");}
+ public java.io.InputStream getResource(String path){String value=resources.get(path);return value==null?null:new java.io.ByteArrayInputStream(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+ public void saveResource(String path,boolean replace){String value=resources.get(path);if(value==null)throw new IllegalArgumentException("Ресурс отсутствует: "+path);if(replace||!Host.yes(34,path))Host.call(9,path,value);}
+ public java.util.logging.Logger getLogger(){return java.util.logging.Logger.getLogger(name);}
+ public io.papermc.paper.plugin.configuration.PluginMeta getPluginMeta(){return new io.papermc.paper.plugin.configuration.PluginMeta(){public String getName(){return name;}public String getVersion(){return version;}};}
  private FileConfiguration config; private String name="plugin"; private boolean enabled;
  private final java.util.Map<String,PluginCommand> commands=new java.util.LinkedHashMap<>();
  public final void initialize(String n){name=n;enabled=true;}

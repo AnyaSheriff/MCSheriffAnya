@@ -11,7 +11,7 @@ import org.bukkit.event.block.*;
 public final class Entry {
  @Export(name="mcsa_dispatch") public static int dispatch(int kind,Address data,int len){
   byte[] bytes=new byte[len];for(int i=0;i<len;i++)bytes[i]=data.add(i).getByte();String[] a=Host.split(new String(bytes,StandardCharsets.UTF_8));
-  if(kind==0){RuntimeState.plugin.onDisable();return 0;}
+  if(kind==0){RuntimeState.plugin.onDisable();EntityDataStore.flush();return 0;}
   if(kind==8){RuntimeState.scheduler.fire(Integer.parseInt(a[0]));return 0;}
   if(kind==7||kind==9){
    CommandSender sender;

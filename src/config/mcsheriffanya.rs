@@ -25,6 +25,12 @@ pub const OLD_FILES: [&str; 2] = ["config/mcsheriffanya.toml", "config/rustcraft
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Предел естественных монстров относительно обычного (0..16).
+    pub monster_spawn_multiplier: f64,
+    /// Доля руды в новых чанках (0..100), старые чанки не меняются.
+    pub ore_retention_percent: u8,
+    /// Явные разрешения HTTPS: имя плагина → точные DNS-имена.
+    pub plugin_network_hosts: std::collections::BTreeMap<String, Vec<String>>,
     /// Require PROXY v1/v2 on Java TCP connections.
     pub proxy_protocol: bool,
     pub viaproxy: bool,
@@ -108,6 +114,9 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            monster_spawn_multiplier: 1.0,
+            ore_retention_percent: 100,
+            plugin_network_hosts: Default::default(),
             proxy_protocol: false,
             viaproxy: false,
             viaproxy_port: 26101,
@@ -190,6 +199,9 @@ impl Settings {
             log_info!("{}: auth-provider больше не нужен — пароли всегда хранятся через Argon2id; настройка игнорируется", path.display());
         }
         Settings {
+            monster_spawn_multiplier: { let value: f64 = take(&values,"monster-spawn-multiplier",1.0,path); if value.is_finite() && (0.0..=16.0).contains(&value) {value} else {log_warn!("monster-spawn-multiplier: нужно число от 0 до 16; беру 1");1.0} },
+            ore_retention_percent: { let value: u8 = take(&values,"ore-retention-percent",100,path); if value <= 100 {value} else {log_warn!("ore-retention-percent: нужно число от 0 до 100; беру 100");100} },
+            plugin_network_hosts: values.get("plugin-network-hosts").map(|value| value.split(',').filter_map(|entry| entry.split_once(':')).map(|(plugin, hosts)| (plugin.trim().to_string(), hosts.split('|').map(|host| host.trim().to_string()).collect())).collect()).unwrap_or_default(),
             viaproxy: take(&values, "viaproxy", default.viaproxy, path),
             viaproxy_port: take(&values, "viaproxy-port", default.viaproxy_port, path),
             viaproxy_java: take(&values, "viaproxy-java", default.viaproxy_java, path),
@@ -240,8 +252,11 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(&self) -> [(&'static str, String); 26] {
+    fn sections(&self) -> [(&'static str, String); 29] {
         [
+            ("monster-spawn-multiplier", format!("# Предел естественных монстров: множитель 0..16; 1 — обычный предел. Не влияет на спавнеры и команды.\nmonster-spawn-multiplier={}\n",self.monster_spawn_multiplier)),
+            ("ore-retention-percent", format!("# Сколько процентов руды оставить в НОВЫХ чанках (0..100); 100 — обычная генерация.\nore-retention-percent={}\n",self.ore_retention_percent)),
+            ("plugin-network-hosts", format!("# HTTPS плагинов выключен по умолчанию. Разрешения: plugin:api.example.org|other.example.org,another:api.example.net\nplugin-network-hosts={}\n", self.plugin_network_hosts.iter().map(|(plugin, hosts)| format!("{plugin}:{}", hosts.join("|"))).collect::<Vec<_>>().join(","))),
             ("viaproxy", format!("# Автозапуск официального ViaProxy; backend принудительно на loopback.\nviaproxy={}\n", self.viaproxy)),
             ("viaproxy-port", format!("viaproxy-port={}\n", self.viaproxy_port)),
             ("viaproxy-java", format!("# Путь к Java 17+ (рекомендуется 21).\nviaproxy-java={}\n", self.viaproxy_java)),
@@ -396,6 +411,16 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn plugin_controls_default_to_vanilla_and_network_is_opt_in() {
+        let path=Path::new("mcsa.properties");let defaults=Settings::default();
+        assert_eq!((defaults.monster_spawn_multiplier,defaults.ore_retention_percent),(1.0,100));assert!(defaults.plugin_network_hosts.is_empty());
+        let settings=Settings::parse("monster-spawn-multiplier=1.5\nore-retention-percent=40\nplugin-network-hosts=fourlegacy:api.example.org|other.example.org\n",path);
+        assert_eq!((settings.monster_spawn_multiplier,settings.ore_retention_percent),(1.5,40));assert_eq!(settings.plugin_network_hosts["fourlegacy"],vec!["api.example.org","other.example.org"]);
+        let invalid=Settings::parse("monster-spawn-multiplier=NaN\nore-retention-percent=101\n",path);assert_eq!((invalid.monster_spawn_multiplier,invalid.ore_retention_percent),(1.0,100));
+        assert_eq!(Settings::parse(&settings.to_file(),path),settings);
+    }
+
     #[test]
     fn proxy_settings_fail_closed_and_round_trip() {
         use std::net::IpAddr;
