@@ -1,2 +1,2 @@
 package org.bukkit;
-public interface OfflinePlayer {java.util.UUID getUniqueId();String getName();boolean isOnline();}
+public interface OfflinePlayer extends org.bukkit.entity.AnimalTamer {java.util.UUID getUniqueId();String getName();boolean isOnline();}

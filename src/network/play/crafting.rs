@@ -33,17 +33,21 @@ fn store(player: &mut PlayerState, slots: &[Option<Stack>]) {
 }
 fn result(shared: &Shared, player: &PlayerState, slots: &[Option<Stack>], commit: bool) -> Option<Stack> {
     let padded = grid_ops::padded(slots);
-    let result = recipes::craft(&padded)?;
+    let Some(result) = recipes::craft(&padded) else {return if crate::plugins::active() {crate::plugins::prepare_craft(&plugin_view(player),slots,None,false,is_table(player))} else {None};};
     if shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed)
         && player.game_mode != GAME_MODE_CREATIVE
         && let Some(id) = recipes::recipe_index(&padded)
         && !player.progress.recipes.knows_crafting(id)
     { return None; }
-    if result.extras().map_post == Some(1) {
+    let result=if result.extras().map_post == Some(1) {
         let mut data = result.extras(); data.map_post = None;
-        return shared.maps.lock().expect("карты").cartography(result.with_extras(data), Stack::new(blocks::item_named("paper")?, 1), commit);
-    }
-    Some(result)
+        shared.maps.lock().expect("карты").cartography(result.with_extras(data), Stack::new(blocks::item_named("paper")?, 1), commit)?
+    } else {result};
+    if crate::plugins::active() {
+        let ingredients:Vec<_>=slots.iter().flatten().collect();
+        let repair=ingredients.len()==2&&ingredients[0].item==ingredients[1].item&&ingredients.iter().all(|s|s.count==1)&&crate::combat::max_damage(ingredients[0])>0;
+        crate::plugins::prepare_craft(&plugin_view(player),slots,Some(result),repair,is_table(player))
+    } else {Some(result)}
 }
 /// Итог после каждой перемены сетки при расходе ингредиентов: по одной на
 /// каждую ячейку, из которой убрали предмет, и на каждый остаток, положенный

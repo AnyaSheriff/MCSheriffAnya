@@ -200,6 +200,7 @@ pub struct PluginChest {
 #[derive(Clone, Debug)]
 pub enum Order {
     PluginFire { ticks: i32 },
+    PluginFlight { owner: String, field: u8, value: i8 },
     PluginVelocity { value: (f64, f64, f64) },
     PluginOpen { chest: std::sync::Arc<std::sync::Mutex<PluginChest>> },
     PluginClose { owner: String },

@@ -347,6 +347,24 @@ mod enabled {
         let (owner,who)=(owner.to_string(),who.clone());with_host(true,move |host| host.drag_event(&owner,&who,handle,slots,legacy))
     }
 
+    pub fn entity_interact(who: &PlayerView, target: &str, hand: u32, slot: Option<u32>) -> bool {
+        let (who,target)=(who.clone(),target.to_string());with_host(false,move |host|host.entity_interact(&who,&target,hand,slot))
+    }
+    pub fn prepare_craft(who: &PlayerView, grid: &[Option<crate::inventory::Stack>], result: Option<crate::inventory::Stack>, repair: bool, table: bool) -> Option<crate::inventory::Stack> {
+        let (who,grid)=(who.clone(),grid.to_vec());with_host(result,move |host|host.prepare_craft(&who,&grid,result,repair,table))
+    }
+    pub fn prepare_anvil(who: &PlayerView, inputs: &[Option<crate::inventory::Stack>], result: Option<crate::inventory::Stack>, cost: i32) -> i32 {
+        let (who,inputs)=(who.clone(),inputs.to_vec());with_host(cost,move |host|host.prepare_anvil(&who,&inputs,result,cost))
+    }
+    pub fn prepare_enchant(who: &PlayerView, item: crate::inventory::Stack, properties: Vec<i16>) -> Vec<i16> {
+        let (who,fallback)=(who.clone(),properties.clone());with_host(fallback,move |host|host.prepare_enchant(&who,item,properties))
+    }
+    pub fn enchant_event(who: &PlayerView, item: crate::inventory::Stack, result: crate::inventory::Stack, button: u32, cost: i32, hint: String, level: i32) -> Option<crate::inventory::Stack> {
+        let who=who.clone();with_host(Some(result),move |host|host.enchant_event(&who,item,result,button,cost,hint,level))
+    }
+    pub fn food_level(who: &PlayerView, level: i32, item: Option<crate::inventory::Stack>) -> Option<i32> {
+        let who=who.clone();with_host(Some(level),move |host|host.food_level(&who,level,item))
+    }
     pub fn item_event(who: &PlayerView, kind: u32, slot: i32) -> bool {
         let who = who.clone();with_host(false, move |host| host.item_event(&who, kind, slot))
     }
@@ -436,7 +454,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -504,6 +522,12 @@ mod disabled {
 
     pub fn drag_event(_owner: &str, _who: &PlayerView, _handle: u32, _slots: Vec<i32>, _legacy: (i32,i32,i32)) -> bool {false}
 
+    pub fn entity_interact(_who: &PlayerView, _target: &str, _hand: u32, _slot: Option<u32>) -> bool {false}
+    pub fn prepare_craft(_who: &PlayerView, _grid: &[Option<crate::inventory::Stack>], result: Option<crate::inventory::Stack>, _repair: bool, _table: bool) -> Option<crate::inventory::Stack> {result}
+    pub fn prepare_anvil(_who: &PlayerView, _inputs: &[Option<crate::inventory::Stack>], _result: Option<crate::inventory::Stack>, cost: i32) -> i32 {cost}
+    pub fn prepare_enchant(_who: &PlayerView, _item: crate::inventory::Stack, properties: Vec<i16>) -> Vec<i16> {properties}
+    pub fn enchant_event(_who: &PlayerView, _item: crate::inventory::Stack, result: crate::inventory::Stack, _button: u32, _cost: i32, _hint: String, _level: i32) -> Option<crate::inventory::Stack> {Some(result)}
+    pub fn food_level(_who: &PlayerView, level: i32, _item: Option<crate::inventory::Stack>) -> Option<i32> {Some(level)}
     pub fn item_event(_who: &PlayerView, _kind: u32, _slot: i32) -> bool {false}
 
     pub fn inventory_event(_owner: &str, _who: &PlayerView, _handle: u32, _kind: u32, _click: (i32, i32, i32)) -> bool { true }
@@ -519,7 +543,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

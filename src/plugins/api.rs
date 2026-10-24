@@ -68,6 +68,7 @@ pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
 
 /// Состояние одного плагина (`Store<PluginCtx>`).
 pub struct PluginCtx {
+    pub pending_mobs: HashMap<[u8;16], (Dimension,crate::mob::Mob)>,
     pub network: super::network::Access,
     pub chests: super::inventory::Chests,
     pub native_items: super::inventory::NativeItems,
@@ -324,6 +325,26 @@ impl mcsa::api::server::Host for PluginCtx {
 }
 
 impl mcsa::api::player::Host for PluginCtx {
+    fn get_flight(&mut self, uuid: String) -> Result<mcsa::api::player::Flight, String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let players = self.shared.players.lock().expect("игроки");
+        let state = &players.ui.info.get(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state;
+        Ok(mcsa::api::player::Flight { allowed: state.flight_allowed, flying: state.flying, fall_damage: state.flight_fall_damage.map_or(-1, i8::from) })
+    }
+    fn set_flight(&mut self, uuid: String, field: u8, value: i8) -> Result<(), String> {
+        if field > 2 || !(if field == 2 { -1..=1 } else { 0..=1 }).contains(&value) {return Err("Неверное поле или значение полёта".into());}
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        let state = &mut players.ui.info.get_mut(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state;
+        match field {
+            0 => {state.flight_allowed = value != 0;if value == 0 {state.flying = false;}},
+            1 => {if value != 0 && !state.flight_allowed {return Err("Полёт игроку не разрешён".into());}state.flying = value != 0;},
+            _ => state.flight_fall_damage = if value < 0 {None} else {Some(value != 0)},
+        }
+        state.flight_owners[field as usize]=Some(self.name.clone());
+        players.order(&uuid, Order::PluginFlight {owner:self.name.clone(),field,value});Ok(())
+    }
+
     fn get_state(&mut self, uuid: String) -> Result<mcsa::api::player::State, String> {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         let players = self.shared.players.lock().expect("игроки");
@@ -410,7 +431,13 @@ impl mcsa::api::player::Host for PluginCtx {
             return Err("эффект: duration >= -1, amplifier от 0 до 255".into());
         }
         let mut players = self.shared.players.lock().expect("игроки");
-        if !players.members().iter().any(|member| member.uuid == uuid) { return Err("игрока нет на сервере".into()); }
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            drop(players);
+            for dimension in Dimension::ALL {let mut items=self.shared.items_in(dimension).lock().expect("сущности");if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&!m.is_dead()) {
+                if !mob.accepts_effect(kind) {return Err("Этот вид сущности не принимает эффект".into());}
+                mob.vitals.give_effect_shown(crate::survival::Effect {kind,amplifier:effect.amplifier,ticks_left:effect.duration,ambient:effect.ambient,visible:effect.particles,show_icon:effect.icon});return Ok(());
+            }}return Err("Живая сущность отсутствует".into());
+        }
         players.order(&uuid, Order::Effect(crate::survival::Effect { kind, amplifier: effect.amplifier, ticks_left: effect.duration, ambient: effect.ambient, visible: effect.particles, show_icon: effect.icon }));
         Ok(())
     }
@@ -419,7 +446,11 @@ impl mcsa::api::player::Host for PluginCtx {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         let kind = crate::survival::EffectKind::from_name(&kind).ok_or("неизвестный эффект")?;
         let mut players = self.shared.players.lock().expect("игроки");
-        if !players.members().iter().any(|member| member.uuid == uuid) { return Err("игрока нет на сервере".into()); }
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            drop(players);
+            for dimension in Dimension::ALL {let mut items=self.shared.items_in(dimension).lock().expect("сущности");if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&!m.is_dead()) {mob.vitals.remove_effects(Some(kind));return Ok(());}}
+            return Err("Живая сущность отсутствует".into());
+        }
         players.order(&uuid, Order::ClearEffect(kind));
         Ok(())
     }
@@ -534,6 +565,36 @@ impl mcsa::api::player::Host for PluginCtx {
 }
 
 impl mcsa::api::world::Host for PluginCtx {
+    fn monster_limit(&mut self, dimension: wit::Dimension) -> u32 {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").plugin_monster_limits.last().map_or_else(|| (crate::mob::spawn::MONSTER_CAP as f64*self.shared.settings.monster_spawn_multiplier).round() as u32, |(_,limit)|*limit as u32)
+    }
+    fn set_monster_limit(&mut self, dimension: wit::Dimension, limit: i32) -> Result<(), String> {
+        if !(-1..=10_000).contains(&limit) {return Err("Предел монстров должен быть от -1 до 10000".into());}
+        let mut world=self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
+        world.plugin_monster_limits.retain(|(owner,_)|owner!=&self.name);
+        if limit>=0 {world.plugin_monster_limits.push((self.name.clone(),limit as usize));}Ok(())
+    }
+
+    fn ray_blocks(&mut self, start: wit::Location, dx: f64, dy: f64, dz: f64, distance: f64, fluids: u8, ignore_passable: bool) -> Result<Option<mcsa::api::world::RayHit>, String> {
+        if ![start.x,start.y,start.z,dx,dy,dz,distance].iter().all(|v|v.is_finite()) || start.x.abs()>30_000_000.0 || start.z.abs()>30_000_000.0 || !(-2048.0..=2048.0).contains(&start.y) || !(0.0..=512.0).contains(&distance) || fluids>2 {return Err("Луч: конечные координаты, длина до 512 блоков".into());}
+        let length=dx.hypot(dy).hypot(dz);if length==0.0 || !length.is_finite() {return Err("Направление луча должно быть ненулевым".into());}
+        let direction=[dx/length,dy/length,dz/length];let origin=[start.x,start.y,start.z];
+        let mut cell=[start.x.floor() as i32,start.y.floor() as i32,start.z.floor() as i32];
+        let mut next=[f64::INFINITY;3];let mut delta=[f64::INFINITY;3];let mut step=[0;3];
+        for axis in 0..3 {if direction[axis]!=0.0 {step[axis]=if direction[axis]>0.0 {1} else {-1};delta[axis]=1.0/direction[axis].abs();let edge=f64::from(cell[axis])+if step[axis]>0 {1.0} else {0.0};next[axis]=(edge-origin[axis])/direction[axis];}}
+        let world=self.shared.world_in(dimension_from_wit(start.dimension)).lock().expect("мир");let mut travelled=0.0;let mut face=6;
+        loop {
+            if !world.has_chunk(cell[0].div_euclid(16),cell[2].div_euclid(16)) {return Err("Луч вышел за загруженные чанки".into());}
+            let state=world.get_block(cell[0],cell[1],cell[2]);
+            let liquid=crate::fluids::fluid_at(state);
+            let hit=if let Some((_,level))=liquid { !ignore_passable && (fluids==2 || fluids==1 && level==0) }
+                else if ignore_passable {crate::blocks::has_box(state)} else {!matches!(crate::blocks::block_at_state(state),None|Some("air"|"cave_air"|"void_air"))};
+            if hit {return Ok(Some(mcsa::api::world::RayHit {x:start.x+direction[0]*travelled,y:start.y+direction[1]*travelled,z:start.z+direction[2]*travelled,block:wit::BlockPos {dimension:start.dimension,x:cell[0],y:cell[1],z:cell[2]},face}));}
+            let axis=(0..3).min_by(|a,b|next[*a].total_cmp(&next[*b])).unwrap_or(0);travelled=next[axis];if travelled>distance {return Ok(None);}
+            cell[axis]+=step[axis];next[axis]+=delta[axis];face=match (axis,step[axis]) {(0,1)=>4,(0,_)=>5,(1,1)=>0,(1,_)=>1,(2,1)=>2,_=>3};
+        }
+    }
+
     fn spawn_particle(&mut self, at: wit::Location, name: String, count: u32, dx: f64, dy: f64, dz: f64) -> Result<(), String> {
         if ![at.x,at.y,at.z,dx,dy,dz].iter().all(|v| v.is_finite()) || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || [dx,dy,dz].iter().any(|v| !(0.0..=64.0).contains(v)) || count > 4096 {return Err("Недопустимые параметры частиц".into());}
         if !matches!(name.as_str(), "happy_villager" | "heart") {return Err("Частица вне поддерживаемого каталога".into());}

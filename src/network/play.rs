@@ -1018,7 +1018,7 @@ async fn enter_world(
             )
             .await?;
         }
-        send_abilities(stream, player.game_mode).await?;
+        send_player_abilities(stream, player).await?;
         send_player_position(stream, player).await?;
 
         // Клиент подтверждает телепортацию — до подтверждения он игнорирует
@@ -3061,6 +3061,7 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
     let plugin_state = if crate::plugins::active() { crate::presentation::PlayerState {
+        flight_owners: player.flight_owners.clone(), flight_allowed: player.flight_allowed(), flying: player.creative_flying, flight_fall_damage: player.flight_fall_damage,
         velocity: player.net.last_delta, fire_ticks: player.vit.fire, in_water: player.net.in_water, in_lava: player.net.in_lava,
         in_rain: shared.world_in(player.dimension).lock().expect("мир").in_rain(player.x, player.y, player.z, 1.8),
         eye_height: if player.sneaking { 1.27 } else { 1.62 }, effects: player.vit.effects.clone(),
@@ -4086,6 +4087,16 @@ fn ability_flags(game_mode: i32) -> u8 {
 /// висеть в воздухе: оригинал шлёт способности при входе и при смене
 /// режима (sculk-shrieker: робот после `gamemode survival` должен упасть и
 /// встать на крикуна).
+impl PlayerState {
+    fn flight_allowed(&self) -> bool {self.plugin_flight.unwrap_or(matches!(self.game_mode, GAME_MODE_CREATIVE | GAME_MODE_SPECTATOR))}
+    fn fall_damage_allowed(&self) -> bool {!self.creative_flying && (!self.flight_allowed() || self.flight_fall_damage == Some(true))}
+}
+async fn send_player_abilities(stream: &mut Outgoing<'_>, player: &PlayerState) -> io::Result<()> {
+    if player.plugin_flight.is_none() {return send_abilities(stream,player.game_mode).await;}
+    let mut body = encode_varint(PLAYER_ABILITIES);
+    body.push((ability_flags(player.game_mode) & !6) | if player.flight_allowed() {4} else {0} | if player.creative_flying || player.game_mode == GAME_MODE_SPECTATOR {2} else {0});
+    push_f32(&mut body, 0.05);push_f32(&mut body, 0.1);write_body(stream, body).await
+}
 async fn send_abilities(stream: &mut Outgoing<'_>, game_mode: i32) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_ABILITIES);
 
@@ -6377,6 +6388,17 @@ async fn read_and_log_play_packets(
                 }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
                 Order::Health { value } => vitals::set_health(stream, shared, player, value).await?,
+                Order::PluginFlight {owner,field,value} => {
+                    if value == -2 && player.flight_owners[field as usize].as_deref()!=Some(&owner) {continue;}
+                    player.flight_owners[field as usize]=if value == -2 {None} else {Some(owner)};
+                    match field {
+                        0 => {player.plugin_flight=if value == -2 {None} else {Some(value!=0)};if !player.flight_allowed() {player.creative_flying=false;}},
+                        1 => player.creative_flying=value>0 && player.flight_allowed(),
+                        _ => player.flight_fall_damage=if value<0 {None} else {Some(value!=0)},
+                    }
+                    if !player.fall_damage_allowed() {player.vit.fall=0.0;}
+                    send_player_abilities(stream, player).await?;
+                },
                 Order::PluginFire { ticks } => player.vit.fire = ticks,
                 Order::PluginVelocity { value } => {player.net.velocity = Some(value);send_velocity(stream, player.entity_id, value).await?;},
                 Order::Effect(effect) => {
@@ -6524,7 +6546,7 @@ async fn read_and_log_play_packets(
 
                     if respawning {
                         // После смерти сперва способности, потом Respawn.
-                        send_abilities(stream, player.game_mode).await?;
+                        send_player_abilities(stream, player).await?;
 
                         if target.as_ref().is_some_and(|target| target.missing) {
                             sleep::send_no_respawn_block(stream).await?;
@@ -6557,7 +6579,7 @@ async fn read_and_log_play_packets(
                         };
 
                         send_player_position_as(stream, player, sync).await?;
-                        send_abilities(stream, player.game_mode).await?;
+                        send_player_abilities(stream, player).await?;
                         send_default_spawn_position(stream, player.spawn_point).await?;
                         send_weather(stream, shared, dimension).await?;
                         send_game_event_start_waiting(stream).await?;
@@ -7552,7 +7574,8 @@ fn handle_client_packet_inner(
     match packet.id {
         SERVERBOUND_ABILITIES => {
             if let Some(flags)=payload.first() {
-                player.creative_flying=player.game_mode == GAME_MODE_CREATIVE && flags & 2 != 0;
+                player.flight_owners[1]=None;
+                player.creative_flying=(if player.plugin_flight.is_some() {player.flight_allowed()} else {player.game_mode==GAME_MODE_CREATIVE}) && flags & 2 != 0;
             }
         }
         SERVERBOUND_KEEP_ALIVE => {
@@ -7791,6 +7814,11 @@ fn handle_client_packet_inner(
             }
         }
         USE_ENTITY => {
+            if crate::plugins::active() && !player.vit.dead && player.game_mode!=GAME_MODE_SPECTATOR
+                && let Some((uuid,hand,slot))=armor_stands::plugin_target(payload,player,shared) {
+                publish_ui(shared,player);
+                if crate::plugins::entity_interact(&plugin_view(player),&uuid,hand,slot) {reaction.inventory=true;return reaction;}
+            }
             let mut cursor = Cursor::new(payload);
 
             // Вторая рука пробует, только если основной делать нечего: у
@@ -11336,6 +11364,9 @@ struct PlayerState {
     shoulder_health: f32,
     shoulder_shown: HashMap<i32, [i32; 2]>,
     creative_flying: bool,
+    plugin_flight: Option<bool>,
+    flight_owners: [Option<String>;3],
+    flight_fall_damage: Option<bool>,
     /// Опознаватель игрока — по нему он отличается от остальных в общем списке
     /// и по нему же назван его файл на диске.
     uuid: [u8; 16],
@@ -11725,6 +11756,9 @@ impl PlayerState {
             shoulder_health: vit.health,
             shoulder_shown: HashMap::new(),
             creative_flying: false,
+            plugin_flight: None,
+            flight_owners: Default::default(),
+            flight_fall_damage: None,
             ride: vehicle::Ride::default(),
             glide: glide::Glide::default(),
             seen_bow_arrows: HashMap::new(),

@@ -2,7 +2,7 @@
 // Use Entity: hand, location (lpVec3), sneaking. [проверить] границы слотов.
 use super::*;
 
-fn location(cursor:&mut Cursor<'_>)->Option<[f64;3]> {
+pub(super) fn location(cursor:&mut Cursor<'_>)->Option<[f64;3]> {
     let first=cursor.u8()?;
     if first==0 {return Some([0.0;3]);}
     let packed=u64::from(first)|(u64::from(cursor.u8()?)<<8)|(u64::from(cursor.u32()?)<<16);
@@ -30,6 +30,22 @@ pub(super) fn packet(payload:&[u8],player:&mut PlayerState,shared:&Shared)->Opti
         player.swing_pending=true;
     }
     Some(reaction)
+}
+
+pub(super) fn plugin_target(payload: &[u8], player: &PlayerState, shared: &Shared) -> Option<(String,u32,Option<u32>)> {
+    let mut cursor=Cursor::new(payload);let (target,hand)=(cursor.varint()?,cursor.varint()?);if !(0..=1).contains(&hand) {return None;}
+    let items=shared.items_in(player.dimension).lock().expect("сущности");
+    let mob=items.mobs().iter().find(|m|m.entity_id==target&&!m.is_dead())?;
+    if (mob.x-player.x).powi(2)+(mob.y-player.y).powi(2)+(mob.z-player.z).powi(2)>36.0 {return None;}
+    let uuid=crate::network::login::format_uuid(&mob.uuid);let mut changed=None;
+    if mob.kind==crate::mob::Kind::ArmorStand {
+        let at=location(&mut cursor)?;cursor.u8()?;
+        let mut probe=mob.clone();let mut held=player.inventory.slot(if hand==1 {inventory::OFFHAND} else {player.inventory.selected_slot()});
+        if crate::mob::armor_stand::equip_at(&mut probe,&mut held,player.game_mode==GAME_MODE_CREATIVE,Some(at[1]),hand as usize) {
+            changed=(0..6).find(|i|probe.stand.equipment[*i]!=mob.stand.equipment[*i]).map(|i|i as u32);
+        }
+    }
+    Some((uuid,hand as u32,changed))
 }
 
 #[cfg(test)] mod tests {

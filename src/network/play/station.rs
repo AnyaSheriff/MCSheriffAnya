@@ -97,6 +97,7 @@ pub(super) async fn open_station(
 
 /// Итог (у наковальни и точила) и свойства окна по нынешним ячейкам.
 fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16>) {
+    let plugin=crate::plugins::active().then(||plugin_view(player));
     let creative = player.game_mode == GAME_MODE_CREATIVE;
     let seed = player.vit.xp_seed;
     let Some(window) = player.window.as_mut() else {
@@ -138,15 +139,17 @@ fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16
                 enchanting::bookshelves(|(x, y, z)| world.get_block(x, y, z), station.pos)
             };
 
-            (None, enchanting::properties(seed, shelves, window.shown[0]).to_vec())
+            let properties=enchanting::properties(seed,shelves,window.shown[0]).to_vec();
+            let properties=if let (Some(who),Some(item))=(plugin.as_ref(),window.shown[0]) {crate::plugins::prepare_enchant(who,item,properties)} else {properties};
+            (None,properties)
         }
         Station::Anvil => {
             let outcome = enchanting::anvil(window.shown[0], window.shown[1], station.name.as_deref(), creative);
 
-            station.cost = outcome.cost;
+            station.cost = if let Some(who)=plugin.as_ref() {crate::plugins::prepare_anvil(who,&window.shown[..2],outcome.result,outcome.cost)} else {outcome.cost};
             station.repair_items = outcome.repair_items;
 
-            (outcome.result, vec![outcome.cost as i16])
+            (outcome.result, vec![station.cost as i16])
         }
         Station::Grindstone => (enchanting::grind(window.shown[0], window.shown[1]), Vec::new()),
         Station::Smithing => {
@@ -619,6 +622,11 @@ pub(super) fn button(shared: &Shared, player: &mut PlayerState, window: i32, but
     let Some(enchanted) = enchanting::enchant(seed, shelves, item, slot) else {
         return true;
     };
+    let enchanted=if crate::plugins::active() {
+        let hint=station.props.get(4+slot).and_then(|id|usize::try_from(*id).ok()).and_then(|id|crate::stackdata::ENCHANTMENTS.get(id)).map_or(String::new(),|(name,_)|(*name).into());
+        let level=i32::from(station.props.get(7+slot).copied().unwrap_or(-1));
+        let Some(value)=crate::plugins::enchant_event(&plugin_view(player),item,enchanted,slot as u32,cost,hint,level) else {reaction.inventory=true;return true;};value
+    } else {enchanted};
 
     player.vit.command_xp(false, -need, true);
     player.progress.enchanted();

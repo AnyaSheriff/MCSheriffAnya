@@ -87,6 +87,12 @@ type Completion = wasmtime::component::TypedFunc<(mcsa::api::types::Sender, Stri
 type DamageFrom = wasmtime::component::TypedFunc<(mcsa::api::types::Player, Option<mcsa::api::types::Player>, String, f64), (Option<f64>,)>;
 type Damage = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, f64), (Option<f64>,)>;
 type DragEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, Vec<i32>), (bool,)>;
+type EntityInteract = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, u32, Option<u32>), (bool,)>;
+type PrepareEnchant = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::inventory::Item, Vec<i32>), (Vec<i32>,)>;
+type EnchantEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::inventory::Item, mcsa::api::inventory::Item, u32, i32, String, i32), (Option<mcsa::api::inventory::Item>,)>;
+type FoodEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, i32, Option<mcsa::api::inventory::Item>), (Option<i32>,)>;
+type PrepareAnvil = wasmtime::component::TypedFunc<(mcsa::api::types::Player, Vec<Option<mcsa::api::inventory::Item>>, Option<mcsa::api::inventory::Item>, i32), (i32,)>;
+type PrepareCraft = wasmtime::component::TypedFunc<(mcsa::api::types::Player, Vec<Option<mcsa::api::inventory::Item>>, Option<mcsa::api::inventory::Item>, bool, bool), (Option<mcsa::api::inventory::Item>,)>;
 type ItemEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, i32), (bool,)>;
 type InventoryEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>;
 type RespawnEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool, bool), (mcsa::api::types::Location,)>;
@@ -106,6 +112,12 @@ pub struct Loaded {
     death: Option<Death>,
     inventory_event: Option<InventoryEvent>,
     item_event: Option<ItemEvent>,
+    prepare_craft: Option<PrepareCraft>,
+    prepare_anvil: Option<PrepareAnvil>,
+    prepare_enchant: Option<PrepareEnchant>,
+    enchant_event: Option<EnchantEvent>,
+    food_event: Option<FoodEvent>,
+    entity_interact: Option<EntityInteract>,
     drag_event: Option<DragEvent>,
     move_event: Option<MoveEvent>,
     respawn_event: Option<RespawnEvent>,
@@ -320,6 +332,7 @@ impl Host {
         let network = super::network::Access::new(&manifest.network_hosts, self.shared.settings.plugin_network_hosts.get(&manifest.name).map(Vec::as_slice).unwrap_or_default());
         crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
         let ctx = PluginCtx {
+            pending_mobs: HashMap::new(),
             network,
             chests: Default::default(),
             native_items: Default::default(),
@@ -408,6 +421,24 @@ impl Host {
                 crate::presentation::release(&self.shared, &manifest.name);
                 short(&error)
             })?;
+        let entity_interact = raw.get_export_index(&mut store, None, "mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-entity"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,String,u32,Option<u32>),(bool,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let prepare_craft = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-prepare-craft"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,Vec<Option<mcsa::api::inventory::Item>>,Option<mcsa::api::inventory::Item>,bool,bool),(Option<mcsa::api::inventory::Item>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let prepare_anvil = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-prepare-anvil"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,Vec<Option<mcsa::api::inventory::Item>>,Option<mcsa::api::inventory::Item>,i32),(i32,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let prepare_enchant = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-prepare-enchant"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,mcsa::api::inventory::Item,Vec<i32>),(Vec<i32>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let enchant_event = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-enchant"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,mcsa::api::inventory::Item,mcsa::api::inventory::Item,u32,i32,String,i32),(Option<mcsa::api::inventory::Item>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
+        let food_event = raw.get_export_index(&mut store,None,"mcsa:api/item-events@0.1.0")
+            .and_then(|parent|raw.get_export_index(&mut store,Some(&parent),"on-food"))
+            .map(|index|raw.get_typed_func::<(mcsa::api::types::Player,i32,Option<mcsa::api::inventory::Item>),(Option<i32>,)>(&mut store,&index)).transpose().map_err(|error|short(&error))?;
         let item_event = raw.get_export_index(&mut store, None, "mcsa:api/item-events@0.1.0")
             .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-item"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, i32), (bool,)>(&mut store, &index))
@@ -430,7 +461,7 @@ impl Host {
         let interact_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-interact"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, damage_from, death, inventory_event, item_event, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, entity_interact, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
@@ -453,6 +484,16 @@ impl Host {
     }
 
     fn drop_registrations(&self, name: &str) {
+        let mut players=self.shared.players.lock().expect("игроки");let mut resets=Vec::new();
+        let modes:HashMap<_,_>=players.members().iter().map(|p|(p.uuid,p.game_mode)).collect();
+        for (uuid,info) in &mut players.ui.info {for field in 0..3 {if info.plugin_state.flight_owners[field].as_deref()==Some(name) {
+            info.plugin_state.flight_owners[field]=None;
+            match field {0=>{info.plugin_state.flight_allowed=modes.get(uuid).is_some_and(|mode|matches!(mode,1|3));if !info.plugin_state.flight_allowed {info.plugin_state.flying=false;}},1=>info.plugin_state.flying=false,_=>info.plugin_state.flight_fall_damage=None}
+            resets.push((*uuid,field as u8));
+        }}}
+        for (uuid,field) in resets {players.order(&uuid,crate::players::Order::PluginFlight {owner:name.into(),field,value: -2});}drop(players);
+
+        for dimension in crate::dimension::Dimension::ALL {self.shared.world_in(dimension).lock().expect("мир").plugin_monster_limits.retain(|(owner,_)|owner!=name); }
         self.registry.lock().expect("список команд захвачен другим потоком").retain(|_, owner| owner != name);
     }
 
@@ -707,6 +748,67 @@ impl Host {
             Ok(result) => result,
             Err(reason) => {let name=plugin.manifest.name.clone();self.bury(vec![Crash {plugin:name,reason}]);true},
         }
+    }
+
+    pub fn entity_interact(&mut self, who: &PlayerView, target: &str, hand: u32, slot: Option<u32>) -> bool {
+        let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;
+        for plugin in &mut self.loaded {let Some(function)=plugin.entity_interact else {continue;};
+            match plugin.call(now,|_,store|{let (result,)=function.call(&mut *store,(who.to_wit(),target.to_string(),hand,slot))?;Ok(result)}) {
+                Ok(true)=>{cancelled=true;break;},Ok(false)=>(),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);cancelled
+    }
+
+    pub fn prepare_craft(&mut self, who: &PlayerView, grid: &[Option<crate::inventory::Stack>], mut result: Option<crate::inventory::Stack>, repair: bool, table: bool) -> Option<crate::inventory::Stack> {
+        let now=self.shared_tick();let mut crashes=Vec::new();
+        for plugin in &mut self.loaded {let Some(function)=plugin.prepare_craft else {continue;};
+            let input=plugin.store.data_mut().inventory_items(grid);let output=plugin.store.data_mut().inventory_items(&[result]).pop().flatten();
+            let answer=plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),input,output,repair,table))?;Ok(value)});
+            match answer {Ok(value)=>match plugin.store.data_mut().inventory_stack(value) {Ok(value)=>result=value,Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})},Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),}
+        }self.bury(crashes);result
+    }
+
+    pub fn prepare_anvil(&mut self, who: &PlayerView, inputs: &[Option<crate::inventory::Stack>], result: Option<crate::inventory::Stack>, mut cost: i32) -> i32 {
+        let now=self.shared_tick();let mut crashes=Vec::new();
+        for plugin in &mut self.loaded {let Some(function)=plugin.prepare_anvil else {continue;};
+            let input=plugin.store.data_mut().inventory_items(inputs);let output=plugin.store.data_mut().inventory_items(&[result]).pop().flatten();
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),input,output,cost))?;Ok(value)}) {
+                Ok(value) if (0..=32767).contains(&value)=>cost=value,
+                Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"Стоимость наковальни должна быть от 0 до 32767".into()}),
+                Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);cost
+    }
+
+    pub fn prepare_enchant(&mut self, who: &PlayerView, item: crate::inventory::Stack, mut properties: Vec<i16>) -> Vec<i16> {
+        let now=self.shared_tick();let mut crashes=Vec::new();
+        for plugin in &mut self.loaded {let Some(function)=plugin.prepare_enchant else {continue;};let Some(item)=plugin.store.data_mut().inventory_items(&[Some(item)]).pop().flatten() else {continue;};
+            let input=properties.iter().map(|v|i32::from(*v)).collect();
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),item,input))?;Ok(value)}) {
+                Ok(value) if value.is_empty()=>{for i in 0..3 {properties[i]=0;properties[4+i]= -1;properties[7+i]= -1;}break;},
+                Ok(value) if value.len()==10&&value.iter().enumerate().all(|(i,v)|if i<3 {(0..=32767).contains(v)} else if i==3 {*v==i32::from(properties[3])} else if i<7 {(-1..crate::stackdata::ENCHANTMENTS.len() as i32).contains(v)} else {(-1..=255).contains(v)})=>properties=value.into_iter().map(|v|v as i16).collect(),
+                Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"Неверные предложения зачарования".into()}),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);properties
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn enchant_event(&mut self, who: &PlayerView, item: crate::inventory::Stack, mut result: crate::inventory::Stack, button: u32, cost: i32, hint: String, level: i32) -> Option<crate::inventory::Stack> {
+        let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;
+        for plugin in &mut self.loaded {let Some(function)=plugin.enchant_event else {continue;};let mut items=plugin.store.data_mut().inventory_items(&[Some(item),Some(result)]).into_iter();let (Some(Some(input)),Some(Some(output)))=(items.next(),items.next()) else {continue;};
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),input,output,button,cost,hint.clone(),level))?;Ok(value)}) {
+                Ok(None)=>{cancelled=true;break;},Ok(value)=>match plugin.store.data_mut().inventory_stack(value) {Ok(Some(value))=>result=value,Ok(None)=>{cancelled=true;break;},Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason})},Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);(!cancelled).then_some(result)
+    }
+
+    pub fn food_level(&mut self, who: &PlayerView, mut level: i32, item: Option<crate::inventory::Stack>) -> Option<i32> {
+        let now=self.shared_tick();let mut crashes=Vec::new();let mut cancelled=false;
+        for plugin in &mut self.loaded {let Some(function)=plugin.food_event else {continue;};let item=plugin.store.data_mut().inventory_items(&[item]).pop().flatten();
+            match plugin.call(now,|_,store|{let (value,)=function.call(&mut *store,(who.to_wit(),level,item))?;Ok(value)}) {
+                Ok(None)=>{cancelled=true;break;},Ok(Some(value)) if (0..=20).contains(&value)=>level=value,
+                Ok(_)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:"Уровень еды должен быть от 0 до 20".into()}),Err(reason)=>crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason}),
+            }
+        }self.bury(crashes);(!cancelled).then_some(level)
     }
 
     pub fn item_event(&mut self, who: &PlayerView, kind: u32, slot: i32) -> bool {

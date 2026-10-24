@@ -115,6 +115,11 @@ interface server {
 }
 
 interface player {
+    record flight { allowed: bool, flying: bool, fall-damage: s8 }
+    get-flight: func(uuid: string) -> result<flight, string>;
+    /// Поле: 0 — разрешение, 1 — полёт, 2 — урон (-1: обычные правила).
+    set-flight: func(uuid: string, field: u8, value: s8) -> result<_, string>;
+
     use types.{location, item-stack, game-mode, block-pos};
     record bed-action { bed: block-pos, problem: u32, can-spawn: bool, can-sleep: bool }
     /// Снимок правил кровати, без изменения мира и без удержания его замка в обработчике.
@@ -248,6 +253,11 @@ interface presentation {
 }
 
 interface %world {
+    monster-limit: func(dimension: dimension) -> u32;
+    set-monster-limit: func(dimension: dimension, limit: s32) -> result<_, string>;
+    record ray-hit { x: f64, y: f64, z: f64, block: block-pos, face: u8 }
+    ray-blocks: func(start: location, dx: f64, dy: f64, dz: f64, distance: f64, fluids: u8, ignore-passable: bool) -> result<option<ray-hit>, string>;
+
     use types.{block-pos, location, dimension};
     record block-state { data: string, sky: u8, light: u8, liquid: bool, passable: bool, age: s32, max-age: s32 }
     block-details: func(pos: block-pos) -> result<block-state, string>;
@@ -296,6 +306,31 @@ interface scheduler {
 }
 
 interface entities {
+    use types.{dimension};
+    use player.{potion-effect};
+    record snapshot { uuid: string, kind: string, at: location, width: f64, height: f64, health: f64, living: bool, hostile: bool, animal: bool, shooter: string, embedded: bool }
+    describe: func(uuid: string) -> result<snapshot, string>;
+    in-world: func(dimension: dimension) -> result<list<snapshot>, string>;
+    cloud-potion: func(uuid: string) -> result<option<string>, string>;
+    effects: func(uuid: string) -> result<list<potion-effect>, string>;
+    equipment: func(uuid: string, slot: u8) -> result<option<item>, string>;
+    set-health: func(uuid: string, health: f64) -> result<_, string>;
+    teleport: func(uuid: string, at: location) -> result<bool, string>;
+    launch: func(uuid: string, kind: string, velocity: vector) -> result<string, string>;
+    set-explosive: func(uuid: string, yield: option<f32>, incendiary: option<bool>) -> result<_, string>;
+    record horse-state { tamed: bool, chest: bool, items: list<option<item>> }
+    horse: func(uuid: string) -> result<horse-state, string>;
+    set-horse-item: func(uuid: string, slot: u32, stack: option<item>) -> result<_, string>;
+    tame-horse: func(uuid: string, tamed: bool) -> result<_, string>;
+    set-horse-owner: func(uuid: string, owner: option<string>) -> result<_, string>;
+    create-mob: func(at: location, kind: string) -> result<string, string>;
+    finish-mob: func(uuid: string, commit: bool) -> result<_, string>;
+    mob-control: func(uuid: string, field: u8, value: s32) -> result<_, string>;
+    get-target: func(uuid: string) -> result<option<string>, string>;
+    set-target: func(uuid: string, target: option<string>) -> result<_, string>;
+    set-arrow-critical: func(uuid: string, critical: bool) -> result<_, string>;
+    set-potion-item: func(uuid: string, stack: item) -> result<_, string>;
+
     use types.{location};
     use inventory.{item};
     record vector { x: f64, y: f64, z: f64 }
@@ -360,6 +395,7 @@ interface attributes {
 
 /// Снимок и изменения инвентаря игрока; метаданные проверяет ядро.
 interface inventory {
+    enchant-with-levels: func(stack: item, levels: s32, treasure: bool, seed: s64) -> result<item, string>;
     record item { kind: string, count: u32, metadata: string }
     chest-create: func(size: u32, title: string) -> result<u32, string>;
     chest-set: func(handle: u32, slot: u32, stack: option<item>) -> result<_, string>;
@@ -476,6 +512,16 @@ world bukkit-plugin {
 }
 
 interface item-events {
+    use inventory.{item};
+    on-prepare-enchant: func(who: player, stack: item, properties: list<s32>) -> list<s32>;
+    on-enchant: func(who: player, stack: item, output: item, button: u32, cost: s32, hint: string, level: s32) -> option<item>;
+    on-food: func(who: player, level: s32, stack: option<item>) -> option<s32>;
+    on-prepare-anvil: func(who: player, inputs: list<option<item>>, output: option<item>, cost: s32) -> s32;
+    on-prepare-craft: func(who: player, grid: list<option<item>>, output: option<item>, repair: bool, table: bool) -> option<item>;
+
+    /// Нажатие на сущность; slot — изменяемая ячейка стойки, если она есть.
+    on-entity: func(who: player, target: string, hand: u32, slot: option<u32>) -> bool;
+
     use types.{player};
     /// 0 — смена выбранной ячейки, 1 — завершение еды/питья, 2 — обмен рук; true отменяет.
     on-item: func(who: player, kind: u32, slot: s32) -> bool;

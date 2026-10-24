@@ -135,6 +135,13 @@ impl PluginCtx {
 }
 
 impl inventory::Host for PluginCtx {
+    fn enchant_with_levels(&mut self, stack: inventory::Item, levels: i32, treasure: bool, seed: i64) -> Result<inventory::Item,String> {
+        if !(1..=30).contains(&levels) {return Err("Уровень зачарования должен быть от 1 до 30".into());}
+        let stack=self.inventory_stack(Some(stack))?.ok_or("Пустой предмет для зачарования")?;
+        let result=crate::enchanting::enchant_with_levels(stack,levels,treasure,seed);
+        self.inventory_items(&[Some(result)]).pop().flatten().ok_or("Неизвестный результат зачарования".into())
+    }
+
     fn chest_release(&mut self, handle: u32) -> Result<(), String> {
         if self.chests.viewers.values().any(|current| *current == handle) { return Err("Сундук ещё открыт".into()); }
         let chest = self.chests.entries.remove(&handle).ok_or("Чужой или закрытый сундук")?;

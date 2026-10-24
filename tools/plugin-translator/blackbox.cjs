@@ -14,7 +14,7 @@ bot.on('messagestr',message=>{messages.push(message);console.log(message);});
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const waitFor=async(text)=>{for(let i=0;i<100;i++){if(messages.some(m=>m.includes(text)))return;await sleep(100);}throw Error('Нет сообщения: '+text);};
 const waitHealth=async(value)=>{for(let i=0;i<100;i++){if(bot.health===value)return;await sleep(100);}assert.equal(bot.health,value);};
-const timer=setTimeout(()=>{console.error('Таймаут');bot.end();process.exit(1);},65000);
+const timer=setTimeout(()=>{console.error('Таймаут');bot.end();process.exit(1);},95000);
 bot.on('error',error=>{console.error(error);clearTimeout(timer);process.exit(1);});
 bot.once('spawn',async()=>{
  try {
@@ -50,7 +50,7 @@ bot.once('spawn',async()=>{
   bot.chat('/gamemode creative');await sleep(400);
   bot.chat('/fill -3 62 -3 5 62 3 stone');await sleep(400);
   bot.chat('/tp 0 63 0');await sleep(400);
-  bot.chat('/setblock 2 63 0 stone');await sleep(500);bot.setQuickBarSlot(1);await sleep(300);
+  bot.chat('/setblock 2 63 0 stone');await sleep(500);bot.chat('/give JavaTester diamond_pickaxe');await sleep(350);const pickaxe=bot.inventory.items().find(item=>item.name==='diamond_pickaxe');assert(pickaxe,'Pickaxe absent');await bot.equip(pickaxe,'hand');await sleep(300);
   const Vec3=bot.entity.position.constructor;
   const target=new Vec3(2,63,0);
   const block=bot.blockAt(target);assert.equal(block?.name,'stone');
@@ -75,6 +75,11 @@ bot.once('spawn',async()=>{
   bot.chat('/give JavaTester dirt 2');await sleep(500);await bot.equip(bot.inventory.items().find(item=>item.name==='dirt'),'hand');bot.chat('/eventprobe interact');await waitFor('Event probe armed: interact');try{await bot.placeBlock(bot.blockAt(new Vec3(-1,62,0)),new Vec3(0,1,0));}catch{}await waitFor('Interaction cancelled; hand=HAND');await sleep(300);assert.equal(bot.blockAt(new Vec3(-1,63,0))?.name,'air');assert.equal(bot.inventory.items().filter(item=>item.name==='dirt').reduce((sum,item)=>sum+item.count,0),2);
   bot.chat('/gamemode survival');await sleep(700);const sourceHealth=bot.health;bot.chat('/eventprobe source');await waitFor('Event probe armed: source');bot.chat('/damage JavaTester 4 minecraft:player_attack by JavaTester');await waitFor('Player damage source delivered and changed to 0.5');await sleep(500);assert(bot.health<sourceHealth&&sourceHealth-bot.health<=0.6,'Source-aware damage was not modified');bot.chat('/gamemode creative');await sleep(300);
   bot.chat('/eventprobe state');await waitFor('Live state, potion, entity and block APIs verified');
+  bot.chat('/gamemode survival');await sleep(350);const foodBefore=bot.food;bot.chat('/eventprobe foodprotect');await waitFor('Event probe armed: foodprotect');bot.chat('/effect give JavaTester minecraft:hunger 4 255');await waitFor('Hunger event changed before food loss');await sleep(1300);assert.equal(bot.food,foodBefore,'Hunger event did not protect food');bot.chat('/effect clear JavaTester minecraft:hunger');bot.chat('/gamemode creative');await sleep(300);
+  bot.chat('/summon skeleton_horse ~2 ~ ~');await sleep(500);const horse=Object.values(bot.entities).find(entity=>entity.name==='skeleton_horse');assert(horse,'Horse absent');bot.chat('/eventprobe entityinteract');await waitFor('Event probe armed: entityinteract');await bot.activateEntity(horse);await waitFor('Entity interaction cancelled: SKELETON_HORSE');
+  bot.chat('/eventprobe native');await waitFor('Native flight, rays, mobs, projectiles and enchantment verified');
+  bot.chat('/give JavaTester paper 3');await sleep(250);bot.chat('/give JavaTester leather 1');await sleep(350);bot.chat('/eventprobe craftbonus');await waitFor('Event probe armed: craftbonus');
+  const bookRecipe=bot.recipesFor(bot.registry.itemsByName.book.id,null,1,null)[0];assert(bookRecipe,'Book recipe absent');await bot.craft(bookRecipe,1);await sleep(400);assert.equal(bot.inventory.items().filter(item=>item.name==='book').reduce((n,item)=>n+item.count,0),2,'PrepareItemCraftEvent did not change native output');console.log('PASS: native flight/rays/entities/projectiles/enchantments and modified crafting output');
   const previousHeld=bot.quickBarSlot;bot.chat('/eventprobe held');await waitFor('Event probe armed: held');bot.setQuickBarSlot(previousHeld===2?3:2);await waitFor('Held slot cancelled before selection');await sleep(400);assert.equal(bot.quickBarSlot,previousHeld);
   bot.chat('/eventprobe consume');await waitFor('Event probe armed: consume');await sleep(300);bot.setQuickBarSlot(2);await sleep(300);bot.activateItem();await waitFor('Consume cancelled before effects and item removal');bot.deactivateItem();await sleep(300);assert.equal(bot.inventory.slots[38]?.name,'honey_bottle');
   bot.chat('/eventprobe swap');await waitFor('Event probe armed: swap');bot._client.write('block_dig',{status:6,location:new Vec3(0,0,0),face:0,sequence:0});await waitFor('Hand swap cancelled before inventory mutation');await sleep(300);assert.equal(bot.inventory.slots[38]?.name,'honey_bottle');bot._client.write('block_dig',{status:6,location:new Vec3(0,0,0),face:0,sequence:0});await sleep(300);assert.equal(bot.inventory.slots[45]?.name,'honey_bottle');bot._client.write('block_dig',{status:6,location:new Vec3(0,0,0),face:0,sequence:0});await sleep(300);assert.equal(bot.inventory.slots[38]?.name,'honey_bottle');

@@ -131,6 +131,9 @@ pub struct Flying {
     pub push: (f64, f64, f64),
     /// Сила взрыва шара гаста.
     pub power: i32,
+    /// Явные правки плагина; отсутствие сохраняет обычный взрыв.
+    pub plugin_yield: Option<f32>,
+    pub plugin_incendiary: Option<bool>,
     pub owner: i32,
     /// Синий череп иссушителя (свойство 8 «dangerous»).
     pub dangerous: bool,
@@ -204,6 +207,8 @@ impl Flying {
             prev: (at, velocity, rot),
             push: (0.0, 0.0, 0.0),
             power: 0,
+            plugin_yield: None,
+            plugin_incendiary: None,
             owner,
             dangerous: false,
             no_gravity: false,
@@ -336,6 +341,8 @@ pub struct Cloud {
     /// Ждёт (свойство 9).
     pub waiting: bool,
     pub effects: Vec<Effect>,
+    pub base_potion: Option<u16>,
+    pub custom_effects: Vec<Effect>,
     /// Дыхание дракона (частица dragon_breath); иначе частица entity_effect цвета `color`.
     pub dragon: bool,
     pub color: i32,
@@ -373,6 +380,8 @@ impl Cloud {
             delay: 20,
             age: 0,
             waiting: false,
+            base_potion: None,
+            custom_effects: effects.clone(),
             effects,
             dragon: false,
             color,
@@ -756,7 +765,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut landed = Vec::new();
     let mut new_clouds: Vec<Cloud> = Vec::new();
     let mut impacts: Vec<Impact> = Vec::new();
-    let mut blasts: Vec<(i32, (f64, f64, f64), f32)> = Vec::new();
+    type FireballBlast = (i32, (f64, f64, f64), f32, bool);
+    let mut blasts: Vec<FireballBlast> = Vec::new();
     let mut skull_hits: Vec<SkullHit> = Vec::new();
     let mut winds: Vec<((f64, f64, f64), bool)> = Vec::new();
     let height = |sneaking: bool| if sneaking { 1.5 } else { 1.8 };
@@ -1092,7 +1102,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 _ => at,
             };
 
-            blasts.push((flying.owner, centre, flying.power.max(1) as f32));
+            blasts.push((flying.owner, centre, flying.plugin_yield.unwrap_or(flying.power.max(1) as f32), flying.plugin_incendiary.unwrap_or(true)));
             continue;
         }
 
@@ -1114,6 +1124,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         if flying.kind == Kind::Lingering {
             let instant_cloud = effects.iter().any(|effect| effect.kind.instant());
             let mut cloud = Cloud::lingering(shared.next_entity_id(), dimension, at, effects, flying.owner, struck.is_none());
+            if let Some(stack)=flying.stack {let mut data=stack.extras();cloud.base_potion=data.potion;data.potion=None;cloud.custom_effects=data.potion_effects();}
             cloud.color = tint;
 
             // Мгновенные зелья (лечение, урон) и в склянке-облаке звучат событием 2007 (чёрный ящик, itemaudit4-potion-harming).
@@ -1382,14 +1393,15 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     skull_blasts(shared, dimension, world, skull_hits);
 
     // Взрывы шаров гаста: сила 1, огонь (вики, Fireball).
-    for (owner, centre, power) in fireball_blasts {
+    for (owner, centre, power, fire) in fireball_blasts {
+        if power == 0.0 {continue;}
         let players = crate::tick::blast_targets(shared, dimension);
         let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
         let mut next_id = || shared.next_entity_id();
 
         world.blast_source = owner;
         world.blast_killer = crate::mob::hostile::killer_key(crate::mob::Kind::Ghast);
-        crate::tnt::explode_with_fire(world, &mut items, &players, centre, power, &mut next_id);
+        if fire {crate::tnt::explode_with_fire(world, &mut items, &players, centre, power, &mut next_id);} else {crate::tnt::explode(world, &mut items, &players, centre, power, false, &mut next_id);}
         world.blast_killer = "";
     }
 
@@ -1523,6 +1535,7 @@ fn small_fireball_hit(shared: &Shared, world: &mut World, items: &mut crate::ite
                 }
             }
         }
+        None if flying.plugin_incendiary == Some(false) => {},
         None => {
             // Клетка перед блоком: откуда пришёл шар (противоположно скорости по главной оси).
             let mut cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);

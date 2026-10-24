@@ -4,6 +4,12 @@ public final class RemotePlayer implements Player {
  private final String uuid,name;private final Location location;private final GameMode mode;
  public RemotePlayer(String[] a,int i){uuid=a[i];name=a[i+1];mode=GameMode.values()[Integer.parseInt(a[i+2])];location=new Location(new RemoteWorld(Integer.parseInt(a[i+3])),Double.parseDouble(a[i+4]),Double.parseDouble(a[i+5]),Double.parseDouble(a[i+6]),Float.parseFloat(a[i+7]),Float.parseFloat(a[i+8]));}
  @Override public boolean equals(Object other){return other instanceof RemotePlayer&&uuid.equals(((RemotePlayer)other).uuid);}@Override public int hashCode(){return uuid.hashCode();}
+ public boolean getAllowFlight(){return Host.call(89,uuid)[0].equals("1");}
+ public boolean isFlying(){return Host.call(89,uuid)[1].equals("1");}
+ public net.kyori.adventure.util.TriState hasFlyingFallDamage(){return net.kyori.adventure.util.TriState.values()[Integer.parseInt(Host.call(89,uuid)[2])+1];}
+ public void setAllowFlight(boolean value){Host.call(90,uuid,"0",value?"1":"0");}
+ public void setFlying(boolean value){Host.call(90,uuid,"1",value?"1":"0");}
+ public void setFlyingFallDamage(net.kyori.adventure.util.TriState value){java.util.Objects.requireNonNull(value);Host.call(90,uuid,"2",""+(value.ordinal()-1));}
  private String[] state(){return Host.call(65,uuid);}
  public int getFireTicks(){return Integer.parseInt(state()[0]);}public void setFireTicks(int ticks){Host.call(66,uuid,""+ticks);}
  public void damage(double amount){if(!Double.isFinite(amount)||amount<0)throw new IllegalArgumentException("Недопустимый урон");Host.call(67,uuid,""+amount);}
@@ -34,5 +40,6 @@ public final class RemotePlayer implements Player {
  public boolean teleport(Location l){return Host.yes(3,uuid,""+((RemoteWorld)l.getWorld()).dimension,""+l.getX(),""+l.getY(),""+l.getZ(),""+l.getYaw(),""+l.getPitch());}
  public void kickPlayer(String r){Host.call(20,uuid,r);}
  public InventoryView openInventory(Inventory inv){return ChestViews.open(this,inv);}public InventoryView getOpenInventory(){return ChestViews.current(this);}public void closeInventory(){ChestViews.close(this);}
+ public EntityEquipment getEquipment(){return slot->{switch(slot){case HAND:return getInventory().getItemInMainHand();case OFF_HAND:return getInventory().getItemInOffHand();case FEET:return getInventory().getItem(36);case LEGS:return getInventory().getItem(37);case CHEST:return getInventory().getItem(38);case HEAD:return getInventory().getHelmet();default:return null;}};}
  public PlayerInventory getInventory(){return new PlayerItems(this);}
 }

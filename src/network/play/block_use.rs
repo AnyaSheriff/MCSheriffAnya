@@ -183,7 +183,7 @@ pub(super) fn use_block(player: &mut PlayerState, shared: &Shared, p: Pos, face:
     redstone::settle(&mut world);
     drop(world);
     if used.eat {
-        player.vit.eat(2, 0.4);
+        vitals::feed(shared,player,2,0.4,None);
         player.progress.custom("eat_cake_slice", 1);
     }
     let mut slots = if used.spend { spend_placed(player) } else { Vec::new() };

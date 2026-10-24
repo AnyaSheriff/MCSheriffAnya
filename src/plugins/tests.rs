@@ -764,3 +764,73 @@ fn player_state_and_mutations_use_the_connection_snapshot() {
     let orders=shared.players.lock().unwrap().take_orders(&[1;16]);assert!(orders.iter().any(|o| matches!(o,crate::players::Order::Hurt {amount,..} if *amount==3.0)));assert!(orders.iter().any(|o| matches!(o,crate::players::Order::Experience {amount:8,levels:false,set:false})));
     assert!(ctx.get_state("не UUID".into()).is_err());
 }
+
+#[test]
+fn plugin_flight_projects_state_and_rejects_unpermitted_flying() {
+    use super::api::mcsa::api::player::Host as _;
+    let root=server_root("flight-api");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root.clone()).unwrap();host.load("hello").unwrap();
+    shared.players.lock().unwrap().ui.info.insert([1;16],crate::presentation::Info::default());
+    let ctx=host.loaded[0].store.data_mut();let uuid=crate::network::login::format_uuid(&[1;16]);
+    assert!(!ctx.get_flight(uuid.clone()).unwrap().allowed);
+    assert!(ctx.set_flight(uuid.clone(),1,1).is_err());
+    ctx.set_flight(uuid.clone(),0,1).unwrap();ctx.set_flight(uuid.clone(),1,1).unwrap();
+    ctx.set_flight(uuid.clone(),2,1).unwrap();
+    let state=ctx.get_flight(uuid.clone()).unwrap();assert!(state.allowed&&state.flying);assert_eq!(state.fall_damage,1);
+    ctx.set_flight(uuid.clone(),0,0).unwrap();assert!(!ctx.get_flight(uuid.clone()).unwrap().flying);
+    ctx.set_flight(uuid.clone(),2,-1).unwrap();assert_eq!(ctx.get_flight(uuid.clone()).unwrap().fall_damage,-1);
+    assert!(ctx.set_flight(uuid.clone(),3,0).is_err());assert!(ctx.set_flight(uuid,1,-1).is_err());
+    host.unload("hello").unwrap();assert!(shared.players.lock().unwrap().ui.info[&[1;16]].plugin_state.flight_owners.iter().all(Option::is_none));
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn plugin_world_rays_are_bounded_and_monster_limits_release_on_unload() {
+    use super::api::mcsa::api::world::Host as _;
+    let root=server_root("rays-and-limits");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root.clone()).unwrap();host.load("hello").unwrap();
+    {let mut world=shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap();world.set_block(0,70,4,crate::blocks::state_by_name("stone").unwrap());}
+    let ctx=host.loaded[0].store.data_mut();let start=wit::Location {dimension:wit::Dimension::Overworld,x:0.5,y:70.5,z:0.5,yaw:None,pitch:None};
+    let hit=ctx.ray_blocks(start,0.0,0.0,4.0,8.0,0,true).unwrap().unwrap();assert_eq!((hit.block.x,hit.block.y,hit.block.z,hit.face),(0,70,4,2));assert_eq!(hit.z,4.0);
+    assert!(ctx.ray_blocks(start,0.0,0.0,1.0,3.0,0,true).unwrap().is_none());
+    assert!(ctx.ray_blocks(start,0.0,0.0,0.0,8.0,0,true).is_err());assert!(ctx.ray_blocks(start,0.0,0.0,1.0,513.0,0,true).is_err());
+    assert!(ctx.ray_blocks(start,f64::NAN,0.0,1.0,8.0,0,true).is_err());
+    let original=ctx.monster_limit(wit::Dimension::Overworld);ctx.set_monster_limit(wit::Dimension::Overworld,0).unwrap();assert_eq!(ctx.monster_limit(wit::Dimension::Overworld),0);assert_eq!(ctx.monster_limit(wit::Dimension::Nether),original);
+    assert!(ctx.set_monster_limit(wit::Dimension::Overworld,10_001).is_err());
+    host.unload("hello").unwrap();assert!(shared.world_in(crate::dimension::Dimension::Overworld).lock().unwrap().plugin_monster_limits.is_empty());
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn entity_snapshots_launch_potions_and_horse_mutations_reach_native_state() {
+    use super::api::mcsa::api::{entities::Host as _, player::Host as _, inventory::Item};
+    use crate::dimension::Dimension;
+    let root=server_root("native-entity-state");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root.clone()).unwrap();host.load("hello").unwrap();
+    shared.players.lock().unwrap().ui.info.insert([1;16],crate::presentation::Info {plugin_state:crate::presentation::PlayerState {eye_height:1.62,..Default::default()},..Default::default()});
+    let horse=crate::mob::Mob::new(501,crate::mob::Kind::SkeletonHorse,(2.0,70.0,3.0));let horse_uuid=crate::network::login::format_uuid(&horse.uuid);
+    shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(horse);
+    let ctx=host.loaded[0].store.data_mut();let player=crate::network::login::format_uuid(&[1;16]);
+    let snapshot=ctx.describe(horse_uuid.clone()).unwrap();assert_eq!(snapshot.kind,"skeleton_horse");assert!(snapshot.living);assert!(snapshot.width>0.0);assert_eq!(snapshot.at.x,2.0);
+    super::api::mcsa::api::entities::Host::set_health(ctx,horse_uuid.clone(),5.0).unwrap();assert_eq!(ctx.describe(horse_uuid.clone()).unwrap().health,5.0);assert!(super::api::mcsa::api::entities::Host::set_health(ctx,horse_uuid.clone(),f64::NAN).is_err());
+    let effect=super::api::mcsa::api::player::PotionEffect {kind:"speed".into(),duration:200,amplifier:1,ambient:false,particles:true,icon:true};ctx.add_potion_effect(horse_uuid.clone(),effect).unwrap();assert_eq!(ctx.effects(horse_uuid.clone()).unwrap()[0].duration,200);ctx.remove_potion_effect(horse_uuid.clone(),"speed".into()).unwrap();assert!(ctx.effects(horse_uuid.clone()).unwrap().is_empty());
+    ctx.tame_horse(horse_uuid.clone(),true).unwrap();ctx.set_horse_owner(horse_uuid.clone(),Some(player.clone())).unwrap();assert!(ctx.horse(horse_uuid.clone()).unwrap().tamed);
+    let saddle=Item {kind:"saddle".into(),count:1,metadata:String::new()};ctx.set_horse_item(horse_uuid.clone(),0,Some(saddle)).unwrap();assert_eq!(ctx.horse(horse_uuid.clone()).unwrap().items[0].as_ref().unwrap().kind,"saddle");
+    assert!(ctx.set_horse_item(horse_uuid.clone(),0,Some(Item {kind:"diamond".into(),count:1,metadata:String::new()})).is_err());ctx.set_horse_item(horse_uuid.clone(),0,None).unwrap();assert!(ctx.horse(horse_uuid.clone()).unwrap().items[0].is_none());
+    let velocity=||super::api::mcsa::api::entities::Vector {x:0.0,y:0.2,z:1.0};
+    let potion=ctx.launch(player.clone(),"splash_potion".into(),velocity()).unwrap();assert_eq!(ctx.describe(potion.clone()).unwrap().shooter,player);ctx.set_potion_item(potion.clone(),Item {kind:"splash_potion".into(),count:1,metadata:r#"{"potion":"minecraft:healing"}"#.into()}).unwrap();assert!(ctx.effects(potion).unwrap().iter().any(|effect|effect.kind=="instant_health"));
+    let ball=ctx.launch(player.clone(),"fireball".into(),velocity()).unwrap();ctx.set_explosive(ball.clone(),Some(0.0),Some(false)).unwrap();assert!(ctx.set_explosive(ball.clone(),Some(f32::NAN),None).is_err());
+    assert!(ctx.launch(player,"tnt".into(),velocity()).is_err());
+    {let thrown=shared.thrown.lock().unwrap();let shot=thrown.flying.iter().find(|shot|crate::network::login::format_uuid(&shot.uuid)==ball).unwrap();assert!(shot.in_owner);assert_eq!(shot.plugin_yield,Some(0.0));assert_eq!(shot.plugin_incendiary,Some(false));assert_eq!(shot.vz,1.0);}
+    shared.world_in(Dimension::Overworld).lock().unwrap().set_block(0,63,0,crate::blocks::state_by_name("stone").unwrap());
+    let at=wit::Location {dimension:wit::Dimension::Overworld,x:0.5,y:70.0,z:0.5,yaw:Some(45.0),pitch:None};
+    let vex=ctx.create_mob(at,"vex".into()).unwrap();assert_eq!(ctx.describe(vex.clone()).unwrap().at.yaw,Some(45.0));assert!(!ctx.in_world(wit::Dimension::Overworld).unwrap().iter().any(|s|s.uuid==vex));
+    ctx.mob_control(vex.clone(),0,0).unwrap();ctx.mob_control(vex.clone(),1,1).unwrap();ctx.mob_control(vex.clone(),2,40).unwrap();ctx.set_target(vex.clone(),Some(crate::network::login::format_uuid(&[1;16]))).unwrap();
+    ctx.finish_mob(vex.clone(),true).unwrap();assert!(ctx.valid(vex.clone()));assert_eq!(ctx.get_target(vex.clone()).unwrap(),Some(crate::network::login::format_uuid(&[1;16])));
+    let aborted=ctx.create_mob(at,"vex".into()).unwrap();ctx.finish_mob(aborted.clone(),false).unwrap();assert!(!ctx.valid(aborted));
+    let items=shared.items_in(Dimension::Overworld).lock().unwrap();let vex=items.mobs().iter().find(|m|crate::network::login::format_uuid(&m.uuid)==vex).unwrap();assert!(!vex.persistent);assert_eq!(vex.illager.life,40);assert_eq!(vex.illager.plugin_limited_life,Some(true));drop(items);
+    let mut cloud=crate::thrown::Cloud::lingering(610,Dimension::Overworld,(1.0,70.0,2.0),Vec::new(),1,false);cloud.base_potion=crate::survival::potion_number("long_poison");let cloud_uuid=crate::network::login::format_uuid(&cloud.uuid);shared.thrown.lock().unwrap().clouds.push(cloud);
+    assert!(ctx.valid(cloud_uuid.clone()));assert_eq!(ctx.describe(cloud_uuid.clone()).unwrap().kind,"area_effect_cloud");assert_eq!(ctx.cloud_potion(cloud_uuid.clone()).unwrap(),Some("long_poison".into()));assert!(ctx.effects(cloud_uuid.clone()).unwrap().is_empty());ctx.remove(cloud_uuid.clone()).unwrap();assert!(!ctx.valid(cloud_uuid));
+    let frame=crate::frame::Frame::new(611,(0,70,0),crate::frame::NORTH,false);let frame_uuid=crate::network::login::format_uuid(&frame.uuid);shared.items_in(Dimension::Overworld).lock().unwrap().add_frame(frame);assert!(ctx.valid(frame_uuid.clone()));assert_eq!(ctx.describe(frame_uuid.clone()).unwrap().kind,"item_frame");ctx.remove(frame_uuid.clone()).unwrap();assert!(!ctx.valid(frame_uuid));
+    std::fs::remove_dir_all(root).unwrap();
+}

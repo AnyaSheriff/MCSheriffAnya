@@ -1224,6 +1224,8 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    /// Предел монстров по владельцам; последняя правка действует до выгрузки.
+    pub plugin_monster_limits: Vec<(String, usize)>,
     pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
     pub fire_tick: bool,
     pub fire_difficulty: u8,
@@ -1546,6 +1548,7 @@ impl World {
     #[cfg(test)]
     pub fn in_memory() -> Self {
         Self {
+            plugin_monster_limits: Vec::new(),
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1705,6 +1708,7 @@ impl World {
         log_info!("Тип мира: {}", kind.name());
 
         let mut world = Self {
+            plugin_monster_limits: Vec::new(),
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,

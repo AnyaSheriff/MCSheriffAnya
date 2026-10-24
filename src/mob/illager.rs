@@ -158,6 +158,8 @@ pub struct State {
 
     /// Вредина: тактов до начала урона (0 — живёт без срока), рывок к цели.
     pub life: i32,
+    /// Явное правило Bukkit; None сохраняет естественную жизнь вредины.
+    pub plugin_limited_life: Option<bool>,
     pub charging: bool,
 
     /// Разоритель: такты оглушения, в конце — рёв.
@@ -813,7 +815,8 @@ pub fn fangs(mob: &mut Mob, ctx: &Ctx) -> Plan {
 /// Вредина: летит к цели, рывком бьёт; со сроком — после него теряет по 1
 /// здоровья в секунду (вики, Vex).
 fn vex(mob: &mut Mob, ctx: &Ctx, rng: &mut Rng, mut plan: Plan) -> Plan {
-    if mob.illager.life > 0 {
+    if mob.illager.plugin_limited_life == Some(true) && mob.illager.life == 0 {mob.illager.life= -1;}
+    if mob.illager.life > 0 && mob.illager.plugin_limited_life != Some(false) {
         mob.illager.life -= 1;
 
         if mob.illager.life == 0 {
@@ -821,7 +824,7 @@ fn vex(mob: &mut Mob, ctx: &Ctx, rng: &mut Rng, mut plan: Plan) -> Plan {
         }
     }
 
-    if mob.illager.life < 0 && mob.ticks.is_multiple_of(20) {
+    if mob.illager.life < 0 && mob.illager.plugin_limited_life != Some(false) && mob.ticks.is_multiple_of(20) {
         mob.hurt(1.0, crate::survival::Source::Generic, None);
     }
 

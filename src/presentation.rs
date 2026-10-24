@@ -27,6 +27,10 @@ pub struct Info {
 
 #[derive(Clone, Default)]
 pub struct PlayerState {
+    pub flight_owners: [Option<String>;3],
+    pub flight_allowed: bool,
+    pub flying: bool,
+    pub flight_fall_damage: Option<bool>,
     pub velocity: (f64, f64, f64),
     pub fire_ticks: i32,
     pub in_water: bool,

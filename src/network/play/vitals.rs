@@ -684,6 +684,9 @@ pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
         player.game_mode = mode;
     }
     player.creative_flying = false;
+    player.plugin_flight = None;
+    player.flight_owners[0] = None;
+    player.flight_owners[1] = None;
     player.attrs.set_creative_ranges(mode == GAME_MODE_CREATIVE);
 }
 
@@ -762,7 +765,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // Высота падения вместе с этим шагом — для грядки.
         let fallen = (player.vit.fall + (-dy).max(0.0)) as f32;
         let smashed = player.vit.smash_landing;
-        let damage = player.vit.land_java(dy, on_ground, env.soft, env.landing);
+        let damage = if player.fall_damage_allowed() {player.vit.land_java(dy, on_ground, env.soft, env.landing)} else {player.vit.fall=0.0;None};
         if env.soft { player.net.mode_fall_velocity = None; }
         if on_ground && fallen >= 2.0 {
             player.progress.custom("fall_one_cm", (fallen * 100.0).round() as i32);
@@ -2881,13 +2884,16 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         }
 
         if player.vit.food < 20 && player.vit.age.is_multiple_of(10) {
-            player.vit.food += 1;
+            feed(shared,player,1,0.0,None);
         }
     }
 
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
 
-    if let Some(amount) = player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)) {
+    let (old_food,old_saturation)=(player.vit.food,player.vit.saturation);
+    let starvation=player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed));
+    food_change(shared,player,old_food,old_saturation,None);
+    if let Some(amount)=starvation.filter(|_|player.vit.food==0) {
         hit(stream, shared, player, amount, Source::Starve, 0).await?;
     }
 
@@ -2914,7 +2920,9 @@ pub(super) fn effect_reactions(shared: &Shared, player: &mut PlayerState, dead: 
 async fn effects_and_eating_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     effect_reactions(shared, player, false);
     let entity = player.entity_id;
+    let (old_food,old_saturation)=(player.vit.food,player.vit.saturation);
     let survival::EffectTick { hurt, gone, restored } = player.vit.effects_tick();
+    food_change(shared,player,old_food,old_saturation,None);
 
     trial_omen(stream, shared, player, difficulty).await?;
     omens(stream, shared, player, difficulty, &gone).await?;
@@ -3130,12 +3138,24 @@ pub(super) fn consume_stack(player: &mut PlayerState, slot: i32, remainder: &str
     }
 }
 
+// Событие видит старое значение игрока; насыщение меняется вместе с принятой едой.
+pub(super) fn food_change(shared: &Shared, player: &mut PlayerState, old: i32, old_saturation: f32, item: Option<Stack>) {
+    let proposed=player.vit.food;if !crate::plugins::active() || proposed==old && item.is_none() {return;}
+    let saturation=player.vit.saturation;player.vit.food=old;player.vit.saturation=old_saturation;super::publish_ui(shared,player);
+    let decision=crate::plugins::food_level(&super::plugin_view(player),proposed,item);let accepted=decision.unwrap_or(old);
+    player.vit.food=accepted;
+    player.vit.saturation=(if decision.is_none() {old_saturation} else if proposed>old {old_saturation+(saturation-old_saturation)*((accepted-old).max(0) as f32/(proposed-old) as f32)} else {saturation}).clamp(0.0,accepted as f32);
+}
+pub(super) fn feed(shared: &Shared, player: &mut PlayerState, nutrition: i32, saturation: f32, item: Option<Stack>) {
+    let (old,old_saturation)=(player.vit.food,player.vit.saturation);player.vit.eat(nutrition,saturation);food_change(shared,player,old,old_saturation,item);
+}
+
 async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, nutrition: i32, saturation: f32) -> io::Result<()> {
     let at = (player.x, player.y, player.z);
     let stack = player.inventory.slot(slot);
     let name = stack.and_then(|stack| blocks::item_name(stack.item)).unwrap_or("");
 
-    player.vit.eat(nutrition, saturation);
+    feed(shared,player,nutrition,saturation,stack);
     if name == "chorus_fruit" {
         let destination = {
             let mut world = shared.world_in(player.dimension).lock().expect("мир");
@@ -3181,6 +3201,7 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
 /// Допили: молоко снимает эффекты, в руке остаётся посуда (в творческом
 /// режиме — прежний предмет). Звук питья клиент играет сам [проверить].
 async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, drink: Drink) -> io::Result<()> {
+    let stack=player.inventory.slot(slot);
     if let Some(left) = consume_stack(player, slot, drink.remainder()) {
         super::throw_out(shared, player, left);
     }
@@ -3190,7 +3211,7 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     if drink == Drink::Milk {
         clear_effects(stream, player, None).await?;
     } else if drink == Drink::Honey {
-        player.vit.eat(6, 1.2);
+        feed(shared,player,6,1.2,stack);
         // Вики, Honey Bottle: «unique sound»; после него — отрыжка, как у еды
         // (чёрный ящик, tails-honey-offhand: оба звука до снятия яда).
         let at = (player.x, player.y, player.z);
@@ -4073,5 +4094,23 @@ mod hot_block_enchantment_tests {
         assert!(!bedrock_environment(&shared, &mut player).iter().any(|(_, source)| *source == Source::Campfire));
         shared.world_in(player.dimension).lock().unwrap().set_block_silently(0, 64, 0, fluids::state_of(fluids::Kind::Lava, 0));
         assert!(bedrock_environment(&shared, &mut player).contains(&(4.0, Source::Lava)));
+    }
+}
+
+#[cfg(test)]
+mod plugin_flight_tests {
+    use super::*;
+    #[test]
+    fn flight_permission_and_fall_rules_preserve_mode_defaults() {
+        let mut player=PlayerState::new([31;16],"Flight".into(),None,None,0x7f,0,(0.5,70.0,0.5));
+        player.game_mode=GAME_MODE_SURVIVAL;
+        assert!(!player.flight_allowed());assert!(player.fall_damage_allowed());
+        player.plugin_flight=Some(true);assert!(player.flight_allowed());assert!(!player.fall_damage_allowed());
+        player.flight_fall_damage=Some(true);assert!(player.fall_damage_allowed());
+        player.creative_flying=true;assert!(!player.fall_damage_allowed());
+        player.flight_owners[2]=Some("fixture".into());
+        change_game_mode(&mut player,GAME_MODE_SURVIVAL);assert!(!player.flight_allowed());assert!(!player.creative_flying);assert_eq!(player.flight_owners[2].as_deref(),Some("fixture"));
+        change_game_mode(&mut player,GAME_MODE_CREATIVE);assert!(player.flight_allowed());
+        change_game_mode(&mut player,GAME_MODE_SPECTATOR);assert!(player.flight_allowed());
     }
 }

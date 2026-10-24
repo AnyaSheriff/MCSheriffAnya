@@ -1141,7 +1141,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             items.mobs().iter().filter(|mob| mob.kind.hostile() && !mob.is_dead()).count()
         };
 
-        if crowd < (crate::mob::spawn::MONSTER_CAP as f64 * shared.settings.monster_spawn_multiplier).round() as usize {
+        if crowd < world.plugin_monster_limits.last().map_or_else(|| (crate::mob::spawn::MONSTER_CAP as f64 * shared.settings.monster_spawn_multiplier).round() as usize, |(_,limit)| *limit) {
             let ambient = if skyless { 0 } else { world.weather.spawn_sky(redstone::ambient_sky(time)) };
             let surface = |x: i32, z: i32| {
                 let mut y = crate::world::MIN_Y + crate::world::WORLD_HEIGHT - 1;

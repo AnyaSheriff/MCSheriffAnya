@@ -36,6 +36,9 @@ static bool utf8_text(const uint8_t *data,size_t len) {
     }return true;
 }
 int32_t mcsa_length(void) { return (int32_t)output_len; }
+static void entity_snapshot(mcsa_api_entities_snapshot_t *p) {
+    string(p->uuid);string(p->kind);number(p->at.dimension);number(p->at.x);number(p->at.y);number(p->at.z);number(p->at.yaw.is_some?p->at.yaw.val:0);number(p->at.pitch.is_some?p->at.pitch.val:0);number(p->width);number(p->height);number(p->health);number(p->living);number(p->hostile);number(p->animal);string(p->shooter);number(p->embedded);
+}
 void *mcsa_call(int32_t op,void *data,int32_t len) {
     char *a[1030]={0}; int count=0; char *copy=malloc((size_t)len+1); if(!copy)abort();
     memcpy(copy,data,len);copy[len]=0;
@@ -126,6 +129,31 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 86: {mcsa_api_types_location_t at={.dimension=atoi(a[0]),.x=atof(a[1]),.y=atof(a[2]),.z=atof(a[3])};if(!mcsa_api_world_spawn_particle(&at,&s[4],atoi(a[5]),atof(a[6]),atof(a[7]),atof(a[8]),&err))error(err);break;}
     case 87: {mcsa_api_types_block_pos_t pos={atoi(a[0]),atoi(a[1]),atoi(a[2]),atoi(a[3])};bool result;if(!mcsa_api_world_break_naturally(&pos,&result,&err))error(err);else number(result);break;}
     case 88: number(mcsa_api_server_is_stopping());break;
+    case 89: {mcsa_api_player_flight_t state;if(!mcsa_api_player_get_flight(&s[0],&state,&err))error(err);else {number(state.allowed);number(state.flying);number(state.fall_damage);}break;}
+    case 90: if(!mcsa_api_player_set_flight(&s[0],atoi(a[1]),atoi(a[2]),&err))error(err);break;
+    case 91: {mcsa_api_types_location_t at={.dimension=atoi(a[0]),.x=atof(a[1]),.y=atof(a[2]),.z=atof(a[3])};mcsa_api_world_option_ray_hit_t hit;if(!mcsa_api_world_ray_blocks(&at,atof(a[4]),atof(a[5]),atof(a[6]),atof(a[7]),atoi(a[8]),!strcmp(a[9],"true"),&hit,&err))error(err);else if(hit.is_some){number(hit.val.x);number(hit.val.y);number(hit.val.z);number(hit.val.block.x);number(hit.val.block.y);number(hit.val.block.z);number(hit.val.face);}break;}
+    case 92: number(mcsa_api_world_monster_limit(atoi(a[0])));break;
+    case 93: if(!mcsa_api_world_set_monster_limit(atoi(a[0]),atoi(a[1]),&err))error(err);break;
+    case 94: {mcsa_api_entities_snapshot_t state;if(!mcsa_api_entities_describe(&s[0],&state,&err))error(err);else {entity_snapshot(&state);mcsa_api_entities_snapshot_free(&state);}break;}
+    case 95: {mcsa_api_entities_list_snapshot_t states;if(!mcsa_api_entities_in_world(atoi(a[0]),&states,&err))error(err);else {for(size_t i=0;i<states.len;i++)entity_snapshot(&states.ptr[i]);mcsa_api_entities_list_snapshot_free(&states);}break;}
+    case 96: {mcsa_api_entities_list_potion_effect_t effects;if(!mcsa_api_entities_effects(&s[0],&effects,&err))error(err);else {for(size_t i=0;i<effects.len;i++){mcsa_api_player_potion_effect_t *effect=&effects.ptr[i];string(effect->kind);number(effect->duration);number(effect->amplifier);number(effect->ambient);number(effect->particles);number(effect->icon);}mcsa_api_entities_list_potion_effect_free(&effects);}break;}
+    case 97: {mcsa_api_entities_option_item_t stack;if(!mcsa_api_entities_equipment(&s[0],atoi(a[1]),&stack,&err))error(err);else {if(stack.is_some){string(stack.val.kind);number(stack.val.count);string(stack.val.metadata);}mcsa_api_entities_option_item_free(&stack);}break;}
+    case 98: if(!mcsa_api_entities_set_health(&s[0],atof(a[1]),&err))error(err);break;
+    case 99: {mcsa_api_types_location_t at={.dimension=atoi(a[1]),.x=atof(a[2]),.y=atof(a[3]),.z=atof(a[4]),.yaw={true,atof(a[5])},.pitch={true,atof(a[6])}};bool result;if(!mcsa_api_entities_teleport(&s[0],&at,&result,&err))error(err);else number(result);break;}
+    case 100: if(!mcsa_api_entities_set_arrow_critical(&s[0],!strcmp(a[1],"true"),&err))error(err);break;
+    case 101: {mcsa_api_inventory_item_t stack={.kind=s[1],.count=atoi(a[2]),.metadata=s[3]};if(!mcsa_api_entities_set_potion_item(&s[0],&stack,&err))error(err);break;}
+    case 102: {mcsa_api_entities_vector_t velocity={atof(a[2]),atof(a[3]),atof(a[4])};plugin_string_t uuid;if(!mcsa_api_entities_launch(&s[0],&s[1],&velocity,&uuid,&err))error(err);else {string(uuid);plugin_string_free(&uuid);}break;}
+    case 103: {float power=atof(a[2]);bool fire=atoi(a[2]);if(!mcsa_api_entities_set_explosive(&s[0],!strcmp(a[1],"0")?&power:NULL,!strcmp(a[1],"1")?&fire:NULL,&err))error(err);break;}
+    case 104: {mcsa_api_entities_horse_state_t state;if(!mcsa_api_entities_horse(&s[0],&state,&err))error(err);else {number(state.tamed);number(state.chest);for(size_t i=0;i<state.items.len;i++){if(state.items.ptr[i].is_some){string(state.items.ptr[i].val.kind);number(state.items.ptr[i].val.count);string(state.items.ptr[i].val.metadata);}else {text("air");text("0");text("");}}mcsa_api_entities_horse_state_free(&state);}break;}
+    case 105: {mcsa_api_inventory_item_t item={.kind=s[2],.count=atoi(a[3]),.metadata=s[4]};if(!mcsa_api_entities_set_horse_item(&s[0],atoi(a[1]),item.count?&item:NULL,&err))error(err);break;}
+    case 106: if(!strcmp(a[1],"0")){if(!mcsa_api_entities_tame_horse(&s[0],atoi(a[2]),&err))error(err);}else {if(!mcsa_api_entities_set_horse_owner(&s[0],s[2].len?&s[2]:NULL,&err))error(err);}break;
+    case 107: {mcsa_api_types_location_t at={.dimension=atoi(a[0]),.x=atof(a[1]),.y=atof(a[2]),.z=atof(a[3]),.yaw={true,atof(a[4])},.pitch={true,atof(a[5])}};plugin_string_t uuid;if(!mcsa_api_entities_create_mob(&at,&s[6],&uuid,&err))error(err);else {string(uuid);plugin_string_free(&uuid);}break;}
+    case 108: if(!mcsa_api_entities_finish_mob(&s[0],atoi(a[1]),&err))error(err);break;
+    case 110: if(!mcsa_api_entities_mob_control(&s[0],atoi(a[1]),atoi(a[2]),&err))error(err);break;
+    case 111: {plugin_option_string_t target;if(!mcsa_api_entities_get_target(&s[0],&target,&err))error(err);else {if(target.is_some)string(target.val);plugin_option_string_free(&target);}break;}
+    case 112: if(!mcsa_api_entities_set_target(&s[0],s[1].len?&s[1]:NULL,&err))error(err);break;
+    case 113: {mcsa_api_inventory_item_t stack={.kind=s[0],.count=atoi(a[1]),.metadata=s[2]},result;if(!mcsa_api_inventory_enchant_with_levels(&stack,atoi(a[3]),!strcmp(a[4],"true"),strtoll(a[5],NULL,10),&result,&err))error(err);else {string(result.kind);number(result.count);string(result.metadata);mcsa_api_inventory_item_free(&result);}break;}
+    case 114: {plugin_option_string_t type;if(!mcsa_api_entities_cloud_potion(&s[0],&type,&err))error(err);else {if(type.is_some)string(type.val);plugin_option_string_free(&type);}break;}
     default: abort();
     }
     free(copy);return output;
@@ -197,3 +225,24 @@ void exports_mcsa_api_player_events_on_respawn(mcsa_api_types_player_t *who,mcsa
     clear();player(who);number(destination->dimension);number(destination->x);number(destination->y);number(destination->z);number(destination->yaw.is_some?destination->yaw.val:who->yaw);number(destination->pitch.is_some?destination->pitch.val:who->pitch);number(bed);number(anchor);
     dispatch(15);*ret=*destination;unsigned dimension;double x,y,z;float yaw,pitch;if(!event_text||sscanf(event_text,"%u %lf %lf %lf %f %f",&dimension,&x,&y,&z,&yaw,&pitch)!=6||dimension>2)abort();ret->dimension=dimension;ret->x=x;ret->y=y;ret->z=z;ret->yaw.is_some=ret->pitch.is_some=true;ret->yaw.val=yaw;ret->pitch.val=pitch;
 }
+
+bool exports_mcsa_api_item_events_on_entity(mcsa_api_types_player_t *who,plugin_string_t *target,uint32_t hand,uint32_t *slot) {clear();player(who);string(*target);number(hand);number(slot?(int64_t)*slot:-1);return dispatch(19)==1;}
+
+bool exports_mcsa_api_item_events_on_prepare_craft(mcsa_api_types_player_t *who,exports_mcsa_api_item_events_list_option_item_t *grid,mcsa_api_inventory_item_t *result,bool repair,bool table,mcsa_api_inventory_item_t *ret) {
+    clear();player(who);number(repair);number(table);if(result){string(result->kind);number(result->count);string(result->metadata);}else {text("air");text("0");text("");}
+    for(size_t i=0;i<grid->len;i++){if(grid->ptr[i].is_some){string(grid->ptr[i].val.kind);number(grid->ptr[i].val.count);string(grid->ptr[i].val.metadata);}else {text("air");text("0");text("");}}
+    dispatch(20);if(!event_text||!event_text[0])return false;char *count=strchr(event_text,'\n');if(!count)abort();*count++=0;char *metadata=strchr(count,'\n');if(!metadata)abort();*metadata++=0;plugin_string_dup(&ret->kind,event_text);ret->count=atoi(count);plugin_string_dup(&ret->metadata,metadata);return true;
+}
+
+int32_t exports_mcsa_api_item_events_on_prepare_anvil(mcsa_api_types_player_t *who,exports_mcsa_api_item_events_list_option_item_t *inputs,mcsa_api_inventory_item_t *result,int32_t cost) {
+    clear();player(who);number(cost);for(size_t i=0;i<inputs->len;i++){if(inputs->ptr[i].is_some){string(inputs->ptr[i].val.kind);number(inputs->ptr[i].val.count);string(inputs->ptr[i].val.metadata);}else {text("air");text("0");text("");}}if(result){string(result->kind);number(result->count);string(result->metadata);}else {text("air");text("0");text("");}dispatch(21);return event_text?atoi(event_text):cost;
+}
+
+void exports_mcsa_api_item_events_on_prepare_enchant(mcsa_api_types_player_t *who,mcsa_api_inventory_item_t *item,plugin_list_s32_t *properties,plugin_list_s32_t *ret) {
+    clear();player(who);string(item->kind);number(item->count);string(item->metadata);for(size_t i=0;i<properties->len;i++)number(properties->ptr[i]);dispatch(22);ret->len=0;ret->ptr=NULL;if(!event_text||!*event_text)return;ret->ptr=malloc(10*sizeof(int32_t));if(!ret->ptr)abort();char *p=event_text;for(int i=0;i<10;i++){char *end;ret->ptr[i]=strtol(p,&end,10);if(end==p)abort();p=end;}ret->len=10;
+}
+bool exports_mcsa_api_item_events_on_enchant(mcsa_api_types_player_t *who,mcsa_api_inventory_item_t *item,mcsa_api_inventory_item_t *result,uint32_t button,int32_t cost,plugin_string_t *hint,int32_t level,mcsa_api_inventory_item_t *ret) {
+    clear();player(who);string(item->kind);number(item->count);string(item->metadata);string(result->kind);number(result->count);string(result->metadata);number(button);number(cost);string(*hint);number(level);dispatch(23);if(!event_text||!*event_text)return false;char *count=strchr(event_text,'\n');if(!count)abort();*count++=0;char *metadata=strchr(count,'\n');if(!metadata)abort();*metadata++=0;plugin_string_dup(&ret->kind,event_text);ret->count=atoi(count);plugin_string_dup(&ret->metadata,metadata);return true;
+}
+
+bool exports_mcsa_api_item_events_on_food(mcsa_api_types_player_t *who,int32_t level,mcsa_api_inventory_item_t *item,int32_t *ret) {clear();player(who);number(level);if(item){string(item->kind);number(item->count);string(item->metadata);}else {text("air");text("0");text("");}if(dispatch(24)==1)return false;*ret=event_text?atoi(event_text):level;return true;}

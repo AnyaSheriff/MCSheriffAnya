@@ -1,6 +1,7 @@
 package org.bukkit;
 import org.bukkit.entity.Player;import ru.mcsa.bukkit.*;
 public final class Bukkit {
+ private static final org.bukkit.inventory.ItemFactory itemFactory=new RemoteItemFactory();public static org.bukkit.inventory.ItemFactory getItemFactory(){return itemFactory;}
  private static final Server server=new Server(){
   public java.util.Collection<? extends Player> getOnlinePlayers(){return Bukkit.getOnlinePlayers();}public Player getPlayer(String n){return Bukkit.getPlayer(n);}public Player getPlayer(java.util.UUID u){return Bukkit.getPlayer(u);}
   public int broadcastMessage(String m){return Bukkit.broadcastMessage(m);}public org.bukkit.plugin.PluginManager getPluginManager(){return RuntimeState.manager;}public org.bukkit.scheduler.BukkitScheduler getScheduler(){return RuntimeState.scheduler;}

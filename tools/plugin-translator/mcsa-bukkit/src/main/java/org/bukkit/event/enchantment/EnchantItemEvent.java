@@ -1,0 +1,6 @@
+package org.bukkit.event.enchantment;
+public class EnchantItemEvent extends org.bukkit.event.Event implements org.bukkit.event.Cancellable {
+ private final org.bukkit.entity.Player player;private final org.bukkit.inventory.ItemStack item;private final java.util.Map<org.bukkit.enchantments.Enchantment,Integer> enchants;private final int cost,button,level;private final org.bukkit.enchantments.Enchantment hint;private boolean cancelled;
+ public EnchantItemEvent(org.bukkit.entity.Player player,org.bukkit.inventory.ItemStack item,java.util.Map<org.bukkit.enchantments.Enchantment,Integer> enchants,int cost,int button,org.bukkit.enchantments.Enchantment hint,int level){this.player=player;this.item=item;this.enchants=enchants;this.cost=cost;this.button=button;this.hint=hint;this.level=level;}
+ public org.bukkit.entity.Player getEnchanter(){return player;}public org.bukkit.inventory.ItemStack getItem(){return item;}public java.util.Map<org.bukkit.enchantments.Enchantment,Integer> getEnchantsToAdd(){return enchants;}public int getExpLevelCost(){return cost;}public int whichButton(){return button;}public org.bukkit.enchantments.Enchantment getEnchantmentHint(){return hint;}public int getLevelHint(){return level;}public boolean isCancelled(){return cancelled;}public void setCancelled(boolean value){cancelled=value;}
+}

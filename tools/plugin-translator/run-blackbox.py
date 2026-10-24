@@ -78,7 +78,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут запуска ядра')
-            guarded_run(['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=60)
+            guarded_run(['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=120)
             player_pdc=list((work/'plugins/java-command/data').glob('entity-*.pdc.json'));assert len(player_pdc)==1 and 'java-command:probe' in player_pdc[0].read_text(), 'PDC сущности не сохранён в data/'
             assert (config.parent / 'queue.yml').read_text() == 'order: [first, second]', 'очередь не сохранила файл через хозяина'
             assert config.read_text() == (root / 'fixtures/scheduler/config.yml').read_text(), 'config.yml не восстановлен из JAR'

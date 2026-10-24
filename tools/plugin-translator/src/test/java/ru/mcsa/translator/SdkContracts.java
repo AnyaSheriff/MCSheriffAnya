@@ -90,6 +90,26 @@ public final class SdkContracts {
   check(((org.bukkit.block.data.Ageable)crop.getBlockData()).getAge()==4&&((org.bukkit.block.data.Ageable)crop.getBlockData()).getMaximumAge()==7);
   org.bukkit.event.player.PlayerItemConsumeEvent eating=new org.bukkit.event.player.PlayerItemConsumeEvent(null,bottle,org.bukkit.inventory.EquipmentSlot.HAND);eating.getItem().setAmount(99);check(eating.getItem().getAmount()==1);eating.setCancelled(true);check(eating.isCancelled());
   check(org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.minecraft("zombie_horse"))==org.bukkit.entity.EntityType.ZOMBIE_HORSE);
-  System.out.println("PASS: 81 контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
+  check(org.bukkit.Tag.CLIMBABLE.isTagged(org.bukkit.Material.LADDER));
+  check(!org.bukkit.Tag.CLIMBABLE.isTagged(org.bukkit.Material.STONE));
+  check(org.bukkit.Tag.LEAVES.isTagged(org.bukkit.Material.OAK_LEAVES));
+  check(!org.bukkit.Tag.LEAVES.isTagged(org.bukkit.Material.OAK_SAPLING));
+  check(org.bukkit.Tag.CROPS.isTagged(org.bukkit.Material.WHEAT));
+  check(org.bukkit.Tag.FLOWERS.isTagged(org.bukkit.Material.POPPY));
+  check(org.bukkit.Tag.REPLACEABLE.isTagged(org.bukkit.Material.AIR));
+  check(!org.bukkit.Tag.REPLACEABLE.isTagged(org.bukkit.Material.STONE));
+  check(org.bukkit.Tag.ENTITY_TYPES_UNDEAD.isTagged(org.bukkit.entity.EntityType.STRAY));
+  check(!org.bukkit.Tag.ENTITY_TYPES_UNDEAD.isTagged(org.bukkit.entity.EntityType.COW));
+  check(org.bukkit.Material.STONE.getKey().equals(NamespacedKey.minecraft("stone")));
+  org.bukkit.util.RayTraceResult hit=new org.bukkit.util.RayTraceResult(new org.bukkit.util.Vector(1,2,3));hit.getHitPosition().setX(99);check(hit.getHitPosition().getX()==1);
+  check(net.kyori.adventure.util.TriState.byBoolean((Boolean)null)==net.kyori.adventure.util.TriState.NOT_SET);
+  check(net.kyori.adventure.util.TriState.TRUE.toBooleanOrElse(false));
+  check(!net.kyori.adventure.util.TriState.FALSE.toBooleanOrElse(true));
+  org.bukkit.inventory.ItemStack bread=new org.bukkit.inventory.ItemStack(org.bukkit.Material.BREAD,2);org.bukkit.event.entity.FoodLevelChangeEvent food=new org.bukkit.event.entity.FoodLevelChangeEvent(null,14,bread);bread.setAmount(40);check(food.getItem().getAmount()==2);food.setFoodLevel(11);check(food.getFoodLevel()==11);food.setCancelled(true);check(food.isCancelled());
+  org.bukkit.enchantments.EnchantmentOffer offer=new org.bukkit.enchantments.EnchantmentOffer(org.bukkit.enchantments.Enchantment.UNBREAKING,2,30);offer.setCost(21);check(offer.getCost()==21);check(offer.getEnchantmentLevel()==2);
+  String[] prepared=new String[26];java.util.Arrays.fill(prepared,"");prepared[9]="0";prepared[10]="0";for(int i=0;i<5;i++){prepared[11+i*3]="air";prepared[12+i*3]="0";}prepared[11]="book";prepared[12]="1";ru.mcsa.bukkit.PreparedCraft matrix=new ru.mcsa.bukkit.PreparedCraft(null,prepared);org.bukkit.inventory.ItemStack result=matrix.getResult();result.setAmount(3);check(matrix.getResult().getAmount()==1);matrix.setResult(result);check(matrix.getResult().getAmount()==3);
+  org.bukkit.event.inventory.PrepareItemCraftEvent crafting=new org.bukkit.event.inventory.PrepareItemCraftEvent(matrix,matrix.view(),()->new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOOK),false);check(crafting.getRecipe().getResult().getType()==org.bukkit.Material.BOOK);
+  check(new ru.mcsa.bukkit.RemoteWorld(1).equals(new ru.mcsa.bukkit.RemoteWorld(1)));check(!new ru.mcsa.bukkit.RemoteWorld(0).equals(new ru.mcsa.bukkit.RemoteWorld(1)));
+  System.out.println("PASS: 106 контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
  }
 }
