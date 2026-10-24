@@ -124,3 +124,31 @@ fn chunk_frames_pots_and_nested_contents_obey_catalog() {
     assert!(chunk.validate_catalog(preview()).is_ok());
     assert!(matches!(chunk.validate_catalog(native()), Err(DecodeError::InvalidInventory { .. })));
 }
+
+#[test]
+fn repro_8_9_regeneration_potions_save_and_reload_without_loss() {
+    let mut world = World::palette_test_world(1792855987123998292, 0);
+    world.ensure(8, 9);
+    let chunk = &world.chunks[&(8, 9)];
+    let chest = &chunk.containers[&(5, -48, 6)];
+    let potion = crate::blocks::item_named("potion").unwrap();
+    assert_eq!(potion, 1122);
+    let potions: Vec<_> = chest.slots.iter().flatten().filter(|stack| stack.item == potion).collect();
+    assert_eq!(potions.iter().map(|stack| stack.count).sum::<i32>(), 3);
+    assert_eq!(potions.len(), 3);
+    for stack in potions {
+        assert_eq!(stack.count, 1);
+        assert_eq!(crate::survival::POTIONS[usize::from(stack.extras().potion.unwrap())], "regeneration");
+    }
+    let bytes = chunk.to_bytes_with_catalog(preview()).unwrap();
+    let back = Chunk::decode_for_load_with_catalog(&bytes, preview()).unwrap();
+    assert!(chunk.same_content(&back));
+    assert_eq!(back.to_bytes_with_catalog(preview()).unwrap(), bytes);
+    let path = std::env::temp_dir().join(format!("mcsa-recipe-potion-{}", std::process::id()));
+    std::fs::create_dir_all(&path).unwrap();
+    region::write(&path, 8, 9, &bytes).unwrap();
+    let stored = region::read(&path, 8, 9).unwrap().unwrap();
+    let reloaded = Chunk::decode_for_load_with_catalog(&stored, preview()).unwrap();
+    assert!(chunk.same_content(&reloaded));
+    std::fs::remove_dir_all(path).unwrap();
+}

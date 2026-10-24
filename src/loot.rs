@@ -823,6 +823,24 @@ pub fn fill(table: &[Pool], size: usize, dice: &mut Dice) -> Vec<Option<Stack>> 
     slots
 }
 
+/// Добыча Preview раскладывается по допустимым стопкам;
+/// данные зелья и других предметов переносятся в каждую часть.
+pub fn fill_split_stacks(table: &[Pool], size: usize, dice: &mut Dice) -> Vec<Option<Stack>> {
+    let mut slots = vec![None; size];
+    for stack in roll(table, dice) {
+        let limit = crate::blocks::stack_size(stack.item).max(1);
+        let mut remaining = stack.count;
+        while remaining > 0 {
+            let free: Vec<_> = (0..size).filter(|&at| slots[at].is_none()).collect();
+            if free.is_empty() { return slots; }
+            let count = remaining.min(limit);
+            slots[free[(dice.next() % free.len() as u64) as usize]] = Some(Stack { count, ..stack });
+            remaining -= count;
+        }
+    }
+    slots
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -931,5 +949,37 @@ mod tests {
 
         assert!(slots.iter().flatten().count() >= 3);
         assert_eq!(slots.len(), 27);
+    }
+}
+
+#[cfg(test)]
+mod stack_limit_tests {
+    use super::*;
+    #[test]
+    fn preview_chest_splits_all_potions_without_losing_components_or_quantity() {
+        let table = [Pool { rolls: (1,1), entries: &[("potion:regeneration:potion",3,3,1)], empty: 0 }];
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        for seed in 0..100 {
+            let slots = fill_split_stacks(&table,27,&mut Dice::new(seed));
+            let stacks: Vec<_> = slots.iter().flatten().collect();
+            assert_eq!(stacks.len(),3);
+            for stack in stacks {
+                assert_eq!(stack.count,1);
+                assert_eq!(crate::survival::POTIONS[usize::from(stack.extras().potion.unwrap())],"regeneration");
+                catalog.validate_stack(stack).unwrap();
+            }
+            let old = fill(&table,27,&mut Dice::new(seed));
+            assert_eq!(old.iter().flatten().map(|s| s.count).sum::<i32>(),3);
+            assert_eq!(old.iter().flatten().count(),1);
+        }
+    }
+    #[test]
+    fn valid_legacy_loot_keeps_the_same_slots_and_rng_state() {
+        for seed in 0..100 {
+            let mut old = Dice::new(seed);
+            let mut new = Dice::new(seed);
+            assert_eq!(fill(&STRONGHOLD_LIBRARY,27,&mut old),fill_split_stacks(&STRONGHOLD_LIBRARY,27,&mut new));
+            assert_eq!(old.next(),new.next());
+        }
     }
 }

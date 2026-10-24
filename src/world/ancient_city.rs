@@ -157,14 +157,14 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
     for (start_x, start_z) in near(terrain, chunk_x, chunk_z) {
         if let Some(placed) = Placed::new(terrain.seed(), start_x, start_z) {
-            paint(terrain.seed(), &placed, chunk_x, chunk_z, chunk);
+            paint(terrain.seed(), &placed, chunk_x, chunk_z, chunk, terrain.preview());
         }
     }
 }
 
 /// Блоки и сундуки города в чанке (chunk_x, chunk_z).
 #[cfg(not(seedmap_core))]
-fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut super::Chunk) {
+fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut super::Chunk, split_loot: bool) {
     let template = placed.template;
     let states = &template.states[usize::from(placed.turns % 4)];
 
@@ -195,7 +195,12 @@ fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut sup
         let mut dice = crate::loot::Dice::new(template::roll(seed, x, z, 0xAC17 ^ (wy as u64)));
         let mut chest = crate::containers::Container::new(crate::containers::Kind::Chest);
 
-        chest.slots = crate::loot::fill(table(data), chest.slots.len(), &mut dice);
+        // Прежний профиль сохраняет старую раскладку и последовательность RNG.
+        chest.slots = if split_loot {
+            crate::loot::fill_split_stacks(table(data), chest.slots.len(), &mut dice)
+        } else {
+            crate::loot::fill(table(data), chest.slots.len(), &mut dice)
+        };
         chunk.put_generated_container(x - chunk_x * 16, wy, z - chunk_z * 16, chest);
     }
 }

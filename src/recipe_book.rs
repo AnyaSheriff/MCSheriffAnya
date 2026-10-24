@@ -412,7 +412,7 @@ impl Book {
         groups.into_iter().map(|group| {
             let mut body = encode_varint(ADD);
             body.extend(encode_varint(group.len() as i32));
-            for (id, entry) in group { self.sent.insert(entry.key.clone()); body.extend(entry_body(id, entry, !replace)); }
+            for (id, entry) in group { self.sent.insert(entry.key.clone()); body.extend(entry_body_with_ingredients(id, entry, !replace, self.catalog().changed_rules())); }
             body.push(u8::from(replace));
             body
         }).collect()
@@ -447,7 +447,12 @@ impl Book {
     }
 }
 
+#[cfg(test)]
 fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
+    entry_body_with_ingredients(id, entry, announce, false)
+}
+
+fn entry_body_with_ingredients(id: usize, entry: &Entry, announce: bool, explicit_sets: bool) -> Vec<u8> {
     let mut body = encode_varint(id as i32);
     match &entry.display {
         Display::Crafting(recipe) => {
@@ -459,7 +464,8 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
             body.extend(encode_varint(recipe.cells.len() as i32));
             for cell in recipe.cells {
                 // Пустая клетка ступеней — слот типа 0, как в наблюдении 777.
-                if entry.slab.is_some() && !cell.is_empty() { ingredient_set(&mut body, cell); }
+                // Официальный777 передаёт ингредиенты через IDSet, включая одиночные ID.
+                if (explicit_sets || entry.slab.is_some()) && !cell.is_empty() { ingredient_set(&mut body, cell); }
                 else { slot(&mut body, cell); }
             }
             stack(&mut body, recipe.result, recipe.count);
@@ -475,7 +481,8 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
         }
         Display::Furnace { kind, input, result, xp } => {
             body.extend(encode_varint(2));
-            slot(&mut body, &[*input]);
+            if explicit_sets { ingredient_set(&mut body, &[*input]); }
+            else { slot(&mut body, &[*input]); }
             body.push(1); // любое топливо
             stack(&mut body, *result, 1);
             let (station, category) = match kind { Kind::BlastFurnace => ("blast_furnace", 8), Kind::Smoker => ("smoker", 9), _ => ("furnace", 6) };
@@ -486,7 +493,7 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
         }
         Display::Stonecutting { input, result, count } => {
             body.extend(encode_varint(3));
-            if entry.slab.is_some() { ingredient_set(&mut body, &[*input]); }
+            if explicit_sets || entry.slab.is_some() { ingredient_set(&mut body, &[*input]); }
             else { slot(&mut body, &[*input]); }
             stack(&mut body, *result, *count);
             slot(&mut body, &[blocks::item_named("stonecutter").unwrap()]);
@@ -905,3 +912,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "recipe_book_wire_tests.rs"]
+mod wire_tests;
