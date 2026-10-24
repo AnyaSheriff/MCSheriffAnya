@@ -55,6 +55,12 @@ public final class SdkContracts {
   check(org.bukkit.Material.DIAMOND_SWORD.getMaxDurability()==1561&&org.bukkit.Material.DIAMOND_SWORD.getMaxStackSize()==1);
   check(org.bukkit.Material.APPLE.isEdible()&&org.bukkit.Material.STONE.isSolid());
   check(org.bukkit.enchantments.Enchantment.SHARPNESS.conflictsWith(org.bukkit.enchantments.Enchantment.SMITE));
-  System.out.println("PASS: 40 контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
+  org.bukkit.util.Vector direction=new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(0),0,0,0,90,0).getDirection();check(Math.abs(direction.getX()+1)<1e-12&&Math.abs(direction.getZ())<1e-12);
+  org.bukkit.util.Vector vector=new org.bukkit.util.Vector(3,4,0);check(vector.length()==5&&vector.clone().normalize().length()==1&&vector.length()==5);
+  org.bukkit.Location origin=new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(0),-0.5,1,0),destination=origin.clone().add(new org.bukkit.util.Vector(3,4,0));check(origin.distanceSquared(destination)==25&&origin.getBlockX()==-1);
+  boolean wrongWorld=false;try{origin.distance(new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(1),0,0,0));}catch(IllegalArgumentException expected){wrongWorld=true;}check(wrongWorld);
+  final org.bukkit.inventory.Inventory[] held=new org.bukkit.inventory.Inventory[1];org.bukkit.inventory.InventoryHolder holder=()->held[0];held[0]=new ru.mcsa.bukkit.ChestInventory(holder,27,Component.text("Race"));held[0].setItem(13,item);check(held[0].getHolder()==holder&&held[0].getItem(13).equals(item));held[0].getItem(13).setAmount(0);check(item.getAmount()==1);
+  boolean wrongSize=false;try{new ru.mcsa.bukkit.ChestInventory(null,10,Component.empty());}catch(IllegalArgumentException expected){wrongSize=true;}check(wrongSize);
+  System.out.println("PASS: 47 контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
  }
 }

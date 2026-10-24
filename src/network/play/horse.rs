@@ -99,6 +99,7 @@ pub(super) fn slots(shared: &Shared, player: &PlayerState, id: i32) -> Option<Ve
 }
 
 pub(super) async fn open(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, entity_id: i32) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     let Some(slots) = slots(shared, player, entity_id) else { return Ok(()); };
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
     let id = player.window_counter;
@@ -108,7 +109,7 @@ pub(super) async fn open(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     packet.extend_from_slice(&encode_varint(if slots.len() > 2 { 5 } else { 0 }));
     push_i32(&mut packet, entity_id);
     write_body(stream, packet).await?;
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, plugin_chest: None, ender: false });
     send_window_content(stream, player).await
 }
 
@@ -216,7 +217,7 @@ mod tests {
         assert!(p.inventory.held().is_none());
         p.sneaking = true;
         assert_eq!(use_entity(100, &mut p, &shared).open_cart, Some(100));
-        p.window = Some(OpenWindow { id: 1, halves: Vec::new(), cart: Some(100), shown: slots(&shared, &p, 100).unwrap(), lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
+        p.window = Some(OpenWindow { id: 1, halves: Vec::new(), cart: Some(100), shown: slots(&shared, &p, 100).unwrap(), lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, plugin_chest: None, ender: false });
         let diamonds = Stack::new(blocks::item_named("diamond").unwrap(), 10);
         p.inventory.set_cursor(Some(diamonds));
         let mut click = encode_varint(1); click.extend_from_slice(&encode_varint(0));

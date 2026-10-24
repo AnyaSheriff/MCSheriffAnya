@@ -68,4 +68,25 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
             except subprocess.TimeoutExpired:
                 server.kill()
                 server.wait()
+    # Новый процесс ядра читает те же данные, сохранённые щелчком в GUI.
+    wait_for_idle()
+    with log_path.open('a') as log:
+        server = subprocess.Popen([str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+        try:
+            for _ in range(300):
+                if server.poll() is not None:
+                    raise RuntimeError('Ядро завершилось при перезапуске: ' + str(log_path))
+                if log_path.read_text().count('Готово (') >= 2:
+                    break
+                time.sleep(0.1)
+            else:
+                raise RuntimeError('Таймаут перезапуска ядра')
+            guarded_run(['node', str(root / 'blackbox.cjs'), str(port), '--restart'], check=True, timeout=30)
+        finally:
+            server.send_signal(signal.SIGINT)
+            try:
+                server.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait()
 print('PASS: изолированное ядро завершено; журнал tools/plugin-translator/target/blackbox-core.log')

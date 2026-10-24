@@ -85,6 +85,7 @@ impl Drop for InsideGuard {
 
 type Completion = wasmtime::component::TypedFunc<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>;
 type Damage = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, f64), (Option<f64>,)>;
+type InventoryEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>;
 type Death = wasmtime::component::TypedFunc<(mcsa::api::types::Player, bool), ()>;
 
 /// Загруженный плагин.
@@ -96,6 +97,7 @@ pub struct Loaded {
     completion: Option<Completion>,
     damage: Option<Damage>,
     death: Option<Death>,
+    inventory_event: Option<InventoryEvent>,
     limits: Limits,
     pub stats: Stats,
 }
@@ -306,6 +308,7 @@ impl Host {
         crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
         let ctx = PluginCtx {
             network,
+            chests: Default::default(),
             native_items: Default::default(),
             name: manifest.name.clone(),
             trusted,
@@ -377,7 +380,11 @@ impl Host {
                 crate::presentation::release(&self.shared, &manifest.name);
                 short(&error)
             })?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, death, limits, stats: Stats::default() };
+        let inventory_event = raw.get_export_index(&mut store, None, "mcsa:api/inventory-events@0.1.0")
+            .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-inventory"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>(&mut store, &index))
+            .transpose().map_err(|error| short(&error))?;
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, death, inventory_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
@@ -583,6 +590,21 @@ impl Host {
         }
         self.bury(crashes);
         if cancelled { None } else { Some(damage as f32) }
+    }
+
+    pub fn inventory_event(&mut self, owner: &str, who: &PlayerView, handle: u32, kind: u32, click: (i32, i32, i32)) -> bool {
+        let now = self.shared_tick();
+        let Some(plugin) = self.loaded.iter_mut().find(|plugin| plugin.manifest.name == owner) else { return true; };
+        if kind == 1 && plugin.store.data().chests.viewers.get(&who.uuid) == Some(&handle) { plugin.store.data_mut().chests.viewers.remove(&who.uuid); }
+        let Some(function) = plugin.inventory_event else { return true; };
+        let result = plugin.call(now, |_, store| {
+            let (cancelled,) = function.call(&mut *store, (who.to_wit(), handle, kind, click.0, click.1, click.2))?;
+            Ok(cancelled)
+        });
+        match result {
+            Ok(cancelled) => cancelled,
+            Err(reason) => { self.bury(vec![Crash { plugin: owner.into(), reason }]); true }
+        }
     }
 
     pub fn death(&mut self, who: &PlayerView, keep_inventory: bool) {

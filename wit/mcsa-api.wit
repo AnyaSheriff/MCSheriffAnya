@@ -314,6 +314,16 @@ interface attributes {
 /// Снимок и изменения инвентаря игрока; метаданные проверяет ядро.
 interface inventory {
     record item { kind: string, count: u32, metadata: string }
+    chest-create: func(size: u32, title: string) -> result<u32, string>;
+    chest-set: func(handle: u32, slot: u32, stack: option<item>) -> result<_, string>;
+    chest-snapshot: func(handle: u32) -> result<list<option<item>>, string>;
+    chest-open: func(uuid: string, handle: u32) -> result<_, string>;
+    chest-close: func(uuid: string) -> result<_, string>;
+    chest-current: func(uuid: string) -> option<u32>;
+    chest-release: func(handle: u32) -> result<_, string>;
+    cursor: func(uuid: string) -> result<option<item>, string>;
+    record view { kind: string, items: list<option<item>> }
+    open-view: func(uuid: string) -> result<view, string>;
     snapshot: func(uuid: string) -> result<list<option<item>>, string>;
     selected: func(uuid: string) -> result<u32, string>;
     set: func(uuid: string, slot: u32, stack: option<item>) -> result<_, string>;
@@ -412,6 +422,7 @@ world bukkit-plugin {
     include plugin;
     export completion;
     export combat-events;
+    export inventory-events;
 }
 
 /// Необязательные события игроков: старым компонентам экспорт не нужен.
@@ -426,4 +437,10 @@ interface combat-events {
 world sdk-module {
     include module;
     export completion;
+}
+
+/// Только собственные окна компонента; true отменяет транзакцию до изменения вещей.
+interface inventory-events {
+    use types.{player};
+    on-inventory: func(who: player, handle: u32, kind: u32, slot: s32, button: s32, mode: s32) -> bool;
 }

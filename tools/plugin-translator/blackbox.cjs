@@ -8,6 +8,7 @@ const port=Number(process.argv[2]||26210);assert(Number.isInteger(port)&&port>=2
 const bot = mineflayer.createBot({host:'127.0.0.1',port,username:'JavaTester',version:'26.1',auth:'offline'});
 const messages=[];
 let actionBar=false;
+const teams=[];bot._client.on("teams",packet=>teams.push(packet));
 bot._client.on('action_bar',()=>{actionBar=true;});
 bot.on('messagestr',message=>{messages.push(message);console.log(message);});
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -21,6 +22,13 @@ bot.once('spawn',async()=>{
   bot.chat('/javahello');await waitFor('Команда из Java работает');
   const hints=await bot.tabComplete('/javahello java-tab');assert(hints.some(h=>h.match==='java-tab-ok'));
   console.log('PASS: Tab java-tab-ok');
+  if(process.argv.includes('--restart')){bot.chat('/javahello gui-persistent');await waitFor('GUI persisted across restart');console.log('PASS: GUI plugin data survived core restart');clearTimeout(timer);bot.end();setTimeout(()=>process.exit(0),300);return;}
+  bot.chat('/javahello team');await sleep(600);assert(teams.some(packet=>JSON.stringify(packet).includes('[Elves]')),'Team prefix packet missing');assert(teams.some(packet=>JSON.stringify(packet).includes('JavaTester')),'Team entry packet missing');
+  bot.chat('/javahello gui');for(let i=0;i<100&&!bot.currentWindow;i++)await sleep(100);assert(bot.currentWindow,'GUI did not open');assert.equal(bot.currentWindow.slots[13]?.name,'diamond');
+  await bot.clickWindow(13,0,0);await waitFor('GUI cancelled with holder and item');await sleep(300);assert.equal(bot.currentWindow.slots[13]?.name,'diamond');assert.equal(bot.currentWindow.selectedItem,null);assert(!bot.inventory.items().some(item=>item.name==='diamond'));
+  bot.chat('/javahello gui-close');await waitFor('GUI close delivered');await sleep(300);assert.equal(bot.currentWindow,null);
+  bot.chat('/javahello gui-free');for(let i=0;i<100&&!bot.currentWindow;i++)await sleep(100);assert(bot.currentWindow);await bot.clickWindow(13,0,0);await waitFor('GUI allowed click');await sleep(300);assert.equal(bot.currentWindow.slots[13],null);assert.equal(bot.currentWindow.selectedItem?.name,'diamond');bot.closeWindow(bot.currentWindow);await sleep(500);assert(bot.inventory.items().some(item=>item.name==='diamond'),'Cursor item lost on close');
+  console.log('PASS: client GUI, holder, cancelled/allowed clicks, cursor return, close and scoreboard teams');
   bot.chat('/gamerule natural_health_regeneration false');await waitFor('Правило natural_health_regeneration: false');
   bot.chat('/javahello api');await waitFor('Компонент из Java работает');await sleep(600);
   await waitHealth(18);

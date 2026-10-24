@@ -680,3 +680,34 @@ fn translated_items_and_attributes_are_checked_and_project_pending_edits() {
     assert_eq!(ctx.get(uuid.clone(),"attack_damage".into()).unwrap().value,7.0);
     assert!(ctx.set_base(uuid,"attack_damage".into(),f64::NAN).is_err());
 }
+
+#[test]
+fn plugin_chests_validate_items_queue_real_windows_and_expire_on_unload() {
+    use super::api::mcsa::api::inventory::{self, Host as _};
+    let root = server_root("chests"); install(&root, "plugins", "hello", "hello", "");
+    let shared = shared(); java_info(&shared);
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap(); host.load("hello").unwrap();
+    let ctx = host.loaded[0].store.data_mut();
+    let uuid = crate::network::login::format_uuid(&[1; 16]);
+    for size in [0, 8, 10, 55, u32::MAX] { assert!(ctx.chest_create(size, r#"{"text":"Race"}"#.into()).is_err()); }
+    assert!(ctx.chest_create(27, r#"{"nbt":"secret"}"#.into()).is_err());
+    let handle = ctx.chest_create(27, r#"{"text":"Race","color":"red","extra":[]}"#.into()).unwrap();
+    let item = inventory::Item { kind: "diamond".into(), count: 1, metadata: r#"{"pdc":{"hello:race":{"type":"string","value":"elf"}}}"#.into() };
+    assert!(ctx.chest_set(handle, 13, Some(item.clone())).is_ok());
+    assert!(ctx.chest_set(handle, 27, Some(item.clone())).is_err());
+    assert!(ctx.chest_set(handle + 1, 0, None).is_err());
+    let mut forged = item; forged.metadata = r#"{"_native":99999}"#.into();
+    assert!(ctx.chest_set(handle, 0, Some(forged)).is_err());
+    assert!(ctx.chest_snapshot(handle).unwrap()[13].as_ref().unwrap().metadata.contains("elf"));
+    assert!(ctx.chest_open(crate::network::login::format_uuid(&[2; 16]), handle).is_err());
+    assert!(ctx.chest_open(uuid.clone(), handle).is_ok());
+    assert_eq!(ctx.chest_current(uuid.clone()), Some(handle));
+    assert!(ctx.chest_close(uuid).is_ok());
+    let orders = shared.players.lock().unwrap().take_orders(&[1; 16]);
+    let chest = orders.iter().find_map(|order| match order { crate::players::Order::PluginOpen { chest } => Some(chest.clone()), _ => None }).unwrap();
+    assert!(chest.lock().unwrap().active);
+    assert!(!chest.lock().unwrap().title.contains("extra"));
+    assert!(orders.iter().any(|order| matches!(order, crate::players::Order::PluginClose { owner } if owner == "hello")));
+    host.unload("hello").unwrap();
+    assert!(!chest.lock().unwrap().active);
+}

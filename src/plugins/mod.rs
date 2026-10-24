@@ -317,6 +317,11 @@ mod enabled {
         with_host(Some(amount), move |host| host.damage(&who, &cause, amount))
     }
 
+    pub fn inventory_event(owner: &str, who: &PlayerView, handle: u32, kind: u32, click: (i32, i32, i32)) -> bool {
+        let (owner, who) = (owner.to_string(), who.clone());
+        with_host(true, move |host| host.inventory_event(&owner, &who, handle, kind, click))
+    }
+
     pub fn death(who: &PlayerView, keep_inventory: bool) {
         let who = who.clone();
         with_host((), move |host| host.death(&who, keep_inventory));
@@ -397,7 +402,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -458,6 +463,7 @@ mod disabled {
     }
 
     pub fn damage(_who: &PlayerView, _cause: &str, amount: f32) -> Option<f32> { Some(amount) }
+    pub fn inventory_event(_owner: &str, _who: &PlayerView, _handle: u32, _kind: u32, _click: (i32, i32, i32)) -> bool { true }
     pub fn death(_who: &PlayerView, _keep_inventory: bool) {}
 
     pub fn command_names(_shared: &Shared, _uuid: &[u8;16]) -> Vec<String> { Vec::new() }
@@ -470,7 +476,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

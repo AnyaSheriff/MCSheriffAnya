@@ -272,7 +272,7 @@ mod tests {
         let mut p=encode_varint(window);p.extend(encode_varint(0));p.extend(slot.to_be_bytes());p.push(button);p.extend(encode_varint(mode));p.extend([0,0]);p
     }
     fn table(p: &mut PlayerState) {
-        p.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![None;10],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,ender:false,
+        p.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![None;10],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,plugin_chest: None, ender: false,
             station:Some(station::StationWindow{kind:Station::Crafting,pos:(0,64,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None})});
     }
     #[test]

@@ -3,6 +3,7 @@ import org.bukkit.inventory.*;import org.bukkit.*;
 public final class PlayerItems implements PlayerInventory {
  private final org.bukkit.entity.Player owner;private final String uuid;public PlayerItems(org.bukkit.entity.Player owner){this.owner=owner;uuid=owner.getUniqueId().toString();}
  private int slot(int slot){if(slot<0||slot>40)throw new IllegalArgumentException("Ячейка: 0..40");return slot<9?slot+36:slot<36?slot:slot==40?45:44-slot;}
+ public org.bukkit.event.inventory.InventoryType getType(){return org.bukkit.event.inventory.InventoryType.PLAYER;}
  public int getSize(){return 41;}public InventoryHolder getHolder(){return owner;}
  public ItemStack[] getContents(){String[] data=Host.call(37,uuid);ItemStack[] result=new ItemStack[41];for(int i=0;i<result.length;i++){int n=slot(i)*3;if(n+2<data.length){Material material=Material.matchMaterial(data[n]);int count=Integer.parseInt(data[n+1]);if(material!=null&&!material.isAir()&&count>0)result[i]=ItemStack.fromHost(material,count,data[n+2]);}}return result;}
  public ItemStack getItem(int index){slot(index);return getContents()[index];}

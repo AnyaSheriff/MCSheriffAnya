@@ -187,8 +187,20 @@ pub enum Change {
 /// Команды выполняются не в том подключении, которого касаются: выгнать или
 /// перенести игрока может и консоль, и другой игрок. Поэтому поручение
 /// кладётся сюда, а подключение забирает его на ближайшем круге.
+/// Пользовательский сундук: содержимое общее для всех смотрящих, без блока в мире.
+#[derive(Debug)]
+pub struct PluginChest {
+    pub owner: String,
+    pub handle: u32,
+    pub title: String,
+    pub slots: Vec<Option<crate::inventory::Stack>>,
+    pub active: bool,
+}
+
 #[derive(Clone, Debug)]
 pub enum Order {
+    PluginOpen { chest: std::sync::Arc<std::sync::Mutex<PluginChest>> },
+    PluginClose { owner: String },
     /// Выгнать с сервера, показав причину.
     Kick { reason: String },
 

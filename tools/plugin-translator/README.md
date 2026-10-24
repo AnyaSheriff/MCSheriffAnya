@@ -109,8 +109,8 @@ META-INF/services и Class-Path не передаются компилятору
 Имена команд ядра и auth зарезервированы также на стороне хозяина.
 
 Пока нет зависимостей от других плагинов, aliases и деклараций permissions в
-plugin.yml, полного java.io/произвольного YAML, GUI-инвентарей,
-interact/move/inventory событий, entity damage с прямым виновником, спавна сущностей и Java-обёрток bossbar/scoreboard.
+plugin.yml, полного java.io/произвольного YAML,
+interact/move и событий нативных контейнеров, entity damage с прямым виновником, спавна сущностей и Java-обёрток bossbar/целей scoreboard.
 Существующий WIT presentation и Rust SDK сохраняют bossbar/scoreboard/actionbar.
 Причины урона сведены к поддерживаемым типам ядра: точное соответствие Paper
 и порядок относительно износа брони ещё требуют проверки. Отмена сейчас не
@@ -179,3 +179,42 @@ DNS закрепляется за проверенными публичными 
 [reqwest ClientBuilder](https://docs.rs/reqwest/0.13.5/reqwest/struct.ClientBuilder.html).
 
 [Attribute (Paper)](https://jd.papermc.io/paper/1.21.11/org/bukkit/attribute/Attribute.html), [значения и пределы](https://minecraft.wiki/w/Attribute).
+
+## Пользовательские сундуки и команды scoreboard
+
+`Bukkit.createInventory(holder, size, Component)` создаёт сундук на 9..54 ячейки,
+кратно 9. `openInventory`, `getOpenInventory`, `closeInventory`, держатели и
+`InventoryView` связаны с настоящим окном Java-клиента. Ядро проверяет предметы
+и ItemMeta тем же путём, что и инвентарь игрока. Лимит — 512 живых сундуков на
+компонент; после закрытия последним смотрящим мост освобождает дескриптор,
+сохраняя Java-объект для повторного открытия. Выгрузка компонента закрывает окна.
+
+`InventoryOpenEvent` можно отменить до открытия. `InventoryClickEvent` приходит
+до перемещения вещей; отмена возвращает клиенту авторитетные ячейки и курсор.
+Обычный/правый/Shift/цифровой/двойной щелчок, выброс, вторая рука и творческое
+копирование выполняются ядром. Перетаскивание собирает ячейки, посылает
+`InventoryDragEvent` при завершении и распределяет вещи только после разрешения.
+`InventoryCloseEvent` приходит при закрытии, замене окна и выходе. Курсор
+возвращается в рюкзак, переполнение выпадает. События пока только для своих GUI,
+не для обычных сундуков, крафта и торговли. Изменение окна из обработчика щелчка
+следует планировать через `runTask`, как предписывает Javadoc.
+
+Нативный `getOpenInventory` даёт снимок верхних ячеек и инвентарь игрока снизу;
+запись в верхние ячейки нативного окна явно отклоняется по-русски. Блоковые
+держатели и специализированные `AnvilView`/`MerchantInventory` ещё не реализованы.
+
+`getScoreboardManager().getMainScoreboard()` поддерживает команды с именем,
+цветом, Component-префиксом/суффиксом и набором участников. Изменения уходят
+всем Java-клиентам, новый игрок получает снимок команд; перенос записи между
+командами удаляет её из старой. Команды ограничены пространством компонента и
+очищаются при выгрузке. Цели/счёт/личные доски Java пока не поддержаны.
+`getPlayerExact`, текущий такт, векторы, расстояния/направление Location и поиск
+ближайших игроков по ограничивающему прямоугольнику также доступны.
+
+Сигнатуры и контракт сверены только с публичными Javadoc:
+[Bukkit](https://jd.papermc.io/paper/1.21.11/org/bukkit/Bukkit.html),
+[InventoryView](https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/InventoryView.html),
+[InventoryClickEvent](https://jd.papermc.io/paper/1.21.11/org/bukkit/event/inventory/InventoryClickEvent.html),
+[Team](https://jd.papermc.io/paper/1.21.11/org/bukkit/scoreboard/Team.html),
+[Vector](https://jd.papermc.io/paper/1.21.11/org/bukkit/util/Vector.html),
+[Location](https://jd.papermc.io/paper/1.21.11/org/bukkit/Location.html).

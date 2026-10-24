@@ -104,7 +104,7 @@ async fn cart_window_reads_published_slots_while_clicks_read_live_slots() {
     let before=cart.slots.clone();cart.slots[0]=Some(stack("dirt"));
     shared.items_in(p.dimension).lock().unwrap().add_cart(cart);
     shared.world_in(p.dimension).lock().unwrap().publish_contents([(40,before.clone())].into());
-    p.window=Some(OpenWindow {id:1,halves:Vec::new(),cart:Some(40),shown:before,lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,station:None,ender:false});
+    p.window=Some(OpenWindow {id:1,halves:Vec::new(),cart:Some(40),shown:before,lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,station:None,plugin_chest: None, ender: false});
     let mut out=Outgoing::capture();send_window_changes(&mut out,&shared,&mut p).await.unwrap();assert!(out.queued().is_empty());
     let live=cart_slots(&shared,p.dimension,40).unwrap();assert_eq!(live[0],Some(stack("dirt")));
     shared.world_in(p.dimension).lock().unwrap().publish_contents([(40,live)].into());

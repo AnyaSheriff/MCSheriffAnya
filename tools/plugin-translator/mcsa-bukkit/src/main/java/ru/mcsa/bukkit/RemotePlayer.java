@@ -17,5 +17,6 @@ public final class RemotePlayer implements Player {
  public boolean hasPermission(String p){return Integer.parseInt(Host.text(10,uuid))>=4;}
  public boolean teleport(Location l){return Host.yes(3,uuid,""+((RemoteWorld)l.getWorld()).dimension,""+l.getX(),""+l.getY(),""+l.getZ(),""+l.getYaw(),""+l.getPitch());}
  public void kickPlayer(String r){Host.call(20,uuid,r);}
+ public InventoryView openInventory(Inventory inv){return ChestViews.open(this,inv);}public InventoryView getOpenInventory(){return ChestViews.current(this);}public void closeInventory(){ChestViews.close(this);}
  public PlayerInventory getInventory(){return new PlayerItems(this);}
 }

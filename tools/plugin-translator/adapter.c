@@ -37,10 +37,10 @@ static bool utf8_text(const uint8_t *data,size_t len) {
 }
 int32_t mcsa_length(void) { return (int32_t)output_len; }
 void *mcsa_call(int32_t op,void *data,int32_t len) {
-    char *a[16]={0}; int count=0; char *copy=malloc((size_t)len+1); if(!copy)abort();
+    char *a[1030]={0}; int count=0; char *copy=malloc((size_t)len+1); if(!copy)abort();
     memcpy(copy,data,len);copy[len]=0;
-    for(int i=0;i<len&&count<16;){a[count++]=copy+i;i+=(int)strlen(copy+i)+1;}
-    plugin_string_t s[16];for(int i=0;i<16;i++)s[i]=str(a[i]?a[i]:"");
+    for(int i=0;i<len&&count<1030;){a[count++]=copy+i;i+=(int)strlen(copy+i)+1;}
+    plugin_string_t s[1030];for(int i=0;i<(count>16?count:16);i++)s[i]=str(a[i]?a[i]:"");
     plugin_string_t err={0};clear();
     switch(op) {
     case 0: mcsa_api_server_broadcast(&s[0]);break;
@@ -88,6 +88,18 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 43: if(!mcsa_api_attributes_set_base(&s[0],&s[1],atof(a[2]),&err))error(err);break;
     case 44: {mcsa_api_attributes_modifier_t modifier={.id=s[2],.amount=atof(a[3]),.operation=atoi(a[4])};if(!mcsa_api_attributes_add(&s[0],&s[1],&modifier,&err))error(err);break;}
     case 45: if(!mcsa_api_attributes_remove(&s[0],&s[1],&s[2],&err))error(err);break;
+    case 50: {uint32_t handle;if(!mcsa_api_inventory_chest_create(atoi(a[0]),&s[1],&handle,&err))error(err);else number(handle);break;}
+    case 51: {mcsa_api_inventory_item_t item={.kind=s[2],.count=atoi(a[3]),.metadata=s[4]};if(!mcsa_api_inventory_chest_set(atoi(a[0]),atoi(a[1]),item.count?&item:NULL,&err))error(err);break;}
+    case 52: {mcsa_api_inventory_list_option_item_t items;if(!mcsa_api_inventory_chest_snapshot(atoi(a[0]),&items,&err))error(err);else {for(size_t i=0;i<items.len;i++){if(items.ptr[i].is_some){string(items.ptr[i].val.kind);number(items.ptr[i].val.count);string(items.ptr[i].val.metadata);}else {text("air");text("0");text("");}}mcsa_api_inventory_list_option_item_free(&items);}break;}
+    case 53: if(!mcsa_api_inventory_chest_open(&s[0],atoi(a[1]),&err))error(err);break;
+    case 54: if(!mcsa_api_inventory_chest_close(&s[0],&err))error(err);break;
+    case 55: {uint32_t handle;if(mcsa_api_inventory_chest_current(&s[0],&handle))number(handle);break;}
+    case 56: if(!mcsa_api_inventory_chest_release(atoi(a[0]),&err))error(err);break;
+    case 57: {mcsa_api_inventory_option_item_t item;if(!mcsa_api_inventory_cursor(&s[0],&item,&err))error(err);else {if(item.is_some){string(item.val.kind);number(item.val.count);string(item.val.metadata);}mcsa_api_inventory_option_item_free(&item);}break;}
+    case 58: {mcsa_api_presentation_team_t team={.id=s[1],.prefix=s[2],.suffix=s[3],.color=s[4],.visibility=s[5],.members={.ptr=s+6,.len=count-6}};number(mcsa_api_presentation_set_team(&s[0],&team));break;}
+    case 59: number(mcsa_api_presentation_remove_team(&s[0],&s[1]));break;
+    case 60: number(mcsa_api_server_current_tick());break;
+    case 61: {mcsa_api_inventory_view_t view;if(!mcsa_api_inventory_open_view(&s[0],&view,&err))error(err);else {string(view.kind);for(size_t i=0;i<view.items.len;i++){if(view.items.ptr[i].is_some){string(view.items.ptr[i].val.kind);number(view.items.ptr[i].val.count);string(view.items.ptr[i].val.metadata);}else {text("air");text("0");text("");}}mcsa_api_inventory_view_free(&view);}break;}
     default: abort();
     }
     free(copy);return output;
@@ -129,4 +141,8 @@ void exports_mcsa_api_completion_on_tab_complete(mcsa_api_types_sender_t *caller
     clear();number(caller->kind);if(caller->uuid.is_some)string(caller->uuid.val);else text("");string(caller->name);string(*name);
     for(size_t i=0;i<args->len;i++)string(args->ptr[i]);
     completions=(plugin_list_string_t){0};dispatch(9);*ret=completions;completions=(plugin_list_string_t){0};
+}
+
+bool exports_mcsa_api_inventory_events_on_inventory(mcsa_api_types_player_t *who,uint32_t handle,uint32_t kind,int32_t slot,int32_t button,int32_t mode) {
+    clear();player(who);number(handle);number(kind);number(slot);number(button);number(mode);return dispatch(12)!=0;
 }

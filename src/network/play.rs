@@ -3061,7 +3061,11 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
     let mut players = shared.players.lock().expect("игроки");
-    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { inventory: player.inventory.slots().to_vec(), selected: player.inventory.selected() as u32, ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
+    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { open_top: player.window.as_ref().map_or_else(|| player.inventory.slots()[..5].to_vec(), |open| open.shown.clone()), open_kind: player.window.as_ref().map_or("CRAFTING", |open| {
+        if crafting::is_table(player) { "WORKBENCH" } else if open.merchant.is_some() { "MERCHANT" } else if let Some(station) = &open.station { match station.kind { crate::enchanting::Station::Anvil => "ANVIL", crate::enchanting::Station::Grindstone => "GRINDSTONE", crate::enchanting::Station::Smithing => "SMITHING", crate::enchanting::Station::Stonecutter => "STONECUTTER", crate::enchanting::Station::Loom => "LOOM", crate::enchanting::Station::Cartography => "CARTOGRAPHY", crate::enchanting::Station::Crafting => "WORKBENCH", crate::enchanting::Station::Enchanting => "ENCHANTING" } } else { match open.kind {
+            Some(containers::Kind::Furnace) => "FURNACE", Some(containers::Kind::BlastFurnace) => "BLAST_FURNACE", Some(containers::Kind::Smoker) => "SMOKER", Some(containers::Kind::Hopper) => "HOPPER", Some(containers::Kind::Dispenser) => "DISPENSER", Some(containers::Kind::Dropper) => "DROPPER", Some(containers::Kind::BrewingStand) => "BREWING", Some(containers::Kind::Beacon) => "BEACON", Some(containers::Kind::Lectern) => "LECTERN", Some(containers::Kind::Crafter) => "CRAFTER", Some(containers::Kind::ShulkerBox) => "SHULKER_BOX", Some(containers::Kind::EnderChest) => "ENDER_CHEST", _ => "CHEST",
+        } }
+    }).into(), cursor: player.inventory.cursor(), inventory: player.inventory.slots().to_vec(), selected: player.inventory.selected() as u32, ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
     if first {
         let packets: Vec<_> = players.ui.list_names.iter().map(|(uuid, (_, name))| crate::presentation::list_packet(uuid, Some(name))).collect();
         for packet in packets { players.order(&player.uuid, Order::Packet(packet)); }
@@ -4610,6 +4614,7 @@ async fn open_window(
     player: &mut PlayerState,
     at: (i32, i32, i32),
 ) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     // Повторное открытие тоже закрывает личную сетку, иначе входы потеряются.
     if crafting::is_table(player) { close_own_window(shared, player); }
     let (halves, slots, kind) = {
@@ -4704,7 +4709,7 @@ async fn open_window(
         props: props.clone(),
         merchant: None,
         station: None,
-        ender: kind == containers::Kind::EnderChest,
+        plugin_chest: None, ender: kind == containers::Kind::EnderChest,
     });
     send_window_content(stream, player).await?;
 
@@ -4737,6 +4742,7 @@ async fn open_window(
 /// Chest: «27 slots», как у сундука; Minecart with Hopper: 5 ячеек, окно
 /// воронки). Заголовок — имя сущности. [проверить]: заголовок.
 async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, entity_id: i32) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     let found = {
         let items=shared.items_in(player.dimension).lock().expect("предметы");
         if let Some(mob)=items.mobs().iter().find(|m| m.entity_id==entity_id && crate::mob::land::llama(m.kind) && m.land.tamed && !m.is_dead()) {
@@ -4756,7 +4762,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     else { body.extend_from_slice(&encode_varint(menu)); body.extend_from_slice(&nbt::translated(title)); }
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, plugin_chest: None, ender: false });
     send_window_content(stream, player).await
 }
 
@@ -4844,6 +4850,24 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     let Some(window) = &player.window else {
         return Ok(());
     };
+
+    if let Some(chest) = &window.plugin_chest {
+        let (active, slots) = { let chest = chest.lock().expect("сундук"); (chest.active, chest.slots.clone()) };
+        if !active {
+            let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+            body.extend(encode_varint(window.id));
+            write_body(stream, body).await?;
+            close_own_window(shared, player);
+            send_container_content(stream, player).await?;
+        } else {
+            let changed: Vec<_> = slots.iter().enumerate().filter(|(i, item)| window.shown[*i] != **item).map(|(i, item)| (i, *item)).collect();
+            for (slot, stack) in changed {
+                player.window.as_mut().expect("окно").shown[slot] = stack;
+                send_window_slot(stream, player, slot, stack).await?;
+            }
+        }
+        return Ok(());
+    }
 
     // Окно станка живёт, пока стоит станок.
     if window.station.is_some() {
@@ -4971,6 +4995,18 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     let Some(window) = player.window.take() else {
         return;
     };
+
+    if let Some(chest) = &window.plugin_chest {
+        let (owner, handle) = { let chest = chest.lock().expect("сундук"); (chest.owner.clone(), chest.handle) };
+        crate::plugins::inventory_event(&owner, &plugin_view(player), handle, 1, (-1, 0, 0));
+        // Курсор принадлежит игроку: после закрытия не теряется и не копируется.
+        if let Some(stack) = player.inventory.cursor() {
+            player.inventory.set_cursor(None);
+            if let Some(rest) = player.inventory.put(stack).1 { throw_out(shared, player, rest); }
+            player.inventory_after_window = true;
+        }
+        return;
+    }
 
     // Станок: предметы из его ячеек возвращаются игроку.
     if window.station.is_some() {
@@ -6734,6 +6770,33 @@ async fn read_and_log_play_packets(
                     send_container_slot(stream, player, slot).await?;
                 }
 
+                Order::PluginOpen { chest } => {
+                    let (title, slots, active) = { let gui = chest.lock().expect("сундук"); (gui.title.clone(), gui.slots.clone(), gui.active) };
+                    if !active { continue; }
+                    if player.window.as_ref().and_then(|open| open.plugin_chest.as_ref()).is_some_and(|old| std::sync::Arc::ptr_eq(old, &chest)) { send_window_content(stream, player).await?; continue; }
+                    close_own_window(shared, player);
+                    for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
+                    player.window_counter = player.window_counter % WINDOW_IDS + 1;
+                    let id = player.window_counter;
+                    let mut body = encode_varint(OPEN_SCREEN);
+                    body.extend(encode_varint(id));
+                    body.extend(encode_varint(slots.len() as i32 / 9 - 1));
+                    let title: serde_json::Value = serde_json::from_str(&title).expect("заголовок проверен хозяином");
+                    body.extend(crate::scoreboard::encode_component(&title));
+                    write_body(stream, body).await?;
+                    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: None, shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false, plugin_chest: Some(chest) });
+                    send_window_content(stream, player).await?;
+                }
+                Order::PluginClose { owner } => {
+                    if let Some(open) = player.window.as_ref().filter(|open| open.plugin_chest.as_ref().is_none_or(|chest| chest.lock().expect("сундук").owner == owner)) {
+                        let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+                        body.extend(encode_varint(open.id));
+                        write_body(stream, body).await?;
+                        close_own_window(shared, player);
+                        for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
+                        send_container_content(stream, player).await?;
+                    }
+                }
                 Order::SetEnderSlot { slot, stack } => {
                     player.ender[slot] = stack;
                     player.save(&shared.playerdata);
@@ -7246,6 +7309,8 @@ async fn apply_reaction(
         send_suggestions(stream, hints).await?;
     }
 
+    if reaction.window_content { send_window_content(stream, player).await?; }
+
     for (slot, stack) in reaction.window_slots.clone() {
         send_window_slot(stream, player, slot, stack).await?;
     }
@@ -7367,6 +7432,7 @@ struct Reaction {
 
     /// Ячейки открытого окна хранилища, которые клиент предсказал не так.
     window_slots: Vec<(usize, Option<Stack>)>,
+    window_content: bool,
 
     /// Ячейка окна, опустевшая при закрытии (книга с кафедры): номер окна и ячейка.
     emptied: Option<(i32, usize)>,
@@ -10676,6 +10742,12 @@ fn select_bundle(shared: &Shared, player: &mut PlayerState, slot: i32, index: i3
         if let Some(s) = view.get(slot as usize).filter(|s| crate::bundle::is_bundle(s.item)) { view.set(slot as usize, Some(crate::bundle::select(s, index))); }
         return;
     }
+    if let Some(chest) = &open.plugin_chest {
+        let mut chest = chest.lock().expect("сундук");
+        if let Some(stack) = chest.slots.get_mut(slot as usize).and_then(Option::as_mut).filter(|s| crate::bundle::is_bundle(s.item)) { *stack = crate::bundle::select(*stack, index); }
+        open.shown.clone_from(&chest.slots);
+        return;
+    }
     let mut world = shared.world_in(player.dimension).lock().expect("мир");
     let mut slots = if let Some(cart) = open.cart { cart_slots(shared, player.dimension, cart).unwrap_or_default() }
         else if open.ender { player.ender.clone() } else { containers::window_slots(&world, &open.halves) };
@@ -10691,6 +10763,36 @@ fn select_bundle(shared: &Shared, player: &mut PlayerState, slot: i32, index: i3
     } else if open.ender { player.ender.clone_from(&slots); }
     else { containers::store_window_slots(&mut world, &open.halves, &slots); }
     open.shown = slots;
+}
+
+fn prepare_plugin_drag(player: &mut PlayerState, id: i32, slot: i32, button: i8, slots: &[Option<Stack>]) -> Option<(i8, Vec<i32>)> {
+    let (kind, phase) = (button >> 2, button & 3);
+    let Some(held) = player.inventory.cursor() else { player.crafting_drag = None; return None; };
+    if !(0..=2).contains(&kind) || kind == 2 && player.game_mode != GAME_MODE_CREATIVE { player.crafting_drag = None; return None; }
+    if phase == 0 { player.crafting_drag = Some((id, kind, Vec::new())); return None; }
+    let (_, _, mut selected) = player.crafting_drag.take().filter(|(window, started, _)| *window == id && *started == kind)?;
+    if phase == 1 {
+        let mut copy = slots.to_vec();
+        let view = window::Window { container: &mut copy, inventory: &mut player.inventory, kind: None, horse: None };
+        if slot >= 0 && (slot as usize) < view.len() && !selected.contains(&slot) && (kind == 2 || selected.len() < held.count as usize) && view.get(slot as usize).is_none_or(|stack| stack.stacks_with(&held) && stack.count < stack.limit()) { selected.push(slot); }
+        player.crafting_drag = Some((id, kind, selected));
+        None
+    } else { (phase == 2 && !selected.is_empty()).then_some((kind, selected)) }
+}
+
+fn distribute_plugin_drag(inventory: &mut Inventory, slots: &mut [Option<Stack>], kind: i8, selected: &[i32]) {
+    let Some(held) = inventory.cursor() else { return; };
+    let each = match kind { 0 => held.count / selected.len() as i32, 1 => 1, _ => held.limit() };
+    let mut left = held.count;
+    let mut view = window::Window { container: slots, inventory, kind: None, horse: None };
+    for &slot in selected {
+        let old = view.get(slot as usize);
+        if old.is_some_and(|stack| !stack.stacks_with(&held)) { continue; }
+        let count = old.map_or(0, |stack| stack.count);
+        let moved = each.min(held.limit() - count).min(if kind == 2 { held.limit() } else { left });
+        if moved > 0 { view.set(slot as usize, Some(held.with_count(count + moved))); if kind != 2 { left -= moved; } }
+    }
+    view.inventory.set_cursor(inventory::remainder(held, left));
 }
 
 fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
@@ -10736,6 +10838,42 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     let Some(window) = player.window.as_ref() else {
         return;
     };
+
+    if let Some(chest) = window.plugin_chest.clone() {
+        if _window != window.id { return; }
+        let (owner, handle, active) = { let chest = chest.lock().expect("сундук"); (chest.owner.clone(), chest.handle, chest.active) };
+        publish_player(shared, player);
+        let drag = if mode == 5 {
+            let slots = chest.lock().expect("сундук").slots.clone();
+            prepare_plugin_drag(player, _window, slot as i16 as i32, button as i8, &slots)
+        } else { player.crafting_drag = None; None };
+        let notify = mode != 5 || drag.is_some();
+        let cancelled = !active || notify && crate::plugins::inventory_event(&owner, &plugin_view(player), handle, 0, (slot as i16 as i32, button as i8 as i32, mode));
+        let mut chest = chest.lock().expect("сундук");
+        let thrown = if cancelled { None } else if let Some((kind, selected)) = drag {
+            distribute_plugin_drag(&mut player.inventory, &mut chest.slots, kind, &selected);
+            None
+        } else if mode == 3 && player.game_mode == GAME_MODE_CREATIVE {
+            let view = window::Window { container: &mut chest.slots, inventory: &mut player.inventory, kind: None, horse: None };
+            if let Some(stack) = usize::try_from(slot as i16).ok().and_then(|slot| view.get(slot)) { view.inventory.set_cursor(Some(stack.with_count(stack.limit()))); }
+            None
+        } else {
+            window::Window { container: &mut chest.slots, inventory: &mut player.inventory, kind: None, horse: None }.click(slot as i16 as i32, button as i8, mode).thrown
+        };
+        let slots = chest.slots.clone();
+        drop(chest);
+        if let Some(stack) = thrown { throw_out(shared, player, stack); }
+        if let Some(open) = player.window.as_mut() { open.shown.clone_from(&slots); }
+        // Отмену клиент получает целиком, включая курсор: предсказанная вещь не остаётся в руке.
+        if cancelled { reaction.window_content = true; return; }
+        reaction.window_slots.extend(slots.into_iter().enumerate());
+        let size = player.window.as_ref().expect("окно").shown.len();
+        for (i, slot) in (inventory::FIRST_MAIN..=inventory::LAST_MAIN).chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR).enumerate() {
+            reaction.window_slots.push((size + i, player.inventory.slot(slot)));
+        }
+        reaction.cursor = Some(player.inventory.cursor());
+        return;
+    }
 
     if window.merchant.is_some() {
         merchant::click(shared, player, (slot as i16 as i32, button as i8, mode), &predicted, predicted_cursor, readable, reaction);
@@ -11401,6 +11539,7 @@ struct OpenWindow {
     /// Окно эндер-сундука: ячейки — личные, `PlayerState::ender`; `halves` —
     /// только сам блок (смотрящие и крышка).
     ender: bool,
+    plugin_chest: Option<std::sync::Arc<std::sync::Mutex<crate::players::PluginChest>>>,
 }
 
 impl OpenWindow {

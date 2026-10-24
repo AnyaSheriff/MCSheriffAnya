@@ -83,6 +83,7 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
 /// Открывает окно торговли: Open Screen, содержимое окна, Merchant Offers
 /// (чёрный ящик, villager-trade: в этом порядке).
 pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, villager_id: i32) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     let pending=shared.items_in(player.dimension).lock().expect("торговец").mobs().iter()
         .find(|m|m.entity_id==villager_id).map(|m|((m.x as i32,m.z as i32),m.villager.offers.clone()));
     if let Some((at,mut offers))=pending {
@@ -129,7 +130,7 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         props: Vec::new(),
         merchant: Some(Merchant::new(villager_id)),
         station: None,
-        ender: false,
+        plugin_chest: None, ender: false,
     });
     send_window_content(stream, player).await?;
     write_body(stream, offers_packet(id, &state, wandering)).await

@@ -41,6 +41,7 @@ pub(super) async fn open_station(
     at: (i32, i32, i32),
     kind: Station,
 ) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     match kind {
         Station::Anvil => player.progress.custom("interact_with_anvil", 1),
         Station::Grindstone => player.progress.custom("interact_with_grindstone", 1),
@@ -76,7 +77,7 @@ pub(super) async fn open_station(
         props: Vec::new(),
         merchant: None,
         station: Some(station),
-        ender: false,
+        plugin_chest: None, ender: false,
     });
     send_window_content(stream, player).await?;
 
@@ -708,7 +709,7 @@ pub(super) fn still_there(shared: &Shared, player: &PlayerState, window: &OpenWi
         let paper=item("paper",1);
         for slot in 9..45 {player.inventory.set(slot,Some(item("stone",64)));}
         player.inventory.set(9,Some(input));
-        player.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![Some(input),Some(paper),Some(input)],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,ender:false,
+        player.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![Some(input),Some(paper),Some(input)],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,plugin_chest: None, ender: false,
             station:Some(StationWindow{kind:Station::Cartography,pos:(0,64,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None})});
         let mut reaction=Reaction::default();
         assert!(!take_result(&shared,&mut player,1,&mut reaction));

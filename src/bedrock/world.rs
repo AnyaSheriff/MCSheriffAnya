@@ -1066,6 +1066,8 @@ impl BedrockWorld {
 
         for order in orders {
             match order {
+                // Пользовательские сундуки доступны только подключениям Java со снимком UI.
+                crate::players::Order::PluginOpen { .. } | crate::players::Order::PluginClose { .. } => {}
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 // API set-health допускает только игроков со снимком Java UI.
                 crate::players::Order::Health { .. } => {}

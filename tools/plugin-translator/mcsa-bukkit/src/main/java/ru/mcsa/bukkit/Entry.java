@@ -21,6 +21,7 @@ public final class Entry {
   }
   Player p=Host.player(a,0);Event e;
   switch(kind){
+   case 12:return ChestViews.event(p,Integer.parseInt(a[9]),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),Integer.parseInt(a[13]));
    case 1:e=new PlayerJoinEvent(p,null);break;
    case 2:e=new PlayerQuitEvent(p,null);break;
    case 3:e=new AsyncPlayerChatEvent(p,a[9]);break;
@@ -30,6 +31,7 @@ public final class Entry {
    case 11:e=new org.bukkit.event.entity.PlayerDeathEvent(p,a[9].equals("1"));break;
    default:throw new IllegalArgumentException("Неизвестное событие");
   }
+  if(kind==1)MainScoreboard.INSTANCE.sync(p);
   RuntimeState.fire(e);
   if(e instanceof Cancellable&&((Cancellable)e).isCancelled())return 1;
   if(kind==10){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}

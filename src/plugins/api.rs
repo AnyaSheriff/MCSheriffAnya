@@ -69,6 +69,7 @@ pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
 /// Состояние одного плагина (`Store<PluginCtx>`).
 pub struct PluginCtx {
     pub network: super::network::Access,
+    pub chests: super::inventory::Chests,
     pub native_items: super::inventory::NativeItems,
     pub name: String,
     /// Модуль из `modules/` — доверенный.

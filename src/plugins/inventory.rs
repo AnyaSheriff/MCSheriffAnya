@@ -97,7 +97,96 @@ fn metadata(stack: Stack, token: Option<u32>) -> String {
     if map.is_empty() { String::new() } else { Value::Object(map).to_string() }
 }
 
+#[derive(Default)]
+pub struct Chests {
+    next: u32,
+    entries: std::collections::BTreeMap<u32, std::sync::Arc<std::sync::Mutex<crate::players::PluginChest>>>,
+    pub viewers: std::collections::BTreeMap<[u8; 16], u32>,
+}
+impl Drop for Chests {
+    fn drop(&mut self) { for chest in self.entries.values() { chest.lock().expect("сундук").active = false; } }
+}
+impl PluginCtx {
+    fn inventory_stack(&mut self, item: Option<inventory::Item>) -> Result<Option<Stack>, String> {
+        let stack = match item {
+            Some(item) => {
+                let number = crate::blocks::item_named(&item.kind).ok_or("неизвестный предмет")?;
+                if item.kind == "air" || item.count == 0 || item.count > crate::blocks::stack_size(number) as u32 { return Err("неверное количество предметов".into()); }
+                let original = self.native_items.restore(&item.metadata)?;
+                let mut data = original.map(|stack| stack.extras()).unwrap_or_default();
+                apply_metadata(&mut data, &item.metadata)?;
+                let stack = Stack::new(number, item.count as i32).with_extras(data);
+                Some(Stack { tnt: original.filter(|old| old.item == number).and_then(|old| old.tnt), ..stack })
+            }
+            None => None,
+        };
+        Ok(stack)
+    }
+    fn inventory_items(&mut self, slots: &[Option<Stack>]) -> Vec<Option<inventory::Item>> {
+        slots.iter().map(|slot| slot.and_then(|stack| crate::blocks::item_name(stack.item).map(|name| {
+            let token = self.native_items.remember(stack);
+            inventory::Item { kind: name.into(), count: stack.count as u32, metadata: metadata(stack, Some(token)) }
+        }))).collect()
+    }
+}
+
 impl inventory::Host for PluginCtx {
+    fn chest_release(&mut self, handle: u32) -> Result<(), String> {
+        if self.chests.viewers.values().any(|current| *current == handle) { return Err("Сундук ещё открыт".into()); }
+        let chest = self.chests.entries.remove(&handle).ok_or("Чужой или закрытый сундук")?;
+        chest.lock().expect("сундук").active = false;
+        Ok(())
+    }
+    fn open_view(&mut self, text: String) -> Result<inventory::View, String> {
+        let uuid = parse_uuid(&text).ok_or("Неверный UUID")?;
+        let (kind, slots) = { let players = self.shared.players.lock().expect("игроки"); let info = players.ui.info.get(&uuid).ok_or("Игрок Java отсутствует")?; (info.open_kind.clone(), info.open_top.clone()) };
+        Ok(inventory::View { kind, items: self.inventory_items(&slots) })
+    }
+    fn cursor(&mut self, text: String) -> Result<Option<inventory::Item>, String> {
+        let uuid = parse_uuid(&text).ok_or("Неверный UUID")?;
+        let stack = self.shared.players.lock().expect("игроки").ui.info.get(&uuid).ok_or("Игрок Java отсутствует")?.cursor;
+        Ok(self.inventory_items(&[stack]).pop().flatten())
+    }
+    fn chest_create(&mut self, size: u32, title: String) -> Result<u32, String> {
+        if !(9..=54).contains(&size) || !size.is_multiple_of(9) { return Err("Сундук: 9..54 ячейки, кратно 9".into()); }
+        let title = super::presentation::component(&title).ok_or("Недопустимый заголовок сундука")?.to_string();
+        if self.chests.entries.len() >= 512 { return Err("Лимит пользовательских сундуков: 512 на компонент".into()); }
+        self.chests.next = self.chests.next.checked_add(1).ok_or("Исчерпаны номера сундуков")?;
+        let handle = self.chests.next;
+        self.chests.entries.insert(handle, std::sync::Arc::new(std::sync::Mutex::new(crate::players::PluginChest {
+            owner: self.name.clone(), handle, title, slots: vec![None; size as usize], active: true,
+        })));
+        Ok(handle)
+    }
+    fn chest_set(&mut self, handle: u32, slot: u32, item: Option<inventory::Item>) -> Result<(), String> {
+        let stack = self.inventory_stack(item)?;
+        let chest = self.chests.entries.get(&handle).ok_or("Чужой или закрытый сундук")?;
+        let mut chest = chest.lock().expect("сундук");
+        *chest.slots.get_mut(slot as usize).ok_or("Ячейка вне сундука")? = stack;
+        Ok(())
+    }
+    fn chest_snapshot(&mut self, handle: u32) -> Result<Vec<Option<inventory::Item>>, String> {
+        let slots = self.chests.entries.get(&handle).ok_or("Чужой или закрытый сундук")?.lock().expect("сундук").slots.clone();
+        Ok(self.inventory_items(&slots))
+    }
+    fn chest_open(&mut self, text: String, handle: u32) -> Result<(), String> {
+        let uuid = parse_uuid(&text).ok_or("Неверный UUID")?;
+        let chest = self.chests.entries.get(&handle).ok_or("Чужой или закрытый сундук")?.clone();
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.ui.info.contains_key(&uuid) { return Err("Игрок Java отсутствует".into()); }
+        self.chests.viewers.insert(uuid, handle);
+        players.order(&uuid, Order::PluginOpen { chest });
+        Ok(())
+    }
+    fn chest_close(&mut self, text: String) -> Result<(), String> {
+        let uuid = parse_uuid(&text).ok_or("Неверный UUID")?;
+        self.shared.players.lock().expect("игроки").order(&uuid, Order::PluginClose { owner: self.name.clone() });
+        Ok(())
+    }
+    fn chest_current(&mut self, text: String) -> Option<u32> {
+        parse_uuid(&text).and_then(|uuid| self.chests.viewers.get(&uuid).copied())
+    }
+
     fn snapshot(&mut self, text: String) -> Result<Vec<Option<inventory::Item>>, String> {
         let uuid = parse_uuid(&text).ok_or("неверный UUID")?;
         let slots = self.shared.players.lock().expect("игроки").ui.info.get(&uuid).ok_or("нет снимка игрока")?.inventory.clone();
@@ -113,18 +202,7 @@ impl inventory::Host for PluginCtx {
     fn set(&mut self, text: String, slot: u32, item: Option<inventory::Item>) -> Result<(), String> {
         if !(5..=45).contains(&slot) { return Err("ячейка: от 5 до 45".into()); }
         let uuid = parse_uuid(&text).ok_or("неверный UUID")?;
-        let stack = match item {
-            Some(item) => {
-                let number = crate::blocks::item_named(&item.kind).ok_or("неизвестный предмет")?;
-                if item.kind == "air" || item.count == 0 || item.count > crate::blocks::stack_size(number) as u32 { return Err("неверное количество предметов".into()); }
-                let original = self.native_items.restore(&item.metadata)?;
-                let mut data = original.map(|stack| stack.extras()).unwrap_or_default();
-                apply_metadata(&mut data, &item.metadata)?;
-                let stack = Stack::new(number, item.count as i32).with_extras(data);
-                Some(Stack { tnt: original.filter(|old| old.item == number).and_then(|old| old.tnt), ..stack })
-            }
-            None => None,
-        };
+        let stack = self.inventory_stack(item)?;
         let mut players = self.shared.players.lock().expect("игроки");
         let info = players.ui.info.get_mut(&uuid).ok_or("нет снимка игрока")?;
         if info.inventory.len() != 46 { info.inventory.resize(46,None); }

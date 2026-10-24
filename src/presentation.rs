@@ -13,6 +13,9 @@ type Uuid = [u8; 16];
 pub struct Info {
     pub inventory: Vec<Option<crate::inventory::Stack>>,
     pub selected: u32,
+    pub cursor: Option<crate::inventory::Stack>,
+    pub open_top: Vec<Option<crate::inventory::Stack>>,
+    pub open_kind: String,
     pub ping: u32,
     pub health: f32,
     pub max_health: f32,
