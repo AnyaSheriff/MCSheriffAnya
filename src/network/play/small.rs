@@ -49,7 +49,7 @@ fn update_shoulders(items: &mut items::Items, player: &mut PlayerState, now: u64
     let hurt = player.vit.health < player.shoulder_health;
     // Чёрный ящик parrot-shoulder: оригинал сбрасывает на такт раньше нашего шага проверки (падение 0,45).
     let release = player.vit.fall > 0.4 || wet || player.sleeping.is_some() || hurt
-        || player.glide.active || player.creative_flying || player.ride.vehicle.is_some()
+        || player.glide.active || player.abilities.flying || player.ride.vehicle.is_some()
         || player.game_mode == GAME_MODE_SPECTATOR || player.vit.health <= 0.0;
     player.shoulder_health=player.vit.health;
         if release && now > player.shoulder_since + 20 {
@@ -66,7 +66,7 @@ fn update_shoulders(items: &mut items::Items, player: &mut PlayerState, now: u64
                     items.add_mob(mob);
                 }
             }
-        } else if !(wet || player.sleeping.is_some() || player.glide.active || player.creative_flying || player.ride.vehicle.is_some()
+        } else if !(wet || player.sleeping.is_some() || player.glide.active || player.abilities.flying || player.ride.vehicle.is_some()
             || player.game_mode == GAME_MODE_SPECTATOR || player.vit.health <= 0.0 || hurt)
             && player.shoulders.iter().any(Option::is_none) {
             // Чёрный ящик parrot-shoulder: попугай садится и на падающего игрока.
@@ -136,7 +136,7 @@ mod tests {
         parrot.tame.owner=Some(player.uuid); parrot.ticks=101;
         items.add_mob(parrot);
         update_shoulders(&mut items,&mut player,30,false,&mut ||100);
-        player.creative_flying=true;
+        player.abilities.flying=true;
         update_shoulders(&mut items,&mut player,60,false,&mut ||100);
         assert_eq!(variants(&player.shoulders),[-1,-1]); assert_eq!(items.mobs().len(),1);
         items.mobs_mut()[0].ticks=101;

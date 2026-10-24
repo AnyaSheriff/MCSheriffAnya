@@ -41,7 +41,7 @@ pub(super) fn may_crit(player: &PlayerState) -> bool {
     // падение» — нет: булава под ним бьёт критом 6·1,5 (чёрный ящик,
     // itemaudit-slow-falling-mace). Левитация [проверить]. Копья и всадники не критуют;
     // лестницы/люки пока [проверить].
-    player.vit.fall > 0.0 && !player.on_ground && !player.vit.sprinting && !player.net.in_water
+    !player.abilities.flying && player.vit.fall > 0.0 && !player.on_ground && !player.vit.sprinting && !player.net.in_water
         && player.ride.vehicle.is_none()
         && ![crate::survival::EffectKind::Blindness, crate::survival::EffectKind::Levitation].into_iter().any(|kind| player.vit.has_effect(kind))
         && !player.inventory.held().and_then(|stack| combat::item_name(stack.item)).is_some_and(|name| name.ends_with("_spear"))
@@ -49,7 +49,7 @@ pub(super) fn may_crit(player: &PlayerState) -> bool {
 
 pub(super) fn may_smash(player: &PlayerState, mace: bool) -> bool {
     combat::smash_ready(mace, player.vit.fall as f32, player.on_ground)
-        && !player.glide.active && !player.vit.has_effect(crate::survival::EffectKind::SlowFalling)
+        && !player.abilities.flying && !player.glide.active && !player.vit.has_effect(crate::survival::EffectKind::SlowFalling)
 }
 
 /// Wiki, Thorns: срабатывает и от стрел/трезубца и ударов моба.
@@ -325,25 +325,11 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
                     let wind = data.level("wind_burst");
 
                     if wind > 0 && lands {
-                        let targets: Vec<crate::tnt::Target> = shared
-                            .players
-                            .lock()
-                            .expect("список игроков захвачен другим потоком")
-                            .members()
-                            .iter()
-                            .filter(|member| member.dimension == player.dimension && member.game_mode != 3)
-                            .map(|member| {
-                                let me = member.entity_id == player.entity_id;
-
-                                crate::tnt::Target {
-                                    entity_id: member.entity_id,
-                                    x: if me { player.x } else { member.position.x },
-                                    y: if me { player.y } else { member.position.y },
-                                    z: if me { player.z } else { member.position.z },
-                                    sneaking: member.sneaking,
-                                }
-                            })
-                            .collect();
+                        let mut targets = crate::tick::blast_targets(shared, player.dimension);
+                        if let Some(me) = targets.iter_mut().find(|p| p.entity_id == player.entity_id) {
+                            (me.x, me.y, me.z) = (player.x, player.y, player.z);
+                            me.flying_creative = player.game_mode == 1 && player.abilities.flying;
+                        }
                         let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
 
                         crate::tnt::wind_burst(&mut world, &mut items, &targets, (from.0, from.1 - 0.1, from.2), crate::tnt::wind_burst_knockback(wind), player.entity_id);

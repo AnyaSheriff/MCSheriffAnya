@@ -547,7 +547,8 @@ impl mcsa::api::player::Host for PluginCtx {
         let Some(uuid) = parse_uuid(&uuid) else { return false };
         let mode = match mode { wit::GameMode::Survival => 0, wit::GameMode::Creative => 1, wit::GameMode::Adventure => 2, wit::GameMode::Spectator => 3 };
         let mut players = self.shared.players.lock().expect("список игроков занят");
-        if !players.members().iter().any(|member| member.uuid == uuid) { return false; }
+        let Some(member) = players.members().iter().find(|member| member.uuid == uuid) else { return false; };
+        if member.game_mode == mode { return true; }
         players.set_game_mode(&uuid, mode);
         players.order(&uuid, Order::GameMode { mode });
         true

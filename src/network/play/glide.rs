@@ -54,7 +54,7 @@ pub(super) fn command(payload: &[u8], player: &mut PlayerState, shared: &Shared)
         return;
     }
 
-    if player.on_ground || player.net.in_water || player.ride.vehicle.is_some() || player.vit.dead || !usable(player) {
+    if player.abilities.flying || player.on_ground || player.net.in_water || player.ride.vehicle.is_some() || player.vit.dead || !usable(player) {
         return;
     }
 
@@ -75,7 +75,7 @@ pub(super) fn tick(shared: &Shared, player: &mut PlayerState) {
         return;
     }
 
-    if player.on_ground || player.net.in_water || player.ride.vehicle.is_some() || !usable(player) {
+    if player.abilities.flying || player.on_ground || player.net.in_water || player.ride.vehicle.is_some() || !usable(player) {
         stop(shared, player);
 
         return;

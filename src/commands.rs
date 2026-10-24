@@ -252,8 +252,10 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                     .expect("список игроков захвачен другим потоком");
 
                 for (uuid, _) in &targets {
-                    players.set_game_mode(uuid, mode);
-                    players.order(uuid, Order::GameMode { mode });
+                    if players.members().iter().any(|member| member.uuid == *uuid && member.game_mode != mode) {
+                        players.set_game_mode(uuid, mode);
+                        players.order(uuid, Order::GameMode { mode });
+                    }
                 }
             }
 

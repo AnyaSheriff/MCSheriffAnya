@@ -672,19 +672,19 @@ fn magma_contact(player: &PlayerState, env: &Env) -> bool {
 
 /// Смена режима общая для своей команды и поручения другого игрока.
 pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
+    if player.game_mode == mode { return; }
     if player.game_mode != mode {
         // fall-mode-teleport-reset, 26.1.2: creative → survival сохраняет
         // пролёт целиком (12 блоков дают урон 9, а не 5).
         if player.game_mode == GAME_MODE_CREATIVE && mortal(mode)
-            && !player.creative_flying && !player.on_ground && player.net.last_delta.1 < 0.0
+            && !player.abilities.flying && !player.on_ground && player.net.last_delta.1 < 0.0
         {
             player.net.mode_fall_velocity = Some(medium_step(player.net.last_delta.1, player.net.in_lava, player.net.in_water));
         }
         player.prev_mode = player.game_mode;
         player.game_mode = mode;
     }
-    player.creative_flying = false;
-    player.plugin_flight = None;
+    player.abilities.apply_mode(mode);
     player.flight_owners[0] = None;
     player.flight_owners[1] = None;
     player.attrs.set_creative_ranges(mode == GAME_MODE_CREATIVE);
@@ -694,9 +694,9 @@ pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
 /// взаимодействия повторяется через два такта после команды.
 pub(super) async fn game_mode_order(stream: &mut Outgoing<'_>, player: &mut PlayerState, mode: i32, now: u64) -> io::Result<()> {
     change_game_mode(player, mode);
-    send_abilities(stream, mode).await?;
+    send_player_abilities(stream, player).await?;
     send_game_event_game_mode(stream, mode).await?;
-    send_abilities(stream, mode).await?;
+    send_player_abilities(stream, player).await?;
     for attribute in [crate::attributes::BLOCK_INTERACTION_RANGE, crate::attributes::ENTITY_INTERACTION_RANGE] {
         player.attrs_touched.push((attribute, now + 2));
     }
@@ -819,7 +819,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // Творческий: урона от падения нет, но высота падения копится — от неё
         // зависит крит (вики, Critical hit: в творческом криты есть); в полёте
         // высота не копится.
-        if player.creative_flying {
+        if player.abilities.flying {
             player.vit.fall = 0.0;
         } else {
             let _ = player.vit.land_java(dy, on_ground, player.net.in_water, 1.0);
@@ -1706,6 +1706,9 @@ pub(super) async fn send_respawn_intro(stream: &mut Outgoing<'_>, player: &Playe
 /// Возрождение: всё заново, точка смерти остаётся в пакете Respawn.
 pub(super) fn respawned(player: &mut PlayerState) {
     player.vit.respawned();
+    player.abilities = playerdata::Abilities::for_mode(player.game_mode);
+    player.flight_owners[0] = None;
+    player.flight_owners[1] = None;
     player.net.reset();
     player.foot_enchants = Default::default();
 
@@ -2908,9 +2911,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 pub(super) fn effect_reactions(shared: &Shared, player: &mut PlayerState, dead: bool) {
     let reaction = crate::effect_reactions::take(&mut player.vit, dead, (player.x, player.y, player.z), 1.8, player.yaw, true);
     if !reaction.wind && !reaction.weaving && !reaction.oozing && reaction.infested_hits == 0 { return; }
-    let targets: Vec<_> = shared.players.lock().expect("игроки").members().iter()
-        .filter(|p| p.dimension == player.dimension && p.game_mode != GAME_MODE_SPECTATOR)
-        .map(|p| crate::tnt::Target { entity_id: p.entity_id, x: p.position.x, y: p.position.y, z: p.position.z, sneaking: p.sneaking }).collect();
+    let targets = crate::tick::blast_targets(shared, player.dimension);
     let mut world = shared.world_in(player.dimension).lock().expect("мир");
     let mut rng = crate::mob::Rng::new(u64::from(world.random_bits()));
     let mut items = shared.items_in(player.dimension).lock().expect("сущности");
@@ -3364,7 +3365,7 @@ mod tests {
     #[test]
     fn honey_drinks_at_full_food_for_forty_ticks() {
         let mut player=PlayerState::new([8;16],"Honey".into(),None,None,0x7F,1,(0.5,64.0,0.5));
-        player.game_mode=GAME_MODE_SURVIVAL;
+        change_game_mode(&mut player,GAME_MODE_SURVIVAL);
         player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(blocks::item_named("honey_bottle").unwrap(),2)));
         assert!(start_eating(&mut player, 0));
         let drink=player.net.eating.as_ref().unwrap();
@@ -4111,13 +4112,14 @@ mod plugin_flight_tests {
     #[test]
     fn flight_permission_and_fall_rules_preserve_mode_defaults() {
         let mut player=PlayerState::new([31;16],"Flight".into(),None,None,0x7f,0,(0.5,70.0,0.5));
-        player.game_mode=GAME_MODE_SURVIVAL;
+        change_game_mode(&mut player,GAME_MODE_SURVIVAL);
         assert!(!player.flight_allowed());assert!(player.fall_damage_allowed());
-        player.plugin_flight=Some(true);assert!(player.flight_allowed());assert!(!player.fall_damage_allowed());
+        player.abilities.mayfly=true;assert!(player.flight_allowed());assert!(!player.fall_damage_allowed());
         player.flight_fall_damage=Some(true);assert!(player.fall_damage_allowed());
-        player.creative_flying=true;assert!(!player.fall_damage_allowed());
+        player.abilities.flying=true;assert!(!player.fall_damage_allowed());
         player.flight_owners[2]=Some("fixture".into());
-        change_game_mode(&mut player,GAME_MODE_SURVIVAL);assert!(!player.flight_allowed());assert!(!player.creative_flying);assert_eq!(player.flight_owners[2].as_deref(),Some("fixture"));
+        change_game_mode(&mut player,GAME_MODE_ADVENTURE);
+        change_game_mode(&mut player,GAME_MODE_SURVIVAL);assert!(!player.flight_allowed());assert!(!player.abilities.flying);assert_eq!(player.flight_owners[2].as_deref(),Some("fixture"));
         change_game_mode(&mut player,GAME_MODE_CREATIVE);assert!(player.flight_allowed());
         change_game_mode(&mut player,GAME_MODE_SPECTATOR);assert!(player.flight_allowed());
     }

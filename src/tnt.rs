@@ -149,6 +149,8 @@ pub struct Target {
     pub y: f64,
     pub z: f64,
     pub sneaking: bool,
+    /// Вики, Explosion: «only if they are not flying».
+    pub flying_creative: bool,
 }
 
 /// Центр взрыва подожжённого динамита.
@@ -355,6 +357,7 @@ pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], cent
     let mut pushed = Vec::new();
 
     for player in players {
+        if player.flying_creative { continue; }
         // Нападающий взлетает ровно на заявленную скорость, без ослабления с
         // расстоянием: у оригинала отдача ему 0; 1,2; 0 при уровне 1 (чёрный
         // ящик, pvp-mace-wind-burst, три записи; вики, Wind Burst: 1,2 / 1,75 / 2,2).
@@ -368,7 +371,7 @@ pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], cent
             continue;
         };
 
-        if let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact * knockback) {
+        if !player.flying_creative && let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact * knockback) {
             pushed.push((player.entity_id, push));
         }
     }
@@ -420,7 +423,7 @@ pub fn wind_charge_burst(
             continue;
         };
 
-        if let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact * knockback) {
+        if !player.flying_creative && let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact * knockback) {
             pushed.push((player.entity_id, push));
         }
     }
@@ -609,8 +612,8 @@ fn can_blow_up(state: i32) -> bool {
 /// Лежащий предмет от урона пропадает (здоровье 5; «Nether stars are immune
 /// to explosions» — вики, Item (entity)). Падающий блок и динамит только
 /// толкаются. Игроков двигает их клиент — возвращается, кого и как толкнуть.
-/// [проверить]: не толкается ли летящий игрок в творческом (вики, Explosion,
-/// 1.9: «only if they are not flying» — полёт сервер пока не знает).
+/// Вики, Explosion: «only if they are not flying» — творческий полёт
+/// исключает толчок, но не проверку урона.
 fn push_entities(
     world: &World,
     items: &mut Items,
@@ -716,7 +719,7 @@ fn push_entities(
         // Урон идёт, даже когда толкать некуда (центр в самом игроке).
         hurts.push((player.entity_id, impact));
 
-        if let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact) {
+        if !player.flying_creative && let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact) {
             pushed.push((player.entity_id, push));
         }
     }
@@ -1106,6 +1109,19 @@ mod tests {
         assert_eq!(by_id(3).vitals.health, 20.0);
     }
 
+    #[test]
+    fn creative_flight_suppresses_explosion_push_but_keeps_damage_checks() {
+        let world = World::in_memory();
+        let mut items = Items::new();
+        let grounded = Target { entity_id: 391, x: 2.5, y: 64.0, z: 0.5, sneaking: false, flying_creative: false };
+        let flying = Target { entity_id: 392, flying_creative: true, ..grounded };
+        let (pushes, hurts) = push_entities(&world, &mut items, &[grounded, flying], (0.5, 64.0, 0.5), 4.0);
+        assert_eq!(pushes.len(), 1);
+        assert_eq!(pushes[0].0, grounded.entity_id);
+        assert_eq!(hurts.len(), 2);
+        assert_eq!(hurts[0].1, hurts[1].1);
+    }
+
     /// «Порыв ветра» подбрасывает стоящего в центре прямо вверх, тем
     /// сильнее, чем выше уровень, и никого не ранит (вики, Wind Burst).
     #[test]
@@ -1119,7 +1135,7 @@ mod tests {
 
         items.add_mob(crate::mob::Mob::new(1, crate::mob::Kind::Cow, (2.5, 64.0, 0.5)));
 
-        let me = Target { entity_id: 7, x: 0.5, y: 64.0, z: 0.5, sneaking: false };
+        let me = Target { entity_id: 7, x: 0.5, y: 64.0, z: 0.5, sneaking: false, flying_creative: false };
         let reader = world.watch_events(READER);
 
         wind_burst(&mut world, &mut items, &[me], (0.5, 63.9, 0.5), wind_burst_knockback(1), 7);
@@ -1387,7 +1403,7 @@ mod tests {
         // Предмет рядом с центром — пропадёт.
         items.drop_item(6, crate::inventory::Stack::new(1, 1), (1.0, 64.0, 0.5), (0.0, 0.0, 0.0), 0);
 
-        let players = [Target { entity_id: 9, x: 0.5, y: 64.0, z: 3.5, sneaking: false }];
+        let players = [Target { entity_id: 9, x: 0.5, y: 64.0, z: 3.5, sneaking: false, flying_creative: false }];
         let world_reader = world.watch_events(READER);
 
         explode(&mut world, &mut items, &players, (0.5, 64.06125, 0.5), POWER, false, &mut next);

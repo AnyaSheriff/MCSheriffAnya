@@ -32,7 +32,7 @@ pub(super) fn eligible(player: &PlayerState, full: bool, critical: bool, now: u6
 /// стоят на полу (itemaudit4-knockback). Проверяем реальную опору перед
 /// ударом; вверх летящий игрок и незаконченный перенос не приземляются.
 pub(super) fn settle(shared: &Shared, player: &mut PlayerState) {
-    if player.on_ground || player.awaiting_teleport || player.creative_flying || player.ride.vehicle.is_some()
+    if player.on_ground || player.awaiting_teleport || player.abilities.flying || player.ride.vehicle.is_some()
         || player.net.last_delta.1 > 0.0 || (player.y-player.y.floor()).abs() >= 0.001 { return; }
     let world = shared.world_in(player.dimension).lock().expect("мир");
     let below = world.get_block(player.x.floor() as i32,(player.y-0.001).floor() as i32,player.z.floor() as i32);

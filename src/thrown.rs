@@ -725,6 +725,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         .map(|member| (member.entity_id, (member.position.x, member.position.y, member.position.z), member.sneaking, member.game_mode, member.uuid))
         .collect();
 
+    let blast_targets = crate::tick::blast_targets(shared, dimension);
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
     let mut thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
 
@@ -1201,11 +1202,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
     // Взрывы зарядов ветра — после хода всех снарядов, как у шаров гаста.
     if !winds.is_empty() {
-        let targets: Vec<crate::tnt::Target> = members
-            .iter()
-            .filter(|m| m.3 != 3)
-            .map(|m| crate::tnt::Target { entity_id: m.0, x: m.1.0, y: m.1.1, z: m.1.2, sneaking: m.2 })
-            .collect();
+        let targets = blast_targets.as_slice();
         let griefing = shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed);
 
         for (centre, breeze) in winds {
@@ -1216,7 +1213,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             };
             let mut doors = Vec::new();
 
-            crate::tnt::wind_charge_burst(world, &mut items, &targets, centre, power, knockback, gust, &mut |world, pos| {
+            crate::tnt::wind_charge_burst(world, &mut items, targets, centre, power, knockback, gust, &mut |world, pos| {
                 crate::wind::interact(world, pos, &mut doors, griefing || !breeze);
             });
         }

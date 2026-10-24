@@ -65,7 +65,7 @@ pub(super) fn update(shared: &Shared, player: &mut PlayerState) {
     player.foot_enchants.grounded = player.on_ground;
     player.foot_enchants.allowed = allowed;
 
-    let freeze = allowed && frost > 0 && player.on_ground && !player.creative_flying;
+    let freeze = allowed && frost > 0 && player.on_ground && !player.abilities.flying;
     let obstacles = if freeze { frost_obstacles(shared, player) } else { Vec::new() };
     let on_soul = {
         let mut world = shared.world_in(player.dimension).lock().expect("мир");
@@ -101,7 +101,7 @@ pub(super) fn update(shared: &Shared, player: &mut PlayerState) {
 
 fn trail(shared: &Shared, player: &mut PlayerState, active: bool) {
     let at = (player.x, player.y, player.z);
-    let active = active && player.on_ground && !player.creative_flying && !player.awaiting_teleport;
+    let active = active && player.on_ground && !player.abilities.flying && !player.awaiting_teleport;
     // После остановки vanilla хранит последнюю сетевую скорость до нового
     // пакета позиции (enchant-soul-effects: частицы +196,+201,+206,+211).
     let motion = (player.net.last_delta.0, player.net.last_delta.2);

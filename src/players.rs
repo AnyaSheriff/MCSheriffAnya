@@ -133,6 +133,7 @@ pub const GLIDE_BIT: u8 = 0x40;
 /// нагрудник, штаны, ботинки) — их клиенты показывают на чужом игроке.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Gear {
+    pub abilities: crate::playerdata::Abilities,
     pub silent: bool,
     pub worn: [Option<Stack>; 5],
     pub view: CombatView,
