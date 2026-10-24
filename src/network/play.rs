@@ -4347,6 +4347,7 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::Level { except: Some(id), .. } if *id == player.entity_id => {}
+            WorldEvent::Level { effect: 2019 | 2020, .. } if stream.stream().client_version() != mcsa_protocol::JavaVersion::V26_3 => {}
             WorldEvent::Level { x, y, z, effect, data, .. } => {
                 let mut body = encode_varint(WORLD_EVENT);
 
@@ -9000,7 +9001,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         && let Some(reaction) = debug_stick::interact(shared, player, (x,y,z), 1, true, sequence)
     { return Some(reaction); }
 
-    let breaks_now = mining::allows(player, shared, (x, y, z), state, status);
+    let breaks_now = mining::allows(player, shared, (x, y, z), state, status, face);
 
     // Удар по редстоуновой руде зажигает её (вики, Redstone Ore: «pressing
     // either the break or the use control»). В творческом блок ломается

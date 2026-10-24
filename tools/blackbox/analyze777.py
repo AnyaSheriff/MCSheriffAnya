@@ -150,6 +150,15 @@ def project_record(record,decoder,scenario,data,output,sounds):
                 stream=io.BytesIO(bytes.fromhex(e['hex']))
                 value=decoder.read(stream,'packet_'+e['name'])
                 if stream.read():raise ValueError('trailing bytes')
+                if e['name']=='world_event' and value['effectId']==1010:
+                    songs=client.get('registry_names',{}).get('minecraft:jukebox_song')
+                    if songs is None and record.get('protocol')==777:raise ValueError('missing advertised jukebox song registry')
+                    if songs is not None:
+                        # Номер песни относится к реестру данного соединения.
+                        # Сравниваем имена, а не порядок данного соединения,
+                        # сохраняя исходный номер в сыром пакете.
+                        if not 0 <= value['data'] < len(songs):raise ValueError('jukebox song outside advertised registry')
+                        value['data']='song:'+songs[value['data']]
                 if e['name'] in ('rel_entity_move','entity_move_look') and 'move' in value:
                     movement=value.pop('move')
                     # Один delta777 имеет тот же масштаб1/4096, что старые dX/dY/dZ.

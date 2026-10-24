@@ -57,6 +57,34 @@ class HarnessTests(unittest.TestCase):
             self.assertEqual(project_record(record,decoder,scenario,data,output,{}),[])
             self.assertEqual(json.loads(output.read_text())['window']['last'],scenario['record_ticks']+10)
 
+    def test_jukebox_projection_uses_the_advertised_song_name(self):
+        from record777 import pack_position
+        protocol={'types':{},'play':{'toClient':{'types':{'packet_world_event':['container',[
+            {'name':'effectId','type':'i32'},{'name':'location','type':['bitfield',[
+                {'name':'x','size':26,'signed':True},{'name':'z','size':26,'signed':True},{'name':'y','size':12,'signed':True}]]},
+            {'name':'data','type':'i32'},{'name':'global','type':'bool'}]]}},'toServer':{'types':{}}}}
+        with tempfile.TemporaryDirectory() as folder:
+            data=Path(folder)
+            for name in ('items','entities','blocks'):(data/f'{name}.json').write_text('[]')
+            scenario=dict(name='jukebox-disc',record_ticks=1)
+            def project(songs,index):
+                payload=struct.pack('>i',1010)+pack_position([100,-59,100])+struct.pack('>i?',index,False)
+                record={'protocol':777,'origin':[100,-59,100],'initial':[{'entity':1}], 'start':0,'sent':[],
+                    'clients':[{'events':[dict(at=0,name='world_event',hex=payload.hex())],
+                                'registry_names':{'minecraft:jukebox_song':songs}}]}
+                output=data/'events.json'
+                errors=project_record(record,Decoder(protocol),scenario,data,output,{})
+                return errors,json.loads(output.read_text())['events']
+            official=project(['minecraft:bounce','minecraft:cat'],1)
+            core=project(['minecraft:cat','minecraft:bounce'],0)
+            self.assertEqual(official,core)
+            self.assertEqual(official[0],[])
+            self.assertEqual(official[1][0]['data'],'song:minecraft:cat')
+            self.assertNotEqual(official,project(['minecraft:cat','minecraft:bounce'],1))
+            self.assertTrue(project(['minecraft:cat'],-1)[0])
+            self.assertTrue(project(['minecraft:cat'],1)[0])
+            self.assertTrue(project(None,0)[0])
+
     def test_optional_anonymous_nbt_end_and_compound(self):
         decoder=Decoder({'types':{},'play':{'toClient':{'types':{}}}})
         self.assertIsNone(decoder.read(io.BytesIO(b'\0'),'anonOptionalNbt'))

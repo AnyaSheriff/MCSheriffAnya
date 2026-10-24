@@ -95,6 +95,7 @@ class Recorder(Client):
         self.calibrating = False
         self.observing_sounds = False
         self.item_samples = []
+        self.registry_names = {}
         self.motion = [0., 0., 0.]
         self.floor = -59.
         self.flying = True
@@ -329,7 +330,20 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         clients=[None]*len(usernames)
         def join_client(entry):
             i,username=entry
-            c=connect(port,protocol,lambda sock,table: make_recorder(sock,table,version,speed_attribute),version=version,username=username)
+            registries={}
+            def configuration(sock,packet_id,payload):
+                # Сохраняем только имена объявленных сетевых реестров;
+                # содержимое NBT нужно декодировать лишь для границ записей.
+                from analyze777 import Decoder
+                schema=protocol['configuration']['toClient']['types']['packet'][1][0]['type'][1]['mappings']
+                if schema.get(hex(packet_id)) != 'registry_data' and schema.get(f'0x{packet_id:02x}') != 'registry_data':return False
+                decoder=Decoder(protocol)
+                decoder.types.update(protocol['configuration']['toClient']['types'])
+                row=decoder.read(io.BytesIO(payload),'packet_registry_data')
+                registries[row['id']]=[entry['key'] for entry in row['entries']]
+                return False
+            c=connect(port,protocol,lambda sock,table: make_recorder(sock,table,version,speed_attribute),version=version,username=username,configuration_handler=configuration)
+            c.registry_names=registries
             clients[i]=c
             # Те же наборы и границы, что у исходного bot.js: случайный
             # предмет/игрок не должен становиться целью Attack.
@@ -563,7 +577,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                 c.send('block_dig',varint(dig_status(action.get('status',0),version))+pack_position(pos)+bytes([action.get('face',1)])+varint(c.sequence))
         time.sleep(max(0,start+(s['record_ticks']+13)*.05-time.monotonic()))
         for c in clients:c.recording=False;c.external_ticks=False
-        result={'scenario':s['name'],'protocol':version,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
+        result={'scenario':s['name'],'protocol':version,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
         output.write_text(json.dumps(result,indent=1)+'\n')
         for text in s.get('cleanup',[]):
             special(text,clients) if text.startswith('!') else command(text)
@@ -644,7 +658,7 @@ def main():
                     with (folder/'config/mcsa.properties').open('a') as config:config.write('debug=true\n')
                 (folder/'config/skins.toml').write_text('mojang=false\nely=false\n')
             (folder/'eula.txt').write_text('eula=true\n')
-            (folder/('server.properties' if label=='official' else 'config/server.properties')).write_text(f'server-ip=127.0.0.1\nserver-port={port}\nenable-rcon=true\nrcon.port={port+1}\nrcon.password=local-blackbox\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\nallow-flight=true\ngamemode=creative\nmax-tick-time=0\n')
+            (folder/('server.properties' if label=='official' else 'config/server.properties')).write_text(f'server-ip=127.0.0.1\nserver-port={port}\nenable-rcon=true\nrcon.port={port+1}\nrcon.password=local-blackbox\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\ngenerator-settings={{"layers":[{{"block":"minecraft:bedrock","height":1}},{{"block":"minecraft:stone","height":3}}],"biome":"minecraft:plains"}}\ngenerate-structures=false\nwhite-list=false\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\nallow-flight=true\ngamemode=creative\nmax-tick-time=0\n')
             ops=[]
             for name in ('blackbox','blackboxb'):
                 value=bytearray(hashlib.md5(('OfflinePlayer:'+name).encode()).digest());value[6]=(value[6]&15)|48;value[8]=(value[8]&63)|128

@@ -2291,7 +2291,7 @@ impl World {
 
         if container.slots != before {
             // Печь начинает плавку заново, если вход сменили.
-            crate::furnace::after_slots_changed(container, &before);
+            crate::furnace::after_slots_changed(container, &before, self.catalog);
             self.contents_changed.push((x, y, z));
         }
 

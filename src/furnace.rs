@@ -522,7 +522,7 @@ pub fn extract_order(kind: Kind, size: usize) -> Vec<usize> {
 /// Так у оригинала: свойство 3 становится 200, когда руду положили
 /// командой в ячейку, и остаётся 0, когда печь поставили с рудой в данных
 /// (чёрный ящик, furnace-smelt).
-pub fn after_slots_changed(container: &mut Container, before: &[Option<Stack>]) {
+pub fn after_slots_changed(container: &mut Container, before: &[Option<Stack>], catalog: crate::gameplay_catalog::Catalog) {
     if !is_oven(container.kind) {
         return;
     }
@@ -537,7 +537,10 @@ pub fn after_slots_changed(container: &mut Container, before: &[Option<Stack>]) 
 
     if !same {
         container.heat.cook = 0;
-        container.heat.cook_total = cook_time(container.kind);
+        // furnace-blast777: до первого зажигания свойство3 равно200;
+        // действительное время рецепта100 появляется при заправке.
+        container.heat.cook_total = if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
+            && container.heat.lit_total == 0 { 200 } else { cook_time(container.kind) };
     }
 }
 
@@ -659,6 +662,10 @@ pub fn tick_oven(world: &mut World, pos: Pos) {
     {
         heat.lit = time;
         heat.lit_total = time;
+        // [проверить] Явное NBT-время200 пока неотличимо от начального200.
+        if world.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 && heat.cook_total == 200 {
+            heat.cook_total = cook_time(kind);
+        }
 
         // Лава сгорает, ведро остаётся (вики, Smelting).
         slots[FUEL] = if name_of(stack.item) == "lava_bucket" {
@@ -936,12 +943,43 @@ mod tests {
     }
 
     #[test]
+    fn blast_furnace_263_announces_default_then_recipe_duration() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            let mut world = World::in_memory_with_catalog(catalog);
+            world.set_block_silently(0, 0, 0, blocks::state_by_name("blast_furnace").unwrap());
+            world.with_container(0, 0, 0, |c| c.slots[INPUT] = Some(Stack::new(id("raw_iron"), 1)));
+            let initial = if profile == Profile::Preview26_3 { 200 } else { 100 };
+            assert_eq!(properties(world.container(0, 0, 0).unwrap()), vec![0, 0, 0, initial]);
+            world.with_container(0, 0, 0, |c| c.slots[FUEL] = Some(Stack::new(id("coal"), 1)));
+            tick_oven(&mut world, (0, 0, 0));
+            assert_eq!(world.container(0, 0, 0).unwrap().heat.cook_total, 100);
+            for _ in 1..100 { tick_oven(&mut world, (0, 0, 0)); }
+            assert_eq!(world.container(0, 0, 0).unwrap().slots[OUTPUT].unwrap().item, id("iron_ingot"));
+            // Нестандартное время50 из NBT и прежнее нулевое не подменяются
+            // исправлением свойства только что заправленной печи.
+            for total in [0, 50] {
+                let mut world = World::in_memory_with_catalog(catalog);
+                world.set_block_silently(0, 0, 0, blocks::state_by_name("blast_furnace").unwrap());
+                world.with_container(0, 0, 0, |c| {
+                    c.slots[INPUT] = Some(Stack::new(id("raw_iron"), 1));
+                    c.slots[FUEL] = Some(Stack::new(id("coal"), 1));
+                });
+                world.with_container(0, 0, 0, |c| c.heat.cook_total = total);
+                tick_oven(&mut world, (0, 0, 0));
+                assert_eq!(world.container(0, 0, 0).unwrap().heat.cook_total, total);
+            }
+        }
+    }
+
+    #[test]
     fn a_furnace_smelts_like_the_original() {
         let mut container = Container::new(Kind::Furnace);
         let before = container.slots.clone();
 
         container.slots[INPUT] = Some(Stack::new(id("iron_ore"), 2));
-        after_slots_changed(&mut container, &before);
+        after_slots_changed(&mut container, &before, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));
         assert_eq!(properties(&container), vec![0, 0, 0, 200]);
         assert!(may_place(Kind::Furnace, FUEL, id("coal")));
         assert!(!may_place(Kind::Furnace, FUEL, id("iron_ore")));

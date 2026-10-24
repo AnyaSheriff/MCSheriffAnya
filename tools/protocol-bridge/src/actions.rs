@@ -190,6 +190,10 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // Wiki Java Edition protocol/Packets, Level Event:
                 // 2001/3008: «Block state ID» (слом и завершение археологии).
                 2001|3008=>context.items.content.packet_id(RegistryKind::BlockState,from,to,u32::try_from(data).map_err(|_|Error::Invalid)?)? as i32,
+                // mining-feedback-777: data — грань, не состояние блока.
+                // Ядро создаёт эти события только для777; старому клиенту
+                // они не отправляются (обратного аналога ещё не установлено).
+                2019|2020 if from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 && (0..=5).contains(&data) => data,
                 // Обычные звуковые события777 (wide777 + автокрафтер):
                 // data0 не является ссылкой на реестр.
                 // Другие данные/версии этим наблюдением не разрешаются.
@@ -401,6 +405,24 @@ mod tests {
                     assert_eq!(effects("world_event",&mut Cursor::new(&body),&mut Vec::new(),OLD,JavaVersion::V26_2,Context::default()),
                         Err(Error::PayloadUnavailable("unverified level event data")));
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn observed_mining_feedback_preserves_face_and_rejects_old_clients() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/mining-feedback-777.json")).unwrap();
+        for row in fixture["packets"].as_array().unwrap() {
+            let hex = row["hex"].as_str().unwrap();
+            let body: Vec<u8> = (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i+2],16).unwrap()).collect();
+            let mut output = Vec::new();
+            effects("world_event", &mut Cursor::new(&body), &mut output, OLD, NEW, Context::default()).unwrap();
+            assert_eq!(output, body);
+            assert!(effects("world_event", &mut Cursor::new(&body), &mut Vec::new(), NEW, OLD, Context::default()).is_err());
+            assert!(effects("world_event", &mut Cursor::new(&body), &mut Vec::new(), OLD, JavaVersion::V26_2, Context::default()).is_err());
+            for face in [-1_i32, 6] {
+                let mut invalid = body.clone(); invalid[12..16].copy_from_slice(&face.to_be_bytes());
+                assert!(effects("world_event", &mut Cursor::new(&invalid), &mut Vec::new(), OLD, NEW, Context::default()).is_err());
             }
         }
     }

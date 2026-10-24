@@ -12,6 +12,8 @@ pub(super) struct Session {
     /// (чёрный ящик mining-time-denied: оригинал ломает камень на такте 130
     /// после START 12 и CANCEL 13).
     cancelled: bool,
+    face: u8,
+    feedback_tick: u64,
 }
 
 fn progress(player: &PlayerState, shared: &Shared, state: i32) -> f32 {
@@ -45,7 +47,7 @@ pub(super) fn punched(player: &mut PlayerState, state: i32) {
     if let Some(session) = &mut player.mining { session.state = state; }
 }
 
-pub(super) fn allows(player: &mut PlayerState, shared: &Shared, at: (i32, i32, i32), state: i32, status: i32) -> bool {
+pub(super) fn allows(player: &mut PlayerState, shared: &Shared, at: (i32, i32, i32), state: i32, status: i32, face: u8) -> bool {
     if player.game_mode == GAME_MODE_CREATIVE {
         player.mining = None;
         player.delayed = None;
@@ -56,7 +58,8 @@ pub(super) fn allows(player: &mut PlayerState, shared: &Shared, at: (i32, i32, i
     match status {
         0 => {
             let instant = progress(player, shared, state) >= 1.0;
-            player.mining = (!instant).then_some(Session { at, state, dimension: player.dimension, started: now, pending: false, cancelled: false });
+            player.mining = (!instant).then_some(Session { at, state, dimension: player.dimension, started: now, pending: false, cancelled: false, face, feedback_tick: now });
+            if !instant && state != 0 { feedback(shared, player, at, face, 0); }
             instant
         }
         1 => {
@@ -89,9 +92,33 @@ pub(super) fn allows(player: &mut PlayerState, shared: &Shared, at: (i32, i32, i
     }
 }
 
+fn feedback(shared: &Shared, player: &PlayerState, at: (i32, i32, i32), face: u8, since: u64) {
+    // Сетевой mining-audit777: камень, кровать, грани0/1/2; каждый четвёртый
+    // такт2019 заменяется2020, data — грань из START. Прочие грани [проверить].
+    // [проверить] В такте FINISH сетевой цикл пока может выдать лишний2019;
+    // bed-place-break остаётся открытым, хотя прежние20пропусков устранены.
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 && face <= 5 {
+        let effect = if since % 4 == 3 { 2020 } else { 2019 };
+        shared.world_in(player.dimension).lock().expect("мир").note_level_event(at.0, at.1, at.2, effect, i32::from(face));
+    }
+}
+
 /// [проверить] Ранний FINISH оставляет отложенное копание до полной прочности;
 /// CANCEL, смена блока/измерения и выход из досягаемости отменяют его.
 pub(super) fn tick(shared: &Shared, player: &mut PlayerState) {
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && let Some(session) = player.mining
+        && !session.cancelled && !session.pending
+        && session.dimension == player.dimension && player.game_mode == GAME_MODE_SURVIVAL && !player.vit.dead
+        && session.state != 0 && within_reach(player, session.at)
+    {
+        let now = *shared.ticks.borrow();
+        let state = shared.world_in(player.dimension).lock().expect("мир").get_block(session.at.0, session.at.1, session.at.2);
+        if state == session.state && now > session.feedback_tick {
+            feedback(shared, player, session.at, session.face, now.saturating_sub(session.started));
+            player.mining.as_mut().expect("копает").feedback_tick = now;
+        }
+    }
     let Some(session) = player.delayed else { return; };
     let state = shared.world_in(player.dimension).lock().expect("мир").get_block(session.at.0, session.at.1, session.at.2);
     if player.dimension != session.dimension || state != session.state || !within_reach(player, session.at)
@@ -118,7 +145,11 @@ pub(super) fn tick(shared: &Shared, player: &mut PlayerState) {
 mod tests {
     use super::*;
     fn setup(name: &str, tool: Option<&str>) -> (Shared, PlayerState) {
-        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(), crate::ops::Ops::open(std::path::Path::new("target/mining-test-ops.json")), crate::skins::Settings::default());
+        setup_profile(name, tool, crate::gameplay_catalog::Profile::Java26_1_2)
+    }
+    fn setup_profile(name: &str, tool: Option<&str>, profile: crate::gameplay_catalog::Profile) -> (Shared, PlayerState) {
+        let catalog = crate::gameplay_catalog::Catalog::new(profile);
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog), Default::default(), Default::default(), Default::default(), crate::ops::Ops::open(std::path::Path::new("target/mining-test-ops.json")), crate::skins::Settings::default());
         let mut player = PlayerState::new([18; 16], "MiningTest".into(), None, None, 0x7f, 1, (3.5, 64.0, 5.5));
         player.game_mode = GAME_MODE_SURVIVAL;
         player.on_ground = true;
@@ -135,6 +166,46 @@ mod tests {
     }
     fn block(shared: &Shared, player: &PlayerState) -> i32 { shared.world_in(player.dimension).lock().unwrap().get_block(3, 64, 3) }
 
+    #[test]
+    fn mining_feedback_263_tracks_face_cadence_cancellation_and_changed_blocks() {
+        use crate::gameplay_catalog::Profile;
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for face in [0, 1, 2] {
+                let (shared, mut player) = setup_profile("stone", None, profile);
+                let reader = shared.next_reader();
+                let start = shared.world_in(player.dimension).lock().unwrap().watch_events(reader);
+                let stone = block(&shared, &player);
+                allows(&mut player, &shared, (3, 64, 3), stone, 0, face);
+                for now in 1..8 {
+                    shared.ticks.send_replace(now);
+                    tick(&shared, &mut player);
+                    tick(&shared, &mut player);
+                }
+                allows(&mut player, &shared, (3, 64, 3), stone, 1, face);
+                shared.ticks.send_replace(8);
+                tick(&shared, &mut player);
+                let (events, next) = shared.world_in(player.dimension).lock().unwrap().events_since(start, reader);
+                let levels: Vec<_> = events.into_iter().filter_map(|e| match e {
+                    WorldEvent::Level { effect: effect @ (2019 | 2020), data, .. } => Some((effect, data)),
+                    _ => None,
+                }).collect();
+                let expected = if profile == Profile::Preview26_3 {
+                    vec![(2019, i32::from(face)), (2019, i32::from(face)), (2019, i32::from(face)), (2020, i32::from(face)),
+                         (2019, i32::from(face)), (2019, i32::from(face)), (2019, i32::from(face)), (2020, i32::from(face))]
+                } else { vec![] };
+                assert_eq!(levels, expected);
+                // Исчезнувшая цель не создаёт частиц даже при оставшемся START.
+                allows(&mut player, &shared, (3, 64, 3), stone, 0, face);
+                let after_start = shared.world_in(player.dimension).lock().unwrap().events_since(next, reader).1;
+                shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 64, 3, 0);
+                shared.ticks.send_replace(9);
+                tick(&shared, &mut player);
+                assert!(!shared.world_in(player.dimension).lock().unwrap().events_since(after_start, reader).0.iter()
+                    .any(|e| matches!(e, WorldEvent::Level { effect: 2019 | 2020, .. })));
+            }
+        }
+    }
+
     fn enchanted(player: &mut PlayerState, slot: i32, item: &str, name: &str, level: i32) {
         let mut data = crate::stackdata::Data::default();
         data.set_enchant(crate::stackdata::enchantment_number(name).unwrap(), level);
@@ -149,13 +220,13 @@ mod tests {
         enchanted(&mut player, hand, "diamond_pickaxe", "efficiency", 5);
         // Первая попытка после замены вещи должна видеть новые атрибуты;
         // 34 / 45 < 1: Efficiency V не даёт мгновенного слома без Haste.
-        assert!(!allows(&mut player, &shared, (3, 64, 3), stone, 0));
+        assert!(!allows(&mut player, &shared, (3, 64, 3), stone, 0, 1));
         let dry = progress(&player, &shared, stone);
         assert!((dry - 34.0 / 45.0).abs() < 0.000_001);
         shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 65, 5, blocks::state_by_name("water").unwrap());
         assert!((progress(&player, &shared, stone) - dry / 5.0).abs() < 0.000_001);
         enchanted(&mut player, 5, "diamond_helmet", "aqua_affinity", 1);
-        allows(&mut player, &shared, (3, 64, 3), stone, 0);
+        allows(&mut player, &shared, (3, 64, 3), stone, 0, 1);
         assert!((progress(&player, &shared, stone) - dry).abs() < 0.000_001);
         player.on_ground = false;
         player.y += 0.1;
