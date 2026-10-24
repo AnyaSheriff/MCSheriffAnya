@@ -12,7 +12,7 @@ fn recorded_motion_replays_fall_damage_and_both_particle_counts() {
         let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
             crate::ops::Ops::open(std::path::Path::new("tmp/motion-ops.json")), crate::skins::Settings::default());
         let mut p = PlayerState::new([72;16],"Motion".into(),None,None,0x7f,0,(3.5,64.0,1.5));
-        p.game_mode = if name.starts_with("fall-") { GAME_MODE_CREATIVE } else { GAME_MODE_SURVIVAL };
+        vitals::change_game_mode(&mut p, if name.starts_with("fall-") { GAME_MODE_CREATIVE } else { GAME_MODE_SURVIVAL });
         p.entity_id = 72;
         shared.world_in(p.dimension).lock().unwrap().set_block_silently(3,63,1,blocks::state_by_name("stone").unwrap());
         let mut actual = Vec::new();
@@ -82,7 +82,7 @@ async fn mode_change_landing_keeps_recorded_velocity_then_teleport_clears_it() {
     let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
         crate::ops::Ops::open(std::path::Path::new("tmp/motion-velocity-ops.json")), crate::skins::Settings::default());
     let mut p = PlayerState::new([73;16],"Velocity".into(),None,None,0x7f,0,(3.5,64.0,1.5));
-    p.game_mode = GAME_MODE_CREATIVE;
+    vitals::change_game_mode(&mut p, GAME_MODE_CREATIVE);
     p.entity_id = 73;
     shared.world_in(p.dimension).lock().unwrap().set_block_silently(3,63,1,blocks::state_by_name("stone").unwrap());
     let rows = fixture["fall-mode-teleport-motion"].as_array().unwrap();
@@ -130,7 +130,7 @@ fn actual_mace_hits_reset_fall_for_players_and_mobs_without_blanket_immunity() {
                 crate::ops::Ops::open(std::path::Path::new("tmp/motion-combat-ops.json")), crate::skins::Settings::default());
             shared.ticks.send_replace(100);
             let mut p = PlayerState::new([74;16],"Smash".into(),None,None,0x7f,0,(3.5,66.40739540236494,1.5));
-            p.game_mode = GAME_MODE_SURVIVAL;
+            vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
             p.entity_id = 74;
             p.on_ground = false;
             p.vit.fall = 1.59260459763506;

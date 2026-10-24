@@ -124,7 +124,7 @@ impl Body {
         };
         if !near { return; }
         p.dimension = stance.dimension;
-        p.game_mode = stance.game_mode;
+        if p.game_mode != stance.game_mode { vitals::change_game_mode(p, stance.game_mode); }
         p.attrs.set_creative_ranges(stance.game_mode == GAME_MODE_CREATIVE);
         p.ride.vehicle = Some(target);
         let input = u8::from(flags & (1 << 10) != 0) | (u8::from(flags & (1 << 11) != 0) << 1)
@@ -169,7 +169,7 @@ impl Body {
     fn load(&mut self, stance: &Stance, inventory: &Inventory, vit: &Vitals, last_attack: u64) {
         let p = &mut *self.state;
 
-        p.game_mode = stance.game_mode;
+        if p.game_mode != stance.game_mode { vitals::change_game_mode(p, stance.game_mode); }
         p.attrs.set_creative_ranges(stance.game_mode == GAME_MODE_CREATIVE);
         (p.x, p.y, p.z) = stance.feet;
         p.yaw = stance.yaw;

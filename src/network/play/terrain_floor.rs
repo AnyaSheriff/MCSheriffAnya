@@ -83,7 +83,7 @@ fn crossing(world: &World, from: Point, to: Point, height: f64) -> Crossing {
 pub(super) fn classify(shared: &Shared, player: &PlayerState, to: Point) -> Decision {
     let from = (player.x, player.y, player.z);
     if !matches!(player.game_mode, GAME_MODE_SURVIVAL | GAME_MODE_ADVENTURE)
-        || player.creative_flying || player.vit.dead || player.glide.active
+        || player.abilities.flying || player.vit.dead || player.glide.active
         || player.net.spin_pose || player.net.spin_since.is_some()
         || player.net.in_water || player.net.in_lava
         || from.0 != to.0 || from.2 != to.2 || to.1 >= from.1 || from.1 - to.1 > MAX_DESCENT

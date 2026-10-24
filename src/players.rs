@@ -133,6 +133,7 @@ pub const GLIDE_BIT: u8 = 0x40;
 /// нагрудник, штаны, ботинки) — их клиенты показывают на чужом игроке.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Gear {
+    pub abilities: crate::playerdata::Abilities,
     pub worn: [Option<Stack>; 5],
     pub view: CombatView,
     /// Скорость удара: её меняет оружие в руке, и остальным она уходит атрибутом.
@@ -189,6 +190,9 @@ pub enum Change {
 /// кладётся сюда, а подключение забирает его на ближайшем круге.
 #[derive(Clone, Debug)]
 pub enum Order {
+    // Общий вход для API полёта; поверхность plugins переносится отдельно.
+    #[allow(dead_code)]
+    PluginFlight { owner: String, field: u8, value: i8 },
     /// Выгнать с сервера, показав причину.
     Kick { reason: String },
 

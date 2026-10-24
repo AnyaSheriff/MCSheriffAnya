@@ -74,7 +74,7 @@ fn unsupported() -> BackupError {
 #[cfg(target_os = "linux")]
 mod linux;
 
-/// Только известный переход storage10→11. Манифест меняется после полной
+/// Только известный переход storage10/11→12. Манифест меняется после полной
 /// проверки копии, пока session.lock всех измерений ещё удерживаются.
 pub(crate) fn create_storage_upgrade(guard: &StartupGuard, expected: &super::profile::Manifest) -> Result<VerifiedBackup, BackupError> {
     #[cfg(target_os = "linux")]
@@ -90,6 +90,16 @@ pub(crate) fn create_unidentified_storage_receipt(guard: &StartupGuard) -> Resul
     { linux::create_unidentified_storage_receipt(guard) }
     #[cfg(not(target_os = "linux"))]
     { let _ = guard; Err(unsupported()) }
+}
+
+/// Обновляет известный receipt после проверенной копии, без объявления игрового профиля.
+pub(crate) fn upgrade_unidentified_storage_receipt(guard: &StartupGuard,
+    expected: &super::startup::storage_receipt::Receipt,
+) -> Result<VerifiedBackup, BackupError> {
+    #[cfg(target_os = "linux")]
+    { linux::upgrade_unidentified_storage_receipt(guard, expected) }
+    #[cfg(not(target_os = "linux"))]
+    { let _ = (guard, expected); Err(unsupported()) }
 }
 
 #[cfg(target_os = "linux")]

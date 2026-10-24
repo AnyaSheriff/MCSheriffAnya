@@ -32,10 +32,10 @@ fn legacy_creative_flags_do_not_grant_survival_flight() {
     let mut packet = vec![0x13, 15];
     packet.extend(99f32.to_be_bytes()); packet.extend(99f32.to_be_bytes());
     apply(&packet, &mut player, &shared);
-    assert!(!player.creative_flying); assert_eq!(player.game_mode, GAME_MODE_SURVIVAL);
+    assert!(!player.abilities.flying); assert_eq!(player.game_mode, GAME_MODE_SURVIVAL);
     vitals::change_game_mode(&mut player, GAME_MODE_CREATIVE);
     apply(&packet, &mut player, &shared);
-    assert!(player.creative_flying);
+    assert!(player.abilities.flying);
 }
 
 #[test]

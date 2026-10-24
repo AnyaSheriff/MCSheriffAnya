@@ -680,7 +680,7 @@ pub(super) fn create_storage_upgrade(guard: &StartupGuard, expected: &super::sup
         .map_err(|error| BackupError { retained: None, publication_uncertain: false, cause: invalid(error.to_string()) })?;
     if plan.kind != profile::TransitionKind::StorageUpgrade
         || !matches!(&guard.check, profile::StartupCheck::StorageUpgradePending { snapshot_id } if snapshot_id == &expected.snapshot_id) {
-        return Err(BackupError { retained: None, publication_uncertain: false, cause: invalid("нет незавершённого плана storage10→11") });
+        return Err(BackupError { retained: None, publication_uncertain: false, cause: invalid("нет незавершённого плана storage10/11→12") });
     }
     create_with_completion(guard, Options::default(), &mut |_| Ok(()), Some(expected), false,
         &mut |source, backup, uncertain| publish_storage_manifest(source, expected, backup, uncertain))
@@ -702,7 +702,7 @@ fn publish_storage_manifest(source: &LockedWorld<'_>, expected: &super::super::p
     let target = profile::current_profile();
     let plan = profile::plan_transition(Some(expected), &target.gameplay_version, std::slice::from_ref(&target))
         .map_err(|error| invalid(error.to_string()))?;
-    if plan.kind != profile::TransitionKind::StorageUpgrade { return Err(invalid("требуется точный переход playerdata10→11")); }
+    if plan.kind != profile::TransitionKind::StorageUpgrade { return Err(invalid("требуется точный переход playerdata10/11→12")); }
     source.check_anchor()?;
     let (previous, stamp) = checked_manifest(source, expected)?;
     let updated = profile::Manifest { save_format: target.save_format, snapshot_id: backup.snapshot_id().to_owned(), ..expected.clone() };
@@ -795,5 +795,60 @@ pub(super) fn create_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBac
         &mut |source, backup, uncertain| {
             source.check_anchor()?;
             super::super::migration::activate(guard, backup, uncertain)
+        })
+}
+
+
+fn checked_storage_receipt(source: &LockedWorld<'_>, expected: &super::super::startup::storage_receipt::Receipt) -> io::Result<(File, Stamp)> {
+    use super::super::{profile, startup::storage_receipt};
+    require_absent(&source.root, profile::MANIFEST_NAME.as_bytes())?;
+    let file = regular(&source.root, storage_receipt::NAME.as_bytes())?;
+    let stamp = Stamp::of(&metadata_supported(&file, storage_receipt::NAME.as_bytes())?);
+    let mut bytes = Vec::new();
+    (&file).take(16 * 1024 + 1).read_to_end(&mut bytes)?;
+    if storage_receipt::decode(&bytes)? != *expected || Stamp::of(&file.metadata()?) != stamp { return Err(changed()); }
+    Ok((file, stamp))
+}
+
+pub(super) fn upgrade_unidentified_storage_receipt(guard: &StartupGuard,
+    expected: &super::super::startup::storage_receipt::Receipt,
+) -> Result<VerifiedBackup, BackupError> {
+    if !matches!(guard.check, super::super::profile::StartupCheck::LegacyUnidentified) || !expected.needs_upgrade() {
+        return Err(BackupError { retained: None, publication_uncertain: false, cause: invalid("нет известного прежнего receipt") });
+    }
+    create_with_completion(guard, Options::default(), &mut |_| Ok(()), None, false,
+        &mut |source, backup, uncertain| {
+            use super::super::startup::storage_receipt;
+            source.check_anchor()?;
+            let (previous, stamp) = checked_storage_receipt(source, expected)?;
+            let updated = storage_receipt::Receipt::for_backup(backup.snapshot_id());
+            let bytes = serde_json::to_vec(&updated).map_err(io::Error::other)?;
+            let temp_name = format!(".mcsa-storage-{}.tmp", backup.snapshot_id());
+            let mut temporary = new_file(&source.parent, temp_name.as_bytes())?;
+            temporary.write_all(&bytes)?;
+            // SAFETY: действующий наш fd; сохраняем права проверенного receipt.
+            if unsafe { libc::fchmod(temporary.as_raw_fd(), stamp.mode & 0o777) } != 0 { return Err(io::Error::last_os_error()); }
+            temporary.sync_all()?;
+            let mut readback = Vec::new();
+            regular(&source.parent, temp_name.as_bytes())?.take(16 * 1024 + 1).read_to_end(&mut readback)?;
+            if readback != bytes { return Err(changed()); }
+            source.check_anchor()?;
+            let (current, current_stamp) = checked_storage_receipt(source, expected)?;
+            if current_stamp != stamp || !same_inode(&current.metadata()?, &previous.metadata()?)
+                || !same_inode(&regular(&source.parent, temp_name.as_bytes())?.metadata()?, &temporary.metadata()?) { return Err(changed()); }
+            let old = component(temp_name.as_bytes())?;
+            let new = component(storage_receipt::NAME.as_bytes())?;
+            // SAFETY: fd-relative rename атомарно заменяет проверенный старый receipt.
+            if unsafe { libc::renameat(source.parent.as_raw_fd(), old.as_ptr(), source.root.as_raw_fd(), new.as_ptr()) } != 0 {
+                return Err(io::Error::last_os_error());
+            }
+            *uncertain = true;
+            source.root.sync_all()?;
+            source.parent.sync_all()?;
+            source.check_anchor()?;
+            let (published, _) = checked_storage_receipt(source, &updated)?;
+            if !same_inode(&published.metadata()?, &temporary.metadata()?) { return Err(changed()); }
+            *uncertain = false;
+            Ok(())
         })
 }

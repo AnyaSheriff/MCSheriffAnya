@@ -9,7 +9,7 @@ fn shared() -> Shared {
 fn player() -> PlayerState {
     let mut p = PlayerState::new([71;16], "Mismatch".into(), None, None, 0x7f, 0, (3.5,64.0,1.5));
     p.entity_id = 71;
-    p.game_mode = GAME_MODE_CREATIVE;
+    vitals::change_game_mode(&mut p, GAME_MODE_CREATIVE);
     p.awaiting_teleport = false;
     p
 }
@@ -71,7 +71,7 @@ fn teleport_preserves_fall_but_does_not_count_the_coordinate_jump() {
     // fall-mode-teleport-reset: после /tp вниз накопленные 4 блока дают урон 1.
     let shared = shared();
     let mut p = player();
-    p.game_mode = GAME_MODE_SURVIVAL;
+    vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
     p.vit.fall = 4.0;
     position_body(&mut p, Sync::Command);
     assert_eq!(p.vit.fall, 4.0);
@@ -134,7 +134,7 @@ async fn ordinary_fall_announces_observer_packets_once_in_the_movement_tick() {
     // pvp-mace-landing-count: порядок звуков и Damage Event при уроне 1.
     let shared = shared();
     let mut p = player();
-    p.game_mode = GAME_MODE_SURVIVAL;
+    vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
     p.vit.fall = 4.0;
     p.on_ground = true;
     let stone = blocks::state_by_name("stone").unwrap();
@@ -249,7 +249,7 @@ async fn sweeping_edge_resends_with_attack_speed_after_durability_change() {
 fn smash_landing_particles_are_published_in_the_movement_tick() {
     let shared = shared();
     let mut p = player();
-    p.game_mode = GAME_MODE_SURVIVAL;
+    vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
     p.vit.fall = 9.0;
     p.vit.smash_landing = true;
     p.vit.smash_forgives = true;

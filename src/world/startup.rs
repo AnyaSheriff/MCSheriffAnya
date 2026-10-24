@@ -199,6 +199,9 @@ fn prepare_with_upgrade(world: &Path,
     if pending {
         upgrade(&guard, manifest.as_ref().expect("известный исходный профиль"))?;
         guard.check = profile::check_current_world(&world).map_err(profile_error)?;
+    } else if manifest.is_none() && receipt.as_ref().is_some_and(storage_receipt::Receipt::needs_upgrade) {
+        super::snapshot::upgrade_unidentified_storage_receipt(&guard, receipt.as_ref().expect("проверенный receipt"))
+            .map_err(io::Error::other)?;
     } else if unidentified_backup {
         super::snapshot::create_unidentified_storage_receipt(&guard).map_err(io::Error::other)?;
         // Раскладка записи известна, игровой профиль по-прежнему НЕ установлен.

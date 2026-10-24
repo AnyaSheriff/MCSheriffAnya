@@ -10,7 +10,7 @@ impl Fixture {
 }
 impl Drop for Fixture {fn drop(&mut self){fs::remove_dir_all(&self.0).unwrap();}}
 fn empty_player()->PlayerData {
-    PlayerData {shoulders:[None,None],inventory:Inventory::new(),x:1.5,y:65.,z:-3.5,yaw:90.,pitch:0.,game_mode:0,
+    PlayerData {abilities: Abilities::for_mode(0),shoulders:[None,None],inventory:Inventory::new(),x:1.5,y:65.,z:-3.5,yaw:90.,pitch:0.,game_mode:0,
         dimension:Default::default(),vitals:Default::default(),respawn:None,ender:empty_ender()}
 }
 

@@ -184,7 +184,7 @@ fn catalog_dry_slab_geometry_and_crouching_share_the_bounded_guard() {
 #[test]
 fn old_teleport_vehicle_sleep_piston_and_unsupported_pose_guards_keep_their_order() {
     for mode in [GAME_MODE_SPECTATOR,GAME_MODE_CREATIVE] {
-        let (shared,mut p)=setup(stone(),65.0); p.game_mode=mode; p.creative_flying=mode==GAME_MODE_CREATIVE;
+        let (shared,mut p)=setup(stone(),65.0); p.game_mode=mode; p.abilities.flying=mode==GAME_MODE_CREATIVE;
         assert!(!handle_client_packet(&movement((0.5,64.875,0.5),0,false),&mut p,&shared).resync); assert_eq!(p.y,64.875);
     }
     for pose in 0..5 {

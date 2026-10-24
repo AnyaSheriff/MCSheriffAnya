@@ -1069,6 +1069,8 @@ impl BedrockWorld {
 
         for order in orders {
             match order {
+                // [Bedrock: потом] Общие настройки полёта пока доступны Java.
+                crate::players::Order::PluginFlight { .. } => {},
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 // [Bedrock: потом] Атрибуция команды; само здоровье обновляется.
                 crate::players::Order::CommandDamage { amount, source, .. } => self.health.hurt(amount, source),
@@ -3900,7 +3902,13 @@ impl BedrockWorld {
     /// Что записывается в файл игрока. Курсор — туда же, в инвентарь: иначе
     /// то, что держали курсором, пропало бы.
     fn player_data(&self) -> crate::playerdata::PlayerData {
+        let abilities = self.saved.as_ref().map_or_else(|| crate::playerdata::Abilities::for_mode(self.game_mode), |data| {
+            let mut abilities = data.abilities;
+            if data.game_mode != self.game_mode { abilities.apply_mode(self.game_mode); }
+            abilities
+        });
         crate::playerdata::PlayerData {
+            abilities,
             // [Bedrock: потом] Попугаи на плечах пока только сохраняются.
             shoulders: self.saved.as_ref().map(|s| s.shoulders.clone()).unwrap_or([None,None]),
             x: self.position.0 as f64,

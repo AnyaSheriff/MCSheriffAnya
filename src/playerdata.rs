@@ -51,7 +51,10 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// Старое ядро v9 не читает v10: обратный переход требует резервной копии.
 /// Версия 11 — новые полные записи мобов внутри переносимых ульев;
 /// старые читатели должны отвергнуть файл до изменения инвентаря.
-pub(crate) const FORMAT_VERSION: u32 = 11;
+/// Версия 12 — сохранённые способности после хвоста курсора.
+pub(crate) const FORMAT_VERSION: u32 = 12;
+const MOB_STORAGE_VERSION: u32 = 11;
+const ABILITIES_SIZE: usize = 13;
 const CURSOR_VERSION: u32 = 10;
 const TOTAL_EXPERIENCE_VERSION: u32 = 9;
 const SHOULDERS_VERSION: u32 = 8;
@@ -164,9 +167,71 @@ impl SavedVitals {
     }
 }
 
+/// Способности из minecraft.wiki/w/Player.dat_format: «abilities», «flying»,
+/// «mayfly», «instabuild», «invulnerable», «mayBuild», «flySpeed», «walkSpeed».
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Abilities {
+    pub flying: bool,
+    pub mayfly: bool,
+    pub instabuild: bool,
+    pub invulnerable: bool,
+    pub may_build: bool,
+    pub fly_speed: f32,
+    pub walk_speed: f32,
+}
+
+impl Default for Abilities {
+    fn default() -> Self {
+        Self { flying: false, mayfly: false, instabuild: false, invulnerable: false,
+            may_build: true, fly_speed: 0.05, walk_speed: 0.1 }
+    }
+}
+
+impl Abilities {
+    pub fn for_mode(mode: i32) -> Self {
+        let mut abilities = Self::default();
+        abilities.apply_mode(mode);
+        abilities
+    }
+
+    /// Вики, Creative: «flight»; Spectator: «always flying».
+    pub fn apply_mode(&mut self, mode: i32) {
+        self.mayfly = matches!(mode, 1 | 3);
+        self.instabuild = mode == 1;
+        self.invulnerable = matches!(mode, 1 | 3);
+        self.may_build = matches!(mode, 0 | 1);
+        self.flying = self.mayfly && (self.flying || mode == 3);
+    }
+
+    pub fn client_flying(&mut self, flags: u8) {
+        if self.mayfly { self.flying = flags & 2 != 0; }
+    }
+
+    pub fn flags(self) -> u8 {
+        u8::from(self.invulnerable) | (u8::from(self.flying) << 1)
+            | (u8::from(self.mayfly) << 2) | (u8::from(self.instabuild) << 3)
+    }
+
+    fn write(self, out: &mut Vec<u8>) {
+        out.extend_from_slice(&[u8::from(self.flying), u8::from(self.mayfly),
+            u8::from(self.instabuild), u8::from(self.invulnerable), u8::from(self.may_build)]);
+        out.extend_from_slice(&self.fly_speed.to_be_bytes());
+        out.extend_from_slice(&self.walk_speed.to_be_bytes());
+    }
+
+    fn read(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() != ABILITIES_SIZE || bytes[..5].iter().any(|b| *b > 1) { return None; }
+        let value = Self { flying: bytes[0] != 0, mayfly: bytes[1] != 0,
+            instabuild: bytes[2] != 0, invulnerable: bytes[3] != 0, may_build: bytes[4] != 0,
+            fly_speed: f32::from_be_bytes(take(bytes, 5)?), walk_speed: f32::from_be_bytes(take(bytes, 9)?) };
+        (value.fly_speed.is_finite() && value.walk_speed.is_finite()).then_some(value)
+    }
+}
+
 /// Что сервер помнит об игроке между заходами.
 #[derive(Clone, PartialEq, Debug)]
 pub struct PlayerData {
+    pub abilities: Abilities,
     /// Сущности попугаев на плечах: независимые записи Mob.
     pub shoulders: [Option<Vec<u8>>; 2],
     pub x: f64,
@@ -396,6 +461,7 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
     let mut ender = empty_ender();
     let mut shoulders = [None,None];
     let mut saved_cursor = None;
+    let mut abilities = Abilities::for_mode(i32::from_be_bytes(take(bytes, 40)?));
     let (mut inventory, dimension, vitals, respawn) = match version {
         OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
         INVENTORY_VERSION => (read_inventory(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
@@ -405,8 +471,13 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
 
             (read_inventory(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | CURSOR_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | CURSOR_VERSION | MOB_STORAGE_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
+            if version >= FORMAT_VERSION {
+                let (rest, stored) = tail.split_at(tail.len().checked_sub(ABILITIES_SIZE)?);
+                abilities = Abilities::read(stored)?;
+                tail = rest;
+            }
             if version >= CURSOR_VERSION { saved_cursor = match catalog { Some(catalog) => cursor::take_for_catalog(catalog, &mut tail)?, None => cursor::take(&mut tail)? }; }
             let mut respawn = None;
             let mut seed = 0;
@@ -469,6 +540,7 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
 
     inventory.set_cursor(saved_cursor);
     Some(PlayerData {
+        abilities,
         shoulders,
         x: f64::from_be_bytes(take(bytes, 8)?),
         y: f64::from_be_bytes(take(bytes, 16)?),
@@ -549,6 +621,7 @@ fn encode_inner(data: &PlayerData, catalog: Catalog) -> io::Result<Vec<u8>> {
         cursor::append_for_catalog(catalog, data.inventory.cursor(), &mut out)?;
     }
 
+    data.abilities.write(&mut out);
     Ok(out)
 }
 
@@ -570,6 +643,7 @@ mod tests {
 
     fn sample() -> PlayerData {
         PlayerData {
+            abilities: Abilities::for_mode(1),
             shoulders: [None,None],
             inventory: Inventory::new(),
             x: 12.5,
@@ -585,7 +659,68 @@ mod tests {
         }
     }
 
+    #[test]
+    fn abilities_round_trip_all_seven_fields_for_every_mode() {
+        for mode in 0..=3 {
+            let mut data = sample();
+            data.game_mode = mode;
+            data.abilities = Abilities { flying: true, mayfly: true, instabuild: true,
+                invulnerable: true, may_build: false, fly_speed: 0.123, walk_speed: 0.234 };
+            assert_eq!(parse(&encode(&data).unwrap()), Some(data.clone()));
+            data.abilities = Abilities { flying: false, mayfly: false, instabuild: false,
+                invulnerable: false, may_build: true, fly_speed: 0.02, walk_speed: 0.03 };
+            assert_eq!(parse(&encode(&data).unwrap()), Some(data));
+        }
+    }
+
+    #[test]
+    fn version_nine_restores_mode_abilities_without_flight_and_preserves_total_xp() {
+        for mode in 0..=3 {
+            let mut data = sample();
+            data.game_mode = mode;
+            data.vitals.experience_total = 42;
+            let mut bytes = encode(&data).unwrap();
+            strip_cursor_tail(&mut bytes);
+            bytes[4..8].copy_from_slice(&TOTAL_EXPERIENCE_VERSION.to_be_bytes());
+            data.abilities = Abilities::for_mode(mode);
+            assert_eq!(parse(&bytes), Some(data));
+        }
+    }
+
+    #[test]
+    fn version_eleven_keeps_cursor_and_total_xp_with_default_abilities() {
+        let mut data = sample();
+        data.inventory.set_cursor(Some(crate::inventory::Stack::new(1, 7)));
+        data.vitals.experience_total = 42;
+        let mut bytes = encode(&data).unwrap();
+        bytes.truncate(bytes.len() - ABILITIES_SIZE);
+        bytes[4..8].copy_from_slice(&MOB_STORAGE_VERSION.to_be_bytes());
+        assert_eq!(parse(&bytes), Some(data));
+    }
+
+    #[test]
+    fn corrupt_or_truncated_abilities_are_rejected() {
+        let bytes = encode(&sample()).unwrap();
+        for missing in 1..=ABILITIES_SIZE {
+            assert!(parse(&bytes[..bytes.len() - missing]).is_none());
+        }
+        let start = bytes.len() - ABILITIES_SIZE;
+        for flag in 0..5 {
+            let mut bad = bytes.clone();
+            bad[start + flag] = 2;
+            assert!(parse(&bad).is_none());
+        }
+        for offset in [5, 9] {
+            for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                let mut bad = bytes.clone();
+                bad[start + offset..start + offset + 4].copy_from_slice(&value.to_be_bytes());
+                assert!(parse(&bad).is_none());
+            }
+        }
+    }
+
     fn strip_cursor_tail(bytes: &mut Vec<u8>) {
+        bytes.truncate(bytes.len() - ABILITIES_SIZE);
         let mut tail = bytes.as_slice();
         cursor::take(&mut tail).expect("хвост курсора v10");
         let length = tail.len();
@@ -782,7 +917,9 @@ mod tests {
         }
         // Текущий простой Parrot использует прежнюю раскладку без annex.
         let mut old = sample(); old.shoulders[0] = Some(valid);
-        let mut bytes = encode_inner(&old, native).unwrap(); bytes[4..8].copy_from_slice(&10u32.to_be_bytes());
+        let mut bytes = encode_inner(&old, native).unwrap();
+        bytes.truncate(bytes.len() - ABILITIES_SIZE);
+        bytes[4..8].copy_from_slice(&10u32.to_be_bytes());
         fs::write(&path, &bytes).unwrap();
         assert_eq!(load_checked_for_catalog(&directory, &uuid, native), Ok(Some(old)));
         assert_eq!(fs::read(&path).unwrap(), bytes);
@@ -854,7 +991,7 @@ mod tests {
             assert_eq!(parse(&bytes), Some(expected.clone()));
             assert_eq!(parse_with_catalog(&bytes, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()));
             let rewritten = encode(&expected).unwrap();
-            assert_eq!(u32::from_be_bytes(rewritten[4..8].try_into().unwrap()), 11);
+            assert_eq!(u32::from_be_bytes(rewritten[4..8].try_into().unwrap()), FORMAT_VERSION);
             assert_eq!(parse(&rewritten), Some(expected.clone()));
             assert_eq!(parse_with_catalog(&rewritten, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()));
             // Старый курсор обязателен и в10, и в11: обрезка не превращается в None.
@@ -862,8 +999,8 @@ mod tests {
             assert!(parse(&damaged).is_none());
         }
         let mut future = original;
-        future[4..8].copy_from_slice(&12u32.to_be_bytes());
-        assert_eq!(check_layout(&future), Err(LoadError::UnsupportedLayout(12)));
+        future[4..8].copy_from_slice(&(FORMAT_VERSION + 1).to_be_bytes());
+        assert_eq!(check_layout(&future), Err(LoadError::UnsupportedLayout(FORMAT_VERSION + 1)));
     }
 
     #[test]

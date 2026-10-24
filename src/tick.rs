@@ -1265,9 +1265,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
+    let targets = blast_targets(shared, dimension);
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
-
-    let targets: Vec<_> = watchers.iter().map(|p| crate::tnt::Target { entity_id: p.id, x: p.x, y: p.y, z: p.z, sneaking: false }).collect();
     if world.catalog().changed_rules() {
         let riding = shared.riding.lock().expect("седоки");
         for mob in items.mobs_mut() { mob.riding = riding.vehicle_of(mob.entity_id).is_some(); }
@@ -2880,12 +2879,8 @@ pub(crate) fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::T
     /// Режим наблюдателя: сквозь всё проходит, взрыв его не толкает.
     const SPECTATOR: i32 = 3;
 
-    shared
-        .players
-        .lock()
-        .expect("список игроков захвачен другим потоком")
-        .members()
-        .iter()
+    let players = shared.players.lock().expect("список игроков захвачен другим потоком");
+    players.members().iter()
         .filter(|member| member.dimension == dimension && member.game_mode != SPECTATOR)
         .map(|member| tnt::Target {
             entity_id: member.entity_id,
@@ -2893,6 +2888,7 @@ pub(crate) fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::T
             y: member.position.y,
             z: member.position.z,
             sneaking: member.sneaking,
+            flying_creative: member.game_mode == 1 && players.gear(&member.uuid).abilities.flying,
         })
         .collect()
 }

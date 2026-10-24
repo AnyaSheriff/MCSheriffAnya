@@ -22,6 +22,8 @@ pub(crate) struct Receipt {
 }
 
 impl Receipt {
+    pub(crate) fn needs_upgrade(&self) -> bool { self.playerdata_layout != crate::playerdata::FORMAT_VERSION }
+
     pub(crate) fn for_backup(snapshot_id: &str) -> Self {
         Self { schema: 1, region_layout: 1, chunk_layout: u32::from(super::super::CHUNK_VERSION),
             playerdata_layout: crate::playerdata::FORMAT_VERSION, snapshot_id: snapshot_id.into() }
@@ -31,7 +33,9 @@ impl Receipt {
 pub(crate) fn decode(bytes: &[u8]) -> io::Result<Receipt> {
     if bytes.len() > MAX_BYTES { return Err(io::Error::new(io::ErrorKind::InvalidData, "storage receipt слишком велик")); }
     let receipt: Receipt = serde_json::from_slice(bytes).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-    if receipt != Receipt::for_backup(&receipt.snapshot_id) || receipt.snapshot_id.len() != 32
+    let mut supported = Receipt::for_backup(&receipt.snapshot_id);
+    if matches!(receipt.playerdata_layout, 10 | 11) { supported.playerdata_layout = receipt.playerdata_layout; }
+    if receipt != supported || receipt.snapshot_id.len() != 32
         || !receipt.snapshot_id.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "неподдержанная схема/раскладка или snapshot_id storage receipt"));
     }
