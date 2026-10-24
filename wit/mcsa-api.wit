@@ -114,7 +114,11 @@ interface server {
 }
 
 interface player {
-    use types.{location, item-stack, game-mode};
+    use types.{location, item-stack, game-mode, block-pos};
+    record bed-action { bed: block-pos, problem: u32, can-spawn: bool, can-sleep: bool }
+    /// Снимок правил кровати, без изменения мира и без удержания его замка в обработчике.
+    get-bed-action: func(uuid: string, pos: block-pos) -> option<bed-action>;
+    set-respawn: func(uuid: string, to: option<location>) -> result<_, string>;
 
     /// Личное сообщение. false — игрока нет на сервере.
     send-message: func(uuid: string, message: string) -> bool;
@@ -423,6 +427,7 @@ world bukkit-plugin {
     export completion;
     export combat-events;
     export inventory-events;
+    export player-events;
 }
 
 /// Необязательные события игроков: старым компонентам экспорт не нужен.
@@ -443,4 +448,14 @@ world sdk-module {
 interface inventory-events {
     use types.{player};
     on-inventory: func(who: player, handle: u32, kind: u32, slot: s32, button: s32, mode: s32) -> bool;
+}
+
+/// Необязательные события перед принятием движения и использованием предмета.
+interface player-events {
+    use types.{player, location, block-pos};
+    /// none возвращает клиента к прежнему месту; результат проходит проверку координат.
+    on-move: func(who: player, destination: location, jump: bool) -> option<location>;
+    on-respawn: func(who: player, destination: location, bed: bool, anchor: bool) -> location;
+    /// 0 — разрешить, 1 — запретить блок, 2 — запретить предмет, 3 — оба.
+    on-interact: func(who: player, action: u32, hand: u32, block: option<block-pos>, face: u32) -> u32;
 }

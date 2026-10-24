@@ -86,6 +86,9 @@ impl Drop for InsideGuard {
 type Completion = wasmtime::component::TypedFunc<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>;
 type Damage = wasmtime::component::TypedFunc<(mcsa::api::types::Player, String, f64), (Option<f64>,)>;
 type InventoryEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>;
+type RespawnEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool, bool), (mcsa::api::types::Location,)>;
+type MoveEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool), (Option<mcsa::api::types::Location>,)>;
+type InteractEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>;
 type Death = wasmtime::component::TypedFunc<(mcsa::api::types::Player, bool), ()>;
 
 /// Загруженный плагин.
@@ -98,6 +101,9 @@ pub struct Loaded {
     damage: Option<Damage>,
     death: Option<Death>,
     inventory_event: Option<InventoryEvent>,
+    move_event: Option<MoveEvent>,
+    respawn_event: Option<RespawnEvent>,
+    interact_event: Option<InteractEvent>,
     limits: Limits,
     pub stats: Stats,
 }
@@ -384,7 +390,17 @@ impl Host {
             .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-inventory"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, death, inventory_event, limits, stats: Stats::default() };
+        let player_events = raw.get_export_index(&mut store, None, "mcsa:api/player-events@0.1.0");
+        let move_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-move"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, mcsa::api::types::Location, bool), (Option<mcsa::api::types::Location>,)>(&mut store, &index))
+            .transpose().map_err(|error| short(&error))?;
+        let respawn_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-respawn"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, mcsa::api::types::Location, bool, bool), (mcsa::api::types::Location,)>(&mut store, &index))
+            .transpose().map_err(|error| short(&error))?;
+        let interact_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-interact"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>(&mut store, &index))
+            .transpose().map_err(|error| short(&error))?;
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, death, inventory_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
@@ -570,6 +586,65 @@ impl Host {
     }
 
     // ----- события -----
+
+    pub fn respawn(&mut self, who: &PlayerView, destination: &PlayerView, bed: bool, anchor: bool) -> PlayerView {
+        let now = self.shared_tick();let mut to = destination.clone();let mut crashes = Vec::new();
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.respawn_event else { continue; };
+            let location = mcsa::api::types::Location { dimension: super::api::dimension_to_wit(to.dimension), x: to.x, y: to.y, z: to.z, yaw: Some(to.yaw), pitch: Some(to.pitch) };
+            match plugin.call(now, |_, store| {let (result,) = function.call(&mut *store, (who.to_wit(), location, bed, anchor))?;Ok(result)}) {
+                Ok(value) if valid_move(&value, super::api::dimension_from_wit(value.dimension)) => {to.dimension = super::api::dimension_from_wit(value.dimension);to.x = value.x;to.y = value.y;to.z = value.z;to.yaw = value.yaw.unwrap_or(to.yaw);to.pitch = value.pitch.unwrap_or(to.pitch);}
+                Ok(_) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason: "Недопустимое место возрождения".into() }),
+                Err(reason) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason }),
+            }
+        }
+        self.bury(crashes);to
+    }
+
+    pub fn player_move(&mut self, who: &PlayerView, destination: &PlayerView, jump: bool) -> Option<PlayerView> {
+        let now = self.shared_tick();
+        let mut to = destination.clone();
+        let mut crashes = Vec::new();
+        let mut cancelled = false;
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.move_event else { continue; };
+            let location = mcsa::api::types::Location { dimension: super::api::dimension_to_wit(to.dimension), x: to.x, y: to.y, z: to.z, yaw: Some(to.yaw), pitch: Some(to.pitch) };
+            match plugin.call(now, |_, store| {
+                let (result,) = function.call(&mut *store, (who.to_wit(), location, jump))?;
+                Ok(result)
+            }) {
+                Ok(None) => { cancelled = true; break; }
+                Ok(Some(value)) if valid_move(&value, who.dimension) => {
+                    to.x = value.x; to.y = value.y; to.z = value.z;
+                    to.yaw = value.yaw.unwrap_or(to.yaw); to.pitch = value.pitch.unwrap_or(to.pitch);
+                }
+                Ok(_) => { cancelled = true; crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason: "Недопустимое место движения; для смены мира используйте teleport".into() }); }
+                Err(reason) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason }),
+            }
+        }
+        self.bury(crashes);
+        if cancelled { None } else { Some(to) }
+    }
+
+    pub fn interact(&mut self, who: &PlayerView, action: u32, hand: u32, block: Option<(i32, i32, i32)>, face: u32) -> u32 {
+        let now = self.shared_tick();
+        let mut denied = 0;
+        let mut crashes = Vec::new();
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.interact_event else { continue; };
+            let block = block.map(|(x, y, z)| mcsa::api::types::BlockPos { dimension: super::api::dimension_to_wit(who.dimension), x, y, z });
+            match plugin.call(now, |_, store| {
+                let (result,) = function.call(&mut *store, (who.to_wit(), action, hand, block, face))?;
+                Ok(result)
+            }) {
+                Ok(value @ 0..=3) => denied |= value,
+                Ok(_) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason: "Недопустимый ответ обработчика взаимодействия".into() }),
+                Err(reason) => crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason }),
+            }
+        }
+        self.bury(crashes);
+        denied
+    }
 
     pub fn damage(&mut self, who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {
         let now = self.shared_tick();
@@ -868,5 +943,27 @@ mod tests {
         assert!(short(&error).contains("топливо"));
         assert_eq!(short(&wasmtime::Error::msg("something\nelse")), "something");
         assert!(short(&wasmtime::Error::msg("forcing a memory growth failure to be a trap")).contains("памяти"));
+    }
+}
+
+// Плагины не могут пропустить NaN, бесконечность и чужое измерение в физику.
+fn valid_move(value: &mcsa::api::types::Location, dimension: crate::dimension::Dimension) -> bool {
+    super::api::dimension_from_wit(value.dimension) == dimension
+        && value.x.is_finite() && value.x.abs() <= 30_000_000.0
+        && value.z.is_finite() && value.z.abs() <= 30_000_000.0
+        && value.y.is_finite() && value.y.abs() <= 20_000_000.0
+        && value.yaw.is_none_or(f32::is_finite) && value.pitch.is_none_or(f32::is_finite)
+}
+
+#[cfg(test)]
+mod movement_tests {
+    use super::*;
+    #[test]
+    fn plugin_destinations_reject_nonfinite_coordinates_and_cross_world_moves() {
+        let valid = mcsa::api::types::Location {dimension: mcsa::api::types::Dimension::Overworld, x: 0.0, y: 70.0, z: 0.0, yaw: Some(0.0), pitch: Some(0.0)};
+        assert!(valid_move(&valid, crate::dimension::Dimension::Overworld));
+        for value in [f64::NAN, f64::INFINITY, 30_000_001.0] {assert!(!valid_move(&mcsa::api::types::Location {x: value, ..valid}, crate::dimension::Dimension::Overworld));}
+        assert!(!valid_move(&mcsa::api::types::Location {yaw: Some(f32::NAN), ..valid}, crate::dimension::Dimension::Overworld));
+        assert!(!valid_move(&valid, crate::dimension::Dimension::Nether));
     }
 }

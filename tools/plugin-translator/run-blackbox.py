@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import uuid
+import zipfile
 
 root = Path(__file__).resolve().parent
 repo = root.parent.parent
@@ -39,15 +40,35 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
     identity[6] = (identity[6] & 15) | 48
     identity[8] = (identity[8] & 63) | 128
     (work / 'ops.json').write_text(json.dumps([{'uuid': str(uuid.UUID(bytes=bytes(identity))), 'name': 'JavaTester', 'level': 4}]))
+    cache = root / 'target/blackbox-plugins'
+    sdk_digest = hashlib.sha256()
+    sources = [*sorted((root/'mcsa-bukkit/src/main/java').rglob('*.java')), *sorted((root/'src/main/java').rglob('*.java')), root/'adapter.c', root/'bridge.h', root/'translate.py', root/'decimal_runtime.py', root/'decimal-runtime.h', repo/'wit/mcsa-api.wit']
+    for source in sources:
+        sdk_digest.update(str(source.relative_to(repo)).encode());sdk_digest.update(source.read_bytes())
     for name in ('command', 'events', 'scheduler'):
-        guarded_run([sys.executable, str(root / 'translate.py'), str(root / 'target' / (name + '.jar')), '--output', str(work / 'plugins')], check=True)
+        digest = sdk_digest.copy()
+        jar = root / 'target' / (name + '.jar')
+        with zipfile.ZipFile(jar) as archive:
+            for entry in sorted(archive.namelist()):
+                digest.update(entry.encode());digest.update(archive.read(entry))
+        plugin_name = 'java-' + name
+        stamp = cache / plugin_name / '.fixture-hash'
+        if not stamp.is_file() or stamp.read_text() != digest.hexdigest() or not (cache/plugin_name/'plugin.wasm').is_file():
+            with tempfile.TemporaryDirectory(prefix='fixture-cache-', dir=root/'target') as staging:
+                guarded_run([sys.executable, str(root / 'translate.py'), str(jar), '--output', staging], check=True)
+                cache.mkdir(exist_ok=True)
+                shutil.rmtree(cache/plugin_name, ignore_errors=True)
+                shutil.move(str(Path(staging)/plugin_name), str(cache/plugin_name))
+            stamp.write_text(digest.hexdigest())
+        shutil.copytree(cache/plugin_name, work/'plugins'/plugin_name)
+
     # Проверяем восстановление config.yml из встроенного ресурса saveDefaultConfig.
     config = work / 'plugins/java-scheduler/data/config.yml'
     config.unlink()
     log_path = root / 'target/blackbox-core.log'
     wait_for_idle()
     with log_path.open('w') as log:
-        server = subprocess.Popen([str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+        server = subprocess.Popen(['nice', '-n', '19', str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         try:
             for _ in range(300):
                 if server.poll() is not None:
@@ -57,7 +78,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут запуска ядра')
-            guarded_run(['node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=60)
+            guarded_run(['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=60)
             player_pdc=list((work/'plugins/java-command/data').glob('entity-*.pdc.json'));assert len(player_pdc)==1 and 'java-command:probe' in player_pdc[0].read_text(), 'PDC сущности не сохранён в data/'
             assert (config.parent / 'queue.yml').read_text() == 'order: [first, second]', 'очередь не сохранила файл через хозяина'
             assert config.read_text() == (root / 'fixtures/scheduler/config.yml').read_text(), 'config.yml не восстановлен из JAR'
@@ -71,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
     # Новый процесс ядра читает те же данные, сохранённые щелчком в GUI.
     wait_for_idle()
     with log_path.open('a') as log:
-        server = subprocess.Popen([str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+        server = subprocess.Popen(['nice', '-n', '19', str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         try:
             for _ in range(300):
                 if server.poll() is not None:
@@ -81,7 +102,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут перезапуска ядра')
-            guarded_run(['node', str(root / 'blackbox.cjs'), str(port), '--restart'], check=True, timeout=30)
+            guarded_run(['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port), '--restart'], check=True, timeout=30)
         finally:
             server.send_signal(signal.SIGINT)
             try:

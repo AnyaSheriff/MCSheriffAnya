@@ -12,8 +12,9 @@ public abstract class JavaPlugin implements org.bukkit.plugin.Plugin, CommandExe
  private final java.util.Map<String,PluginCommand> commands=new java.util.LinkedHashMap<>();
  public final void initialize(String n){name=n;enabled=true;}
  public final void declareCommand(String n,String description,String usage,int level){Host.call(4,n,description,usage,""+level);commands.put(n,new PluginCommand(n,this));}
+ public final void declareAlias(String alias,String command,String description,String usage){Host.call(4,alias,description,usage,"0");commands.put(alias,commands.get(command));}
  public String getName(){return name;} public final Server getServer(){return Bukkit.getServer();} public final boolean isEnabled(){return enabled;}
- public PluginCommand getCommand(String n){return commands.get(n.toLowerCase(java.util.Locale.ROOT));}
+ public PluginCommand getCommand(String n){return commands.get(ru.mcsa.bukkit.Permissions.key(n));}
  public FileConfiguration getConfig(){if(config==null)reloadConfig();return config;}
  public void reloadConfig(){config=new FileConfiguration();config.loadFromString(Host.text(8,"config.yml"));}
  public void saveDefaultConfig(){Host.call(26,"config.yml",ru.mcsa.bukkit.RuntimeState.defaultConfig);config=null;} public void saveConfig(){Host.call(9,"config.yml",getConfig().saveToString());}

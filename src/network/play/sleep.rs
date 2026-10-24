@@ -350,6 +350,8 @@ pub(super) struct Target {
     pub yaw: Option<f32>,
     pub missing: bool,
     pub deplete: Option<Vec<u8>>,
+    pub bed_spawn: bool,
+    pub anchor_spawn: bool,
 }
 
 /// Звук `deplete` якоря самому возрождённому — в углу блока, разделом
@@ -407,7 +409,7 @@ pub(super) fn respawn_target(shared: &Shared, player: &mut PlayerState) -> Targe
             });
             let yaw = if point.forced { point.yaw } else { bed::yaw_toward(at, point.pos) };
 
-            return Target { dimension: point.dimension, at, yaw: Some(yaw), missing: false, deplete };
+            return Target { dimension: point.dimension, at, yaw: Some(yaw), missing: false, deplete, bed_spawn: bed::is_bed(state), anchor_spawn: anchor };
         }
 
         if !point.forced {
@@ -416,7 +418,7 @@ pub(super) fn respawn_target(shared: &Shared, player: &mut PlayerState) -> Targe
         }
     }
 
-    Target { dimension: Dimension::Overworld, at: on_the_ground(shared, player.spawn_point), yaw: None, missing, deplete: None }
+    Target { dimension: Dimension::Overworld, at: on_the_ground(shared, player.spawn_point), yaw: None, missing, deplete: None, bed_spawn: false, anchor_spawn: false }
 }
 
 /// Game Event 0 — до Respawn (чёрный ящик, bed-respawn).

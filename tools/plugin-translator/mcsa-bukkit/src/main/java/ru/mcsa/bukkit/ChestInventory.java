@@ -9,7 +9,7 @@ public final class ChestInventory implements Inventory {
  public ItemStack[] getContents(){if(handle!=0)refresh();return items.clone();}
  void refresh(){String[] a=Host.call(52,""+handle);for(int i=0;i<items.length;i++){int n=i*3;Material m=Material.matchMaterial(a[n]);int count=Integer.parseInt(a[n+1]);items[i]=m==null||m.isAir()||count==0?null:ItemStack.fromHost(m,count,a[n+2]);}}
  public void setItem(int slot,ItemStack item){check(slot);items[slot]=item==null?null:item.clone();if(handle!=0)send(slot);}
- private void send(int slot){ItemStack item=items[slot];Host.call(51,""+handle,""+slot,item==null||item.isEmpty()?"air":item.getType().name().toLowerCase(java.util.Locale.ROOT),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());}
+ private void send(int slot){ItemStack item=items[slot];Host.call(51,""+handle,""+slot,item==null||item.isEmpty()?"air":Ascii.lower(item.getType().name()),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());}
  int prepare(){if(handle==0){handle=Integer.parseInt(Host.text(50,""+items.length,Text.json(title)));for(int i=0;i<items.length;i++)send(i);}return handle;}
  public boolean contains(Material material){for(ItemStack item:getContents())if(item!=null&&item.getType()==material)return true;return false;}
  public boolean containsAtLeast(ItemStack stack,int count){for(ItemStack item:getContents())if(item!=null&&item.isSimilar(stack))count-=item.getAmount();return count<=0;}

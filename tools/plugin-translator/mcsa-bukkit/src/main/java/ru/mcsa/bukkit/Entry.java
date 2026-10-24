@@ -9,7 +9,8 @@ import org.bukkit.event.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.block.*;
 public final class Entry {
- @Export(name="mcsa_dispatch") public static int dispatch(int kind,Address data,int len){
+ @Export(name="mcsa_dispatch") public static int dispatch(int kind,Address data,int len){try{return dispatchEvent(kind,data,len);}catch(RuntimeException|Error failure){Host.call(23,"Ошибка обработчика Bukkit: "+failure);throw failure;}}
+ private static int dispatchEvent(int kind,Address data,int len){
   byte[] bytes=new byte[len];for(int i=0;i<len;i++)bytes[i]=data.add(i).getByte();String[] a=Host.split(new String(bytes,StandardCharsets.UTF_8));
   if(kind==0){RuntimeState.plugin.onDisable();EntityDataStore.flush();return 0;}
   if(kind==8){RuntimeState.scheduler.fire(Integer.parseInt(a[0]));return 0;}
@@ -21,6 +22,15 @@ public final class Entry {
   }
   Player p=Host.player(a,0);Event e;
   switch(kind){
+   case 15:{Location to=new Location(new RemoteWorld(Integer.parseInt(a[9])),Double.parseDouble(a[10]),Double.parseDouble(a[11]),Double.parseDouble(a[12]),Float.parseFloat(a[13]),Float.parseFloat(a[14]));PlayerRespawnEvent respawn=new PlayerRespawnEvent(p,to,a[15].equals("1"),a[16].equals("1"));RuntimeState.fire(respawn);Location result=respawn.getRespawnLocation();Host.call(22,((RemoteWorld)result.getWorld()).dimension+" "+result.getX()+" "+result.getY()+" "+result.getZ()+" "+result.getYaw()+" "+result.getPitch());return 2;}
+   case 13:{Location from=((RemotePlayer)p).snapshotLocation(),to=new Location(new RemoteWorld(Integer.parseInt(a[9])),Double.parseDouble(a[10]),Double.parseDouble(a[11]),Double.parseDouble(a[12]),Float.parseFloat(a[13]),Float.parseFloat(a[14]));
+    if(a[15].equals("1")){com.destroystokyo.paper.event.player.PlayerJumpEvent jump=new com.destroystokyo.paper.event.player.PlayerJumpEvent(p,from.clone(),to.clone());RuntimeState.fire(jump);if(jump.isCancelled())return 1;}
+    PlayerMoveEvent move=new PlayerMoveEvent(p,from,to);RuntimeState.fire(move);if(move.isCancelled()||move.getTo()==null)return 1;Location result=move.getTo();Host.call(22,((RemoteWorld)result.getWorld()).dimension+" "+result.getX()+" "+result.getY()+" "+result.getZ()+" "+result.getYaw()+" "+result.getPitch());return 2;}
+   case 14:{int hand=Integer.parseInt(a[10]);org.bukkit.block.Block clicked=a[11].equals("1")?new RemoteBlock(new RemoteWorld(Integer.parseInt(a[12])),Integer.parseInt(a[13]),Integer.parseInt(a[14]),Integer.parseInt(a[15]),null):null;
+    org.bukkit.inventory.ItemStack item=hand==0?p.getInventory().getItemInMainHand():p.getInventory().getItemInOffHand();
+    PlayerInteractEvent interact=new PlayerInteractEvent(p,Action.values()[Integer.parseInt(a[9])],item,clicked,org.bukkit.block.BlockFace.values()[Integer.parseInt(a[16])],hand==0?org.bukkit.inventory.EquipmentSlot.HAND:org.bukkit.inventory.EquipmentSlot.OFF_HAND);RuntimeState.fire(interact);
+    if(interact.useInteractedBlock()!=Event.Result.DENY&&clicked!=null&&interact.getAction()==Action.RIGHT_CLICK_BLOCK&&BedActions.cancelled(p,clicked))return 3;
+    return (interact.useInteractedBlock()==Event.Result.DENY?1:0)|(interact.useItemInHand()==Event.Result.DENY?2:0);}
    case 12:return ChestViews.event(p,Integer.parseInt(a[9]),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),Integer.parseInt(a[13]));
    case 1:e=new PlayerJoinEvent(p,null);break;
    case 2:e=new PlayerQuitEvent(p,null);break;
@@ -31,10 +41,11 @@ public final class Entry {
    case 11:e=new org.bukkit.event.entity.PlayerDeathEvent(p,a[9].equals("1"));break;
    default:throw new IllegalArgumentException("Неизвестное событие");
   }
-  if(kind==1)MainScoreboard.INSTANCE.sync(p);
+  if(kind==1){MainScoreboard.INSTANCE.sync(p);}if(kind==2)ArmorChanges.leave(p);
   RuntimeState.fire(e);
   if(e instanceof Cancellable&&((Cancellable)e).isCancelled())return 1;
   if(kind==10){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}
+  if(kind==3){AsyncPlayerChatEvent legacy=(AsyncPlayerChatEvent)e;io.papermc.paper.event.player.AsyncChatEvent modern=new io.papermc.paper.event.player.AsyncChatEvent(p,net.kyori.adventure.text.Component.text(legacy.getMessage()));RuntimeState.fire(modern);if(modern.isCancelled())return 1;if(modern.hasCustomDelivery()){modern.deliver();return 1;}}
   if(kind==3&&!((AsyncPlayerChatEvent)e).getMessage().equals(a[9])){Host.call(22,((AsyncPlayerChatEvent)e).getMessage());return 2;}
   return 0;
  }

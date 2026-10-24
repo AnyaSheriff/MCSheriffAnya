@@ -1,3 +1,17 @@
 name: java-events
 version: '1.0'
 main: fixtures.EventsPlugin
+commands:
+  eventprobe:
+    description: Проверки событий
+    aliases: [eprobe]
+    permission: fixture.public
+permissions:
+  fixture.public:
+    default: true
+    children:
+      fixture.public.child: true
+  fixture.public.child:
+    default: false
+  fixture.bypass:
+    default: false

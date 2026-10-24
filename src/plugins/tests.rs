@@ -103,6 +103,10 @@ fn load_run_command_and_unload() {
     host.player_join(&view());
     assert_eq!(host.damage(&view(), "CUSTOM", 4.0), Some(4.0));
     assert_eq!(host.damage(&view(), "FALL", 5.0), Some(5.0));
+    let mut destination = view();destination.x += 1.0;
+    assert_eq!(host.player_move(&view(), &destination, true).unwrap().x, destination.x);
+    assert_eq!(host.respawn(&view(), &destination, false, false).x, destination.x);
+    assert_eq!(host.interact(&view(), 3, 0, None, 6), 0);
     host.death(&view(), false);
 
     assert_eq!(host.unload("hello").unwrap(), "hello выгружен");
@@ -710,4 +714,20 @@ fn plugin_chests_validate_items_queue_real_windows_and_expire_on_unload() {
     assert!(orders.iter().any(|order| matches!(order, crate::players::Order::PluginClose { owner } if owner == "hello")));
     host.unload("hello").unwrap();
     assert!(!chest.lock().unwrap().active);
+}
+
+#[test]
+fn plugin_respawn_points_are_validated_and_queued_without_changing_worlds() {
+    use super::api::mcsa::api::player::Host as _;
+    let root = server_root("plugin-spawn");install(&root, "plugins", "hello", "hello", "");
+    let shared = shared();java_info(&shared);
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap();host.load("hello").unwrap();
+    let ctx = host.loaded[0].store.data_mut();let uuid = crate::network::login::format_uuid(&[1;16]);
+    let point = wit::Location {dimension: wit::Dimension::Nether, x: -0.5, y: 70.0, z: 1.5, yaw: Some(90.0), pitch: None};
+    assert!(ctx.set_respawn(uuid.clone(), Some(wit::Location {x: f64::NAN, ..point})).is_err());
+    assert!(ctx.set_respawn(uuid.clone(), Some(point)).is_ok());
+    let orders = shared.players.lock().unwrap().take_orders(&[1;16]);
+    assert!(orders.iter().any(|order| matches!(order, crate::players::Order::PluginSpawn {point: Some(point)} if point.dimension == crate::dimension::Dimension::Nether && point.pos == (-1,70,1) && !point.forced)));
+    assert_eq!(shared.players.lock().unwrap().members()[0].dimension, crate::dimension::Dimension::Overworld);
+    assert!(ctx.set_respawn(uuid, None).is_ok());
 }

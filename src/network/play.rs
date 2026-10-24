@@ -6340,7 +6340,12 @@ async fn read_and_log_play_packets(
             // (play/sleep.rs).
             let mut target = None;
             let order = if respawning {
-                let found = sleep::respawn_target(shared, player);
+                let mut found = sleep::respawn_target(shared, player);
+                if crate::plugins::active() {
+                    let who = plugin_view(player);let mut to = who.clone();to.dimension = found.dimension;to.x = found.at.0;to.y = found.at.1;to.z = found.at.2;to.yaw = found.yaw.unwrap_or(player.yaw);
+                    let to = crate::plugins::respawn(&who, &to, found.bed_spawn, found.anchor_spawn);
+                    found.dimension = to.dimension;found.at = (to.x, to.y, to.z);found.yaw = Some(to.yaw);player.pitch = to.pitch;
+                }
                 let (dimension, (x, y, z)) = (found.dimension, found.at);
 
                 target = Some(found);
@@ -6353,6 +6358,7 @@ async fn read_and_log_play_packets(
 
             match order {
                 Order::Respawn => {}
+                Order::PluginSpawn { point } => { player.respawn = point;player.save(&shared.playerdata); }
                 Order::WakeUp => player.wake_due = true,
                 Order::Message { component } => {
                     let mut body = encode_varint(SYSTEM_CHAT);
@@ -7583,6 +7589,8 @@ fn handle_client_packet_inner(
                 return reaction;
             }
 
+            let previous_rotation = (player.yaw, player.pitch);
+
             // В пакете «позиция и поворот» углы идут сразу за координатами.
             if packet.id == SET_PLAYER_POSITION_AND_ROTATION
                 && let Some((yaw, pitch)) = read_rotation(payload, POSITION_BYTES)
@@ -7630,6 +7638,21 @@ fn handle_client_packet_inner(
 
             let from = (player.x, player.y, player.z);
 
+            let (x, y, z) = if crate::plugins::active() {
+                let mut who = plugin_view(player);
+                who.yaw = previous_rotation.0; who.pitch = previous_rotation.1;
+                let mut to = plugin_view(player); to.x = x; to.y = y; to.z = z;
+                let flags = if packet.id == SET_PLAYER_POSITION { POSITION_BYTES } else { POSITION_BYTES + ROTATION_BYTES };
+                let jump = player.on_ground && y > player.y && payload.get(flags).is_some_and(|flag| flag & ON_GROUND_FLAG == 0);
+                let Some(to) = crate::plugins::player_move(&who, &to, jump) else {
+                    player.yaw = previous_rotation.0; player.pitch = previous_rotation.1;
+                    reaction.resync = true;
+                    return reaction;
+                };
+                reaction.resync |= (to.x, to.y, to.z, to.yaw, to.pitch) != (x, y, z, player.yaw, player.pitch);
+                player.set_rotation(to.yaw, to.pitch);
+                (to.x, to.y, to.z)
+            } else { (x, y, z) };
             player.moved_since_tp = true;
             player.set_position(x, y, z);
 
@@ -7646,7 +7669,12 @@ fn handle_client_packet_inner(
         }
         SET_PLAYER_ROTATION => {
             if let Some((yaw, pitch)) = read_rotation(payload, 0) {
-                player.set_rotation(yaw, pitch);
+                if crate::plugins::active() && !player.awaiting_teleport && !player.vit.dead {
+                    let who = plugin_view(player);let mut to = who.clone();to.yaw = yaw;to.pitch = pitch;
+                    let Some(to) = crate::plugins::player_move(&who, &to, false) else { reaction.resync = true;return reaction; };
+                    reaction.resync |= (to.x, to.y, to.z, to.yaw, to.pitch) != (player.x, player.y, player.z, yaw, pitch);
+                    player.set_position(to.x, to.y, to.z);player.set_rotation(to.yaw, to.pitch);
+                } else { player.set_rotation(yaw, pitch); }
             }
 
             // До подтверждения переноса клиент ещё на старом месте.
@@ -8810,6 +8838,12 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         format_hex(payload)
     );
 
+    if status == STARTED_DIGGING && crate::plugins::active() && face <= 5 && within_reach(player, (x, y, z))
+        && crate::plugins::interact(&plugin_view(player), 0, 0, Some((x, y, z)), u32::from(face)) != 0
+    {
+        return Some(Reaction { confirm: vec![(x, y, z)], ..Reaction::accepted(sequence) });
+    }
+
     // Java 26.1.2: jab копья — действие без блока. Нулевая позиция в
     // пакете не должна проходить проверку дальности/загруженности чанка.
     if status == 7 {
@@ -9175,6 +9209,16 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     /// Вторая рука в поле `hand`.
     const OFF_HAND: i32 = 1;
 
+    if crate::plugins::active() {
+        let mut cursor = Cursor::new(payload);
+        let hand = cursor.varint()?;let clicked = cursor.position()?;let face = cursor.varint()?;
+        cursor.f32()?;cursor.f32()?;cursor.f32()?;cursor.u8()?;let sequence = cursor.sequence()?;
+        if !(0..=1).contains(&hand) || !(0..=5).contains(&face) { return Some(Reaction::accepted(sequence)); }
+        if crate::plugins::interact(&plugin_view(player), 1, hand as u32, Some(clicked), face as u32) != 0 {
+            let adjacent = offset_towards(clicked.0, clicked.1, clicked.2, face);
+            return Some(Reaction { confirm: vec![clicked, adjacent], slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected(), inventory::OFFHAND], ..Reaction::accepted(sequence) });
+        }
+    }
     if Cursor::new(payload).varint()? != OFF_HAND {
         return place_with_main_hand(payload, player, shared);
     }
@@ -10159,6 +10203,10 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     // pvp-shield: от взгляда зависит, держит ли щит удар).
     if !player.awaiting_teleport {
         player.set_rotation(yaw, pitch);
+    }
+
+    if crate::plugins::active() && (0..=1).contains(&hand) && crate::plugins::interact(&plugin_view(player), 3, hand as u32, None, 6) & 2 != 0 {
+        return Some(Reaction { slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected(), inventory::OFFHAND], ..answer });
     }
 
     if let Some(answer) = equipment_sound::use_item(shared, player, hand, sequence) { return Some(answer); }

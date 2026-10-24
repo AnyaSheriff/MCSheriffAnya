@@ -8,6 +8,7 @@ import sys
 import tempfile
 root = Path(__file__).resolve().parent
 guarded_run([sys.executable, str(root / 'build-fixtures.py')], check=True)
+guarded_run([sys.executable, str(root / 'test-decimal-runtime.py')], check=True)
 cp = str(root / 'target/tool') + os.pathsep + str(root / 'target/lib/*')
 guarded_run(['javac', '-proc:none', '--release', '11', '-cp', cp, '-d', str(root / 'target/tool'), str(root / 'src/test/java/ru/mcsa/translator/InspectorFixtures.java')], check=True)
 sdk_cp = str(root / 'target/sdk') + os.pathsep + str(root / 'target/tool')
@@ -41,4 +42,4 @@ with tempfile.TemporaryDirectory(dir=root / 'target') as folder:
         normalized = str(Path(folder) / (name + '-normalized.jar'))
         guarded_run(['java', '-cp', cp, 'ru.mcsa.translator.Normalize', str(root / 'target' / (name + '.jar')), normalized], check=True)
         guarded_run(['java', '-cp', cp, 'ru.mcsa.translator.Inspect', normalized, folder + '/out', str(root / 'target/mcsa-bukkit.jar')], check=True)
-print('PASS: 15 отказов, 3 поддерживаемых JAR; входной код на JVM не запускался')
+print('PASS: 17 отказов, 3 поддерживаемых JAR; входной код на JVM не запускался')

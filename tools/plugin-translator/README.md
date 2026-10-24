@@ -218,3 +218,5 @@ DNS закрепляется за проверенными публичными 
 [Team](https://jd.papermc.io/paper/1.21.11/org/bukkit/scoreboard/Team.html),
 [Vector](https://jd.papermc.io/paper/1.21.11/org/bukkit/util/Vector.html),
 [Location](https://jd.papermc.io/paper/1.21.11/org/bukkit/Location.html).
+
+Числа C/WASI проверяет `python3 tools/plugin-translator/test-decimal-runtime.py` (также входит в `test-inspector.py`). Платформенный порт заменяет разбор float/double и вставку чисел в StringBuilder: десятичная запись сохраняет исходное число, включая subnormal и signed zero. Поддержаны ASCII decimal/hex-float, суффиксы Java, NaN/Infinity; длина входа ограничена 4096 символами. Имена материалов, ключей и полей компонентов нормализуются как ASCII; текст сообщений не меняется. Fixture bot проверяет эти пути в WASM, в том числе исключение NumberFormatException.

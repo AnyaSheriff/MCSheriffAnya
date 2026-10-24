@@ -100,6 +100,9 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 59: number(mcsa_api_presentation_remove_team(&s[0],&s[1]));break;
     case 60: number(mcsa_api_server_current_tick());break;
     case 61: {mcsa_api_inventory_view_t view;if(!mcsa_api_inventory_open_view(&s[0],&view,&err))error(err);else {string(view.kind);for(size_t i=0;i<view.items.len;i++){if(view.items.ptr[i].is_some){string(view.items.ptr[i].val.kind);number(view.items.ptr[i].val.count);string(view.items.ptr[i].val.metadata);}else {text("air");text("0");text("");}}mcsa_api_inventory_view_free(&view);}break;}
+    case 62: {mcsa_api_presentation_player_info_t info;if(mcsa_api_presentation_get_player_info(&s[0],&info)){number(info.food);number(info.level);number(info.exp);mcsa_api_presentation_player_info_free(&info);}break;}
+    case 63: {mcsa_api_types_block_pos_t pos={atoi(a[1]),atoi(a[2]),atoi(a[3]),atoi(a[4])};mcsa_api_player_bed_action_t action;if(mcsa_api_player_get_bed_action(&s[0],&pos,&action)){number(action.bed.dimension);number(action.bed.x);number(action.bed.y);number(action.bed.z);number(action.problem);number(action.can_spawn);number(action.can_sleep);}break;}
+    case 64: {mcsa_api_types_location_t to={.dimension=atoi(a[1]),.x=atof(a[2]),.y=atof(a[3]),.z=atof(a[4]),.yaw={true,atof(a[5])},.pitch={true,0}};if(!mcsa_api_player_set_respawn(&s[0],!strcmp(a[6],"1")?&to:NULL,&err))error(err);break;}
     default: abort();
     }
     free(copy);return output;
@@ -145,4 +148,17 @@ void exports_mcsa_api_completion_on_tab_complete(mcsa_api_types_sender_t *caller
 
 bool exports_mcsa_api_inventory_events_on_inventory(mcsa_api_types_player_t *who,uint32_t handle,uint32_t kind,int32_t slot,int32_t button,int32_t mode) {
     clear();player(who);number(handle);number(kind);number(slot);number(button);number(mode);return dispatch(12)!=0;
+}
+
+bool exports_mcsa_api_player_events_on_move(mcsa_api_types_player_t *who,mcsa_api_types_location_t *destination,bool jump,mcsa_api_types_location_t *ret) {
+    clear();player(who);number(destination->dimension);number(destination->x);number(destination->y);number(destination->z);number(destination->yaw.is_some?destination->yaw.val:who->yaw);number(destination->pitch.is_some?destination->pitch.val:who->pitch);number(jump);
+    int result=dispatch(13);if(result==1)return false;*ret=*destination;
+    if(result==2&&event_text){unsigned dimension;double x,y,z;float yaw,pitch;if(sscanf(event_text,"%u %lf %lf %lf %f %f",&dimension,&x,&y,&z,&yaw,&pitch)!=6||dimension>2)abort();ret->dimension=dimension;ret->x=x;ret->y=y;ret->z=z;ret->yaw.is_some=ret->pitch.is_some=true;ret->yaw.val=yaw;ret->pitch.val=pitch;}return true;
+}
+uint32_t exports_mcsa_api_player_events_on_interact(mcsa_api_types_player_t *who,uint32_t action,uint32_t hand,mcsa_api_types_block_pos_t *block,uint32_t face) {
+    clear();player(who);number(action);number(hand);number(block!=NULL);number(block?block->dimension:who->dimension);number(block?block->x:0);number(block?block->y:0);number(block?block->z:0);number(face);return (uint32_t)dispatch(14);
+}
+void exports_mcsa_api_player_events_on_respawn(mcsa_api_types_player_t *who,mcsa_api_types_location_t *destination,bool bed,bool anchor,mcsa_api_types_location_t *ret) {
+    clear();player(who);number(destination->dimension);number(destination->x);number(destination->y);number(destination->z);number(destination->yaw.is_some?destination->yaw.val:who->yaw);number(destination->pitch.is_some?destination->pitch.val:who->pitch);number(bed);number(anchor);
+    dispatch(15);*ret=*destination;unsigned dimension;double x,y,z;float yaw,pitch;if(!event_text||sscanf(event_text,"%u %lf %lf %lf %f %f",&dimension,&x,&y,&z,&yaw,&pitch)!=6||dimension>2)abort();ret->dimension=dimension;ret->x=x;ret->y=y;ret->z=z;ret->yaw.is_some=ret->pitch.is_some=true;ret->yaw.val=yaw;ret->pitch.val=pitch;
 }

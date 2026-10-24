@@ -13,6 +13,7 @@ import tempfile
 import urllib.request
 import zipfile
 from build_guard import run as guarded_run
+from decimal_runtime import port_decimals
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent.parent
@@ -55,6 +56,7 @@ def bootstrap(toolchain=True):
 
 
 def port_runtime(c):
+    port_decimals(c)
     # Только перенос платформенной части TeaVM; код плагина не исполняется на JVM.
     p = c / "definitions.h"
     p.write_text(p.read_text().replace("#ifdef __GNUC__", "#if defined(__GNUC__) && !defined(__wasi__)") + "\n#if defined(__wasi__)\n#include <stdalign.h>\n#endif\n")
@@ -117,7 +119,8 @@ def translate(jar, output, check_only=False, report=None):
         port_runtime(work / "c")
         wit = work / "wit"
         run(CHAIN / "wit-bindgen-0.63.0-x86_64-linux/wit-bindgen", "c", "--world", "bukkit-plugin", "--rename-world", "plugin", "--out-dir", wit, REPO / "wit/mcsa-api.wit")
-        run(CHAIN / "wasi-sdk-34.0-x86_64-linux/bin/clang", "--target=wasm32-wasip2", "-mexec-model=reactor", "-O2", "-mllvm", "-wasm-enable-sjlj", "-mllvm", "-wasm-use-legacy-eh=false", "-mexception-handling", "-Wno-parentheses-equality", "-Wno-pointer-sign", "-Wno-unused-value", "-include", ROOT / "bridge.h", "-I", wit, work / "c/all.c", ROOT / "adapter.c", wit / "plugin.c", wit / "plugin_component_type.o", "-Wl,--max-memory=33554432", "-Wl,-z,stack-size=1048576", "-lsetjmp", "-lm", "-o", work / "plugin.wasm")
+        # Java требует переполнения по модулю; поля и представления TeaVM разделяют память.
+        run(CHAIN / "wasi-sdk-34.0-x86_64-linux/bin/clang", "--target=wasm32-wasip2", "-mexec-model=reactor", "-O2", "-fwrapv", "-fno-strict-aliasing", "-mllvm", "-wasm-enable-sjlj", "-mllvm", "-wasm-use-legacy-eh=false", "-mexception-handling", "-Wno-parentheses-equality", "-Wno-pointer-sign", "-Wno-unused-value", "-include", ROOT / "bridge.h", "-I", wit, work / "c/all.c", ROOT / "adapter.c", wit / "plugin.c", wit / "plugin_component_type.o", "-Wl,--max-memory=33554432", "-Wl,-z,stack-size=1048576", "-lsetjmp", "-lm", "-o", work / "plugin.wasm")
         run(CHAIN / "wasm-tools-1.262.0-x86_64-linux/wasm-tools", "validate", "--features", "all", work / "plugin.wasm")
         output.mkdir(parents=True, exist_ok=True)
         # Публикация только полностью собранного компонента, без изменения существующих плагинов.

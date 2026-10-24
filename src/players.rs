@@ -256,6 +256,8 @@ pub enum Order {
 
     /// Возродить умершего игрока (клиент нажал «возродиться»).
     Respawn,
+    /// Личная точка, установленная API плагина.
+    PluginSpawn { point: Option<crate::bed::RespawnPoint> },
 
     /// Проснуться: ночь пропущена (tick.rs) — встать с кровати без
     /// сообщения о спящих (вики, Bed: «Passing the night»).

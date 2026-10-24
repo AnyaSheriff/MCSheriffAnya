@@ -1,6 +1,6 @@
 package org.bukkit.potion;
 public final class PotionEffectType implements org.bukkit.Keyed {
- private final org.bukkit.NamespacedKey key;private PotionEffectType(String name){key=org.bukkit.NamespacedKey.minecraft(name);}public org.bukkit.NamespacedKey getKey(){return key;}public String getName(){return key.getKey().toUpperCase(java.util.Locale.ROOT);}
+ private final org.bukkit.NamespacedKey key;private PotionEffectType(String name){key=org.bukkit.NamespacedKey.minecraft(name);}public org.bukkit.NamespacedKey getKey(){return key;}public String getName(){return ru.mcsa.bukkit.Ascii.upper(key.getKey());}
  public static final PotionEffectType ABSORPTION=new PotionEffectType("absorption");
  public static final PotionEffectType BAD_OMEN=new PotionEffectType("bad_omen");
  public static final PotionEffectType BLINDNESS=new PotionEffectType("blindness");

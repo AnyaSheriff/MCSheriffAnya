@@ -5,7 +5,7 @@ import org.objectweb.asm.*;
 public final class InspectorFixtures implements Opcodes {
  public static void main(String[] args)throws Exception{
   Path root=Path.of(args[0]);Files.createDirectories(root);
-  for(String kind:new String[]{"missing-method","missing-overload","missing-field","nms","reflection","threads","bridge","inherited","generic-signature","adventure-overload","adventure-spoof","executor","parallel-map","atomic-field-thread","unit-sleep"}){
+  for(String kind:new String[]{"missing-method","missing-overload","missing-field","nms","reflection","threads","bridge","inherited","generic-signature","adventure-overload","adventure-spoof","executor","parallel-map","atomic-field-thread","unit-sleep","permissions-invalid","alias-core"}){
    String className=kind.equals("adventure-spoof")?"net/kyori/adventure/text/Evil":"fixture/Rejected";
    ClassWriter c=new ClassWriter(0);c.visit(V11,ACC_PUBLIC,className,null,"org/bukkit/plugin/java/JavaPlugin",null);
    if(kind.equals("generic-signature"))c.visitField(ACC_PRIVATE,"hidden","Ljava/util/List;","Ljava/util/List<Lnet/minecraft/server/Forbidden;>;",null).visitEnd();
@@ -28,7 +28,7 @@ public final class InspectorFixtures implements Opcodes {
    m.visitInsn(RETURN);m.visitMaxs(4,1);m.visitEnd();c.visitEnd();
    try(JarOutputStream jar=new JarOutputStream(Files.newOutputStream(root.resolve(kind+".jar")))){
     jar.putNextEntry(new JarEntry(className+".class"));jar.write(c.toByteArray());jar.closeEntry();
-    jar.putNextEntry(new JarEntry("plugin.yml"));jar.write(("name: rejected\nversion: '1'\nmain: "+className.replace('/','.')+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));jar.closeEntry();
+    jar.putNextEntry(new JarEntry("plugin.yml"));jar.write(("name: rejected\nversion: '1'\nmain: "+className.replace('/','.')+"\n"+(kind.equals("permissions-invalid")?"permissions:\n  invalid:\n    default: superuser\n":kind.equals("alias-core")?"commands:\n  custom:\n    aliases: [op]\n":"")).getBytes(java.nio.charset.StandardCharsets.UTF_8));jar.closeEntry();
    }
   }
  }

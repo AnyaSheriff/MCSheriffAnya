@@ -16,6 +16,11 @@ public final class CommandPlugin extends JavaPlugin implements org.bukkit.event.
   if(args.length>0&&args[0].equals("zero")&&sender instanceof org.bukkit.entity.Player){((org.bukkit.entity.Player)sender).setHealth(0);return true;}
   if(args.length>0&&args[0].equals("api")&&sender instanceof org.bukkit.entity.Player){
    org.bukkit.entity.Player player=(org.bukkit.entity.Player)sender;
+   for(String canonical:new String[]{"7.0","0.5","-1.0","0.0","-0.0","10.5","0.1","1.0E20","1.0E-7","4.9E-324","1.7976931348623157E308","NaN","Infinity"}){double value=Double.parseDouble(canonical);if(!Double.toString(value).equals(canonical))throw new IllegalStateException("Нарушено форматирование Double: "+canonical+" -> "+Double.toString(value));}
+   for(String canonical:new String[]{"0.5","-0.0","1.4E-45","3.4028235E38","NaN","Infinity"})if(!Float.toString(Float.parseFloat(canonical)).equals(canonical))throw new IllegalStateException("Нарушено преобразование Float: "+canonical);
+   boolean invalidNumber=false;try{Double.parseDouble("12x");}catch(NumberFormatException expected){invalidNumber=true;}if(!invalidNumber)throw new IllegalStateException("Некорректное число принято");
+   long overflow=Long.parseLong("9223372036854775807");overflow++;if(overflow!=Long.MIN_VALUE)throw new IllegalStateException("Нарушено переполнение long");
+   player.sendMessage("WASM decimal conversion verified");
    java.util.concurrent.ConcurrentHashMap<String,Integer> values=new java.util.concurrent.ConcurrentHashMap<>();values.put("value",3);
    java.util.concurrent.atomic.AtomicInteger count=new java.util.concurrent.atomic.AtomicInteger(values.get("value"));
    int roll=java.util.concurrent.ThreadLocalRandom.current().nextInt(1,4);if(roll<1||roll>=4||java.util.concurrent.TimeUnit.SECONDS.toMillis(1)!=1000)throw new IllegalStateException("Случайное число или единица времени");
@@ -31,7 +36,7 @@ public final class CommandPlugin extends JavaPlugin implements org.bukkit.event.
    player.sendMessage("Item meta/PDC round trip");
    player.getPersistentDataContainer().set(key,org.bukkit.persistence.PersistentDataType.INTEGER,7);
    org.bukkit.attribute.AttributeInstance attack=player.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);double base=attack.getBaseValue();attack.setBaseValue(7);attack.addTransientModifier(new org.bukkit.attribute.AttributeModifier(key,0.5,org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR));
-   if(attack.getValue()!=10.5)throw new IllegalStateException("Правки атрибутов не видны");attack.removeModifier(key);attack.setBaseValue(base);player.sendMessage("Attribute queue round trip");
+   double projected=attack.getValue();if(projected!=10.5)throw new IllegalStateException("Правки атрибутов не видны: value="+projected+", base="+attack.getBaseValue()+", modifiers="+attack.getModifiers().size());attack.removeModifier(key);attack.setBaseValue(base);player.sendMessage("Attribute queue round trip");
    boolean denied=false;try{org.mcsa.api.Https.get("https://example.org/");}catch(IllegalStateException expected){denied=true;}if(!denied)throw new IllegalStateException("HTTPS без разрешения");player.sendMessage("HTTPS denied without approval");
    denied=false;try{new java.io.File(getDataFolder(),"../escape");}catch(SecurityException expected){denied=true;}if(!denied)throw new IllegalStateException("Выход из папки данных");player.sendMessage("Data folder confinement works");
    player.setHealth(18);player.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.NIGHT_VISION,100,0,false,false,true));

@@ -312,6 +312,21 @@ mod enabled {
         with_host(Verdict::Allow, move |host| host.player_command(&who, &line))
     }
 
+    pub fn respawn(who: &PlayerView, destination: &PlayerView, bed: bool, anchor: bool) -> PlayerView {
+        let (who, destination) = (who.clone(), destination.clone());let fallback = destination.clone();
+        with_host(fallback, move |host| host.respawn(&who, &destination, bed, anchor))
+    }
+    pub fn player_move(who: &PlayerView, destination: &PlayerView, jump: bool) -> Option<PlayerView> {
+        let (who, destination) = (who.clone(), destination.clone());
+        let fallback = Some(destination.clone());
+        with_host(fallback, move |host| host.player_move(&who, &destination, jump))
+    }
+
+    pub fn interact(who: &PlayerView, action: u32, hand: u32, block: Option<(i32, i32, i32)>, face: u32) -> u32 {
+        let who = who.clone();
+        with_host(0, move |host| host.interact(&who, action, hand, block, face))
+    }
+
     pub fn damage(who: &PlayerView, cause: &str, amount: f32) -> Option<f32> {
         let (who, cause) = (who.clone(), cause.to_string());
         with_host(Some(amount), move |host| host.damage(&who, &cause, amount))
@@ -402,7 +417,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -462,6 +477,9 @@ mod disabled {
         Verdict::Allow
     }
 
+    pub fn respawn(_who: &PlayerView, destination: &PlayerView, _bed: bool, _anchor: bool) -> PlayerView { destination.clone() }
+    pub fn player_move(_who: &PlayerView, destination: &PlayerView, _jump: bool) -> Option<PlayerView> { Some(destination.clone()) }
+    pub fn interact(_who: &PlayerView, _action: u32, _hand: u32, _block: Option<(i32, i32, i32)>, _face: u32) -> u32 { 0 }
     pub fn damage(_who: &PlayerView, _cause: &str, amount: f32) -> Option<f32> { Some(amount) }
     pub fn inventory_event(_owner: &str, _who: &PlayerView, _handle: u32, _kind: u32, _click: (i32, i32, i32)) -> bool { true }
     pub fn death(_who: &PlayerView, _keep_inventory: bool) {}
@@ -476,7 +494,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, damage, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

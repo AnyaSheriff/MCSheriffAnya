@@ -323,6 +323,35 @@ impl mcsa::api::server::Host for PluginCtx {
 }
 
 impl mcsa::api::player::Host for PluginCtx {
+    fn set_respawn(&mut self, uuid: String, to: Option<wit::Location>) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let point = match to {
+            Some(to) if to.x.is_finite() && to.x.abs() <= 30_000_000.0 && to.z.is_finite() && to.z.abs() <= 30_000_000.0 && to.y.is_finite() && (-2048.0..=2048.0).contains(&to.y) && to.yaw.is_none_or(f32::is_finite) => Some(crate::bed::RespawnPoint { dimension: dimension_from_wit(to.dimension), pos: (to.x.floor() as i32, to.y.floor() as i32, to.z.floor() as i32), yaw: to.yaw.unwrap_or(0.0), forced: false }),
+            None => None,
+            _ => return Err("Недопустимая точка возрождения".into()),
+        };
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.members().iter().any(|member| member.uuid == uuid) {return Err("игрока нет на сервере".into());}
+        if !players.ui.info.contains_key(&uuid) {return Err("Точка возрождения API пока поддерживается только для Java".into());}
+        players.order(&uuid, Order::PluginSpawn { point });Ok(())
+    }
+
+    fn get_bed_action(&mut self, uuid: String, pos: wit::BlockPos) -> Option<mcsa::api::player::BedAction> {
+        let uuid = parse_uuid(&uuid)?;
+        let (member, dead, sleeping) = {let players = self.shared.players.lock().expect("игроки");(players.members().iter().find(|member| member.uuid == uuid)?.clone(), players.gear(&uuid).view.dead, players.gear(&uuid).sleeping.is_some())};
+        let dimension = dimension_from_wit(pos.dimension);if member.dimension != dimension || member.sneaking {return None;}
+        let world = self.shared.world_in(dimension).lock().expect("мир");
+        let head = crate::bed::head_of(&world, (pos.x, pos.y, pos.z))?;
+        let problem = if !crate::bed::beds_work(dimension) {4}
+            else if sleeping || dead || crate::bed::occupied(&world, head) {5}
+            else if !crate::bed::bed_in_reach(&world, head, (member.position.x, member.position.y, member.position.z)) {1}
+            else if crate::bed::bed_obstructed(&world, head) {2}
+            else {let items = self.shared.items_in(dimension).lock().expect("сущности");let (wide, high) = crate::bed::MONSTER_REACH;
+                if member.game_mode != 1 && items.mobs().iter().any(|mob| mob.kind.hostile() && !mob.is_dead() && (mob.x - (f64::from(head.0)+0.5)).abs() <= wide && (mob.y-f64::from(head.1)).abs() <= high && (mob.z-(f64::from(head.2)+0.5)).abs() <= wide) {3} else {0}};
+        let dark = crate::bed::dark_enough(world.time_of_day(), world.weather.is_raining(), world.weather.is_thundering());
+        Some(mcsa::api::player::BedAction { bed: wit::BlockPos { dimension: pos.dimension, x: head.0, y: head.1, z: head.2 }, problem, can_spawn: problem == 0, can_sleep: problem == 0 && dark })
+    }
+
     fn set_health(&mut self, uuid: String, health: f64) -> Result<(), String> {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         let mut players = self.shared.players.lock().expect("игроки");
