@@ -1,0 +1,49 @@
+{
+  "head": "748292f78c5c029d880c6437f277f8832008d7c9",
+  "tnt_sha256": "9f6ebd7e4b15460739c027757b76872cacbcfd05fdf8bf0b2ebe25b21f3ffa01",
+  "attempts": [
+    {
+      "attempt": 1,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 2,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 3,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 4,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 5,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 6,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 7,
+      "exit": 0,
+      "tnt_failed": false
+    },
+    {
+      "attempt": 8,
+      "exit": 101,
+      "tnt_failed": true
+    }
+  ],
+  "baseline_unit_test_count": 3051,
+  "failure_artifact": "unchanged-head-tnt-failure.txt",
+  "command": "git archive HEAD; cargo test --release --bin mcsheriffanya --no-run; run the unchanged-HEAD unit-test binary with default threads"
+}

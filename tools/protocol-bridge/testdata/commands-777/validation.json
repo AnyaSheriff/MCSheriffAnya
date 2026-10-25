@@ -1,0 +1,63 @@
+{
+  "status": "complete",
+  "comparison": {
+    "scope": "implemented core; custom tnt/changepassword excluded; root suggestions projected onto implemented commands",
+    "op4": {
+      "node_path_mismatches_before": 2402,
+      "node_path_mismatches_after": 0,
+      "suggestion_mismatches_before": 224,
+      "suggestion_mismatches_after": 0,
+      "queries": 231
+    },
+    "nonop": {
+      "node_path_mismatches_before": 154,
+      "node_path_mismatches_after": 0,
+      "suggestion_mismatches_before": 117,
+      "suggestion_mismatches_after": 0,
+      "queries": 118
+    },
+    "native775_op4": {
+      "suggestion_mismatches_before": 208,
+      "suggestion_mismatches_after": 0,
+      "queries": 215
+    }
+  },
+  "tests": {
+    "command": "CARGO_BUILD_JOBS=6 cargo test --release --workspace -- --test-threads=6",
+    "passed": 3288,
+    "ignored": 103,
+    "protocol_bridge": {
+      "passed": 303,
+      "ignored": 12
+    },
+    "root_unit": {
+      "passed": 2971,
+      "ignored": 89
+    },
+    "root_integration": {
+      "passed": 3,
+      "ignored": 0
+    },
+    "seedmap_core": {
+      "passed": 11,
+      "ignored": 2
+    },
+    "python_passed": 6
+  },
+  "test_count_explanation": {
+    "previous_root_only_passed": 2969,
+    "root_baseline": 2965,
+    "first_turn_new_tests": 4,
+    "omitted_protocol_bridge_and_seedmap_passed": 314,
+    "unchanged_head_full_baseline": 3279,
+    "new_rust_tests_total": 9,
+    "final_full_passed": 3288
+  },
+  "clippy": "cargo clippy --release --workspace --all-targets -- -D warnings: PASS",
+  "build": "cargo build --release: PASS",
+  "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24",
+  "wire_validation": "wire-validation.json",
+  "unchanged_head_tnt_failure": "unchanged-head-tnt-failure.txt",
+  "permission_policy": "data keeps its pre-existing level-4 backend gate; op4/non-op fixture filtering matches",
+  "cargo_build_jobs": 6
+}

@@ -57,6 +57,8 @@ mod mining;
 mod movement_enchantments;
 mod spear;
 mod give;
+mod command_tree;
+mod command_completion;
 use crate::playerdata::{self, PlayerData};
 use crate::players::{Change, Member, Order, Position};
 use crate::placing;
@@ -1052,8 +1054,10 @@ async fn enter_world(
 
         // Дерево команд: без него клиент не знает, что можно вводить после косой
         // черты, и не подсказывает.
-        let may_tnt = crate::permissions::allowed(shared, &player.uuid, crate::custom_tnt::GIVE_NODE);
-        send_commands(stream, may_tnt).await?;
+        player.net.command_protocol = stream.stream().client_version().protocol();
+        let access = command_access(shared, &player.uuid);
+        send_commands(stream, shared, &player.uuid, access.1).await?;
+        player.net.command_access = Some(access);
         write_body(stream, crate::stonecutter::recipe_packet_for_catalog(shared.catalog())).await?;
 
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
@@ -3621,18 +3625,21 @@ fn push_text_component(out: &mut Vec<u8>, text: &str) {
     out.extend_from_slice(&nbt::text_component(text));
 }
 
-/// Отправляет Commands — дерево команд, по которому клиент подсказывает ввод
-/// после косой черты.
-///
-/// Узлы дерева бывают трёх видов: корень, слово и аргумент. У нас пока только
-/// слова, поэтому дерево простое. Слово, на котором команда считается
-/// законченной, помечается отдельным битом — без него клиент не даст
-/// отправить команду.
-///
-/// Ветка `tnt` (особый динамит) — только тем, кому она позволена
-/// (`may_tnt`): остальным её незачем и видеть. Права, выданные позже,
-/// откроют её при следующем входе.
-async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<()> {
+/// Уровень и право на собственную ветвь проверяются раздельно: замки
+/// ops/permissions никогда не удерживаются во время записи в сеть.
+fn command_access(shared: &Shared, who: &[u8; 16]) -> (i32, bool) {
+    let level = shared.ops.lock().expect("права").level_of(who);
+    let may_tnt = crate::permissions::allowed(shared, who, crate::custom_tnt::GIVE_NODE);
+    (level, may_tnt)
+}
+
+async fn send_commands(stream: &mut Outgoing<'_>, shared: &Shared, who: &[u8; 16], may_tnt: bool) -> io::Result<()> {
+    let level = shared.ops.lock().expect("права").level_of(who);
+    let body = if stream.stream().client_version().protocol() >= 775 { command_tree::packet(level, stream.stream().client_version().protocol(), may_tnt) } else { legacy_commands(may_tnt) };
+    write_body(stream, body).await
+}
+
+fn legacy_commands(may_tnt: bool) -> Vec<u8> {
     /// Виды узлов — младшие два бита флагов.
     const NODE_ROOT: u8 = 0x00;
     const NODE_LITERAL: u8 = 0x01;
@@ -3869,7 +3876,7 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
 
     body.extend_from_slice(&encode_varint(0)); // корень — узел номер 0
 
-    write_body(stream, body).await
+    body
 }
 
 /// Собирает подсказки к набираемой команде.
@@ -3877,11 +3884,21 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
 /// Клиент присылает всё, что набрано, и ждёт, чем дописать последнее слово.
 /// Сам он умеет дополнять только названия команд: имена игроков знает
 /// только сервер.
+#[cfg(test)]
 fn suggestions(payload: &[u8], shared: &Shared, who: &[u8; 16]) -> Option<Suggestions> {
+    suggestions_for(payload, shared, who, 777)
+}
+
+fn suggestions_for(payload: &[u8], shared: &Shared, who: &[u8; 16], protocol: i32) -> Option<Suggestions> {
     let mut cursor = Cursor::new(payload);
 
     let id = cursor.varint()?;
     let text = cursor.string()?;
+    let level = shared.ops.lock().expect("права").level_of(who);
+    if protocol >= 775 && !text.trim_start_matches('/').starts_with("tnt ") {
+        let tree = command_tree::for_level(level, protocol);
+        return Some(command_completion::complete(&tree, id, &text, shared, who));
+    }
 
     // Дописывается последнее слово: от него и считаем место замены.
     let typed = text.rsplit(' ').next().unwrap_or("");
@@ -3896,6 +3913,7 @@ fn suggestions(payload: &[u8], shared: &Shared, who: &[u8; 16]) -> Option<Sugges
         start,
         length,
         matches: hints_for(&text, typed, shared, who),
+        tooltips: Vec::new(),
     })
 }
 
@@ -4034,9 +4052,14 @@ async fn send_suggestions(stream: &mut Outgoing<'_>, hints: &Suggestions) -> io:
     body.extend_from_slice(&encode_varint(hints.length));
     body.extend_from_slice(&encode_varint(hints.matches.len() as i32));
 
-    for hint in &hints.matches {
+    for (index, hint) in hints.matches.iter().enumerate() {
         body.extend_from_slice(&encode_string(hint));
-        body.push(0); // пояснения к подсказке нет
+        if let Some(Some(tooltip)) = hints.tooltips.get(index) {
+            body.push(1);
+            body.extend_from_slice(tooltip);
+        } else {
+            body.push(0);
+        }
     }
 
     write_body(stream, body).await
@@ -6372,6 +6395,13 @@ async fn read_and_log_play_packets(
         note_criteria(shared, player, &mut criteria_seen);
         send_pending_score(stream, shared, &player.uuid, &mut score_sent).await?;
 
+        // После op/deop клиент сразу получает новое дерево, без переподключения.
+        let access = command_access(shared, &player.uuid);
+        if Some(access) != player.net.command_access {
+            send_commands(stream, shared, &player.uuid, access.1).await?;
+            player.net.command_access = Some(access);
+        }
+
         // Поручения от команд: выгнать, перенести. Их отдаёт не то
         // подключение, которого они касаются, поэтому забираем их отсюда.
         // throw2-ender_pearl-up45-yaw90-standing.md:36–43: wake от
@@ -7544,6 +7574,7 @@ struct Suggestions {
 
     /// Чем дописать.
     matches: Vec<String>,
+    tooltips: Vec<Option<Vec<u8>>>,
 }
 
 impl Reaction {
@@ -7992,7 +8023,7 @@ fn handle_client_packet_inner(
             }
         }
         TAB_COMPLETE_REQUEST => {
-            if let Some(answer) = suggestions(payload, shared, &player.uuid) {
+            if let Some(answer) = suggestions_for(payload, shared, &player.uuid, player.net.command_protocol) {
                 reaction.suggestions = Some(answer);
             }
         }
@@ -12834,13 +12865,15 @@ mod tests {
     /// какой кусок строки заменить.
     #[test]
     fn suggestions_complete_player_names() {
+        let ops_path = std::env::temp_dir().join(format!("mcsa-command-player-names-{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&ops_path);
         let shared = crate::shared::Shared::new(
             crate::world::World::in_memory(),
             crate::world::World::in_memory(),
             std::path::PathBuf::new(),
             std::path::PathBuf::new(),
             Default::default(),
-            crate::ops::Ops::open(std::path::Path::new("/tmp/mcsheriffanya-no-ops.json")),
+            crate::ops::Ops::open(&ops_path),
             crate::skins::Settings::default(),
         );
 
@@ -12864,6 +12897,8 @@ mod tests {
             }
         }
 
+        shared.ops.lock().expect("права").give(&[1; 16], "Вася", crate::ops::HIGHEST_LEVEL);
+
         let ask = |text: &str| {
             let mut payload = encode_varint(7); // номер запроса
             payload.extend_from_slice(&encode_string(text));
@@ -12882,14 +12917,15 @@ mod tests {
         assert_eq!(hints.start, "kick ".len() as i32);
 
         // Ничего не набрано — подходят все имена и все значки.
-        assert_eq!(ask("tp ").matches.len(), 3 + 5);
+        assert_eq!(ask("tp ").matches.len(), 3 + 6 + 3);
 
         // Набрано то, чего нет.
         assert!(ask("kick Юра").matches.is_empty());
 
         // Особый динамит без прав не подсказывается вовсе.
-        assert!(ask("tnt ").matches.is_empty());
-        assert!(ask("tnt give Вася m").matches.is_empty());
+        assert!(suggestions(&[encode_varint(1), encode_string("tnt ")].concat(), &shared, &[9; 16]).unwrap().matches.is_empty());
+        assert!(suggestions(&[encode_varint(1), encode_string("tnt give Вася m")].concat(), &shared, &[9; 16]).unwrap().matches.is_empty());
+        let _ = std::fs::remove_file(ops_path);
     }
 
     /// Подсказки к `tnt`: слова, игроки, виды из таблицы, число — тому, у

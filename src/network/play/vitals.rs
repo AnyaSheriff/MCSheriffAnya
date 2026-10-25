@@ -210,6 +210,9 @@ struct Meta {
 
 /// Сетевая сторона здоровья игрока.
 pub(super) struct Net {
+    /// Протокол дерева команд и последний действительно отправленный допуск.
+    pub command_protocol: i32,
+    pub command_access: Option<(i32, bool)>,
     pub hits: Vec<Pending>,
     /// Урон, что сейчас применяется, уже разослан остальным (см. `Pending::announced`).
     pub announced: bool,
@@ -354,6 +357,8 @@ impl Net {
 
     pub fn new() -> Self {
         Self {
+            command_protocol: 777,
+            command_access: None,
             hits: Vec::new(),
             announced: false,
             announced_health: None,

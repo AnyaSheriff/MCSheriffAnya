@@ -120,21 +120,24 @@ impl Answer {
 ///
 /// Ноль — можно всем. Всё, что меняет мир или задевает других игроков,
 /// требует прав; их выдают командой `op`, а хранятся они в `ops.json`.
-fn level_needed(command: &str) -> i32 {
+pub(crate) fn level_needed(command: &str) -> i32 {
     // Команды commands_admin.rs: уровни по вики.
     if let Some(level) = crate::commands_admin::level(command) {
         return level;
     }
 
     match command {
-        "help" | "list" | "say" => 0,
+        "help" | "list" | "random" => 0,
+        "op" | "deop" | "kick" => 3,
+        // data сохраняет прежний локальный уровень доступа (data_get_tests).
+        "stop" | "data" => 4,
         // Вики, Commands: trigger и teammsg доступны всем, прочие команды
         // табло и функций — с уровня 2.
         "trigger" | "teammsg" | "tm" => 0,
         "scoreboard" | "team" | "tag" | "bossbar" | "function" | "schedule" | "return" | "execute" | "datapack" => 2,
         // Права на особый динамит — узлом (permissions.rs), не уровнем.
         "tnt" => 0,
-        _ => ops::HIGHEST_LEVEL,
+        _ => 2,
     }
 }
 
@@ -226,6 +229,14 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             return crate::commands_world::fail("commands.generic.permission", &[]);
         }
         return Answer::saying("На это у тебя нет прав".to_string());
+    }
+
+    if name == "random" {
+        let arguments: Vec<_> = command.split_whitespace().collect();
+        if (arguments.get(1) == Some(&"reset") || arguments.len() > 3)
+            && !allowed("execute", source, shared) {
+            return Answer::saying("На это у тебя нет прав".to_string());
+        }
     }
 
     match name {
@@ -2078,6 +2089,11 @@ fn experience(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// `gamerule <правило> [значение]`: настоящим считается `keepInventory`,
 /// остальные правила принимаются и молча игнорируются.
 fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
+    // Оба имени из Commands ведут к одному обработчику правила.
+    let normalized: Vec<_> = parts.iter().enumerate().map(|(index, part)| {
+        if index == 0 { part.strip_prefix("minecraft:").unwrap_or(part) } else { *part }
+    }).collect();
+    let parts = normalized.as_slice();
     // Правила командных блоков (command_block.rs).
     if let [rule, rest @ ..] = parts
         && rest.len() <= 1
@@ -2904,7 +2920,7 @@ fn weather(parts: &[&str], shared: &Shared) -> Answer {
 
 /// Время по названию или числом.
 fn time_by_name(value: &str) -> Option<i64> {
-    Some(match value {
+    Some(match value.strip_prefix("minecraft:").unwrap_or(value) {
         "day" => 1_000,
         "noon" => 6_000,
         "night" => 13_000,
@@ -3918,6 +3934,7 @@ mod tests {
         let shared = server();
 
         assert!(run("time set night", &Source::Console, &shared).reply.contains("13000"));
+        assert!(run("time set minecraft:night", &Source::Console, &shared).reply.contains("13000"));
         assert!(run("time query", &Source::Console, &shared).reply.contains("13000"));
 
         run("time add 1000", &Source::Console, &shared);
@@ -4075,6 +4092,8 @@ mod tests {
 
         run("gamerule keepInventory true", &Source::Console, &shared);
         assert!(shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
+        run("gamerule minecraft:keep_inventory false", &Source::Console, &shared);
+        assert!(!shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
     }
 
     #[test]
