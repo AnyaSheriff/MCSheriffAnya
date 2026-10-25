@@ -61,6 +61,7 @@ pub mod ocean;
 pub mod region;
 pub mod terrain;
 pub mod trees;
+mod tree_shapes_26_3;
 pub mod underground;
 mod writer;
 pub mod vegetation;
@@ -5455,7 +5456,7 @@ fn draw_tree(
     // листва считалась бы оторванной и осыпалась бы, как только появится
     // опадание. Считается по блокам самого дерева, поэтому чанки на стыке
     // решают одинаково.
-    let distances = if mushroom { std::collections::HashMap::new() } else { leaf_distances(&blocks) };
+    let distances = if mushroom { std::collections::HashMap::new() } else { tree.leaf_distances_in(ground.seed, x, z, &blocks) };
     let leaf_state = |distance: i32, wet: bool| {
         crate::blocks::state_from_text(&format!("{}[distance={},waterlogged={}]", tree.leaves, distance, wet))
     };

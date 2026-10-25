@@ -992,6 +992,10 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         },
     };
 
+    if world.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        tree = tree.in_preview_sapling(seed);
+    }
+
     // Вики, Bee: саженец дуба/берёзы у цветка, «5% chance» гнезда.
     if matches!(name,"oak_sapling"|"birch_sapling") {
         let nearby=(-2..=2).any(|dx|(-2..=2).any(|dz|(0..=1).any(|dy|crate::mob::wildlife::pollinatable(world.get_block(x+dx,y+dy,z+dz)))));
@@ -1014,7 +1018,7 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         world.set_block_silently(origin.0 + dx, y, origin.1 + dz, AIR);
     }
 
-    let distances = crate::world::leaf_distances(&parts);
+    let distances = tree.leaf_distances_in(seed, origin.0, origin.1, &parts);
     let log_state = |axis: &trees::Axis| {
         let axis = match axis {
             trees::Axis::X => "x",

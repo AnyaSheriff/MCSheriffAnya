@@ -24,7 +24,8 @@ pub struct Tree {
     pub log: &'static str,
     pub leaves: &'static str,
     /// Высота прямого ствола — до макушки или до первого излома. У мангра —
-    /// число брёвен над корнями, у акации — полная высота вместе с изгибом.
+    /// число брёвен над корнями, у прежней акации — полная высота с изгибом.
+    /// У наблюдённых форм 26.3 — высота прямого участка до первого изгиба.
     pub trunk: i32,
     pub shape: Shape,
     /// Под кроной висит пчелиное гнездо: у дубов на равнине, у берёз на лугу.
@@ -32,6 +33,8 @@ pub struct Tree {
     pub heart: bool,
     /// Полочный гриб на стволе (естественный тополь пятнистого леса 26.3).
     pub shelf: bool,
+    /// Образец формы 26.3; None сохраняет прежний генератор и его RNG.
+    pub(crate) observation: Option<usize>,
 }
 
 /// Форма дерева.
@@ -83,7 +86,7 @@ pub enum Shape {
     /// Дерево с азалией: короткий ствол, крона раздувается кверху.
     Azalea,
     /// Тополь 26.3: прямой ствол 7–11, кольцо коротких ветвей на четыре блока ниже макушки,
-    /// у кроны бывает второе кольцо; крона — стопка дисков, один цвет листвы на дерево.
+    /// у кроны бывает второе кольцо; нижние слои ромбами, один цвет листвы на дерево.
     Poplar,
     /// Огромный коричневый гриб: ножка и плоская шляпка.
     BrownMushroom,
@@ -124,6 +127,26 @@ pub type TreeBlock = (i32, i32, i32, Part);
 pub const TREE_REACH: i32 = 8;
 
 impl Tree {
+    /// Выбирает целую наблюдённую форму только для нового профиля.
+    pub(crate) fn in_preview(mut self, seed: i64) -> Self {
+        let mut random = Random::new(seed);
+        if let Some(index) = super::tree_shapes_26_3::select(self.shape, &mut random) {
+            self.trunk = super::tree_shapes_26_3::trunk(index);
+            self.observation = Some(index);
+        }
+        self
+    }
+
+    /// Саженцы мерялись отдельно: не смешиваем их выборку с лесной.
+    pub(crate) fn in_preview_sapling(mut self, seed: i64) -> Self {
+        let mut random = Random::new(seed);
+        if let Some(index) = super::tree_shapes_26_3::select_sapling(self.shape, &mut random) {
+            self.trunk = super::tree_shapes_26_3::trunk(index);
+            self.observation = Some(index);
+        }
+        self
+    }
+
     /// Толстый ли ствол — 2×2: стоит на четырёх столбцах, от (0, 0) до
     /// (1, 1).
     pub fn wide(&self) -> bool {
@@ -136,41 +159,72 @@ impl Tree {
         self.blocks_in(0, x, z)
     }
 
+    fn shape_random(seed: i64, x: i32, z: i32) -> Random {
+        Random::new(
+            ((x as i64).wrapping_mul(341_873_128_712).wrapping_add((z as i64).wrapping_mul(132_897_987_541)) + 5_003)
+                ^ seed.wrapping_mul(0x5DEE_CE66D),
+        )
+    }
+
+    /// Для наблюдённой формы возвращаем наблюдённые состояния; прежний
+    /// профиль сохраняет старый обход и не обращается к новым таблицам.
+    pub(crate) fn leaf_distances_in(&self, seed: i64, x: i32, z: i32, blocks: &[TreeBlock]) -> std::collections::HashMap<(i32,i32,i32),i32> {
+        if let Some(index) = self.observation {
+            super::tree_shapes_26_3::distances(index, self.trunk, &mut Self::shape_random(seed,x,z))
+        } else {
+            super::leaf_distances(blocks)
+        }
+    }
+
     /// Все блоки дерева, выросшего в точке (x, z) мира с этим семенем.
     /// Форма своя у каждого места и каждого мира, но одна и та же при
     /// каждом обращении: соседние чанки рисуют одно и то же дерево, каждый
     /// свою часть.
     pub fn blocks_in(&self, seed: i64, x: i32, z: i32) -> Vec<TreeBlock> {
-        let mut random = Random::new(
-            ((x as i64).wrapping_mul(341_873_128_712).wrapping_add((z as i64).wrapping_mul(132_897_987_541)) + 5_003)
-                ^ seed.wrapping_mul(0x5DEE_CE66D),
-        );
+        let mut random = Self::shape_random(seed, x, z);
         let mut blocks = Vec::with_capacity(256);
 
-        match self.shape {
-            Shape::Oak => self.oak(&mut random, &mut blocks),
-            Shape::Round => self.round(&mut random, &mut blocks),
-            Shape::Swamp => self.swamp(&mut random, &mut blocks),
-            Shape::Fancy => self.fancy(&mut random, &mut blocks),
-            Shape::Spruce => self.spruce(&mut random, &mut blocks),
-            Shape::Pine => self.pine(&mut random, &mut blocks),
-            Shape::MegaSpruce => self.mega_conifer(&mut random, &mut blocks, false),
-            Shape::MegaPine => self.mega_conifer(&mut random, &mut blocks, true),
-            Shape::Jungle => self.jungle(&mut random, &mut blocks),
-            Shape::MegaJungle => self.mega_jungle(&mut random, &mut blocks),
-            Shape::Bush => bush(&mut random, &mut blocks),
-            Shape::Acacia => self.acacia(&mut random, &mut blocks),
-            Shape::DarkOak => self.dark_oak(&mut random, &mut blocks, false),
-            Shape::PaleOak => self.dark_oak(&mut random, &mut blocks, true),
-            Shape::Cherry => self.cherry(&mut random, &mut blocks),
-            Shape::Mangrove => self.mangrove(&mut random, &mut blocks, false),
-            Shape::TallMangrove => self.mangrove(&mut random, &mut blocks, true),
-            Shape::Azalea => self.azalea(&mut random, &mut blocks),
-            Shape::Poplar => self.poplar(&mut random, &mut blocks),
-            Shape::BrownMushroom => self.brown_mushroom(&mut blocks),
-            Shape::RedMushroom => self.red_mushroom(&mut blocks),
-        }
+        if let Some(index) = self.observation {
+            super::tree_shapes_26_3::draw(index, self.trunk, &mut random, &mut blocks);
+            // Образцы содержат геометрию кроны; прежние украшения остаются.
+            if self.shape == Shape::Swamp {
+                hang_vines(&mut random, &mut blocks, self.trunk - 1, (0, 0, 3), (2, 4), |dx, dz| square_without_corners(dx, dz, 3));
+            }
+            if self.shape == Shape::Round && self.bees && self.trunk >= 4 {
+                blocks.push((0, self.trunk - 3, 1, Part::Block("bee_nest[facing=south]")));
+            }
+        } else {
+            match self.shape {
+                Shape::Oak => self.oak(&mut random, &mut blocks),
+                Shape::Round => self.round(&mut random, &mut blocks),
+                Shape::Swamp => self.swamp(&mut random, &mut blocks),
+                Shape::Fancy => self.fancy(&mut random, &mut blocks),
+                Shape::Spruce => self.spruce(&mut random, &mut blocks),
+                Shape::Pine => self.pine(&mut random, &mut blocks),
+                Shape::MegaSpruce => self.mega_conifer(&mut random, &mut blocks, false),
+                Shape::MegaPine => self.mega_conifer(&mut random, &mut blocks, true),
+                Shape::Jungle => self.jungle(&mut random, &mut blocks),
+                Shape::MegaJungle => self.mega_jungle(&mut random, &mut blocks),
+                Shape::Bush => bush(&mut random, &mut blocks),
+                Shape::Acacia => self.acacia(&mut random, &mut blocks),
+                Shape::DarkOak => self.dark_oak(&mut random, &mut blocks, false),
+                Shape::PaleOak => self.dark_oak(&mut random, &mut blocks, true),
+                Shape::Cherry => self.cherry(&mut random, &mut blocks),
+                Shape::Mangrove => self.mangrove(&mut random, &mut blocks, false),
+                Shape::TallMangrove => self.mangrove(&mut random, &mut blocks, true),
+                Shape::Azalea => self.azalea(&mut random, &mut blocks),
+                Shape::Poplar => self.poplar(&mut random, &mut blocks),
+                Shape::BrownMushroom => self.brown_mushroom(&mut blocks),
+                Shape::RedMushroom => self.red_mushroom(&mut blocks),
+            }
 
+        }
+        // Гнездо не входит в геометрию образца без пчёл.
+        if self.observation.is_some() && self.bees && self.shape == Shape::Oak
+            && let Some(lowest) = blocks.iter().filter(|b| b.3 == Part::Leaves).map(|b| b.1).min()
+        {
+            blocks.push((0, lowest - 1, 1, Part::Block("bee_nest[facing=south]")));
+        }
         dirt_under_trunk(&mut blocks);
 
         // Вики, Creaking Heart: 10 % естественных бледных дубов; саженцы — без сердца.
@@ -209,58 +263,10 @@ impl Tree {
         blocks
     }
 
-    /// Тополь 26.3. Форма снята с деревьев, выращенных из саженцев на официальном сервере 26.3
-    /// (63 дерева, плюс 120 первой пробы; слои листвы сверяются таблицей `POPLAR_LEAF_PERMILLE`):
-    /// ствол 7–11 равномерно; на высоте «макушка − 4» кольцо веток длиной 1 (каждая из четырёх сторон
-    /// с вероятностью около 0,7, но хотя бы одна); число n = 0…3 задаёт радиус кроны R = 4 + n, при n > 0
-    /// на высоте «макушка − 3 + s» (s = 1 или 2) второе кольцо из четырёх веток длиной n. Листва — слои
-    /// от «макушка − 4» до «макушка + s»: радиусы 2, R − 1, R, [R при s = 2,] R − 1 (R − 2…), …;
-    /// внутри слоя клетка ставится с замеренной вероятностью по квадрату расстояния от оси.
-    /// [проверить] связь n с s и ветвями проверена на 63 деревьях; естественные деревья леса не мерялись.
+    /// Тополь: целая наблюдённая крона вместо усреднения по кругу.
     fn poplar(&self, random: &mut Random, blocks: &mut Vec<TreeBlock>) {
-        let top = self.trunk;
-        trunk(blocks, 0, 0, 1, top);
-
-        // Нижнее кольцо веток.
-        let mut present = [false; 4];
-        for side in &mut present { *side = fraction(random) < 0.7; }
-        if !present.contains(&true) { present[roll(random, 4) as usize] = true; }
-        let mut arms: Vec<(i32, i32, i32)> = Vec::new();
-        for (index, (step_x, step_z)) in CARDINAL.iter().enumerate() {
-            if present[index] { arms.push((*step_x, top - 4, *step_z)); }
-        }
-
-        // Длина верхних веток и сдвиг кроны.
-        let pick = fraction(random);
-        let n = if pick < 46.0 / 120.0 { 0 } else if pick < 96.0 / 120.0 { 1 } else if pick < 109.0 / 120.0 { 2 } else { 3 };
-        let shift = 1 + roll(random, 2);
-        let radius = 4 + n;
-        if n > 0 {
-            for (step_x, step_z) in CARDINAL {
-                for step in 1..=n { arms.push((step_x * step, top - 3 + shift, step_z * step)); }
-            }
-        }
-        for (x, y, z) in &arms {
-            blocks.push((*x, *y, *z, Part::Log(if *z == 0 { Axis::X } else { Axis::Z })));
-        }
-
-        let layers: Vec<(i32, i32)> = if shift == 1 {
-            vec![(-4, 2), (-3, radius - 1), (-2, radius), (-1, radius - 1), (0, radius - 2), (1, radius - 3)]
-        } else {
-            vec![(-4, 2), (-3, radius - 1), (-2, radius), (-1, radius), (0, radius - 1), (1, radius - 2), (2, radius - 3)]
-        };
-        for (dy, layer_radius) in layers {
-            let table = POPLAR_LEAF_PERMILLE[(layer_radius.clamp(1, 7) - 1) as usize];
-            for dx in -layer_radius - 1..=layer_radius + 1 {
-                for dz in -layer_radius - 1..=layer_radius + 1 {
-                    let y = top + dy;
-                    // Ствол занимает ось до макушки, ветки — свои клетки.
-                    if (dx == 0 && dz == 0 && dy <= 0) || arms.contains(&(dx, y, dz)) { continue; }
-                    let chance = table.iter().find(|(square, _)| *square == dx * dx + dz * dz).map_or(0, |(_, permille)| *permille);
-                    if chance > 0 && fraction(random) * 1000.0 < f64::from(chance) { blocks.push((dx, y, dz, Part::Leaves)); }
-                }
-            }
-        }
+        let index = super::tree_shapes_26_3::select_sapling(Shape::Poplar, random).expect("формы тополя");
+        super::tree_shapes_26_3::draw(index, self.trunk, random, blocks);
     }
 
     /// Дуб. Над макушкой крест, на уровне макушки слой 3×3, ниже — слои
@@ -1266,22 +1272,9 @@ struct Species {
 /// Порода с таким стволом, кроной, формой и высотой ствола от `low`
 /// до `low + spread + extra - 2`.
 const fn species(log: &'static str, leaves: &'static str, shape: Shape, low: i32, spread: i32, extra: i32) -> Species {
-    Species { tree: Tree { log, leaves, trunk: low, shape, bees: false, heart: false, shelf: false }, spread, extra }
+    Species { tree: Tree { log, leaves, trunk: low, shape, bees: false, heart: false, shelf: false, observation: None }, spread, extra }
 }
 
-
-/// Вероятность листа (в тысячных) по квадрату расстояния от оси ствола для слоя радиуса 1…7 (индекс = радиус − 1).
-/// Снято с деревьев, выращенных из саженцев на официальном сервере 26.3 (63 дерева): внутри диска листва
-/// почти сплошная, у края — около половины клеток, на самих осях — чаще.
-const POPLAR_LEAF_PERMILLE: [&[(i32, u16)]; 7] = [
-    &[(0, 1000), (1, 815), (2, 500)],
-    &[(0, 1000), (1, 1000), (2, 955), (4, 851), (5, 463), (8, 205)],
-    &[(0, 1000), (1, 1000), (2, 1000), (4, 1000), (5, 911), (8, 449), (9, 832), (10, 450), (13, 166)],
-    &[(0, 1000), (1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 928), (9, 1000), (10, 905), (13, 426), (16, 854), (17, 421)],
-    &[(0, 1000), (1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 1000), (9, 1000), (10, 1000), (13, 935), (16, 1000), (17, 914), (18, 458), (20, 428), (25, 306), (26, 435)],
-    &[(1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 1000), (9, 1000), (10, 1000), (13, 1000), (16, 1000), (17, 1000), (18, 944), (20, 931), (25, 602), (26, 875), (29, 417), (36, 806), (37, 403)],
-    &[(1, 1000), (2, 1000), (4, 1000), (5, 1000), (8, 1000), (9, 1000), (10, 1000), (13, 1000), (16, 1000), (17, 1000), (18, 1000), (20, 1000), (25, 938), (26, 1000), (29, 875), (32, 438), (34, 312), (36, 1000), (37, 1000), (40, 438), (49, 875), (50, 292)],
-];
 
 // Высоты — по замеру: у каждой породы указан замеренный разброс и среднее.
 
@@ -1480,10 +1473,11 @@ impl Terrain {
         if column.biome == Biome::DappledForest && species.tree.shape == Shape::Poplar {
             let colour = fraction(&mut random);
             let leaves = if colour < 0.48 { "orange_poplar_leaves" } else if colour < 0.80 { "red_poplar_leaves" } else { "yellow_poplar_leaves" };
-            return Some(Tree { trunk, leaves, shelf: true, ..species.tree });
+            return Some(Tree { trunk, leaves, shelf: true, ..species.tree }.in_preview(random.next() as i64));
         }
 
-        Some(Tree { trunk, bees, heart, ..species.tree })
+        let tree = Tree { trunk, bees, heart, ..species.tree };
+        Some(if self.preview() && !(tree.shape == Shape::Round && species.extra > 1) { tree.in_preview(random.next() as i64) } else { tree })
     }
 }
 
@@ -1517,7 +1511,8 @@ pub fn camp_tree(seed: i64, x: i32, z: i32, pool: &str) -> Option<Tree> {
     );
     let trunk = species.tree.trunk + roll(&mut random, species.spread) + roll(&mut random, species.extra);
 
-    Some(Tree { trunk, bees, leaves: leaves.unwrap_or(species.tree.leaves), shelf: leaves.is_some(), ..species.tree })
+    let tree = Tree { trunk, bees, leaves: leaves.unwrap_or(species.tree.leaves), shelf: leaves.is_some(), ..species.tree };
+    Some(if tree.shape == Shape::Round && species.extra > 1 {tree} else {tree.in_preview(random.next() as i64)})
 }
 
 /// Дерево с азалией над пышной пещерой в точке (x, z): высота ствола своя
@@ -2142,3 +2137,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "crown_tests.rs"]
+mod crown_tests;
