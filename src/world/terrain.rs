@@ -976,8 +976,18 @@ impl Terrain {
             Style::Smooth => 0.0,
         };
 
-        let raw_continent = self.continent.octaves(x / 2400.0 + off, z / 2400.0 + off, 4);
+        // https://minecraft.wiki/w/World_generation: «Continentalness».
+        // Моря прежней модели были слишком широкими: медиана расстояния
+        // до суши в тёплом море доходила до 367 блоков против 82 у оригинала.
+        // Меняется длина волны, а не квантили доли моря [проверить: дальние окна].
+        let continent_scale = if self.preview && self.style == Style::Vanilla { 1200.0 } else { 2400.0 };
+        let raw_continent = self.continent.octaves(x / continent_scale + off, z / continent_scale + off, 4);
         let continent = match self.style {
+            Style::Vanilla if self.preview && raw_continent * 1.8 - 0.12 < -1.0 => {
+                // https://minecraft.wiki/w/World_generation: «Mushroom fields».
+                // Диапазон -1,2…-1,05 был недостижим из-за обрезки на -1.
+                (raw_continent * 1.8 - 0.12).max(-1.2)
+            }
             Style::Vanilla => measured_continent(raw_continent),
             Style::Smooth => stretch(raw_continent, 2.4, 0.42),
         };
@@ -1161,6 +1171,8 @@ impl Terrain {
         if self.style != Style::Vanilla { return *climate; }
         let mut parameters = distribution::CALIBRATED;
         if self.preview {
+            parameters[0..4].copy_from_slice(&distribution::PREVIEW_LAND_T);
+            parameters[20..32].copy_from_slice(&distribution::PREVIEW_WARM_H);
             parameters[4..8].copy_from_slice(&distribution::PREVIEW_OCEAN_T);
             parameters[8..12].copy_from_slice(&distribution::PREVIEW_OCEAN_T);
         }
@@ -1189,8 +1201,9 @@ impl Terrain {
         let mut biome = biome_of(climate);
 
         // 26.3: пятнистый лес на месте равнин в умеренно холодном и очень сухом
-        // климате при положительной странности (вики, Dappled Forest: «moderately
-        // cold regions with very low humidity, typically where weirdness is positive»).
+        // климате при положительной странности. Вики, Dappled Forest:
+        // https://minecraft.wiki/w/Dappled_Forest — «positive weirdness».
+        // Прежний порог 0,4 исключал значительную часть подходящего климата.
         if self.preview && biome == Biome::Plains && dappled_climate(climate) {
             biome = Biome::DappledForest;
         }
@@ -1230,8 +1243,13 @@ impl Terrain {
     // модель, не алгоритм оригинала [проверить: вид границ на местности].
     fn biome_input(&self, climate: &Climate, x: i32, z: i32) -> Climate {
         if self.style != Style::Vanilla { return *climate; }
-        let dx = self.detail.octaves(f64::from(x)/12.0+0.37, f64::from(z)/12.0+0.37, 2)*10.0;
-        let dz = self.detail.octaves(f64::from(x)/12.0+183.37, f64::from(z)/12.0-97.37, 2)*10.0;
+        // https://minecraft.wiki/w/World_generation: «horizontal coordinates».
+        // Искривление медленнее биомной клетки: прежние 12 блоков
+        // перебрасывали соседей через порог и дробили пустыню на 16 м².
+        // Старые миры сохраняют прежнюю геометрию; масштаб 26.3 — наш.
+        let scale = if self.preview { 96.0 } else { 12.0 };
+        let dx = self.detail.octaves(f64::from(x)/scale+0.37, f64::from(z)/scale+0.37, 2)*10.0;
+        let dz = self.detail.octaves(f64::from(x)/scale+183.37, f64::from(z)/scale-97.37, 2)*10.0;
         self.climate_at(x+dx.round() as i32,z+dz.round() as i32)
     }
 
@@ -1434,6 +1452,15 @@ impl Terrain {
         // В горах земля и так поднята — там плато почти не добавляется.
         ground += PLATEAU * plateau * (1.0 - 0.7 * mountains);
 
+        // https://minecraft.wiki/w/World_generation: «peaks and valleys».
+        // Линейный подъём давал слишком много высот 100–140 и слабый хвост
+        // высоких пиков. Непрерывная выпуклая шкала оставляет равнины низкими,
+        // но усиливает редкие хребты; шум и морское дно не масштабируются.
+        if self.preview {
+            let uplift = (ground - base).max(0.0);
+            ground += spline(&[(0.0,0.0),(30.0,10.0),(50.0,22.0),(70.0,36.0),
+                (80.0,49.0),(90.0,90.0),(100.0,140.0),(110.0,155.0),(140.0,230.0)], uplift) - uplift;
+        }
         let mut surface = sea_floor + (ground - sea_floor) * land;
 
         // Насколько место далеко от воды: у берега раскачка стихает, иначе
@@ -1488,10 +1515,20 @@ impl Terrain {
             cap = cap.min(river + (1.0 - valley) * 60.0);
         }
 
+        // https://minecraft.wiki/w/Mushroom_Fields: «islands surrounded by deep oceans».
+        // Отдельный низкий остров: иначе доступный биом остался бы на дне
+        // под водой. Переход непрерывен ещё внутри глубокого моря.
+        // Частоту и размеры островов на большой выборке 26.3 [проверить].
+        let island = if self.preview { smooth_step((-climate.continent - 1.0) / 0.1) } else { 0.0 };
+        if island > 0.0 {
+            let island_height = 68.0 + self.detail.octaves(fx/120.0+17.0,fz/120.0-31.0,2)*5.0;
+            surface += (island_height-surface)*island;
+            cap += (island_height+12.0-cap).max(0.0)*island;
+        }
         Relief {
             surface,
-            wobble,
-            rugged,
+            wobble: wobble*(1.0-0.75*island),
+            rugged: rugged*(1.0-island),
             cap,
         }
     }
@@ -2343,7 +2380,7 @@ fn biome_of(climate: &Climate) -> Biome {
     }
 }
 
-const DAPPLED_WEIRDNESS: f64 = 0.4;
+const DAPPLED_WEIRDNESS: f64 = 0.0;
 
 /// Климат пятнистого леса 26.3 (замер официального мира, tools/measure/census_263.py).
 fn dappled_climate(climate: &Climate) -> bool {
@@ -3351,6 +3388,198 @@ fn named(name: &str) -> i32 {
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    /// Доли считаются по двум квадратам вместе: перестановка биомов не
+    /// превращает несовпадение координат в ошибку состава мира.
+    #[test]
+    fn preview_common_biome_shares_follow_region_census() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
+        let mut counts = std::collections::BTreeMap::<&str,usize>::new();
+        let mut total = 0;
+        for (seed,x0,z0) in [(1_792_932_773_345_722_119,-2064,-1440),(100_554_032_945_340,-1072,-1568)] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            for z in (z0..z0+3088).step_by(16) { for x in (x0..x0+3088).step_by(16) {
+                *counts.entry(terrain.biome_at(x+2,z+2).name()).or_default() += 1;
+                total += 1;
+            } }
+        }
+        for (name,value) in reference["pooled_reference_surface_percent"].as_object().unwrap() {
+            let measured = *counts.get(name.as_str()).unwrap_or(&0) as f64 * 100.0 / total as f64;
+            assert!((measured-value.as_f64().unwrap()).abs() <= 1.0,"{name}: {measured}, оригинал {value}");
+        }
+    }
+
+    /// Необрезанные пятна пустыни: исходная перепись дала 16 м² против
+    /// 5024 м² у оригинала. Грубый порог ловит прежнюю рябь в одну клетку.
+    #[test]
+    fn preview_desert_patches_are_not_single_cell_boundary_noise() {
+        let terrain = Terrain::new(1_792_932_773_345_722_119,Style::Vanilla).with_preview(true);
+        let side = 3088/4;
+        let mut desert = vec![false;side*side];
+        for z in 0..side { for x in 0..side {
+            desert[z*side+x] = terrain.biome_at(-2064+x as i32*4+2,-1440+z as i32*4+2) == Biome::Desert;
+        } }
+        let mut areas = Vec::new();
+        for start in 0..desert.len() {
+            if !desert[start] { continue; }
+            desert[start] = false;
+            let mut stack = vec![start]; let mut area = 0; let mut edge = false;
+            while let Some(at) = stack.pop() {
+                area += 16;
+                let (x,z) = (at%side,at/side);
+                edge |= x==0 || z==0 || x+1==side || z+1==side;
+                for next in [(x>0).then(||at-1),(x+1<side).then_some(at+1),
+                    (z>0).then(||at-side),(z+1<side).then_some(at+side)].into_iter().flatten() {
+                    if desert[next] { desert[next] = false; stack.push(next); }
+                }
+            }
+            if !edge { areas.push(area); }
+        }
+        areas.sort_unstable();
+        assert!(areas.len()>5);
+        assert!(areas[areas.len()/2]>=1000,"мелкие пятна: {areas:?}");
+    }
+
+    /// Совместные квантили двух семян, настоящая сетка плотности чанков.
+    #[test]
+    fn preview_relief_has_low_common_hills_and_a_high_peak_tail() {
+        let mut heights = Vec::new();
+        for (seed,x0,z0) in [(1_792_932_773_345_722_119,-2064,-1440),(100_554_032_945_340,-1072,-1568)] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            for z in (z0..z0+3088).step_by(128) { for x in (x0..x0+3088).step_by(128) {
+                let grid = terrain.relief_grid(x,z,x+15,z+15);
+                for dz in (0..16).step_by(4) { for dx in (0..16).step_by(4) {
+                    heights.push(terrain.column_in(x+dx,z+dz,Some(&grid)).height);
+                } }
+            } }
+        }
+        heights.sort_unstable();
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
+        let p95 = heights[(heights.len()-1)*95/100];
+        assert!((p95-reference["reference_height_pooled"]["95"].as_i64().unwrap() as i32).abs() <= 5,"p95={p95}");
+        assert!(*heights.last().unwrap() >= 180,"потерян хвост высоких пиков");
+    }
+
+    /// Грубая регрессия ширины морей на третьем семени тоже; точные
+    /// расстояния с шагом 4 и допуск 16 считает отдельная перепись.
+    #[test]
+    fn preview_warm_oceans_are_not_hundreds_of_blocks_wide_on_every_seed() {
+        for (seed,x0,z0) in [(1_792_932_773_345_722_119,-2064,-1440),(100_554_032_945_340,-1072,-1568),(20_261_025,-1072,-1568)] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            let mut land = Vec::new(); let mut warm = Vec::new();
+            for z in (z0..z0+3088).step_by(32) { for x in (x0..x0+3088).step_by(32) {
+                let biome = terrain.biome_at(x+2,z+2);
+                if !biome.is_ocean() { land.push((x,z)); }
+                if biome == Biome::WarmOcean { warm.push((x,z)); }
+            } }
+            let mut distances = Vec::new();
+            for (x,z) in warm {
+                let squared = land.iter().map(|&(lx,lz)| (lx-x).pow(2)+(lz-z).pow(2)).min().unwrap();
+                let edge = (x-x0+16).min(z-z0+16).min(x0+3088-x).min(z0+3088-z);
+                if squared < edge*edge { distances.push(squared); }
+            }
+            distances.sort_unstable();
+            assert!(distances.len()>50);
+            assert!(distances[distances.len()/2] <= 200*200,"семя {seed}: море слишком широкое");
+        }
+    }
+
+    /// Проверяется сохранённый результат генератора, а не только классификатор.
+    #[test]
+    fn preview_dappled_chunk_contains_biome_and_poplar_logs() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
+        let sample = &reference["dappled_chunk"];
+        let (cx,cz) = (sample["x"].as_i64().unwrap() as i32,sample["z"].as_i64().unwrap() as i32);
+        let terrain = Terrain::new(sample["seed"].as_i64().unwrap(),Style::Vanilla).with_preview(true);
+        let generator = crate::world::Generator::Normal(terrain);
+        let chunk = crate::world::Chunk::generated(&generator,cx,cz);
+        let mut cells = 0; let mut logs = 0;
+        for z in (2..16).step_by(4) { for x in (2..16).step_by(4) {
+            cells += usize::from(chunk.biome(x,80,z) == Biome::DappledForest.number() as u16);
+        } }
+        for z in 0..16 { for x in 0..16 { for y in 62..180 {
+            logs += usize::from(crate::blocks::block_at_state(chunk.block(x,y,z)) == Some("poplar_log"));
+        } } }
+        assert_eq!(cells,16);
+        assert!(logs>0,"пятнистый лес без тополей");
+    }
+
+    #[test]
+    fn preview_dappled_accepts_the_entire_positive_weirdness_band() {
+        for weirdness in [-0.1,0.0,0.01,0.2,0.39,0.6] {
+            let climate = Climate { continent:0.2,temperature:-0.3,humidity:-0.5,erosion:0.7,weirdness };
+            assert_eq!(dappled_climate(&climate),weirdness>0.0);
+        }
+    }
+
+    /// До исправления климата биом был вообще недостижим; проверяем
+    /// настоящий чанк и сушу с мицелием, а не ручной Climate ниже порога.
+    #[test]
+    fn preview_mushroom_island_reaches_generated_chunks() {
+        let sample: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a-mushroom.json")).unwrap();
+        let seed = sample["seed"].as_i64().unwrap();
+        let (cx,cz) = (sample["chunk"][0].as_i64().unwrap() as i32,sample["chunk"][1].as_i64().unwrap() as i32);
+        let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+        let old = Terrain::new(seed,Style::Vanilla);
+        assert_ne!(old.biome_at(cx*16+8,cz*16+8),Biome::MushroomFields);
+        let grid = terrain.relief_grid(cx*16,cz*16,cx*16+15,cz*16+15);
+        let columns: Vec<_> = (0..16).flat_map(|z|(0..16).map(move |x|(x,z))).map(|(x,z)|
+            (x,z,terrain.column_in(cx*16+x,cz*16+z,Some(&grid)))).collect();
+        let generator = crate::world::Generator::Normal(terrain);
+        let chunk = crate::world::Chunk::generated(&generator,cx,cz);
+        let mut mushroom = 0; let mut dry_mycelium = 0;
+        for (x,z,col) in columns {
+            if col.biome != Biome::MushroomFields { continue; }
+            mushroom += 1;
+            if col.height >= SEA && crate::blocks::block_at_state(chunk.block(x,col.height,z)) == Some("mycelium") {
+                dry_mycelium += 1;
+            }
+        }
+        assert!(mushroom>64,"остров не появился");
+        assert!(dry_mycelium>16,"остров остался под водой");
+    }
+
+    #[test]
+    fn preview_mushroom_shore_keeps_mycelium_above_water() {
+        let terrain = Terrain::new(42,Style::Vanilla).with_preview(true);
+        for height in [50,61,62,68] {
+            let column = Column { biome:Biome::MushroomFields,..Column::flat(height) };
+            if height < SEA {
+                assert_ne!(terrain.surface(&column,0,height,0,0),Some("mycelium"));
+            } else {
+                assert_eq!(terrain.surface(&column,0,height,0,0),Some("mycelium"));
+            }
+        }
+    }
+
+    /// Свежие сохранённые чанки для независимой переписи; миры вне репозитория.
+    #[test]
+    #[ignore]
+    fn export_batch_a_263_chunks() {
+        let plan: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
+            std::env::var("BATCH_A_PLAN").expect("BATCH_A_PLAN")).unwrap()).unwrap();
+        for sample in plan["samples"].as_array().unwrap() {
+            let seed = sample["seed"].as_i64().unwrap();
+            let root = std::path::Path::new(sample["output"].as_str().unwrap());
+            let region = root.join("region");
+            assert!(!root.join("level.dat").exists(),"нужен свежий каталог");
+            std::fs::create_dir_all(&region).unwrap();
+            let terrain = Terrain::new(seed, Style::Vanilla).with_preview(true);
+            let spawn = crate::world::spawn_search::find(|x,z| terrain.column_at(x,z));
+            std::fs::write(root.join("level.dat"), format!("seed={seed}\nspawn={} {} {}\n", spawn.0,spawn.1,spawn.2)).unwrap();
+            let generator = crate::world::Generator::Normal(terrain);
+            for pair in sample["chunks"].as_array().unwrap() {
+                let (x,z) = (pair[0].as_i64().unwrap() as i32,pair[1].as_i64().unwrap() as i32);
+                let chunk = crate::world::Chunk::generated(&generator,x,z);
+                crate::world::region::write(&region,x,z,&chunk.to_bytes()).unwrap();
+            }
+            println!("{}: {} чанков",seed,sample["chunks"].as_array().unwrap().len());
+        }
+    }
 
     /// Глубина выбирает вариант моря, а не другой температурный пояс.
     #[test]

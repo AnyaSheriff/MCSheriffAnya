@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "seeds": [
+    1792932773345722119,
+    100554032945340,
+    20261025
+  ],
+  "pooled_reference_surface_percent": {
+    "desert": 7.989287464092996,
+    "dark_forest": 2.216114442669602,
+    "birch_forest": 1.6640547397245564,
+    "old_growth_birch_forest": 2.4135715052753097,
+    "jungle": 5.131912098311364,
+    "sparse_jungle": 3.14668682380735,
+    "bamboo_jungle": 0.969945292155494,
+    "warm_ocean": 11.278548375459746
+  },
+  "reference_height_pooled": {
+    "50": 62,
+    "95": 93,
+    "99": 115,
+    "100": 210
+  },
+  "dappled_chunk": {
+    "seed": 1792932773345722119,
+    "x": -108,
+    "z": -85
+  },
+  "source": "Official 26.3 read-only region census: docs/genaudit-26.3.md; two 37249-chunk squares. Third seed is held out, never fitted."
+}

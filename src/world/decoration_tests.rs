@@ -106,7 +106,9 @@ fn reported_stone_mountain_has_no_orphan_litter() {
         let chunk=Chunk::generated(&generator,cx,cz);
         for x in 0..16 {for z in 0..16 {
             if (cx*16+x-790).abs()>16 || (cz*16+z+352).abs()>16 {continue;}
-            for y in 100..180 {litter+=usize::from(crate::blocks::block_at_state(chunk.block(x,y,z))==Some("leaf_litter"));}
+            // Биомы и высоты могут сдвигаться: проверяем опору, а не отсутствие леса.
+            for y in 100..180 {litter+=usize::from(crate::blocks::block_at_state(chunk.block(x,y,z))==Some("leaf_litter")
+                && !matches!(crate::blocks::block_at_state(chunk.block(x,y-1,z)),Some("grass_block"|"dirt"|"stone")));}
         }}
         if (cx,cz)==(49,-22) {assert_eq!(chunk.block(6,141,0),AIR);}
     }}

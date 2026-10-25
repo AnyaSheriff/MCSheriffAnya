@@ -1,0 +1,12 @@
+{
+  "seed": 100554032945340,
+  "chunk": [
+    -12,
+    -4
+  ],
+  "before_surface_biome": "deep_cold_ocean",
+  "before_mushroom_fields_possible": false,
+  "reason": "Continentalness clipped at -1.0; biome requires below -1.05.",
+  "official_reference": "Mushroom Fields island/underwater surface rules on minecraft.wiki; independent owner-seed 26.3 locate window in census.",
+  "before_ground_height": 33
+}

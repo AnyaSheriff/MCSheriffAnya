@@ -24,9 +24,10 @@ fn export_badlands_263_chunks() {
 fn eroded_badlands_spires_reach_the_chunk_as_solid_terracotta() {
     let generator = Generator::Normal(Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true));
     let Generator::Normal(terrain) = &generator else { unreachable!() };
-    let places = [(110, -159), (111, -159)];
+    // После смены масштаба материков берём новое пятно того же семени.
+    let places = [(47, 219), (48, 219)];
     let chunks: Vec<_> = places.iter().map(|&(cx, cz)| Chunk::generated(&generator, cx, cz)).collect();
-    let wide = terrain.relief_grid(1759, -2545, 1792, -2528);
+    let wide = terrain.relief_grid(751, 3503, 784, 3520);
     let mut columns = 0;
     let mut tallest = 0;
     for (i, &(cx, cz)) in places.iter().enumerate() {
