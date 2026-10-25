@@ -323,6 +323,41 @@ impl ContentCodec {
         {
             return None;
         }
+        // Выходная палитра777 проверяет каждую ячейку, включая воздух.
+        // Неизменяемый индекс сохраняет первый результат прежнего поиска,
+        // но не повторяет обход каталога4096раз на каждую секцию.
+        if space == IdSpace::Wire(JavaVersion::V26_3) {
+            type Range = Option<(u32, u32)>;
+            static WIRE: std::sync::LazyLock<[Vec<Range>; 4]> = std::sync::LazyLock::new(|| {
+                let kinds = [RegistryKind::Item, RegistryKind::Block, RegistryKind::BlockState, RegistryKind::Entity];
+                std::array::from_fn(|index| {
+                    let mut table: Vec<Range> = Vec::new();
+                    for row in entries() {
+                        let (first, last, wire) = match kinds[index] {
+                            RegistryKind::Item if row.has_item() => (row.item as u32, row.item as u32, row.wire_item),
+                            RegistryKind::Block if row.has_block() => (row.block as u32, row.block as u32, row.wire_block),
+                            RegistryKind::BlockState if row.state_count() > 0 => (row.first_state as u32, row.last_state as u32, row.wire_first_state),
+                            RegistryKind::Entity => {
+                                let Some((canonical, wire)) = entity_ids(row) else { continue; };
+                                (canonical, canonical, wire)
+                            }
+                            _ => continue,
+                        };
+                        let end = (wire + last - first) as usize;
+                        if table.len() <= end { table.resize(end + 1, None); }
+                        for value in &mut table[wire as usize..=end] { value.get_or_insert((first, wire)); }
+                    }
+                    table
+                })
+            });
+            let index = match kind {
+                RegistryKind::Item => 0, RegistryKind::Block => 1,
+                RegistryKind::BlockState => 2, RegistryKind::Entity => 3,
+                _ => return None,
+            };
+            return WIRE[index].get(id as usize).copied().flatten()
+                .map(|(first, wire)| (first + id - wire, first, wire));
+        }
         entries().find_map(|row| {
             let (first, last, wire) = match kind {
                 RegistryKind::Item if !row.has_item() => return None,
@@ -452,6 +487,27 @@ impl ContentCodec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn indexed_wire_extensions_preserve_all_ids_and_unknowns() {
+        for kind in [RegistryKind::Item, RegistryKind::Block, RegistryKind::BlockState, RegistryKind::Entity] {
+            let ranges: Vec<_> = entries().filter_map(|row| match kind {
+                RegistryKind::Item if row.has_item() => Some((row.item as u32, row.item as u32, row.wire_item)),
+                RegistryKind::Block if row.has_block() => Some((row.block as u32, row.block as u32, row.wire_block)),
+                RegistryKind::BlockState if row.state_count() > 0 => Some((row.first_state as u32, row.last_state as u32, row.wire_first_state)),
+                RegistryKind::Entity => entity_ids(row).map(|(first, wire)| (first, first, wire)),
+                _ => None,
+            }).collect();
+            // Весь16-битный диапазон: расширения, обычные ID и дыры;
+            // отдельная граница исключает обрезание входного u32 до u16.
+            for id in (0..=65_536).chain([u32::MAX]) {
+                let expected = ranges.iter().find_map(|&(first, last, wire)| {
+                    (wire..=wire + last - first).contains(&id).then(|| (first + id - wire, first, wire))
+                });
+                assert_eq!(ContentCodec::extension(kind, IdSpace::Wire(JavaVersion::V26_3), id), expected, "{kind:?}/{id}");
+            }
+        }
+    }
+
     #[test]
     fn extension_is_canonical_and_never_an_alias_for_wire775() {
         let codec = ContentCodec::white_slab_preview();

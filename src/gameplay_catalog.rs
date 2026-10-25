@@ -193,6 +193,11 @@ impl Catalog {
     fn entry_named(name: &str) -> Option<&'static SlabDescriptor> { entries().find(|row| row.name == name) }
 
     fn entry_id(kind: Kind, id: i32) -> Option<&'static SlabDescriptor> {
+        // Каталог расширяет базу775 только после этих границ. Проверка
+        // сохранения обходит каждую ячейку под замком мира: обычные ID
+        // не должны заново просматривать все расширения.
+        let first = match kind { Kind::Item => WHITE_SLAB_ITEM, Kind::Block => WHITE_SLAB_BLOCK, Kind::State => WHITE_SLAB_FIRST_STATE };
+        if (0..first).contains(&id) { return None; }
         entries().find(|row| match kind {
             Kind::Item => row.has_item() && row.item == id,
             Kind::Block => row.block == id,
@@ -347,3 +352,22 @@ mod mineral_tests;
 mod poplar_tests;
 #[cfg(test)]
 mod furnish_tests;
+
+#[cfg(test)]
+mod lookup_timing_tests {
+    use super::*;
+
+    #[test]
+    fn base_fast_path_preserves_every_canonical_lookup() {
+        for kind in [Kind::Item, Kind::Block, Kind::State] {
+            for id in (-1..=65_536).chain([i32::MIN, i32::MAX]) {
+                let expected = entries().find(|row| match kind {
+                    Kind::Item => row.has_item() && row.item == id,
+                    Kind::Block => row.block == id,
+                    Kind::State => (row.first_state..=row.last_state).contains(&id),
+                });
+                assert_eq!(Catalog::entry_id(kind, id), expected, "{kind:?}/{id}");
+            }
+        }
+    }
+}

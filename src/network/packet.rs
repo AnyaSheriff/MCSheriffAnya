@@ -324,6 +324,7 @@ pub struct Outgoing<'a> {
     content: mcsa_protocol::content::ContentCodec,
     stream: Transport<'a>,
     buffer: Vec<u8>,
+    queued_at: Option<Instant>,
     control: Option<crate::sessions::Control>,
     deadline: Option<Instant>,
     failed: bool,
@@ -358,12 +359,12 @@ impl<'a> Outgoing<'a> {
         let legacy = stream.legacy.clone();
         let probe_776 = stream.probe_776_enabled();
         let content = stream.content;
-        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
+        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), queued_at: None, control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
+    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), queued_at: None, control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
     pub(crate) fn capture_content(version: JavaVersion, content: mcsa_protocol::content::ContentCodec) -> Self {
@@ -372,7 +373,7 @@ impl<'a> Outgoing<'a> {
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
+        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), queued_at: None, control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -427,6 +428,8 @@ impl<'a> Outgoing<'a> {
     }
 
     async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
+        let measured = timing_enabled().then(Instant::now);
+        if self.queued_at.is_none() { self.queued_at = measured; }
         // Configuration777: sulfur_cube_hot занимает42, прежние виды от
         // sweet_berry_bush сдвинуты на1. Внутренние Source остаются775;
         // основной26.1.2 сохраняет прежние пакеты для любого клиента.
@@ -468,6 +471,7 @@ impl<'a> Outgoing<'a> {
             }
         }
 
+        if let Some(start) = measured { eprintln!("NET_TIMING encode id={} us={}", body.first().copied().unwrap_or(0), start.elapsed().as_micros()); }
         if self.buffer.len() >= OUTGOING_LIMIT {
             self.flush().await?;
         }
@@ -490,6 +494,8 @@ impl<'a> Outgoing<'a> {
         if self.buffer.is_empty() { return Ok(()); }
         let deadline = self.deadline.map_or(Instant::now() + WRITE_TIMEOUT,
             |deadline| deadline.min(Instant::now() + WRITE_TIMEOUT));
+        let writing = timing_enabled().then(Instant::now);
+        let bytes = self.buffer.len();
         let control = self.control.clone();
         let result = tokio::select! {
             biased;
@@ -509,6 +515,9 @@ impl<'a> Outgoing<'a> {
                 }
             } => Err(io::Error::new(io::ErrorKind::ConnectionAborted, "подключение закрыто командой")),
         };
+        if let Some(start) = writing {
+            eprintln!("NET_TIMING write bytes={bytes} queue_us={} write_us={}", self.queued_at.take().map_or(0, |at| start.duration_since(at).as_micros()), start.elapsed().as_micros());
+        }
         if result.is_err() { self.failed = true; }
         #[cfg(test)]
         if matches!(self.stream, Transport::Capture) { return result; }
@@ -1001,3 +1010,22 @@ mod tests {
 #[cfg(test)]
 #[path = "packet_776_tests.rs"]
 mod tests_776;
+
+// Диагностика включается явно и не меняет порядок пакетов.
+pub(super) fn timing_enabled() -> bool {
+    static ENABLED: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| std::env::var_os("MCSA_NET_TIMING").is_some());
+    *ENABLED
+}
+
+// Отдельные участки подключения: ожидание сокета в эти замеры не входит.
+pub(super) struct TimingSpan { name: &'static str, start: Option<Instant> }
+impl TimingSpan {
+    pub(super) fn new(name: &'static str) -> Self { Self { name, start: timing_enabled().then(Instant::now) } }
+}
+impl Drop for TimingSpan {
+    fn drop(&mut self) {
+        if let Some(start) = self.start && start.elapsed() >= Duration::from_millis(5) {
+            eprintln!("NET_TIMING stage={} us={}", self.name, start.elapsed().as_micros());
+        }
+    }
+}

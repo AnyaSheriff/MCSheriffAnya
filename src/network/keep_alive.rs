@@ -40,6 +40,7 @@ impl KeepAlive {
         let Ok(bytes) = <[u8; 8]>::try_from(payload) else { return false; };
         if self.pending.is_some_and(|(id, deadline)| id == i64::from_be_bytes(bytes) && Instant::now() < deadline) {
             self.latency = self.last_sent.elapsed().as_millis().min(u128::from(u32::MAX)) as u32;
+            if super::packet::timing_enabled() { eprintln!("NET_TIMING keep_alive rtt_us={}", self.last_sent.elapsed().as_micros()); }
             self.pending = None;
             return true;
         }

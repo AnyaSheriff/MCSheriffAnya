@@ -404,11 +404,6 @@ const SKIN_PARTS_PROPERTY: u8 = 16;
 /// переноса — чтобы было на чём стоять. Остальное догружается порциями.
 const NEAR_CHUNKS: i32 = 3;
 
-/// Сколько чанков догружать за один круг основного цикла. Круг бывает на
-/// каждом такте и на каждом пакете игрока, так что даль приходит быстро,
-/// но не заслоняет чат и движение.
-const CHUNKS_PER_STEP: usize = 64;
-
 /// Номер свойства «ведущая рука» у игрока — прямо перед частями скина.
 const MAIN_HAND_PROPERTY: u8 = 15;
 
@@ -2936,6 +2931,7 @@ impl Prefetch {
     /// появился в мире другим путём (его прислали игроку, в нём уже что-то
     /// поменяли), не заменяется.
     fn collect(&mut self, shared: &Shared, dimension: crate::dimension::Dimension) {
+        let _timing = super::packet::TimingSpan::new("prefetch_collect");
         let arrived: Vec<_> = self.receiver.try_iter().collect();
 
         if arrived.is_empty() {
@@ -3008,6 +3004,117 @@ impl Prefetch {
                 let _ = sender.send((chunk_x, chunk_z, source.take(chunk_x, chunk_z)));
             });
         }
+    }
+}
+
+// Подготовка дальней земли не останавливает обработчик пакетов: даже один
+// холодный чанк/свет может считаться дольше такта. В игру попадает только
+// готовый результат; снимок блоков для записи по-прежнему берётся перед send.
+type LitChunk = (ChunkLight, Vec<world::light::Recounted>);
+type PendingChunkLight = ((i32, i32), tokio::task::JoinHandle<LitChunk>);
+
+struct ProgressiveChunks {
+    dimension: crate::dimension::Dimension,
+    loads: Prefetch,
+    light: Option<PendingChunkLight>,
+}
+
+impl ProgressiveChunks {
+    fn new(dimension: crate::dimension::Dimension) -> Self {
+        Self { dimension, loads: Prefetch::new(), light: None }
+    }
+
+    async fn step(&mut self, stream: &mut Outgoing<'_>, shared: &Shared,
+        dimension: crate::dimension::Dimension, center: (i32, i32), sent: &mut SentChunks, view: i32,
+    ) -> io::Result<bool> {
+        let _timing = super::packet::TimingSpan::new("progressive_chunks");
+        if self.dimension != dimension { *self = Self::new(dimension); }
+        self.loads.collect(shared, dimension);
+        let inside = |(x, z): (i32, i32)| (x - center.0).abs() <= view && (z - center.1).abs() <= view;
+        let gone: Vec<_> = sent.iter().copied().filter(|place| !inside(*place)).collect();
+        for (x, z) in gone { send_unload_chunk(stream, x, z).await?; sent.remove(&(x, z)); }
+
+        if self.light.as_ref().is_some_and(|(_, job)| !job.is_finished()) { return Ok(false); }
+        if let Some((place, job)) = self.light.take() {
+            let (light, recounted) = job.await.map_err(io::Error::other)?;
+            shared.world_in(dimension).lock().expect("мир захвачен другим потоком").store_light(recounted);
+            if inside(place) && !sent.contains(&place) {
+                send_chunk(stream, shared.world_in(dimension), place.0, place.1, &light).await?;
+                sent.insert(place);
+            }
+        }
+
+        let wanted = ((center.0 - view)..=(center.0 + view)).flat_map(|x|
+            ((center.1 - view)..=(center.1 + view)).map(move |z| (x, z)))
+            .filter(|place| !sent.contains(place))
+            .min_by_key(|(x, z)| (x - center.0).pow(2) + (z - center.1).pow(2));
+        let Some((x, z)) = wanted else { return Ok(true); };
+        let (missing, source) = {
+            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+            let missing: Vec<_> = (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (x + dx, z + dz)))
+                .filter(|(x, z)| !world.has_chunk(*x, *z)).collect();
+            (missing, Arc::new(world.source()))
+        };
+        if !missing.is_empty() {
+            for (x, z) in missing {
+                if !self.loads.pending.insert((x, z)) { continue; }
+                let source = source.clone();
+                let sender = self.loads.sender.clone();
+                tokio::task::spawn_blocking(move || { let _ = sender.send((x, z, source.take(x, z))); });
+            }
+            return Ok(false);
+        }
+        let job = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").light_job(x, z)
+            .ok_or_else(|| io::Error::other("нет подготовленного чанка"))?;
+        self.light = Some(((x, z), tokio::task::spawn_blocking(move || job.finish())));
+        Ok(false)
+    }
+}
+
+// Правка блока не должна держать его подтверждение за расчётом света.
+// Повторные правки объединяются; результат старого измерения не публикуется.
+#[derive(Default)]
+struct LightUpdates {
+    dimension: Option<crate::dimension::Dimension>,
+    pending: std::collections::BTreeSet<(i32, i32)>,
+    running: Vec<PendingChunkLight>,
+}
+
+impl LightUpdates {
+    async fn step(&mut self, stream: &mut Outgoing<'_>, shared: &Shared,
+        dimension: crate::dimension::Dimension, center: (i32, i32), view: i32,
+    ) -> io::Result<()> {
+        let _timing = super::packet::TimingSpan::new("light_updates");
+        if self.dimension != Some(dimension) {
+            self.running.clear();
+            // До первого вызова уже могли прийти правки текущего измерения.
+            if self.dimension.is_some() { self.pending.clear(); }
+            self.dimension = Some(dimension);
+        }
+        let inside = |(x, z): (i32, i32)| (x - center.0).abs() <= view && (z - center.1).abs() <= view;
+        self.pending.retain(|place| inside(*place));
+        let mut index = 0;
+        while index < self.running.len() {
+            if !self.running[index].1.is_finished() { index += 1; continue; }
+            let ((x, z), job) = self.running.remove(index);
+            let (light, recounted) = job.await.map_err(io::Error::other)?;
+            shared.world_in(dimension).lock().expect("мир захвачен другим потоком").store_light(recounted);
+            if inside((x, z)) {
+                if stream.legacy_view()?.is_some() {
+                    send_chunk(stream, shared.world_in(dimension), x, z, &light).await?;
+                } else { send_light_update(stream, x, z, &light).await?; }
+            }
+        }
+        while self.running.len() < 4 {
+            let place = self.pending.iter().copied().find(|place| !self.running.iter().any(|(at, _)| at == place));
+            let Some((x, z)) = place else { break; };
+            self.pending.remove(&(x, z));
+            let job = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").light_job(x, z);
+            if let Some(job) = job {
+                self.running.push(((x, z), tokio::task::spawn_blocking(move || job.finish())));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -4274,10 +4381,14 @@ async fn flush_tick(
     world_changes: &mut usize,
     pending: &mut Vec<Reaction>,
 ) -> io::Result<bool> {
+    let _timing = super::packet::TimingSpan::new("flush_tick");
     let lagged = send_pending_world_events(stream, shared, player, world_changes).await?;
 
     for reaction in pending.drain(..) {
         apply_reaction(stream, shared, player, &reaction).await?;
+        if super::packet::timing_enabled() && let Some(sequence) = reaction.acknowledge {
+            eprintln!("NET_TIMING response sequence={sequence} tick={}", *shared.ticks.borrow());
+        }
     }
 
     Ok(lagged)
@@ -4677,17 +4788,10 @@ async fn send_pending_world_events(
     player.pending_changes = pending;
     player.pending_entities = entities;
 
-    for (x, z) in light_chunks {
-        let job = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").light_job(x, z);
-        let Some(job) = job else { continue; };
-        let (light, recounted) = tokio::task::spawn_blocking(move || job.finish()).await.map_err(io::Error::other)?;
-        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").store_light(recounted);
-        if stream.legacy_view()?.is_some() {
-            send_chunk(stream, shared.world_in(player.dimension), x, z, &light).await?;
-        } else {
-            send_light_update(stream, x, z, &light).await?;
-        }
+    if player.light_updates.dimension != Some(player.dimension) {
+        player.light_updates = LightUpdates { dimension: Some(player.dimension), ..Default::default() };
     }
+    player.light_updates.pending.extend(light_chunks);
 
     Ok(lagged)
 }
@@ -5588,6 +5692,7 @@ async fn send_recipes(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io
 /// ответ на запрос экрана статистики, достижения (пакет, объявление,
 /// награда) и запись на диск раз в пять минут (progress.rs).
 async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    let _timing = super::packet::TimingSpan::new("progress_tick");
     player.progress.tick_player(player.sneaking, !player.vit.dead, player.sleeping.is_some());
     if !player.vit.dead {
         // Фантомам нужно знать, сколько игрок не спал (src/mob/phantom.rs).
@@ -6272,6 +6377,7 @@ async fn read_and_log_play_packets(
     let mut all_chunks_sent = false;
     let mut last_view = player.view;
     let mut prefetch = Prefetch::new();
+    let mut chunks = ProgressiveChunks::new(player.dimension);
 
     // Круг цикла начинается либо с пакета клиента, либо с конца такта: всё,
     // что случилось в мире за такт, должно уйти клиенту сразу, а не тогда,
@@ -6289,6 +6395,8 @@ async fn read_and_log_play_packets(
         // прежде чем ждать клиента или конца такта.
         if control.reason().is_some() { return Ok(()); }
         stream.deadline(player.keep_alive.deadline());
+        let light_center = player.chunk();
+        player.light_updates.step(stream, shared, player.dimension, light_center, player.view).await?;
         stream.flush().await?;
 
         let ready = if std::mem::take(&mut finished_tick) { None } else { tokio::select! {
@@ -6367,18 +6475,6 @@ async fn read_and_log_play_packets(
         if player.view != last_view {
             last_view = player.view;
             all_chunks_sent = false;
-        }
-
-        if !all_chunks_sent {
-            all_chunks_sent = send_chunks_around(
-                stream,
-                shared, player.dimension,
-                chunk,
-                &mut sent_chunks,
-                (player.view, player.view),
-                CHUNKS_PER_STEP,
-            )
-            .await?;
         }
 
         // Весь обзор прислан — складываем впрок то, что за его краем.
@@ -7048,6 +7144,12 @@ async fn read_and_log_play_packets(
                     sent_chunks.clear();
                     all_chunks_sent = false;
                 }
+
+                // Ответы этого такта уходят до подготовки дальней земли.
+                stream.flush().await?;
+                if !all_chunks_sent {
+                    all_chunks_sent = chunks.step(stream, shared, player.dimension, player.chunk(), &mut sent_chunks, player.view).await?;
+                }
             }
             Some(Err(_)) => {}
             // Читатель закончил: клиент закрыл соединение.
@@ -7114,7 +7216,13 @@ async fn read_and_log_play_packets(
                         break;
                     }
 
+                    if let Some(at) = permit.received { eprintln!("NET_TIMING process id={} queue_us={} backlog={}", packet.id, at.elapsed().as_micros(), inbound.packets.len()); }
+                    let processing = super::packet::TimingSpan::new("handle_client_packet");
                     let reaction = handle_client_packet(&packet, player, shared);
+                    drop(processing);
+                    if super::packet::timing_enabled() && let Some(sequence) = reaction.acknowledge {
+                        eprintln!("NET_TIMING action sequence={sequence} arrived_tick={arrived} handled_tick={}", *starts.borrow());
+                    }
 
                     // Действие в начале такта могло сменить то, что видят другие
                     // (лук опущен, вещь износилась): им это должно быть известно
@@ -7192,6 +7300,7 @@ fn is_gated(packet_id: i32) -> bool {
 // Счётчик принадлежит пакету: ошибка записи, kick или закрытие очереди
 // освобождают его даже после извлечения из канала, до применения действия.
 struct TickPermit {
+    received: Option<tokio::time::Instant>,
     waiting: Option<Arc<[std::sync::atomic::AtomicUsize; 2]>>,
     index: usize,
 }
@@ -7203,7 +7312,7 @@ impl TickPermit {
             waiting[index].fetch_add(1, std::sync::atomic::Ordering::AcqRel);
             waiting.clone()
         });
-        Self { waiting, index }
+        Self { waiting, index, received: super::packet::timing_enabled().then(tokio::time::Instant::now) }
     }
 }
 
@@ -11576,6 +11685,7 @@ struct PlayerState {
 
     /// Данные блок-сущностей, которые уйдут после ближайшей пачки.
     pending_entities: Vec<PendingEntity>,
+    light_updates: LightUpdates,
 
     /// Инвентарь менялся, пока было открыто окно хранилища, так, что окно
     /// этого не показало (броня, вторая рука): после закрытия прислать
@@ -11829,6 +11939,7 @@ impl PlayerState {
             window: None,
             pending_changes: Vec::new(),
             pending_entities: Vec::new(),
+            light_updates: LightUpdates::default(),
             inventory_after_window: false,
             late_slots: Vec::new(),
             window_counter: 0,
@@ -12041,6 +12152,7 @@ impl PlayerState {
     /// лежит. Так же, как сохраняется мир: сразу, а не только при выходе, —
     /// сервер может и не успеть сохранить, если его выключат.
     fn save_if_needed(&mut self, directory: &Path, catalog: crate::gameplay_catalog::Catalog) {
+        let _timing = super::packet::TimingSpan::new("save_player");
         if self.needs_save() {
             self.save_with_catalog(directory, catalog);
         }
@@ -13033,3 +13145,7 @@ mod concrete_slab_family_tests;
 
 #[cfg(test)]
 mod abilities_tests;
+
+#[cfg(test)]
+#[path = "play/chunk_stream_tests.rs"]
+mod chunk_stream_tests;
