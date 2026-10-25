@@ -1,0 +1,20 @@
+{
+  "brush-sand": "95a023a9866ac9c4a56621bcab5657899a053c78c5978ba7253c6545b40ec7f3",
+  "dripstone-placement-support": "0d2261e0204b72d53c168ee36b4fa4555df201f81dd410cc31dfff0373c5f5bd",
+  "enchant-mining-fortune-gravel": "c34085d0f6eb872e7bd88c9f45e48439abaf94e0c76ac384ea6ae024bb90efd9",
+  "falling-anvil-degrades": "8bd32148fe1baf1537f5352bc2fc93fb8384125a0af7f00882580c421215f175",
+  "falling-chain-anvil-column": "a4b8bbc03c0f48f3476495313dd12b52349d4914daa868e4aaf9ae8d5fc3aa19",
+  "falling-chain-anvil-layer": "90e45ea02fb46e18b74fb97bba798f24fae34e258172d1929864c55c84d3f50a",
+  "falling-chain-anvil-overhang": "52ec8c0ff2276dc1467bf588bffaf19f8ff297a9d1a66d8d5d4f27c48f4cf82d",
+  "falling-chain-gravel-column": "9d4bfad57a92c698f98de5bdf207a97c4a9d5f3a506b31cd2e17616ee8cbf38b",
+  "falling-chain-gravel-layer": "b5f07890e8cae31ba98d7298c28dc626e2c9fc0356e8ee3169eff31b52943b54",
+  "falling-chain-gravel-overhang": "11abd755bead60957cfac24068c6778c0c328eb09f8c2c35e447ee693c90049d",
+  "falling-chain-sand-column": "5476f12be7b5d982940a07083b440a4fca3140f1a9d73a561ec7d819fddba959",
+  "falling-chain-sand-layer": "a110644e63b413a221c392a06dd413b501a6c915a955a025a7692bbc8828e27e",
+  "falling-chain-sand-overhang": "6ca7d0410b5ca184862daba018d3c4e2712c789aa3aa5d4d152c6d2cbcb47354",
+  "falling-chain-white_concrete_powder-column": "3746dc396883132c503d4f3f6c7f6b9dea9aa01cad3d89ea0b8e8de7f7cf8223",
+  "falling-chain-white_concrete_powder-layer": "b3595929f793a7c9458a8c07fb039ff78c030ee60e888ef45c5cac9253d88488",
+  "falling-chain-white_concrete_powder-overhang": "7370598e79748ed714e2f399711774e203589c9a53b226b8118cf4c0ef96b364",
+  "sand-into-water": "2a3647fa9645de3dc4a75b9fab354360a47782fdc62d1f4e886086e4fb3f6ddd",
+  "scaffolding-support": "039f301038a359ea2147925766fbcc31ab0443b1fa7ae7e78b8e88a235b01180"
+}

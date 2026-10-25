@@ -1,0 +1,283 @@
+[
+  {
+    "scenario": "falling-chain-anvil-layer",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "362ad8447f7762b3d95be9e7f44e4e99773b419df1daa3ec646cce9f6935b82a",
+    "counts": [
+      121,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-anvil-column",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "64102df246b57fab1ad903967d5a822bb70101b27323db0479e3f6f208948fd2",
+    "counts": [
+      31,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-anvil-overhang",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "f9acf2778001ab670ada10c616081cf37acfe60aceec5807e8c8a702f8c5c7cd",
+    "counts": [
+      16,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-anvil-degrades",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "47ebc676e515f0041470738115b8bba730324165c982d36b917d888e868ce472",
+    "counts": [
+      14,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-sand-layer",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "6f806782de807346c6938b11a1c603dca6e0127949f2647dd99f924baaeb894c",
+    "counts": [
+      97,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-sand-column",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "84d11eea22363bf3060926700355c398f0262ca47a13d3b2463f51a3edbd1776",
+    "counts": [
+      25,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-sand-overhang",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "cdf38461c6299fc4930a14ae11cc04c2a1f6818312763ea1d2a38fe5de580749",
+    "counts": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-gravel-layer",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "fd3799046bf04fa2959701b77181ba23593b01ab9a2adc0d584ed605aa0e6f4c",
+    "counts": [
+      97,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-gravel-column",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "9df820f14953970927c4ff9bdefec0b66ae6769a62ba8a98a615f55b974c4d68",
+    "counts": [
+      25,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-gravel-overhang",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "d4f921f5b82c98cb1bd1ba061697ed7ce083fa1bf1f48daf142e3d4d3b5589bd",
+    "counts": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-layer",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "5f8842397bf4269e02f18175f3895aa3b577723f19fdaccff7ccb7f5b578b069",
+    "counts": [
+      97,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-column",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "aac3ba8cfa4742b2a26522283be9a4d8a6483fb6a4884fc2f5c94568ec6d72ea",
+    "counts": [
+      25,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-overhang",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "16d097704c6e338618137f6585c1822931f3e727844e5cf5a467411f9281e12c",
+    "counts": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "sand-into-water",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "b08e11ef28ff1ccc4155448e54e6babadd33898c739e81f66766c99a23b5ccd3",
+    "counts": [
+      15,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "scaffolding-support",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "ed8b98ef1320fe808db8e1206c4ea9c6d0e306bbe868d450f6ca56e513b1ea66",
+    "counts": [
+      26,
+      9,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "dripstone-placement-support",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "3027befe95c39b1adb2d07ed3b4f018c9be5cecd6c805f48d529050d82b89f13",
+    "counts": [
+      16,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "enchant-mining-fortune-gravel",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "9e0f1fdcd2546329b29fa473c6e79033417706352986bb508c47cae02b919074",
+    "counts": [
+      29,
+      0,
+      0,
+      2
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "brush-sand",
+    "repeat": 0,
+    "exits": {
+      "ours": 1
+    },
+    "status": "capture-open",
+    "official_sha256": "60d17a5b8a7b246a578d9ea8b6f8c49959dd406ead84f3208c81004aea71f361"
+  }
+]

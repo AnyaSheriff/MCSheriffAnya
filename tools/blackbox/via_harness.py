@@ -68,6 +68,7 @@ def main():
     parser.add_argument('--primary', choices=('26.3', '26.1.2'), default='26.3')
     parser.add_argument('--port', type=int, default=26170)
     parser.add_argument('--ours-port', type=int, default=26270)
+    parser.add_argument('--official-heap', choices=('768M', '3G'), default='768M')
     parser.add_argument('--wire', action='store_true')
     parser.add_argument('--streaming-observation', action='store_true')
     parser.add_argument('--debug', action='store_true')
@@ -86,7 +87,7 @@ def main():
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
     manifest = {'primary': args.primary, 'scenarios': names, 'repeat': args.repeat,
-                'port': args.port, 'ours_port': args.ours_port, 'translation': bool(args.proxy),
+                'port': args.port, 'ours_port': args.ours_port, 'official_heap': args.official_heap, 'translation': bool(args.proxy),
                 'official_recordings': str(args.official_recordings.resolve()) if args.official_recordings else None}
     for key in ('binary', 'jar', 'proxy'):
         path = getattr(args, key)
@@ -142,7 +143,7 @@ def main():
             if label == 'official':
                 shutil.copyfile(args.jar, folder / 'server.jar')
                 (folder / 'eula.txt').write_text('eula=true\n')
-                argv = [JAVA, '-Xms128M', '-Xmx768M', '-jar', 'server.jar', 'nogui']
+                argv = [JAVA, '-Xms128M', f'-Xmx{args.official_heap}', '-jar', 'server.jar', 'nogui']
             else:
                 (cfg / 'mcsa.properties').write_text(
                     f'java-version={args.primary}\nsend-error-reports=false\nauth-enabled=false\n'

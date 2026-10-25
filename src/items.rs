@@ -159,6 +159,8 @@ pub struct Dropped {
     /// воздухом, упирается в землю. Разница в двух вещах — его не поднять,
     /// и, долетев, он снова становится блоком.
     pub block: Option<i32>,
+    /// Пройденное вниз расстояние: износ падающей наковальни.
+    pub fall_distance: f64,
 
     /// Подожжённый динамит — сколько тактов осталось до взрыва; `block` у
     /// него — состояние блока динамита (его клиент и рисует). У прочих —
@@ -632,6 +634,7 @@ impl Items {
             owner: None,
             ticks: 0,
             block: None,
+            fall_distance: 0.0,
             fuse: None,
             custom: None,
             health: ITEM_HEALTH,
@@ -670,6 +673,7 @@ impl Items {
             owner: None,
             ticks: 0,
             block: Some(state),
+            fall_distance: 0.0,
             fuse: None,
             custom: None,
             health: ITEM_HEALTH,
@@ -713,6 +717,7 @@ impl Items {
             owner: None,
             ticks: 0,
             block: Some(state),
+            fall_distance: 0.0,
             fuse: Some(fuse),
             custom,
             health: ITEM_HEALTH,
@@ -1455,6 +1460,7 @@ impl Dropped {
 
         if step_y < 0.0 && solid(column.0, next_y.floor() as i32, column.1) {
             // Легли на верх блока.
+            self.fall_distance += (self.y - (next_y.floor() + 1.0)).max(0.0);
             self.y = next_y.floor() + 1.0;
             self.vy = 0.0;
             self.on_ground = true;
@@ -1466,6 +1472,7 @@ impl Dropped {
             return;
         }
 
+        self.fall_distance += (self.y - next_y).max(0.0);
         self.y = next_y;
     }
 }

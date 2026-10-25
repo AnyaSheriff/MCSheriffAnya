@@ -2482,6 +2482,10 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
         return Answer::saying(format!("Не знаю такого блока: {}", block));
     };
 
+    // Вики, Commands/fill: «without triggering block updates and shape updates».
+    // Так можно воспроизвести висящий песок, который ещё не получил обновление.
+    let strict = parts.get(if area { 7 } else { 4 }) == Some(&"strict");
+
     let [x1, y1, z1, x2, y2, z2] = numbers;
     let (x1, x2) = (x1.min(x2), x1.max(x2));
     let (y1, y2) = (y1.min(y2), y1.max(y2));
@@ -2527,11 +2531,16 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                 // заменённый сундук ничего не высыпает.
                 world.with_container(x, y, z, |container| container.slots.fill(None));
 
-                if world.get_block(x, y, z) != state {
+                if !strict && world.get_block(x, y, z) != state {
                     world.note_commanded(x, y, z);
                 }
 
-                if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
+                let differs = world.get_block(x, y, z) != state;
+                let updated = if strict && differs {
+                    world.set_debug_state((x, y, z), state);
+                    true
+                } else { !strict && differs && world.set_block(x, y, z, state) };
+                if updated {
                     changed += 1;
                     placed.push((x, y, z));
                 }
@@ -2659,22 +2668,24 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     world.take_spilled();
     crate::containers::after_change(&mut world);
 
-    for x in x1..=x2 {
-        for y in y1..=y2 {
-            for z in z1..=z2 {
-                crate::placing::refresh_neighbours(&mut world, x, y, z);
+    if !strict {
+        for x in x1..=x2 {
+            for y in y1..=y2 {
+                for z in z1..=z2 {
+                    crate::placing::refresh_neighbours(&mut world, x, y, z);
+                }
             }
         }
-    }
 
-    crate::redstone::settle(&mut world);
-
-    // Поставленное командой подстраивается под соседей уже после того, как
-    // соседи узнали о нём (сценарий observer-clock: сосед-наблюдатель
-    // срабатывает раньше поставленного).
-    for place in placed {
-        crate::redstone::command_placed(&mut world, place);
         crate::redstone::settle(&mut world);
+
+        // Поставленное командой подстраивается под соседей уже после того, как
+        // соседи узнали о нём (сценарий observer-clock: сосед-наблюдатель
+        // срабатывает раньше поставленного).
+        for place in placed {
+            crate::redstone::command_placed(&mut world, place);
+            crate::redstone::settle(&mut world);
+        }
     }
 
     world.save_if_due();
@@ -4127,6 +4138,24 @@ mod tests {
         // Только динамит — предмет остаётся.
         assert_eq!(run("kill @e[type=tnt]", &Source::Console, &shared).reply, "Убрано сущностей: 0");
         assert_eq!(run("kill @e[type=item]", &Source::Console, &shared).reply, "Убрано сущностей: 1");
+    }
+
+    #[test]
+    fn strict_fill_leaves_floating_blocks_dormant_until_a_neighbour_changes() {
+        let shared = server();
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        run("fill 3 70 3 7 70 7 sand strict", &Source::Console, &shared);
+        let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        crate::redstone::settle(&mut world);
+        for _ in 0..10 {
+            let due = world.advance(crate::tick::PER_TICK);
+            assert!(due.is_empty(), "strict не должен будить песок");
+        }
+        assert_eq!(world.get_block(5, 70, 5), blocks::state_by_name("sand").unwrap());
+        crate::placing::break_block(&mut world, 5, 70, 5);
+        assert!(world.advance(crate::tick::PER_TICK).is_empty());
+        let due = world.advance(crate::tick::PER_TICK);
+        assert_eq!(due.len(), 4, "сломанный блок будит четырёх соседей через два такта");
     }
 
     #[test]

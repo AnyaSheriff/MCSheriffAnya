@@ -1,0 +1,22 @@
+{
+  "name": "falling-chain-gravel-overhang",
+  "about": "Цепочка падения: gravel, overhang; заливка strict без обновлений, затем сломать один блок.",
+  "blocks": [],
+  "setup": [
+    "fill $(4,0,0) $(4,3,0) minecraft:stone",
+    "fill $(0,4,0) $(4,4,0) minecraft:gravel strict",
+    "tp $(bot) $(0.5,3,3.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "dig": [
+        0,
+        4,
+        0
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 65
+}

@@ -1,0 +1,562 @@
+[
+  {
+    "scenario": "falling-chain-anvil-column",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "official_block_changes": 19,
+    "ours_block_changes": 19,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-anvil-layer",
+    "official_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "official_block_changes": 73,
+    "ours_block_changes": 73,
+    "spawns_equal": true,
+    "blocks_equal": false,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-anvil-overhang",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "official_block_changes": 10,
+    "ours_block_changes": 10,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-gravel-column",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "official_block_changes": 19,
+    "ours_block_changes": 19,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-gravel-layer",
+    "official_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "official_block_changes": 73,
+    "ours_block_changes": 73,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-gravel-overhang",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "official_block_changes": 10,
+    "ours_block_changes": 10,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-sand-column",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "official_block_changes": 19,
+    "ours_block_changes": 19,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-sand-layer",
+    "official_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "official_block_changes": 73,
+    "ours_block_changes": 73,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-sand-overhang",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "official_block_changes": 10,
+    "ours_block_changes": 10,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-column",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        11,
+        1
+      ]
+    ],
+    "official_block_changes": 19,
+    "ours_block_changes": 19,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-layer",
+    "official_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "official_block_changes": 73,
+    "ours_block_changes": 73,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-overhang",
+    "official_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "ours_spawns_by_tick": [
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "official_block_changes": 10,
+    "ours_block_changes": 10,
+    "spawns_equal": true,
+    "blocks_equal": true,
+    "blocks_equal_allowing_anvil_wear": true
+  }
+]

@@ -408,7 +408,7 @@ async fn run(shared: Arc<Shared>) {
             // он проходит и там разбивается, как у оригинала. В выгруженных
             // чанках мира нет — там всё замирает, а не проваливается в пустоту.
             let solid = |x, y, z| blocks::stops_items(world.get_block(x, y, z));
-            let holds_block = |x, y, z| blocks::solid_top(world.get_block(x, y, z));
+            let holds_block = |x, y, z| holds_falling_block(world.get_block(x, y, z));
             let loaded = |chunk_x, chunk_z| world.has_chunk(chunk_x, chunk_z);
 
             let water = |x, y, z| {
@@ -2516,6 +2516,24 @@ fn start_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 }
 
+fn holds_falling_block(state: i32) -> bool {
+    // Наковальня не закрывает всю верхнюю грань, но ловит падающий блок
+    // на высоте целого блока (чёрный ящик, falling-chain-anvil-column).
+    blocks::solid_top(state) || matches!(blocks::block_at_state(state), Some("anvil" | "chipped_anvil" | "damaged_anvil"))
+}
+
+/// Вики, Anvil: «5% × the number of blocks fallen», если высота больше одного.
+/// [проверить] Округление дробной высоты: сетевые пробы — целые 2, 4 и 24.
+fn anvil_after_fall(state: i32, distance: f32, roll: f32) -> Option<i32> {
+    let name = blocks::block_at_state(state)?;
+    if !matches!(name, "anvil" | "chipped_anvil" | "damaged_anvil")
+        || distance <= 1.0 || roll >= (0.05 * distance.ceil()).min(1.0)
+    { return Some(state); }
+    let next = blocks::state_by_name(crate::enchanting::anvil_damaged(name)?)?;
+    let facing = blocks::orientation_of(state)?.value(state, "facing")?;
+    blocks::orientation_of(next)?.with(next, "facing", facing)
+}
+
 /// Ставит обратно в мир то, что долетело до земли.
 ///
 /// «If it lands with the bottom center of its hitbox in a replaceable block,
@@ -2528,7 +2546,7 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         .expect("предметы захвачены другим потоком")
         .take_landed();
 
-    for block in landed {
+    for mut block in landed {
         let Some(state) = block.block else {
             continue;
         };
@@ -2538,6 +2556,17 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
             block.y.round() as i32,
             block.z.floor() as i32,
         );
+
+        let state = if matches!(blocks::block_at_state(state), Some("anvil" | "chipped_anvil" | "damaged_anvil")) {
+            let Some(next) = anvil_after_fall(state, block.fall_distance as f32, world.random_unit()) else {
+                world.note_level_event(x, y, z, 1029, 0);
+                continue;
+            };
+            if next != state && let Some(item) = blocks::block_at_state(next).and_then(blocks::item_for_block) {
+                block.stack = Stack::new(item, 1);
+            }
+            next
+        } else { state };
 
         // Место свободно — блок встаёт обратно. Заменяемое (трава, вода,
         // снежный слой) он просто занимает: так у оригинала.
@@ -3811,6 +3840,96 @@ mod tests {
         for cx in 0..20 { for cz in 0..20 { world.ensure(cx, cz); } }
         step_mobs(&shared, dimension, &mut world, &mut crate::mob::Rng::new(71), 1);
         assert!(shared.items_in(dimension).lock().unwrap().mobs().is_empty());
+    }
+
+    #[test]
+    fn falling_anvil_damage_keeps_facing_and_uses_fall_distance() {
+        let state = blocks::state_from_text("anvil[facing=east]").unwrap();
+        assert_eq!(anvil_after_fall(state, 1.0, 0.0), Some(state));
+        assert_eq!(anvil_after_fall(state, 4.0, 0.21), Some(state));
+        let chipped = anvil_after_fall(state, 4.0, 0.19).unwrap();
+        assert_eq!(blocks::block_at_state(chipped), Some("chipped_anvil"));
+        assert_eq!(blocks::orientation_of(chipped).unwrap().value(chipped, "facing"), Some("east"));
+        let damaged = anvil_after_fall(chipped, 24.0, 0.999).unwrap();
+        assert_eq!(blocks::block_at_state(damaged), Some("damaged_anvil"));
+        assert_eq!(anvil_after_fall(damaged, 24.0, 0.999), None);
+    }
+
+    #[test]
+    fn falling_sand_lands_on_each_anvil_stage_instead_of_dropping_as_an_item() {
+        for name in ["anvil", "chipped_anvil", "damaged_anvil"] {
+            let shared = mob_server();
+            let dimension = Dimension::Overworld;
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            world.set_block_silently(0, 69, 0, blocks::state_by_name(name).unwrap());
+            let sand = blocks::state_by_name("sand").unwrap();
+            shared.items_in(dimension).lock().unwrap().drop_block(1, sand, Stack::new(blocks::item_named("sand").unwrap(), 1), (0.5, 74.0, 0.5));
+            for _ in 0..30 {
+                shared.items_in(dimension).lock().unwrap().step(
+                    &|x,y,z| blocks::stops_items(world.get_block(x,y,z)),
+                    &|x,y,z| holds_falling_block(world.get_block(x,y,z)), &|_,_| true);
+                land_falling(&shared, dimension, &mut world);
+            }
+            assert_eq!(world.get_block(0, 70, 0), sand, "{name}");
+            assert!(shared.items_in(dimension).lock().unwrap().items().is_empty());
+        }
+    }
+
+    /// Без начального обновления песок висит; каждый ушедший блок будит соседей.
+    #[test]
+    fn floating_falling_layers_collapse_in_two_tick_manhattan_waves() {
+        for name in ["sand", "red_sand", "gravel", "white_concrete_powder", "anvil"] {
+            let shared = mob_server();
+            let dimension = Dimension::Overworld;
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            let state = blocks::state_by_name(name).unwrap();
+            for x in 4..=8 { for z in 4..=8 { world.set_block_silently(x, 70, z, state); } }
+            redstone::settle(&mut world);
+            for _ in 0..10 { falling_test_tick(&shared, dimension, &mut world); }
+            assert!(shared.items_in(dimension).lock().unwrap().items().is_empty());
+            assert_eq!(crate::placing::break_block(&mut world, 6, 70, 6), Some(state));
+            for tick in 1..=10 {
+                falling_test_tick(&shared, dimension, &mut world);
+                for x in 4i32..=8 { for z in 4i32..=8 {
+                    let distance = (x - 6).abs() + (z - 6).abs();
+                    let expected = if distance * 2 <= tick { AIR } else { state };
+                    assert_eq!(world.get_block(x, 70, z), expected, "{name}, такт {tick}, {x},{z}");
+                } }
+                let expected = [0, 0, 4, 4, 12, 12, 20, 20, 24, 24, 24][tick as usize];
+                assert_eq!(shared.items_in(dimension).lock().unwrap().items().len(), expected, "{name}, такт {tick}");
+            }
+        }
+    }
+
+    #[test]
+    fn falling_column_and_supported_overhang_propagate_without_falling_through_support() {
+        for column in [false, true] {
+            let shared = mob_server();
+            let dimension = Dimension::Overworld;
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            let state = blocks::state_by_name("sand").unwrap();
+            for offset in 0..5 {
+                let (x, y) = if column { (4, 70 + offset) } else { (4 + offset, 70) };
+                world.set_block_silently(x, y, 4, state);
+            }
+            if !column { world.set_block_silently(8, 69, 4, STONE); }
+            crate::placing::break_block(&mut world, 4, 70, 4);
+            for tick in 1..=10 {
+                falling_test_tick(&shared, dimension, &mut world);
+                let count = (tick / 2).min(if column { 4 } else { 3 });
+                assert_eq!(shared.items_in(dimension).lock().unwrap().items().len(), count, "столб={column}, такт {tick}");
+            }
+            if !column { assert_eq!(world.get_block(8, 70, 4), state); }
+        }
+    }
+
+    fn falling_test_tick(shared: &Shared, dimension: Dimension, world: &mut World) {
+        for (pos, kind) in world.advance(PER_TICK) {
+            if kind == TickKind::Block { redstone::ticked(world, pos); }
+            redstone::settle(world);
+        }
+        start_falling(shared, dimension, world);
+        redstone::settle(world);
     }
 
     #[test]

@@ -1,0 +1,21 @@
+{
+  "name": "falling-chain-gravel-column",
+  "about": "Цепочка падения: gravel, column; заливка strict без обновлений, затем сломать один блок.",
+  "blocks": [],
+  "setup": [
+    "fill $(0,1,0) $(0,7,0) minecraft:gravel strict",
+    "tp $(bot) $(0.5,3,3.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "dig": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 65
+}

@@ -1,0 +1,21 @@
+{
+  "name": "falling-chain-white_concrete_powder-layer",
+  "about": "Цепочка падения: white_concrete_powder, layer; заливка strict без обновлений, затем сломать один блок.",
+  "blocks": [],
+  "setup": [
+    "fill $(-2,4,-2) $(2,4,2) minecraft:white_concrete_powder strict",
+    "tp $(bot) $(0.5,3,3.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "dig": [
+        0,
+        4,
+        0
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 65
+}

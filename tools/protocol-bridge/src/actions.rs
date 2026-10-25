@@ -196,8 +196,11 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 2019|2020 if from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 && (0..=5).contains(&data) => data,
                 // Обычные звуковые события777 (wide777 + автокрафтер):
                 // data0 не является ссылкой на реестр.
+                // 1029/0: разрушение, falling-anvil-degrades; 1031/0: наковальня,
+                // falling-chain-anvil-*; 1045/0: сталактит,
+                // dripstone-placement-support — сетевые записи официального777.
                 // Другие данные/версии этим наблюдением не разрешаются.
-                1000|1011|1026|1035|1038|1043|1044|1049|1050|1053|1054 if data == 0 && matches!((from,to),
+                1000|1011|1026|1029|1031|1035|1038|1043|1044|1045|1049|1050|1053|1054 if data == 0 && matches!((from,to),
                     (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
                 // Jukebox использует общий префикс согласованного реестра
                 // песен, не item ID; новая bounce добавлена в его конец.
@@ -379,6 +382,30 @@ mod tests {
                 let mut invalid=body.clone();invalid[12..16].copy_from_slice(&1i32.to_be_bytes());
                 assert!(effects("world_event",&mut Cursor::new(&invalid),&mut Vec::new(),from,to,Context::default()).is_err());
             }
+        }
+    }
+
+    #[test]
+    fn observed_falling_landing_events_translate_without_allowing_unknown_data() {
+        for effect in [1029i32, 1031, 1045] {
+            let mut body = Vec::new();
+            body.extend(effect.to_be_bytes());
+            body.extend(0i64.to_be_bytes());
+            body.extend(0i32.to_be_bytes());
+            body.push(0);
+            for (from, to) in [(JavaVersion::V26_1_2, JavaVersion::V26_3), (JavaVersion::V26_3, JavaVersion::V26_1_2)] {
+                let mut output = Vec::new();
+                effects("world_event", &mut Cursor::new(&body), &mut output, from, to, Context::default()).unwrap();
+                assert_eq!(output, body);
+                for end in 0..body.len() {
+                    assert!(effects("world_event", &mut Cursor::new(&body[..end]), &mut Vec::new(), from, to, Context::default()).is_err());
+                }
+                let mut invalid = body.clone();
+                invalid[12..16].copy_from_slice(&1i32.to_be_bytes());
+                assert_eq!(effects("world_event", &mut Cursor::new(&invalid), &mut Vec::new(), from, to, Context::default()),
+                    Err(Error::PayloadUnavailable("unverified level event data")));
+            }
+            assert!(effects("world_event", &mut Cursor::new(&body), &mut Vec::new(), JavaVersion::V26_1_2, JavaVersion::V26_2, Context::default()).is_err());
         }
     }
 
