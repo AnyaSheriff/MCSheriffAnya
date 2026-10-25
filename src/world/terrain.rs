@@ -920,6 +920,12 @@ impl Terrain {
         self.preview
     }
 
+    /// Ключ кэшей генерации: профиль влияет на высоту и декорации даже
+    /// при одинаковом семени. Стиль занимает младший бит, 26.3 — следующий.
+    pub fn generation_profile(&self) -> u8 {
+        u8::from(self.style == Style::Vanilla) | (u8::from(self.preview) << 1)
+    }
+
     /// Семя мира, от которого заведены шумы.
     pub fn seed(&self) -> i64 {
         self.seed
@@ -1249,7 +1255,12 @@ impl Terrain {
     /// Выше `cap` камня нет: там русло реки или толща океана.
     fn density(&self, relief: &Relief, x: i32, y: i32, z: i32) -> f64 {
         let (fx, fy, fz) = (x as f64, y as f64, z as f64);
-        let shake = self.relief.octaves3(fx / 56.0, fy / 24.0, fz / 56.0, 3) * 1.7;
+        // У 26.3 растягиваем вертикальную волну: при периоде 24 её
+        // производная почти отменяла «-fy», и верх перескакивал на 18 блоков
+        // за один столбец (1117,-477 → 1117,-476). Сетка и границы чанков
+        // здесь ни при чём. Вики, Noise: «3D noise»; масштаб наш, не оригинала.
+        let vertical_scale = if self.preview { 48.0 } else { 24.0 };
+        let shake = self.relief.octaves3(fx / 56.0, fy / vertical_scale, fz / 56.0, 3) * 1.7;
         let mut density = relief.surface - fy + relief.wobble * shake;
 
         if relief.rugged > 0.0 {
@@ -1368,7 +1379,8 @@ impl Terrain {
         // из воды торчали бы одинокие блоки.
         let inland = smooth_step((surface - SEA as f64) / 6.0);
         let hills = smooth_step((spread - 8.0) / 20.0) * (1.0 - mountains);
-        let wobble = 1.5 + (3.5 + 14.0 * hills + 14.0 * mountains + 6.0 * shattered) * inland * land;
+        let hill_wave = if self.preview { 8.0 } else { 14.0 };
+        let wobble = 1.5 + (3.5 + hill_wave * hills + 14.0 * mountains + 6.0 * shattered) * inland * land;
         // У подножий гор оригинал обрывист: ниже ~100 в горных местах почти
         // каждый четвёртый столбец — ступенька (замер terrain-measured-2).
         let foot = mountains * (1.0 - smooth_step((surface - 95.0) / 30.0));
@@ -1610,11 +1622,11 @@ impl Terrain {
         // в них попадает, — сотни: биом клетки запоминаем, чтобы не считать
         // климат заново. Кэш свой у потока и сбрасывается, когда разрастётся.
         thread_local! {
-            static CELLS: std::cell::RefCell<std::collections::HashMap<(i64, i32, i32), Biome>> =
+            static CELLS: std::cell::RefCell<std::collections::HashMap<(i64, u8, i32, i32), Biome>> =
                 std::cell::RefCell::new(std::collections::HashMap::new());
         }
 
-        let key = (self.seed ^ ((self.style == Style::Smooth) as i64), to_x >> 2, to_z >> 2);
+        let key = (self.seed, self.generation_profile(), to_x >> 2, to_z >> 2);
 
         CELLS.with_borrow_mut(|cells| {
             if let Some(biome) = cells.get(&key) {

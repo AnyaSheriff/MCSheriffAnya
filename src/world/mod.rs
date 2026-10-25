@@ -3448,6 +3448,9 @@ impl World {
             frame
         }));
         self.loaded_mobs.extend(chunk.mobs.iter().cloned());
+        // Ревизия нового экземпляра снова начинается с нуля; маска старого
+        // чанка при том же номере ревизии больше не описывает его секции.
+        self.random_sections.remove(&key);
         self.chunks.insert(key, chunk);
         self.unloaded.remove(&key);
 
@@ -3623,6 +3626,7 @@ impl World {
         // Ждать пересчёта в выгруженных чанках больше некому.
         self.redstone.forget_outside(|x, z| self.chunks.contains_key(&chunk_key(x, z)));
         self.sky_cache.retain(|key, _| self.chunks.contains_key(key));
+        self.random_sections.retain(|key, _| self.chunks.contains_key(key));
 
         before - self.chunks.len()
     }
@@ -8648,3 +8652,6 @@ mod prepared_light_regressions {
         assert!(!world.has_chunk(0, 0));
     }
 }
+
+#[cfg(test)]
+mod terrain_263_tests;

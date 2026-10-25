@@ -372,10 +372,10 @@ include!("mineshaft_start.rs");
 
 /// Шахта со стартом в чанке — из памяти, если уже считана.
 fn cached(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Option<std::sync::Arc<Plan>> {
-    type Plans = Mutex<HashMap<(i64, bool, i32, i32), Option<std::sync::Arc<Plan>>>>;
+    type Plans = Mutex<HashMap<(i64, u8, i32, i32), Option<std::sync::Arc<Plan>>>>;
     static CACHE: OnceLock<Plans> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, chunk_x, chunk_z);
+    let key = (terrain.seed(), terrain.generation_profile(), chunk_x, chunk_z);
 
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();

@@ -107,6 +107,12 @@ pub fn filter(state: i32) -> u8 {
     filtered(table()[state as u16 as usize])
 }
 
+/// Свет и закрытые грани с учётом каталога мира, включая блоки 26.3.
+pub fn cover_properties(catalog: Catalog, state: i32) -> (u8, u8) {
+    let props = table_for(catalog)[state as u16 as usize];
+    (filtered(props), closed(props))
+}
+
 /// Направление шага света: куда сдвинуться и какие грани на пути.
 struct Direction {
     x: i32,

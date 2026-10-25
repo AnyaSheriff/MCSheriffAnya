@@ -157,6 +157,17 @@ fn adapt(terrain: &Terrain, chunk: &mut super::Chunk, cx: i32, cz: i32, ground: 
                 } else {
                     continue;
                 };
+                // Поднятая борода засыпает прежний покров. Нельзя оставлять
+                // старый дёрн внутри новой толщи земли/камня (вики, Grass
+                // Block: «covered by any opaque blocks»).
+                if solid && crate::blocks::block_at_state(chunk.block(x - cx * 16, y - 1, z - cz * 16)) == Some("grass_block") {
+                    let (filter, faces) = super::light::cover_properties(
+                        crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3), state);
+                    if filter == 15 || faces & 1 != 0 {
+                        chunk.put_generated(x - cx * 16, y - 1, z - cz * 16,
+                            crate::blocks::state_by_name("dirt").expect("земля"), true);
+                    }
+                }
                 chunk.put_generated(x - cx * 16, y, z - cz * 16, state, true);
             }
         }

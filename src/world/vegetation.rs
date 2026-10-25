@@ -865,6 +865,14 @@ fn fallen_trees(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 
             for (dx, dy, dz, state) in fallen_blocks(key, wood, blocks, x, z, column.height, &lookup) {
                 put_over_plants(chunk, blocks, local_x + dx, column.height + dy, local_z + dz, state);
+                // Пень — такое же основание ствола, как у стоящего дерева.
+                // Вики, Tree: «dirt ... under the trunk»; лежачая часть
+                // ствола остаётся отдельным украшением поверхности.
+                if (dx, dy, dz) == (0, 1, 0)
+                    && block_in(chunk, local_x, column.height + 1, local_z) == Some(state)
+                    && block_in(chunk, local_x, column.height, local_z) == Some(blocks.ground.grass_block) {
+                    chunk.put_generated(local_x, column.height, local_z, blocks.ground.dirt, true);
+                }
             }
         }
     }

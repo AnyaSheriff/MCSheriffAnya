@@ -157,12 +157,12 @@ fn near_village(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -
 
 /// Стоит ли аванпост в этой области: чанк старта.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
-    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<(i32, i32)>>>;
+    type Starts = Mutex<HashMap<(i64, u8, i32, i32), Option<(i32, i32)>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -248,7 +248,7 @@ fn plan(seed: i64, chunk_x: i32, chunk_z: i32, ground: &dyn Fn(i32, i32) -> i32)
     out
 }
 
-type Cache = OnceLock<Mutex<HashMap<(i64, bool, i32, i32), Arc<Vec<Placed>>>>>;
+type Cache = OnceLock<Mutex<HashMap<(i64, u8, i32, i32), Arc<Vec<Placed>>>>>;
 
 /// Раскладка — одна на старт, хранится, пока мир жив.
 fn plan_cached(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Arc<Vec<Placed>> {
@@ -256,7 +256,7 @@ fn plan_cached(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) ->
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, chunk_x, chunk_z);
+    let key = (terrain.seed(), terrain.generation_profile(), chunk_x, chunk_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {

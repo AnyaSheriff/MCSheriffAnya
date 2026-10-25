@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-type Key = (i64, bool, i32, i32);
+type Key = (i64, u8, i32, i32);
 
 struct Cache<T> {
     entries: HashMap<Key, Rc<T>>,
@@ -41,7 +41,7 @@ thread_local! {
 
 fn cache_key(generator: &Generator, x: i32, z: i32) -> Option<Key> {
     match generator {
-        Generator::Normal(t) => Some((t.seed(), t.style() == terrain::Style::Smooth, x, z)),
+        Generator::Normal(t) => Some((t.seed(), t.generation_profile(), x, z)),
         _ => None,
     }
 }

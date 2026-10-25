@@ -730,18 +730,24 @@ fn mushroom_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) {
 // Трава и мицелий
 // ---------------------------------------------------------------------------
 
-/// Пропускает ли блок над дёрном свет и жизнь: не жидкость и не полный
-/// непрозрачный блок (снежный слой в один блок тоже не мешает).
-fn lets_live(state: i32) -> bool {
+/// Вики, Grass Block: «light-blocking side(s) ... facing the dirt block»;
+/// Snow: «Thicker layers ... revert to plain dirt». Нижняя грань плиты
+/// закрывает дёрн даже при нулевом поглощении света.
+fn lets_live(world: &World, state: i32) -> bool {
     if state == AIR {
         return true;
     }
 
-    if fluids::fluid_at(state).is_some() || value(state, "waterlogged") == Some("true") {
+    if name_of(state) == "snow" {
+        return number(state, "layers") == 1;
+    }
+    if fluids::fluid_at(state).is_some() || value(state, "waterlogged") == Some("true")
+        || world.catalog().waterlogged(state).ok().flatten() == Some(true) {
         return false;
     }
 
-    name_of(state) == "snow" && number(state, "layers") == 1 || crate::world::light::filter(state) < 15
+    let (filter, faces) = crate::world::light::cover_properties(world.catalog(), state);
+    filter < 15 && faces & 1 == 0
 }
 
 /// Трава и мицелий: под непрозрачным блоком гибнут в землю; при свете над
@@ -750,7 +756,7 @@ fn lets_live(state: i32) -> bool {
 fn spread_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32, name: &str) {
     let above = world.get_block(x, y + 1, z);
 
-    if !lets_live(above) {
+    if !lets_live(world, above) {
         world.set_block(x, y, z, state_of("dirt"));
         return;
     }
@@ -768,7 +774,7 @@ fn spread_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32, name: 
 
         let over = world.get_block(tx, ty + 1, tz);
 
-        if lets_live(over) && light(world, tx, ty + 1, tz) >= 4 {
+        if lets_live(world, over) {
             let snowy = name_of(over) == "snow";
             let grown = with(state_of(name), "snowy", snowy).unwrap_or(state);
 
@@ -1408,6 +1414,42 @@ mod tests {
 
     fn state(text: &str) -> i32 {
         blocks::state_from_text(text).unwrap_or_else(|| panic!("нет состояния {}", text))
+    }
+
+    #[test]
+    fn covered_grass_random_ticks_reach_negative_and_high_sections() {
+        for y in [-63, 0, 64, 141, 300] {
+            let mut world = World::in_memory();
+            for x in 0..16 {
+                world.set_block_silently(x, y, -1, state("grass_block"));
+                world.set_block_silently(x, y + 1, -1, state("stone"));
+            }
+            // Прогреваем кэш и проверяем выключенное правило.
+            random_ticks(&mut world, &[(0, -1)], 0, 0);
+            assert_eq!(name_of(world.get_block(0, y, -1)), "grass_block");
+            for _ in 0..16 { random_ticks(&mut world, &[(0, -1)], 0, 4096); }
+            assert!((0..16).all(|x| name_of(world.get_block(x, y, -1)) == "dirt"));
+        }
+    }
+
+    #[test]
+    fn grass_cover_obeys_bottom_faces_snow_and_preview_catalog() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        for (text, survives) in [
+            ("stone", false), ("oak_planks", false), ("glass", true),
+            ("stone_slab[type=bottom]", false), ("stone_slab[type=top]", true),
+            ("stone_slab[type=double]", false), ("stone_slab[type=top,waterlogged=true]", false),
+            ("snow[layers=1]", true), ("snow[layers=2]", false), ("snow[layers=8]", false),
+            ("water", false), ("poplar_planks", false),
+        ] {
+            let cover = catalog.default_state(text).ok().flatten().filter(|_| !text.contains('['))
+                .or_else(|| blocks::state_from_text(text)).unwrap();
+            world.set_block_silently(0, 64, 0, state("grass_block"));
+            world.set_block_silently(0, 65, 0, cover);
+            random_tick(&mut world, (0, 64, 0), state("grass_block"));
+            assert_eq!(name_of(world.get_block(0, 64, 0)), if survives { "grass_block" } else { "dirt" }, "{text}");
+        }
     }
 
     /// Пол из земли на высоте 0, 9×9.

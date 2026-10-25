@@ -519,9 +519,9 @@ type Cache<K, V> = OnceLock<Mutex<HashMap<K, Arc<V>>>>;
 
 /// Раскладка деревни — одна на старт, хранится, пока мир жив.
 fn plan_cached(terrain: &super::terrain::Terrain, kind: Kind, chunk_x: i32, chunk_z: i32) -> Arc<Vec<Placed>> {
-    static CACHE: Cache<(i64, bool, Kind, i32, i32), Vec<Placed>> = OnceLock::new();
+    static CACHE: Cache<(i64, u8, Kind, i32, i32), Vec<Placed>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, kind, chunk_x, chunk_z);
+    let key = (terrain.seed(), terrain.generation_profile(), kind, chunk_x, chunk_z);
 
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();
@@ -589,6 +589,15 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
         let ground = |x: i32, z: i32| super::structure_terrain::street_height(&source, x, z, &beards);
 
         paint(kind, &pieces, [x0, z0, x0 + 15, z0 + 15], &ground, &mut |Put::Block(x, y, z, state)| {
+            // Вики, Grass Block: «covered by any opaque blocks». Поздний
+            // пол/дорога засыпает прежнюю поверхность; она больше не дёрн.
+            // Прозрачные детали (забор, стекло, верхняя плита) покров сохраняют.
+            let (filter, faces) = super::light::cover_properties(
+                crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3), state);
+            if (filter == 15 || faces & 1 != 0)
+                && blocks::block_at_state(chunk.block(x - x0, y - 1, z - z0)) == Some("grass_block") {
+                chunk.put_generated(x - x0, y - 1, z - z0, blocks::state_by_name("dirt").expect("земля"), true);
+            }
             chunk.put_generated(x - x0, y, z - z0, state, true);
         });
         population::chests(terrain.seed(),kind,&pieces,chunk,chunk_x,chunk_z);
