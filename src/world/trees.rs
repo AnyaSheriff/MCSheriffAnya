@@ -263,6 +263,46 @@ impl Tree {
         blocks
     }
 
+    /// Естественные корни — связные лестницы, а не отдельные диагональные
+    /// клетки. minecraft.wiki/w/Mangrove: «prop roots»; конкретный обход
+    /// оригинала [проверить]. Геометрия прежнего профиля не меняется.
+    pub(super) fn blocks_in_preview(&self, seed: i64, x: i32, z: i32) -> Vec<TreeBlock> {
+        let mut blocks = self.blocks_in(seed, x, z);
+        if !matches!(self.shape, Shape::Mangrove | Shape::TallMangrove) { return blocks; }
+        let roots: Vec<_> = blocks.iter().filter(|b| b.3 == Part::Block("mangrove_roots"))
+            .map(|b| (b.0,b.1,b.2)).collect();
+        let mut taken: std::collections::HashSet<_> = roots.iter().copied().collect();
+        for &(dx,dy,dz) in &roots {
+            if (dx,dz) == (0,0) { continue; }
+            let (sx,sz) = (dx.signum(),dz.signum());
+            let previous = roots.iter().filter(|b| (b.0,b.2) == (dx-sx,dz-sz))
+                .max_by_key(|b| b.1);
+            if let Some(&(mut bx,mut by,mut bz)) = previous {
+                while (bx,by,bz) != (dx,dy,dz) {
+                    if bx != dx { bx += sx; }
+                    else if bz != dz { bz += sz; }
+                    else { by += (dy-by).signum(); }
+                    if taken.insert((bx,by,bz)) {
+                        blocks.push((bx,by,bz,Part::Block("mangrove_roots")));
+                    }
+                }
+            }
+            // Вторая точка опоры перед концом корня: прежде ил заменялся
+            // только под самой дальней клеткой, без продолжения к стволу.
+            if !roots.iter().any(|b| (b.0,b.2) == (dx+sx,dz+sz)) {
+                blocks.push((dx-sx,0,dz-sz,Part::Ground("muddy_mangrove_roots")));
+                if dx.abs().max(dz.abs()) >= 3 {
+                    blocks.push((dx-2*sx,0,dz-2*sz,Part::Ground("muddy_mangrove_roots")));
+                }
+            }
+        }
+        // После восстановления связных корней мха на них больше;
+        // доля по переписи естественных деревьев, не по плоской площадке.
+        let mut moss = Self::shape_random(seed ^ 67_153,x,z);
+        blocks.retain(|b| b.3 != Part::Block("moss_carpet") || roll(&mut moss,5) != 0);
+        blocks
+    }
+
     /// Тополь: целая наблюдённая крона вместо усреднения по кругу.
     fn poplar(&self, random: &mut Random, blocks: &mut Vec<TreeBlock>) {
         let index = super::tree_shapes_26_3::select_sapling(Shape::Poplar, random).expect("формы тополя");
@@ -1426,9 +1466,31 @@ impl Terrain {
             return None;
         }
 
-        let (density, mix, bees) = woodland(column.biome)?;
+        let (mut density, mut mix, bees) = woodland(column.biome)?;
 
-        if !chance(self.seed(), x, z, 1_301, density) {
+        // minecraft.wiki/w/Plains: «5% of chunks». Редкость относится к
+        // чанку, а не к каждому столбцу; дешёвый фильтр знает эту же точку.
+        let lone = self.preview() && matches!(column.biome, Biome::Plains | Biome::SunflowerPlains);
+        if self.preview() {
+            // Частоты принятых деревьев по биомной переписи 26.3;
+            // точные соли украшения оригинала ещё [проверить].
+            match column.biome {
+                Biome::Forest => density = 0.0285,
+                Biome::BirchForest => density = 0.040,
+                Biome::FlowerForest => { density = 0.035; mix = &[(0.1, FANCY_OAK), (0.15, BIRCH), (0.75, OAK)]; }
+                Biome::DarkForest => density = 0.035,
+                Biome::SnowyTaiga => density = 0.018,
+                // minecraft.wiki/w/Meadow: «oak or birch».
+                Biome::Meadow => mix = &[(0.8, OAK), (0.2, TALL_BIRCH)],
+                Biome::SparseJungle => { density = 0.0065; mix = &[(0.16, FANCY_OAK), (0.5, JUNGLE_BUSH), (0.34, JUNGLE)]; }
+                Biome::BambooJungle => { density = 0.025; mix = &[(0.16, FANCY_OAK), (0.5, JUNGLE_BUSH), (0.10, MEGA_JUNGLE), (0.24, JUNGLE)]; }
+                Biome::Jungle => mix = &[(0.18, FANCY_OAK), (0.5, JUNGLE_BUSH), (0.09, MEGA_JUNGLE), (0.23, JUNGLE)],
+                Biome::WindsweptSavanna => density = 0.0024,
+                _ => {}
+            }
+        }
+
+        if if lone { !plains_tree(self.seed(), x, z) } else { !chance(self.seed(), x, z, 1_301, density) } {
             return None;
         }
 
@@ -1436,8 +1498,12 @@ impl Terrain {
         // стволов рядом остаётся один, и оба чанка решают одинаково.
         // Высоту соседа не спрашиваем нарочно: это стоило бы пересчёта всех
         // шумов на каждое дерево, а на густоту леса почти не влияет.
-        for dx in -2..=2 {
-            for dz in -2..=2 {
+        // Мангровые корни переплетаются; общий запрет стволов в квадрате
+        // 5×5 отсеивал и пригодные деревья (minecraft.wiki/w/Mangrove:
+        // «dense foliage»). Прежний профиль сохраняет прежний отбор.
+        let spacing = if lone { 0 } else if self.preview() && column.biome == Biome::MangroveSwamp { 1 } else { 2 };
+        for dx in -spacing..=spacing {
+            for dz in -spacing..=spacing {
                 if (dx, dz) == (0, 0) || (dz, dx) > (0, 0) {
                     continue;
                 }
@@ -1462,6 +1528,18 @@ impl Terrain {
             })
             .or(mix.last())
             .map(|(_, species)| *species)?;
+
+        // Редкость отдельной породы: изменение общей густоты сдвигало
+        // также уже верные дубы и редкие ели пятнистого леса.
+        if self.preview() {
+            let share = match column.biome {
+                Biome::WindsweptHills | Biome::WindsweptGravellyHills if species.tree.log == "spruce_log" => 0.15,
+                Biome::DarkForest if species.tree.log == "birch_log" => 0.6,
+                Biome::DappledForest if species.tree.shape == Shape::Poplar => 0.90,
+                _ => 1.0,
+            };
+            if !chance(self.seed(),x,z,1_303,share) { return None; }
+        }
 
         let trunk = species.tree.trunk + roll(&mut random, species.spread) + roll(&mut random, species.extra);
         let bees = fraction(&mut random) < bees;
@@ -1567,7 +1645,18 @@ pub fn from_sapling(name: &str, wide: bool, seed: i64) -> Option<Tree> {
 /// Дешёвая проверка перед дорогой: самая густая чаща у нас реже одного ствола
 /// на шестнадцать мест, поэтому почти для всех мест столбец считать незачем.
 pub fn tree_possible(seed: i64, x: i32, z: i32) -> bool {
-    chance(seed, x, z, 1_301, DENSEST_FOREST)
+    chance(seed, x, z, 1_301, DENSEST_FOREST) || plains_tree(seed, x, z)
+}
+
+/// Одна попытка в редком чанке; отрицательные координаты делятся вниз.
+/// Собственная соль: точное совпадение потока 26.3 [проверить].
+fn plains_tree(seed: i64, x: i32, z: i32) -> bool {
+    let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
+    if !chance(seed, cx, cz, 1_307, 0.05) { return false; }
+    let mut random = Random::new(seed ^ i64::from(cx).wrapping_mul(341_873_128_712)
+        ^ i64::from(cz).wrapping_mul(132_897_987_541) ^ 1_309);
+    let (dx, dz) = (roll(&mut random, 16), roll(&mut random, 16));
+    (x.rem_euclid(16), z.rem_euclid(16)) == (dx, dz)
 }
 
 /// Самая большая густота деревьев среди всех биомов.
@@ -1576,6 +1665,50 @@ const DENSEST_FOREST: f64 = 0.06;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview_plains_tree_rarity_is_per_chunk_and_survives_fast_filter() {
+        let terrain = Terrain::new(1792932773345722119, super::super::terrain::Style::Vanilla).with_preview(true);
+        let column = Column { biome: Biome::Plains, ..Column::flat(70) };
+        let mut occupied = 0;
+        for cx in -32..32 { for cz in -32..32 {
+            let mut trees = 0;
+            for dx in 0..16 { for dz in 0..16 {
+                let (x,z) = (cx*16+dx,cz*16+dz);
+                if terrain.tree_at(&column,x,z).is_some() {
+                    assert!(tree_possible(terrain.seed(),x,z));
+                    trees += 1;
+                }
+            }}
+            assert!(trees <= 1);
+            occupied += trees;
+        }}
+        assert!((164..=246).contains(&occupied), "{occupied}/4096 чанков вместо 5%");
+    }
+
+    #[test]
+    fn preview_mangrove_roots_are_six_connected_and_have_inner_anchors() {
+        use std::collections::HashSet;
+        for seed in 0..64 {
+            for species in [MANGROVE,TALL_MANGROVE] {
+                let tree = species.tree;
+                let blocks = tree.blocks_in_preview(seed,seed as i32,7);
+                let mut roots: HashSet<_> = blocks.iter().filter(|b| b.3 == Part::Block("mangrove_roots"))
+                    .map(|b| (b.0,b.1,b.2)).collect();
+                let mut queue = vec![(0,1,0)];
+                roots.remove(&(0,1,0));
+                while let Some((x,y,z)) = queue.pop() {
+                    for (dx,dy,dz) in [(1,0,0),(-1,0,0),(0,1,0),(0,-1,0),(0,0,1),(0,0,-1)] {
+                        let next = (x+dx,y+dy,z+dz);
+                        if roots.remove(&next) { queue.push(next); }
+                    }
+                }
+                assert!(roots.is_empty(), "оторванные корни: {roots:?}");
+                let anchors = |blocks: &[TreeBlock]| blocks.iter().filter(|b| b.3 == Part::Ground("muddy_mangrove_roots")).count();
+                assert!(anchors(&blocks) > anchors(&tree.blocks_in(seed,seed as i32,7)));
+            }
+        }
+    }
 
     #[test]
     fn pale_oak_heart_is_opt_in_and_supported_by_vertical_logs() {

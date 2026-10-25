@@ -1034,13 +1034,19 @@ fn patches(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
                         }
 
                         let column = *area.near(local_x, local_z);
-                        let share = patch_share(rule.patch, column.biome);
+                        let mut share = patch_share(rule.patch, column.biome);
+                        if area.terrain.preview() && column.biome == Biome::Meadow && matches!(rule.patch, Patch::Wildflowers) {
+                            share *= 2.0;
+                        }
+                        if area.terrain.preview() && column.biome == Biome::FlowerForest && matches!(rule.patch, Patch::LilyOfTheValley) {
+                            share *= 1.6;
+                        }
 
                         if share <= 0.0 || !on_land(&column) || !roll(key, x + dx, z + dz, cell_salt, rule.cells * share) {
                             continue;
                         }
 
-                        grow_in_patch(key, chunk, blocks, rule.patch, kind, (x + dx, z + dz), (local_x, local_z), &column);
+                        grow_in_patch(area, chunk, blocks, rule.patch, kind, (x + dx, z + dz), (local_x, local_z), &column);
                     }
                 }
             }
@@ -1051,7 +1057,7 @@ fn patches(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 /// Одно растение грядки.
 #[allow(clippy::too_many_arguments)]
 fn grow_in_patch(
-    key: u64,
+    area: &Area,
     chunk: &mut Chunk,
     blocks: &Palette,
     patch: Patch,
@@ -1060,6 +1066,7 @@ fn grow_in_patch(
     (local_x, local_z): (i32, i32),
     column: &Column,
 ) {
+    let key = area.key;
     let y = column.height + 1;
     let Some(ground) = block_in(chunk, local_x, column.height, local_z) else {
         return;
@@ -1067,6 +1074,17 @@ fn grow_in_patch(
 
     if !blocks.ground.soil(ground) {
         return;
+    }
+
+    // minecraft.wiki/w/Leaf_Litter: «replaceable by other blocks» —
+    // правило нужно и грядкам, не только одиночной траве. Сначала проверяем
+    // обе клетки высокого растения, чтобы не удалить опад при неудаче.
+    if area.terrain.preview()
+        && block_in(chunk,local_x,y,local_z).is_some_and(|here| blocks.leaf_litter.iter().flatten().any(|&s| s == here))
+    {
+        if matches!(patch,Patch::Pumpkin | Patch::Melon | Patch::Bushes) && ground != blocks.ground.grass_block { return; }
+        if matches!(patch,Patch::TallFlowers | Patch::Sunflowers) && block_in(chunk,local_x,y+1,local_z) != Some(AIR) { return; }
+        chunk.put_generated(local_x,y,local_z,AIR,true);
     }
 
     // Лепестки лежат пучками по одному–четыре и смотрят в разные стороны.
@@ -1442,8 +1460,6 @@ fn cover(biome: Biome) -> Cover {
 
 /// Все растения по одному на столбец.
 fn single_plants(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
-    let key = area.key;
-
     for local_x in 0..CHUNK_SIZE {
         for local_z in 0..CHUNK_SIZE {
             let x = area.chunk_x * CHUNK_SIZE + local_x;
@@ -1451,7 +1467,7 @@ fn single_plants(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
             let column = *area.near(local_x, local_z);
 
             if column.height < SEA {
-                underwater(key, chunk, blocks, &column, x, z, local_x, local_z);
+                underwater(area, chunk, blocks, &column, x, z, local_x, local_z);
             } else {
                 on_ground(area, chunk, blocks, &column, x, z, local_x, local_z);
             }
@@ -1481,7 +1497,10 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
     // а земля под ним перестаёт быть заснеженной.
     let snowed = here == blocks.snow && ground == blocks.ground.snowy_grass;
 
-    if here != AIR && !snowed {
+    // minecraft.wiki/w/Leaf_Litter: «replaceable by other blocks».
+    // Опад деревьев уже лежит; он не должен отнимать попытки травы и цветов.
+    let litter = area.terrain.preview() && blocks.leaf_litter.iter().flatten().any(|&state| state == here);
+    if here != AIR && !snowed && !litter {
         return;
     }
 
@@ -1549,7 +1568,32 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
         }
     }
 
-    let cover = cover(biome);
+    let mut cover = cover(biome);
+    if area.terrain.preview() {
+        // Биомные частоты переписи 26.3, без переноса глобальной доли
+        // биома в густоту растений. minecraft.wiki/w/Meadow: «lots of
+        // short grass»; порядок и соли отдельных пятен [проверить].
+        match biome {
+            Biome::Forest => cover.grass = 0.030,
+            Biome::Plains => cover.grass = 0.19,
+            Biome::Meadow => { cover.grass = 0.18; cover.tall_grass = 0.0125; }
+            Biome::BirchForest => cover.grass = 0.060,
+            Biome::OldGrowthBirchForest => cover.grass = 0.055,
+            Biome::FlowerForest => cover.grass = 0.040,
+            Biome::SparseJungle => { cover.grass = 0.30; cover.fern = 0.10; }
+            Biome::BambooJungle => { cover.grass = 0.25; cover.fern = 0.075; cover.tall_grass = 0.003; }
+            Biome::Taiga => { cover.grass = 0.006; cover.large_fern = 0.010; }
+            Biome::SnowyTaiga => { cover.grass = 0.0035; cover.fern = 0.0075; cover.large_fern = 0.004; }
+            Biome::SavannaPlateau => { cover.grass = 0.49; cover.tall_grass = 0.014; }
+            Biome::WindsweptSavanna => cover.grass = 0.055,
+            Biome::WindsweptHills => { cover.grass = 0.020; cover.tall_grass = 0.0; }
+            Biome::Desert => cover.dead_bush = 0.004,
+            Biome::WoodedBadlands => cover.dead_bush = 0.044,
+            Biome::MangroveSwamp => cover.grass = 0.11,
+            Biome::River => { cover.grass = 0.01; cover.tall_grass = 0.0012; }
+            _ => {}
+        }
+    }
     let dry = sandy || ground == blocks.ground.terracotta;
     let value = unit(key, x, z, SALT_COVER);
 
@@ -1739,6 +1783,9 @@ pub(super) fn tree_litter(
         Shape::Fancy => "fancy_oak_leaf_litter",
         Shape::Round => "birch_leaf_litter",
         Shape::DarkOak => "dark_oak_leaf_litter",
+        // minecraft.wiki/w/Leaf_Litter: «any type of tree». Редкие ели
+        // пятнистого леса тоже дают опад; пространственная маска [проверить].
+        Shape::Spruce if biome == Biome::DappledForest => "oak_leaf_litter",
         // 14 изолированных естественных тополей: 17–32 клетки на ствол.
         Shape::Poplar => "poplar_natural",
         _ => return,
@@ -1787,7 +1834,8 @@ fn pick_flower(key: u64, x: i32, z: i32, bouquet: Bouquet) -> Flower {
 
 /// Растение под водой или на ней: кувшинки, ламинария, морская трава.
 #[allow(clippy::too_many_arguments)]
-fn underwater(key: u64, chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i32, local_x: i32, local_z: i32) {
+fn underwater(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i32, local_x: i32, local_z: i32) {
+    let key = area.key;
     let biome = column.biome;
     let bottom = column.height + 1;
     let depth = SEA - column.height;
@@ -1823,8 +1871,8 @@ fn underwater(key: u64, chunk: &mut Chunk, blocks: &Palette, column: &Column, x:
     // в одних клетках 8×8 её много, в других нет вовсе. Густота — по замеру
     // мира оригинала.
     let kelp = match biome {
-        Biome::DeepOcean => 0.24,
-        Biome::DeepColdOcean => 0.21,
+        Biome::DeepOcean => if area.terrain.preview() { 0.16 } else { 0.24 },
+        Biome::DeepColdOcean => if area.terrain.preview() { 0.42 } else { 0.21 },
         Biome::ColdOcean => 0.19,
         Biome::Ocean => 0.18,
         Biome::LukewarmOcean => 0.126,
@@ -1834,7 +1882,12 @@ fn underwater(key: u64, chunk: &mut Chunk, blocks: &Palette, column: &Column, x:
 
     if depth >= 3 && roll(key, x >> 3, z >> 3, SALT_KELP_ZONE, 0.35) && roll(key, x, z, SALT_KELP, kelp) {
         let mut dice = Dice::new(key, x, z, SALT_KELP + 1);
-        let length = 1 + dice.below((depth - 1).min(25));
+        // minecraft.wiki/w/Kelp: «age ... from 0 to 24» описывает возраст,
+        // а не исходную высоту. В 2180 сохранённых чанках 26.3 высоты 1–10;
+        // ограничение глубиной применяется после выбора длины.
+        let length = if area.terrain.preview() {
+            (1 + dice.below(10)).min(depth - 1)
+        } else { 1 + dice.below((depth - 1).min(25)) };
 
         for dy in 0..length - 1 {
             if !put_water(chunk, bottom + dy, blocks.kelp_plant) {
@@ -1850,8 +1903,8 @@ fn underwater(key: u64, chunk: &mut Chunk, blocks: &Palette, column: &Column, x:
     // океанах она большей частью высокая. Густота и доля высокой — по
     // замеру мира оригинала.
     let (density, tall_share) = match biome {
-        Biome::DeepOcean => (0.17, 0.75),
-        Biome::DeepLukewarmOcean => (0.2, 0.77),
+        Biome::DeepOcean => (0.17, if area.terrain.preview() { 0.80 } else { 0.75 }),
+        Biome::DeepLukewarmOcean => (if area.terrain.preview() { 0.22 } else { 0.2 }, 0.77),
         Biome::DeepColdOcean => (0.15, 0.8),
         Biome::LukewarmOcean => (0.25, 0.3),
         Biome::WarmOcean => (0.23, 0.3),
@@ -1886,6 +1939,100 @@ fn underwater(key: u64, chunk: &mut Chunk, blocks: &Palette, column: &Column, x:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Проверяем готовые чанки, включая корни в воде и отбор почвы;
+    /// малое окно допускает разброс, полная перепись остаётся отдельной.
+    #[test]
+    fn preview_generated_vegetation_matches_regression_windows() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/vegetation-regression.json")).unwrap();
+        let terrain = Terrain::new(fixture["seed"].as_i64().unwrap(),Style::Vanilla).with_preview(true);
+        let generator = Generator::Normal(terrain);
+        for sample in fixture["samples"].as_array().unwrap() {
+            let biome = Biome::by_name(sample["biome"].as_str().unwrap(),true).unwrap();
+            let bounds: Vec<_> = sample["bounds"].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+            let limits = sample["bounds_per_million"].as_object().unwrap();
+            let mut counts = std::collections::BTreeMap::<&str,usize>::new();
+            let mut volume = 0;
+            for cx in bounds[0]..=bounds[2] { for cz in bounds[1]..=bounds[3] {
+                let chunk = Chunk::generated(&generator,cx,cz);
+                volume += chunk.biomes.iter().filter(|&&b| b == biome.number() as u16).count()*64;
+                for (sy,section) in chunk.sections.iter().enumerate() {
+                    let Some(section) = section else { continue; };
+                    for (index,&state) in section.iter().enumerate() {
+                        let Some(name) = crate::blocks::block_at_state(i32::from(state)) else { continue; };
+                        if !limits.contains_key(name) { continue; }
+                        let (x,y,z) = ((index&15) as i32,MIN_Y+sy as i32*16+(index>>8) as i32,((index>>4)&15) as i32);
+                        if chunk.biome(x,y,z) == biome.number() as u16 { *counts.entry(name).or_default() += 1; }
+                    }
+                }
+            }}
+            assert!(volume > 500_000,"биом сместился: {biome:?}, {volume}");
+            for (name,range) in limits {
+                let density = counts.get(name.as_str()).copied().unwrap_or(0) as f64*1e6/volume as f64;
+                let (low,high) = (range[0].as_f64().unwrap(),range[1].as_f64().unwrap());
+                assert!((low..=high).contains(&density),"{biome:?}/{name}: {density}, границы {low}…{high}");
+            }
+        }
+    }
+
+    #[test]
+    fn preview_ground_plants_replace_tree_litter() {
+        let terrain = Terrain::new(42, Style::Vanilla).with_preview(true);
+        let columns = vec![Column { biome: Biome::Forest, ..Column::flat(70) }; (SIDE*SIDE) as usize];
+        let area = Area { terrain: &terrain, columns: &columns, chunk_x: 0, chunk_z: 0, key: key_of(&terrain) };
+        let blocks = palette();
+        let mut chunk = Chunk::generated(&Generator::Flat,0,0);
+        let mut grass = 0;
+        for x in 0..16 { for z in 0..16 {
+            chunk.put_generated(x,70,z,blocks.ground.grass_block,true);
+            chunk.put_generated(x,71,z,blocks.leaf_litter[0][0],true);
+            chunk.put_generated(x,72,z,AIR,true);
+            on_ground(&area,&mut chunk,blocks,area.near(x,z),x,z,x,z);
+            grass += usize::from(chunk.block(x,71,z) == blocks.short_grass);
+        }}
+        assert!(grass > 0, "опад отнял все попытки травы");
+        for patch in [Patch::Pumpkin,Patch::Melon,Patch::Berries,Patch::Petals,
+            Patch::Wildflowers,Patch::TallFlowers,Patch::Sunflowers,Patch::LilyOfTheValley,Patch::Bushes]
+        {
+            chunk.put_generated(5,71,5,blocks.leaf_litter[0][0],true);
+            chunk.put_generated(5,72,5,AIR,true);
+            grow_in_patch(&area,&mut chunk,blocks,patch,0,(5,5),(5,5),area.near(5,5));
+            assert_ne!(chunk.block(5,71,5),blocks.leaf_litter[0][0]);
+            assert_ne!(chunk.block(5,71,5),AIR);
+        }
+        chunk.put_generated(5,71,5,blocks.leaf_litter[0][0],true);
+        chunk.put_generated(5,72,5,state("stone"),true);
+        grow_in_patch(&area,&mut chunk,blocks,Patch::TallFlowers,0,(5,5),(5,5),area.near(5,5));
+        assert_eq!(chunk.block(5,71,5),blocks.leaf_litter[0][0],"неудачная попытка съела опад");
+        for x in 0..16 { for z in 0..16 { chunk.put_generated(x,71,z,AIR,true); }}
+        let sapling = super::super::trees::from_sapling("spruce_sapling",false,42).unwrap();
+        let spruce = super::super::trees::Tree { shape: super::super::trees::Shape::Spruce, ..sapling };
+        tree_litter(&terrain,&mut chunk,&spruce,(8,8),(8,70,8),Biome::DappledForest);
+        assert!((0..16).any(|x| (0..16).any(|z| blocks.leaf_litter.iter().flatten().any(|&s| chunk.block(x,71,z) == s))),
+            "ель пятнистого леса не дала опада");
+    }
+
+    #[test]
+    fn preview_generated_kelp_uses_initial_height_not_growth_age() {
+        let terrain = Terrain::new(1792932773345722119, Style::Vanilla).with_preview(true);
+        let generator = Generator::Normal(terrain);
+        let blocks = palette();
+        let mut plants = 0;
+        let mut tall = 0;
+        for cx in -112..-108 { for cz in 88..92 {
+            let chunk = Chunk::generated(&generator,cx,cz);
+            for x in 0..16 { for z in 0..16 { for y in MIN_Y+1..SEA {
+                if !blocks.kelp.contains(&chunk.block(x,y,z)) { continue; }
+                let mut length = 1;
+                while y-length >= MIN_Y && chunk.block(x,y-length,z) == blocks.kelp_plant { length += 1; }
+                assert!(length <= 10, "ламинария выросла до {length} при выключенных тиках");
+                tall += usize::from(length >= 8);
+                plants += 1;
+            }}}
+        }}
+        assert!(plants >= 30 && tall > 0, "неполная выборка: {plants}/{tall}");
+    }
     use crate::world::terrain::Style;
     use std::collections::HashMap;
 

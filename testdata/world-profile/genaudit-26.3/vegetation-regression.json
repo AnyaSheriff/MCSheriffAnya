@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "seed": 1792932773345722119,
+  "unit": "blocks per million 3D biome blocks",
+  "note": "Small generated-chunk regressions; bounds include sampling variation. Full census tolerance remains 20%, with floor 5. Reselect windows if biome placement changes.",
+  "samples": [
+    {
+      "biome": "forest",
+      "bounds": [-100, -74, -97, -71],
+      "before": {"short_grass": 36.24},
+      "vanilla_full_census": {"short_grass": 62.279014},
+      "bounds_per_million": {"short_grass": [45, 90]}
+    },
+    {
+      "biome": "mangrove_swamp",
+      "bounds": [-55, -5, -52, -2],
+      "before": {"mangrove_roots": 616.919, "muddy_mangrove_roots": 217.324},
+      "vanilla_full_census": {"mangrove_roots": 1218.899247, "muddy_mangrove_roots": 586.456574},
+      "bounds_per_million": {"mangrove_roots": [900, 1600], "muddy_mangrove_roots": [400, 750]}
+    }
+  ]
+}

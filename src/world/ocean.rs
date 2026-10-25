@@ -857,6 +857,9 @@ fn reef_density(noise: &Noise, x: i32, z: i32) -> f64 {
 /// украшают общий риф одинаково.
 fn reefs(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
     let noise = Noise::new(area.terrain.seed() ^ SALT_REEF_ZONE);
+    // Частота попыток после нормировки на блоки тёплого океана 26.3;
+    // глобальные блоки/чанк зависят ещё и от доли этого биома.
+    let densest = if area.terrain.preview() { 0.070 } else { REEF_DENSEST };
     let reach = REEF_REACH + 1;
     let mut placed: Vec<(i32, i32, i32)> = Vec::new();
 
@@ -865,7 +868,7 @@ fn reefs(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
             let (x, z) = (area.chunk_x * CHUNK_SIZE + local_x, area.chunk_z * CHUNK_SIZE + local_z);
 
             // Сперва дешёвое «а не здесь ли», и только потом столбец.
-            if !roll(area.key, x, z, SALT_REEF, REEF_DENSEST)
+            if !roll(area.key, x, z, SALT_REEF, densest)
                 || unit(area.key, x, z, SALT_REEF + 1) * REEF_DENSEST >= reef_density(&noise, x, z)
             {
                 continue;
@@ -1031,6 +1034,16 @@ fn decorate_coral(area: &Area, chunk: &mut Chunk, blocks: &Palette, x: i32, y: i
         return;
     }
 
+    // minecraft.wiki/w/Coral_reef: «on coral blocks». Список попыток
+    // содержит и блоки, не вставшие на склоне; украшать их нельзя.
+    // За границей чанка опору проверяет соседний проход.
+    if area.terrain.preview()
+        && match block_in(chunk, local_x, y, local_z) {
+            Some(here) => !blocks.coral_block(here),
+            None => y <= area.column(x,z).height,
+        }
+    { return; }
+
     let mut dice = Dice::new(area.key, x, z, SALT_DECOR ^ (y as u64 & 0x1FF) << 20);
     let top = dice.unit();
     let kind = dice.below(KINDS.len() as i32) as usize;
@@ -1113,6 +1126,25 @@ fn sea_pickles(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview_coral_does_not_decorate_failed_reef_blocks() {
+        use crate::world::terrain::Style;
+        let terrain = Terrain::new(42,Style::Vanilla).with_preview(true);
+        let columns = vec![Column { biome: Biome::WarmOcean, ..Column::flat(40) }; (SIDE*SIDE) as usize];
+        let area = Area { terrain: &terrain, columns: &columns, chunk_x: 0, chunk_z: 0, key: key_of(&terrain) };
+        let blocks = palette();
+        let mut chunk = Chunk::generated(&Generator::Flat,0,0);
+        for x in 0..16 { for z in 0..16 { for y in 40..43 {
+            chunk.put_generated(x,y,z,blocks.water,true);
+        }}}
+        for x in 1..15 { for z in 1..15 {
+            decorate_coral(&area,&mut chunk,blocks,x,41,z);
+        }}
+        for x in 0..16 { for z in 0..16 { for y in 40..43 {
+            assert_eq!(chunk.block(x,y,z),blocks.water,"украшение без кораллового блока");
+        }}}
+    }
 
     /// Все записи блоков есть в таблице.
     #[test]

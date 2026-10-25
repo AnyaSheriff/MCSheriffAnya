@@ -5470,7 +5470,8 @@ fn draw_tree(
         log(terrain::Axis::Y),
         log(terrain::Axis::Z),
     ];
-    let mut blocks = tree.blocks_in(ground.seed, x, z);
+    let mut blocks = if ground.terrain.is_some() { tree.blocks_in_preview(ground.seed, x, z) }
+        else { tree.blocks_in(ground.seed, x, z) };
     if let Some(terrain) = ground.terrain {
         // Опора считается по реально доступной кроне: склон может вырезать
         // промежуточный лист или ветвь. Полная форма проверяется и за краем
