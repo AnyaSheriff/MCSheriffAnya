@@ -400,10 +400,6 @@ const SET_ENTITY_DATA: i32 = 0x63;
 /// здесь означает, что клиент запишет байт в чужое свойство.
 const SKIN_PARTS_PROPERTY: u8 = 16;
 
-/// Сколько чанков в каждую сторону присылается сразу при входе и после
-/// переноса — чтобы было на чём стоять. Остальное догружается порциями.
-const NEAR_CHUNKS: i32 = 3;
-
 /// Номер свойства «ведущая рука» у игрока — прямо перед частями скина.
 const MAIN_HAND_PROPERTY: u8 = 15;
 
@@ -720,7 +716,16 @@ pub async fn play_session(
     let skin_parts = look.skin_parts;
     // Что осталось от прошлого захода: место, поворот и режим игры. Если
     // игрок здесь впервые, этого нет — он появится в точке появления.
-    let saved = playerdata::load_checked_for_catalog(&shared.playerdata, uuid, shared.catalog()).map_err(io::Error::other)?;
+    let saved = match playerdata::load_checked_for_catalog(&shared.playerdata, uuid, shared.catalog()) {
+        Ok(saved) => saved,
+        Err(error) => {
+            let reason = format!("Вход запрещён: {error}. Сохранение игрока не изменено. Обратитесь к администратору.");
+            let mut out = Outgoing::new(socket);
+            send_disconnect(&mut out, &reason).await?;
+            out.flush().await?;
+            return Ok(false);
+        }
+    };
 
     // Скин узнаётся до входа в мир: он должен быть готов к тому мгновению,
     // когда сервер расскажет о новом игроке остальным.
@@ -1090,26 +1095,10 @@ async fn enter_world(
         // дальности прорисовки. Отправляем квадрат вокруг игрока: он может стоять
         // и не в начале координат — при следующем заходе он появляется там, где
         // вышел.
-        let (center_x, center_z) = player.chunk();
+        let sent = SentChunks::new();
 
-        let mut sent = SentChunks::new();
-
-        // Сперва только ближний квадрат — чтобы было на чём стоять. Остальное
-        // догружается в основном цикле: иначе на большой дальности игрок ждал бы
-        // тысячи чанков, прежде чем войти, а сообщение о его входе остальные
-        // увидели бы только через десяток секунд. У оригинала так же: игрок
-        // появляется сразу, даль дорисовывается потом.
-        send_chunks_around(
-            stream,
-            shared, player.dimension,
-            (center_x, center_z),
-            &mut sent,
-            (NEAR_CHUNKS, player.view),
-            usize::MAX,
-        )
-        .await?;
-
-        log_debug!("Play: отправлено ближних чанков — {}", sent.len());
+        // Весь обзор готовит ограниченный конвейер основного цикла.
+        // Вход не ждёт ни диска, ни генерации, ни расчёта света.
 
         // Чужие игроки появляются в мире только теперь: сущность клиент создаёт
         // лишь после того, как получил запись об игроке в списке, а место в мире —
@@ -2754,149 +2743,6 @@ async fn send_container_slot(
     write_body(stream, body).await
 }
 
-/// Отправляет клиенту чанки вокруг этого места — те, которых у него ещё нет.
-///
-/// Мир ровный и бесконечный: чанк складывается, когда до него дошли, и
-/// с этого мгновения хранится вместе с остальным миром.
-async fn send_chunks_around(
-    stream: &mut Outgoing<'_>,
-    shared: &Shared,
-    dimension: crate::dimension::Dimension,
-    (center_x, center_z): (i32, i32),
-    sent: &mut SentChunks,
-    (radius, view): (i32, i32),
-    limit: usize,
-) -> io::Result<bool> {
-    // Ушедшие из виду чанки клиент выбрасывает сам. Сервер должен об этом
-    // знать, иначе, вернувшись, игрок увидит на их месте пустоту: сервер
-    // считал бы, что они у клиента уже есть.
-
-    let gone: Vec<(i32, i32)> = sent
-        .iter()
-        .filter(|(x, z)| (x - center_x).abs() > view || (z - center_z).abs() > view)
-        .copied()
-        .collect();
-
-    for (chunk_x, chunk_z) in gone {
-        send_unload_chunk(stream, chunk_x, chunk_z).await?;
-        sent.remove(&(chunk_x, chunk_z));
-    }
-
-    // Что показать игроку: сперва ближние чанки, потом дальние — так земля
-    // под ногами появляется сразу, а даль дорисовывается. За раз — не больше
-    // `limit`: остальное дошлёт следующий вызов, а игрок тем временем уже
-    // ходит и видит чат.
-    let radius = radius.min(view);
-    let mut wanted: Vec<(i32, i32)> = Vec::new();
-
-    for chunk_x in (center_x - radius)..=(center_x + radius) {
-        for chunk_z in (center_z - radius)..=(center_z + radius) {
-            if !sent.contains(&(chunk_x, chunk_z)) {
-                wanted.push((chunk_x, chunk_z));
-            }
-        }
-    }
-
-    wanted.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
-
-    let all = wanted.len() <= limit;
-    wanted.truncate(limit);
-
-    for place in &wanted {
-        sent.insert(*place);
-    }
-
-    // Готовим чанки пачками и сразу несколькими руками: складывание куска
-    // мира — работа счётная, и на дальности в тридцать два чанка их тысячи.
-    // Замок мира при этом не держим: такт не должен ждать землю.
-    const AT_ONCE: usize = 16;
-
-    for part in wanted.chunks(AT_ONCE) {
-        // Свет у края чанка зависит от соседей: без них там остался бы шов.
-        // Поэтому складываются и соседи отправляемых чанков — клиенту они
-        // уйдут позже, когда до них дойдёт очередь.
-        let mut needed: Vec<(i32, i32)> = Vec::new();
-
-        for (chunk_x, chunk_z) in part.iter().copied() {
-            for place in (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (chunk_x + dx, chunk_z + dz))) {
-                if !needed.contains(&place) {
-                    needed.push(place);
-                }
-            }
-        }
-
-        let source = {
-            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
-            needed.retain(|(chunk_x, chunk_z)| !world.has_chunk(*chunk_x, *chunk_z));
-            Arc::new(world.source())
-        };
-
-        // Пока чанки складываются и светятся, уже готовое (выгрузка чанков,
-        // центр обзора) не должно ждать в очереди.
-        stream.flush().await?;
-
-        let mut coming = Vec::new();
-
-        for (chunk_x, chunk_z) in needed {
-            let source = Arc::clone(&source);
-
-            coming.push(tokio::task::spawn_blocking(move || {
-                (chunk_x, chunk_z, source.take(chunk_x, chunk_z))
-            }));
-        }
-
-        for waiting in coming {
-            let Ok((chunk_x, chunk_z, ready)) = waiting.await else {
-                continue;
-            };
-
-            shared
-                .world_in(dimension)
-                .lock()
-                .expect("мир захвачен другим потоком")
-                .accept(chunk_x, chunk_z, ready);
-        }
-
-        // Свет — тоже вне захвата мира и сразу несколькими руками: миру
-        // достаются только ссылки на секции, счёт идёт в стороне.
-        let mut lighting = Vec::new();
-
-        for (chunk_x, chunk_z) in part.iter().copied() {
-            let job = shared
-                .world_in(dimension)
-                .lock()
-                .expect("мир захвачен другим потоком")
-                .light_job(chunk_x, chunk_z);
-
-            lighting.push(tokio::task::spawn_blocking(move || job.map(LightJob::finish)));
-        }
-
-        for ((chunk_x, chunk_z), waiting) in part.iter().copied().zip(lighting) {
-            let light = match waiting.await {
-                Ok(Some((light, recounted))) => {
-                    // Пересчитанный собственный свет — обратно в чанки,
-                    // чтобы не считать его заново.
-                    if !recounted.is_empty() {
-                        shared
-                            .world_in(dimension)
-                            .lock()
-                            .expect("мир захвачен другим потоком")
-                            .store_light(recounted);
-                    }
-
-                    light
-                }
-                _ => ChunkLight::open_sky(),
-            };
-
-            send_chunk(stream, shared.world_in(dimension), chunk_x, chunk_z, &light).await?;
-        }
-    }
-
-    Ok(all)
-}
-
 /// Чанки, которые складываются впрок за краем обзора одного игрока: к
 /// тому мгновению, как чанк войдёт в обзор, он уже готов, и отправка не ждёт
 /// генерации. Клиенту эти чанки не шлются. Насколько далеко и сколько за
@@ -2908,11 +2754,14 @@ async fn send_chunks_around(
 struct Prefetch {
     /// Что уже складывается и ещё не пришло.
     pending: std::collections::HashSet<(i32, i32)>,
-    sender: std::sync::mpsc::Sender<(i32, i32, world::ReadyChunk)>,
-    receiver: std::sync::mpsc::Receiver<(i32, i32, world::ReadyChunk)>,
+    sender: std::sync::mpsc::Sender<(i32, i32, Option<world::ReadyChunk>, PreparationTicket, tokio::sync::OwnedSemaphorePermit)>,
+    receiver: std::sync::mpsc::Receiver<(i32, i32, Option<world::ReadyChunk>, PreparationTicket, tokio::sync::OwnedSemaphorePermit)>,
     /// Вокруг какого чанка кольцо уже всё готово: пока игрок там, искать
     /// нечего.
     done_around: Option<(i32, i32, i32)>,
+    demand: Demand,
+    slots: Arc<tokio::sync::Semaphore>,
+    retry: HashMap<(i32, i32), (std::time::Instant, u32)>,
 }
 
 impl Prefetch {
@@ -2924,29 +2773,41 @@ impl Prefetch {
             sender,
             receiver,
             done_around: None,
+            demand: Demand::default(),
+            slots: Arc::new(tokio::sync::Semaphore::new(PREPARATIONS_PER_CONNECTION)),
+            retry: HashMap::new(),
         }
     }
 
     /// Кладёт в мир то, что успело сложиться. Чанк, который тем временем
     /// появился в мире другим путём (его прислали игроку, в нём уже что-то
     /// поменяли), не заменяется.
-    fn collect(&mut self, shared: &Shared, dimension: crate::dimension::Dimension) {
+    fn collect(&mut self, shared: &Shared, dimension: crate::dimension::Dimension) -> Vec<(i32, i32)> {
         let _timing = super::packet::TimingSpan::new("prefetch_collect");
-        let arrived: Vec<_> = self.receiver.try_iter().collect();
-
-        if arrived.is_empty() {
-            return;
-        }
-
+        let started = std::time::Instant::now();
+        let mut accepted = Vec::new();
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
-        for (chunk_x, chunk_z, ready) in arrived {
+        let recovered: Vec<_> = self.retry.keys().copied().filter(|&(x, z)| world.has_chunk(x, z)).collect();
+        for place in recovered { self.retry.remove(&place); accepted.push(place); }
+        // Готовые ответы остаются в ограниченном канале, пока не хватит времени.
+        while started.elapsed() < std::time::Duration::from_millis(4) {
+            let Ok((chunk_x, chunk_z, ready, _ticket, _permit)) = self.receiver.try_recv() else { break; };
             self.pending.remove(&(chunk_x, chunk_z));
 
+            let Some(ready) = ready else { continue; };
+            if !preparation_wanted(&self.demand, (chunk_x, chunk_z)) { continue; }
             if !world.has_chunk(chunk_x, chunk_z) {
-                world.accept(chunk_x, chunk_z, ready);
+                if world.accept_prepared(chunk_x, chunk_z, ready) {
+                    self.retry.remove(&(chunk_x, chunk_z));
+                    accepted.push((chunk_x, chunk_z));
+                } else {
+                    let attempts = self.retry.get(&(chunk_x, chunk_z)).map_or(0, |(_, n)| *n).saturating_add(1);
+                    let delay = std::time::Duration::from_millis(100 * (1u64 << attempts.min(6)));
+                    self.retry.insert((chunk_x, chunk_z), (std::time::Instant::now() + delay, attempts));
+                }
             }
         }
+        accepted
     }
 
     /// Запускает складывание ближайших недостающих чанков кольца от `view`
@@ -2954,6 +2815,7 @@ impl Prefetch {
     fn step(&mut self, shared: &Shared,
     dimension: crate::dimension::Dimension, (center_x, center_z): (i32, i32), view: i32) {
         let (ahead, at_once) = (shared.settings.prefetch_chunks, shared.settings.prefetch_at_once);
+        self.set_demand((center_x, center_z), view + ahead);
 
         if ahead <= 0 || self.done_around == Some((center_x, center_z, view)) || self.pending.len() >= at_once {
             return;
@@ -2994,80 +2856,204 @@ impl Prefetch {
         let mut missing = missing;
         missing.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
 
-        for (chunk_x, chunk_z) in missing.into_iter().take(at_once - self.pending.len()) {
-            let source = Arc::clone(&source);
-            let sender = self.sender.clone();
-
-            self.pending.insert((chunk_x, chunk_z));
-            tokio::task::spawn_blocking(move || {
-                // Игрок мог уйти, и приёмника уже нет — тогда чанк не нужен.
-                let _ = sender.send((chunk_x, chunk_z, source.take(chunk_x, chunk_z)));
-            });
+        self.set_demand((center_x, center_z), reach);
+        for (x, z) in missing.into_iter().take(at_once.min(PREPARATIONS_PER_CONNECTION).saturating_sub(self.pending.len())) {
+            self.schedule(&source, x, z);
         }
     }
+
+    fn set_demand(&mut self, center: (i32, i32), reach: i32) {
+        *self.demand.lock().expect("обзор подготовки") = Some((center, reach));
+        self.retry.retain(|&(x, z), _| (x - center.0).abs() <= reach && (z - center.1).abs() <= reach);
+    }
+
+    fn schedule(&mut self, source: &Arc<world::ChunkSource>, x: i32, z: i32) {
+        let source = source.clone();
+        self.schedule_with(source.preparation_key(x, z), move || source.take(x, z));
+    }
+
+    fn schedule_with(&mut self, key: PreparationKey, prepare: impl FnOnce() -> world::ReadyChunk + Send + 'static) {
+        let (_, x, z) = key;
+        if self.pending.len() >= PREPARATIONS_PER_CONNECTION || self.pending.contains(&(x, z))
+            || self.retry.get(&(x, z)).is_some_and(|(until, _)| *until > std::time::Instant::now()) { return; }
+        let Ok(permit) = self.slots.clone().try_acquire_owned() else { return; };
+        let Some(ticket) = PreparationTicket::acquire(key) else { return; };
+        self.pending.insert((x, z));
+        let (sender, demand) = (self.sender.clone(), self.demand.0.clone());
+        tokio::task::spawn_blocking(move || {
+            // Проверка после ожидания пула, непосредственно перед дорогой работой.
+            let ready = preparation_wanted(&demand, (x, z)).then(prepare);
+            let _ = sender.send((x, z, ready, ticket, permit));
+        });
+    }
+
+}
+
+const PREPARATIONS_PER_CONNECTION: usize = 32;
+const PREPARATIONS_GLOBAL: usize = 64;
+type PreparationKey = (std::path::PathBuf, i32, i32);
+fn preparations() -> &'static Mutex<HashSet<PreparationKey>> {
+    static ACTIVE: std::sync::OnceLock<Mutex<HashSet<PreparationKey>>> = std::sync::OnceLock::new();
+    ACTIVE.get_or_init(Default::default)
+}
+struct PreparationTicket(PreparationKey);
+impl PreparationTicket {
+    fn acquire(key: PreparationKey) -> Option<Self> {
+        let mut active = preparations().lock().expect("очередь подготовки");
+        if active.len() >= PREPARATIONS_GLOBAL || !active.insert(key.clone()) { return None; }
+        Some(Self(key))
+    }
+}
+impl Drop for PreparationTicket {
+    fn drop(&mut self) { preparations().lock().expect("очередь подготовки").remove(&self.0); }
+}
+fn preparation_wanted(demand: &DemandState, (x, z): (i32, i32)) -> bool {
+    demand.lock().expect("обзор подготовки").is_some_and(|((cx, cz), reach)| (x - cx).abs() <= reach && (z - cz).abs() <= reach)
+}
+type DemandState = Mutex<Option<((i32, i32), i32)>>;
+#[derive(Default)]
+struct Demand(Arc<DemandState>);
+impl std::ops::Deref for Demand {
+    type Target = DemandState;
+    fn deref(&self) -> &Self::Target { &self.0 }
+}
+impl Drop for Demand {
+    fn drop(&mut self) { *self.0.lock().expect("обзор подготовки") = None; }
 }
 
 // Подготовка дальней земли не останавливает обработчик пакетов: даже один
 // холодный чанк/свет может считаться дольше такта. В игру попадает только
 // готовый результат; снимок блоков для записи по-прежнему берётся перед send.
-type LitChunk = (ChunkLight, Vec<world::light::Recounted>);
-type PendingChunkLight = ((i32, i32), tokio::task::JoinHandle<LitChunk>);
+struct LitChunk {
+    prepared: world::light::PreparedLight,
+    packet: Option<ChunkPayload>,
+    contents: Option<ChunkContents>,
+}
+impl From<world::light::PreparedLight> for LitChunk {
+    fn from(prepared: world::light::PreparedLight) -> Self { Self { prepared, packet: None, contents: None } }
+}
+impl std::ops::Deref for LitChunk {
+    type Target = world::light::PreparedLight;
+    fn deref(&self) -> &Self::Target { &self.prepared }
+}
+impl std::ops::DerefMut for LitChunk {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.prepared }
+}
+type PendingChunkLight = ((i32, i32), tokio::task::JoinHandle<io::Result<Option<LitChunk>>>);
+
+enum ChunkPayload {
+    Internal(Vec<u8>),
+    Wire(super::packet::PreparedChunkPacket),
+}
+
+struct ChunkBuild {
+    snapshot: ChunkSnapshot,
+    registry: Arc<configuration::ChunkBiomes>,
+    encoder: Option<super::packet::ChunkEncoder>,
+}
+
+fn start_light(job: LightJob, demand: Arc<DemandState>, build: Option<ChunkBuild>) -> Option<PendingChunkLight> {
+    static SLOTS: std::sync::OnceLock<Arc<tokio::sync::Semaphore>> = std::sync::OnceLock::new();
+    let permit = SLOTS.get_or_init(|| Arc::new(tokio::sync::Semaphore::new(32))).clone().try_acquire_owned().ok()?;
+    let place = job.chunks[4].as_ref()?.place;
+    Some((place, tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        if !preparation_wanted(&demand, place) { return Ok(None); }
+        let prepared = job.prepare();
+        let contents = build.as_ref().map(|build| (build.snapshot.entities.clone(), build.snapshot.shelves.clone()));
+        let packet = build.map(|build| {
+            let body = encode_chunk(build.snapshot, place.0, place.1, &prepared.light, &build.registry)?;
+            match build.encoder {
+                Some(encoder) => encoder.encode(&body, mcsa_protocol::chunk::Context {
+                    min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: build.registry.count as u32,
+                }).map(ChunkPayload::Wire),
+                None => Ok(ChunkPayload::Internal(body)),
+            }
+        }).transpose()?;
+        Ok(Some(LitChunk { prepared, packet, contents }))
+    })))
+}
 
 struct ProgressiveChunks {
     dimension: crate::dimension::Dimension,
     loads: Prefetch,
-    light: Option<PendingChunkLight>,
+    light: Vec<PendingChunkLight>,
 }
 
 impl ProgressiveChunks {
     fn new(dimension: crate::dimension::Dimension) -> Self {
-        Self { dimension, loads: Prefetch::new(), light: None }
+        Self { dimension, loads: Prefetch::new(), light: Vec::new() }
     }
 
     async fn step(&mut self, stream: &mut Outgoing<'_>, shared: &Shared,
         dimension: crate::dimension::Dimension, center: (i32, i32), sent: &mut SentChunks, view: i32,
     ) -> io::Result<bool> {
         let _timing = super::packet::TimingSpan::new("progressive_chunks");
-        if self.dimension != dimension { *self = Self::new(dimension); }
-        self.loads.collect(shared, dimension);
+        if self.dimension != dimension {
+            let slots = self.loads.slots.clone();
+            *self = Self::new(dimension);
+            self.loads.slots = slots;
+        }
+        self.loads.set_demand(center, view + 1);
+        let accepted = self.loads.collect(shared, dimension);
+        // Появившийся после ошибки сосед меняет свет уже отправленного края.
+        for (x, z) in accepted {
+            sent.retain(|&(sx, sz)| (sx - x).abs() > 1 || (sz - z).abs() > 1);
+        }
         let inside = |(x, z): (i32, i32)| (x - center.0).abs() <= view && (z - center.1).abs() <= view;
         let gone: Vec<_> = sent.iter().copied().filter(|place| !inside(*place)).collect();
         for (x, z) in gone { send_unload_chunk(stream, x, z).await?; sent.remove(&(x, z)); }
-
-        if self.light.as_ref().is_some_and(|(_, job)| !job.is_finished()) { return Ok(false); }
-        if let Some((place, job)) = self.light.take() {
-            let (light, recounted) = job.await.map_err(io::Error::other)?;
-            shared.world_in(dimension).lock().expect("мир захвачен другим потоком").store_light(recounted);
-            if inside(place) && !sent.contains(&place) {
-                send_chunk(stream, shared.world_in(dimension), place.0, place.1, &light).await?;
+        let started = std::time::Instant::now();
+        let mut bytes = 0;
+        let mut index = 0;
+        // Ответы игры уже сброшены. Пачка ограничена временем, числом и байтами.
+        while index < self.light.len() && started.elapsed() < std::time::Duration::from_millis(8) && bytes < 1024 * 1024 {
+            if !self.light[index].1.is_finished() { index += 1; continue; }
+            let (place, job) = self.light.remove(index);
+            let Some(mut prepared) = job.await.map_err(io::Error::other)?? else { continue; };
+            if !inside(place) || sent.contains(&place) { continue; }
+            {
+                let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+                if !world.light_is_current(&prepared) { continue; }
+                world.store_light(std::mem::take(&mut prepared.recounted));
+            }
+            if let Some(size) = send_prepared_chunk(stream, shared.world_in(dimension), place.0, place.1, &prepared).await? {
+                bytes += size;
                 sent.insert(place);
             }
         }
-
-        let wanted = ((center.0 - view)..=(center.0 + view)).flat_map(|x|
+        let mut wanted: Vec<_> = ((center.0 - view)..=(center.0 + view)).flat_map(|x|
             ((center.1 - view)..=(center.1 + view)).map(move |z| (x, z)))
-            .filter(|place| !sent.contains(place))
-            .min_by_key(|(x, z)| (x - center.0).pow(2) + (z - center.1).pow(2));
-        let Some((x, z)) = wanted else { return Ok(true); };
-        let (missing, source) = {
+            .filter(|place| !sent.contains(place) && !self.light.iter().any(|(at, _)| at == place)).collect();
+        wanted.sort_by_key(|(x, z)| (x - center.0).pow(2) + (z - center.1).pow(2));
+        let registry = if stream.legacy_view()?.is_none() { Some(stream.chunk_biomes()?) } else { None };
+        {
             let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-            let missing: Vec<_> = (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (x + dx, z + dz)))
-                .filter(|(x, z)| !world.has_chunk(*x, *z)).collect();
-            (missing, Arc::new(world.source()))
-        };
-        if !missing.is_empty() {
-            for (x, z) in missing {
-                if !self.loads.pending.insert((x, z)) { continue; }
-                let source = source.clone();
-                let sender = self.loads.sender.clone();
-                tokio::task::spawn_blocking(move || { let _ = sender.send((x, z, source.take(x, z))); });
+            let source = Arc::new(world.source());
+            let retries: Vec<_> = self.loads.retry.keys().copied().collect();
+            for (x, z) in retries {
+                if !world.has_chunk(x, z) { self.loads.schedule(&source, x, z); }
             }
-            return Ok(false);
+            let planning = std::time::Instant::now();
+            for (x, z) in wanted.into_iter().take(256) {
+                if planning.elapsed() >= std::time::Duration::from_millis(2) { break; }
+                if self.light.len() >= 16 { break; }
+                let mut waiting = false;
+                for (nx, nz) in (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (x + dx, z + dz))) {
+                    if !world.has_chunk(nx, nz) {
+                        self.loads.schedule(&source, nx, nz);
+                        // Недоступный сосед не мешает отправить центральный чанк.
+                        if !self.loads.retry.contains_key(&(nx, nz)) { waiting = true; }
+                    }
+                }
+                if waiting { continue; }
+                if let Some(job) = world.light_job(x, z) {
+                    let build = registry.as_ref().map(|registry| ChunkBuild { snapshot: chunk_snapshot(&world, x, z), registry: registry.clone(), encoder: stream.chunk_encoder() });
+                    if let Some(pending) = start_light(job, self.loads.demand.0.clone(), build) { self.light.push(pending); }
+                }
+            }
         }
-        let job = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").light_job(x, z)
-            .ok_or_else(|| io::Error::other("нет подготовленного чанка"))?;
-        self.light = Some(((x, z), tokio::task::spawn_blocking(move || job.finish())));
-        Ok(false)
+        Ok(sent.len() == ((view * 2 + 1) as usize).pow(2))
     }
 }
 
@@ -3078,6 +3064,7 @@ struct LightUpdates {
     dimension: Option<crate::dimension::Dimension>,
     pending: std::collections::BTreeSet<(i32, i32)>,
     running: Vec<PendingChunkLight>,
+    demand: Demand,
 }
 
 impl LightUpdates {
@@ -3087,22 +3074,29 @@ impl LightUpdates {
         let _timing = super::packet::TimingSpan::new("light_updates");
         if self.dimension != Some(dimension) {
             self.running.clear();
+            *self.demand.lock().expect("обзор света") = None;
+            self.demand = Demand::default();
             // До первого вызова уже могли прийти правки текущего измерения.
             if self.dimension.is_some() { self.pending.clear(); }
             self.dimension = Some(dimension);
         }
         let inside = |(x, z): (i32, i32)| (x - center.0).abs() <= view && (z - center.1).abs() <= view;
+        *self.demand.lock().expect("обзор света") = Some((center, view));
         self.pending.retain(|place| inside(*place));
         let mut index = 0;
         while index < self.running.len() {
             if !self.running[index].1.is_finished() { index += 1; continue; }
             let ((x, z), job) = self.running.remove(index);
-            let (light, recounted) = job.await.map_err(io::Error::other)?;
-            shared.world_in(dimension).lock().expect("мир захвачен другим потоком").store_light(recounted);
+            let Some(mut prepared) = job.await.map_err(io::Error::other)?? else { continue; };
+            {
+                let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+                if !world.light_is_current(&prepared) { self.pending.insert((x, z)); continue; }
+                world.store_light(std::mem::take(&mut prepared.recounted));
+            }
             if inside((x, z)) {
                 if stream.legacy_view()?.is_some() {
-                    send_chunk(stream, shared.world_in(dimension), x, z, &light).await?;
-                } else { send_light_update(stream, x, z, &light).await?; }
+                    if send_prepared_chunk(stream, shared.world_in(dimension), x, z, &prepared).await?.is_none() { self.pending.insert((x, z)); }
+                } else { send_light_update(stream, x, z, &prepared.light).await?; }
             }
         }
         while self.running.len() < 4 {
@@ -3111,7 +3105,8 @@ impl LightUpdates {
             self.pending.remove(&(x, z));
             let job = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").light_job(x, z);
             if let Some(job) = job {
-                self.running.push(((x, z), tokio::task::spawn_blocking(move || job.finish())));
+                if let Some(pending) = start_light(job, self.demand.0.clone(), None) { self.running.push(pending); }
+                else { self.pending.insert((x, z)); break; }
             }
         }
         Ok(())
@@ -3996,15 +3991,27 @@ fn suggestions(payload: &[u8], shared: &Shared, who: &[u8; 16]) -> Option<Sugges
     suggestions_for(payload, shared, who, 777)
 }
 
-fn suggestions_for(payload: &[u8], shared: &Shared, who: &[u8; 16], protocol: i32) -> Option<Suggestions> {
+fn suggestion_input(payload: &[u8]) -> Option<(i32, &str)> {
+    if payload.len() > command_completion::MAX_INPUT_UTF16 * 3 + 10 { return None; }
     let mut cursor = Cursor::new(payload);
-
     let id = cursor.varint()?;
-    let text = cursor.string()?;
+    let length = usize::try_from(cursor.varint()?).ok()?;
+    let text = std::str::from_utf8(cursor.bytes(length)?).ok()?;
+    (text.encode_utf16().take(command_completion::MAX_INPUT_UTF16 + 1).count() <= command_completion::MAX_INPUT_UTF16)
+        .then_some((id, text))
+}
+
+#[cfg(test)]
+fn suggestions_for(payload: &[u8], shared: &Shared, who: &[u8; 16], protocol: i32) -> Option<Suggestions> {
+    let (id, text) = suggestion_input(payload)?;
+    suggestions_for_input(id, text, shared, who, protocol)
+}
+
+fn suggestions_for_input(id: i32, text: &str, shared: &Shared, who: &[u8; 16], protocol: i32) -> Option<Suggestions> {
     let level = shared.ops.lock().expect("права").level_of(who);
     if protocol >= 775 && !text.trim_start_matches('/').starts_with("tnt ") {
         let tree = command_tree::for_level(level, protocol);
-        return Some(command_completion::complete(&tree, id, &text, shared, who));
+        return Some(command_completion::complete(&tree, id, text, shared, who));
     }
 
     // Дописывается последнее слово: от него и считаем место замены.
@@ -4013,13 +4020,13 @@ fn suggestions_for(payload: &[u8], shared: &Shared, who: &[u8; 16], protocol: i3
     // Место и длина считаются в знаках, а не в байтах: иначе на русских
     // именах клиент заменял бы не тот кусок строки.
     let length = text_length(typed);
-    let start = text_length(&text) - length;
+    let start = text_length(text) - length;
 
     Some(Suggestions {
         id,
         start,
         length,
-        matches: hints_for(&text, typed, shared, who),
+        matches: hints_for(text, typed, shared, who),
         tooltips: Vec::new(),
     })
 }
@@ -5821,18 +5828,120 @@ async fn send_pending_chat(
 
 /// Отправляет чанк с указанными координатами — из текущего состояния мира.
 /// Свет посчитан заранее, вне захвата мира.
-async fn send_chunk(
+async fn send_chunk(stream: &mut Outgoing<'_>, world: &Mutex<World>, x: i32, z: i32, light: &ChunkLight) -> io::Result<()> {
+    send_chunk_inner(stream, world, x, z, light, None).await.map(|_| ())
+}
+
+async fn send_prepared_chunk(stream: &mut Outgoing<'_>, world: &Mutex<World>, x: i32, z: i32, prepared: &LitChunk) -> io::Result<Option<usize>> {
+    if let Some(body) = &prepared.packet {
+        {
+            let world = world.lock().expect("мир захвачен другим потоком");
+            if !world.light_is_current(prepared) { return Ok(None); }
+            if let Some(contents) = &prepared.contents {
+                let snapshot = chunk_snapshot(&world, x, z);
+                if snapshot.entities != contents.0 || snapshot.shelves != contents.1 { return Ok(None); }
+            }
+        }
+        let size = match body {
+            ChunkPayload::Wire(packet) => { stream.send_prepared_chunk(packet).await?; packet.len() }
+            ChunkPayload::Internal(body) => {
+                let registry = stream.chunk_biomes()?;
+                stream.send_chunk(body, mcsa_protocol::chunk::Context {
+                    min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: registry.count as u32,
+                }).await?;
+                body.len()
+            }
+        };
+        return Ok(Some(size));
+    }
+    send_chunk_inner(stream, world, x, z, &prepared.light, Some(prepared)).await
+}
+
+async fn send_chunk_inner(
     stream: &mut Outgoing<'_>,
     world: &Mutex<World>,
     chunk_x: i32,
     chunk_z: i32,
     light: &ChunkLight,
-) -> io::Result<()> {
+    prepared: Option<&LitChunk>,
+) -> io::Result<Option<usize>> {
     if let Some((window, sky)) = stream.legacy_view()? {
-        let chunk = legacy_chunks::snapshot(world, chunk_x, chunk_z, light, window, sky)?;
-        return stream.send_legacy_chunk(&chunk).await;
+        let Some(chunk) = legacy_chunks::snapshot(world, chunk_x, chunk_z, light, prepared, window, sky)? else { return Ok(None); };
+        stream.send_legacy_chunk(&chunk).await?;
+        return Ok(Some(128 * 1024));
     }
     let biome_registry = stream.chunk_biomes()?;
+    let snapshot = {
+        let world = world.lock().expect("мир захвачен другим потоком");
+        if prepared.is_some_and(|light| !world.light_is_current(light)) { return Ok(None); }
+        chunk_snapshot(&world, chunk_x, chunk_z)
+    };
+    let body = encode_chunk(snapshot, chunk_x, chunk_z, light, &biome_registry)?;
+    stream.send_chunk(&body, mcsa_protocol::chunk::Context {
+        min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: biome_registry.count as u32,
+    }).await?;
+    Ok(Some(body.len()))
+}
+
+// Секции общие с LightJob: блоки, NBT и свет относятся к одному снимку.
+type ChunkBlocks = (Vec<Option<Arc<[u16]>>>, Vec<u16>);
+type ChunkContents = (Vec<(i32, i32, i32, containers::Kind)>, HashMap<(i32, i32, i32), Vec<u8>>);
+struct ChunkSnapshot {
+    taken: Option<ChunkBlocks>,
+    entities: Vec<(i32, i32, i32, containers::Kind)>,
+    shelves: HashMap<(i32, i32, i32), Vec<u8>>,
+}
+
+fn chunk_snapshot(world: &World, chunk_x: i32, chunk_z: i32) -> ChunkSnapshot {
+    let taken = world.chunk_packet(chunk_x, chunk_z, |sections, biomes| (sections.to_vec(), biomes.to_vec()));
+    let entities = world.chunk_containers(chunk_x, chunk_z);
+
+    // Полки показывают свои предметы всем — их данные идут и в пакете
+    // чанка, иначе вошедший увидит пустые полки. [проверить] так ли у
+    // оригинала.
+    let mut shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
+        .iter()
+        .filter(|(_, _, _, kind)| *kind == containers::Kind::Shelf)
+        .filter_map(|&(x, y, z, _)| {
+            let (wx, wz) = (chunk_x * 16 + x, chunk_z * 16 + z);
+
+            world.container(wx, y, wz).map(|c| ((x, y, z), redstone::shelf::nbt(&c.slots)))
+        })
+        .collect();
+
+    for &(x, y, z, kind) in &entities {
+        let data = world.container(chunk_x * 16 + x, y, chunk_z * 16 + z);
+        if let Some(c) = data {
+            match kind {
+                containers::Kind::Campfire => { shelves.insert((x, y, z), crate::campfire::nbt(c)); }
+                containers::Kind::Beacon => { shelves.insert((x, y, z), crate::beacon::nbt(c)); }
+                _ => {}
+            }
+        }
+    }
+
+    // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
+    for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
+        shelves.insert((x, y, z), nbt);
+    }
+
+    // Таблички несут текст.
+    for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
+        shelves.insert((x, y, z), nbt);
+    }
+
+    for (at, nbt) in world.chunk_pots(chunk_x, chunk_z) { shelves.insert(at, nbt); }
+
+    // Испытательные спавнеры — моба, хранилища — подошедших (trial.rs).
+    for ((x, y, z), nbt) in world.chunk_trials(chunk_x, chunk_z) {
+        shelves.insert((x, y, z), nbt);
+    }
+
+    ChunkSnapshot { taken, entities, shelves }
+}
+
+fn encode_chunk(snapshot: ChunkSnapshot, chunk_x: i32, chunk_z: i32, light: &ChunkLight, biome_registry: &configuration::ChunkBiomes) -> io::Result<Vec<u8>> {
+    let ChunkSnapshot { taken, entities, shelves } = snapshot;
     let mut body = encode_varint(CHUNK_DATA);
 
     push_i32(&mut body, chunk_x);
@@ -5841,60 +5950,6 @@ async fn send_chunk(
     // Карты высот. Клиент умеет обходиться без них: недостающие он заполняет
     // минимальной высотой.
     body.extend_from_slice(&encode_varint(0));
-
-    // Секции чанка — одним блоком байт с длиной впереди. Под захватом мира
-    // берутся только ссылки на секции (они общие с миром) и биомы, а
-    // складываются байты уже без него: складывание палитр — самое долгое
-    // в пакете, и такт всё это время ждал бы мира. Хранилища — тем же
-    // захватом.
-    let (taken, entities, shelves) = {
-        let world = world.lock().expect("мир захвачен другим потоком");
-        let taken = world.chunk_packet(chunk_x, chunk_z, |sections, biomes| (sections.to_vec(), biomes.to_vec()));
-        let entities = world.chunk_containers(chunk_x, chunk_z);
-
-        // Полки показывают свои предметы всем — их данные идут и в пакете
-        // чанка, иначе вошедший увидит пустые полки. [проверить] так ли у
-        // оригинала.
-        let mut shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
-            .iter()
-            .filter(|(_, _, _, kind)| *kind == containers::Kind::Shelf)
-            .filter_map(|&(x, y, z, _)| {
-                let (wx, wz) = (chunk_x * 16 + x, chunk_z * 16 + z);
-
-                world.container(wx, y, wz).map(|c| ((x, y, z), redstone::shelf::nbt(&c.slots)))
-            })
-            .collect();
-
-        for &(x, y, z, kind) in &entities {
-            let data = world.container(chunk_x * 16 + x, y, chunk_z * 16 + z);
-            if let Some(c) = data {
-                match kind {
-                    containers::Kind::Campfire => { shelves.insert((x, y, z), crate::campfire::nbt(c)); }
-                    containers::Kind::Beacon => { shelves.insert((x, y, z), crate::beacon::nbt(c)); }
-                    _ => {}
-                }
-            }
-        }
-
-        // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
-        for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
-            shelves.insert((x, y, z), nbt);
-        }
-
-        // Таблички несут текст.
-        for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
-            shelves.insert((x, y, z), nbt);
-        }
-
-        for (at, nbt) in world.chunk_pots(chunk_x, chunk_z) { shelves.insert(at, nbt); }
-
-        // Испытательные спавнеры — моба, хранилища — подошедших (trial.rs).
-        for ((x, y, z), nbt) in world.chunk_trials(chunk_x, chunk_z) {
-            shelves.insert((x, y, z), nbt);
-        }
-
-        (taken, entities, shelves)
-    };
 
     let taken = taken.map(|(sections, biomes)| {
         let mapped = biomes.into_iter().map(|id| biome_registry.map(id)).collect::<io::Result<Vec<_>>>()?;
@@ -5906,7 +5961,7 @@ async fn send_chunk(
         // У каждой секции свои 64 клетки биома: пещерные биомы лежат
         // только в толще.
         for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
-            push_section(&mut out, section.as_deref(), Some(biomes), &biome_registry);
+            push_section(&mut out, section.as_deref(), Some(biomes), biome_registry);
         }
 
         // Самая высокая секция, где есть хоть один блок: свет выше неё
@@ -5948,7 +6003,7 @@ async fn send_chunk(
             let mut empty = Vec::new();
 
             for _ in 0..world::SECTIONS {
-                push_section(&mut empty, None, None, &biome_registry);
+                push_section(&mut empty, None, None, biome_registry);
             }
 
             body.extend_from_slice(&encode_varint(empty.len() as i32));
@@ -5982,9 +6037,7 @@ async fn send_chunk(
 
     push_light(&mut body, top, light);
 
-    stream.send_chunk(&body, mcsa_protocol::chunk::Context {
-        min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: biome_registry.count as u32,
-    }).await
+    Ok(body)
 }
 
 /// Добавляет одну секцию чанка.
@@ -6372,12 +6425,12 @@ async fn read_and_log_play_packets(
     let mut standing_in = player.chunk();
     let mut seen = entered.seen;
 
-    // Весь ли обзор уже прислан. При входе прислан только ближний квадрат —
-    // даль догружается здесь, порциями.
+    // Готов ли обзор: пока конвейер занят им, загрузка впрок не запускается.
     let mut all_chunks_sent = false;
     let mut last_view = player.view;
     let mut prefetch = Prefetch::new();
     let mut chunks = ProgressiveChunks::new(player.dimension);
+    prefetch.slots = chunks.loads.slots.clone();
 
     // Круг цикла начинается либо с пакета клиента, либо с конца такта: всё,
     // что случилось в мире за такт, должно уйти клиенту сразу, а не тогда,
@@ -6396,6 +6449,7 @@ async fn read_and_log_play_packets(
         if control.reason().is_some() { return Ok(()); }
         stream.deadline(player.keep_alive.deadline());
         let light_center = player.chunk();
+        stream.flush().await?;
         player.light_updates.step(stream, shared, player.dimension, light_center, player.view).await?;
         stream.flush().await?;
 
@@ -6478,6 +6532,7 @@ async fn read_and_log_play_packets(
         }
 
         // Весь обзор прислан — складываем впрок то, что за его краем.
+        prefetch.set_demand(chunk, player.view + shared.settings.prefetch_chunks);
         prefetch.collect(shared, player.dimension);
 
         if all_chunks_sent {
@@ -6816,6 +6871,7 @@ async fn read_and_log_play_packets(
                     }
                     sent_chunks.clear();
                     prefetch = Prefetch::new();
+                    prefetch.slots = chunks.loads.slots.clone();
 
                     // Как у оригинала, всё о самом игроке уходит сразу, до чанков.
                     // (После перехода без смерти место и «жди чанки» ушли выше:
@@ -6837,16 +6893,6 @@ async fn read_and_log_play_packets(
                     let chunk = player.chunk();
                     standing_in = chunk;
                     send_center_chunk(stream, chunk).await?;
-                    send_chunks_around(
-                        stream,
-                        shared,
-                        player.dimension,
-                        chunk,
-                        &mut sent_chunks,
-                        (NEAR_CHUNKS, player.view),
-                        usize::MAX,
-                    )
-                    .await?;
                     all_chunks_sent = false;
 
                     send_container_content(stream, player, shared.catalog()).await?;
@@ -6907,15 +6953,6 @@ async fn read_and_log_play_packets(
                     send_center_chunk(stream, chunk).await?;
 
                     // Под ногами — сразу, даль — порциями в цикле.
-                    send_chunks_around(
-                        stream,
-                        shared, player.dimension,
-                        chunk,
-                        &mut sent_chunks,
-                        (NEAR_CHUNKS, player.view),
-                        usize::MAX,
-                    )
-                    .await?;
                     all_chunks_sent = false;
 
                     log_debug!(
@@ -7142,14 +7179,11 @@ async fn read_and_log_play_packets(
                 if lagged {
                     log_info!("{} отстал от событий мира — чанки присылаются заново", player.name);
                     sent_chunks.clear();
-                    all_chunks_sent = false;
                 }
 
                 // Ответы этого такта уходят до подготовки дальней земли.
                 stream.flush().await?;
-                if !all_chunks_sent {
-                    all_chunks_sent = chunks.step(stream, shared, player.dimension, player.chunk(), &mut sent_chunks, player.view).await?;
-                }
+                all_chunks_sent = chunks.step(stream, shared, player.dimension, player.chunk(), &mut sent_chunks, player.view).await?;
             }
             Some(Err(_)) => {}
             // Читатель закончил: клиент закрыл соединение.
@@ -8132,7 +8166,13 @@ fn handle_client_packet_inner(
             }
         }
         TAB_COMPLETE_REQUEST => {
-            if let Some(answer) = suggestions_for(payload, shared, &player.uuid, player.net.command_protocol) {
+            let Some((id, text)) = suggestion_input(payload) else {
+                shared.players.lock().expect("список игроков").order(&player.uuid,
+                    Order::Kick { reason: "Запрос подсказок повреждён или длиннее 32500 символов UTF-16".into() });
+                return reaction;
+            };
+            if !player.net.completion_budget.take(payload.len()) { return reaction; }
+            if let Some(answer) = suggestions_for_input(id, text, shared, &player.uuid, player.net.command_protocol) {
                 reaction.suggestions = Some(answer);
             }
         }
@@ -11820,7 +11860,7 @@ impl PlayerState {
         // Игрок, сохранённый ниже дна мира, вернулся бы в пустоту и падал
         // вечно. Такое бывает после того, как мир поменялся, — ставим его
         // в точку появления.
-        let saved = saved.filter(|data| {
+        let saved = saved.map(|mut data| {
             let in_the_void = data.y < world::MIN_Y as f64;
 
             if in_the_void {
@@ -11832,7 +11872,8 @@ impl PlayerState {
                 );
             }
 
-            !in_the_void
+            if in_the_void { (data.x, data.y, data.z) = spawn; }
+            data
         });
 
         let (x, y, z, yaw, pitch, game_mode) = match &saved {

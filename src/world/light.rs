@@ -433,6 +433,7 @@ fn spread(light: &mut [u8], props: &[u16], queue: &mut Vec<u32>, layers: usize, 
 }
 
 /// Чанк для сшивки света: его блоки и собственный свет.
+#[derive(Clone)]
 pub struct LightInput {
     /// Какой чанк.
     pub place: (i32, i32),
@@ -677,7 +678,22 @@ impl Seam<'_> {
     }
 }
 
+/// Результат вместе со всеми входами, включая использованный готовый свет.
+pub struct PreparedLight {
+    pub light: ChunkLight,
+    pub recounted: Vec<Recounted>,
+    pub inputs: [Option<LightInput>; 9],
+    pub center: (i32, i32),
+}
+
 impl LightJob {
+    pub fn prepare(self) -> PreparedLight {
+        let inputs = self.chunks.clone();
+        let center = inputs[CENTER].as_ref().expect("центральный чанк").place;
+        let (light, recounted) = self.finish();
+        PreparedLight { light, recounted, inputs, center }
+    }
+
     /// Свет чанка с учётом соседей и заново посчитанный собственный свет
     /// тех, у кого он устарел.
     pub fn finish(self) -> (ChunkLight, Vec<Recounted>) {

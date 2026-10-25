@@ -36,13 +36,38 @@ struct Context<'a> {
     resources: &'static Resources,
 }
 
+pub(super) const MAX_INPUT_UTF16: usize = 32_500;
+
+pub(super) struct CompletionBudget {
+    since: std::time::Instant,
+    tokens: usize,
+}
+impl Default for CompletionBudget {
+    fn default() -> Self { Self { since: std::time::Instant::now(), tokens: 64 } }
+}
+impl CompletionBudget {
+    pub fn take(&mut self, bytes: usize) -> bool {
+        let now = std::time::Instant::now();
+        let refill = (now.duration_since(self.since).as_millis() / 25) as usize;
+        if refill > 0 {
+            self.tokens = self.tokens.saturating_add(refill).min(64);
+            self.since = now;
+        }
+        let cost = 4 + bytes.div_ceil(2048);
+        if cost > self.tokens { return false; }
+        self.tokens -= cost;
+        true
+    }
+}
+
 pub(super) fn complete(tree: &Tree, id: i32, text: &str, shared: &Shared, who: &[u8; 16]) -> Suggestions {
     let level = shared.ops.lock().expect("права").level_of(who);
     let context = Context { shared, who, level, resources: resources(tree.protocol) };
     let start = usize::from(text.starts_with('/'));
     let line = &text[start..];
+    let lower = line.to_lowercase();
     let mut found = if !line.contains(' ') {
-        super::command_tree::IMPLEMENTED.iter().filter(|name| name.starts_with(&line.to_lowercase()))
+        super::command_tree::IMPLEMENTED.iter().filter(|name| name.starts_with(&lower))
             .map(|name| Match { start, text: (*name).into(), tooltip: None }).collect()
     } else {
         walk(tree, tree.root, start, text, &context, "", 0).1
@@ -58,7 +83,7 @@ pub(super) fn complete(tree: &Tree, id: i32, text: &str, shared: &Shared, who: &
     for hint in &mut found {
         if hint.start > start { hint.text = format!("{}{}", &text[start..hint.start], hint.text); }
     }
-    found.sort_by(|a, b| a.text.to_lowercase().cmp(&b.text.to_lowercase()).then_with(|| a.text.cmp(&b.text)));
+    found.sort_by_cached_key(|hint| (hint.text.to_lowercase(), hint.text.clone()));
     found.dedup_by(|a, b| a.text == b.text);
     found.truncate(1000);
     Suggestions { id, start: text_length(&text[..start]), length: text_length(&text[start..]),
@@ -75,6 +100,7 @@ fn walk(tree: &Tree, index: usize, offset: usize, text: &str, context: &Context<
         let node = &tree.nodes[child];
         node.flags & 3 == 1 && rest.strip_prefix(&node.name).is_some_and(|tail| tail.is_empty() || tail.starts_with(' '))
     });
+    let lower_rest = rest.to_lowercase();
     let children = exact_literal.map_or_else(|| parent.children.clone(), |child| vec![child]);
     let mut local = Vec::new();
     let mut best: Option<(usize, Vec<Match>)> = None;
@@ -90,7 +116,7 @@ fn walk(tree: &Tree, index: usize, offset: usize, text: &str, context: &Context<
             // сначала разбирает destination, а затем необязательные targets.
             if best.as_ref().is_none_or(|previous| candidate.0 > previous.0) { best = Some(candidate); }
         } else if node.flags & 3 == 1 {
-            if node.name.to_lowercase().starts_with(&rest.to_lowercase()) {
+            if node.name.starts_with(&lower_rest) {
                 local.push(Match { start: offset, text: node.name.clone(), tooltip: None });
             }
         } else {
@@ -150,22 +176,22 @@ fn read_argument(node: &Node, rest: &str, context: &Context<'_>) -> Option<usize
 }
 
 fn matches_resource(value: &str, typed: &str) -> bool {
-    let typed = typed.to_lowercase();
     if typed.is_empty() { return true; }
     if value.starts_with(['!', '#']) {
         let prefix = value.chars().take_while(|ch| *ch == '!' || *ch == '#').collect::<String>();
-        if !typed.starts_with(&prefix) { return value.starts_with(&typed); }
+        if !typed.starts_with(&prefix) { return value.starts_with(typed); }
         return matches_resource(&value[prefix.len()..], &typed[prefix.len()..]);
     }
     if typed.starts_with(['!', '#']) { return false; }
-    if typed.contains(':') { return value.starts_with(&typed); }
-    value.starts_with(&typed) || value.strip_prefix("minecraft:").unwrap_or(value).split('_').any(|part| part.starts_with(&typed))
+    if typed.contains(':') { return value.starts_with(typed); }
+    value.starts_with(typed) || value.strip_prefix("minecraft:").unwrap_or(value).split('_').any(|part| part.starts_with(typed))
 }
 
 fn entries(context: &Context<'_>, key: &str, offset: usize, typed: &str, out: &mut Vec<Match>) {
     if let Some(values) = context.resources.get(key) {
+        let lower = typed.to_lowercase();
         for entry in values {
-            if matches_resource(&entry.text, typed) {
+            if matches_resource(&entry.text, &lower) {
                 out.push(Match { start: offset, text: entry.text.clone(), tooltip: entry.tooltip.as_deref().map(super::command_tree::bytes) });
             }
         }
@@ -215,8 +241,9 @@ fn suggest(node: &Node, offset: usize, rest: &str, context: &Context<'_>, comman
                 if command == "op" { names.retain(|name| !operators.iter().any(|op| op.eq_ignore_ascii_case(name))); }
                 else { names = operators.into_iter().map(str::to_owned).collect(); }
             } else if command == "pardon" { names = crate::commands_admin::banned_names(); }
+            let lower = rest.to_lowercase();
             for name in names {
-                if name.to_lowercase().starts_with(&rest.to_lowercase()) {
+                if name.to_lowercase().starts_with(&lower) {
                     out.push(Match { start: offset, text: name, tooltip: None });
                 }
             }
@@ -429,5 +456,24 @@ mod fixture_tests {
     #[test]
     fn native775_op4_replies_diff_against_official_fixture() {
         compare(include_str!("../../../tools/protocol-bridge/testdata/commands-777/native-775/official.json"), 775, "op4");
+    }
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+
+    #[test]
+    fn completion_budget_bounds_bursts_and_large_payload_work_per_connection() {
+        let mut budget = CompletionBudget::default();
+        for _ in 0..16 { assert!(budget.take(0)); }
+        assert!(!budget.take(0));
+        let mut another = CompletionBudget::default();
+        assert!(another.take(MAX_INPUT_UTF16 * 3));
+        assert!(!another.take(MAX_INPUT_UTF16 * 3));
+        assert!(!another.take(2_000_000));
+        another.since -= std::time::Duration::from_secs(10);
+        assert!(another.take(MAX_INPUT_UTF16 * 3));
+        assert!(!another.take(MAX_INPUT_UTF16 * 3));
     }
 }

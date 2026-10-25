@@ -213,6 +213,7 @@ pub(super) struct Net {
     /// Протокол дерева команд и последний действительно отправленный допуск.
     pub command_protocol: i32,
     pub command_access: Option<(i32, bool)>,
+    pub completion_budget: super::command_completion::CompletionBudget,
     pub hits: Vec<Pending>,
     /// Урон, что сейчас применяется, уже разослан остальным (см. `Pending::announced`).
     pub announced: bool,
@@ -359,6 +360,7 @@ impl Net {
         Self {
             command_protocol: 777,
             command_access: None,
+            completion_budget: Default::default(),
             hits: Vec::new(),
             announced: false,
             announced_health: None,

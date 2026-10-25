@@ -2,9 +2,10 @@
 use super::*;
 use mcsa_protocol::{legacy_blocks::{self, SourceSection, View}, legacy_chunk::{Chunk, HeightWindow}};
 
-pub(super) fn snapshot(world: &Mutex<World>, x: i32, z: i32, light: &ChunkLight, window: HeightWindow, sky: bool) -> io::Result<Chunk> {
+pub(super) fn snapshot(world: &Mutex<World>, x: i32, z: i32, light: &ChunkLight, prepared: Option<&LitChunk>, window: HeightWindow, sky: bool) -> io::Result<Option<Chunk>> {
     let (sections, biomes) = {
         let world = world.lock().expect("мир захвачен другим потоком");
+        if prepared.is_some_and(|light| !world.light_is_current(light)) { return Ok(None); }
         let sections = world.chunk_packet(x,z,|sections,_| sections.to_vec())
             .unwrap_or_else(|| vec![None; world::SECTIONS as usize]);
         let mut biomes = [0;256];
@@ -41,5 +42,5 @@ pub(super) fn snapshot(world: &Mutex<World>, x: i32, z: i32, light: &ChunkLight,
         blocks: states.as_deref(), block_light: &block[i], sky_light: sky.then_some(sky_arrays[i].as_slice()),
     }).collect();
     legacy_blocks::project(View { version: mcsa_protocol::wire::INTERNAL, x,z,min_y:world::MIN_Y,window,
-        sections:&source,biomes,block_entities:vec![] }).map_err(|error| io::Error::other(format!("Чанк1.12.2: {error:?}")))
+        sections:&source,biomes,block_entities:vec![] }).map(Some).map_err(|error| io::Error::other(format!("Чанк1.12.2: {error:?}")))
 }

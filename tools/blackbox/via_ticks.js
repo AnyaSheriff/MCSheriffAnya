@@ -6,7 +6,8 @@ const path = require('path');
 const mineflayer = require(path.join(process.env.HOME, 'node_modules', 'mineflayer'));
 const createBot = mineflayer.createBot;
 mineflayer.createBot = (options) => {
-  const bot = createBot(options);
+  const view = process.env.MCSA_BB_VIEW_DISTANCE;
+  const bot = createBot(view ? { ...options, viewDistance: view } : options);
   let quitting = false;
   bot.once('spawn', () => {
     const quit = bot.quit.bind(bot);

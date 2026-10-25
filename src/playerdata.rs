@@ -17,8 +17,7 @@ use std::path::{Path, PathBuf};
 
 use crate::inventory::Inventory;
 use crate::gameplay_catalog::{Catalog, Profile, StackError, StackLocation, StackProblem};
-#[cfg(test)]
-use crate::{log_info, log_warn};
+use crate::log_warn;
 
 mod cursor;
 
@@ -354,46 +353,32 @@ impl std::fmt::Display for LoadError {
 }
 impl std::error::Error for LoadError {}
 
-/// Missing остаётся новым игроком; неподдержанный заголовок требует отказа.
-/// Прежняя политика damaged/IO здесь намеренно не расширяется: этот срез
-/// различает только известные версии раскладки и не распознаёт профиль мира.
+/// Только отсутствие файла допускает создание нового игрока.
 #[cfg(test)]
 pub fn load_checked(directory: &Path, uuid: &[u8; 16]) -> Result<Option<PlayerData>, LoadError> {
-    let path = path_for(directory, uuid);
-    let bytes = match fs::read(&path) {
-        Ok(bytes) => bytes,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => {
-            log_warn!("Не удалось прочитать данные игрока ({}): {}", path.display(), e);
-            return Ok(None);
-        }
-    };
-    check_layout(&bytes)?;
-    match parse(&bytes) {
-        Some(data) => {
-            log_info!("Положение игрока прочитано из {}: {:.2} {:.2} {:.2}",
-                path.display(), data.x, data.y, data.z);
-            Ok(Some(data))
-        }
-        None => {
-            log_warn!("Файл игрока {} не читается, игрок зайдёт как в первый раз", path.display());
-            Ok(None)
-        }
-    }
+    load_checked_for_catalog(directory, uuid, Catalog::new(Profile::Java26_1_2))
 }
 
 /// Только отсутствующий файл означает нового игрока. Любая другая ошибка
 /// останавливает вход и не даёт заменить сохранение пустыми данными.
 pub fn load_checked_for_catalog(directory: &Path, uuid: &[u8; 16], catalog: Catalog) -> Result<Option<PlayerData>, LoadError> {
-    let bytes = match fs::read(path_for(directory, uuid)) {
-        Ok(bytes) => bytes,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(LoadError::ReadFailure(error.kind())),
-    };
-    check_layout(&bytes)?;
-    let data = parse_with_catalog(&bytes, Some(Catalog::new(Profile::Preview26_3))).ok_or(LoadError::InvalidData)?;
-    validate_player(&data, catalog).map_err(LoadError::IncompatibleInventory)?;
-    Ok(Some(data))
+    let path = path_for(directory, uuid);
+    let result = (|| {
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound
+                && matches!(fs::symlink_metadata(&path), Err(ref absent) if absent.kind() == io::ErrorKind::NotFound) => return Ok(None),
+            Err(error) => return Err(LoadError::ReadFailure(error.kind())),
+        };
+        check_layout(&bytes)?;
+        let data = parse_with_catalog(&bytes, Some(Catalog::new(Profile::Preview26_3))).ok_or(LoadError::InvalidData)?;
+        validate_player(&data, catalog).map_err(LoadError::IncompatibleInventory)?;
+        Ok(Some(data))
+    })();
+    if let Err(error) = &result {
+        log_warn!("Вход запрещён: файл игрока {}: {}; сохранение не изменено", path.display(), error);
+    }
+    result
 }
 
 fn validate_player(data: &PlayerData, catalog: Catalog) -> Result<(), StackError> {
@@ -448,7 +433,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerData> {
     let read_inventory = |bytes: &[u8]| match catalog {
         Some(catalog) => Inventory::from_bytes_for_catalog(bytes, catalog).ok(),
-        None => Inventory::from_bytes(bytes),
+        None => Inventory::from_bytes_for_catalog(bytes, Catalog::new(Profile::Java26_1_2)).ok(),
     };
     if bytes.len() < SIZE || &bytes[..4] != MAGIC {
         return None;
@@ -539,15 +524,14 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
     };
 
     inventory.set_cursor(saved_cursor);
+    let (x, y, z) = (f64::from_be_bytes(take(bytes, 8)?), f64::from_be_bytes(take(bytes, 16)?), f64::from_be_bytes(take(bytes, 24)?));
+    let (yaw, pitch) = (f32::from_be_bytes(take(bytes, 32)?), f32::from_be_bytes(take(bytes, 36)?));
+    let game_mode = i32::from_be_bytes(take(bytes, 40)?);
+    if ![x, y, z].into_iter().all(f64::is_finite) || ![yaw, pitch].into_iter().all(f32::is_finite) || !(0..=3).contains(&game_mode) { return None; }
     Some(PlayerData {
         abilities,
         shoulders,
-        x: f64::from_be_bytes(take(bytes, 8)?),
-        y: f64::from_be_bytes(take(bytes, 16)?),
-        z: f64::from_be_bytes(take(bytes, 24)?),
-        yaw: f32::from_be_bytes(take(bytes, 32)?),
-        pitch: f32::from_be_bytes(take(bytes, 36)?),
-        game_mode: i32::from_be_bytes(take(bytes, 40)?),
+        x, y, z, yaw, pitch, game_mode,
         inventory,
         dimension,
         vitals,
@@ -657,6 +641,89 @@ mod tests {
             respawn: None,
             ender: empty_ender(),
         }
+    }
+
+    #[test]
+    fn released_fixtures_preserve_inventory_xp_and_position() {
+        for (layout, bytes) in [(8, super::incompatible_tests::RELEASED_V8),
+            (9, super::incompatible_tests::RELEASED_V9)] {
+            let data = parse(bytes).expect("раскладка выпущенного alpha");
+            assert_eq!((data.x, data.y, data.z, data.yaw, data.pitch, data.game_mode), (12.5, 65.0, -3.25, 90.0, -12.0, 1));
+            assert_eq!(data.inventory.slot(36), Some(crate::inventory::Stack::new(1, 17)));
+            assert_eq!(data.inventory.slot(37), Some(crate::inventory::Stack::new(10, 5)));
+            assert_eq!(data.ender[4], Some(crate::inventory::Stack::new(1, 7)));
+            assert_eq!(data.inventory.cursor(), None);
+            assert_eq!((data.vitals.health, data.vitals.food, data.vitals.experience), (18.0, 19, 7));
+            assert_eq!(data.vitals.experience_total, if layout == 9 { 42 } else { 7 });
+            assert_eq!(data.vitals.xp_seed, 123456);
+            assert_eq!(data.abilities, Abilities::for_mode(1));
+            let upgraded = encode(&data).unwrap();
+            assert_eq!(&upgraded[8..bytes.len()], &bytes[8..]);
+            assert_eq!(parse(&upgraded), Some(data));
+            for end in 0..bytes.len() { assert!(parse(&bytes[..end]).is_none(), "обрезка {end}"); }
+            let mut trailing = bytes.to_vec(); trailing.push(0);
+            assert!(parse(&trailing).is_none());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn released_fixtures_upgrade_with_verified_backup_and_restart() {
+        use crate::world::{profile, startup};
+        for (layout, bytes) in [(8, super::incompatible_tests::RELEASED_V8),
+            (9, super::incompatible_tests::RELEASED_V9)] {
+            let root = test_directory(&format!("released-upgrade-{layout}"));
+            let world = root.join("world");
+            let directory = world.join("playerdata");
+            fs::create_dir_all(&directory).unwrap();
+            let mut manifest = profile::decode(include_bytes!("../testdata/world-profile/26.3-playerdata11.json")).unwrap();
+            manifest.save_format.playerdata_layout = layout;
+            fs::write(world.join(profile::MANIFEST_NAME), serde_json::to_vec(&manifest).unwrap()).unwrap();
+            let uuid = [117; 16];
+            let path = path_for(&directory, &uuid);
+            fs::write(&path, bytes).unwrap();
+            let guard = startup::prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_3).unwrap();
+            let updated = profile::read_manifest(&world).unwrap().unwrap();
+            assert_eq!(updated.save_format.playerdata_layout, FORMAT_VERSION);
+            let backup = root.join("backups/world").join(&updated.snapshot_id);
+            crate::world::snapshot::verify_backup(&backup).unwrap();
+            assert_eq!(fs::read(backup.join("world/playerdata").join(path.file_name().unwrap())).unwrap(), bytes);
+            let catalog = Catalog::new(Profile::Preview26_3);
+            let loaded = load_checked_for_catalog(&directory, &uuid, catalog).unwrap().unwrap();
+            save_for_catalog(&directory, &uuid, &loaded, catalog).unwrap();
+            assert_eq!(&fs::read(&path).unwrap()[4..8], &12u32.to_be_bytes());
+            assert_eq!(load_checked_for_catalog(&directory, &uuid, catalog).unwrap(), Some(loaded));
+            drop(guard);
+            drop(startup::prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_3).unwrap());
+            assert_eq!(fs::read_dir(root.join("backups/world")).unwrap().count(), 1);
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn unreleased_main_abilities_layout_ten_is_refused_without_touching_bytes() {
+        let root = test_directory("refuse-unreleased-main10");
+        let uuid = [118; 16];
+        let mut bytes = super::incompatible_tests::RELEASED_V9.to_vec();
+        bytes[4..8].copy_from_slice(&10u32.to_be_bytes());
+        Abilities::for_mode(1).write(&mut bytes);
+        let path = path_for(&root, &uuid);
+        fs::write(&path, &bytes).unwrap();
+        assert_eq!(load_checked_for_catalog(&root, &uuid, Catalog::new(Profile::Preview26_3)), Err(LoadError::InvalidData));
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dangling_player_symlink_is_not_a_new_player() {
+        let root = test_directory("dangling-player");
+        let uuid = [119; 16];
+        let path = path_for(&root, &uuid);
+        std::os::unix::fs::symlink(root.join("absent"), &path).unwrap();
+        assert!(matches!(load_checked_for_catalog(&root, &uuid, Catalog::new(Profile::Preview26_3)), Err(LoadError::ReadFailure(_))));
+        assert!(fs::symlink_metadata(&path).unwrap().file_type().is_symlink());
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

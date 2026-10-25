@@ -4,6 +4,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -66,28 +67,33 @@ def main():
     parser.add_argument('--proxy', type=Path)
     parser.add_argument('--primary', choices=('26.3', '26.1.2'), default='26.3')
     parser.add_argument('--port', type=int, default=26170)
+    parser.add_argument('--ours-port', type=int, default=26270)
     parser.add_argument('--wire', action='store_true')
+    parser.add_argument('--streaming-observation', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--repeat', type=int, default=1)
     parser.add_argument('--names', type=Path)
     parser.add_argument('--official-recordings', type=Path)
+    parser.add_argument('--reference-wait', type=float, default=0)
     parser.add_argument('scenarios', nargs='*')
     args = parser.parse_args()
     assert 26100 <= args.port <= 26194
+    assert 26200 <= args.ours_port <= 26296
     assert args.repeat > 0
+    assert 0 <= args.reference_wait <= 600
     assert args.primary != '26.3' or args.proxy, '26.3 requires symmetric translation'
     names = args.scenarios or json.loads(args.names.read_text())
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
     manifest = {'primary': args.primary, 'scenarios': names, 'repeat': args.repeat,
-                'port': args.port, 'translation': bool(args.proxy),
+                'port': args.port, 'ours_port': args.ours_port, 'translation': bool(args.proxy),
                 'official_recordings': str(args.official_recordings.resolve()) if args.official_recordings else None}
     for key in ('binary', 'jar', 'proxy'):
         path = getattr(args, key)
         if path:
             manifest[key] = {'path': str(path.resolve()), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
     manifest['scripts'] = {n: hashlib.sha256((ROOT / 'tools/blackbox' / n).read_bytes()).hexdigest()
-                           for n in ('bot.js', 'compare.js', 'via_ticks.js')}
+                           for n in ('bot.js', 'compare.js', 'via_ticks.js', '../protocol-bridge/probe_gameplay.py')}
     (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     children, logs, rows, taps = [], [], [], []
 
@@ -109,12 +115,12 @@ def main():
         raise TimeoutError(str(folder))
 
     try:
-        for p in range(args.port, args.port + 6):
+        for p in (args.port, args.port + 1, args.port + 4, args.ours_port, args.ours_port + 1, args.ours_port + 4):
             with socket.socket() as check:
                 check.bind(('127.0.0.1', p))
         sides = [('ours', 2)] if args.official_recordings else [('official', 0), ('ours', 2)]
         for label, offset in sides:
-            port = args.port + offset
+            port = args.port if label == 'official' else args.ours_port
             folder = out / label
             folder.mkdir()
             cfg = folder if label == 'official' else folder / 'config'
@@ -124,10 +130,10 @@ def main():
                 'enforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\n'
                 'generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},'
                 '{"block":"minecraft:stone","height":3}],"biome":"minecraft:plains"}\n'
-                'generate-structures=false\nwhite-list=false\nlevel-seed=1\nview-distance=4\n'
+                f'generate-structures=false\nwhite-list=false\nlevel-seed=1\nview-distance={10 if args.streaming_observation else 4}\n'
                 'simulation-distance=4\nspawn-protection=0\nallow-flight=true\ngamemode=creative\nmax-tick-time=0\n')
             ops = []
-            for name in ('blackbox', 'blackboxb'):
+            for name in ('blackbox', 'blackboxb', 'StreamProbe', 'TabProbe'):
                 raw = bytearray(hashlib.md5(('OfflinePlayer:' + name).encode()).digest())
                 raw[6] = (raw[6] & 15) | 48
                 raw[8] = (raw[8] & 63) | 128
@@ -147,7 +153,7 @@ def main():
             if args.proxy:
                 target = port
                 if args.wire:
-                    target = args.port + 4 + offset // 2
+                    target = port + 4
                     taps.append(WireTap(target, port, out / (label + '-wire')))
                 folder = out / (label + '-proxy')
                 folder.mkdir()
@@ -156,13 +162,26 @@ def main():
                 start([JAVA, '-Xmx512M', '-jar', str(args.proxy.resolve()), 'cli',
                        '--bind-address', f'127.0.0.1:{port + 1}', '--target-address', f'127.0.0.1:{target}',
                        '--target-version', args.primary, '--compression-threshold', '-1'], folder, port + 1)
+        if args.streaming_observation:
+            assert not args.official_recordings
+            observation = out / 'streaming'
+            subprocess.run(['python3', str(ROOT / 'tools/protocol-bridge/probe_gameplay.py'),
+                '--review-streaming', '--binary', str(args.binary.resolve()), '--jar', str(args.jar.resolve()),
+                '--data', '/home/lenox/.local/share/mcsa-java-26.3-probe/candidate-json',
+                '--output', str(observation), '--official-port', str(args.port),
+                '--ours-port', str(args.ours_port), '--attach'], cwd=ROOT, check=False)
         for repeat in range(args.repeat):
             for name in names:
                 captures = {}
                 if args.official_recordings:
                     reference = args.official_recordings / f'{name}-0-official.json'
                     if not reference.is_file():
-                        reference = args.official_recordings / f'vanilla-{name}.json'
+                        previous = args.official_recordings / f'vanilla-{name}.json'
+                        if previous.is_file(): reference = previous
+                    # Повтор может идти следом за ещё работающим оригинальным захватом.
+                    deadline = time.monotonic() + args.reference_wait
+                    while not reference.is_file() and time.monotonic() < deadline:
+                        time.sleep(.25)
                     assert reference.is_file(), str(reference)
                     captures['official'] = reference.resolve()
                 def record(label, offset):
@@ -172,11 +191,13 @@ def main():
                     if args.proxy:
                         argv += ['--require', str(ROOT / 'tools/blackbox/via_ticks.js')]
                     argv += [str(ROOT / 'tools/blackbox/bot.js'), '127.0.0.1',
-                            str(args.port + offset + bool(args.proxy)),
+                            str((args.port if label == 'official' else args.ours_port) + bool(args.proxy)),
                             str(ROOT / f'tools/blackbox/scenarios/{name}.json'), str(dest), '1']
                     with logpath.open('w') as log:
                         try:
-                            result = subprocess.run(argv, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=240)
+                            environment = dict(os.environ)
+                            if args.streaming_observation: environment['MCSA_BB_VIEW_DISTANCE'] = 'short'
+                            result = subprocess.run(argv, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=240, env=environment)
                             code = result.returncode
                         except subprocess.TimeoutExpired:
                             code = 124

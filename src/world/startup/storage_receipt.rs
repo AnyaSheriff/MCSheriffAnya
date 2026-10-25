@@ -34,7 +34,7 @@ pub(crate) fn decode(bytes: &[u8]) -> io::Result<Receipt> {
     if bytes.len() > MAX_BYTES { return Err(io::Error::new(io::ErrorKind::InvalidData, "storage receipt слишком велик")); }
     let receipt: Receipt = serde_json::from_slice(bytes).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
     let mut supported = Receipt::for_backup(&receipt.snapshot_id);
-    if matches!(receipt.playerdata_layout, 10 | 11) { supported.playerdata_layout = receipt.playerdata_layout; }
+    if matches!(receipt.playerdata_layout, 8..=11) { supported.playerdata_layout = receipt.playerdata_layout; }
     if receipt != supported || receipt.snapshot_id.len() != 32
         || !receipt.snapshot_id.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "неподдержанная схема/раскладка или snapshot_id storage receipt"));

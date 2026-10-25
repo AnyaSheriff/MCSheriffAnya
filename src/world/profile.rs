@@ -212,7 +212,7 @@ pub fn plan_transition(
         && source.save_format == target.save_format
         && source.save_format == (SaveFormat { region_layout: 1, playerdata_layout: crate::playerdata::FORMAT_VERSION })
         && manifest.save_format.region_layout == 1
-        && matches!(manifest.save_format.playerdata_layout, 10 | 11);
+        && matches!(manifest.save_format.playerdata_layout, 8..=11);
     if source.save_format != manifest.save_format && !storage_upgrade { return Err(Error::FormatMismatch); }
     let kind = if storage_upgrade { TransitionKind::StorageUpgrade } else {
         match source.release_order.cmp(&target.release_order) {
@@ -502,7 +502,7 @@ mod tests {
         assert_eq!(plan.source.registry_id, block_item_registry_id());
         assert_eq!(plan.snapshot_id, previous.snapshot_id);
         // Ни номер региона, ни неизвестный player-layout не получают такого исключения.
-        for (region, player) in [(2, 10), (1, 9), (1, crate::playerdata::FORMAT_VERSION + 1), (5, 10)] {
+        for (region, player) in [(2, 10), (1, 7), (1, crate::playerdata::FORMAT_VERSION + 1), (5, 10)] {
             let mut unsupported = previous.clone();
             unsupported.save_format = SaveFormat { region_layout: region, playerdata_layout: player };
             assert!(matches!(plan_transition(Some(&unsupported), &current.gameplay_version, std::slice::from_ref(&current)), Err(Error::FormatMismatch)));

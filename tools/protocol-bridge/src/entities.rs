@@ -34,6 +34,9 @@ fn supported_payload(from: JavaVersion, to: JavaVersion) -> Result<(), wire::Err
 }
 
 impl Tracker {
+    /// Фоновая запись чанка, как translate_packets, разделяет соседние motion777.
+    pub fn prepared_chunk_sent(&mut self) { self.motion_777 = None; }
+
     /// Перевод может требовать нескольких пакетов: абсолютная позиция777
     /// отделена от скорости. Родной маршрут остаётся одним borrowed-пакетом.
     pub fn translate_packets<'a>(&mut self,from:JavaVersion,to:JavaVersion,body:&'a [u8],context:wire::Context)->Result<Vec<Cow<'a,[u8]>>,wire::Error>{

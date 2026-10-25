@@ -3252,6 +3252,25 @@ impl World {
         })
     }
 
+    /// Проверяются все девять входов, в том числе отсутствие соседа и кеш.
+    /// Общие секции отличают повторно загруженный чанк с тем же revision.
+    pub fn light_is_current(&self, prepared: &light::PreparedLight) -> bool {
+        prepared.inputs.iter().enumerate().all(|(slot, input)| {
+            let place = (prepared.center.0 + slot as i32 % 3 - 1, prepared.center.1 + slot as i32 / 3 - 1);
+            match (input, self.chunks.get(&place)) {
+                (None, None) => true,
+                (Some(input), Some(chunk)) => input.revision == chunk.revision
+                    && input.sections.len() == chunk.sections.len()
+                    && input.sections.iter().zip(&chunk.sections).all(|(a, b)| match (a, b) {
+                        (None, None) => true,
+                        (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+                        _ => false,
+                    }),
+                _ => false,
+            }
+        })
+    }
+
     /// Кладёт в чанки пересчитанный собственный свет — если их блоки с тех
     /// пор не менялись.
     pub fn store_light(&mut self, recounted: Vec<light::Recounted>) {
@@ -3381,6 +3400,19 @@ impl World {
                 self.ensure(chunk_x, chunk_z);
             }
         }
+    }
+
+    /// Приём фоновой подготовки никогда не читает диск и не генерирует.
+    pub fn accept_prepared(&mut self, x: i32, z: i32, ready: ReadyChunk) -> bool {
+        let key = (x, z);
+        if self.chunks.contains_key(&key) { return true; }
+        let stale = ready.epoch + UNLOAD_MEMORY < self.unload_epoch
+            || self.unloaded.get(&key).is_some_and(|at| *at > ready.epoch);
+        if !stale && let Taken::Loaded { chunk, from_disk, wake } = ready.taken {
+            self.insert_chunk(x, z, chunk, from_disk, &wake);
+            return true;
+        }
+        false
     }
 
     /// Кладёт чанк в мир и делает всё, что следует за его появлением.
@@ -4824,6 +4856,10 @@ pub struct ChunkSource {
 }
 
 impl ChunkSource {
+    pub fn preparation_key(&self, x: i32, z: i32) -> (PathBuf, i32, i32) {
+        (self.path.clone(), x, z)
+    }
+
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
         ReadyChunk {
@@ -8555,3 +8591,60 @@ mod preview_tests;
 
 #[cfg(test)]
 mod decoration_tests;
+
+#[cfg(test)]
+mod prepared_light_regressions {
+    use super::*;
+
+    #[test]
+    fn newer_b_light_publication_invalidates_older_a_including_cache_reuse() {
+        for cached in [false, true] {
+            let mut world = World::in_memory();
+            for x in -1..=1 { for z in -1..=1 { world.ensure(x, z); } }
+            if cached {
+                let (_, recounted) = world.light_job(0, 0).unwrap().finish();
+                world.store_light(recounted);
+            }
+            let a = world.light_job(0, 0).unwrap().prepare();
+            assert!(world.light_is_current(&a));
+            if cached { assert!(a.recounted.is_empty()); }
+            // А снял старый свет, затем факел в соседнем чанке и публикация Б.
+            let torch = crate::blocks::state_by_name("torch").unwrap();
+            world.set_block(16, 10, 0, torch);
+            let mut b = world.light_job(0, 0).unwrap().prepare();
+            assert!(world.light_is_current(&b));
+            world.store_light(std::mem::take(&mut b.recounted));
+            assert!(!world.light_is_current(&a));
+            assert!(world.light_is_current(&b));
+            assert_ne!(a.light.at(15, 10, 0).1, b.light.at(15, 10, 0).1);
+        }
+    }
+
+    #[test]
+    fn every_input_revision_and_absent_neighbour_are_validated() {
+        for slot in 0..9 {
+            let mut world = World::in_memory();
+            for x in -1..=1 { for z in -1..=1 { world.ensure(x, z); } }
+            let prepared = world.light_job(0, 0).unwrap().prepare();
+            let (x, z) = (slot % 3 - 1, slot / 3 - 1);
+            world.set_block(x * 16, 10, z * 16, crate::blocks::state_by_name("torch").unwrap());
+            assert!(!world.light_is_current(&prepared), "вход {slot}");
+        }
+        let mut world = World::in_memory();
+        world.ensure(0, 0);
+        let prepared = world.light_job(0, 0).unwrap().prepare();
+        world.ensure(1, 1);
+        assert!(!world.light_is_current(&prepared));
+    }
+
+    #[test]
+    fn unavailable_and_stale_accept_never_prepare_under_world_lock() {
+        let mut world = World::in_memory();
+        assert!(!world.accept_prepared(0, 0, ReadyChunk { taken: Taken::Unavailable, epoch: 0 }));
+        assert!(!world.has_chunk(0, 0));
+        let ready = world.source().take(0, 0);
+        world.unloaded.insert((0, 0), 1);
+        assert!(!world.accept_prepared(0, 0, ready));
+        assert!(!world.has_chunk(0, 0));
+    }
+}

@@ -63,7 +63,7 @@ fn bad_manifests_refuse_without_migration_and_release_the_guard() {
     let mut future = current.clone();
     future.schema += 1;
     let mut old_layout = current.clone();
-    old_layout.save_format.playerdata_layout = 9;
+    old_layout.save_format.playerdata_layout = 7;
     for bytes in [
         serde_json::to_vec(&wrong_registry).unwrap(),
         serde_json::to_vec(&wrong_profile).unwrap(),
@@ -183,7 +183,7 @@ fn old_storage_world(fixture: &Fixture) -> (PathBuf, Vec<u8>) {
 #[cfg(target_os = "linux")]
 #[test]
 fn known_storage_ten_and_eleven_upgrade_after_verified_backup_and_restart_does_not_repeat_it() {
-    for layout in [10, 11] {
+    for layout in [8, 9, 10, 11] {
         let fixture = Fixture::new();
         let (world, _) = old_storage_world(&fixture);
         let mut manifest = current_manifest();
@@ -416,7 +416,7 @@ fn guard_drop_unlocks_even_with_an_inherited_descriptor() {
 #[cfg(target_os = "linux")]
 #[test]
 fn old_unidentified_receipts_upgrade_after_backup_without_assigning_gameplay() {
-    for layout in [10, 11] {
+    for layout in [8, 9, 10, 11] {
         let fixture = Fixture::new();
         let world = fixture.world(); fs::create_dir(&world).unwrap();
         fs::write(world.join("session.lock"), b"old-lock").unwrap();

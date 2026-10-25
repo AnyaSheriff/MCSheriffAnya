@@ -353,6 +353,33 @@ fn item_context(content: mcsa_protocol::content::ContentCodec) -> mcsa_protocol:
     mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32), content }
 }
 
+/// Неизменяемая часть кодирования чанка; ни сокет, ни Tracker в работу не уходят.
+#[derive(Clone, Copy)]
+pub(crate) struct ChunkEncoder {
+    version: JavaVersion,
+    content: mcsa_protocol::content::ContentCodec,
+    threshold: i32,
+}
+pub(crate) struct PreparedChunkPacket {
+    bytes: Vec<u8>,
+    version: JavaVersion,
+    content: mcsa_protocol::content::ContentCodec,
+}
+impl PreparedChunkPacket {
+    pub fn len(&self) -> usize { self.bytes.len() }
+}
+impl ChunkEncoder {
+    pub fn encode(self, body: &[u8], context: mcsa_protocol::chunk::Context) -> io::Result<PreparedChunkPacket> {
+        if body.first() != Some(&0x2d) { return Err(io::Error::other("Фоновый кодировщик принимает только чанк")); }
+        let content = if self.version == wire::INTERNAL { self.content.native_view() } else { self.content };
+        let body = wire::translate_with_context(State::Play, Direction::Clientbound, wire::INTERNAL, self.version, body,
+            wire::Context { chunk: Some(context), items: item_context(content), ..Default::default() }).map_err(translate_error)?;
+        let mut bytes = Vec::new();
+        frame(&mut bytes, &body, self.threshold);
+        Ok(PreparedChunkPacket { bytes, version: self.version, content: self.content })
+    }
+}
+
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut Connection) -> Self {
         let version = stream.client_version();
@@ -387,6 +414,22 @@ impl<'a> Outgoing<'a> {
         return Ok(Arc::new(super::configuration::test_chunk_biomes(self.version, self.content.is_preview())));
         #[cfg(not(test))]
         Err(io::Error::other("Чанк до согласования реестров Configuration"))
+    }
+
+    pub(crate) fn chunk_encoder(&self) -> Option<ChunkEncoder> {
+        (!self.probe_776 && matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3))
+            .then_some(ChunkEncoder { version: self.version, content: self.content, threshold: compression_threshold() })
+    }
+
+    pub(crate) async fn send_prepared_chunk(&mut self, packet: &PreparedChunkPacket) -> io::Result<()> {
+        if packet.version != self.version || packet.content != self.content {
+            return Err(io::Error::other("Чанк подготовлен для другого протокола/каталога"));
+        }
+        if self.version == JavaVersion::V26_3 { self.entities.prepared_chunk_sent(); }
+        if self.queued_at.is_none() && timing_enabled() { self.queued_at = Some(Instant::now()); }
+        self.buffer.extend_from_slice(&packet.bytes);
+        if self.buffer.len() >= OUTGOING_LIMIT { self.flush().await?; }
+        Ok(())
     }
 
     pub async fn send_chunk(&mut self, body: &[u8], context: mcsa_protocol::chunk::Context) -> io::Result<()> {
