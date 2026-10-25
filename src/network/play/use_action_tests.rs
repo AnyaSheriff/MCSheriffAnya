@@ -22,7 +22,7 @@ fn action(bytes: &[u8], p: &mut PlayerState, shared: &Shared) -> Reaction {
     let mut body = encode_varint(PLAYER_ACTION);
     body.extend_from_slice(bytes);
     handle_client_packet(&PacketInfo { id:PLAYER_ACTION, length:body.len() as i32, body, teleport:None,
-        foreign_inventory:false, legacy_inventory:None }, p, shared)
+        punch: false, foreign_inventory:false, legacy_inventory:None }, p, shared)
 }
 fn arm(p: &mut PlayerState, hand: i32, kind: vitals::UseKind) {
     let slot = if hand == 0 { p.inventory.selected_slot() } else { inventory::OFFHAND };

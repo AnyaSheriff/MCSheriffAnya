@@ -16,7 +16,7 @@ fn player(mode: i32) -> PlayerState {
 fn client_flags(p: &mut PlayerState, shared: &Shared, flags: &[u8]) {
     let mut body = encode_varint(SERVERBOUND_ABILITIES);
     body.extend_from_slice(flags);
-    handle_client_packet(&PacketInfo { id: SERVERBOUND_ABILITIES, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }, p, shared);
+    handle_client_packet(&PacketInfo { id: SERVERBOUND_ABILITIES, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }, p, shared);
 }
 
 fn reconnect(p: &mut PlayerState, label: &str) -> PlayerState {
@@ -168,7 +168,7 @@ async fn self_command_sends_abilities_after_state_was_applied_before_queued_orde
     shared.ops.lock().unwrap().give(&p.uuid, &p.name, 4);
     let mut body = encode_varint(SERVERBOUND_CHAT_COMMAND);
     body.extend_from_slice(&encode_string("gamemode creative"));
-    handle_client_packet(&PacketInfo { id: SERVERBOUND_CHAT_COMMAND, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }, &mut p, &shared);
+    handle_client_packet(&PacketInfo { id: SERVERBOUND_CHAT_COMMAND, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }, &mut p, &shared);
     assert_eq!(p.game_mode, 1);
     let orders = shared.players.lock().unwrap().take_orders(&p.uuid);
     assert!(matches!(orders.as_slice(), [Order::GameMode { mode: 1 }]));

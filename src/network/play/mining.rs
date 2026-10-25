@@ -391,7 +391,7 @@ mod tests {
         assert_eq!(packets.len(),2);assert_eq!(packets[1][1],2);
         let apply=|body:Vec<u8>,player:&mut PlayerState,shared:&Shared| {
             handle_client_packet(&PacketInfo {id:PLAYER_ACTION,length:body.len() as i32,body,teleport:None,
-                foreign_inventory:false,legacy_inventory:None},player,shared)
+                punch: false, foreign_inventory:false,legacy_inventory:None},player,shared)
         };
         for untranslated in [false,true] {
             let (shared,mut player)=setup("obsidian",None);

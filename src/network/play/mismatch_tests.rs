@@ -17,7 +17,37 @@ fn player() -> PlayerState {
 fn packet(id: i32, payload: &[u8]) -> PacketInfo {
     let mut body = encode_varint(id);
     body.extend_from_slice(payload);
-    PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
+    PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }
+}
+
+#[test]
+fn confirmed_777_pose_keeps_the_first_real_fall_step_and_775_keeps_its_old_anchor() {
+    use mcsa_protocol::teleport::{Confirmation, Pose};
+    let shared = shared();
+    for with_pose in [false, true] {
+        let mut p = player();
+        vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
+        p.y = 68.0;
+        p.on_ground = false;
+        p.vit.fall = 2.5;
+        position_body(&mut p, Sync::Command);
+        let mut ack = packet(CONFIRM_TELEPORTATION, &encode_varint(p.teleport));
+        ack.teleport = Some(Confirmation { id: p.teleport, pose: with_pose.then_some(Pose {
+            x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
+        }) });
+        assert!(accept_teleport(&ack, &mut p));
+        assert_eq!(p.vit.fall, 2.5);
+        // Шесть одинаковых входных Position: официальный и наш wire-захват
+        // pvp-mace на26180/26182; ни таймер робота, ни допуски не меняются.
+        for y in [-55.07840000152588,-55.23363200604248,-55.46415937495544,
+            -55.768476202412984,-56.14510670065164,-56.59260459763506] {
+            let mut payload = Vec::new();
+            push_f64(&mut payload,p.x); push_f64(&mut payload,y+123.0); push_f64(&mut payload,p.z); payload.push(0);
+            handle_client_packet(&packet(SET_PLAYER_POSITION,&payload), &mut p, &shared);
+        }
+        let expected = 2.5 + 1.59260459763506 - if with_pose { 0.0 } else { 0.07840000152588 };
+        assert!((p.vit.fall - expected).abs() < 1e-6, "pose={with_pose}: {}",p.vit.fall);
+    }
 }
 
 #[test]
@@ -339,7 +369,7 @@ fn modern_confirmation_applies_pose_without_counting_a_walk_or_fall() {
     ack.teleport = Some(Confirmation { id: p.teleport, pose: Some(Pose { x: 17.5, y: 81.0, z: 10.5, yaw: 47.0, pitch: 0.0 }) });
     handle_client_packet(&ack, &mut p, &shared);
     assert_eq!((p.x, p.y, p.z, p.yaw, p.pitch), (17.5, 81.0, 10.5, 47.0, 0.0));
-    assert!(!p.awaiting_teleport && !p.moved_since_tp && p.net.teleported);
+    assert!(!p.awaiting_teleport && !p.moved_since_tp && !p.net.teleported);
     assert_eq!(p.vit.fall, 4.0);
     assert!(p.net.hits.is_empty());
     p.x = 18.0;

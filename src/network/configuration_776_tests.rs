@@ -4,7 +4,7 @@ use mcsa_protocol::{JavaVersion, Negotiated};
 
 fn packet(id: i32, payload: &[u8]) -> PacketInfo {
     let mut body = crate::network::varint::encode_varint(id); body.extend(payload);
-    PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
+    PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }
 }
 
 async fn connection(bodies: &[Vec<u8>]) -> Connection {

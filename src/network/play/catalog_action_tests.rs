@@ -144,7 +144,7 @@ fn creative775_view_cannot_overwrite_or_drop_real_new_items() {
     for target in [36i16,37,-1] {
         let mut body=encode_varint(SET_CREATIVE_MODE_SLOT);body.extend(target.to_be_bytes());
         body.extend(mcsa_protocol::items::encode(mcsa_protocol::JavaVersion::V26_1_2,Some(&slot),true,Default::default()).unwrap());
-        let packet=PacketInfo{id:SET_CREATIVE_MODE_SLOT,length:body.len() as i32,body,teleport:None,foreign_inventory:true,legacy_inventory:None};
+        let packet=PacketInfo{id:SET_CREATIVE_MODE_SLOT,length:body.len() as i32,body,teleport:None,punch: false, foreign_inventory:true,legacy_inventory:None};
         let reaction=handle_client_packet(&packet,&mut player,&shared);
         assert!(reaction.inventory);assert_eq!(player.inventory.slot(36),Some(actual));assert!(player.inventory.slot(37).is_none());
     }

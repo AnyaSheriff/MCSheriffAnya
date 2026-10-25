@@ -14,7 +14,7 @@ fn named(name:&str,count:i32,label:&str)->Stack {
 }
 fn action(payload:&[u8],p:&mut PlayerState,shared:&Shared)->Reaction {
     let mut body=encode_varint(PLAYER_ACTION);body.extend_from_slice(payload);
-    handle_client_packet(&PacketInfo {id:PLAYER_ACTION,length:body.len() as i32,body,teleport:None,foreign_inventory:false,legacy_inventory:None},p,shared)
+    handle_client_packet(&PacketInfo {id:PLAYER_ACTION,length:body.len() as i32,body,teleport:None,punch: false, foreign_inventory:false,legacy_inventory:None},p,shared)
 }
 fn payload()->Vec<u8>{let mut bytes=encode_varint(6);push_packed_position(&mut bytes,0,0,0);bytes.push(0);bytes.extend(encode_varint(1));bytes}
 

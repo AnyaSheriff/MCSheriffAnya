@@ -273,7 +273,7 @@ fn oversized_completion_disconnects_even_after_its_connection_budget_is_empty() 
         body.extend(encode_varint(42));
         body.extend(encode_string(&text));
         let packet = PacketInfo { id: TAB_COMPLETE_REQUEST, length: body.len() as i32, body,
-            teleport: None, foreign_inventory: false, legacy_inventory: None };
+            teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
         assert!(handle_client_packet_inner(&packet, &mut player, &shared).suggestions.is_none());
         let orders = shared.players.lock().unwrap().take_orders(&player.uuid);
         assert!(matches!(&orders[..], [Order::Kick { reason }] if reason.contains("32500")));

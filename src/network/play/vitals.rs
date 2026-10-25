@@ -683,6 +683,16 @@ fn magma_contact(player: &PlayerState, env: &Env) -> bool {
         && !protected_from_hot_blocks(player)
 }
 
+/// После толчка клиент может прислать только флаг земли, без координат.
+/// Via pvp-bow777: airborne→grounded даёт сверку опоры на+4; ожидание
+/// следующего Position задерживало её до+6. Шаг в воздухе ожидание не тратит.
+pub(super) fn confirm_support(player: &mut PlayerState, reaction: &mut Reaction, now: u64) {
+    if player.on_ground && player.net.check_support.is_some_and(|due| now >= due) {
+        player.net.check_support = None;
+        reaction.confirm.push((player.x.floor() as i32, (player.y - 0.2).floor() as i32, player.z.floor() as i32));
+    }
+}
+
 /// Смена режима общая для своей команды и поручения другого игрока.
 pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
     if player.game_mode == mode { return; }
@@ -716,6 +726,16 @@ pub(super) async fn game_mode_order(stream: &mut Outgoing<'_>, player: &mut Play
     Ok(())
 }
 
+/// Новая опорная поза сбрасывает производные движения, но не пролёт.
+pub(super) fn confirmed_pose(player: &mut PlayerState) {
+    player.net.teleported = false;
+    player.net.pin = None;
+    player.net.mode_fall_velocity = None;
+    player.net.prev_ground = player.on_ground;
+    player.net.last_delta = (0.0, 0.0, 0.0);
+    player.net.sweep_motion = Default::default();
+}
+
 /// Пакет движения от клиента: прыжок, бег по земле и приземление.
 pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, f64)) {
     // Едущий не бежит ногами и не получает вторично урон падения транспорта.
@@ -730,11 +750,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
     let jump = dx * dx + dy * dy + dz * dz > 100.0;
 
     if std::mem::take(&mut player.net.teleported) || jump {
-        player.net.pin = None;
-        player.net.mode_fall_velocity = None;
-        player.net.prev_ground = on_ground;
-        player.net.last_delta = (0.0, 0.0, 0.0);
-        player.net.sweep_motion = Default::default();
+        confirmed_pose(player);
         // fall-mode-teleport-reset: /tp не прибавляет скачок координат,
         // но сохраняет уже накопленный пролёт (после /tp вниз урон 1).
 

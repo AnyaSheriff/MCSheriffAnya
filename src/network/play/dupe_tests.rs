@@ -25,7 +25,7 @@ fn packet(id: i32, payload: &[u8]) -> PacketInfo {
     let mut body = encode_varint(id);
     body.extend_from_slice(payload);
     PacketInfo { id, length: body.len() as i32, body, teleport: None,
-        foreign_inventory: false, legacy_inventory: None }
+        punch: false, foreign_inventory: false, legacy_inventory: None }
 }
 
 #[test]

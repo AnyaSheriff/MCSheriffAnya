@@ -20,7 +20,30 @@ fn setup(state: i32, feet: f64) -> (Shared, PlayerState) {
 
 fn packet(id: i32, payload: &[u8]) -> PacketInfo {
     let mut body = encode_varint(id); body.extend_from_slice(payload);
-    PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
+    PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }
+}
+
+#[test]
+fn support_feedback_accepts_ground_only_and_rotation_without_losing_airborne_wait() {
+    for id in [SET_PLAYER_ON_GROUND, SET_PLAYER_ROTATION, SET_PLAYER_POSITION] {
+        let (shared, mut player) = setup(blocks::state_by_name("stone").unwrap(), 65.0);
+        player.awaiting_teleport = false;
+        player.net.check_support = Some(40);
+        let movement = |ground| {
+            let mut payload = Vec::new();
+            if id == SET_PLAYER_POSITION { for value in [0.5,65.0,0.5] { push_f64(&mut payload, value); } }
+            if id == SET_PLAYER_ROTATION { push_f32(&mut payload,0.0); push_f32(&mut payload,0.0); }
+            payload.push(ground);
+            packet(id, &payload)
+        };
+        shared.ticks.send_replace(40);
+        assert!(handle_client_packet(&movement(0), &mut player, &shared).confirm.is_empty());
+        assert_eq!(player.net.check_support, Some(40));
+        shared.ticks.send_replace(41);
+        assert_eq!(handle_client_packet(&movement(1), &mut player, &shared).confirm, [(0,64,0)]);
+        assert_eq!(player.net.check_support, None);
+        assert!(handle_client_packet(&movement(1), &mut player, &shared).confirm.is_empty());
+    }
 }
 
 fn movement(to: Point, flags: u8, rotation: bool) -> PacketInfo {

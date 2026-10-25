@@ -75,6 +75,8 @@ pub struct PacketInfo {
     pub body: Vec<u8>,
     /// Дополнительные поля ConfirmTeleportation777; тело приведено к775.
     pub teleport: Option<mcsa_protocol::teleport::Confirmation>,
+    /// Новый Punch777 отличаем от прежнего Arm Animation после перевода ID.
+    pub punch: bool,
     /// Предсказания хэшей компонентов чужой версии не подтверждают инвентарь.
     pub foreign_inventory: bool,
     /// Старое подтверждение хранится отдельно от современных хэшей.
@@ -134,7 +136,7 @@ pub async fn read_packet<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<Pac
         id: packet_id,
         length,
         body,
-        teleport: None, foreign_inventory: false, legacy_inventory: None,
+        teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None,
     })
 }
 
@@ -249,12 +251,12 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
             // Такой пакет никогда не передаётся обычному обработчику.
             let id = if body.is_empty() { -1 } else { decode_varint(&body)?.0 };
             return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None,
-                foreign_inventory: false, legacy_inventory: action });
+                punch: false, foreign_inventory: false, legacy_inventory: action });
         }
         let body = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?
             .serverbound(&packet.body).map_err(translate_error)?;
         let (id, _) = decode_varint(&body)?;
-        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None });
+        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None });
     }
     // Confirm имеет ID0 в обеих проверенных версиях. Его новые поля нужны
     // обработчику, поэтому не пропускаем их через обычный перевод в775.
@@ -263,14 +265,14 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("ConfirmTeleportation: {error:?}")))?;
         let mut body = vec![0];
         push_varint(&mut body, confirmation.id);
-        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation), foreign_inventory: false, legacy_inventory: None });
+        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation), punch: false, foreign_inventory: false, legacy_inventory: None });
     }
     if probe_776 {
         let adapter = if version==JavaVersion::V1_21_4 {mcsa_protocol::client_769::serverbound} else if version==JavaVersion::V1_21_5 {mcsa_protocol::client_770::serverbound} else if version==JavaVersion::V1_21_6 {mcsa_protocol::client_771::serverbound} else if version==JavaVersion::V1_21_8 {mcsa_protocol::client_772::serverbound} else if version==JavaVersion::V1_21_9 {mcsa_protocol::client_773::serverbound} else if version==JavaVersion::V1_21_11 {mcsa_protocol::client_774::serverbound} else {mcsa_protocol::client_776::serverbound};
         let body = adapter(&packet.body, wire::Context { items: item_context(content), ..Default::default() })
             .map_err(translate_error)?.into_owned();
         let (id, _) = decode_varint(&body)?;
-        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12 || (matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) && id==0x42) || (content.is_preview() && id == 0x38), legacy_inventory: None });
+        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: id == 0x12 || (matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) && id==0x42) || (content.is_preview() && id == 0x38), legacy_inventory: None });
     }
     if version == wire::INTERNAL {
         if content.is_preview() && packet.id == 0x38 {
@@ -282,13 +284,14 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
         }
         return Ok(packet);
     }
+    let punch = version == JavaVersion::V26_3 && packet.id == 0x2e;
     let body = wire::translate_with_context(State::Play, Direction::Serverbound,
         version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(content), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
     // Родной клиент777 основного263 получает обычные поячеечные ответы;
     // полный снимок нужен при переходе между каталогами предметов.
     let foreign_inventory = id == 0x12 && !(version == JavaVersion::V26_3 && content.is_preview());
-    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory, legacy_inventory: None })
+    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, punch, foreign_inventory, legacy_inventory: None })
 }
 
 /// Предел одной записи вместе со сбросом. Это защита транспорта, а не
@@ -681,6 +684,23 @@ pub fn is_client_disconnect(error: &io::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn translated_punch_keeps_its_identity_apart_from_legacy_arm_animation() {
+        for (version, body, punch) in [
+            (JavaVersion::V26_3, vec![0x2e], true),
+            (JavaVersion::V26_3, vec![0x3f,0], false),
+            (JavaVersion::V26_1_2, vec![0x3f,0], false),
+        ] {
+            let mut bytes = Vec::new();
+            frame(&mut bytes, &body, compression_threshold());
+            let packet = read_play_packet_with_content(&mut bytes.as_slice(), version, None, false,
+                mcsa_protocol::content::ContentCodec::white_slab_preview()).await.unwrap();
+            assert_eq!(packet.id, 0x3f);
+            assert_eq!(packet.payload(), [0]);
+            assert_eq!(packet.punch, punch);
+        }
+    }
 
     #[tokio::test]
     async fn preview_keep_alive_uses_client_ids_and_replies_reach_the_canonical_handler() {

@@ -19,7 +19,7 @@ fn player(item: &str) -> PlayerState {
 fn packet(id: i32, payload: Vec<u8>) -> PacketInfo {
     let mut body = encode_varint(id);
     body.extend(payload);
-    PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
+    PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }
 }
 
 fn movement(at: (f64, f64, f64), ground: bool) -> PacketInfo {

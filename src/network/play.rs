@@ -1424,6 +1424,11 @@ fn accept_teleport(packet: &PacketInfo, player: &mut PlayerState) -> bool {
         if !valid_position(at.x, at.y, at.z) || !at.yaw.is_finite() || !at.pitch.is_finite() { return false; }
         player.set_position(at.x, at.y, at.z);
         player.set_rotation(at.yaw, at.pitch);
+        // Confirm777 уже задаёт новую опорную позу. Следующий Position —
+        // настоящий шаг: Via pvp-mace терял первые0,0784блока падения
+        // и0,4704урона при совершенно одинаковых входных пакетах.
+        // Старый Confirm775 без позы по-прежнему ждёт первого места.
+        vitals::confirmed_pose(player);
     }
     player.awaiting_teleport = false;
     true
@@ -7900,12 +7905,7 @@ fn handle_client_packet_inner(
 
             // Прыжок, бег и приземление считает здоровье (vitals.rs).
             vitals::moved(player, shared, from);
-            if player.net.check_support.is_some_and(|due| *shared.ticks.borrow() >= due) {
-                player.net.check_support = None;
-                if player.on_ground {
-                    reaction.confirm.push((x.floor() as i32, (y - 0.2).floor() as i32, z.floor() as i32));
-                }
-            }
+            vitals::confirm_support(player, &mut reaction, *shared.ticks.borrow());
         }
         SET_PLAYER_ROTATION => {
             if let Some((yaw, pitch)) = read_rotation(payload, 0) {
@@ -7925,6 +7925,7 @@ fn handle_client_packet_inner(
                 if !player.net.teleported {
                     vitals::moved(player, shared, (player.x, player.y, player.z));
                 }
+                vitals::confirm_support(player, &mut reaction, *shared.ticks.borrow());
             }
         }
         SET_PLAYER_ON_GROUND => {
@@ -7937,6 +7938,7 @@ fn handle_client_packet_inner(
                 if !player.net.teleported {
                     vitals::moved(player, shared, (player.x, player.y, player.z));
                 }
+                vitals::confirm_support(player, &mut reaction, *shared.ticks.borrow());
             }
         }
         0x34 => { gameplay::beacon_select(payload, player, shared); }
@@ -8237,9 +8239,9 @@ fn handle_client_packet_inner(
         SWING_ARM => {
             let now = *shared.ticks.borrow();
 
-            // Официальный777: Attack и Swing одного такта не дают второго
-            // Animate0 наблюдателю (pvp-armor/attribute-item).
-            if !pvp::broadcast_swing_after_attack(shared.catalog(), player.last_attack, now) { return reaction; }
+            // Punch777 после Attack — настоящий взмах (Via pvp-armor).
+            // Прежний Arm Animation сохраняет отдельное поведение777.
+            if !packet.punch && !pvp::broadcast_swing_after_attack(shared.catalog(), player.last_attack, now) { return reaction; }
             shared.players.lock().expect("список игроков захвачен другим потоком").swing_at(&player.uuid, now);
         }
         SET_CARRIED_ITEM => {
@@ -12735,7 +12737,7 @@ mod tests {
             id: SET_PLAYER_POSITION,
             length: body.len() as i32,
             body,
-            teleport: None, foreign_inventory: false, legacy_inventory: None,
+            teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None,
         };
 
         assert_eq!(packet.payload().len(), POSITION_BYTES);
@@ -12767,7 +12769,7 @@ mod tests {
                 push_f32(&mut body, *value);
             }
             body.push(flags);
-            PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
+            PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }
         };
 
         handle_client_packet(&packet(SET_PLAYER_POSITION, &[1.5, 2.0, 3.5], &[], 0x01), &mut player, &shared);

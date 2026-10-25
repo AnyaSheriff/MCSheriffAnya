@@ -18,7 +18,7 @@ fn apply(body: &[u8], player: &mut PlayerState, shared: &Shared) -> Reaction {
         pose: Pose { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch } };
     let body = legacy_actions::translate(body, context).unwrap();
     let (id, _) = decode_varint(&body).unwrap();
-    let packet = PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None };
+    let packet = PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
     handle_client_packet(&packet, player, shared)
 }
 
@@ -74,7 +74,7 @@ fn inventory_action(body: &[u8], player: &mut PlayerState, shared: &Shared) -> R
     }).unwrap();
     let id = if body.is_empty() { -1 } else { decode_varint(&body).unwrap().0 };
     handle_client_packet(&PacketInfo { id, length: body.len() as i32, body, teleport: None,
-        foreign_inventory: false, legacy_inventory: action }, player, shared)
+        punch: false, foreign_inventory: false, legacy_inventory: action }, player, shared)
 }
 
 fn click_packet(transaction: i16, slot: i16, expected: &[u8]) -> Vec<u8> {
@@ -114,7 +114,7 @@ fn legacy_rejection_survives_close_but_not_death_and_respawn() {
     let wrong = click_packet(3, 5, &[1,8,64,0,0,0]);
     assert!(!inventory_action(&wrong, &mut player, &shared).legacy_confirmation.unwrap().accepted);
     let close = PacketInfo { id: CLOSE_CONTAINER, length: 2, body: vec![CLOSE_CONTAINER as u8, 0],
-        teleport: None, foreign_inventory: false, legacy_inventory: None };
+        teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
     handle_client_packet(&close, &mut player, &shared);
     let empty = click_packet(4, 37, &[255,255]);
     assert!(inventory_action(&empty, &mut player, &shared).legacy_confirmation.is_none());
@@ -167,7 +167,7 @@ fn legacy_inventory_modes_use_shared_handlers_with_recorded_inputs() {
                 enchantments: super::super::packet::legacy_enchantments(),
             }).unwrap();
             let native_packet = PacketInfo { id: CLICK_CONTAINER, length: native_body.len() as i32, body: native_body,
-                teleport: None, foreign_inventory: false, legacy_inventory: None };
+                teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
             handle_client_packet(&native_packet, &mut native, &native_shared);
             let reaction = inventory_action(&body, &mut player, &shared);
             assert!(reaction.legacy_confirmation.unwrap().accepted, "{stage}");

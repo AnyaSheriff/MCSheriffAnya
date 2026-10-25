@@ -100,12 +100,32 @@ mod itemaudit_tests {
     use super::*;
 
     #[test]
-    fn same_tick_attack_swing_is_not_duplicated_only_on_263() {
+    fn real_swing_after_same_tick_attack_reaches_observers_once() {
         use crate::gameplay_catalog::{Catalog,Profile};
-        let old=Catalog::new(Profile::Java26_1_2);let modern=Catalog::new(Profile::Preview26_3);
-        assert!(broadcast_swing_after_attack(old,40,40));
-        assert!(!broadcast_swing_after_attack(modern,40,40));
-        assert!(broadcast_swing_after_attack(modern,40,41));
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(Path::new("tmp/combat-swing-ops.json")), crate::skins::Settings::default());
+            let mut player = PlayerState::new_for_catalog([19;16], "Swing".into(), None, None, 0, 19, (0.5,64.0,0.5), catalog);
+            shared.players.lock().unwrap().join(player.member(), player.entity_id).unwrap();
+            let mut body = encode_varint(SWING_ARM);
+            body.push(0);
+            let mut packet = PacketInfo { id: SWING_ARM, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
+            shared.ticks.send_replace(40);
+            player.last_attack = 40;
+            handle_client_packet(&packet, &mut player, &shared);
+            assert_eq!(shared.players.lock().unwrap().members()[0].swings, u32::from(profile == Profile::Java26_1_2));
+            // Пустой Punch777 обязан пережить перевод в тот же внутренний ID.
+            packet.punch = true;
+            // pvp-armor777: по одному Animate0 после ударов0 и14.
+            for (tick, expected) in [(40,1), (40,1), (43,1), (54,2)] {
+                shared.ticks.send_replace(tick);
+                player.last_attack = tick;
+                handle_client_packet(&packet, &mut player, &shared);
+                assert_eq!(shared.players.lock().unwrap().members()[0].swings, expected);
+            }
+        }
     }
 
     #[test]
