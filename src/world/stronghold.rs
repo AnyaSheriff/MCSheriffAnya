@@ -44,7 +44,7 @@ pub const RINGS: [u32; 8] = [3, 6, 10, 15, 21, 28, 36, 9];
 /// 1280–2816 блоков у первого, каждое следующее на 3072 дальше).
 const RING_MIDDLE: f64 = 128.0;
 const RING_STEP: f64 = 192.0;
-const RING_HALF: f64 = 48.0;
+const RING_HALF: f64 = 40.0;
 
 /// Вики, Biome tag: «moved up to 112 block», биом на y=0.
 const LAND_SEARCH: i32 = 112;
@@ -279,23 +279,27 @@ fn template_for(kind: Kind, facing: u8, variant: u32) -> usize {
 
 /// Точки колец в чанках до сдвига к суше: на равных долях круга внутри
 /// кольца, со случайным поворотом и расстоянием в пределах кольца.
+#[cfg(any(test, seedmap_core))]
 pub fn ring_points(seed: i64) -> Vec<(i32, i32)> {
-    let mut dice = Dice::new(seed, 0x5_7801, 0, 0);
+    ring_candidates(seed).into_iter().map(|(point, _)| point).collect()
+}
+
+/// minecraft.wiki/w/Stronghold: «concentric rings». Отдельный поток поиска
+/// биома расходует nextLong, даже если поиск не изменил точку кольца.
+fn ring_candidates(seed: i64) -> Vec<((i32, i32), i64)> {
+    let mut random = super::template::StructureRandom::new(seed);
+    let mut angle = random.double() * std::f64::consts::TAU;
     let mut out = Vec::with_capacity(128);
-
     for (ring, &count) in RINGS.iter().enumerate() {
-        let turn = dice.unit() * std::f64::consts::TAU;
-
-        // Вики, Stronghold: «roughly 36°» у последнего кольца из девяти.
         let divisions = if ring == 7 { 10 } else { count };
-        for at in 0..count {
-            let angle = turn + std::f64::consts::TAU * f64::from(at) / f64::from(divisions);
-            let distance = RING_MIDDLE + RING_STEP * ring as f64 + (dice.unit() * 2.0 - 1.0) * RING_HALF;
-
-            out.push(((angle.cos() * distance).round() as i32, (angle.sin() * distance).round() as i32));
+        for _ in 0..count {
+            let distance = RING_MIDDLE + RING_STEP * ring as f64 + (random.double() * 2.0 - 1.0) * RING_HALF;
+            let point = ((angle.cos() * distance).round() as i32, (angle.sin() * distance).round() as i32);
+            out.push((point, random.long()));
+            angle += std::f64::consts::TAU / f64::from(divisions);
         }
+        if ring < 7 { angle += random.double() * std::f64::consts::TAU; }
     }
-
     out
 }
 
@@ -303,20 +307,24 @@ pub fn ring_points(seed: i64) -> Vec<(i32, i32)> {
 /// предпочтительному биому (`land` принимает мировые координаты блоков).
 /// Считаются один раз на семя.
 pub fn starts(seed: i64, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>> {
-    static CACHE: Cache<i64, Vec<(i32, i32)>> = OnceLock::new();
+    starts_with_profile(seed, false, land)
+}
+
+fn starts_with_profile(seed: i64, preview: bool, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>> {
+    static CACHE: Cache<(i64, bool), Vec<(i32, i32)>> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
 
     #[cfg(not(seedmap_core))]
-    if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&seed) {
+    if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&(seed, preview)) {
         return found.clone();
     }
 
-    let out = biased_points(seed,land);
+    let out = if preview { biased_points(seed,land) } else { legacy_biased_points(seed,land) };
 
     let out = Arc::new(out);
     #[cfg(not(seedmap_core))]
-    cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(seed, out.clone());
+    cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert((seed, preview), out.clone());
     out
 }
 
@@ -818,7 +826,9 @@ fn preferred(biome: super::terrain::Biome) -> bool {
 
 /// Чанки стартов крепостей мира с этим рельефом.
 pub fn starts_of(terrain: &super::terrain::Terrain) -> Arc<Vec<(i32, i32)>> {
-    starts(terrain.seed(), &|x, z| land(terrain, x, z))
+    if terrain.generation_profile() & 2 != 0 {
+        starts_with_profile(terrain.seed(), true, &|x, z| land(terrain, x, z))
+    } else { starts(terrain.seed(), &|x, z| land(terrain, x, z)) }
 }
 
 /// Раскладка крепости — одна на старт, хранится, пока мир жив.
@@ -1132,17 +1142,17 @@ mod tests {
 // Вики, Stronghold: «generate underwater if necessary». Предпочтение
 // суши не запрещает океан; детализацию сетки поиска [проверить].
 fn biased_points(seed:i64,land:&dyn Fn(i32,i32)->bool) -> Vec<(i32,i32)> {
-    ring_points(seed).into_iter().map(|(cx,cz)| {
+    ring_candidates(seed).into_iter().map(|((cx,cz), search_seed)| {
         let (x,z)=(cx*16+8,cz*16+8);
-        let mut dice=Dice::new(seed,0x57_B10,cx,cz);
+        let mut dice=super::template::StructureRandom::new(search_seed);
         let mut found=0;
         let mut best=(cx,cz);
-        for qx in (x-LAND_SEARCH).div_euclid(4)..=(x+LAND_SEARCH).div_euclid(4) {
-            for qz in (z-LAND_SEARCH).div_euclid(4)..=(z+LAND_SEARCH).div_euclid(4) {
-                let (px,pz)=(qx*4+2,qz*4+2);
+        for qz in (z-LAND_SEARCH).div_euclid(4)..=(z+LAND_SEARCH).div_euclid(4) {
+            for qx in (x-LAND_SEARCH).div_euclid(4)..=(x+LAND_SEARCH).div_euclid(4) {
+                let (px,pz)=(qx*4,qz*4);
                 if land(px,pz) {
+                    if found == 0 || dice.below(found+1)==0 {best=(px.div_euclid(16),pz.div_euclid(16));}
                     found+=1;
-                    if dice.below(found)==0 {best=(px.div_euclid(16),pz.div_euclid(16));}
                 }
             }
         }
@@ -1171,4 +1181,44 @@ fn stronghold_preferred_tag_is_not_all_land() {
     for b in [Plains, CherryGrove, PaleGarden, LushCaves, DripstoneCaves] {
         assert!(preferred(b), "{b:?}");
     }
+}
+
+
+fn legacy_ring_points(seed: i64) -> Vec<(i32, i32)> {
+    let mut dice = Dice::new(seed, 0x5_7801, 0, 0);
+    let mut out = Vec::with_capacity(128);
+
+    for (ring, &count) in RINGS.iter().enumerate() {
+        let turn = dice.unit() * std::f64::consts::TAU;
+
+        // Вики, Stronghold: «roughly 36°» у последнего кольца из девяти.
+        let divisions = if ring == 7 { 10 } else { count };
+        for at in 0..count {
+            let angle = turn + std::f64::consts::TAU * f64::from(at) / f64::from(divisions);
+            let distance = RING_MIDDLE + RING_STEP * ring as f64 + (dice.unit() * 2.0 - 1.0) * 48.0;
+
+            out.push(((angle.cos() * distance).round() as i32, (angle.sin() * distance).round() as i32));
+        }
+    }
+
+    out
+}
+
+fn legacy_biased_points(seed:i64,land:&dyn Fn(i32,i32)->bool) -> Vec<(i32,i32)> {
+    legacy_ring_points(seed).into_iter().map(|(cx,cz)| {
+        let (x,z)=(cx*16+8,cz*16+8);
+        let mut dice=Dice::new(seed,0x57_B10,cx,cz);
+        let mut found=0;
+        let mut best=(cx,cz);
+        for qx in (x-LAND_SEARCH).div_euclid(4)..=(x+LAND_SEARCH).div_euclid(4) {
+            for qz in (z-LAND_SEARCH).div_euclid(4)..=(z+LAND_SEARCH).div_euclid(4) {
+                let (px,pz)=(qx*4+2,qz*4+2);
+                if land(px,pz) {
+                    found+=1;
+                    if dice.below(found)==0 {best=(px.div_euclid(16),pz.div_euclid(16));}
+                }
+            }
+        }
+        best
+    }).collect()
 }

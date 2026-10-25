@@ -283,11 +283,77 @@ pub fn chance(seed: i64, x: i32, y: i32, z: i32, salt: u64) -> f64 {
 
 /// Чанк попытки в области: сдвиг 0…spacing−separation−1 по каждой оси
 /// (вики, Structure set: «linear»).
+pub fn grid_attempt(seed: i64, region_x: i32, region_z: i32, spacing: i32, separation: i32, salt: u64) -> (i32, i32) {
+    let mut random = placement_random(seed, region_x, region_z, salt);
+    let span = spacing - separation;
+    (region_x * spacing + random.below(span), region_z * spacing + random.below(span))
+}
+
 pub fn attempt(seed: i64, region_x: i32, region_z: i32, spacing: i32, separation: i32, salt: u64) -> (i32, i32) {
     let dice = roll(seed, region_x, region_z, salt);
     let span = (spacing - separation) as u64;
 
     (region_x * spacing + (dice % span) as i32, region_z * spacing + ((dice >> 24) % span) as i32)
+}
+
+/// Поток области: minecraft.wiki/w/Structure_set, «salt», «linear».
+/// Подтверждён сохранёнными началами двух миров 26.3; декор использует свой поток.
+pub fn placement_random(seed: i64, x: i32, z: i32, salt: u64) -> StructureRandom {
+    StructureRandom::new(seed.wrapping_add(i64::from(x).wrapping_mul(341_873_128_712))
+        .wrapping_add(i64::from(z).wrapping_mul(132_897_987_541)).wrapping_add(salt as i64))
+}
+
+/// Треугольный разброс: четыре последовательных броска, сначала оба X.
+pub fn triangular_attempt(seed: i64, x: i32, z: i32, spacing: i32, separation: i32, salt: u64) -> (i32, i32) {
+    let mut random = placement_random(seed, x, z, salt);
+    let span = spacing - separation;
+    (x * spacing + (random.below(span) + random.below(span)) / 2,
+     z * spacing + (random.below(span) + random.below(span)) / 2)
+}
+
+/// java.util.Random по документации Java API; без доступа к коду игры.
+pub struct StructureRandom(u64);
+
+impl StructureRandom {
+    pub fn new(seed: i64) -> Self {
+        Self((seed as u64 ^ 0x0005_DEEC_E66D) & ((1u64 << 48) - 1))
+    }
+
+    fn bits(&mut self, count: u32) -> u64 {
+        self.0 = self.0.wrapping_mul(0x0005_DEEC_E66D).wrapping_add(11) & ((1u64 << 48) - 1);
+        self.0 >> (48 - count)
+    }
+
+    pub fn below(&mut self, bound: i32) -> i32 {
+        assert!(bound > 0);
+        if (bound as u32).is_power_of_two() {
+            return ((bound as u64 * self.bits(31)) >> 31) as i32;
+        }
+        loop {
+            let bits = self.bits(31) as i32;
+            let value = bits % bound;
+            if bits.wrapping_sub(value).wrapping_add(bound - 1) >= 0 { return value; }
+        }
+    }
+
+    pub fn long(&mut self) -> i64 {
+        ((self.bits(32) as i32 as i64) << 32).wrapping_add(self.bits(32) as i32 as i64)
+    }
+
+    pub fn double(&mut self) -> f64 {
+        ((self.bits(26) << 27) + self.bits(27)) as f64 / (1u64 << 53) as f64
+    }
+
+    pub fn float(&mut self) -> f32 {
+        self.bits(24) as f32 / (1u32 << 24) as f32
+    }
+
+    pub fn for_chunk(seed: i64, x: i32, z: i32) -> Self {
+        let mut random = Self::new(seed);
+        let a = random.long();
+        let b = random.long();
+        Self::new(i64::from(x).wrapping_mul(a) ^ i64::from(z).wrapping_mul(b) ^ seed)
+    }
 }
 
 /// Ближайший старт среди областей вокруг чанка (`locate structure`): по
@@ -395,5 +461,67 @@ mod tests {
         assert_eq!(parsed[0].cell(0, 0, 1), Cell::Air);
         assert_eq!(parsed[0].cell(1, 1, 1), Cell::Block(0));
         assert_eq!(parsed[0].cells().count(), 4);
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+mod overworld_placement_tests {
+    use super::*;
+
+    /// Регрессия по сохранённым началам, а не по вычисленным ожиданиям.
+    #[test]
+    fn persisted_official_starts_are_grid_candidates() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-starts.json")).unwrap();
+        let mut checked = 0;
+        for start in fixture["starts"].as_array().unwrap() {
+            let seed = start["seed"].as_i64().unwrap();
+            let name = start["family"].as_str().unwrap();
+            let x = start["chunk"][0].as_i64().unwrap() as i32;
+            let z = start["chunk"][1].as_i64().unwrap() as i32;
+            let actual = if name.starts_with("village") {
+                super::super::village::attempt(seed, x.div_euclid(34), z.div_euclid(34))
+            } else if name.starts_with("abandoned_camp") {
+                super::super::abandoned_camp::attempt(seed, x.div_euclid(37), z.div_euclid(37))
+            } else {
+                use super::super::{ancient_city, mansion, monument, ocean_ruin, pillager_outpost,
+                    ruined_portal, shipwreck, temples, trail_ruins, trial_chambers};
+                match name {
+                    "desert_pyramid" | "jungle_pyramid" | "swamp_hut" => temples::attempt(
+                        match name { "desert_pyramid" => temples::Kind::DesertPyramid,
+                            "jungle_pyramid" => temples::Kind::JunglePyramid, _ => temples::Kind::SwampHut },
+                        seed, x.div_euclid(32), z.div_euclid(32)),
+                    "igloo" => temples::igloo_attempt(seed, x.div_euclid(32), z.div_euclid(32)),
+                    "monument" => monument::attempt(seed, x.div_euclid(32), z.div_euclid(32)),
+                    "mansion" => mansion::attempt(seed, x.div_euclid(80), z.div_euclid(80)),
+                    "ancient_city" => ancient_city::attempt(seed, x.div_euclid(24), z.div_euclid(24)),
+                    "trial_chambers" => trial_chambers::attempt(seed, x.div_euclid(34), z.div_euclid(34)),
+                    "shipwreck" | "shipwreck_beached" => shipwreck::attempt(seed, x.div_euclid(24), z.div_euclid(24)),
+                    "ocean_ruin" | "ocean_ruin_cold" | "ocean_ruin_warm" => ocean_ruin::attempt(seed, x.div_euclid(20), z.div_euclid(20)),
+                    "trail_ruins" => trail_ruins::attempt(seed, x.div_euclid(34), z.div_euclid(34)),
+                    name if name.starts_with("ruined_portal") => ruined_portal::attempt(seed, x.div_euclid(40), z.div_euclid(40)),
+                    "pillager_outpost" => pillager_outpost::attempt(seed, x.div_euclid(32), z.div_euclid(32)),
+                    "mineshaft" | "mineshaft_mesa" => {
+                        assert!(StructureRandom::for_chunk(seed, x, z).double() < 0.004);
+                        checked += 1;
+                        continue;
+                    }
+                    "buried_treasure" => {
+                        assert!(placement_random(seed, x, z, 10_387_320).float() < 0.01);
+                        checked += 1;
+                        continue;
+                    }
+                    "stronghold" => {
+                        assert!(super::super::stronghold::ring_points(seed).iter()
+                            .any(|&(cx, cz)| (cx-x).abs() <= 8 && (cz-z).abs() <= 8), "{seed} {name}");
+                        checked += 1;
+                        continue;
+                    }
+                    _ => panic!("непроверенное семейство {name}"),
+                }
+            };
+            assert_eq!(actual, (x, z), "{seed} {name}");
+            checked += 1;
+        }
+        assert_eq!(checked, 609);
     }
 }

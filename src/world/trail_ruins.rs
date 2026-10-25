@@ -93,8 +93,19 @@ pub fn fits(biome: super::terrain::Biome) -> bool {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Поставленный кусок: образец, положение, угол рамки в мире.
 #[derive(Clone, Copy, Debug)]
@@ -145,7 +156,7 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let library = library();
     let found = (fits(terrain.column_in(x + 8, z + 8, None).biome) && !library.layouts.is_empty()).then(|| {
@@ -193,7 +204,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
     for region_x in (chunk_x - REACH_CHUNKS).div_euclid(SPACING)..=(chunk_x + REACH_CHUNKS).div_euclid(SPACING) {
         for region_z in (chunk_z - REACH_CHUNKS).div_euclid(SPACING)..=(chunk_z + REACH_CHUNKS).div_euclid(SPACING) {
-            let (x, z) = attempt(seed, region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > REACH_CHUNKS || (z - chunk_z).abs() > REACH_CHUNKS {
                 continue;

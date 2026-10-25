@@ -93,15 +93,26 @@ fn roll(seed: i64, x: i32, z: i32, salt: u64) -> u64 {
 /// Чанк попытки в области (rx, rz): сдвиг 0…25 по каждой оси (вики:
 /// «separation» — у соседних областей старты не ближе 8 чанков).
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    super::template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, 10_387_312)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     let dice = roll(seed, region_x, region_z, 10_387_312);
     let span = (SPACING - SEPARATION) as u64;
 
     (region_x * SPACING + (dice % span) as i32, region_z * SPACING + ((dice >> 20) % span) as i32)
 }
 
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
+
 /// Стоит ли деревня с чанком старта в этой области, и какая.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32, Kind)> {
-    let (chunk_x, chunk_z) = attempt(terrain.seed(), region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let kind = Kind::of_biome(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)?;
 
     library(kind).map(|_| (chunk_x, chunk_z, kind))
@@ -542,7 +553,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
     for region_x in (chunk_x - reach).div_euclid(SPACING)..=(chunk_x + reach).div_euclid(SPACING) {
         for region_z in (chunk_z - reach).div_euclid(SPACING)..=(chunk_z + reach).div_euclid(SPACING) {
-            let (x, z) = attempt(terrain.seed(), region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > reach || (z - chunk_z).abs() > reach {
                 continue;

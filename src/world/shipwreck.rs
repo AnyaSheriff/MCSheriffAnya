@@ -75,8 +75,19 @@ impl Ship {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Вид по биому: Some(false) — на дне, Some(true) — на берегу.
 pub fn kind_of(biome: super::terrain::Biome) -> Option<bool> {
@@ -104,7 +115,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let found = kind_of(terrain.column_in(x + 8, z + 8, None).biome).map(|beached| {
         let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x5419);
@@ -231,7 +242,10 @@ const TREASURE_DEPTH: [i32; 3] = [1, 2, 3];
 pub fn treasure_in(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Option<i32> {
     use super::terrain::Biome;
 
-    if template::chance(terrain.seed(), chunk_x, 0, chunk_z, 0) >= TREASURE_SHARE {
+    let chance = if terrain.generation_profile() & 2 != 0 {
+        f64::from(template::placement_random(terrain.seed(), chunk_x, chunk_z, 10_387_320).float())
+    } else { template::chance(terrain.seed(), chunk_x, 0, chunk_z, 0) };
+    if chance >= TREASURE_SHARE {
         return None;
     }
 

@@ -128,12 +128,23 @@ fn roll(seed: i64, x: i32, z: i32, salt: u64) -> u64 {
 
 /// Чанк попытки в области: «треугольный» сдвиг — полусумма двух 0…26.
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    super::template::triangular_attempt(seed, region_x, region_z, SPACING, SEPARATION, 10_387_313)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     let dice = roll(seed, region_x, region_z, 10_387_313);
     let span = (SPACING - SEPARATION) as u64;
     let part = |shift: u32| (dice >> shift) % span;
 
     (region_x * SPACING + ((part(0) + part(12)) / 2) as i32, region_z * SPACING + ((part(24) + part(36)) / 2) as i32)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 fn deep(biome: super::terrain::Biome) -> bool {
     use super::terrain::Biome;
@@ -161,7 +172,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         return *found;
     }
 
-    let (chunk_x, chunk_z) = attempt(terrain.seed(), region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let biome = |dx: i32, dz: i32| terrain.column_in(x + dx, z + dz, None).biome;
     // Вики, Ocean Monument: «everywhere within a 16 block square radius».
@@ -214,7 +225,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
     for region_x in (chunk_x - 2).div_euclid(SPACING)..=(chunk_x + 2).div_euclid(SPACING) {
         for region_z in (chunk_z - 2).div_euclid(SPACING)..=(chunk_z + 2).div_euclid(SPACING) {
-            let (x, z) = attempt(terrain.seed(), region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > 2 || (z - chunk_z).abs() > 2 {
                 continue;

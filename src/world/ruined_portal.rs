@@ -165,7 +165,7 @@ pub fn library() -> &'static [Template] {
 
 /// Чанк попытки в области.
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
-    template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
 
 /// Свойства портала по виду (вики, таблица «Ruined Portals»): как встаёт,
@@ -228,7 +228,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         return *found;
     }
 
-    let found = decide(terrain.seed(), region_x, region_z, &|x, z| terrain.column_in(x, z, None).biome, &|x, z, floor| {
+    let found = decide(terrain.seed(), region_x, region_z, terrain.generation_profile() & 2 != 0, &|x, z| terrain.column_in(x, z, None).biome, &|x, z, floor| {
         let height = terrain.column_at(x, z).height;
 
         if floor { height } else { height.max(super::terrain::SEA) }
@@ -249,7 +249,7 @@ pub fn start_in_nether(nether: &super::nether::Nether, region_x: i32, region_z: 
         return *found;
     }
 
-    let found = decide(nether.seed(), region_x, region_z, &|x, z| nether.biome_at(x, z), &|_, _, _| 0).map(|mut portal| {
+    let found = decide(nether.seed(), region_x, region_z, false, &|x, z| nether.biome_at(x, z), &|_, _, _| 0).map(|mut portal| {
         portal.origin.1 = nether_height(nether, &portal);
         portal
     });
@@ -285,8 +285,9 @@ fn nether_height(nether: &super::nether::Nether, portal: &Portal) -> i32 {
 }
 
 /// Решение области: вид по биому, образец, положение, поля и высота.
-fn decide(seed: i64, region_x: i32, region_z: i32, biome: &dyn Fn(i32, i32) -> super::terrain::Biome, top: &dyn Fn(i32, i32, bool) -> i32) -> Option<Portal> {
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+fn decide(seed: i64, region_x: i32, region_z: i32, preview: bool, biome: &dyn Fn(i32, i32) -> super::terrain::Biome, top: &dyn Fn(i32, i32, bool) -> i32) -> Option<Portal> {
+    let (chunk_x, chunk_z) = if preview { attempt(seed, region_x, region_z) }
+        else { template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT) };
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let here = biome(x + 8, z + 8);
     let variant = Variant::of_biome(here)?;

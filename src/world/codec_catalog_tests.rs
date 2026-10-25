@@ -127,9 +127,10 @@ fn chunk_frames_pots_and_nested_contents_obey_catalog() {
 
 #[test]
 fn repro_8_9_regeneration_potions_save_and_reload_without_loss() {
-    let mut world = World::palette_test_world(1792855987123998292, 0);
-    world.ensure(8, 9);
-    let chunk = &world.chunks[&(8, 9)];
+    // Сохранённый чанк до исправления сетки камер: проверяем чтение старого
+    // мира, даже когда новая генерация уже не ставит сундук в (8, 9).
+    let stored = zstd::stream::decode_all(&include_bytes!("../../testdata/world-profile/genaudit-26.3/legacy-potion-chunk.zst")[..]).unwrap();
+    let chunk = Chunk::decode_for_load_with_catalog(&stored, preview()).unwrap();
     let chest = &chunk.containers[&(5, -48, 6)];
     let potion = crate::blocks::item_named("potion").unwrap();
     assert_eq!(potion, 1122);

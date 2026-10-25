@@ -398,7 +398,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<st
 
     for x in chunk_x - RADIUS_CHUNKS..=chunk_x + RADIUS_CHUNKS {
         for z in chunk_z - RADIUS_CHUNKS..=chunk_z + RADIUS_CHUNKS {
-            if roll(terrain.seed(), x, z, 0x5AF7_0000) % 1000 >= CHANCE {
+            if !eligible_for(terrain, x, z) {
                 continue;
             }
 
@@ -893,10 +893,37 @@ mod tests {
     /// там.
     #[test]
     fn starts_are_rare() {
-        let starts = (-200..200).flat_map(|x| (-50..50).map(move |z| (x, z))).filter(|&(x, z)| roll(7, x, z, 0x5AF7_0000) % 1000 < CHANCE).count();
+        let starts = (-200..200).flat_map(|x| (-50..50).map(move |z| (x, z))).filter(|&(x, z)| eligible(7, x, z)).count();
         let share = starts as f64 / 40_000.0;
 
         assert!((share - 0.004).abs() < 0.001, "{share}");
+    }
+
+    /// Регрессия: новая проверка начала должна доходить до блоков, а не
+    /// только до адаптера переписи (minecraft.wiki/w/Mineshaft: «0.4%»).
+    #[test]
+    fn official_start_places_wood_in_generated_chunks() {
+        use super::super::{terrain, Chunk, Generator};
+        let generator = Generator::Normal(terrain::Terrain::new(1_792_932_773_345_722_119, terrain::Style::Vanilla).with_preview(true));
+        let Generator::Normal(terrain) = &generator else { unreachable!() };
+        let (cx, cz) = (-21, -31);
+        assert!(start_at(terrain, cx, cz).is_some());
+        let expected = cached(terrain, cx, cz).unwrap();
+        assert!(near(terrain, cx, cz).iter().any(|plan| std::sync::Arc::ptr_eq(plan, &expected)));
+        let mut wood = 0;
+        for x in cx-1..=cx+1 {
+            for z in cz-1..=cz+1 {
+                let chunk = Chunk::generated(&generator, x, z);
+                for y in super::super::MIN_Y..60 {
+                    for bz in 0..16 {
+                        for bx in 0..16 {
+                            if matches!(blocks::block_at_state(chunk.block(bx, y, bz)), Some("oak_planks" | "oak_fence" | "rail")) { wood += 1; }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(wood > 10, "{wood}");
     }
 
     /// Перепись кусков шахты — против замера оригинала (tools/measure/

@@ -188,8 +188,19 @@ impl Mansion {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::triangular_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Подходит ли биом (вики: тёмный лес и бледный сад).
 pub fn biome_fits(biome: super::terrain::Biome) -> bool {
@@ -219,7 +230,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let found = biome_fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)
         .then(|| place(seed, chunk_x, chunk_z, &|x, z| terrain.column_at(x, z).height));
 

@@ -202,11 +202,22 @@ fn roll(seed: i64, x: i32, z: i32, salt: u64) -> u64 {
 
 /// Чанк попытки в области: ровный сдвиг 0…21.
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    super::template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, 94_251_327)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     let dice = roll(seed, region_x, region_z, 0x0007_81A1);
     let span = (SPACING - SEPARATION) as u64;
 
     (region_x * SPACING + (dice % span) as i32, region_z * SPACING + ((dice >> 32) % span) as i32)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Какая из снятых камер, на сколько четвертей повёрнута и низ стартового куска.
 fn pick(seed: i64, chunk_x: i32, chunk_z: i32) -> (usize, u8, i32) {
@@ -232,7 +243,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         return *found;
     }
 
-    let (chunk_x, chunk_z) = attempt(terrain.seed(), region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (_, _, start_y) = pick(terrain.seed(), chunk_x, chunk_z);
     let column = terrain.column_at(chunk_x * 16 + 8, chunk_z * 16 + 8);
     // Глубокая тьма в начале — камеры нет (вики: «except the deep dark»).
@@ -313,7 +324,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
     for region_x in (chunk_x - REACH).div_euclid(SPACING)..=(chunk_x + REACH).div_euclid(SPACING) {
         for region_z in (chunk_z - REACH).div_euclid(SPACING)..=(chunk_z + REACH).div_euclid(SPACING) {
-            let (x, z) = attempt(terrain.seed(), region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > REACH || (z - chunk_z).abs() > REACH {
                 continue;

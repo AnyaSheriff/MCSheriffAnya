@@ -44,7 +44,6 @@ use crate::blocks;
 pub const SPACING: i32 = 32;
 pub const SEPARATION: i32 = 8;
 const SALT: u64 = 165_745_296;
-const FREQUENCY: f64 = 0.2;
 
 /// Наименьшее расстояние до деревни, чанков (exclusion zone).
 const VILLAGE_ZONE: i32 = 10;
@@ -114,8 +113,19 @@ fn turn(a: i32, b: i32, turns: u8) -> (i32, i32) {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Биомы аванпоста (вики, Pillager Outpost, «Generation», Java).
 pub fn fits(biome: super::terrain::Biome) -> bool {
@@ -144,7 +154,7 @@ fn near_village(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -
 
     for region_x in (chunk_x - VILLAGE_ZONE).div_euclid(spacing)..=(chunk_x + VILLAGE_ZONE).div_euclid(spacing) {
         for region_z in (chunk_z - VILLAGE_ZONE).div_euclid(spacing)..=(chunk_z + VILLAGE_ZONE).div_euclid(spacing) {
-            let (x, z) = super::village::attempt(terrain.seed(), region_x, region_z);
+            let (x, z) = super::village::attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() <= VILLAGE_ZONE && (z - chunk_z).abs() <= VILLAGE_ZONE && super::village::start_in(terrain, region_x, region_z).is_some() {
                 return true;
@@ -170,8 +180,14 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
-    let lucky = template::chance(seed, region_x, 0, region_z, SALT ^ 0xF4E9) < FREQUENCY;
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
+    // minecraft.wiki/w/Pillager_Outpost: «20%»; редукция по чанкам,
+    // а не по области размещения. Подтверждена сохранёнными началами.
+    let reduction_seed = i64::from(chunk_x >> 4) ^ (i64::from(chunk_z >> 4) << 4) ^ seed;
+    let mut reduction = template::StructureRandom::new(reduction_seed);
+    reduction.below(1);
+    let lucky = if terrain.generation_profile() & 2 != 0 { reduction.below(5) == 0 }
+        else { template::chance(seed, region_x, 0, region_z, SALT ^ 0xF4E9) < 0.2 };
     let found = (lucky
         && !library().layouts.is_empty()
         && fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)
@@ -279,7 +295,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
     for region_x in (chunk_x - reach).div_euclid(SPACING)..=(chunk_x + reach).div_euclid(SPACING) {
         for region_z in (chunk_z - reach).div_euclid(SPACING)..=(chunk_z + reach).div_euclid(SPACING) {
-            let (x, z) = attempt(terrain.seed(), region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > reach || (z - chunk_z).abs() > reach {
                 continue;
