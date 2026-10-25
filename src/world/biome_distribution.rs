@@ -60,6 +60,12 @@ pub const CALIBRATED: [f64; 45] = [
     -0.026647, 0.713323,
 ];
 
+// Единая шкала моря для 26.3. Квантили сохраняют суммарные температурные
+// доли прежней калибровки: 90955 морских клеток, четыре семени, девять окон
+// на семя. Глубина больше не переключает температуру. Это своя модель;
+// [проверить] глобальная перепись 26.3 вне выбранных окон.
+pub const PREVIEW_OCEAN_T: [f64; 4] = [-0.499077, -0.218470, 0.046497, 0.566556];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,6 +73,7 @@ mod tests {
 
     #[test]
     fn calibration_is_monotone_and_finite() {
+        assert!(PREVIEW_OCEAN_T.windows(2).all(|p| p[0] < p[1]));
         for range in [0..4,4..8,8..12,12..16,16..20,20..24,24..28,28..32,32..37,37..43] {
             assert!(CALIBRATED[range].windows(2).all(|p| p[0]<p[1]));
         }
@@ -75,6 +82,40 @@ mod tests {
             let c=Climate{continent:n,temperature:n,humidity:n,erosion:n,weirdness:n};
             let out=mapped(&c,&CALIBRATED);
             assert!([out.continent,out.temperature,out.humidity,out.erosion,out.weirdness].iter().all(|v|v.is_finite()));
+        }
+    }
+
+    /// Смена границ глубины не должна заодно перекрашивать весь климат мира.
+    #[test]
+    fn preview_ocean_preserves_pooled_temperature_shares() {
+        fn rank(b: Biome) -> Option<usize> {
+            match b {
+                Biome::FrozenOcean | Biome::DeepFrozenOcean => Some(0),
+                Biome::ColdOcean | Biome::DeepColdOcean => Some(1),
+                Biome::Ocean | Biome::DeepOcean => Some(2),
+                Biome::LukewarmOcean | Biome::DeepLukewarmOcean => Some(3),
+                Biome::WarmOcean => Some(4),
+                _ => None,
+            }
+        }
+        let mut counts = [[0usize; 5]; 2];
+        for seed in [100_554_032_945_340, 42, 1, 1_234_567_890] {
+            let old = Terrain::new(seed, Style::Vanilla);
+            let new = Terrain::new(seed, Style::Vanilla).with_preview(true);
+            for cx in [-8192, 0, 8192] { for cz in [-8192, 0, 8192] {
+                let half = if cx == 0 && cz == 0 { 1024 } else { 512 };
+                for x in (cx-half..cx+half).step_by(16) { for z in (cz-half..cz+half).step_by(16) {
+                    for (i, terrain) in [&old, &new].iter().enumerate() {
+                        if let Some(t) = rank(terrain.biome_at(x+2, z+2)) { counts[i][t] += 1; }
+                    }
+                } }
+            } }
+        }
+        let totals = counts.map(|row| row.iter().sum::<usize>());
+        assert_eq!(totals[0], totals[1]);
+        for (t, (&old_count, &new_count)) in counts[0].iter().zip(&counts[1]).enumerate() {
+            let difference = old_count.abs_diff(new_count) as f64 / totals[0] as f64;
+            assert!(difference < 0.01, "пояс {t}: {counts:?}");
         }
     }
 

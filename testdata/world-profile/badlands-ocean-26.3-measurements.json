@@ -1,0 +1,6311 @@
+{
+  "date": "2026-10-25",
+  "baseline_commit": "27406368394d506726f700eb91ac6c8f131b59ea",
+  "profile": "Preview26_3, Style::Vanilla",
+  "official_version": "26.3",
+  "official_provenance": {
+    "seed": 1792932773345722119,
+    "launcher_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "port": 26160,
+    "sites": [
+      [
+        10464,
+        -10464
+      ],
+      [
+        -6912,
+        -7104
+      ],
+      [
+        6944,
+        9504
+      ],
+      [
+        -8960,
+        10304
+      ],
+      [
+        16320,
+        -32
+      ]
+    ],
+    "version": "26.3",
+    "stopped": true
+  },
+  "official_download_manifest": "https://piston-meta.mojang.com/v1/packages/61fff1316bd50312624a858bbb5eb18fa45208ed/26.3.json",
+  "source_policy": "Only own generation and read-only saved vanilla region files. Launcher is opaque; no game code, reports or data-pack dumps used. Cached 26.1.2 search results are excluded.",
+  "quantile_orders": {
+    "badlands": [
+      0,
+      0.5,
+      0.9,
+      0.99,
+      1
+    ],
+    "transitions_per32": [
+      0,
+      0.5,
+      0.9,
+      1
+    ],
+    "ocean_exact_distances": [
+      0,
+      0.1,
+      0.5,
+      0.9,
+      1
+    ]
+  },
+  "reproduction": {
+    "ours": "while pgrep -x cargo >/dev/null; do sleep 15; done\nCARGO_BUILD_JOBS=6 BADLANDS_OUTPUT='<new-dir>' cargo test --release export_badlands_263_chunks -- --ignored --nocapture",
+    "official": "python3 tools/measure/badlands_reference_263.py --jar <official-26.3-launcher> --plan testdata/world-profile/badlands-reference-26.3-plan.json --output <new-dir>",
+    "measurement": "tools/measure/badlands_ocean_263.py; numpy and scipy required; measure distant badlands windows separately, using their chunk selections. --columns exports vertical band layouts.",
+    "biome_grid": "cargo build --release -p seedmap-core --example biome_profile_263; executable takes a JSON plan and CSV output (same cargo guard and job limit)."
+  },
+  "badlands": {
+    "ours_before": {
+      "band_min_layers": 8,
+      "opening_size": 33,
+      "biome": "eroded_badlands",
+      "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+      "chunks": 192,
+      "eroded_columns": 46368,
+      "eligible_columns": 12240,
+      "height_quantiles": [
+        62.0,
+        94.0,
+        143.0,
+        162.0,
+        163.0
+      ],
+      "prominence_quantiles": [
+        0.0,
+        1.0,
+        9.0,
+        17.0,
+        22.0
+      ],
+      "terracotta_color_counts": {
+        "terracotta": 354347,
+        "red_terracotta": 50657,
+        "brown_terracotta": 41274,
+        "orange_terracotta": 54419,
+        "white_terracotta": 14768,
+        "light_gray_terracotta": 9615,
+        "yellow_terracotta": 31709
+      },
+      "terracotta_depth_quantiles": [
+        0.0,
+        13.0,
+        13.0,
+        13.0,
+        13.0
+      ],
+      "band_columns_ge16": 0,
+      "band_run_quantiles": [
+        1.0,
+        2.0,
+        4.0,
+        7.0,
+        9.0
+      ],
+      "transitions_per32_quantiles": [
+        0.0,
+        13.333333333333334,
+        21.333333333333332,
+        27.428571428571427
+      ],
+      "spires": {
+        "count": 5,
+        "count_per10000_columns": 4.084967320261438,
+        "area_columns": 604,
+        "area_share": 0.04934640522875817,
+        "peak_prominences": [
+          22,
+          18,
+          20,
+          17,
+          16
+        ],
+        "areas": [
+          273,
+          113,
+          155,
+          56,
+          7
+        ]
+      }
+    },
+    "ours_after": {
+      "band_min_layers": 8,
+      "opening_size": 33,
+      "biome": "eroded_badlands",
+      "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+      "chunks": 192,
+      "eroded_columns": 46352,
+      "eligible_columns": 12230,
+      "height_quantiles": [
+        62.0,
+        96.0,
+        143.0,
+        162.0,
+        163.0
+      ],
+      "prominence_quantiles": [
+        0.0,
+        1.0,
+        10.0,
+        28.0,
+        45.0
+      ],
+      "terracotta_color_counts": {
+        "terracotta": 319977,
+        "orange_terracotta": 196552,
+        "brown_terracotta": 57203,
+        "light_gray_terracotta": 38816,
+        "white_terracotta": 24663,
+        "red_terracotta": 29818,
+        "yellow_terracotta": 16004
+      },
+      "terracotta_depth_quantiles": [
+        0.0,
+        15.0,
+        19.0,
+        30.0,
+        61.0
+      ],
+      "band_columns_ge16": 21952,
+      "band_run_quantiles": [
+        1.0,
+        1.0,
+        2.0,
+        3.0,
+        11.0
+      ],
+      "transitions_per32_quantiles": [
+        0.0,
+        23.11111111111111,
+        26.181818181818183,
+        32.0
+      ],
+      "spires": {
+        "count": 9,
+        "count_per10000_columns": 7.358953393295176,
+        "area_columns": 794,
+        "area_share": 0.06492232215862632,
+        "peak_prominences": [
+          35,
+          22,
+          18,
+          45,
+          40,
+          31,
+          17,
+          16,
+          26
+        ],
+        "areas": [
+          96,
+          259,
+          113,
+          15,
+          166,
+          78,
+          56,
+          7,
+          4
+        ]
+      }
+    },
+    "vanilla_references": [
+      {
+        "id": "owner_plateau",
+        "seed": 1792932773345722119,
+        "chunk_window": [
+          -349,
+          -59,
+          17,
+          17
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 289,
+          "eroded_columns": 29265,
+          "eligible_columns": 15473,
+          "height_quantiles": [
+            79.0,
+            126.0,
+            150.0,
+            160.0,
+            163.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            3.0,
+            10.0,
+            17.0,
+            24.0
+          ],
+          "terracotta_color_counts": {
+            "orange_terracotta": 140661,
+            "yellow_terracotta": 17162,
+            "terracotta": 348215,
+            "red_terracotta": 27097,
+            "brown_terracotta": 37554,
+            "light_gray_terracotta": 16775,
+            "white_terracotta": 28151
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            21.0,
+            28.0,
+            32.0,
+            36.0
+          ],
+          "band_columns_ge16": 25965,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            3.0,
+            5.0,
+            6.0
+          ],
+          "transitions_per32_quantiles": [
+            6.4,
+            19.555555555555557,
+            27.2,
+            32.0
+          ],
+          "spires": {
+            "count": 5,
+            "count_per10000_columns": 3.231435403606282,
+            "area_columns": 1070,
+            "area_share": 0.06915271763717443,
+            "peak_prominences": [
+              18,
+              17,
+              22,
+              24,
+              17
+            ],
+            "areas": [
+              67,
+              269,
+              369,
+              104,
+              261
+            ]
+          }
+        },
+        "runtime_version_line": "[17:35:57] [Server thread/INFO]: Starting minecraft server version 26.3"
+      },
+      {
+        "id": "second_patch",
+        "seed": 100554032945340,
+        "chunk_window": [
+          39,
+          25,
+          16,
+          16
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 256,
+          "eroded_columns": 5456,
+          "eligible_columns": 5456,
+          "height_quantiles": [
+            60.0,
+            86.0,
+            100.0,
+            103.0,
+            106.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            3.0,
+            12.0,
+            17.0,
+            21.0
+          ],
+          "terracotta_color_counts": {
+            "yellow_terracotta": 12690,
+            "orange_terracotta": 17709,
+            "terracotta": 30157,
+            "light_gray_terracotta": 5304,
+            "white_terracotta": 5321,
+            "brown_terracotta": 10082
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            16.0,
+            19.0,
+            23.0,
+            31.0
+          ],
+          "band_columns_ge16": 3074,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            4.0,
+            8.0,
+            12.0
+          ],
+          "transitions_per32_quantiles": [
+            0.0,
+            16.0,
+            18.285714285714285,
+            24.0
+          ],
+          "spires": {
+            "count": 2,
+            "count_per10000_columns": 3.665689149560117,
+            "area_columns": 625,
+            "area_share": 0.11455278592375366,
+            "peak_prominences": [
+              19,
+              21
+            ],
+            "areas": [
+              16,
+              609
+            ]
+          }
+        },
+        "runtime_version_line": "[17:11:15] [Server thread/INFO]: Starting minecraft server version 26.3"
+      },
+      {
+        "id": "lowland_0",
+        "seed": 1792932773345722119,
+        "chunk_window": [
+          650,
+          -658,
+          8,
+          8
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 64,
+          "eroded_columns": 7104,
+          "eligible_columns": 1680,
+          "height_quantiles": [
+            57.0,
+            63.0,
+            67.0,
+            85.0,
+            94.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            0.0,
+            4.0,
+            22.0,
+            31.0
+          ],
+          "terracotta_color_counts": {
+            "orange_terracotta": 30351,
+            "white_terracotta": 13547,
+            "terracotta": 46286,
+            "light_gray_terracotta": 9131,
+            "red_terracotta": 7273,
+            "yellow_terracotta": 551,
+            "brown_terracotta": 9314
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            14.0,
+            25.0,
+            43.0,
+            46.0
+          ],
+          "band_columns_ge16": 2772,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            2.0,
+            5.0,
+            13.0
+          ],
+          "transitions_per32_quantiles": [
+            6.857142857142857,
+            23.272727272727273,
+            28.444444444444443,
+            29.333333333333332
+          ],
+          "spires": {
+            "count": 2,
+            "count_per10000_columns": 11.904761904761905,
+            "area_columns": 54,
+            "area_share": 0.03214285714285714,
+            "peak_prominences": [
+              31,
+              16
+            ],
+            "areas": [
+              41,
+              13
+            ]
+          }
+        }
+      },
+      {
+        "id": "lowland_1",
+        "seed": 1792932773345722119,
+        "chunk_window": [
+          -436,
+          -448,
+          8,
+          8
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 64,
+          "eroded_columns": 8048,
+          "eligible_columns": 2352,
+          "height_quantiles": [
+            58.0,
+            74.0,
+            90.0,
+            108.0,
+            113.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            6.0,
+            12.0,
+            43.0,
+            44.0
+          ],
+          "terracotta_color_counts": {
+            "orange_terracotta": 52359,
+            "terracotta": 50012,
+            "light_gray_terracotta": 13635,
+            "white_terracotta": 15501,
+            "red_terracotta": 7463,
+            "brown_terracotta": 13795,
+            "yellow_terracotta": 1500
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            19.0,
+            32.0,
+            56.0,
+            61.0
+          ],
+          "band_columns_ge16": 5611,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            2.0,
+            10.0,
+            13.0
+          ],
+          "transitions_per32_quantiles": [
+            0.0,
+            21.333333333333332,
+            25.435897435897434,
+            32.0
+          ],
+          "spires": {
+            "count": 4,
+            "count_per10000_columns": 17.006802721088434,
+            "area_columns": 180,
+            "area_share": 0.07653061224489796,
+            "peak_prominences": [
+              44,
+              39,
+              22,
+              23
+            ],
+            "areas": [
+              138,
+              21,
+              16,
+              5
+            ]
+          }
+        }
+      },
+      {
+        "id": "lowland_2",
+        "seed": 1792932773345722119,
+        "chunk_window": [
+          430,
+          590,
+          8,
+          8
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 64,
+          "eroded_columns": 3360,
+          "eligible_columns": 944,
+          "height_quantiles": [
+            60.0,
+            64.0,
+            66.0,
+            70.0,
+            73.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            1.0,
+            4.0,
+            7.569999999999936,
+            10.0
+          ],
+          "terracotta_color_counts": {
+            "white_terracotta": 6170,
+            "light_gray_terracotta": 6028,
+            "orange_terracotta": 12606,
+            "terracotta": 20125,
+            "red_terracotta": 3170,
+            "brown_terracotta": 2672,
+            "yellow_terracotta": 224
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            14.0,
+            23.0,
+            56.0,
+            64.0
+          ],
+          "band_columns_ge16": 917,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            2.0,
+            5.0,
+            12.0
+          ],
+          "transitions_per32_quantiles": [
+            0.0,
+            27.428571428571427,
+            29.333333333333332,
+            29.53846153846154
+          ],
+          "spires": {
+            "count": 0,
+            "count_per10000_columns": 0.0,
+            "area_columns": 0,
+            "area_share": 0.0,
+            "peak_prominences": [],
+            "areas": []
+          }
+        }
+      },
+      {
+        "id": "lowland_3",
+        "seed": 1792932773345722119,
+        "chunk_window": [
+          -564,
+          640,
+          8,
+          8
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 64,
+          "eroded_columns": 8384,
+          "eligible_columns": 2560,
+          "height_quantiles": [
+            63.0,
+            69.0,
+            82.0,
+            93.0,
+            96.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            2.0,
+            14.0,
+            25.0,
+            28.0
+          ],
+          "terracotta_color_counts": {
+            "terracotta": 55978,
+            "red_terracotta": 8644,
+            "orange_terracotta": 52734,
+            "white_terracotta": 16809,
+            "light_gray_terracotta": 16296,
+            "yellow_terracotta": 2089,
+            "brown_terracotta": 10333
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            18.0,
+            27.0,
+            56.0,
+            62.0
+          ],
+          "band_columns_ge16": 6804,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            2.0,
+            7.0,
+            14.0
+          ],
+          "transitions_per32_quantiles": [
+            4.0,
+            22.303030303030305,
+            25.142857142857142,
+            32.0
+          ],
+          "spires": {
+            "count": 4,
+            "count_per10000_columns": 15.625,
+            "area_columns": 312,
+            "area_share": 0.121875,
+            "peak_prominences": [
+              18,
+              19,
+              28,
+              25
+            ],
+            "areas": [
+              21,
+              44,
+              165,
+              82
+            ]
+          }
+        }
+      },
+      {
+        "id": "lowland_4",
+        "seed": 1792932773345722119,
+        "chunk_window": [
+          1016,
+          -6,
+          8,
+          8
+        ],
+        "statistics": {
+          "band_min_layers": 8,
+          "opening_size": 33,
+          "biome": "eroded_badlands",
+          "definition": "Terracotta: first band within 8 blocks below terrain, contiguous depth capped at 64; run lengths and transitions use columns with >=8 contiguous layers. Hoodoo proxy: configurable morphological opening of terrain height (opening_size); 8-connected prominence>=12 components, 4..1024 columns, peak>=16. 32-block observed halo excludes truncated windows.",
+          "chunks": 64,
+          "eroded_columns": 6816,
+          "eligible_columns": 2576,
+          "height_quantiles": [
+            57.0,
+            67.0,
+            73.0,
+            95.0,
+            99.0
+          ],
+          "prominence_quantiles": [
+            0.0,
+            1.0,
+            6.0,
+            30.0,
+            33.0
+          ],
+          "terracotta_color_counts": {
+            "orange_terracotta": 41392,
+            "light_gray_terracotta": 7689,
+            "white_terracotta": 14337,
+            "terracotta": 47482,
+            "red_terracotta": 7142,
+            "brown_terracotta": 9370,
+            "yellow_terracotta": 1795
+          },
+          "terracotta_depth_quantiles": [
+            0.0,
+            17.0,
+            27.0,
+            50.0,
+            56.0
+          ],
+          "band_columns_ge16": 4660,
+          "band_run_quantiles": [
+            1.0,
+            1.0,
+            2.0,
+            8.0,
+            13.0
+          ],
+          "transitions_per32_quantiles": [
+            0.0,
+            21.333333333333332,
+            24.615384615384617,
+            32.0
+          ],
+          "spires": {
+            "count": 1,
+            "count_per10000_columns": 3.8819875776397517,
+            "area_columns": 150,
+            "area_share": 0.05822981366459627,
+            "peak_prominences": [
+              33
+            ],
+            "areas": [
+              150
+            ]
+          }
+        }
+      }
+    ],
+    "vanilla_pooled": {
+      "eligible_columns": 31041,
+      "spires": 18,
+      "count_per10000_columns": 5.798782255726297,
+      "area_columns": 2391,
+      "area_share": 0.07702715763023099,
+      "maximum_local_prominence": 44
+    },
+    "sampled_columns": [
+      {
+        "source": "owner_plateau",
+        "role": "low_floor",
+        "seed": 1792932773345722119,
+        "x": -5529,
+        "z": -775,
+        "terrain_top_y": 79,
+        "terracotta_start_y": 79,
+        "terracotta_top_down": [
+          "terracotta",
+          "red_terracotta",
+          "white_terracotta",
+          "orange_terracotta"
+        ]
+      },
+      {
+        "source": "owner_plateau",
+        "role": "highest",
+        "seed": 1792932773345722119,
+        "x": -5524,
+        "z": -896,
+        "terrain_top_y": 163,
+        "terracotta_start_y": 163,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "red_terracotta",
+          "red_terracotta",
+          "red_terracotta",
+          "red_terracotta",
+          "red_terracotta"
+        ]
+      },
+      {
+        "source": "second_patch",
+        "role": "low_floor",
+        "seed": 100554032945340,
+        "x": 660,
+        "z": 463,
+        "terrain_top_y": 70,
+        "terracotta_start_y": 69,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta"
+        ]
+      },
+      {
+        "source": "second_patch",
+        "role": "highest",
+        "seed": 100554032945340,
+        "x": 799,
+        "z": 548,
+        "terrain_top_y": 106,
+        "terracotta_start_y": 106,
+        "terracotta_top_down": [
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "yellow_terracotta"
+        ]
+      },
+      {
+        "source": "lowland_0",
+        "role": "low_floor",
+        "seed": 1792932773345722119,
+        "x": 10477,
+        "z": -10406,
+        "terrain_top_y": 70,
+        "terracotta_start_y": 69,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "terracotta"
+        ]
+      },
+      {
+        "source": "lowland_0",
+        "role": "highest",
+        "seed": 1792932773345722119,
+        "x": 10509,
+        "z": -10461,
+        "terrain_top_y": 95,
+        "terracotta_start_y": 95,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "yellow_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "white_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta"
+        ]
+      },
+      {
+        "source": "lowland_1",
+        "role": "low_floor",
+        "seed": 1792932773345722119,
+        "x": -6920,
+        "z": -7051,
+        "terrain_top_y": 70,
+        "terracotta_start_y": 70,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta"
+        ]
+      },
+      {
+        "source": "lowland_1",
+        "role": "highest",
+        "seed": 1792932773345722119,
+        "x": -6931,
+        "z": -7084,
+        "terrain_top_y": 113,
+        "terracotta_start_y": 112,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta"
+        ]
+      },
+      {
+        "source": "lowland_2",
+        "role": "low_floor",
+        "seed": 1792932773345722119,
+        "x": 6880,
+        "z": 9486,
+        "terrain_top_y": 70,
+        "terracotta_start_y": 69,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta"
+        ]
+      },
+      {
+        "source": "lowland_2",
+        "role": "highest",
+        "seed": 1792932773345722119,
+        "x": 6910,
+        "z": 9531,
+        "terrain_top_y": 127,
+        "terracotta_start_y": 127,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "yellow_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "white_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta"
+        ]
+      },
+      {
+        "source": "lowland_3",
+        "role": "low_floor",
+        "seed": 1792932773345722119,
+        "x": -9022,
+        "z": 10338,
+        "terrain_top_y": 70,
+        "terracotta_start_y": 69,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "yellow_terracotta",
+          "brown_terracotta",
+          "brown_terracotta"
+        ]
+      },
+      {
+        "source": "lowland_3",
+        "role": "highest",
+        "seed": 1792932773345722119,
+        "x": -8918,
+        "z": 10338,
+        "terrain_top_y": 110,
+        "terracotta_start_y": 110,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "yellow_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "white_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "white_terracotta",
+          "terracotta"
+        ]
+      },
+      {
+        "source": "lowland_4",
+        "role": "low_floor",
+        "seed": 1792932773345722119,
+        "x": 16256,
+        "z": -69,
+        "terrain_top_y": 70,
+        "terracotta_start_y": 69,
+        "terracotta_top_down": [
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "orange_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "yellow_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "white_terracotta"
+        ]
+      },
+      {
+        "source": "lowland_4",
+        "role": "highest",
+        "seed": 1792932773345722119,
+        "x": 16318,
+        "z": -95,
+        "terrain_top_y": 109,
+        "terracotta_start_y": 109,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "yellow_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "white_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "white_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta"
+        ]
+      },
+      {
+        "source": "ours_before",
+        "seed": 1792932773345722119,
+        "x": 1775,
+        "z": -2536,
+        "terrain_top_y": 74,
+        "terracotta_start_y": 74,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "red_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "red_terracotta",
+          "red_terracotta",
+          "brown_terracotta",
+          "brown_terracotta"
+        ]
+      },
+      {
+        "source": "ours_after",
+        "seed": 1792932773345722119,
+        "x": 1775,
+        "z": -2536,
+        "terrain_top_y": 106,
+        "terracotta_start_y": 106,
+        "terracotta_top_down": [
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "yellow_terracotta",
+          "red_terracotta",
+          "yellow_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "red_terracotta",
+          "red_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "light_gray_terracotta",
+          "white_terracotta",
+          "light_gray_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "brown_terracotta",
+          "terracotta",
+          "orange_terracotta",
+          "terracotta",
+          "terracotta"
+        ]
+      }
+    ]
+  },
+  "oceans": {
+    "area_windows": [
+      {
+        "seed": 1792932773345722119,
+        "rectangles_x_z_width_depth_step": [
+          [
+            -2094,
+            -1470,
+            3136,
+            3136,
+            4
+          ]
+        ],
+        "selection": "Full saved 3136x3136 Overworld snapshot including generation halo; same observed cells on all sides. Two warm-climate windows, not a global area estimate.",
+        "before": {
+          "definition": "Euclidean distance between 4x4 surface-biome cell centres to non-ocean, non-river cells; unknown edges censored. Resolution 4 blocks.",
+          "known_cells": 614656,
+          "ocean_cells": 277025,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 24133,
+              "area_share_all": 0.03926261193252811,
+              "area_share_ocean": 0.08711488132839997,
+              "exact_distances": 23219,
+              "censored": 914,
+              "distance_quantiles_exact": [
+                4.0,
+                22.627416997969522,
+                89.44271909999159,
+                231.2055362658948,
+                385.268737376912
+              ],
+              "halo256_cells": 19994,
+              "halo256_below": {
+                "16": 1028,
+                "32": 2425,
+                "64": 6070,
+                "128": 12518,
+                "256": 18318
+              },
+              "below_with_known_radius": {
+                "16": 1473,
+                "32": 3396,
+                "64": 7816,
+                "128": 14311,
+                "256": 18364
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 32759,
+              "area_share_all": 0.05329647802998751,
+              "area_share_ocean": 0.11825286526486779,
+              "exact_distances": 32449,
+              "censored": 310,
+              "distance_quantiles_exact": [
+                129.79984591670362,
+                220.90722034374522,
+                374.0374312819507,
+                572.7128425310541,
+                687.9651153946688
+              ],
+              "halo256_cells": 32448,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 5617
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 5617
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 1458,
+              "area_share_all": 0.0023720585172844646,
+              "area_share_ocean": 0.005263062900460247,
+              "exact_distances": 1458,
+              "censored": 0,
+              "distance_quantiles_exact": [
+                241.49534156997728,
+                307.6647505353863,
+                387.71107406898614,
+                468.0683645220796,
+                528.3029433951698
+              ],
+              "halo256_cells": 1458,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 41
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 41
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 19305,
+              "area_share_all": 0.031407811849229486,
+              "area_share_ocean": 0.06968685136720512,
+              "exact_distances": 12880,
+              "censored": 6425,
+              "distance_quantiles_exact": [
+                185.0837648201484,
+                272.4613721273134,
+                460.43457732885355,
+                649.3566046480162,
+                772.3211767134189
+              ],
+              "halo256_cells": 14991,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 939
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 939
+              }
+            },
+            "deep_ocean": {
+              "cells": 5934,
+              "area_share_all": 0.009654180549770928,
+              "area_share_ocean": 0.02142044941792257,
+              "exact_distances": 5080,
+              "censored": 854,
+              "distance_quantiles_exact": [
+                175.72706109191037,
+                251.87298386289865,
+                372.53724646000165,
+                552.4288145723494,
+                689.6375859826667
+              ],
+              "halo256_cells": 5369,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 537
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 546
+              }
+            },
+            "frozen_ocean": {
+              "cells": 7959,
+              "area_share_all": 0.012948706268221574,
+              "area_share_ocean": 0.028730259001895134,
+              "exact_distances": 7448,
+              "censored": 511,
+              "distance_quantiles_exact": [
+                4.0,
+                11.313708498984761,
+                44.721359549995796,
+                147.5127113166862,
+                246.47920804806233
+              ],
+              "halo256_cells": 6857,
+              "halo256_below": {
+                "16": 947,
+                "32": 2267,
+                "64": 4195,
+                "128": 5825,
+                "256": 6857
+              },
+              "below_with_known_radius": {
+                "16": 1141,
+                "32": 2605,
+                "64": 4627,
+                "128": 6010,
+                "256": 6857
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 83034,
+              "area_share_all": 0.1350901967930029,
+              "area_share_ocean": 0.2997346809854706,
+              "exact_distances": 58956,
+              "censored": 24078,
+              "distance_quantiles_exact": [
+                4.0,
+                23.323807579381203,
+                112.0714058089752,
+                238.72997298202839,
+                368.19560019098543
+              ],
+              "halo256_cells": 43821,
+              "halo256_below": {
+                "16": 2224,
+                "32": 5159,
+                "64": 11174,
+                "128": 21614,
+                "256": 39072
+              },
+              "below_with_known_radius": {
+                "16": 3630,
+                "32": 8121,
+                "64": 16561,
+                "128": 28710,
+                "256": 39505
+              }
+            },
+            "ocean": {
+              "cells": 23061,
+              "area_share_all": 0.03751854695960017,
+              "area_share_ocean": 0.08324519447703276,
+              "exact_distances": 16781,
+              "censored": 6280,
+              "distance_quantiles_exact": [
+                4.0,
+                21.540659228538015,
+                113.13708498984761,
+                239.0983061420553,
+                378.375474892335
+              ],
+              "halo256_cells": 12512,
+              "halo256_below": {
+                "16": 624,
+                "32": 1363,
+                "64": 2733,
+                "128": 6041,
+                "256": 11272
+              },
+              "below_with_known_radius": {
+                "16": 1114,
+                "32": 2402,
+                "64": 4528,
+                "128": 8858,
+                "256": 11405
+              }
+            },
+            "warm_ocean": {
+              "cells": 79382,
+              "area_share_all": 0.12914866201582673,
+              "area_share_ocean": 0.28655175525674575,
+              "exact_distances": 54499,
+              "censored": 24883,
+              "distance_quantiles_exact": [
+                4.0,
+                102.2154587134451,
+                401.8556954927975,
+                675.4340826295003,
+                806.8704976636585
+              ],
+              "halo256_cells": 68269,
+              "halo256_below": {
+                "16": 634,
+                "32": 1421,
+                "64": 2824,
+                "128": 6075,
+                "256": 13848
+              },
+              "below_with_known_radius": {
+                "16": 773,
+                "32": 1699,
+                "64": 3427,
+                "128": 6795,
+                "256": 13918
+              }
+            }
+          },
+          "physical_land": false
+        },
+        "after": {
+          "definition": "Euclidean distance between 4x4 cell centres to non-ocean, non-river surface-biome cells; unknown edges censored. Resolution 4 blocks.",
+          "known_cells": 614656,
+          "ocean_cells": 277025,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 28711,
+              "area_share_all": 0.04671068044564765,
+              "area_share_ocean": 0.10364046566194386,
+              "on_dry_land_columns": 0,
+              "exact_distances": 27330,
+              "censored": 1381,
+              "distance_quantiles_exact": [
+                4.0,
+                26.832815729997478,
+                100.0,
+                234.0939982143925,
+                385.268737376912
+              ],
+              "halo256_cells": 23012,
+              "halo256_below": {
+                "16": 957,
+                "32": 2222,
+                "64": 5736,
+                "128": 13184,
+                "256": 20948
+              },
+              "below_with_known_radius": {
+                "16": 1394,
+                "32": 3230,
+                "64": 7847,
+                "128": 15979,
+                "256": 21006
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 25436,
+              "area_share_all": 0.04138249687630154,
+              "area_share_ocean": 0.09181842793971663,
+              "on_dry_land_columns": 0,
+              "exact_distances": 25436,
+              "censored": 0,
+              "distance_quantiles_exact": [
+                129.79984591670362,
+                213.65392577717827,
+                378.0581965782517,
+                572.1258602790124,
+                687.9651153946688
+              ],
+              "halo256_cells": 25436,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 4944
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 4944
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 629,
+              "area_share_all": 0.0010233366305705956,
+              "area_share_ocean": 0.00227055319916975,
+              "on_dry_land_columns": 0,
+              "exact_distances": 629,
+              "censored": 0,
+              "distance_quantiles_exact": [
+                245.60130292814003,
+                318.7425101833714,
+                372.58019271024057,
+                431.3513648987331,
+                449.44410108488466
+              ],
+              "halo256_cells": 629,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 10
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 10
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 63774,
+              "area_share_all": 0.10375559662640567,
+              "area_share_ocean": 0.23021026983124268,
+              "on_dry_land_columns": 0,
+              "exact_distances": 42807,
+              "censored": 20967,
+              "distance_quantiles_exact": [
+                182.1647605877712,
+                301.2507261402037,
+                490.35497346310257,
+                687.8371900384567,
+                806.8704976636585
+              ],
+              "halo256_cells": 53399,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 1557
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 1561
+              }
+            },
+            "deep_ocean": {
+              "cells": 11050,
+              "area_share_all": 0.017977535401915868,
+              "area_share_ocean": 0.03988809674217129,
+              "on_dry_land_columns": 0,
+              "exact_distances": 10504,
+              "censored": 546,
+              "distance_quantiles_exact": [
+                168.04761230080004,
+                258.549801779077,
+                370.29717795305976,
+                560.5111946388832,
+                688.6160032993715
+              ],
+              "halo256_cells": 10524,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 952
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 957
+              }
+            },
+            "frozen_ocean": {
+              "cells": 9577,
+              "area_share_all": 0.015581072990420658,
+              "area_share_ocean": 0.034570887104051984,
+              "on_dry_land_columns": 0,
+              "exact_distances": 9005,
+              "censored": 572,
+              "distance_quantiles_exact": [
+                4.0,
+                11.313708498984761,
+                44.181444068749045,
+                146.696966567138,
+                249.47945807220282
+              ],
+              "halo256_cells": 8285,
+              "halo256_below": {
+                "16": 1145,
+                "32": 2777,
+                "64": 5159,
+                "128": 7066,
+                "256": 8285
+              },
+              "below_with_known_radius": {
+                "16": 1386,
+                "32": 3199,
+                "64": 5699,
+                "128": 7348,
+                "256": 8287
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 70494,
+              "area_share_all": 0.11468854123281966,
+              "area_share_ocean": 0.25446800830249977,
+              "on_dry_land_columns": 0,
+              "exact_distances": 49133,
+              "censored": 21361,
+              "distance_quantiles_exact": [
+                4.0,
+                24.0,
+                116.61903789690601,
+                242.55308697272852,
+                357.8826623350173
+              ],
+              "halo256_cells": 35755,
+              "halo256_below": {
+                "16": 1622,
+                "32": 3789,
+                "64": 8428,
+                "128": 16620,
+                "256": 31387
+              },
+              "below_with_known_radius": {
+                "16": 2868,
+                "32": 6306,
+                "64": 13094,
+                "128": 22708,
+                "256": 31761
+              }
+            },
+            "ocean": {
+              "cells": 21914,
+              "area_share_all": 0.035652462515618495,
+              "area_share_ocean": 0.07910477393737027,
+              "on_dry_land_columns": 0,
+              "exact_distances": 14197,
+              "censored": 7717,
+              "distance_quantiles_exact": [
+                4.0,
+                20.0,
+                105.60303025955268,
+                232.96351645697658,
+                368.28250026304534
+              ],
+              "halo256_cells": 9963,
+              "halo256_below": {
+                "16": 558,
+                "32": 1247,
+                "64": 2641,
+                "128": 5244,
+                "256": 9084
+              },
+              "below_with_known_radius": {
+                "16": 1109,
+                "32": 2429,
+                "64": 4352,
+                "128": 7452,
+                "256": 9238
+              }
+            },
+            "warm_ocean": {
+              "cells": 45440,
+              "area_share_all": 0.07392753019575177,
+              "area_share_ocean": 0.16402851728183376,
+              "on_dry_land_columns": 0,
+              "exact_distances": 33729,
+              "censored": 11711,
+              "distance_quantiles_exact": [
+                4.0,
+                34.40930106817051,
+                203.9607805437114,
+                555.7495788554696,
+                788.0101522188658
+              ],
+              "halo256_cells": 38716,
+              "halo256_below": {
+                "16": 1175,
+                "32": 2600,
+                "64": 5032,
+                "128": 9959,
+                "256": 19334
+              },
+              "below_with_known_radius": {
+                "16": 1374,
+                "32": 3059,
+                "64": 5967,
+                "128": 11197,
+                "256": 19428
+              }
+            }
+          },
+          "physical_land": false
+        },
+        "vanilla": {
+          "definition": "Euclidean distance between 4x4 surface-biome cell centres to non-ocean, non-river cells; unknown edges censored. Resolution 4 blocks.",
+          "known_cells": 614656,
+          "ocean_cells": 154304,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 43618,
+              "area_share_all": 0.07096327051228654,
+              "area_share_ocean": 0.2826757569473248,
+              "exact_distances": 30642,
+              "censored": 12976,
+              "distance_quantiles_exact": [
+                48.662100242385755,
+                117.09824934643558,
+                226.4155471693585,
+                361.3530129942187,
+                432.9618920875139
+              ],
+              "halo256_cells": 29343,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 60,
+                "128": 3289,
+                "256": 15915
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 63,
+                "128": 4084,
+                "256": 16029
+              }
+            },
+            "deep_ocean": {
+              "cells": 778,
+              "area_share_all": 0.0012657486463973344,
+              "area_share_ocean": 0.005041995022812111,
+              "exact_distances": 778,
+              "censored": 0,
+              "distance_quantiles_exact": [
+                63.245553203367585,
+                86.16263691415206,
+                112.64102272262978,
+                134.1044369139217,
+                148.43180252223578
+              ],
+              "halo256_cells": 778,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 1,
+                "128": 619,
+                "256": 778
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 1,
+                "128": 619,
+                "256": 778
+              }
+            },
+            "frozen_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 57463,
+              "area_share_all": 0.09348806486880466,
+              "area_share_ocean": 0.37240123392783075,
+              "exact_distances": 53758,
+              "censored": 3705,
+              "distance_quantiles_exact": [
+                4.0,
+                8.0,
+                39.59797974644666,
+                106.28264204469139,
+                357.0994259306503
+              ],
+              "halo256_cells": 39984,
+              "halo256_below": {
+                "16": 7165,
+                "32": 14511,
+                "64": 26164,
+                "128": 37139,
+                "256": 39406
+              },
+              "below_with_known_radius": {
+                "16": 11207,
+                "32": 21828,
+                "64": 35789,
+                "128": 44855,
+                "256": 39678
+              }
+            },
+            "ocean": {
+              "cells": 30846,
+              "area_share_all": 0.050184168054977094,
+              "area_share_ocean": 0.19990408544172542,
+              "exact_distances": 30130,
+              "censored": 716,
+              "distance_quantiles_exact": [
+                4.0,
+                8.94427190999916,
+                39.59797974644666,
+                84.8528137423857,
+                143.10835055998655
+              ],
+              "halo256_cells": 21442,
+              "halo256_below": {
+                "16": 3676,
+                "32": 7998,
+                "64": 15573,
+                "128": 21294,
+                "256": 21442
+              },
+              "below_with_known_radius": {
+                "16": 5596,
+                "32": 11928,
+                "64": 22162,
+                "128": 27805,
+                "256": 21652
+              }
+            },
+            "warm_ocean": {
+              "cells": 21599,
+              "area_share_all": 0.035139980737192836,
+              "area_share_ocean": 0.13997692866030692,
+              "exact_distances": 21554,
+              "censored": 45,
+              "distance_quantiles_exact": [
+                4.0,
+                21.540659228538015,
+                107.70329614269008,
+                256.0,
+                360.99861495579177
+              ],
+              "halo256_cells": 14319,
+              "halo256_below": {
+                "16": 501,
+                "32": 1056,
+                "64": 2422,
+                "128": 5474,
+                "256": 12153
+              },
+              "below_with_known_radius": {
+                "16": 1433,
+                "32": 3162,
+                "64": 6405,
+                "128": 10535,
+                "256": 12347
+              }
+            }
+          },
+          "physical_land": false
+        },
+        "physical_distance_check": {
+          "before": {
+            "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+            "known_cells": 614656,
+            "ocean_cells": 277025,
+            "biomes": {
+              "cold_ocean": {
+                "cells": 24133,
+                "area_share_all": 0.03926261193252811,
+                "area_share_ocean": 0.08711488132839997,
+                "on_dry_land_columns": 226,
+                "exact_distances": 23029,
+                "censored": 1104,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.284271247461902,
+                  96.66436778875658,
+                  239.73985864234402,
+                  392.2448215082004
+                ],
+                "halo256_cells": 19994,
+                "halo256_below": {
+                  "16": 610,
+                  "32": 1825,
+                  "64": 5199,
+                  "128": 11978,
+                  "256": 18092
+                },
+                "below_with_known_radius": {
+                  "16": 996,
+                  "32": 2686,
+                  "64": 6787,
+                  "128": 13764,
+                  "256": 18138
+                }
+              },
+              "deep_cold_ocean": {
+                "cells": 32759,
+                "area_share_all": 0.05329647802998751,
+                "area_share_ocean": 0.11825286526486779,
+                "on_dry_land_columns": 0,
+                "exact_distances": 32449,
+                "censored": 310,
+                "distance_quantiles_exact": [
+                  135.35139452550905,
+                  225.28204544525957,
+                  379.4733192202055,
+                  580.0551697899089,
+                  695.6895859505157
+                ],
+                "halo256_cells": 32448,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 5299
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 5299
+                }
+              },
+              "deep_frozen_ocean": {
+                "cells": 1458,
+                "area_share_all": 0.0023720585172844646,
+                "area_share_ocean": 0.005263062900460247,
+                "on_dry_land_columns": 0,
+                "exact_distances": 1458,
+                "censored": 0,
+                "distance_quantiles_exact": [
+                  252.63412279421004,
+                  306.7115850887605,
+                  383.0195356160462,
+                  463.93443938284105,
+                  537.3267162537147
+                ],
+                "halo256_cells": 1458,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1
+                }
+              },
+              "deep_lukewarm_ocean": {
+                "cells": 19305,
+                "area_share_all": 0.031407811849229486,
+                "area_share_ocean": 0.06968685136720512,
+                "on_dry_land_columns": 0,
+                "exact_distances": 12838,
+                "censored": 6467,
+                "distance_quantiles_exact": [
+                  179.6886195617296,
+                  282.41812972966164,
+                  468.187996428785,
+                  664.7453645767457,
+                  784.1020341766753
+                ],
+                "halo256_cells": 14991,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 835
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 835
+                }
+              },
+              "deep_ocean": {
+                "cells": 5934,
+                "area_share_all": 0.009654180549770928,
+                "area_share_ocean": 0.02142044941792257,
+                "on_dry_land_columns": 0,
+                "exact_distances": 5046,
+                "censored": 888,
+                "distance_quantiles_exact": [
+                  173.85051049680584,
+                  251.87298386289865,
+                  381.34498816688284,
+                  561.7259118110896,
+                  698.1690339738651
+                ],
+                "halo256_cells": 5369,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 544
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 553
+                }
+              },
+              "frozen_ocean": {
+                "cells": 7959,
+                "area_share_all": 0.012948706268221574,
+                "area_share_ocean": 0.028730259001895134,
+                "on_dry_land_columns": 96,
+                "exact_distances": 7494,
+                "censored": 465,
+                "distance_quantiles_exact": [
+                  0.0,
+                  20.0,
+                  59.464274989274024,
+                  160.89748288895012,
+                  261.19724347703215
+                ],
+                "halo256_cells": 6857,
+                "halo256_below": {
+                  "16": 218,
+                  "32": 1178,
+                  "64": 3397,
+                  "128": 5629,
+                  "256": 6856
+                },
+                "below_with_known_radius": {
+                  "16": 428,
+                  "32": 1523,
+                  "64": 3835,
+                  "128": 5814,
+                  "256": 6856
+                }
+              },
+              "lukewarm_ocean": {
+                "cells": 83034,
+                "area_share_all": 0.1350901967930029,
+                "area_share_ocean": 0.2997346809854706,
+                "on_dry_land_columns": 733,
+                "exact_distances": 58840,
+                "censored": 24194,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.284271247461902,
+                  115.16944039110375,
+                  242.98148077579904,
+                  365.1410686296462
+                ],
+                "halo256_cells": 43821,
+                "halo256_below": {
+                  "16": 1165,
+                  "32": 3923,
+                  "64": 10243,
+                  "128": 21078,
+                  "256": 38765
+                },
+                "below_with_known_radius": {
+                  "16": 2297,
+                  "32": 6584,
+                  "64": 15483,
+                  "128": 27996,
+                  "256": 39196
+                }
+              },
+              "ocean": {
+                "cells": 23061,
+                "area_share_all": 0.03751854695960017,
+                "area_share_ocean": 0.08324519447703276,
+                "on_dry_land_columns": 343,
+                "exact_distances": 16660,
+                "censored": 6401,
+                "distance_quantiles_exact": [
+                  0.0,
+                  21.540659228538015,
+                  113.13708498984761,
+                  246.64144015148793,
+                  386.16058835670947
+                ],
+                "halo256_cells": 12512,
+                "halo256_below": {
+                  "16": 803,
+                  "32": 1545,
+                  "64": 2864,
+                  "128": 5852,
+                  "256": 11100
+                },
+                "below_with_known_radius": {
+                  "16": 1130,
+                  "32": 2451,
+                  "64": 4751,
+                  "128": 8696,
+                  "256": 11233
+                }
+              },
+              "warm_ocean": {
+                "cells": 79382,
+                "area_share_all": 0.12914866201582673,
+                "area_share_ocean": 0.28655175525674575,
+                "on_dry_land_columns": 213,
+                "exact_distances": 54686,
+                "censored": 24696,
+                "distance_quantiles_exact": [
+                  0.0,
+                  108.07404868885037,
+                  407.9215610874228,
+                  679.8235065073875,
+                  808.8015825899453
+                ],
+                "halo256_cells": 68269,
+                "halo256_below": {
+                  "16": 320,
+                  "32": 1104,
+                  "64": 2631,
+                  "128": 5818,
+                  "256": 13586
+                },
+                "below_with_known_radius": {
+                  "16": 515,
+                  "32": 1399,
+                  "64": 3088,
+                  "128": 6538,
+                  "256": 13656
+                }
+              }
+            },
+            "physical_land": true
+          },
+          "after": {
+            "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+            "known_cells": 614656,
+            "ocean_cells": 277025,
+            "biomes": {
+              "cold_ocean": {
+                "cells": 28711,
+                "area_share_all": 0.04671068044564765,
+                "area_share_ocean": 0.10364046566194386,
+                "on_dry_land_columns": 271,
+                "exact_distances": 27113,
+                "censored": 1598,
+                "distance_quantiles_exact": [
+                  0.0,
+                  30.463092423455635,
+                  105.22357150372724,
+                  241.76021178018522,
+                  392.2448215082004
+                ],
+                "halo256_cells": 23012,
+                "halo256_below": {
+                  "16": 717,
+                  "32": 1900,
+                  "64": 5036,
+                  "128": 12581,
+                  "256": 20712
+                },
+                "below_with_known_radius": {
+                  "16": 1116,
+                  "32": 2808,
+                  "64": 7018,
+                  "128": 15321,
+                  "256": 20770
+                }
+              },
+              "deep_cold_ocean": {
+                "cells": 25436,
+                "area_share_all": 0.04138249687630154,
+                "area_share_ocean": 0.09181842793971663,
+                "on_dry_land_columns": 0,
+                "exact_distances": 25436,
+                "censored": 0,
+                "distance_quantiles_exact": [
+                  135.35139452550905,
+                  218.24756585125985,
+                  382.85245199684954,
+                  577.2347875864725,
+                  695.6895859505157
+                ],
+                "halo256_cells": 25436,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 4674
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 4674
+                }
+              },
+              "deep_frozen_ocean": {
+                "cells": 629,
+                "area_share_all": 0.0010233366305705956,
+                "area_share_ocean": 0.00227055319916975,
+                "on_dry_land_columns": 0,
+                "exact_distances": 629,
+                "censored": 0,
+                "distance_quantiles_exact": [
+                  259.59969183340723,
+                  317.18762557360753,
+                  367.93477682872003,
+                  425.40890287915437,
+                  443.44108966129875
+                ],
+                "halo256_cells": 629,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_lukewarm_ocean": {
+                "cells": 63774,
+                "area_share_all": 0.10375559662640567,
+                "area_share_ocean": 0.23021026983124268,
+                "on_dry_land_columns": 0,
+                "exact_distances": 42787,
+                "censored": 20987,
+                "distance_quantiles_exact": [
+                  178.39282496782207,
+                  311.17840542042757,
+                  497.3047355495421,
+                  696.1264247301592,
+                  808.8015825899453
+                ],
+                "halo256_cells": 53399,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1348
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1352
+                }
+              },
+              "deep_ocean": {
+                "cells": 11050,
+                "area_share_all": 0.017977535401915868,
+                "area_share_ocean": 0.03988809674217129,
+                "on_dry_land_columns": 0,
+                "exact_distances": 10499,
+                "censored": 551,
+                "distance_quantiles_exact": [
+                  171.7672844286711,
+                  261.71128102465076,
+                  376.53153918363864,
+                  575.0130433303231,
+                  696.56299069072
+                ],
+                "halo256_cells": 10524,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 882
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 887
+                }
+              },
+              "frozen_ocean": {
+                "cells": 9577,
+                "area_share_all": 0.015581072990420658,
+                "area_share_ocean": 0.034570887104051984,
+                "on_dry_land_columns": 96,
+                "exact_distances": 9048,
+                "censored": 529,
+                "distance_quantiles_exact": [
+                  0.0,
+                  20.0,
+                  57.271284253105414,
+                  158.39191898578665,
+                  264.1514716975849
+                ],
+                "halo256_cells": 8285,
+                "halo256_below": {
+                  "16": 280,
+                  "32": 1469,
+                  "64": 4257,
+                  "128": 6849,
+                  "256": 8273
+                },
+                "below_with_known_radius": {
+                  "16": 518,
+                  "32": 1886,
+                  "64": 4798,
+                  "128": 7131,
+                  "256": 8275
+                }
+              },
+              "lukewarm_ocean": {
+                "cells": 70494,
+                "area_share_all": 0.11468854123281966,
+                "area_share_ocean": 0.25446800830249977,
+                "on_dry_land_columns": 584,
+                "exact_distances": 49038,
+                "censored": 21456,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.844410203711913,
+                  120.59850745345068,
+                  247.6449070746257,
+                  365.1410686296462
+                ],
+                "halo256_cells": 35755,
+                "halo256_below": {
+                  "16": 827,
+                  "32": 2856,
+                  "64": 7594,
+                  "128": 16082,
+                  "256": 31016
+                },
+                "below_with_known_radius": {
+                  "16": 1857,
+                  "32": 5220,
+                  "64": 12068,
+                  "128": 21916,
+                  "256": 31388
+                }
+              },
+              "ocean": {
+                "cells": 21914,
+                "area_share_all": 0.035652462515618495,
+                "area_share_ocean": 0.07910477393737027,
+                "on_dry_land_columns": 336,
+                "exact_distances": 14085,
+                "censored": 7829,
+                "distance_quantiles_exact": [
+                  0.0,
+                  20.0,
+                  104.0768946500615,
+                  240.8318915758459,
+                  376.19144062564743
+                ],
+                "halo256_cells": 9963,
+                "halo256_below": {
+                  "16": 688,
+                  "32": 1396,
+                  "64": 2710,
+                  "128": 5177,
+                  "256": 8913
+                },
+                "below_with_known_radius": {
+                  "16": 1070,
+                  "32": 2407,
+                  "64": 4513,
+                  "128": 7518,
+                  "256": 9067
+                }
+              },
+              "warm_ocean": {
+                "cells": 45440,
+                "area_share_all": 0.07392753019575177,
+                "area_share_ocean": 0.16402851728183376,
+                "on_dry_land_columns": 324,
+                "exact_distances": 33865,
+                "censored": 11575,
+                "distance_quantiles_exact": [
+                  0.0,
+                  40.9483018908246,
+                  207.42227459942677,
+                  550.0283562584956,
+                  787.095928079926
+                ],
+                "halo256_cells": 38716,
+                "halo256_below": {
+                  "16": 604,
+                  "32": 1954,
+                  "64": 4737,
+                  "128": 9666,
+                  "256": 19260
+                },
+                "below_with_known_radius": {
+                  "16": 805,
+                  "32": 2322,
+                  "64": 5547,
+                  "128": 10922,
+                  "256": 19354
+                }
+              }
+            },
+            "physical_land": true
+          },
+          "vanilla": {
+            "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+            "known_cells": 614656,
+            "ocean_cells": 154304,
+            "biomes": {
+              "cold_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_cold_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_frozen_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_lukewarm_ocean": {
+                "cells": 43618,
+                "area_share_all": 0.07096327051228654,
+                "area_share_ocean": 0.2826757569473248,
+                "on_dry_land_columns": 3,
+                "exact_distances": 33607,
+                "censored": 10011,
+                "distance_quantiles_exact": [
+                  0.0,
+                  86.05103903422555,
+                  192.4162155328911,
+                  325.37977810552394,
+                  408.95965571190516
+                ],
+                "halo256_cells": 29343,
+                "halo256_below": {
+                  "16": 13,
+                  "32": 108,
+                  "64": 774,
+                  "128": 5581,
+                  "256": 19185
+                },
+                "below_with_known_radius": {
+                  "16": 64,
+                  "32": 302,
+                  "64": 1547,
+                  "128": 7987,
+                  "256": 19334
+                }
+              },
+              "deep_ocean": {
+                "cells": 778,
+                "area_share_all": 0.0012657486463973344,
+                "area_share_ocean": 0.005041995022812111,
+                "on_dry_land_columns": 0,
+                "exact_distances": 778,
+                "censored": 0,
+                "distance_quantiles_exact": [
+                  86.53323061113575,
+                  108.07404868885037,
+                  140.22838514366484,
+                  164.0146319705837,
+                  176.40861656959956
+                ],
+                "halo256_cells": 778,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 240,
+                  "256": 778
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 240,
+                  "256": 778
+                }
+              },
+              "frozen_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "lukewarm_ocean": {
+                "cells": 57463,
+                "area_share_all": 0.09348806486880466,
+                "area_share_ocean": 0.37240123392783075,
+                "on_dry_land_columns": 467,
+                "exact_distances": 53217,
+                "censored": 4246,
+                "distance_quantiles_exact": [
+                  0.0,
+                  16.492422502470642,
+                  48.16637831516918,
+                  108.29589096544707,
+                  301.72835465033774
+                ],
+                "halo256_cells": 39984,
+                "halo256_below": {
+                  "16": 3173,
+                  "32": 10523,
+                  "64": 24513,
+                  "128": 36935,
+                  "256": 39849
+                },
+                "below_with_known_radius": {
+                  "16": 4462,
+                  "32": 15146,
+                  "64": 34029,
+                  "128": 45409,
+                  "256": 40121
+                }
+              },
+              "ocean": {
+                "cells": 30846,
+                "area_share_all": 0.050184168054977094,
+                "area_share_ocean": 0.19990408544172542,
+                "on_dry_land_columns": 10,
+                "exact_distances": 29553,
+                "censored": 1293,
+                "distance_quantiles_exact": [
+                  0.0,
+                  24.0,
+                  60.0,
+                  108.81176406988355,
+                  156.46085772486356
+                ],
+                "halo256_cells": 21442,
+                "halo256_below": {
+                  "16": 648,
+                  "32": 3557,
+                  "64": 11293,
+                  "128": 20699,
+                  "256": 21442
+                },
+                "below_with_known_radius": {
+                  "16": 946,
+                  "32": 4975,
+                  "64": 15698,
+                  "128": 26889,
+                  "256": 21652
+                }
+              },
+              "warm_ocean": {
+                "cells": 21599,
+                "area_share_all": 0.035139980737192836,
+                "area_share_ocean": 0.13997692866030692,
+                "on_dry_land_columns": 48,
+                "exact_distances": 21533,
+                "censored": 66,
+                "distance_quantiles_exact": [
+                  0.0,
+                  32.0,
+                  135.35139452550905,
+                  262.4804754643667,
+                  360.0
+                ],
+                "halo256_cells": 14319,
+                "halo256_below": {
+                  "16": 28,
+                  "32": 284,
+                  "64": 1346,
+                  "128": 4213,
+                  "256": 11804
+                },
+                "below_with_known_radius": {
+                  "16": 669,
+                  "32": 2124,
+                  "64": 4804,
+                  "128": 8518,
+                  "256": 11998
+                }
+              }
+            },
+            "physical_land": true
+          }
+        }
+      },
+      {
+        "seed": 100554032945340,
+        "rectangles_x_z_width_depth_step": [
+          [
+            -1102,
+            -1598,
+            3136,
+            3136,
+            4
+          ]
+        ],
+        "selection": "Full saved 3136x3136 Overworld snapshot including generation halo; same observed cells on all sides. Two warm-climate windows, not a global area estimate.",
+        "before": {
+          "definition": "Euclidean distance between 4x4 cell centres to non-ocean, non-river surface-biome cells; unknown edges censored. Resolution 4 blocks.",
+          "known_cells": 614656,
+          "ocean_cells": 376549,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 15434,
+              "area_share_all": 0.025109980216576427,
+              "area_share_ocean": 0.04098802546282157,
+              "on_dry_land_columns": 0,
+              "exact_distances": 11741,
+              "censored": 3693,
+              "distance_quantiles_exact": [
+                4.0,
+                20.396078054371138,
+                106.50821564555478,
+                214.84878403193255,
+                349.28498393145964
+              ],
+              "halo256_cells": 7461,
+              "halo256_below": {
+                "16": 272,
+                "32": 699,
+                "64": 1503,
+                "128": 3489,
+                "256": 6394
+              },
+              "below_with_known_radius": {
+                "16": 744,
+                "32": 1809,
+                "64": 3307,
+                "128": 5105,
+                "256": 6475
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 38395,
+              "area_share_all": 0.062465834548104955,
+              "area_share_ocean": 0.10196548125210796,
+              "on_dry_land_columns": 0,
+              "exact_distances": 31806,
+              "censored": 6589,
+              "distance_quantiles_exact": [
+                155.79473675320358,
+                317.23808094237364,
+                570.802942842828,
+                735.4454432519111,
+                811.763512360589
+              ],
+              "halo256_cells": 36931,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 1163
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 1221
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 36517,
+              "area_share_all": 0.05941046699291962,
+              "area_share_ocean": 0.09697808253374726,
+              "on_dry_land_columns": 0,
+              "exact_distances": 3418,
+              "censored": 33099,
+              "distance_quantiles_exact": [
+                151.7893276880822,
+                246.19311504683492,
+                362.7340581747623,
+                505.93122015492946,
+                629.971427923521
+              ],
+              "halo256_cells": 26535,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 66
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 89
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 20222,
+              "area_share_all": 0.0328997032486464,
+              "area_share_ocean": 0.05370350206746001,
+              "on_dry_land_columns": 0,
+              "exact_distances": 17666,
+              "censored": 2556,
+              "distance_quantiles_exact": [
+                129.79984591670362,
+                244.5240274492468,
+                408.8324829786246,
+                699.2510250550306,
+                854.7093073086311
+              ],
+              "halo256_cells": 19457,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 2140
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 2150
+              }
+            },
+            "deep_ocean": {
+              "cells": 12337,
+              "area_share_all": 0.020071389525197835,
+              "area_share_ocean": 0.032763332262202266,
+              "on_dry_land_columns": 0,
+              "exact_distances": 11549,
+              "censored": 788,
+              "distance_quantiles_exact": [
+                154.40207252495026,
+                286.3396564846869,
+                462.9643614793692,
+                693.1089380465382,
+                822.104616213776
+              ],
+              "halo256_cells": 12137,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 660
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 663
+              }
+            },
+            "frozen_ocean": {
+              "cells": 7569,
+              "area_share_all": 0.01231420501874219,
+              "area_share_ocean": 0.020100969594926556,
+              "on_dry_land_columns": 0,
+              "exact_distances": 4194,
+              "censored": 3375,
+              "distance_quantiles_exact": [
+                4.0,
+                24.0,
+                125.53883861180172,
+                242.1239352067449,
+                342.4616766880639
+              ],
+              "halo256_cells": 534,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 204
+              },
+              "below_with_known_radius": {
+                "16": 237,
+                "32": 367,
+                "64": 323,
+                "128": 371,
+                "256": 239
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 83945,
+              "area_share_all": 0.13657232663473554,
+              "area_share_ocean": 0.2229324735957339,
+              "on_dry_land_columns": 0,
+              "exact_distances": 60158,
+              "censored": 23787,
+              "distance_quantiles_exact": [
+                4.0,
+                23.323807579381203,
+                104.0,
+                262.12057696941685,
+                474.80522322316546
+              ],
+              "halo256_cells": 46732,
+              "halo256_below": {
+                "16": 2271,
+                "32": 5497,
+                "64": 12328,
+                "128": 26342,
+                "256": 39069
+              },
+              "below_with_known_radius": {
+                "16": 3556,
+                "32": 8125,
+                "64": 17201,
+                "128": 33371,
+                "256": 39530
+              }
+            },
+            "ocean": {
+              "cells": 17822,
+              "area_share_all": 0.028995080174927114,
+              "area_share_ocean": 0.04732982958393197,
+              "on_dry_land_columns": 0,
+              "exact_distances": 12707,
+              "censored": 5115,
+              "distance_quantiles_exact": [
+                4.0,
+                20.0,
+                80.89499366462674,
+                223.60679774997897,
+                311.17840542042757
+              ],
+              "halo256_cells": 8913,
+              "halo256_below": {
+                "16": 720,
+                "32": 1731,
+                "64": 3633,
+                "128": 6011,
+                "256": 8363
+              },
+              "below_with_known_radius": {
+                "16": 904,
+                "32": 2242,
+                "64": 4917,
+                "128": 8444,
+                "256": 8439
+              }
+            },
+            "warm_ocean": {
+              "cells": 144308,
+              "area_share_all": 0.23477847771761767,
+              "area_share_ocean": 0.3832383036470685,
+              "on_dry_land_columns": 0,
+              "exact_distances": 86485,
+              "censored": 57823,
+              "distance_quantiles_exact": [
+                4.0,
+                164.0,
+                388.0206180088888,
+                642.1090250105507,
+                872.0
+              ],
+              "halo256_cells": 115244,
+              "halo256_below": {
+                "16": 172,
+                "32": 393,
+                "64": 921,
+                "128": 2680,
+                "256": 20529
+              },
+              "below_with_known_radius": {
+                "16": 454,
+                "32": 996,
+                "64": 2006,
+                "128": 3817,
+                "256": 20638
+              }
+            }
+          },
+          "physical_land": false
+        },
+        "after": {
+          "definition": "Euclidean distance between 4x4 cell centres to non-ocean, non-river surface-biome cells; unknown edges censored. Resolution 4 blocks.",
+          "known_cells": 614656,
+          "ocean_cells": 376549,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 21952,
+              "area_share_all": 0.03571428571428571,
+              "area_share_ocean": 0.058297857649336475,
+              "on_dry_land_columns": 0,
+              "exact_distances": 16702,
+              "censored": 5250,
+              "distance_quantiles_exact": [
+                4.0,
+                20.396078054371138,
+                93.03762679690406,
+                209.5557155033216,
+                345.9710970586994
+              ],
+              "halo256_cells": 10537,
+              "halo256_below": {
+                "16": 548,
+                "32": 1327,
+                "64": 2877,
+                "128": 5812,
+                "256": 9611
+              },
+              "below_with_known_radius": {
+                "16": 1084,
+                "32": 2687,
+                "64": 5454,
+                "128": 8793,
+                "256": 9727
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 27364,
+              "area_share_all": 0.044519210745522696,
+              "area_share_ocean": 0.0726704890996922,
+              "on_dry_land_columns": 0,
+              "exact_distances": 20749,
+              "censored": 6615,
+              "distance_quantiles_exact": [
+                163.21764610482532,
+                352.2817044033103,
+                575.5692834055689,
+                736.4563802425776,
+                796.994353806851
+              ],
+              "halo256_cells": 26157,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 384
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 424
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 34747,
+              "area_share_all": 0.056530807476051645,
+              "area_share_ocean": 0.09227749907714534,
+              "on_dry_land_columns": 0,
+              "exact_distances": 2769,
+              "censored": 31978,
+              "distance_quantiles_exact": [
+                151.7893276880822,
+                235.39583055392444,
+                347.90803382503253,
+                480.83261120685233,
+                598.5048036565788
+              ],
+              "halo256_cells": 24828,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 66
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 89
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 65413,
+              "area_share_all": 0.1064221288004998,
+              "area_share_ocean": 0.17371709923542486,
+              "on_dry_land_columns": 0,
+              "exact_distances": 47724,
+              "censored": 17689,
+              "distance_quantiles_exact": [
+                107.62899237658968,
+                190.53608582103286,
+                367.3254687603352,
+                680.0082352228793,
+                872.0
+              ],
+              "halo256_cells": 57642,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 217,
+                "256": 10980
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 282,
+                "256": 11075
+              }
+            },
+            "deep_ocean": {
+              "cells": 18563,
+              "area_share_all": 0.030200632548937942,
+              "area_share_ocean": 0.04929770096322125,
+              "on_dry_land_columns": 0,
+              "exact_distances": 17040,
+              "censored": 1523,
+              "distance_quantiles_exact": [
+                155.79473675320358,
+                279.0641438338641,
+                538.4719119879885,
+                726.6470945376442,
+                815.185868376041
+              ],
+              "halo256_cells": 18147,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 1143
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 1162
+              }
+            },
+            "frozen_ocean": {
+              "cells": 8116,
+              "area_share_all": 0.013204133694294044,
+              "area_share_ocean": 0.021553635781797323,
+              "on_dry_land_columns": 0,
+              "exact_distances": 4586,
+              "censored": 3530,
+              "distance_quantiles_exact": [
+                4.0,
+                24.0,
+                126.30122723077555,
+                253.78720240838325,
+                349.28498393145964
+              ],
+              "halo256_cells": 693,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 221
+              },
+              "below_with_known_radius": {
+                "16": 265,
+                "32": 423,
+                "64": 399,
+                "128": 371,
+                "256": 261
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 63312,
+              "area_share_all": 0.1030039566847147,
+              "area_share_ocean": 0.1681374801154697,
+              "on_dry_land_columns": 0,
+              "exact_distances": 47166,
+              "censored": 16146,
+              "distance_quantiles_exact": [
+                4.0,
+                22.627416997969522,
+                96.74709297958259,
+                263.0589287593181,
+                474.80522322316546
+              ],
+              "halo256_cells": 36421,
+              "halo256_below": {
+                "16": 1857,
+                "32": 4560,
+                "64": 10332,
+                "128": 21578,
+                "256": 30988
+              },
+              "below_with_known_radius": {
+                "16": 2995,
+                "32": 6943,
+                "64": 14744,
+                "128": 27223,
+                "256": 31353
+              }
+            },
+            "ocean": {
+              "cells": 12825,
+              "area_share_all": 0.020865329550187422,
+              "area_share_ocean": 0.03405931233385297,
+              "on_dry_land_columns": 0,
+              "exact_distances": 8738,
+              "censored": 4087,
+              "distance_quantiles_exact": [
+                4.0,
+                20.0,
+                90.50966799187809,
+                246.73872821265817,
+                319.72488173428104
+              ],
+              "halo256_cells": 6915,
+              "halo256_below": {
+                "16": 528,
+                "32": 1313,
+                "64": 2743,
+                "128": 4404,
+                "256": 6223
+              },
+              "below_with_known_radius": {
+                "16": 637,
+                "32": 1534,
+                "64": 3200,
+                "128": 5565,
+                "256": 6267
+              }
+            },
+            "warm_ocean": {
+              "cells": 124257,
+              "area_share_all": 0.20215697886297376,
+              "area_share_ocean": 0.32998892574405986,
+              "on_dry_land_columns": 0,
+              "exact_distances": 74250,
+              "censored": 50007,
+              "distance_quantiles_exact": [
+                4.0,
+                100.9554357129917,
+                368.39109652650404,
+                627.9108216936542,
+                844.0379138403678
+              ],
+              "halo256_cells": 92604,
+              "halo256_below": {
+                "16": 502,
+                "32": 1120,
+                "64": 2433,
+                "128": 6511,
+                "256": 18972
+              },
+              "below_with_known_radius": {
+                "16": 914,
+                "32": 1952,
+                "64": 3957,
+                "128": 8874,
+                "256": 19086
+              }
+            }
+          },
+          "physical_land": false
+        },
+        "vanilla": {
+          "definition": "Euclidean distance between 4x4 surface-biome cell centres to non-ocean, non-river cells; unknown edges censored. Resolution 4 blocks.",
+          "known_cells": 614656,
+          "ocean_cells": 199546,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 12259,
+              "area_share_all": 0.019944489275301958,
+              "area_share_ocean": 0.06143445621560943,
+              "on_dry_land_columns": 0,
+              "exact_distances": 10536,
+              "censored": 1723,
+              "distance_quantiles_exact": [
+                64.0,
+                109.17875251164945,
+                164.19500601419034,
+                221.61221449036418,
+                256.12496949731394
+              ],
+              "halo256_cells": 10431,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 2088,
+                "256": 10429
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 2109,
+                "256": 10429
+              }
+            },
+            "deep_ocean": {
+              "cells": 2329,
+              "area_share_all": 0.0037891113077884214,
+              "area_share_ocean": 0.011671494292042938,
+              "on_dry_land_columns": 0,
+              "exact_distances": 2067,
+              "censored": 262,
+              "distance_quantiles_exact": [
+                68.81860213634101,
+                96.16652224137046,
+                144.99655168313487,
+                216.85755015844947,
+                250.59928172283335
+              ],
+              "halo256_cells": 1004,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 177,
+                "256": 1004
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 596,
+                "256": 1032
+              }
+            },
+            "frozen_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 43865,
+              "area_share_all": 0.07136512130362349,
+              "area_share_ocean": 0.21982400048109207,
+              "on_dry_land_columns": 121,
+              "exact_distances": 41505,
+              "censored": 2360,
+              "distance_quantiles_exact": [
+                4.0,
+                12.649110640673518,
+                56.85068161420758,
+                135.82341477079717,
+                265.1490147068248
+              ],
+              "halo256_cells": 36961,
+              "halo256_below": {
+                "16": 4492,
+                "32": 9941,
+                "64": 20426,
+                "128": 32226,
+                "256": 36937
+              },
+              "below_with_known_radius": {
+                "16": 4984,
+                "32": 11167,
+                "64": 22953,
+                "128": 35628,
+                "256": 37014
+              }
+            },
+            "ocean": {
+              "cells": 26480,
+              "area_share_all": 0.043081007913369426,
+              "area_share_ocean": 0.13270123179617732,
+              "on_dry_land_columns": 0,
+              "exact_distances": 24799,
+              "censored": 1681,
+              "distance_quantiles_exact": [
+                4.0,
+                12.0,
+                57.688820407423826,
+                212.30167215544958,
+                306.30703550522634
+              ],
+              "halo256_cells": 19270,
+              "halo256_below": {
+                "16": 2325,
+                "32": 5137,
+                "64": 9428,
+                "128": 13906,
+                "256": 18107
+              },
+              "below_with_known_radius": {
+                "16": 3337,
+                "32": 7243,
+                "64": 12538,
+                "128": 17131,
+                "256": 18259
+              }
+            },
+            "warm_ocean": {
+              "cells": 114613,
+              "area_share_all": 0.1864669018117451,
+              "area_share_ocean": 0.5743688172150783,
+              "on_dry_land_columns": 6,
+              "exact_distances": 98339,
+              "censored": 16274,
+              "distance_quantiles_exact": [
+                4.0,
+                14.422205101855956,
+                82.46211251235322,
+                223.89283150650448,
+                392.02040763205173
+              ],
+              "halo256_cells": 88473,
+              "halo256_below": {
+                "16": 7443,
+                "32": 15761,
+                "64": 30673,
+                "128": 56173,
+                "256": 78542
+              },
+              "below_with_known_radius": {
+                "16": 9924,
+                "32": 20602,
+                "64": 38241,
+                "128": 63248,
+                "256": 78843
+              }
+            }
+          },
+          "physical_land": false
+        },
+        "physical_distance_check": {
+          "before": {
+            "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+            "known_cells": 614656,
+            "ocean_cells": 376549,
+            "biomes": {
+              "cold_ocean": {
+                "cells": 15434,
+                "area_share_all": 0.025109980216576427,
+                "area_share_ocean": 0.04098802546282157,
+                "on_dry_land_columns": 14,
+                "exact_distances": 11451,
+                "censored": 3983,
+                "distance_quantiles_exact": [
+                  0.0,
+                  32.2490309931942,
+                  116.27553482998907,
+                  226.45087767549057,
+                  350.2913073429028
+                ],
+                "halo256_cells": 7461,
+                "halo256_below": {
+                  "16": 115,
+                  "32": 452,
+                  "64": 1264,
+                  "128": 3295,
+                  "256": 6376
+                },
+                "below_with_known_radius": {
+                  "16": 236,
+                  "32": 1047,
+                  "64": 2748,
+                  "128": 4776,
+                  "256": 6460
+                }
+              },
+              "deep_cold_ocean": {
+                "cells": 38395,
+                "area_share_all": 0.062465834548104955,
+                "area_share_ocean": 0.10196548125210796,
+                "on_dry_land_columns": 0,
+                "exact_distances": 30046,
+                "censored": 8349,
+                "distance_quantiles_exact": [
+                  163.2666530556684,
+                  314.85869846647086,
+                  577.116972503808,
+                  742.4284477308235,
+                  817.8508421466594
+                ],
+                "halo256_cells": 36931,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 966
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1022
+                }
+              },
+              "deep_frozen_ocean": {
+                "cells": 36517,
+                "area_share_all": 0.05941046699291962,
+                "area_share_ocean": 0.09697808253374726,
+                "on_dry_land_columns": 0,
+                "exact_distances": 2995,
+                "censored": 33522,
+                "distance_quantiles_exact": [
+                  187.48866632412745,
+                  282.41812972966164,
+                  374.4863148367374,
+                  511.4058349690242,
+                  635.6099432828281
+                ],
+                "halo256_cells": 26535,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 23
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 37
+                }
+              },
+              "deep_lukewarm_ocean": {
+                "cells": 20222,
+                "area_share_all": 0.0328997032486464,
+                "area_share_ocean": 0.05370350206746001,
+                "on_dry_land_columns": 0,
+                "exact_distances": 17294,
+                "censored": 2928,
+                "distance_quantiles_exact": [
+                  132.9661611087573,
+                  253.14027731674784,
+                  417.5547868244358,
+                  710.1774426155762,
+                  852.0845028516832
+                ],
+                "halo256_cells": 19457,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1693
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1703
+                }
+              },
+              "deep_ocean": {
+                "cells": 12337,
+                "area_share_all": 0.020071389525197835,
+                "area_share_ocean": 0.032763332262202266,
+                "on_dry_land_columns": 0,
+                "exact_distances": 11415,
+                "censored": 922,
+                "distance_quantiles_exact": [
+                  166.4692163734785,
+                  296.0,
+                  470.88002718314567,
+                  705.5097447944996,
+                  824.9703024957929
+                ],
+                "halo256_cells": 12137,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 563
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 566
+                }
+              },
+              "frozen_ocean": {
+                "cells": 7569,
+                "area_share_all": 0.01231420501874219,
+                "area_share_ocean": 0.020100969594926556,
+                "on_dry_land_columns": 19,
+                "exact_distances": 4085,
+                "censored": 3484,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.284271247461902,
+                  132.0,
+                  254.9162894555066,
+                  342.0409332229112
+                ],
+                "halo256_cells": 534,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 127
+                },
+                "below_with_known_radius": {
+                  "16": 132,
+                  "32": 265,
+                  "64": 227,
+                  "128": 255,
+                  "256": 162
+                }
+              },
+              "lukewarm_ocean": {
+                "cells": 83945,
+                "area_share_all": 0.13657232663473554,
+                "area_share_ocean": 0.2229324735957339,
+                "on_dry_land_columns": 422,
+                "exact_distances": 58807,
+                "censored": 25138,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.284271247461902,
+                  108.664621657649,
+                  263.43576025033957,
+                  485.7324366356441
+                ],
+                "halo256_cells": 46732,
+                "halo256_below": {
+                  "16": 1624,
+                  "32": 4707,
+                  "64": 11343,
+                  "128": 25002,
+                  "256": 38956
+                },
+                "below_with_known_radius": {
+                  "16": 2271,
+                  "32": 6672,
+                  "64": 15671,
+                  "128": 31609,
+                  "256": 39393
+                }
+              },
+              "ocean": {
+                "cells": 17822,
+                "area_share_all": 0.028995080174927114,
+                "area_share_ocean": 0.04732982958393197,
+                "on_dry_land_columns": 387,
+                "exact_distances": 12488,
+                "censored": 5334,
+                "distance_quantiles_exact": [
+                  0.0,
+                  20.0,
+                  88.0,
+                  232.55106965997814,
+                  319.62478001556764
+                ],
+                "halo256_cells": 8913,
+                "halo256_below": {
+                  "16": 883,
+                  "32": 1740,
+                  "64": 3524,
+                  "128": 5903,
+                  "256": 8158
+                },
+                "below_with_known_radius": {
+                  "16": 927,
+                  "32": 2007,
+                  "64": 4372,
+                  "128": 8087,
+                  "256": 8234
+                }
+              },
+              "warm_ocean": {
+                "cells": 144308,
+                "area_share_all": 0.23477847771761767,
+                "area_share_ocean": 0.3832383036470685,
+                "on_dry_land_columns": 14,
+                "exact_distances": 86026,
+                "censored": 58282,
+                "distance_quantiles_exact": [
+                  0.0,
+                  168.4280261714184,
+                  392.93765408777,
+                  649.1594565282093,
+                  879.7545112132134
+                ],
+                "halo256_cells": 115244,
+                "halo256_below": {
+                  "16": 108,
+                  "32": 319,
+                  "64": 834,
+                  "128": 2478,
+                  "256": 19555
+                },
+                "below_with_known_radius": {
+                  "16": 248,
+                  "32": 735,
+                  "64": 1749,
+                  "128": 3558,
+                  "256": 19659
+                }
+              }
+            },
+            "physical_land": true
+          },
+          "after": {
+            "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+            "known_cells": 614656,
+            "ocean_cells": 376549,
+            "biomes": {
+              "cold_ocean": {
+                "cells": 21952,
+                "area_share_all": 0.03571428571428571,
+                "area_share_ocean": 0.058297857649336475,
+                "on_dry_land_columns": 154,
+                "exact_distances": 16277,
+                "censored": 5675,
+                "distance_quantiles_exact": [
+                  0.0,
+                  30.463092423455635,
+                  100.31948963187563,
+                  220.03636063160107,
+                  350.2913073429028
+                ],
+                "halo256_cells": 10537,
+                "halo256_below": {
+                  "16": 429,
+                  "32": 1052,
+                  "64": 2574,
+                  "128": 5591,
+                  "256": 9563
+                },
+                "below_with_known_radius": {
+                  "16": 558,
+                  "32": 1741,
+                  "64": 4544,
+                  "128": 8407,
+                  "256": 9682
+                }
+              },
+              "deep_cold_ocean": {
+                "cells": 27364,
+                "area_share_all": 0.044519210745522696,
+                "area_share_ocean": 0.0726704890996922,
+                "on_dry_land_columns": 0,
+                "exact_distances": 19237,
+                "censored": 8127,
+                "distance_quantiles_exact": [
+                  174.72263734273244,
+                  356.969442165161,
+                  585.368260157655,
+                  740.51873710258,
+                  807.0291196728901
+                ],
+                "halo256_cells": 26157,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 273
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 310
+                }
+              },
+              "deep_frozen_ocean": {
+                "cells": 34747,
+                "area_share_all": 0.056530807476051645,
+                "area_share_ocean": 0.09227749907714534,
+                "on_dry_land_columns": 0,
+                "exact_distances": 2492,
+                "censored": 32255,
+                "distance_quantiles_exact": [
+                  187.48866632412745,
+                  273.2529894114483,
+                  365.20679073642646,
+                  496.6769573877975,
+                  598.8923108539632
+                ],
+                "halo256_cells": 24828,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 23
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 37
+                }
+              },
+              "deep_lukewarm_ocean": {
+                "cells": 65413,
+                "area_share_all": 0.1064221288004998,
+                "area_share_ocean": 0.17371709923542486,
+                "on_dry_land_columns": 0,
+                "exact_distances": 47003,
+                "censored": 18410,
+                "distance_quantiles_exact": [
+                  113.13708498984761,
+                  197.5854245636555,
+                  374.0374312819507,
+                  692.2843345869765,
+                  879.7545112132134
+                ],
+                "halo256_cells": 57642,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 102,
+                  "256": 10015
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 158,
+                  "256": 10105
+                }
+              },
+              "deep_ocean": {
+                "cells": 18563,
+                "area_share_all": 0.030200632548937942,
+                "area_share_ocean": 0.04929770096322125,
+                "on_dry_land_columns": 0,
+                "exact_distances": 16554,
+                "censored": 2009,
+                "distance_quantiles_exact": [
+                  163.2666530556684,
+                  283.3316075424448,
+                  543.1316581156034,
+                  736.0,
+                  821.1796392994653
+                ],
+                "halo256_cells": 18147,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1006
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 1026
+                }
+              },
+              "frozen_ocean": {
+                "cells": 8116,
+                "area_share_all": 0.013204133694294044,
+                "area_share_ocean": 0.021553635781797323,
+                "on_dry_land_columns": 19,
+                "exact_distances": 4493,
+                "censored": 3623,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.0,
+                  132.54433220624713,
+                  268.0,
+                  349.19335617963867
+                ],
+                "halo256_cells": 693,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 138
+                },
+                "below_with_known_radius": {
+                  "16": 146,
+                  "32": 302,
+                  "64": 288,
+                  "128": 255,
+                  "256": 178
+                }
+              },
+              "lukewarm_ocean": {
+                "cells": 63312,
+                "area_share_all": 0.1030039566847147,
+                "area_share_ocean": 0.1681374801154697,
+                "on_dry_land_columns": 326,
+                "exact_distances": 46301,
+                "censored": 17011,
+                "distance_quantiles_exact": [
+                  0.0,
+                  28.0,
+                  101.9803902718557,
+                  263.69679558159214,
+                  485.7324366356441
+                ],
+                "halo256_cells": 36421,
+                "halo256_below": {
+                  "16": 1299,
+                  "32": 3828,
+                  "64": 9437,
+                  "128": 20578,
+                  "256": 31031
+                },
+                "below_with_known_radius": {
+                  "16": 1862,
+                  "32": 5585,
+                  "64": 13372,
+                  "128": 26065,
+                  "256": 31386
+                }
+              },
+              "ocean": {
+                "cells": 12825,
+                "area_share_all": 0.020865329550187422,
+                "area_share_ocean": 0.03405931233385297,
+                "on_dry_land_columns": 285,
+                "exact_distances": 8593,
+                "censored": 4232,
+                "distance_quantiles_exact": [
+                  0.0,
+                  17.88854381999832,
+                  100.0,
+                  256.24987043887205,
+                  328.09754647055803
+                ],
+                "halo256_cells": 6915,
+                "halo256_below": {
+                  "16": 677,
+                  "32": 1396,
+                  "64": 2665,
+                  "128": 4302,
+                  "256": 6053
+                },
+                "below_with_known_radius": {
+                  "16": 699,
+                  "32": 1540,
+                  "64": 2986,
+                  "128": 5187,
+                  "256": 6097
+                }
+              },
+              "warm_ocean": {
+                "cells": 124257,
+                "area_share_all": 0.20215697886297376,
+                "area_share_ocean": 0.32998892574405986,
+                "on_dry_land_columns": 72,
+                "exact_distances": 73657,
+                "censored": 50600,
+                "distance_quantiles_exact": [
+                  0.0,
+                  106.28264204469139,
+                  375.2545802518605,
+                  633.7949195126133,
+                  852.3379611398286
+                ],
+                "halo256_cells": 92604,
+                "halo256_below": {
+                  "16": 325,
+                  "32": 942,
+                  "64": 2289,
+                  "128": 6105,
+                  "256": 18315
+                },
+                "below_with_known_radius": {
+                  "16": 549,
+                  "32": 1558,
+                  "64": 3577,
+                  "128": 8213,
+                  "256": 18415
+                }
+              }
+            },
+            "physical_land": true
+          },
+          "vanilla": {
+            "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+            "known_cells": 614656,
+            "ocean_cells": 199546,
+            "biomes": {
+              "cold_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_cold_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_frozen_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "deep_lukewarm_ocean": {
+                "cells": 12259,
+                "area_share_all": 0.019944489275301958,
+                "area_share_ocean": 0.06143445621560943,
+                "on_dry_land_columns": 0,
+                "exact_distances": 10630,
+                "censored": 1629,
+                "distance_quantiles_exact": [
+                  23.323807579381203,
+                  95.0789145920377,
+                  186.67619023324855,
+                  283.22146608519216,
+                  337.16464820618427
+                ],
+                "halo256_cells": 10431,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 21,
+                  "64": 263,
+                  "128": 2265,
+                  "256": 8521
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 21,
+                  "64": 263,
+                  "128": 2286,
+                  "256": 8521
+                }
+              },
+              "deep_ocean": {
+                "cells": 2329,
+                "area_share_all": 0.0037891113077884214,
+                "area_share_ocean": 0.011671494292042938,
+                "on_dry_land_columns": 0,
+                "exact_distances": 1981,
+                "censored": 348,
+                "distance_quantiles_exact": [
+                  78.79086241436883,
+                  107.70329614269008,
+                  153.15351775261317,
+                  211.09239683134018,
+                  251.20509548972132
+                ],
+                "halo256_cells": 1004,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 134,
+                  "256": 1004
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 350,
+                  "256": 1032
+                }
+              },
+              "frozen_ocean": {
+                "cells": 0,
+                "area_share_all": 0.0,
+                "area_share_ocean": 0.0,
+                "on_dry_land_columns": 0,
+                "exact_distances": 0,
+                "censored": 0,
+                "distance_quantiles_exact": [],
+                "halo256_cells": 0,
+                "halo256_below": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                },
+                "below_with_known_radius": {
+                  "16": 0,
+                  "32": 0,
+                  "64": 0,
+                  "128": 0,
+                  "256": 0
+                }
+              },
+              "lukewarm_ocean": {
+                "cells": 43865,
+                "area_share_all": 0.07136512130362349,
+                "area_share_ocean": 0.21982400048109207,
+                "on_dry_land_columns": 121,
+                "exact_distances": 41479,
+                "censored": 2386,
+                "distance_quantiles_exact": [
+                  0.0,
+                  25.298221281347036,
+                  72.99315036357864,
+                  164.43843832875572,
+                  298.69047524151154
+                ],
+                "halo256_cells": 36961,
+                "halo256_below": {
+                  "16": 1212,
+                  "32": 4843,
+                  "64": 14547,
+                  "128": 29745,
+                  "256": 36449
+                },
+                "below_with_known_radius": {
+                  "16": 1608,
+                  "32": 5993,
+                  "64": 17205,
+                  "128": 33273,
+                  "256": 36526
+                }
+              },
+              "ocean": {
+                "cells": 26480,
+                "area_share_all": 0.043081007913369426,
+                "area_share_ocean": 0.13270123179617732,
+                "on_dry_land_columns": 0,
+                "exact_distances": 24530,
+                "censored": 1950,
+                "distance_quantiles_exact": [
+                  4.0,
+                  24.331050121192877,
+                  79.0441455930787,
+                  211.09239683134018,
+                  277.41665415039523
+                ],
+                "halo256_cells": 19270,
+                "halo256_below": {
+                  "16": 493,
+                  "32": 2487,
+                  "64": 6906,
+                  "128": 12783,
+                  "256": 18800
+                },
+                "below_with_known_radius": {
+                  "16": 801,
+                  "32": 3782,
+                  "64": 9370,
+                  "128": 15902,
+                  "256": 18952
+                }
+              },
+              "warm_ocean": {
+                "cells": 114613,
+                "area_share_all": 0.1864669018117451,
+                "area_share_ocean": 0.5743688172150783,
+                "on_dry_land_columns": 6,
+                "exact_distances": 96381,
+                "censored": 18232,
+                "distance_quantiles_exact": [
+                  0.0,
+                  32.0,
+                  103.84603988597736,
+                  236.30488780387088,
+                  399.6998874155458
+                ],
+                "halo256_cells": 88473,
+                "halo256_below": {
+                  "16": 1779,
+                  "32": 7862,
+                  "64": 22092,
+                  "128": 48818,
+                  "256": 76886
+                },
+                "below_with_known_radius": {
+                  "16": 2110,
+                  "32": 9526,
+                  "64": 26965,
+                  "128": 55113,
+                  "256": 77168
+                }
+              }
+            },
+            "physical_land": true
+          }
+        }
+      }
+    ],
+    "targeted_windows": {
+      "seed": 1792932773345722119,
+      "rectangles_x_z_width_depth_step": [
+        [
+          -1006,
+          -718,
+          528,
+          528,
+          4
+        ],
+        [
+          -1582,
+          -1294,
+          528,
+          528,
+          4
+        ],
+        [
+          2290,
+          -2830,
+          528,
+          528,
+          4
+        ],
+        [
+          2642,
+          -1422,
+          528,
+          528,
+          4
+        ],
+        [
+          2578,
+          -3182,
+          528,
+          528,
+          4
+        ],
+        [
+          2738,
+          -3310,
+          528,
+          528,
+          4
+        ],
+        [
+          -302,
+          114,
+          528,
+          528,
+          4
+        ],
+        [
+          -814,
+          498,
+          528,
+          528,
+          4
+        ],
+        [
+          -1390,
+          850,
+          528,
+          528,
+          4
+        ]
+      ],
+      "selection": "Nine /locate-selected ocean windows, union without duplicate cells. Conditional biome coverage, not an unbiased area census.",
+      "before": {
+        "definition": "Euclidean distance between 4x4 cell centres to non-ocean, non-river surface-biome cells; unknown edges censored. Resolution 4 blocks.",
+        "known_cells": 144832,
+        "ocean_cells": 59023,
+        "biomes": {
+          "cold_ocean": {
+            "cells": 4851,
+            "area_share_all": 0.033493979231109146,
+            "area_share_ocean": 0.08218829947647527,
+            "on_dry_land_columns": 0,
+            "exact_distances": 1316,
+            "censored": 3535,
+            "distance_quantiles_exact": [
+              4.0,
+              28.284271247461902,
+              92.56323954143359,
+              149.10379507409147,
+              173.1588865753069
+            ],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 44,
+              "32": 64,
+              "64": 68,
+              "128": 84,
+              "256": 0
+            }
+          },
+          "deep_cold_ocean": {
+            "cells": 5372,
+            "area_share_all": 0.03709125055236412,
+            "area_share_ocean": 0.09101536689087306,
+            "on_dry_land_columns": 0,
+            "exact_distances": 2,
+            "censored": 5370,
+            "distance_quantiles_exact": [
+              250.3437636531016,
+              250.6486848313304,
+              251.86836954424564,
+              253.08805425716088,
+              253.39297543538967
+            ],
+            "halo256_cells": 1,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 1
+            }
+          },
+          "deep_frozen_ocean": {
+            "cells": 0,
+            "area_share_all": 0.0,
+            "area_share_ocean": 0.0,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 0,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "deep_lukewarm_ocean": {
+            "cells": 1476,
+            "area_share_all": 0.010191117984975696,
+            "area_share_ocean": 0.025007200582823644,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 1476,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "deep_ocean": {
+            "cells": 1301,
+            "area_share_all": 0.008982821475916924,
+            "area_share_ocean": 0.02204225471426393,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 1301,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "frozen_ocean": {
+            "cells": 224,
+            "area_share_all": 0.0015466195315952276,
+            "area_share_ocean": 0.003795130711756434,
+            "on_dry_land_columns": 0,
+            "exact_distances": 89,
+            "censored": 135,
+            "distance_quantiles_exact": [
+              4.0,
+              4.0,
+              12.0,
+              20.0,
+              25.298221281347036
+            ],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 35,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "lukewarm_ocean": {
+            "cells": 24196,
+            "area_share_all": 0.16706252761820592,
+            "area_share_ocean": 0.40994188706097623,
+            "on_dry_land_columns": 0,
+            "exact_distances": 8637,
+            "censored": 15559,
+            "distance_quantiles_exact": [
+              4.0,
+              12.649110640673518,
+              68.0,
+              167.09278859364338,
+              276.0
+            ],
+            "halo256_cells": 535,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 94,
+              "256": 429
+            },
+            "below_with_known_radius": {
+              "16": 938,
+              "32": 1821,
+              "64": 3257,
+              "128": 4344,
+              "256": 461
+            }
+          },
+          "ocean": {
+            "cells": 4583,
+            "area_share_all": 0.031643559434379145,
+            "area_share_ocean": 0.07764769666062382,
+            "on_dry_land_columns": 0,
+            "exact_distances": 989,
+            "censored": 3594,
+            "distance_quantiles_exact": [
+              4.0,
+              8.0,
+              50.11985634456667,
+              224.63477819949887,
+              259.7537295208675
+            ],
+            "halo256_cells": 15,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 7
+            },
+            "below_with_known_radius": {
+              "16": 207,
+              "32": 362,
+              "64": 298,
+              "128": 91,
+              "256": 15
+            }
+          },
+          "warm_ocean": {
+            "cells": 17020,
+            "area_share_all": 0.11751546619531596,
+            "area_share_ocean": 0.2883621639022076,
+            "on_dry_land_columns": 0,
+            "exact_distances": 2519,
+            "censored": 14501,
+            "distance_quantiles_exact": [
+              4.0,
+              16.0,
+              100.07996802557443,
+              196.67637788600408,
+              268.0
+            ],
+            "halo256_cells": 71,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 28
+            },
+            "below_with_known_radius": {
+              "16": 219,
+              "32": 386,
+              "64": 428,
+              "128": 260,
+              "256": 29
+            }
+          }
+        },
+        "physical_land": false
+      },
+      "after": {
+        "definition": "Euclidean distance between 4x4 cell centres to non-ocean, non-river surface-biome cells; unknown edges censored. Resolution 4 blocks.",
+        "known_cells": 144832,
+        "ocean_cells": 59023,
+        "biomes": {
+          "cold_ocean": {
+            "cells": 6208,
+            "area_share_all": 0.04286345558992488,
+            "area_share_ocean": 0.10517933686867831,
+            "on_dry_land_columns": 0,
+            "exact_distances": 1690,
+            "censored": 4518,
+            "distance_quantiles_exact": [
+              4.0,
+              26.832815729997478,
+              112.03570290448761,
+              193.03885619221847,
+              231.4821807396846
+            ],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 96,
+              "32": 121,
+              "64": 87,
+              "128": 84,
+              "256": 0
+            }
+          },
+          "deep_cold_ocean": {
+            "cells": 3170,
+            "area_share_all": 0.021887428192664603,
+            "area_share_ocean": 0.05370787659048168,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 3170,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "deep_frozen_ocean": {
+            "cells": 0,
+            "area_share_all": 0.0,
+            "area_share_ocean": 0.0,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 0,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "deep_lukewarm_ocean": {
+            "cells": 5724,
+            "area_share_all": 0.039521652673442334,
+            "area_share_ocean": 0.09697914372363316,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 5724,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "deep_ocean": {
+            "cells": 3069,
+            "area_share_all": 0.021190068493150686,
+            "area_share_ocean": 0.05199667926062721,
+            "on_dry_land_columns": 0,
+            "exact_distances": 2,
+            "censored": 3067,
+            "distance_quantiles_exact": [
+              250.3437636531016,
+              250.6486848313304,
+              251.86836954424564,
+              253.08805425716088,
+              253.39297543538967
+            ],
+            "halo256_cells": 1,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 1
+            }
+          },
+          "frozen_ocean": {
+            "cells": 537,
+            "area_share_all": 0.0037077441449403447,
+            "area_share_ocean": 0.009098148179523237,
+            "on_dry_land_columns": 0,
+            "exact_distances": 200,
+            "censored": 337,
+            "distance_quantiles_exact": [
+              4.0,
+              5.491168824543146,
+              18.94427190999916,
+              33.103962002574164,
+              40.19950248448356
+            ],
+            "halo256_cells": 0,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 46,
+              "32": 42,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          },
+          "lukewarm_ocean": {
+            "cells": 19411,
+            "area_share_all": 0.13402424878479893,
+            "area_share_ocean": 0.32887179574064346,
+            "on_dry_land_columns": 0,
+            "exact_distances": 7055,
+            "censored": 12356,
+            "distance_quantiles_exact": [
+              4.0,
+              12.649110640673518,
+              67.88225099390856,
+              157.175061635108,
+              251.745903640953
+            ],
+            "halo256_cells": 142,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 61,
+              "256": 138
+            },
+            "below_with_known_radius": {
+              "16": 782,
+              "32": 1465,
+              "64": 2592,
+              "128": 3780,
+              "256": 160
+            }
+          },
+          "ocean": {
+            "cells": 3325,
+            "area_share_all": 0.02295763367211666,
+            "area_share_ocean": 0.05633397150263457,
+            "on_dry_land_columns": 0,
+            "exact_distances": 602,
+            "censored": 2723,
+            "distance_quantiles_exact": [
+              4.0,
+              5.656854249492381,
+              26.832815729997478,
+              233.83754481467156,
+              259.7537295208675
+            ],
+            "halo256_cells": 15,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 7
+            },
+            "below_with_known_radius": {
+              "16": 162,
+              "32": 315,
+              "64": 354,
+              "128": 125,
+              "256": 15
+            }
+          },
+          "warm_ocean": {
+            "cells": 17579,
+            "area_share_all": 0.12137511047282369,
+            "area_share_ocean": 0.29783304813377837,
+            "on_dry_land_columns": 0,
+            "exact_distances": 4003,
+            "censored": 13576,
+            "distance_quantiles_exact": [
+              4.0,
+              16.0,
+              88.54377448471462,
+              208.0307663865068,
+              276.0
+            ],
+            "halo256_cells": 464,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 33,
+              "256": 319
+            },
+            "below_with_known_radius": {
+              "16": 357,
+              "32": 690,
+              "64": 1018,
+              "128": 790,
+              "256": 330
+            }
+          }
+        },
+        "physical_land": false
+      },
+      "vanilla": {
+        "definition": "Euclidean distance between 4x4 cell centres to non-ocean, non-river surface-biome cells; unknown edges censored. Resolution 4 blocks.",
+        "known_cells": 144832,
+        "ocean_cells": 69002,
+        "biomes": {
+          "cold_ocean": {
+            "cells": 14715,
+            "area_share_all": 0.10160047503314185,
+            "area_share_ocean": 0.2132546882699052,
+            "on_dry_land_columns": 1,
+            "exact_distances": 11886,
+            "censored": 2829,
+            "distance_quantiles_exact": [
+              4.0,
+              8.0,
+              31.240998703626616,
+              78.89233169326408,
+              141.53444810363305
+            ],
+            "halo256_cells": 18,
+            "halo256_below": {
+              "16": 8,
+              "32": 16,
+              "64": 18,
+              "128": 18,
+              "256": 18
+            },
+            "below_with_known_radius": {
+              "16": 2679,
+              "32": 5827,
+              "64": 8364,
+              "128": 5518,
+              "256": 44
+            }
+          },
+          "deep_cold_ocean": {
+            "cells": 1168,
+            "area_share_all": 0.008064516129032258,
+            "area_share_ocean": 0.016927045592881367,
+            "on_dry_land_columns": 0,
+            "exact_distances": 338,
+            "censored": 830,
+            "distance_quantiles_exact": [
+              4.0,
+              12.0,
+              39.59797974644666,
+              95.69024546361028,
+              135.88230201170424
+            ],
+            "halo256_cells": 14,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 14,
+              "128": 14,
+              "256": 14
+            },
+            "below_with_known_radius": {
+              "16": 46,
+              "32": 126,
+              "64": 282,
+              "128": 292,
+              "256": 28
+            }
+          },
+          "deep_frozen_ocean": {
+            "cells": 8040,
+            "area_share_all": 0.05551259390190013,
+            "area_share_ocean": 0.11651836178661489,
+            "on_dry_land_columns": 1445,
+            "exact_distances": 1270,
+            "censored": 6770,
+            "distance_quantiles_exact": [
+              65.11528238439882,
+              101.96468889375642,
+              149.10379507409147,
+              189.69449122207,
+              215.40659228538016
+            ],
+            "halo256_cells": 5,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 5
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 260,
+              "256": 13
+            }
+          },
+          "deep_lukewarm_ocean": {
+            "cells": 14655,
+            "area_share_all": 0.1011862019443217,
+            "area_share_ocean": 0.2123851482565723,
+            "on_dry_land_columns": 0,
+            "exact_distances": 1527,
+            "censored": 13128,
+            "distance_quantiles_exact": [
+              48.662100242385755,
+              75.15317691222374,
+              109.17875251164945,
+              148.71178080586031,
+              174.9514218290323
+            ],
+            "halo256_cells": 14,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 7,
+              "128": 14,
+              "256": 14
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 47,
+              "128": 1038,
+              "256": 27
+            }
+          },
+          "deep_ocean": {
+            "cells": 778,
+            "area_share_all": 0.0053717410517012815,
+            "area_share_ocean": 0.011275035506217211,
+            "on_dry_land_columns": 0,
+            "exact_distances": 778,
+            "censored": 0,
+            "distance_quantiles_exact": [
+              63.245553203367585,
+              86.16263691415206,
+              112.64102272262978,
+              134.1044369139217,
+              148.43180252223578
+            ],
+            "halo256_cells": 4,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 4,
+              "256": 4
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 1,
+              "128": 619,
+              "256": 13
+            }
+          },
+          "frozen_ocean": {
+            "cells": 4767,
+            "area_share_all": 0.03291399690676094,
+            "area_share_ocean": 0.06908495405930262,
+            "on_dry_land_columns": 1024,
+            "exact_distances": 3627,
+            "censored": 1140,
+            "distance_quantiles_exact": [
+              4.0,
+              11.313708498984761,
+              53.36665625650534,
+              116.61903789690601,
+              161.24515496597098
+            ],
+            "halo256_cells": 495,
+            "halo256_below": {
+              "16": 72,
+              "32": 144,
+              "64": 226,
+              "128": 416,
+              "256": 495
+            },
+            "below_with_known_radius": {
+              "16": 507,
+              "32": 1093,
+              "64": 1958,
+              "128": 2818,
+              "256": 516
+            }
+          },
+          "lukewarm_ocean": {
+            "cells": 5036,
+            "area_share_all": 0.034771321254971274,
+            "area_share_ocean": 0.07298339178574534,
+            "on_dry_land_columns": 1,
+            "exact_distances": 3279,
+            "censored": 1757,
+            "distance_quantiles_exact": [
+              4.0,
+              5.656854249492381,
+              30.463092423455635,
+              69.85699678629192,
+              102.2154587134451
+            ],
+            "halo256_cells": 16,
+            "halo256_below": {
+              "16": 14,
+              "32": 14,
+              "64": 16,
+              "128": 16,
+              "256": 16
+            },
+            "below_with_known_radius": {
+              "16": 901,
+              "32": 1603,
+              "64": 2443,
+              "128": 1806,
+              "256": 32
+            }
+          },
+          "ocean": {
+            "cells": 11901,
+            "area_share_all": 0.0821710671674768,
+            "area_share_ocean": 0.17247326164459,
+            "on_dry_land_columns": 1,
+            "exact_distances": 10128,
+            "censored": 1773,
+            "distance_quantiles_exact": [
+              4.0,
+              8.0,
+              34.17601498127012,
+              80.99382692526635,
+              134.16407864998737
+            ],
+            "halo256_cells": 18,
+            "halo256_below": {
+              "16": 6,
+              "32": 6,
+              "64": 6,
+              "128": 18,
+              "256": 18
+            },
+            "below_with_known_radius": {
+              "16": 2228,
+              "32": 4290,
+              "64": 6418,
+              "128": 4915,
+              "256": 38
+            }
+          },
+          "warm_ocean": {
+            "cells": 7942,
+            "area_share_all": 0.05483594785682722,
+            "area_share_ocean": 0.11509811309817107,
+            "on_dry_land_columns": 0,
+            "exact_distances": 0,
+            "censored": 7942,
+            "distance_quantiles_exact": [],
+            "halo256_cells": 16,
+            "halo256_below": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            },
+            "below_with_known_radius": {
+              "16": 0,
+              "32": 0,
+              "64": 0,
+              "128": 0,
+              "256": 0
+            }
+          }
+        },
+        "physical_land": false
+      },
+      "physical_distance_check": {
+        "before": {
+          "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+          "known_cells": 144832,
+          "ocean_cells": 59023,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 4851,
+              "area_share_all": 0.033493979231109146,
+              "area_share_ocean": 0.08218829947647527,
+              "on_dry_land_columns": 17,
+              "exact_distances": 35,
+              "censored": 4816,
+              "distance_quantiles_exact": [
+                0.0,
+                0.0,
+                4.0,
+                16.0,
+                23.323807579381203
+              ],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 22,
+                "32": 8,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 5372,
+              "area_share_all": 0.03709125055236412,
+              "area_share_ocean": 0.09101536689087306,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 5372,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 1,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 1476,
+              "area_share_all": 0.010191117984975696,
+              "area_share_ocean": 0.025007200582823644,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 1476,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_ocean": {
+              "cells": 1301,
+              "area_share_all": 0.008982821475916924,
+              "area_share_ocean": 0.02204225471426393,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 1301,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "frozen_ocean": {
+              "cells": 224,
+              "area_share_all": 0.0015466195315952276,
+              "area_share_ocean": 0.003795130711756434,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 224,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 24196,
+              "area_share_all": 0.16706252761820592,
+              "area_share_ocean": 0.40994188706097623,
+              "on_dry_land_columns": 153,
+              "exact_distances": 8981,
+              "censored": 15215,
+              "distance_quantiles_exact": [
+                0.0,
+                20.0,
+                74.4043009509531,
+                172.74258305351347,
+                277.18585822512665
+              ],
+              "halo256_cells": 535,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 115,
+                "256": 448
+              },
+              "below_with_known_radius": {
+                "16": 546,
+                "32": 1349,
+                "64": 2907,
+                "128": 4339,
+                "256": 483
+              }
+            },
+            "ocean": {
+              "cells": 4583,
+              "area_share_all": 0.031643559434379145,
+              "area_share_ocean": 0.07764769666062382,
+              "on_dry_land_columns": 45,
+              "exact_distances": 517,
+              "censored": 4066,
+              "distance_quantiles_exact": [
+                0.0,
+                4.0,
+                20.0,
+                45.60701700396552,
+                78.587530817554
+              ],
+              "halo256_cells": 15,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 185,
+                "32": 343,
+                "64": 282,
+                "128": 91,
+                "256": 0
+              }
+            },
+            "warm_ocean": {
+              "cells": 17020,
+              "area_share_all": 0.11751546619531596,
+              "area_share_ocean": 0.2883621639022076,
+              "on_dry_land_columns": 0,
+              "exact_distances": 1575,
+              "censored": 15445,
+              "distance_quantiles_exact": [
+                8.0,
+                28.0,
+                96.0,
+                193.06371898390023,
+                271.5290039756342
+              ],
+              "halo256_cells": 71,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 16
+              },
+              "below_with_known_radius": {
+                "16": 41,
+                "32": 171,
+                "64": 260,
+                "128": 66,
+                "256": 16
+              }
+            }
+          },
+          "physical_land": true
+        },
+        "after": {
+          "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+          "known_cells": 144832,
+          "ocean_cells": 59023,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 6208,
+              "area_share_all": 0.04286345558992488,
+              "area_share_ocean": 0.10517933686867831,
+              "on_dry_land_columns": 32,
+              "exact_distances": 151,
+              "censored": 6057,
+              "distance_quantiles_exact": [
+                0.0,
+                0.0,
+                11.313708498984761,
+                26.832815729997478,
+                46.8187996428785
+              ],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 87,
+                "32": 93,
+                "64": 19,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 3170,
+              "area_share_all": 0.021887428192664603,
+              "area_share_ocean": 0.05370787659048168,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 3170,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 0,
+              "area_share_all": 0.0,
+              "area_share_ocean": 0.0,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 0,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 5724,
+              "area_share_all": 0.039521652673442334,
+              "area_share_ocean": 0.09697914372363316,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 5724,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "deep_ocean": {
+              "cells": 3069,
+              "area_share_all": 0.021190068493150686,
+              "area_share_ocean": 0.05199667926062721,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 3069,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 1,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "frozen_ocean": {
+              "cells": 537,
+              "area_share_all": 0.0037077441449403447,
+              "area_share_ocean": 0.009098148179523237,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 537,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 0,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 19411,
+              "area_share_all": 0.13402424878479893,
+              "area_share_ocean": 0.32887179574064346,
+              "on_dry_land_columns": 146,
+              "exact_distances": 7323,
+              "censored": 12088,
+              "distance_quantiles_exact": [
+                0.0,
+                17.88854381999832,
+                71.55417527999327,
+                157.2768260107,
+                255.1234995056316
+              ],
+              "halo256_cells": 142,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 73,
+                "256": 139
+              },
+              "below_with_known_radius": {
+                "16": 504,
+                "32": 1150,
+                "64": 2409,
+                "128": 3777,
+                "256": 161
+              }
+            },
+            "ocean": {
+              "cells": 3325,
+              "area_share_all": 0.02295763367211666,
+              "area_share_ocean": 0.05633397150263457,
+              "on_dry_land_columns": 37,
+              "exact_distances": 499,
+              "censored": 2826,
+              "distance_quantiles_exact": [
+                0.0,
+                4.0,
+                24.0,
+                50.215173588192144,
+                83.5224520712844
+              ],
+              "halo256_cells": 15,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 135,
+                "32": 301,
+                "64": 335,
+                "128": 125,
+                "256": 0
+              }
+            },
+            "warm_ocean": {
+              "cells": 17579,
+              "area_share_all": 0.12137511047282369,
+              "area_share_ocean": 0.29783304813377837,
+              "on_dry_land_columns": 0,
+              "exact_distances": 3135,
+              "censored": 14444,
+              "distance_quantiles_exact": [
+                8.0,
+                28.284271247461902,
+                100.0,
+                217.8072542409917,
+                277.18585822512665
+              ],
+              "halo256_cells": 464,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 42,
+                "256": 325
+              },
+              "below_with_known_radius": {
+                "16": 68,
+                "32": 327,
+                "64": 686,
+                "128": 594,
+                "256": 338
+              }
+            }
+          },
+          "physical_land": true
+        },
+        "vanilla": {
+          "definition": "Euclidean distance between 4x4 cell centres to columns with floor height >=63; unknown edges censored.",
+          "known_cells": 144832,
+          "ocean_cells": 69002,
+          "biomes": {
+            "cold_ocean": {
+              "cells": 14715,
+              "area_share_all": 0.10160047503314185,
+              "area_share_ocean": 0.2132546882699052,
+              "on_dry_land_columns": 1,
+              "exact_distances": 9987,
+              "censored": 4728,
+              "distance_quantiles_exact": [
+                0.0,
+                21.540659228538015,
+                60.0,
+                144.12214731319548,
+                192.4162155328911
+              ],
+              "halo256_cells": 18,
+              "halo256_below": {
+                "16": 0,
+                "32": 8,
+                "64": 16,
+                "128": 16,
+                "256": 18
+              },
+              "below_with_known_radius": {
+                "16": 502,
+                "32": 1866,
+                "64": 4554,
+                "128": 3716,
+                "256": 44
+              }
+            },
+            "deep_cold_ocean": {
+              "cells": 1168,
+              "area_share_all": 0.008064516129032258,
+              "area_share_ocean": 0.016927045592881367,
+              "on_dry_land_columns": 0,
+              "exact_distances": 539,
+              "censored": 629,
+              "distance_quantiles_exact": [
+                4.0,
+                24.331050121192877,
+                127.12198865656563,
+                183.52111595127138,
+                195.67319693816015
+              ],
+              "halo256_cells": 14,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 14
+              },
+              "below_with_known_radius": {
+                "16": 14,
+                "32": 82,
+                "64": 202,
+                "128": 22,
+                "256": 28
+              }
+            },
+            "deep_frozen_ocean": {
+              "cells": 8040,
+              "area_share_all": 0.05551259390190013,
+              "area_share_ocean": 0.11651836178661489,
+              "on_dry_land_columns": 1445,
+              "exact_distances": 7564,
+              "censored": 476,
+              "distance_quantiles_exact": [
+                0.0,
+                0.0,
+                8.94427190999916,
+                23.323807579381203,
+                40.0
+              ],
+              "halo256_cells": 5,
+              "halo256_below": {
+                "16": 5,
+                "32": 5,
+                "64": 5,
+                "128": 5,
+                "256": 5
+              },
+              "below_with_known_radius": {
+                "16": 5229,
+                "32": 6671,
+                "64": 5351,
+                "128": 2732,
+                "256": 13
+              }
+            },
+            "deep_lukewarm_ocean": {
+              "cells": 14655,
+              "area_share_all": 0.1011862019443217,
+              "area_share_ocean": 0.2123851482565723,
+              "on_dry_land_columns": 0,
+              "exact_distances": 1402,
+              "censored": 13253,
+              "distance_quantiles_exact": [
+                56.142675390472796,
+                80.9048769906907,
+                116.72184641449394,
+                153.2944806317663,
+                183.86951895297926
+              ],
+              "halo256_cells": 14,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 1,
+                "128": 14,
+                "256": 14
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 15,
+                "128": 878,
+                "256": 27
+              }
+            },
+            "deep_ocean": {
+              "cells": 778,
+              "area_share_all": 0.0053717410517012815,
+              "area_share_ocean": 0.011275035506217211,
+              "on_dry_land_columns": 0,
+              "exact_distances": 778,
+              "censored": 0,
+              "distance_quantiles_exact": [
+                86.53323061113575,
+                108.07404868885037,
+                140.51334456200237,
+                164.19500601419034,
+                176.40861656959956
+              ],
+              "halo256_cells": 4,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 4,
+                "256": 4
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 240,
+                "256": 13
+              }
+            },
+            "frozen_ocean": {
+              "cells": 4767,
+              "area_share_all": 0.03291399690676094,
+              "area_share_ocean": 0.06908495405930262,
+              "on_dry_land_columns": 1024,
+              "exact_distances": 4439,
+              "censored": 328,
+              "distance_quantiles_exact": [
+                0.0,
+                0.0,
+                8.0,
+                20.0,
+                39.395431207184416
+              ],
+              "halo256_cells": 495,
+              "halo256_below": {
+                "16": 389,
+                "32": 488,
+                "64": 495,
+                "128": 495,
+                "256": 495
+              },
+              "below_with_known_radius": {
+                "16": 3618,
+                "32": 4198,
+                "64": 3733,
+                "128": 3044,
+                "256": 516
+              }
+            },
+            "lukewarm_ocean": {
+              "cells": 5036,
+              "area_share_all": 0.034771321254971274,
+              "area_share_ocean": 0.07298339178574534,
+              "on_dry_land_columns": 1,
+              "exact_distances": 3147,
+              "censored": 1889,
+              "distance_quantiles_exact": [
+                0.0,
+                16.0,
+                40.792156108742276,
+                82.07313811473277,
+                123.2233744059949
+              ],
+              "halo256_cells": 16,
+              "halo256_below": {
+                "16": 0,
+                "32": 11,
+                "64": 16,
+                "128": 16,
+                "256": 16
+              },
+              "below_with_known_radius": {
+                "16": 280,
+                "32": 1092,
+                "64": 2105,
+                "128": 1806,
+                "256": 32
+              }
+            },
+            "ocean": {
+              "cells": 11901,
+              "area_share_all": 0.0821710671674768,
+              "area_share_ocean": 0.17247326164459,
+              "on_dry_land_columns": 1,
+              "exact_distances": 8813,
+              "censored": 3088,
+              "distance_quantiles_exact": [
+                0.0,
+                21.540659228538015,
+                55.71355310873648,
+                104.30723848324239,
+                156.46085772486356
+              ],
+              "halo256_cells": 18,
+              "halo256_below": {
+                "16": 0,
+                "32": 2,
+                "64": 6,
+                "128": 18,
+                "256": 18
+              },
+              "below_with_known_radius": {
+                "16": 337,
+                "32": 1647,
+                "64": 4299,
+                "128": 4621,
+                "256": 38
+              }
+            },
+            "warm_ocean": {
+              "cells": 7942,
+              "area_share_all": 0.05483594785682722,
+              "area_share_ocean": 0.11509811309817107,
+              "on_dry_land_columns": 0,
+              "exact_distances": 0,
+              "censored": 7942,
+              "distance_quantiles_exact": [],
+              "halo256_cells": 16,
+              "halo256_below": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              },
+              "below_with_known_radius": {
+                "16": 0,
+                "32": 0,
+                "64": 0,
+                "128": 0,
+                "256": 0
+              }
+            }
+          },
+          "physical_land": true
+        }
+      }
+    },
+    "temperature_control": {
+      "seeds": [
+        100554032945340,
+        42,
+        1,
+        1234567890
+      ],
+      "old_temperature_counts": {
+        "4": 22292,
+        "3": 23512,
+        "2": 8880,
+        "1": 14837,
+        "0": 21434
+      },
+      "ocean_samples": 90955,
+      "raw_ocean_samples": 90952,
+      "cumulative_shares": [
+        0.23565499422791492,
+        0.3987796162937717,
+        0.49641031279204006,
+        0.7549117695563741
+      ],
+      "common_thresholds": [
+        -0.49907727559367604,
+        -0.21847039609030725,
+        0.046496503909217946,
+        0.5665560370862427
+      ],
+      "new_temperature_counts": {
+        "4": 22303,
+        "3": 23512,
+        "2": 8859,
+        "1": 14845,
+        "0": 21436
+      }
+    }
+  },
+  "verification": {
+    "workspace_passed": 3342,
+    "workspace_ignored": 109,
+    "workspace_failed": 0,
+    "counting": "Only top-level test suites; nested one-test smoke subprocess is excluded.",
+    "strict_release_workspace_clippy": "clean",
+    "python_measurement_tests_passed": 3
+  },
+  "limitations": [
+    "Morphological spire counts are an operational proxy, not feature identifiers. Selected diagnostic patches have limited statistical power.",
+    "Ocean distances near unknown edges are censored; exact quantiles alone do not describe censored cells. Minimum observed warm-to-land-biome distance is 4 blocks in both generators.",
+    "Terrain and biome coordinates do not reproduce vanilla seed-for-seed. Broader ocean geometry and global cold/frozen area shares remain unverified.",
+    "Changes affect newly generated 26.3 chunks. Existing owner-world chunks were not rewritten."
+  ]
+}

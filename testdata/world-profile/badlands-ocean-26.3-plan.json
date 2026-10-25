@@ -1,0 +1,64 @@
+{
+  "seed": 1792932773345722119,
+  "ours_sites": [
+    [
+      1826,
+      -2478
+    ],
+    [
+      3490,
+      3906
+    ],
+    [
+      450,
+      3634
+    ]
+  ],
+  "source": "Largest eroded_badlands components in an independent 16384x16384 own biome census, step16; three 128x128 windows, chosen before fixes.",
+  "ours_badlands_windows": [
+    [
+      24,
+      223,
+      8,
+      8
+    ],
+    [
+      110,
+      -159,
+      8,
+      8
+    ],
+    [
+      214,
+      240,
+      8,
+      8
+    ]
+  ],
+  "vanilla_badlands_references": [
+    {
+      "seed": 1792932773345722119,
+      "window": [
+        -349,
+        -59,
+        17,
+        17
+      ],
+      "located_xz": [
+        -5456,
+        -816
+      ],
+      "source": "Official 26.3 /locate biome eroded_badlands, saved normal world, read-only snapshot."
+    },
+    {
+      "seed": 100554032945340,
+      "window": [
+        39,
+        25,
+        16,
+        16
+      ],
+      "source": "All eroded_badlands cells of a saved 3136x3136 normal-world snapshot, read-only."
+    }
+  ]
+}

@@ -8655,3 +8655,6 @@ mod prepared_light_regressions {
 
 #[cfg(test)]
 mod terrain_263_tests;
+
+#[cfg(test)]
+mod badlands_ocean_tests;

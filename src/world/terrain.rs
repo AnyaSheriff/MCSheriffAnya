@@ -539,6 +539,9 @@ pub enum Land {
 pub struct Column {
     /// Высота последнего непустого блока.
     pub height: i32,
+    /// Основание добавленного столба терракоты; исходные плотность и пещеры
+    /// ниже него сохраняются. У обычного столбца дополнительной части нет.
+    pub hoodoo_base: Option<i32>,
     pub biome: Biome,
     pub climate: Climate,
     /// Крутой склон: у соседа с одной стороны земля на четыре блока и
@@ -552,6 +555,7 @@ impl Column {
     pub fn flat(height: i32) -> Column {
         Column {
             height,
+            hoodoo_base: None,
             biome: Biome::Plains,
             climate: Climate {
                 continent: 0.0,
@@ -875,6 +879,7 @@ impl Terrain {
     /// Включает генерацию 26.2/26.3 (только профиль Preview26_3).
     pub fn with_preview(mut self, preview: bool) -> Terrain {
         self.preview = preview;
+        self.bands = if preview { preview_terracotta_bands(self.seed) } else { terracotta_bands(self.seed) };
         self
     }
 
@@ -1066,10 +1071,50 @@ impl Terrain {
         }
     }
 
+    /// Вики, Eroded Badlands: «only generate at lower elevations».
+    /// Отдельный покров из крутых столбов, а не ещё одна плавная волна
+    /// рельефа. Сетка источников мировая: порядок чанков на форму не влияет.
+    /// [проверить] распределение форм за пределами измеренных участков.
+    fn hoodoo_top(&self, x: i32, z: i32, base: i32) -> i32 {
+        if !(SEA - 1..112).contains(&base) {
+            return base;
+        }
+        let fade = 1.0 - smooth_step((f64::from(base) - 80.0) / 32.0);
+        let (cx, cz) = (x.div_euclid(20), z.div_euclid(20));
+        let mut top = base;
+        for sx in cx - 1..=cx + 1 {
+            for sz in cz - 1..=cz + 1 {
+                let mut random = Random::new(self.seed ^ cell_seed((sx, 0, sz)) ^ 0x484F_4F44_4F4F);
+                if !random.next().is_multiple_of(3) {
+                    continue;
+                }
+                let px = sx * 20 + 4 + (random.next() % 12) as i32;
+                let pz = sz * 20 + 4 + (random.next() % 12) as i32;
+                let rx = 2.0 + (random.next() % 5) as f64;
+                let rz = 2.0 + (random.next() % 5) as f64;
+                let r2 = (f64::from(x - px) / rx).powi(2) + (f64::from(z - pz) / rz).powi(2);
+                if r2 >= 1.0 {
+                    continue;
+                }
+                let height = 12.0 + (random.next() % 37) as f64;
+                let rise = (height * fade * (1.0 - r2 * r2).sqrt()).floor() as i32;
+                top = top.max(base + rise);
+            }
+        }
+        top
+    }
+
+    /// Вики, Terrain features: «192 layers», «at most 7 blocks».
+    /// Одна раскладка на весь мир, одинаковый сдвиг всех полос столбца.
+    fn terracotta_band(&self, x: i32, y: i32, z: i32) -> &'static str {
+        let shift = (self.detail.octaves(x as f64 / 60.0, z as f64 / 60.0 + 500.0, 2) * 6.0) as i32;
+        self.bands[(y + shift).rem_euclid(192) as usize]
+    }
+
     /// Столбец, когда сетка плотности уже построена (или не нужна).
     pub fn column_in(&self, x: i32, z: i32, grid: Option<&ReliefGrid>) -> Column {
         let climate = self.climate_at(x, z);
-        let height = match grid {
+        let base_height = match grid {
             Some(grid) => grid.top(x, z),
             None => self.smooth_height(&climate, x, z),
         };
@@ -1079,9 +1124,13 @@ impl Terrain {
         // одних столбцов, а цвета у клиента — по границе клеток, и на стыке
         // биомов выходили бы кривые куски.
         let biome = self.biome_with_climate(&climate, x, z);
+        let height = if self.preview && biome == Biome::ErodedBadlands {
+            self.hoodoo_top(x, z, base_height)
+        } else { base_height };
 
         Column {
             height,
+            hoodoo_base: (height > base_height).then_some(base_height),
             biome,
             climate,
             steep: false,
@@ -1101,8 +1150,21 @@ impl Terrain {
     pub fn surface_temperature_at(&self, x: i32, z: i32) -> f64 {
         let (x,z) = ((x & !3)+2,(z & !3)+2);
         let c = self.biome_input(&self.climate_at(x,z),x,z);
-        if self.style == Style::Vanilla { distribution::mapped(&c,&distribution::CALIBRATED).temperature }
-        else { c.temperature }
+        self.biome_climate(&c).temperature
+    }
+
+    // Вики, World generation: «Temperature» задаёт одну шкалу для мелкого
+    // и глубокого моря. Раздельная подгонка площадей создавала тёплые языки
+    // только из-за перехода глубины при неизменной температуре.
+    // [проверить] доли холодных поясов за пределами измеренных окон 26.3.
+    fn biome_climate(&self, climate: &Climate) -> Climate {
+        if self.style != Style::Vanilla { return *climate; }
+        let mut parameters = distribution::CALIBRATED;
+        if self.preview {
+            parameters[4..8].copy_from_slice(&distribution::PREVIEW_OCEAN_T);
+            parameters[8..12].copy_from_slice(&distribution::PREVIEW_OCEAN_T);
+        }
+        distribution::mapped(climate, &parameters)
     }
 
     fn biome_with_climate(&self, climate: &Climate, x: i32, z: i32) -> Biome {
@@ -1122,9 +1184,7 @@ impl Terrain {
     /// если у неё меньше двух горных соседей, берёт биом соседа.
     fn cell_biome(&self, climate: &Climate, middle_x: i32, middle_z: i32) -> Biome {
         let input = self.biome_input(climate, middle_x, middle_z);
-        let adjusted = if self.style == Style::Vanilla {
-            distribution::mapped(&input, &distribution::CALIBRATED)
-        } else { input };
+        let adjusted = self.biome_climate(&input);
         let climate = &adjusted;
         let mut biome = biome_of(climate);
 
@@ -1148,9 +1208,7 @@ impl Terrain {
         for (dx, dz) in [(4, 0), (-4, 0), (0, 4), (0, -4)] {
             let near_climate = self.climate_at(middle_x + dx, middle_z + dz);
             let near_climate = self.biome_input(&near_climate, middle_x + dx, middle_z + dz);
-            let near_climate = if self.style == Style::Vanilla {
-                distribution::mapped(&near_climate, &distribution::CALIBRATED)
-            } else { near_climate };
+            let near_climate = self.biome_climate(&near_climate);
             let near = biome_of(&near_climate);
 
             if mountain(near) {
@@ -1186,6 +1244,9 @@ impl Terrain {
         y: i32,
         z: i32,
     ) -> bool {
+        if column.hoodoo_base.is_some_and(|base| y > base && y <= column.height) {
+            return true;
+        }
         match grid {
             Some(grid) => grid.solid(x, y, z),
             None => y <= column.height,
@@ -1569,6 +1630,15 @@ impl Terrain {
             return AIR;
         }
 
+        // Вики, Eroded Badlands: «narrow spires». Добавленный столб состоит
+        // из терракоты целиком; пещерный шум не вырезает его середину.
+        if column.hoodoo_base.is_some_and(|base| y > base) {
+            return named(self.terracotta_band(x, y, z));
+        }
+
+        // Прибавка сверху не делает прежнюю поверхность глубиной пещеры:
+        // иначе шум мог вырезать опору только что добавленного столба.
+        let run_top = column.hoodoo_base.map_or(run_top, |base| run_top.min(base));
         let depth = run_top - y;
 
         // Пещеры проедают камень, но не подходят к самой поверхности и не
@@ -2984,10 +3054,19 @@ impl Terrain {
                     return Some("red_sand");
                 }
 
-                if depth <= 12 {
-                    let wobble = (self.detail.octaves(x as f64 / 60.0, z as f64 / 60.0 + 500.0, 2) * 6.0) as i32;
-
-                    return Some(self.bands[(y + wobble).rem_euclid(192) as usize]);
+                // У сохранённого 26.3 толщина меняется между столбцами,
+                // а прежний срез везде обрывал полосы ровно через 13 блоков.
+                // Своя плавная модель покрытия; не параметры оригинала.
+                let clay_depth = if self.preview {
+                    15 + (self.detail.octaves(x as f64 / 48.0 + 21.37,
+                        z as f64 / 48.0 - 43.71, 2) * 14.0).round() as i32
+                } else { 12 };
+                if depth <= clay_depth {
+                    // Вики, Badlands: «orange terracotta under it extending to Y=63».
+                    if self.preview && height < 74 && y > SEA {
+                        return Some("orange_terracotta");
+                    }
+                    return Some(self.terracotta_band(x, y, z));
                 }
 
                 None
@@ -3090,6 +3169,35 @@ fn terracotta_bands(seed: i64) -> [&'static str; 192] {
         }
     }
 
+    bands
+}
+
+/// Своя раскладка 26.3 по частоте смены цветов в сохранённых столбцах.
+/// Оранжевые отметки разделены промежутками: случайные повторные попадания
+/// прежнего варианта оставляли слишком длинные одноцветные полосы.
+/// Белые полосы обрамлены серыми, как в измеренных вертикальных срезах.
+fn preview_terracotta_bands(seed: i64) -> [&'static str; 192] {
+    let mut bands = ["terracotta"; 192];
+    let mut random = Random::new(seed ^ 0x7E44_AC07_7A00);
+    let mut layer = (random.next() % 3) as usize;
+    while layer < bands.len() {
+        bands[layer] = "orange_terracotta";
+        layer += 2 + (random.next() % 3) as usize;
+    }
+    for color in ["yellow_terracotta", "brown_terracotta", "red_terracotta"] {
+        for _ in 0..8 {
+            let start = (random.next() % 192) as usize;
+            let width = 1 + (random.next() % 3) as usize;
+            for layer in start..start + width { bands[layer % 192] = color; }
+        }
+    }
+    for _ in 0..5 {
+        let start = (random.next() % 192) as usize;
+        let width = 1 + (random.next() % 2) as usize;
+        bands[(start + 191) % 192] = "light_gray_terracotta";
+        for layer in start..start + width { bands[layer % 192] = "white_terracotta"; }
+        bands[(start + width) % 192] = "light_gray_terracotta";
+    }
     bands
 }
 
@@ -3243,6 +3351,52 @@ fn named(name: &str) -> i32 {
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    /// Глубина выбирает вариант моря, а не другой температурный пояс.
+    #[test]
+    fn preview_ocean_temperature_bands_are_shared_across_depths() {
+        let terrain = Terrain::new(42, Style::Vanilla).with_preview(true);
+        for i in -100..=100 {
+            let shallow = Climate { continent: -0.3, temperature: f64::from(i) / 100.0,
+                humidity: 0.0, erosion: 0.0, weirdness: 0.0 };
+            let deep = Climate { continent: -0.6, ..shallow };
+            let a = terrain.biome_climate(&shallow);
+            let b = terrain.biome_climate(&deep);
+            assert_eq!(a.temperature, b.temperature);
+            assert_eq!(biome_of(&a) == Biome::WarmOcean, biome_of(&b) == Biome::WarmOcean);
+        }
+    }
+
+    /// Высокое плато не покрывается новыми столбами; они только в низинах.
+    #[test]
+    fn hoodoo_relief_is_lowland_only_and_seeded_in_world_coordinates() {
+        let a = Terrain::new(42, Style::Vanilla).with_preview(true);
+        let b = Terrain::new(43, Style::Vanilla).with_preview(true);
+        let mut raised = 0; let mut different = 0;
+        for x in -40..40 { for z in -40..40 {
+            let h = a.hoodoo_top(x, z, 70);
+            assert!((70..=118).contains(&h));
+            raised += usize::from(h > 82);
+            different += usize::from(h != b.hoodoo_top(x, z, 70));
+            for base in [50, 112, 180] { assert_eq!(a.hoodoo_top(x, z, base), base); }
+        } }
+        assert!(raised > 0 && different > 0, "поднято {raised}, отличается {different}");
+    }
+
+    /// Срез 70→63 повторяет измеренные низины: песок, затем оранжевая глина.
+    #[test]
+    fn preview_badlands_low_floor_is_orange_below_red_sand() {
+        let terrain = Terrain::new(42, Style::Vanilla).with_preview(true);
+        for biome in [Biome::Badlands, Biome::ErodedBadlands, Biome::WoodedBadlands] {
+            let column = Column { biome, ..Column::flat(70) };
+            assert_eq!(terrain.surface(&column, 0, 70, 0, 0), Some("red_sand"));
+            for y in 63..70 {
+                assert_eq!(terrain.surface(&column, 0, y, 0, 70-y), Some("orange_terracotta"));
+            }
+        }
+        let reset = Terrain::new(42, Style::Vanilla).with_preview(true).with_preview(false);
+        assert_eq!(reset.bands, Terrain::new(42, Style::Vanilla).bands);
+    }
 
     /// Поверхность любого биома на любой глубине и высоте — существующий
     /// блок: в проверочных чанках попадаются не все биомы, а неизвестное
