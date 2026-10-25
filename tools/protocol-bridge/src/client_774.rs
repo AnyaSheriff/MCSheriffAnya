@@ -113,7 +113,9 @@ mod recipe_tests {
         assert_eq!(result.as_ref(),[61,0,0,1,2,1,3,2,1,0,0,2,2]);
         for end in 0..source.len(){assert!(clientbound(&mut Tracker::default(),&source[..end],Context::default()).is_err());}
         let set=[0x3f,0,0,1,6,3,1,2,5,1,2,0,0,4,2];
-        let result=clientbound(&mut Tracker::default(),&set,Context::default()).unwrap();
+        // IDSet принадлежит внутреннему preview-builder, а не реальному775.
+        let context=Context {items:crate::items::Context {content:crate::content::ContentCodec::white_slab_preview(),..Default::default()},..Default::default()};
+        let result=clientbound(&mut Tracker::default(),&set,context).unwrap();
         assert_eq!(result.as_ref(),[61,0,0,1,7,2,2,1,2,2,3,2,1,0,0,2,2]);
     }
 }

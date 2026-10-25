@@ -661,6 +661,7 @@ async fn handle_connection_inner(
             }
 
             socket.protocol = negotiated.ok();
+            log_debug!("Login: согласован протокол {} ({}), каталог {:?}, адрес {}", socket.client_version().protocol(), socket.client_version().name(), shared.catalog().profile(), addr);
             #[cfg(test)]
             { socket.probe_776 = matches!(socket.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2); }
             let legacy = socket.client_version() == mcsa_protocol::JavaVersion::V1_12_2;

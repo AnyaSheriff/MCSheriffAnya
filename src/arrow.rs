@@ -790,7 +790,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 }
                 Target::Player { entity_id } => {
                     world.note_game_event(arrow.owner, 6, 0.0);
-                    world.note_player_strike(PlayerStrike { projectile: Some(arrow.entity_id),
+                    world.note_player_strike(PlayerStrike { kinetic: None, projectile: Some(arrow.entity_id),
                         victim: entity_id,
                         attacker: arrow.owner,
                         attacker_uuid: arrow.owner_uuid,

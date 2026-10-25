@@ -74,3 +74,38 @@ fn native_2612_recipe_book_bytes_keep_the_previous_builder() {
     assert_eq!(format!("{:x}", Sha256::digest(&bytes)),
         "f0880db0d158a459d428bb7ae0831750a37dc993259eb47f70e038fd8586c7f2");
 }
+
+#[test]
+fn all_recipe_items_are_valid_in_each_client_registry() {
+    use mcsa_protocol::{ids::{self, RegistryKind}};
+    let mut cases = Vec::new();
+    for profile in [crate::gameplay_catalog::Profile::Java26_1_2, crate::gameplay_catalog::Profile::Preview26_3] {
+        let catalog = crate::gameplay_catalog::Catalog::new(profile);
+        for version in [JavaVersion::V1_21_4, JavaVersion::V1_21_5, JavaVersion::V1_21_6, JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
+            let codec = if version == JavaVersion::V26_1_2 { catalog.content_codec().native_view() } else { catalog.content_codec() };
+            let context = wire::Context { items: mcsa_protocol::items::Context { content: codec, ..Default::default() }, ..Default::default() };
+            let count = (0..3000).find(|id| ids::translate(RegistryKind::Item, version, version, *id).is_err()).unwrap();
+            assert!(count > 1000);
+            for (id, entry) in entries_for_catalog(catalog).iter().enumerate() {
+                let mut body = vec![ADD as u8, 1];
+                body.extend(entry_body_with_ingredients(id, entry, false, catalog.changed_rules()));
+                body.push(1);
+                let packet = match version {
+                    JavaVersion::V1_21_4 => mcsa_protocol::client_769::clientbound(&mut Default::default(), &body, context),
+                    JavaVersion::V1_21_5 => mcsa_protocol::client_770::clientbound(&mut Default::default(), &body, context),
+                    JavaVersion::V1_21_6 => mcsa_protocol::client_771::clientbound(&mut Default::default(), &body, context),
+                    JavaVersion::V1_21_8 => mcsa_protocol::client_772::clientbound(&mut Default::default(), &body, context),
+                    JavaVersion::V1_21_9 => mcsa_protocol::client_773::clientbound(&mut Default::default(), &body, context),
+                    JavaVersion::V1_21_11 => mcsa_protocol::client_774::clientbound(&mut Default::default(), &body, context),
+                    JavaVersion::V26_2 => mcsa_protocol::client_776::clientbound(&mut Default::default(), &body, context),
+                    _ => wire::translate_with_context(State::Play, Direction::Clientbound, JavaVersion::V26_1_2, version, &body, context),
+                }
+                    .unwrap_or_else(|error| panic!("{profile:?} {version:?} {}: {error:?}", entry.key));
+                let mut case = serde_json::json!({"payload": packet[1..].iter().map(|b| format!("{b:02x}")).collect::<String>(), "entries": 1, "item_count": count, "protocol": version.protocol(), "old_slots": version.protocol() < 775, "string_tags": version.protocol() <= 775});
+                case["recipe"] = entry.key.clone().into();
+                cases.push(case);
+            }
+        }
+    }
+    check_packets(&cases);
+}

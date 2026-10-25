@@ -77,7 +77,7 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
             let at = (member.position.x, member.position.y, member.position.z);
             world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, attacker);
             world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
-            world.note_player_strike(PlayerStrike { projectile: None,
+            world.note_player_strike(PlayerStrike { kinetic: None, projectile: None,
                 victim:attacker,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
                 from,yaw:player.yaw,damage,source:Source::Thorns,extra_knockback:0.0,weapon:None,
                 disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new(),
@@ -259,7 +259,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_sound((player.x, player.y, player.z), "minecraft:entity.player.attack.knockback");
     }
 
-    shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_strike(PlayerStrike { projectile: None,
+    shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_strike(PlayerStrike { kinetic: None, projectile: None,
         victim: target,
         attacker: player.entity_id,
         attacker_uuid: player.uuid,
@@ -467,6 +467,17 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
         return block_with_shield(stream, shared, player, strike, hand, now).await;
     }
 
+    // Копьё может толкнуть без урона: скорость цели сняла относительный
+    // порог урона, а собственная скорость нападающего ещё достаточна.
+    if let Some(kinetic) = strike.kinetic && damage <= 0.0 {
+        if kinetic.knockback {
+            vitals::knock_back(player, crate::mob::look_direction(strike.yaw), crate::mob::BASE_KNOCKBACK,
+                player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+        }
+        if kinetic.dismount { super::vehicle::dismount(shared, player); }
+        return Ok(());
+    }
+
     let killer = vitals::Killer { name: &strike.attacker_name, uuid: strike.attacker_uuid, weapon: strike.weapon };
     let at = (player.x, player.y, player.z);
     let from = strike.from;
@@ -528,7 +539,10 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             let dir = if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(strike.yaw) };
             let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
 
-            vitals::knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);
+            if strike.kinetic.is_none_or(|hit| hit.knockback) {
+                vitals::knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);
+            }
+            if strike.kinetic.is_some_and(|hit| hit.dismount) { super::vehicle::dismount(shared, player); }
 
             if strike.extra_knockback > 0.0 {
                 let look = crate::mob::look_direction(strike.yaw);
@@ -688,7 +702,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
         }
 
         world.note_sound_player_except(feet, "minecraft:entity.player.hurt", 1.0, 1.0, entity_id);
-        world.note_player_strike(PlayerStrike { projectile: None,
+        world.note_player_strike(PlayerStrike { kinetic: None, projectile: None,
             victim: entity_id,
             attacker: player.entity_id,
             attacker_uuid: player.uuid,
@@ -931,7 +945,7 @@ mod combat_777_projectile_tests {
             player.entity_id=71;
             player.game_mode=GAME_MODE_SURVIVAL;
             player.on_ground=true;
-            let strike=PlayerStrike {
+            let strike=PlayerStrike { kinetic: None,
                 victim:71,attacker:2,projectile:Some(42),attacker_uuid:[2;16],attacker_name:"Archer".into(),
                 from:(0.5,65.0,-1.5),yaw:0.0,damage:5.0,source:Source::Arrow,extra_knockback:0.0,
                 weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,

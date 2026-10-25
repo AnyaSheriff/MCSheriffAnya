@@ -1,0 +1,3205 @@
+{
+  "base_commit": "7ed46f6",
+  "no_commit": true,
+  "commands": {
+    "tests": "RUST_TEST_THREADS=2 cargo test --release --workspace",
+    "clippy": "cargo clippy --release --all-targets --workspace -- -D warnings",
+    "build": "cargo build --release --workspace"
+  },
+  "rust": {
+    "passed": 3341,
+    "ignored": 105,
+    "failed": 0
+  },
+  "clippy": "clean",
+  "build": "pass",
+  "python_decoder_tests": 6,
+  "production_binary_sha256": "0f43b8708436c3b187494f7eafc343becda899e804dc3d05c6f2428a77ea74dd",
+  "initial_live_pairs": {
+    "baseline40": {
+      "match": 25,
+      "mismatch-open": 15
+    },
+    "requested49": {
+      "match": 26,
+      "mismatch-open": 23
+    },
+    "rows": [
+      {
+        "scenario": "weapon-hotbar-switch",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          110,
+          4,
+          17,
+          35
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "spear-charge-motion",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          9,
+          8,
+          33,
+          3
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-mace-wind-burst",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          22,
+          4,
+          34,
+          14
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-crit",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          27,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-crit-fist-creative",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-cooldown",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          36,
+          12,
+          2,
+          2
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-food-drain",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          65,
+          0,
+          23,
+          23
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-hit-probe",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          15,
+          5,
+          1,
+          9
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-probe",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit2-shield-magic",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          12,
+          0,
+          2,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback-fixedyaw",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-shield",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          13,
+          3,
+          9,
+          11
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-attribute-item",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          8,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-flame",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          33,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-power",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-crit",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          11,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-fist",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          7,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          15,
+          1,
+          1,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-landing-count",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          45,
+          18,
+          49,
+          41
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-wind-burst",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          18,
+          1,
+          1,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-resistance",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          26,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-shield",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          21,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sprint-knockback",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          17,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sweep",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          16,
+          1,
+          1,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sword-spam",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          24,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-trident",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "shield-banner-craft",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          21,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "sword-sweep-secondary-motion",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          35,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "craft-recipe-unlock",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          35,
+          0,
+          7,
+          11
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "recipe-book-place",
+        "repeat": 0,
+        "exits": {
+          "official": 1,
+          "ours": 1
+        },
+        "status": "capture-open"
+      },
+      {
+        "scenario": "cow-crit-fist",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-conditions",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          29,
+          8,
+          18,
+          16
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-cost-motion",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          643,
+          35,
+          96,
+          94
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-food-threshold",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          117,
+          34,
+          42,
+          42
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-hunger",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          18,
+          3,
+          18,
+          18
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-threshold",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          66,
+          0,
+          20,
+          21
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback-phase",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          109,
+          6,
+          31,
+          24
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-armor",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          30,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          13,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-infinity",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-punch",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          15,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-fire-aspect",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          5,
+          16,
+          0,
+          5
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-knockback",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-heavy",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          20,
+          13,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-landing-motion",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          202,
+          89,
+          195,
+          194
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-protection",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          30,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sharpness",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-shield-back",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          23,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-strength",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          14,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sword-charged",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          22,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-thorns",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          17,
+          0,
+          1,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-weakness",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          17,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "sword-sweep-neighbours",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          31,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      }
+    ]
+  },
+  "production_replay": {
+    "completed": 49,
+    "baseline40": {
+      "match": 22,
+      "mismatch-open": 18
+    },
+    "requested49": {
+      "match": 22,
+      "mismatch-open": 27
+    },
+    "rows": [
+      {
+        "scenario": "cow-crit",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "34922d244c4dd7a1246e624a16fef75d053c9b173a8d1ee250a0730a6278f8e8",
+        "counts": [
+          34,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-conditions",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "06445ce787ff2426ca5e4d0631dc40c0b81cbc88311c5e56c4a888501adaeaf5",
+        "counts": [
+          28,
+          9,
+          18,
+          16
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-food-drain",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "d19cecc948c559a002d9eedf4cfbb98c660a8bce21f12ecb936e8fa8330739c8",
+        "counts": [
+          53,
+          12,
+          23,
+          23
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-hunger",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "0c915ed60519943cff7b8b846de8e2fd9d63053cbbcae7bfc969bc362c5c4f11",
+        "counts": [
+          15,
+          6,
+          18,
+          18
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit2-shield-magic",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "034d99fa1833011e4efa82034a3c3cbf9192f09a0043e10b8cd926a21e979f03",
+        "counts": [
+          12,
+          0,
+          2,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback-phase",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "6e6e7bb710a23f6385b225077e075a84f2ccb722147d512ba8bcd7f5fd352fcf",
+        "counts": [
+          93,
+          8,
+          45,
+          44
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-attribute-item",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "23f8283971abc597745169e541d5baf4cceb8c7e5bd831b685bcb6b229eea257",
+        "counts": [
+          8,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-infinity",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "33167a4bfed927bb2756c847ebd1e3809484b7a8a3d2c23ad5bd62cd67767675",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-crit",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "3663f7318f8b9c68f4dc1869be082aeaf35dae65bcfa4e7796411e9650e175dc",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-knockback",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "007444dbf1f1f60ec05b09f3d1935f7f4c035d5533dbe77c3cd862c2e182d1c6",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-landing-count",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "cb79a7f1e84f5d7c45367a9678a0247db5561d1e451e05674427645a68219b1b",
+        "counts": [
+          78,
+          11,
+          23,
+          18
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-protection",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "ff33f6fe0c5f0219ef2ca87565e8f00295e256ba2dffdcbdd47e43bd710bdd0b",
+        "counts": [
+          30,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-shield",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "61f7c1eb44b228c58167af0242bd92292e79ad75bb465da625a4271d1772c58d",
+        "counts": [
+          21,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-strength",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "4f938d7991dad9231950f989e9dba17f02e80d049479f6813a6afebe53f66561",
+        "counts": [
+          14,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sword-spam",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "e59ebe077e9bd7eec2881d76423673749b9f5dec781c94adfa2ef3560da29bd2",
+        "counts": [
+          24,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-weakness",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "93bd2e248004e87d07fd7bc020c7fa4cab775c3be5dc624bcdfd9d2b935a69d0",
+        "counts": [
+          17,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "sword-sweep-secondary-motion",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "69d1dcc55ab9a04756a9e13f4e973dc022bbd88feb07c0d9c2944a8574c82cd8",
+        "counts": [
+          34,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-crit-fist",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "277ef4249ba09e67eda6dabdf300f8fe5db6b0ed379ee44dc710c2b75ef30f47",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-cooldown",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "3f3c890d4942037c856b00bf054c98395d5dd95c313a044d1100abe618ab8d83",
+        "counts": [
+          48,
+          0,
+          2,
+          2
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-food-threshold",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "24f4bdf2f376073dcd769ca237e464670754467b65abfa8fd44cda9d14fc0d4c",
+        "counts": [
+          117,
+          34,
+          42,
+          42
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-probe",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "e7eaeb0f974f045c91d79c2204062f853da46b5f809a17cd1fc59aeb805f68fd",
+        "counts": [
+          11,
+          5,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "991c7e4019947844f343acd64c557776ac2438ecd3330e41f14e0a94f8cbbc95",
+        "counts": [
+          15,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-shield",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "8746fb0dcd8df75b19669629b17ea446225470e4a331c87a0d490f0aa095aeb7",
+        "counts": [
+          1,
+          4,
+          22,
+          12
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "6b91ab7a65ece00d4f562a20cabaa7b54c69ac2b835b6aecad11b5bc0afc6790",
+        "counts": [
+          13,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-power",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "219b2abb298b0c9699f319ccf2e24d3a794643e62efd1b4062c02ffd41fa5260",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-fire-aspect",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "232a54efbe00dabcbf88bcdc417291c67abac29eefab936a7e053a7c33b74900",
+        "counts": [
+          6,
+          15,
+          0,
+          5
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "bb94daf305c266378d58ee44480ac8db9df29c30cebbc32fc63ad2c93370db4d",
+        "counts": [
+          15,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-landing-motion",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "16a0c35589c351f7e0672dc14e3548f5bbe0b5e4809040463fb8ba9fa6828d2d",
+        "counts": [
+          199,
+          83,
+          204,
+          200
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-resistance",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "0f8e8f59ad24f3c6d0cf698c45ad685c7f3f57188dbf058ec1ea299f6587e1a9",
+        "counts": [
+          26,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-shield-back",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "2f8a73694bbd4440214e79be9da8a4f0b12301a62077208c76a883c968447e59",
+        "counts": [
+          22,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sweep",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "c60ea42d93db4d72855c86b8f7f286ef4af7e7596357518a5ec0fa4ccd24daa0",
+        "counts": [
+          17,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-thorns",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "9726da9c69c9ff92b98368f3fc650bbf32a3e00a9b843e58198e100a8265b859",
+        "counts": [
+          17,
+          0,
+          1,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "shield-banner-craft",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "82354d1bbad40fb0bc33873e305dc924b2684f919a0466f7a86985f085c055cc",
+        "counts": [
+          21,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-crit-fist-creative",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "314b04f366f764f2bc50ba74d7fc8c2a2f65d47105004ccc8d068362d8ddb3e3",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-cost-motion",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "7f1eb59330fef78ca26711af49fa74500cc06ae505f4d9ca918ced769aeabb3f",
+        "counts": [
+          660,
+          28,
+          86,
+          84
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-hit-probe",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "891fa2137694c37cdbc2cfcd3ae7a850291bb9a49138658502c098d73be6cb6d",
+        "counts": [
+          15,
+          5,
+          1,
+          9
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "enchant-lunge-threshold",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "1525ca0466771d30c0a25e06bdae8155977a98ea6ad0c5ec555bf6a75d8ece73",
+        "counts": [
+          66,
+          0,
+          20,
+          21
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback-fixedyaw",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "4ac2a12949ba77e926de275a5c0ac977aaed8cc39c42befdaba8561eef9591dd",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-armor",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "55700d286be8644fa5258faaeb7c6f3fca15790dc0bbbec29b49cdb1596df24f",
+        "counts": [
+          30,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-flame",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "e3b705c2d121864d667e864fa262aa1d15202c5e1d5529931b57d42e8182c299",
+        "counts": [
+          33,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-punch",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "34107e9746c5ac50e649ee7b2477357ec787c1c587dbf6e5c80e0a6998ee4d95",
+        "counts": [
+          15,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-fist",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "c095587232e3b0418ff173bd629ef66e5471bdb8071b45021d7588dfd24cc2e8",
+        "counts": [
+          7,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-heavy",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "d1f079fcfc03be6e87f1b69b91e10ab78750d426e83861aecd471c9731c8cb8d",
+        "counts": [
+          18,
+          15,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-wind-burst",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "4863db90b5440ee55ccbd9482c4dbc317895ea56590ffd0aeec7cdb95fde459a",
+        "counts": [
+          15,
+          1,
+          4,
+          4
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sharpness",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "a6cad5b7f91903e2ba45e09ef32366db302b500d474d65fda6f99f6049fe6aca",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sprint-knockback",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "fd94641434afecf26804c938768db8cd1ea746abe8667e4f918bd286f34d831b",
+        "counts": [
+          15,
+          0,
+          2,
+          2
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sword-charged",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "c94ba0a0caed6205cc6e79436051d4e11290ed301622e1dd8f92cdf73ededbdf",
+        "counts": [
+          22,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-trident",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "match",
+        "official_sha256": "2aca716f67c3ea7175d3926af7498e339475f34c82ca3c1fe4258dbe4d728b46",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "sword-sweep-neighbours",
+        "repeat": 0,
+        "exits": {
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "official_sha256": "6d8de0ccd353c6fad0119fbd1e2534ed3c7e41ccc0027e2992a5c665f0541788",
+        "counts": [
+          30,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      }
+    ]
+  },
+  "new_probes": [
+    {
+      "scenario": "weapon-hotbar-switch",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "830052a0cb47b4224b427c53200142f7e0dc1356aa11882960773d804a05ae86",
+      "counts": [
+        54,
+        44,
+        40,
+        52
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "spear-charge-motion",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "91d71f42e3bcfc22e8c1a5e63dab525dbdada7e7884d455c0822c6f5a4af4ddf",
+      "counts": [
+        7,
+        30,
+        11,
+        12
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "cow-mace-wind-burst",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "e092e607091db252a5acaf7842bfa7268002a34ecc2f6b639fc2e0acddbbac53",
+      "counts": [
+        29,
+        5,
+        22,
+        20
+      ],
+      "warnings": []
+    }
+  ],
+  "registry": {
+    "binary_sha256": "0f43b8708436c3b187494f7eafc343becda899e804dc3d05c6f2428a77ea74dd",
+    "clients": [
+      {
+        "protocol": 775,
+        "packets": [
+          {
+            "entries": 0,
+            "replace": true,
+            "sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "24ded2fd3a782bc9596af94ee089f0389bddfc60b10e9accd61e5b145a01280e"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "a1ec56a4483c21adbe8bb62eb73a0c0af4fcc0a74353776125c2356afffcf990"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "88f0ee2acb0ad33db932db562fe0e3c1ea1a9794d96b4b08a4eeafc05f7f6b38"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "13fe4740b3dd446876cfd2c522033ab03dc183153170603b5ba737c37154f2e5"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "84adfc1139e839684350967841472fd9c54b7d3553f9d5e24480c2e1e22b923b"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "0d46c35457fd1f29fb95e7d5d6b78cc5fa1c7dfebf873fa172056de714755107"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "7c86d7ea3f66ad26e37b155ab85ce17c156d7b2dc900b0daf0c37ed950d4a54a"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "261889eabe841a29c14b768f7b137b2bbf0a563d06f3398192c497947b24a92a"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "ffa44567a6d3f32aeedbdcb1f673ebcb1ebc812cd609faae8075efe86015625b"
+          },
+          {
+            "entries": 1668,
+            "replace": false,
+            "sha256": "cafca7f45e781bd5d4fcc93b0540a10bb70ddcdd0f3f8eef14b4b0f54d9c6cae"
+          }
+        ],
+        "no_disconnect": true
+      },
+      {
+        "protocol": 776,
+        "packets": [
+          {
+            "entries": 0,
+            "replace": true,
+            "sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "1684428731ea1b332a73e2fbf6663bd7b609d8127be8ed36335ddb3acf71f61c"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "6d0c2d8a1f2b51a7f166c5567cfbcaf25365423dcf555ff46ed80d64919c9d88"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "b3665a7e5c14a6c26686a961e15c4f5c99553cc47661ba5efbabf5e83eadc799"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "368768d5368953374483b63a79347d1fca2734c662f9dc9aa044dad1698db39a"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "67bd71e6a00477420299293770cf6078e0b0466ee4d9482ae608e62812877047"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "8f41df659d5ca4d69f2aa4ff3f2a12cf0fc7997d3f060bbe78b75dc8cc09549d"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "c41a0d7fbec4f11c2e3ba17be6b760e92967959b74a5ad3e737ac8ce85de5d1f"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "b6c853c4e1c99b1e59b4a9ca2f9067180bdbc97e562b0b7371a83e4194a823ad"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "afb55f752e18125cd54007a5ee3bae24da14365eb1b159988f164f04f81e69c1"
+          },
+          {
+            "entries": 1668,
+            "replace": false,
+            "sha256": "a885347d23b16dfbb4eaad36e0715f8c09f43c05b6ef3666c27c24a1a6f593c5"
+          }
+        ],
+        "no_disconnect": true
+      },
+      {
+        "protocol": 777,
+        "packets": [
+          {
+            "entries": 0,
+            "replace": true,
+            "sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "35230a6fe1c7c494a0622cd8e777e73830f196faa6a80d5568ebac558776754e"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "7db01ea64807ae38223f82f667496f0340a508a66929fe70f10fcce8985f90fc"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "24977a34a2d9150180abfd2ab019ac52d8cca9797ea5c6b345d12a088472e5a4"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "650e7afcdc9d670edbbfa0886f4fdd6a18e1b59526d646a5ae056b200eaf2ac1"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "e74c4294e783fc5157c79aa452e0c74a2fb85b33e74c65ed0223cfa9d26264e9"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "a17cdc7cdb9cb7bef8e552a2166f28dea615377652defc0ab7fa10196745e35d"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "7b08947496f613600d93df6b4ee5912bf57e84609bb7744cc36c0b9599201dac"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "0256c436a053631cf1b6e1a75e5df356728a4f3fb4cda5a3c63ee50f44071ca9"
+          },
+          {
+            "entries": 1,
+            "replace": false,
+            "sha256": "c5df80f51a58b2082b5bff5542ad0fc9c9d5bf517c8b67c331ba96a6c7eb6a47"
+          },
+          {
+            "entries": 1668,
+            "replace": false,
+            "sha256": "c9c971291e10a551af6cbab37fbebadd7bc671906b458ce8781ea7e97861959f"
+          }
+        ],
+        "no_disconnect": true
+      }
+    ]
+  },
+  "native_lunge": [
+    {
+      "scenario": "enchant-lunge-conditions",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        31,
+        6,
+        16,
+        16
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-cooldown",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        44,
+        5,
+        1,
+        1
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-cost-motion",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        680,
+        19,
+        79,
+        78
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-food-drain",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        59,
+        6,
+        23,
+        23
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-food-threshold",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        134,
+        17,
+        42,
+        42
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-hit-probe",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        17,
+        3,
+        1,
+        9
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-hunger",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        18,
+        3,
+        18,
+        18
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-probe",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        13,
+        3,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-threshold",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        56,
+        10,
+        20,
+        21
+      ],
+      "warnings": []
+    }
+  ],
+  "native_lunge_HEAD_control": [
+    {
+      "scenario": "enchant-lunge-conditions",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "72babd3c697dc496ac7300bfb6406757eb6f941a722141418fdd0a4a3abeb2f1",
+      "counts": [
+        31,
+        6,
+        16,
+        16
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-cooldown",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "91775d34780a67037b3db40d8194cee316a3dcdeedfdc5fed1d754e3189eeb0d",
+      "counts": [
+        45,
+        4,
+        1,
+        1
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-cost-motion",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "9edbaf17d94934b510b72d74bc22de0e672333d46348441fc5a992c3b82c2258",
+      "counts": [
+        685,
+        15,
+        78,
+        75
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-food-drain",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "cd329e94e2fc50ea8af53187a3a91c11e32a3816d0ac29f38e4ce1cee7154460",
+      "counts": [
+        59,
+        6,
+        23,
+        23
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-food-threshold",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "3bea72c400ea046d5a06c21a39813ee452d1ab4b0d3b28d0cbf504d797fd6662",
+      "counts": [
+        134,
+        17,
+        42,
+        42
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-hit-probe",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "ad12b0ed510d64e53dfa6b2d5542a86b9a4f240a5cd6b75c74e0267e7b18404d",
+      "counts": [
+        17,
+        3,
+        1,
+        9
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-hunger",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "25e0b3c769021304844bb3c50cd7c17344c7426fcd7a2920ca60d5fba6d2768a",
+      "counts": [
+        18,
+        3,
+        18,
+        18
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-probe",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "7685d4ecc5f3c51838ac3b27b7b170759e612d3138101637a8cc92511734c7bd",
+      "counts": [
+        13,
+        3,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "enchant-lunge-threshold",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "e4804260d72858891faa16553b5f927e4bf9dee4844ffc193360864f9fb427e1",
+      "counts": [
+        56,
+        10,
+        20,
+        21
+      ],
+      "warnings": []
+    }
+  ],
+  "nested_child_result": "The 1-test subprocess result is included in the parent 3021 tests; it is not added twice.",
+  "redstone": {
+    "rerun": false,
+    "prior_baseline": "95/101"
+  },
+  "limitations": [
+    "Owner handshake and exact crashing packet were absent from supplied logs. Crafting-table display171 is an independently reproduced incompatible775 builder format, not a recovered owner packet.",
+    "Persistent owner weapon-switch failure was not reproduced. Immediate equipment/cooldown refresh is covered with five weapons; official ordinary bot jab with spear remains open.",
+    "Spear primary damage/knockback/durability agree in the recorded charge probe. Full timing, attacker status/sprint feedback, stage boundaries and mounted cases remain unverified.",
+    "No comparator, allowances or existing scenarios were changed. New scenarios were refined to wait for full mace charge and send spear jab action.",
+    "Initial live-pair binary preceded only the final spear-ray clipping correction; production replay uses final ordinary release binary and the exact saved official JSON.",
+    "One early Cargo retry briefly overlapped processes and waited on Cargo lock. Subsequent Cargo calls were sequential."
+  ],
+  "lunge_jab_sha256": {
+    "HEAD": "1d3da66ef9b9b417059bbd1c4a2e99819255a3d39164252444d1f3971185efe6",
+    "candidate": "1d3da66ef9b9b417059bbd1c4a2e99819255a3d39164252444d1f3971185efe6"
+  },
+  "phase_repeats": [
+    {
+      "scenario": "itemaudit4-knockback",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "991c7e4019947844f343acd64c557776ac2438ecd3330e41f14e0a94f8cbbc95",
+      "counts": [
+        13,
+        0,
+        3,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "pvp-shield-back",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "2f8a73694bbd4440214e79be9da8a4f0b12301a62077208c76a883c968447e59",
+      "counts": [
+        22,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "pvp-sprint-knockback",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "fd94641434afecf26804c938768db8cd1ea746abe8667e4f918bd286f34d831b",
+      "counts": [
+        17,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "sword-sweep-neighbours",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "6d8de0ccd353c6fad0119fbd1e2534ed3c7e41ccc0027e2992a5c665f0541788",
+      "counts": [
+        30,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "sword-sweep-secondary-motion",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "69d1dcc55ab9a04756a9e13f4e973dc022bbd88feb07c0d9c2944a8574c82cd8",
+      "counts": [
+        34,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "itemaudit4-knockback",
+      "repeat": 1,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "991c7e4019947844f343acd64c557776ac2438ecd3330e41f14e0a94f8cbbc95",
+      "counts": [
+        15,
+        1,
+        0,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "pvp-shield-back",
+      "repeat": 1,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "2f8a73694bbd4440214e79be9da8a4f0b12301a62077208c76a883c968447e59",
+      "counts": [
+        23,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "pvp-sprint-knockback",
+      "repeat": 1,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "fd94641434afecf26804c938768db8cd1ea746abe8667e4f918bd286f34d831b",
+      "counts": [
+        17,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "sword-sweep-neighbours",
+      "repeat": 1,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "6d8de0ccd353c6fad0119fbd1e2534ed3c7e41ccc0027e2992a5c665f0541788",
+      "counts": [
+        30,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "sword-sweep-secondary-motion",
+      "repeat": 1,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "69d1dcc55ab9a04756a9e13f4e973dc022bbd88feb07c0d9c2944a8574c82cd8",
+      "counts": [
+        34,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    }
+  ],
+  "phase_HEAD_control": [
+    {
+      "scenario": "itemaudit4-knockback",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "991c7e4019947844f343acd64c557776ac2438ecd3330e41f14e0a94f8cbbc95",
+      "counts": [
+        13,
+        0,
+        3,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "pvp-shield-back",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "2f8a73694bbd4440214e79be9da8a4f0b12301a62077208c76a883c968447e59",
+      "counts": [
+        23,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "pvp-sprint-knockback",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "fd94641434afecf26804c938768db8cd1ea746abe8667e4f918bd286f34d831b",
+      "counts": [
+        17,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "sword-sweep-neighbours",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "6d8de0ccd353c6fad0119fbd1e2534ed3c7e41ccc0027e2992a5c665f0541788",
+      "counts": [
+        30,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "sword-sweep-secondary-motion",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "69d1dcc55ab9a04756a9e13f4e973dc022bbd88feb07c0d9c2944a8574c82cd8",
+      "counts": [
+        34,
+        1,
+        0,
+        0
+      ],
+      "warnings": []
+    }
+  ],
+  "lunge_probe_impulses": {
+    "official": [
+      [
+        0,
+        -0.078,
+        -0.458
+      ],
+      [
+        0,
+        -0.078,
+        -0.916
+      ],
+      [
+        0,
+        -0.078,
+        -1.374
+      ]
+    ],
+    "candidate": [
+      [
+        0,
+        -0.078,
+        -0.458
+      ],
+      [
+        0,
+        -0.078,
+        -0.916
+      ],
+      [
+        0,
+        -0.078,
+        -1.374
+      ]
+    ],
+    "HEAD": [
+      [
+        0,
+        -0.078,
+        -0.458
+      ],
+      [
+        0,
+        -0.078,
+        -0.916
+      ],
+      [
+        0,
+        -0.078,
+        -1.374
+      ]
+    ]
+  },
+  "production_live": {
+    "completed": 40,
+    "counts": {
+      "match": 29,
+      "mismatch-open": 11
+    },
+    "rows": [
+      {
+        "scenario": "cow-crit",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          31,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-crit-fist-creative",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback-phase",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          97,
+          16,
+          32,
+          25
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-armor",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          30,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          13,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-infinity",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-punch",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-fire-aspect",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          25,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-knockback",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-heavy",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          31,
+          3,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-landing-motion",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          254,
+          37,
+          191,
+          191
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-protection",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          30,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sharpness",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          12,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-shield-back",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          23,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-strength",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          14,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sword-charged",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          22,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-thorns",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          17,
+          0,
+          1,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-weakness",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          18,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "sword-sweep-neighbours",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          30,
+          1,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "cow-crit-fist",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          13,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit2-shield-magic",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          11,
+          1,
+          2,
+          1
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-knockback-fixedyaw",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "itemaudit4-shield",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          11,
+          7,
+          9,
+          9
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-attribute-item",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          8,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-flame",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          33,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-bow-power",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-crit",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-fist",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          7,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          16,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-landing-count",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          81,
+          9,
+          16,
+          22
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-mace-wind-burst",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          15,
+          1,
+          4,
+          4
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-resistance",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "mismatch-open",
+        "counts": [
+          24,
+          2,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-shield",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          21,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sprint-knockback",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          17,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sweep",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          17,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-sword-spam",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          24,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "pvp-trident",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "shield-banner-craft",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          21,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      },
+      {
+        "scenario": "sword-sweep-secondary-motion",
+        "repeat": 0,
+        "exits": {
+          "official": 0,
+          "ours": 0
+        },
+        "status": "match",
+        "counts": [
+          35,
+          0,
+          0,
+          0
+        ],
+        "warnings": []
+      }
+    ]
+  },
+  "changed_files": [
+    "docs/java-26.3-content.md",
+    "src/arrow.rs",
+    "src/combat.rs",
+    "src/main.rs",
+    "src/mob/mod.rs",
+    "src/network/play.rs",
+    "src/network/play/body.rs",
+    "src/network/play/motion_recording_tests.rs",
+    "src/network/play/pvp.rs",
+    "src/network/play/spear.rs",
+    "src/network/play/use_action_tests.rs",
+    "src/network/play/vitals.rs",
+    "src/recipe_book_wire_tests.rs",
+    "src/thrown.rs",
+    "tools/protocol-bridge/recipe_book_decoder.py",
+    "tools/protocol-bridge/src/client_774.rs",
+    "tools/protocol-bridge/src/recipes.rs",
+    "tools/protocol-bridge/test_recipe_book_decoder.py",
+    "tools/protocol-bridge/probe_recipe_registries.py",
+    "tools/protocol-bridge/testdata/recipe-book-775/",
+    "tools/blackbox/scenarios/weapon-hotbar-switch.json",
+    "tools/blackbox/scenarios/spear-charge-motion.json",
+    "tools/blackbox/scenarios/cow-mace-wind-burst.json",
+    "tools/blackbox/fixtures/windmob-26.3/"
+  ],
+  "workspace_tmp_removed": true,
+  "handoff_journal_modified": false
+}

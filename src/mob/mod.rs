@@ -2812,7 +2812,7 @@ impl Mob {
         // Дракону вредят только игроки и взрывы (вики, Ender Dragon: «Only
         // explosions and players deal damage»; чёрный ящик, dragon-die:
         // `damage … minecraft:generic` ему нипочём).
-        if self.kind == Kind::EnderDragon && !matches!(source, Source::PlayerAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::GenericKill) {
+        if self.kind == Kind::EnderDragon && !matches!(source, Source::Spear | Source::PlayerAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::GenericKill) {
             return None;
         }
 

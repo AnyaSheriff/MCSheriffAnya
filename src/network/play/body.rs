@@ -230,7 +230,7 @@ impl Body {
             Act::MobHit { amount, source, attacker, killer, push, at, enchantments } => {
                 let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
                 let amount = if source.scales_with_difficulty() { survival::scaled(amount, difficulty) } else { amount };
-                let strike = PlayerStrike { projectile: None, victim: p.entity_id, attacker, attacker_uuid: [0; 16], attacker_name: killer.to_string(),
+                let strike = PlayerStrike { kinetic: None, projectile: None, victim: p.entity_id, attacker, attacker_uuid: [0; 16], attacker_name: killer.to_string(),
                     from: at, yaw: 0.0, damage: amount, source, extra_knockback: 0.0, weapon: None,
                     disables_shield_ticks: if killer == "entity.minecraft.warden" { 100 } else { 0 }, breach_scale: 1.0,
                     fire_ticks: enchantments.fire_ticks, ignores_shield: enchantments.ignores_shield || !(matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()),
@@ -656,7 +656,7 @@ mod bedrock_entity_tests {
                     shared.ticks.send_replace(100);
                     body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Tick);
                     shared.ticks.send_replace(105);
-                    let strike = PlayerStrike { projectile: None, victim: 1, attacker: 2, attacker_uuid: [2; 16], attacker_name: "Лучник".into(),
+                    let strike = PlayerStrike { kinetic: None, projectile: None, victim: 1, attacker: 2, attacker_uuid: [2; 16], attacker_name: "Лучник".into(),
                         from: (0.5, 0.0, 2.5), yaw: 180.0, damage: 4.0, source: Source::Arrow,
                         extra_knockback: level as f32 * 1.2, weapon: None, disables_shield_ticks: 0, breach_scale: 1.0,
                         fire_ticks: 100, ignores_shield: false, thorns_slots: Vec::new(), effects: Vec::new() };
@@ -799,7 +799,7 @@ mod combat_tests {
         body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Tick);
         assert!(!body.blocking(104)); assert!(body.blocking(105));
         shared.ticks.send_replace(105);
-        let strike = PlayerStrike { projectile: None, victim: 1, attacker: 2, attacker_uuid: [2;16], attacker_name: "Java".into(),
+        let strike = PlayerStrike { kinetic: None, projectile: None, victim: 1, attacker: 2, attacker_uuid: [2;16], attacker_name: "Java".into(),
             from: (0.0,64.0,2.0), yaw: 180.0, damage: 9.0, source: Source::PlayerAttack, extra_knockback: 0.0,
             weapon: None, disables_shield_ticks: 100, breach_scale: 1.0, fire_ticks: 0, ignores_shield: false,
             thorns_slots: Vec::new(), effects: Vec::new() };
@@ -844,7 +844,7 @@ mod combat_tests {
         let shared = shared(); let mut body = Body::new([1;16],"Arrow".into(),1);
         let mut inventory = Inventory::new(); let mut vit = Vitals::new(); let mut last = 0;
         let effect = survival::Effect { kind: survival::EffectKind::Resistance, amplifier: 2, ticks_left: 100, ambient: false, visible: true, show_icon: true };
-        let strike = PlayerStrike { projectile: None, victim:1,attacker:2,attacker_uuid:[2;16],attacker_name:"Archer".into(),
+        let strike = PlayerStrike { kinetic: None, projectile: None, victim:1,attacker:2,attacker_uuid:[2;16],attacker_name:"Archer".into(),
             from:(0.0,64.0,2.0),yaw:180.0,damage:10.0,source:Source::Arrow,extra_knockback:0.0,
             weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,
             thorns_slots:Vec::new(),effects:vec![effect] };

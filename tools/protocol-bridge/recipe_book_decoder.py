@@ -4,9 +4,11 @@ import io
 import struct
 
 class Decoder:
-    def __init__(self, payload, item_names):
+    def __init__(self, payload, item_names, string_tags=False, old_slots=False):
         self.data = io.BytesIO(payload)
         self.names = item_names
+        self.string_tags = string_tags
+        self.old_slots = old_slots
         self.offsets = []
 
     def take(self, n):
@@ -48,13 +50,19 @@ class Decoder:
         if depth > 32:
             raise ValueError('recursive display')
         start = self.data.tell()
-        kind = self.uint(10)
+        kind = self.uint(7 if self.old_slots else 10)
+        if self.old_slots:
+            kind = [0, 1, 4, 5, 6, 8, 9, 10][kind]
         if kind in (0, 1):
             result = [kind]
         elif kind == 4:
             result = [kind, self.item()]
         elif kind == 5:
-            result = [kind, self.item(), self.uint(127)]
+            if self.old_slots:
+                count = self.uint(127)
+                result = [kind, self.item(), count]
+            else:
+                result = [kind, self.item(), self.uint(127)]
             added, removed = self.uint(256), self.uint(256)
             for _ in range(added):
                 component = self.uint()
@@ -64,7 +72,7 @@ class Decoder:
                     raise ValueError(f'unsupported component {component} at {start}')
             result.extend(self.uint() for _ in range(removed))
         elif kind == 6:
-            result = [kind, self.idset()]
+            result = [kind, self.take(self.uint(32767)).decode('utf8') if self.string_tags else self.idset()]
         elif kind == 10:
             result = [kind, [self.slot(depth+1) for _ in range(self.uint(4096))]]
         elif kind in (2, 3):
@@ -130,8 +138,16 @@ if __name__ == '__main__':
         print(json.dumps({'entries': len(rows), 'replace': replace}))
     else:
         cases = json.load(sys.stdin)
+        registries = {}
         for case in cases:
-            rows, replace = Decoder(bytes.fromhex(case['payload']), names).book()
+            count = case.get('item_count')
+            if count is not None and count not in registries:
+                registries[count] = {i: str(i) for i in range(1, count)}
+            case_names = registries[count] if count is not None else names
+            try:
+                rows, replace = Decoder(bytes.fromhex(case['payload']), case_names, case.get('string_tags', False), case.get('old_slots', False)).book()
+            except Exception as error:
+                raise ValueError(f"{case.get('recipe')} protocol {case.get('protocol')}: {error}") from error
             assert len(rows) == case['entries']
             if case.get('idset_ingredients'):
                 for row in rows:

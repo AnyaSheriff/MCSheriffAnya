@@ -17,6 +17,22 @@ fn display(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersio
     if depth>32 || *budget==0 {return Err(Error::TooLarge);}*budget-=1;
     let raw=input.count(if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11){7}else{10})?;
     let kind=if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11){[0,1,4,5,6,8,9,10][raw]}else{raw};
+    // В775 tag-display — строка; IDSet появился в776. Внутренний
+    // preview-builder уже пишет IDSet: для клиента775 разворачиваем его
+    // в composite, иначе длина набора съедает байты следующих предметов.
+    let old_source=from.protocol()<775;
+    let old_target=to.protocol()<775;
+    if kind==6 && (old_source || (from==JavaVersion::V26_1_2 && !context.items.content.is_preview())) {
+        if old_target {uint(out,4);}else if to==JavaVersion::V26_1_2 {uint(out,6);}else{uint(out,6);uint(out,0);}
+        string(input,out)?;
+        return Ok(());
+    }
+    if kind==6 && to==JavaVersion::V26_1_2 {
+        let n=input.count(65537)?;
+        if n==0 {uint(out,6);string(input,out)?;}
+        else {uint(out,10);uint(out,(n-1) as u32);for _ in 1..n {uint(out,4);item(input,out,from,to,context)?;}}
+        return Ok(());
+    }
     if kind==6 && (matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) || matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11)) {
         // Старый tag-display содержит строку; новый writer передаёт IDSet.
         if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {uint(out,6);uint(out,0);string(input,out)?;}
@@ -161,5 +177,31 @@ mod tests {
         assert_eq!(convert("declare_recipes",&deep,OLD,NEW),Err(Error::TooLarge));
         // craft_recipe_response: окно0, shaped0×1 недопустим.
         assert!(convert("craft_recipe_response",&[0,1,0,1,0,0,0],OLD,NEW).is_err());
+    }
+}
+
+#[cfg(test)]
+mod slot_tests {
+    use super::*;
+
+    #[test]
+    fn preview_id_set_becomes_composite_for_real_775_instead_of_a_tag_string() {
+        let context=Context {items:items::Context {content:crate::content::ContentCodec::white_slab_preview().native_view(),..Default::default()},..Default::default()};
+        let mut out=Vec::new();
+        let mut budget=32;
+        let mut input=Cursor::new(&[6,3,1,2]);
+        display(&mut input,&mut out,JavaVersion::V26_1_2,JavaVersion::V26_1_2,context,0,&mut budget).unwrap();
+        assert_eq!(out,[10,2,4,1,4,2]);
+        assert!(input.rest.is_empty());
+    }
+
+    #[test]
+    fn real_775_tag_string_becomes_named_id_set_for_777() {
+        let mut out=Vec::new();
+        let mut budget=32;
+        let mut input=Cursor::new(&[6,5,b'p',b'l',b'a',b'n',b'k']);
+        display(&mut input,&mut out,JavaVersion::V26_1_2,JavaVersion::V26_3,Context::default(),0,&mut budget).unwrap();
+        assert_eq!(out,[6,0,5,b'p',b'l',b'a',b'n',b'k']);
+        assert!(input.rest.is_empty());
     }
 }

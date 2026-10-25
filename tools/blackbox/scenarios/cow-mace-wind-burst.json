@@ -1,0 +1,43 @@
+{
+  "name": "cow-mace-wind-burst",
+  "about": "Сокрушающий удар с Wind Burst I по мобу, без второго робота.",
+  "track_mobs": true,
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "!hotbar 0",
+    "tp $(bot) $(3.5,0,1.5)",
+    "!stopfly",
+    "!wait 20",
+    "item replace entity $(bot) weapon.mainhand with mace[enchantments={wind_burst:1}]",
+    "!wait 30"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 5,
+      "cmd": "tp $(bot) $(3.5,4,1.5)"
+    },
+    {
+      "after": 13,
+      "attack": true
+    }
+  ],
+  "record_ticks": 75,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "difficulty peaceful",
+    "!startfly"
+  ]
+}

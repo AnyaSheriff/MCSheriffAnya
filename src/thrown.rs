@@ -921,7 +921,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         mob.hurt(crate::wind::HIT_DAMAGE, Source::WindCharge, None);
                     }
                 }
-                Some(Struck::Player(id)) => world.note_player_strike(crate::combat::PlayerStrike { projectile: None,
+                Some(Struck::Player(id)) => world.note_player_strike(crate::combat::PlayerStrike { kinetic: None, projectile: None,
                     victim: id,
                     attacker: flying.owner,
                     attacker_uuid: [0; 16],
@@ -1019,7 +1019,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     }
                 }
                 // [проверить] снежок по игроку: урона нет, толчок.
-                Some(Struck::Player(id)) => world.note_player_strike(crate::combat::PlayerStrike { projectile: None,
+                Some(Struck::Player(id)) => world.note_player_strike(crate::combat::PlayerStrike { kinetic: None, projectile: None,
                     victim: id,
                     attacker: flying.owner,
                     attacker_uuid: [0; 16],
@@ -1238,7 +1238,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         }
                     }
                 }
-                crate::firework::Struck::Player(id) => strikes.push(crate::combat::PlayerStrike { projectile: None,
+                crate::firework::Struck::Player(id) => strikes.push(crate::combat::PlayerStrike { kinetic: None, projectile: None,
                     victim: id,
                     attacker: rocket.owner,
                     attacker_uuid: rocket.owner_uuid,
@@ -1489,7 +1489,7 @@ fn small_fireball_hit(shared: &Shared, world: &mut World, items: &mut crate::ite
         Some(Struck::Player(id)) => {
             let from = (flying.x, flying.y, flying.z);
 
-            world.note_player_strike(crate::combat::PlayerStrike { projectile: None,
+            world.note_player_strike(crate::combat::PlayerStrike { kinetic: None, projectile: None,
                 victim: id,
                 attacker: flying.owner,
                 attacker_uuid: [0; 16],

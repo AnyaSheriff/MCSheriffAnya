@@ -1,0 +1,2 @@
+    Checking mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-windmob)
+    Finished `release` profile [optimized] target(s) in 36.85s

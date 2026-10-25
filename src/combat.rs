@@ -70,11 +70,16 @@ pub fn outcome_breached(view: &CombatView, damage: f32, source: Source, now: u64
     Outcome::Taken(taken)
 }
 
+/// Кинетическое попадание копья: стадии отдельно разрешают толчок и сброс седока.
+#[derive(Clone, Copy, Debug)]
+pub struct Kinetic { pub knockback: bool, pub dismount: bool }
+
 /// Удар по игроку, который нападающий отдаёт жертве через журнал мира
 /// (`WorldEvent::PlayerStrike`): щит, броню, отдачу и износ считает
 /// подключение жертвы — у него её инвентарь и состояние.
 #[derive(Clone, Debug)]
 pub struct PlayerStrike {
+    pub kinetic: Option<Kinetic>,
     pub victim: i32,
     pub attacker: i32,
     /// Прямая сущность снаряда; виновник и кредит остаются у attacker.
@@ -312,7 +317,7 @@ pub fn impaling_bonus(data: &Data, kind: &str) -> f32 {
 
 /// Вики, Shield: магия, падение, огонь окружения, молния и шипы обходят щит.
 pub fn shield_blocks(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro
+    matches!(source, Source::Spear | Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro
         | Source::Arrow | Source::Trident | Source::Thrown | Source::Fireball | Source::LargeFireball | Source::WitherSkull
         | Source::WindCharge | Source::Fireworks | Source::Explosion | Source::PlayerExplosion | Source::Thorns)
 }

@@ -134,6 +134,7 @@ pub(super) enum UseKind {
     /// eye-of-ender-far, eye-of-ender-none: Metadata 8=1).
     EnderEye,
     Spyglass,
+    Spear,
 }
 
 /// Использование предмета, которое тянется: щит поднят, лук натянут.
@@ -262,6 +263,7 @@ pub(super) struct Net {
     pub eating: Option<Eating>,
     /// Поднятый щит или натянутый лук.
     pub using: Option<Using>,
+    pub spear_charge: super::spear::Charge,
     /// Рука, которой в последний раз что-то использовали: её бит остаётся
     /// в флагах и после отпускания (чёрный ящик, pvp-shield: 8=2).
     pub last_hand: i32,
@@ -385,6 +387,7 @@ impl Net {
             sweep_motion: Default::default(),
             eating: None,
             using: None,
+            spear_charge: Default::default(),
             last_hand: 0,
             arrows: 0,
             stingers: 0,
@@ -734,6 +737,8 @@ pub(super) fn confirmed_pose(player: &mut PlayerState) {
     player.net.prev_ground = player.on_ground;
     player.net.last_delta = (0.0, 0.0, 0.0);
     player.net.sweep_motion = Default::default();
+    player.net.spear_charge = Default::default();
+    if player.net.using.is_some_and(|using| using.kind == UseKind::Spear) { player.net.using = None; }
 }
 
 /// Пакет движения от клиента: прыжок, бег по земле и приземление.
@@ -1014,6 +1019,7 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
         "shield" if now >= player.net.shield_disabled_until => UseKind::Shield,
         "bow" => UseKind::Bow,
         "spyglass" => UseKind::Spyglass,
+        name if name.ends_with("_spear") => UseKind::Spear,
         // Незаряженный арбалет заряжается, если есть чем (вики, Crossbow);
         // заряженный стреляет (`bow::crossbow_fire`).
         "crossbow" => {
@@ -1047,6 +1053,12 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
     if kind == UseKind::Spyglass {
         shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.use", 1.0, 1.0);
         if let Some(stack) = stack { player.progress.used(stack.item); }
+    }
+    if kind == UseKind::Spear {
+        let item=stack.expect("копьё").item;
+        super::spear::start(player, hand, now, item);
+        let sound=if name=="wooden_spear" {"minecraft:item.spear_wood.use"}else{"minecraft:item.spear.use"};
+        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_except((player.x,player.y,player.z),sound,if name=="wooden_spear" {0.7}else{1.0},1.0,player.entity_id);
     }
     player.net.using = Some(Using { hand, since: now, kind });
     player.net.last_hand = hand;
@@ -1082,7 +1094,7 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
         UseKind::Spyglass => shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.stop_using", 1.0, 1.0),
-        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush | UseKind::Bundle => {}
+        UseKind::Spear | UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush | UseKind::Bundle => {}
     }
 }
 
@@ -2417,6 +2429,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     let tick_now = player.publication.as_ref().map_or_else(|| *shared.ticks.borrow(), |p| p.tick);
 
     tick_spin(shared, player, tick_now);
+    super::spear::tick(shared, player);
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
 
     // Творческий игрок сыт полностью: насыщение 20 (чёрный ящик, pvp-thorns:

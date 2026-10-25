@@ -1,0 +1,87 @@
+{
+  "name": "spear-charge-motion",
+  "about": "Кинетический удар: железное копьё, использование на бегу без Attack.",
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "!hotbar 0",
+    "fill $(-3,0,-3) $(8,5,35) air",
+    "fill $(-3,-1,-3) $(8,-1,35) stone",
+    "tp $(bot) $(3.5,0,0.5) 0 0",
+    "!stopfly",
+    "!look 3.141592653589793 -0.25",
+    "item replace entity $(bot) weapon.mainhand with iron_spear",
+    "!wait 30"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(3.5,0,8.5) {NoAI:1b}"
+    },
+    {
+      "after": 5,
+      "use": true
+    },
+    {
+      "after": 6,
+      "control": [
+        "sprint",
+        true
+      ]
+    },
+    {
+      "after": 6,
+      "control": [
+        "forward",
+        true
+      ]
+    },
+    {
+      "after": 40,
+      "control": [
+        "forward",
+        false
+      ]
+    },
+    {
+      "after": 40,
+      "control": [
+        "sprint",
+        false
+      ]
+    },
+    {
+      "after": 45,
+      "cmd": "data get entity @e[type=cow,limit=1,distance=..48] Health"
+    },
+    {
+      "after": 44,
+      "cmd": "data get entity $(bot) Pos"
+    },
+    {
+      "after": 46,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 5,
+      "face": 0
+    }
+  ],
+  "record_ticks": 65,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "difficulty peaceful",
+    "!startfly"
+  ],
+  "pad_wide": 40
+}

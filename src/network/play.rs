@@ -8253,7 +8253,11 @@ fn handle_client_packet_inner(
                     slot,
                     format_hex(payload)
                 );
+                if slot > 8 { return reaction; }
                 player.inventory.select(slot as i32);
+                // Перезарядка начинается при выборе, даже если до следующего
+                // удара нет рассылки атрибутов; износ не меняет тип оружия.
+                vitals::update_equipment(player, *shared.ticks.borrow());
 
                 // Сменил руку — щит опущен, лук спущен впустую.
                 if player.net.using.is_some_and(|using| using.hand == 0) {
@@ -8560,6 +8564,24 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     if let Some((x, y, z)) = smash_event {
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(x, y, z, 2013, crate::combat::SMASH_PARTICLES);
+    }
+
+    // «Порыв ветра» и по мобу: взрыв ветра у нападающего за частицами удара
+    // о землю, как в pvp::strike_player: подброс после сокрушающего удара
+    // по любой цели, не только по игроку (вики, Wind Burst) [проверить по
+    // мобу ящиком].
+    let wind = data.level("wind_burst");
+
+    if smash && landed && wind > 0 {
+        let mut targets = crate::tick::blast_targets(shared, player.dimension);
+        if let Some(me) = targets.iter_mut().find(|p| p.entity_id == player.entity_id) {
+            (me.x, me.y, me.z) = (player.x, player.y, player.z);
+            me.flying_creative = player.game_mode == GAME_MODE_CREATIVE && player.abilities.flying;
+        }
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+        crate::tnt::wind_burst(&mut world, &mut items, &targets, (from.0, from.1 - 0.1, from.2), crate::tnt::wind_burst_knockback(wind), player.entity_id);
     }
 
     if let Some((at, guardian)) = spikes {

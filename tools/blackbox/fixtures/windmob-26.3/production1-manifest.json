@@ -1,0 +1,44 @@
+{
+  "primary": "26.3",
+  "scenarios": [
+    "cow-crit-fist",
+    "enchant-lunge-cooldown",
+    "enchant-lunge-food-threshold",
+    "enchant-lunge-probe",
+    "itemaudit4-knockback",
+    "itemaudit4-shield",
+    "pvp-bow",
+    "pvp-bow-power",
+    "pvp-fire-aspect",
+    "pvp-mace",
+    "pvp-mace-landing-motion",
+    "pvp-resistance",
+    "pvp-shield-back",
+    "pvp-sweep",
+    "pvp-thorns",
+    "shield-banner-craft"
+  ],
+  "repeat": 1,
+  "port": 26140,
+  "ours_port": 26240,
+  "translation": true,
+  "official_recordings": "/tmp/windmob-references",
+  "binary": {
+    "path": "/tmp/windmob-production-binary",
+    "sha256": "0f43b8708436c3b187494f7eafc343becda899e804dc3d05c6f2428a77ea74dd"
+  },
+  "jar": {
+    "path": "/home/lenox/.local/share/mcsa-java-26.3-probe/server.jar",
+    "sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64"
+  },
+  "proxy": {
+    "path": "/home/lenox/.cache/mcsheriffanya/viaproxy/ViaProxy-3.4.14.jar",
+    "sha256": "2894bbfb2f4342f8fde887af6c689313efd5b0e46a8006775eea0e21e2948ab5"
+  },
+  "scripts": {
+    "bot.js": "4e3ff5920289351e64ccd232b96e0697d92a3088bd9857e83e16157ebd7e1f26",
+    "compare.js": "eb18ea7919be79fda3982e9b2a8e85a348a9c414dc315168952120a11e5c5279",
+    "via_ticks.js": "dc843abab9eb50d050d4fb1a944379c8d476dc1a96b212db7a37b6c13b64c1ab",
+    "../protocol-bridge/probe_gameplay.py": "a1b8959e923f86d3776bfd941a7252a6e26813f50635db42bcf43ea1fd204057"
+  }
+}

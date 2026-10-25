@@ -175,3 +175,30 @@ fn complete_release_stops_crossbow_shield_and_spyglass_without_ammo_or_projectil
         assert!(shared.arrows.lock().unwrap().list.is_empty());
     }
 }
+
+#[test]
+fn switching_weapons_starts_cooldown_at_selection_and_preserves_damage_after_wait() {
+    let (shared,mut p)=setup();
+    let names=["diamond_sword","diamond_axe","mace","iron_spear","trident"];
+    for (i,name) in names.iter().enumerate() {p.inventory.set(inventory::FIRST_HOTBAR+i as i32,Some(stack(name,1)));}
+    vitals::update_equipment(&mut p,100);
+    for (i,damage) in [7.0,9.0,6.0,3.0,9.0].into_iter().enumerate() {
+        let now=200+i as u64*100;
+        shared.ticks.send_replace(now);
+        let body=vec![SET_CARRIED_ITEM as u8,0,i as u8];
+        handle_client_packet(&PacketInfo {id:SET_CARRIED_ITEM,length:3,body,teleport:None,punch:false,foreign_inventory:false,legacy_inventory:None},&mut p,&shared);
+        if i>0 {assert_eq!(p.last_attack,now);}
+        assert_eq!(p.attrs.value(crate::attributes::ATTACK_DAMAGE),damage);
+        // Между выбором и ударом нет sync_attributes: заряд уже идёт.
+        shared.ticks.send_replace(now+50);
+        let id=300+i as i32;
+        let mut mob=crate::mob::Mob::new(id,crate::mob::Kind::Cow,(p.x,p.y,p.z+3.0));
+        mob.vitals.health=100.0;
+        shared.items_in(p.dimension).lock().unwrap().add_mob(mob);
+        attack(id,&mut p,&shared);
+        let items=shared.items_in(p.dimension).lock().unwrap();
+        let mob=items.mobs().iter().find(|mob|mob.entity_id==id).unwrap();
+        assert!((mob.vitals.health-(100.0-damage as f32)).abs()<0.001,"{}: {}",names[i],mob.vitals.health);
+        assert_eq!(p.inventory.held().unwrap().extras().damage,if i==1 {2}else{1});
+    }
+}

@@ -1,0 +1,24 @@
+  чат: Режим игры: творческий
+  чат: Переношу в 3.5 -58 3.5
+  чат: Заполнено блоков: 289
+  чат: Заполнено блоков: 289
+  чат: Заполнено блоков: 0
+  чат: Заполнено блоков: 0
+  чат: Заполнено блоков: 0
+  чат: Заполнено блоков: 0
+  чат: Правило spawn_mobs: false
+  чат: Правило advance_time: true
+  чат: Погода: ясно
+  чат: Убрано сущностей: 0
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+калибровка: начало такта на 0 мс от сетки часов, доли 5 1 1 0 1 0
+  чат: Could not set the block
+  чат: Переношу в 0.5 -59 2.5
+  чат: Режим игры: выживание
+Error: Нет рецепта crafting_table
+    at EventEmitter.<anonymous> (/home/lenox/.cache/mcsheriffanya/work/s26-windmob/tools/blackbox/bot.js:810:43)

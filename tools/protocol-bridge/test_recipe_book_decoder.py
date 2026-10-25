@@ -32,6 +32,20 @@ class RecipeDecoderTests(unittest.TestCase):
         with self.assertRaises(UnicodeDecodeError):
             Decoder(b'\x00\x02\xaf\x01', NAMES).idset()
 
+    def test_775_initial_crafting_table_and_former_idset_builder(self):
+        root = ROOT.parent / 'recipe-book-775'
+        names = {int(k): v for k, v in json.loads((root / 'items.json').read_text()).items()}
+        rows, _ = Decoder((root / 'initial-crafting-table.bin').read_bytes(), names, string_tags=True).book()
+        self.assertEqual(rows[0]['id'], 171)
+        self.assertEqual(rows[0]['recipe']['result'], [5, 'crafting_table', 1])
+        self.assertTrue(all(slot[0] == 10 for slot in rows[0]['recipe']['ingredients']))
+        with self.assertRaises((ValueError, UnicodeDecodeError)):
+            Decoder((root / 'former-idset-builder.bin').read_bytes(), names, string_tags=True).book()
+
+    def test_775_tag_is_string_and_776_tag_is_idset(self):
+        self.assertEqual(Decoder(b'\x06\x05plank', NAMES, string_tags=True).slot(), [6, 'plank'])
+        self.assertEqual(Decoder(b'\x06\x00\x05plank', NAMES).slot(), [6, {'tag': 'plank'}])
+
     def test_trailing_and_invalid_item_are_rejected(self):
         with self.assertRaisesRegex(ValueError, 'trailing'):
             Decoder(b'\x00\x00\x00', NAMES).book()

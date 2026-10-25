@@ -1,0 +1,33 @@
+{
+  "primary": "26.1.2",
+  "scenarios": [
+    "enchant-lunge-conditions",
+    "enchant-lunge-cooldown",
+    "enchant-lunge-cost-motion",
+    "enchant-lunge-food-drain",
+    "enchant-lunge-food-threshold",
+    "enchant-lunge-hit-probe",
+    "enchant-lunge-hunger",
+    "enchant-lunge-probe",
+    "enchant-lunge-threshold"
+  ],
+  "repeat": 1,
+  "port": 26170,
+  "ours_port": 26270,
+  "translation": false,
+  "official_recordings": null,
+  "binary": {
+    "path": "/home/lenox/.cache/mcsheriffanya/work/s26-windmob/target/release/mcsheriffanya",
+    "sha256": "10b33637379e3ef290e569d1b7b77fb8ab7389bb45a1b7b81b112ccdfba9b7d1"
+  },
+  "jar": {
+    "path": "/home/lenox/.local/share/mcsa-java-26.3-probe/server-26.1.2.jar",
+    "sha256": "cd47e7c38328f64768fd17af8fcd8b22496b40b63d4ffee81e71ae059fedcb42"
+  },
+  "scripts": {
+    "bot.js": "4e3ff5920289351e64ccd232b96e0697d92a3088bd9857e83e16157ebd7e1f26",
+    "compare.js": "eb18ea7919be79fda3982e9b2a8e85a348a9c414dc315168952120a11e5c5279",
+    "via_ticks.js": "dc843abab9eb50d050d4fb1a944379c8d476dc1a96b212db7a37b6c13b64c1ab",
+    "../protocol-bridge/probe_gameplay.py": "a1b8959e923f86d3776bfd941a7252a6e26813f50635db42bcf43ea1fd204057"
+  }
+}
