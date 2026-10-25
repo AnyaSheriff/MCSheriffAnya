@@ -666,6 +666,7 @@ pub struct CaveGrid {
     y0: i32,
     layers: i32,
     nodes: Vec<[f64; 3]>,
+    preview: bool,
 }
 
 impl CaveGrid {
@@ -702,7 +703,7 @@ impl CaveGrid {
             *value = lerp(bottom, top, ty);
         }
 
-        hollow_by(values, y, depth)
+        hollow_by(values, y, depth, self.preview)
     }
 }
 
@@ -710,14 +711,17 @@ impl CaveGrid {
 ///
 /// Ходы — там, где оба шума ходов близки к нулю: так пустота тянется
 /// ниточкой по линии их пересечения. Полости — где шум полостей выше порога.
-fn hollow_by([along, across, room]: [f64; 3], y: i32, depth: i32) -> bool {
+fn hollow_by([along, across, room]: [f64; 3], y: i32, depth: i32, preview: bool) -> bool {
     let fy = y as f64;
 
     // У самого дна пещеры сходят на нет: по замерам оригинала ниже −54
     // пустот в семь раз меньше, чем было у нас, и лава там — лужи на
     // дне редких пещер, а не сплошное море.
-    let floor = smooth_step((fy + 65.0) / 20.0);
-    let width = 0.09 * (0.3 + 0.7 * floor) * (1.0 - 0.45 * smooth_step((fy - 45.0) / 30.0));
+    let floor = smooth_step((fy + 65.0) / if preview { 24.0 } else { 20.0 });
+    // Сужение ходов не должно убирать лавовые лужи у дна: там их площадь
+    // измеряется отдельно от сухих полостей выше −55.
+    let width = if preview { 0.075 + 0.04 * (1.0 - smooth_step((fy + 55.0) / 4.0)) } else { 0.09 };
+    let width = width * (0.3 + 0.7 * floor) * (1.0 - 0.45 * smooth_step((fy - 45.0) / 30.0));
 
     if along.abs() < width && across.abs() < width {
         return true;
@@ -738,10 +742,16 @@ fn hollow_by([along, across, room]: [f64; 3], y: i32, depth: i32) -> bool {
     // чем в равнинной земле: нависаний там почти каждый пятый столбец.
     let peaks = smooth_step((fy - 75.0) / 45.0);
 
-    // Ниже −10 у оригинала пустот чуть больше, чем даёт одна глубина.
-    let below = smooth_step((-10.0 - fy) / 20.0);
+    // Добавка у перехода к сланцу не должна распространяться до дна:
+    // иначе избыток залов около −48 сопровождается их нехваткой около −16.
+    let below = if preview {
+        0.08 * smooth_step((fy + 32.0) / 16.0) * (1.0 - smooth_step((fy + 8.0) / 8.0))
+    } else {
+        0.03 * smooth_step((-10.0 - fy) / 20.0)
+    };
 
-    room > 0.405 - 0.08 * deep - 0.2 * shallow - 0.2 * peaks - 0.03 * below + 0.3 * (1.0 - floor) + 0.2 * roof
+    let shallow_weight = if preview { 0.14 } else { 0.2 };
+    room > 0.405 - 0.08 * deep - shallow_weight * shallow - 0.2 * peaks - below + 0.3 * (1.0 - floor) + 0.2 * roof
 }
 
 /// Какой рельеф складывать: как у оригинала или наш плавный.
@@ -1807,14 +1817,24 @@ impl Terrain {
     /// в несколько раз дороже, а пещеры от этого не меняются.
     fn cave_noise(&self, x: i32, y: i32, z: i32) -> [f64; 3] {
         let (fx, fy, fz) = (x as f64, y as f64, z as f64);
+        // Вики, Cave: «hollowness», «thickness» — независимые параметры.
+        // https://minecraft.wiki/w/Cave#Noise_caves
+        // Масштаб старой геометрии сливал ходы и залы: p95 объёма чанковой
+        // компоненты 3825 против 1755 в переписи 26.3. Калибровка своей
+        // формы [проверить]: координаты пещер оригинала не воспроизводятся.
+        let (tunnel_xz, tunnel_y, room_xz, room_y) = if self.preview {
+            (80.0, 54.0, 38.0, 27.0)
+        } else {
+            (140.0, 90.0, 70.0, 45.0)
+        };
 
         // У каждого шума свой дробный сдвиг: шум Перлина равен нулю в целых
         // узлах, и без сдвига оба шума ходов обнулялись бы в одних точках —
         // через каждые 140 блоков по решётке шёл бы гарантированный ход.
         [
-            self.tunnels.at3(fx / 140.0 + 0.371, fy / 90.0 + 0.613, fz / 140.0 + 0.127),
-            self.tunnels_across.at3(fx / 140.0 + 0.719, fy / 90.0 + 0.293, fz / 140.0 + 0.537),
-            self.caves.octaves3(fx / 70.0 + 0.211, fy / 45.0 + 0.457, fz / 70.0 + 0.883, 2),
+            self.tunnels.at3(fx / tunnel_xz + 0.371, fy / tunnel_y + 0.613, fz / tunnel_xz + 0.127),
+            self.tunnels_across.at3(fx / tunnel_xz + 0.719, fy / tunnel_y + 0.293, fz / tunnel_xz + 0.537),
+            self.caves.octaves3(fx / room_xz + 0.211, fy / room_y + 0.457, fz / room_xz + 0.883, 2),
         ]
     }
 
@@ -1847,6 +1867,7 @@ impl Terrain {
             y0,
             layers,
             nodes,
+            preview: self.preview,
         }
     }
 
@@ -1949,7 +1970,7 @@ impl Terrain {
             static FILLS: std::cell::RefCell<FillCache> = std::cell::RefCell::new(FillCache::new());
         }
 
-        let key = (self.seed, self.style == Style::Vanilla, cell);
+        let key = (self.seed, self.generation_profile(), cell);
 
         if let Some(fill) = FILLS.with(|fills| fills.borrow().get(&key).copied()) {
             return fill;
@@ -1976,11 +1997,11 @@ impl Terrain {
     /// Тоже запоминается: соседние клетки спрашивают одни и те же чанки.
     fn rough_surface(&self, chunk_x: i32, chunk_z: i32) -> i32 {
         thread_local! {
-            static SURFACES: std::cell::RefCell<std::collections::HashMap<(i64, bool, i32, i32), i32>> =
+            static SURFACES: std::cell::RefCell<std::collections::HashMap<(i64, u8, i32, i32), i32>> =
                 std::cell::RefCell::new(std::collections::HashMap::new());
         }
 
-        let key = (self.seed, self.style == Style::Vanilla, chunk_x, chunk_z);
+        let key = (self.seed, self.generation_profile(), chunk_x, chunk_z);
 
         if let Some(surface) = SURFACES.with(|surfaces| surfaces.borrow().get(&key).copied()) {
             return surface;
@@ -2049,7 +2070,9 @@ impl Terrain {
         // четверть пещер, глубже — считанные проценты. Четверть — вместе с
         // клетками у моря: порог выше нуля поднят, когда они появились.
         let threshold = if middle >= 0 {
-            0.08
+            // В 26.3 залитые полости Y 0…23 иначе оказываются вдвое реже
+            // переписи. Верхние водоносные клетки и морская вода не меняются.
+            if self.preview && middle < 24 { -0.06 } else { 0.08 }
         } else if middle >= -40 {
             0.33
         } else {
@@ -2175,7 +2198,8 @@ impl Terrain {
                         // что оказалось ниже дна, просто не ложится.
                         let in_world = |by: i32| (BOTTOM..crate::world::MIN_Y + crate::world::WORLD_HEIGHT).contains(&by);
 
-                        match Lump::new(seed, (x, y, z), placement.size) {
+                        let partial_ore = self.preview && placement.has_deep;
+                        match Lump::new(seed, (x, y, z), placement.size, partial_ore) {
                             // Крупное гнездо проверяется поблочно, и чанк
                             // перебирает только свою часть его объёма.
                             Some(lump) => {
@@ -2194,7 +2218,7 @@ impl Terrain {
                                 }
                             }
                             None => {
-                                for (bx, by, bz) in blob(seed, (x, y, z), placement.size) {
+                                for (bx, by, bz) in blob(seed, (x, y, z), placement.size, partial_ore) {
                                     if inside(bx, bz) && in_world(by) {
                                         found.push((bx, by, bz, placement));
                                     }
@@ -2632,16 +2656,17 @@ struct Lump {
 impl Lump {
     /// Ком для гнезда этого размера; `None` — гнездо мелкое, ему хватает
     /// обычного роста от точки.
-    fn new(seed: u64, start: (i32, i32, i32), size: u32) -> Option<Lump> {
+    fn new(seed: u64, start: (i32, i32, i32), size: u32, partial_ore: bool) -> Option<Lump> {
         let most = blob_blocks(size);
 
         if most < 24 {
             return None;
         }
 
-        // Число блоков — как у `blob`: от половины до наибольшего.
+        // Число блоков — как у `blob`; крупные рудные гнёзда 26.3 могут
+        // набирать лишь четверть максимума, каменные пятна сохраняют форму.
         let mut random = Random::new(seed as i64);
-        let (from, to) = (most / 2, most);
+        let (from, to) = (most / if partial_ore { 4 } else { 2 }, most);
         let count = (from + (random.next() % (to - from + 1) as u64) as u32) as f64;
 
         // Отрезок в случайную сторону, длиной около размера кома.
@@ -2734,10 +2759,10 @@ impl Lump {
 ///
 /// Гнездо растёт от начальной точки: каждый следующий блок прирастает
 /// к одному из уже положенных с какой-нибудь стороны. Так получается
-/// плотный неровный ком, а не шар и не змейка. Число блоков — от половины
-/// до наибольшего для этого размера по таблице вики: гнёзда в игре редко
-/// добирают до наибольшего. От начала гнездо не уходит дальше своего охвата.
-fn blob(seed: u64, start: (i32, i32, i32), size: u32) -> Vec<(i32, i32, i32)> {
+/// плотный неровный ком, а не шар и не змейка. Верхний предел — по таблице
+/// вики; степень заполнения своей формы калибруется отдельно.
+/// От начала гнездо не уходит дальше своего охвата.
+fn blob(seed: u64, start: (i32, i32, i32), size: u32, partial_ore: bool) -> Vec<(i32, i32, i32)> {
     let most = blob_blocks(size);
 
     if most == 0 {
@@ -2746,12 +2771,18 @@ fn blob(seed: u64, start: (i32, i32, i32), size: u32) -> Vec<(i32, i32, i32)> {
 
     let mut random = Random::new(seed as i64);
 
-    // Сколько блоков набирает гнездо. Крупные у оригинала добирают от
-    // половины до наибольшего; мелкие (размер до 9) — заметно меньше: по
-    // замерам ванильного мира руды размером до 9 у нас выходило в полтора
-    // раза больше, а уголь и медь сходились.
+    // Прежняя граница давала скачок среднего объёма с 6 до 12 блоков
+    // между размерами 9 и 10. После исправления пустот это завышает медь
+    // и уголь: крупные рудные гнёзда тоже должны бывать частичными.
+    // Вики: «ellipsoidal cluster of blocks» — https://minecraft.wiki/w/Ore_(feature)
+    // Форма своя [проверить на других семенах]; число попыток и максимум
+    // из таблицы не меняются. Старый профиль сохраняет прежнюю границу.
     let (from, to) = if size <= 9 {
-        (most * 3 / 10, most * 7 / 10)
+        // Нижняя граница 30 % округляется вверх: округление вниз давало
+        // для размера 4 среднее 2 вместо 2,5 блока, для размера 9 — 6 вместо 6,5.
+        (if partial_ore { (most * 3).div_ceil(10) } else { most * 3 / 10 }, most * 7 / 10)
+    } else if partial_ore {
+        (most / 4, most)
     } else {
         (most / 2, most)
     };
@@ -3259,9 +3290,9 @@ enum Fluid {
     Barrier,
 }
 
-/// Запомненные клетки водоёмов: (семя, «Обычный» ли мир, клетка) →
+/// Запомненные клетки водоёмов: (семя, профиль генерации, клетка) →
 /// уровень и род жидкости.
-type FillCache = std::collections::HashMap<(i64, bool, (i32, i32, i32)), Option<(i32, Fluid)>>;
+type FillCache = std::collections::HashMap<(i64, u8, (i32, i32, i32)), Option<(i32, Fluid)>>;
 
 /// Своё число клетки водоёмов.
 fn cell_seed((x, y, z): (i32, i32, i32)) -> i64 {
@@ -3757,6 +3788,31 @@ mod tests {
         }
     }
 
+    /// Профили не делят кэш аквиферов, даже при чередовании генераторов.
+    #[test]
+    fn aquifer_cache_distinguishes_generation_profiles() {
+        let legacy = Terrain::new(100_554_032_945_340, Style::Vanilla);
+        let preview = Terrain::new(100_554_032_945_340, Style::Vanilla).with_preview(true);
+        let mut differences = 0;
+
+        for x in -8..8 {
+            for z in -8..8 {
+                for y in 0..2 {
+                    let cell = (x, y, z);
+                    let old = legacy.decide_fill(cell);
+                    let new = preview.decide_fill(cell);
+                    differences += usize::from(old != new);
+
+                    for (terrain, expected) in [(&legacy, old), (&preview, new), (&legacy, old), (&preview, new)] {
+                        assert_eq!(terrain.aquifer_fill(cell), expected);
+                    }
+                }
+            }
+        }
+
+        assert!(differences > 0, "выборка должна различать правила профилей");
+    }
+
     /// Мир повторяется: одно семя — один и тот же рельеф.
     #[test]
     fn the_same_seed_gives_the_same_world() {
@@ -3990,7 +4046,7 @@ mod tests {
             let most = blob_blocks(size) as usize;
 
             for seed in 0..20 {
-                let blocks = blob(seed, (0, 0, 0), size);
+                let blocks = blob(seed, (0, 0, 0), size, false);
 
                 assert!(
                     blocks.len() <= most,

@@ -1,0 +1,5929 @@
+{
+  "date": "2026-10-25",
+  "base_commit": "7510508",
+  "regular_chunks_per_seed": 4096,
+  "source_sha256": {
+    "src/world/mod.rs": "1691da747bef0fa24b236b7cd35873dd1e7c1e2b99ea30b03bc0012b52b42d96",
+    "src/world/terrain.rs": "f7473b5192b10ac651158202b88821036d71c35c9cd1b83c80c863eba1947c5e",
+    "src/world/underground.rs": "5cba4eb1511d1615caa5171d010325586b7c1a338a83b1bc35dccdb1535fff55",
+    "src/world/sulfur_caves.rs": "37c740828186f68dffe42d107515d367bc447d47449b7b60d663322d91088778",
+    "tools/measure/genaudit_263_underground.py": "9439ec4078f359b0fb464a6fa3ca6358d1b437f80b9c8bbe04106aeb18470593"
+  },
+  "generation_test_binary_sha256": "38f78f05c4b185ebaafcdd553c8b3b4f0a9707e09d7621e55234fabc65f8e3fc",
+  "verification": {
+    "workspace_tests_passed": 3358,
+    "ignored": 109,
+    "clippy_release_all_targets_workspace_warnings_denied": "clean"
+  },
+  "seeds": {
+    "owner": {
+      "seed": 1792932773345722119,
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "plan_sha256": "7d536f5d7142bdc507fbbe78bf8cce69a2c6f7ce58d68e80ccb57796e7ac63f9",
+      "reports_sha256": {
+        "before": "47c79ec6363d75a2d7c2d8578e0e4c2eba4b3a024f55ad3f8ae9e748ba2ec4ca",
+        "after": "21843cd3a743a550761ee325240c7ff0af0226074d0322e8b9d200865cf26a76"
+      },
+      "coverage": {
+        "dimension": "overworld",
+        "ours": {
+          "chunks": 4096,
+          "requested": 4096,
+          "chunk_sha256": "a96b1870b2c4af1c66a0e8443a51f38f545719d81c796bacd4b38b1700f9f3a6",
+          "missing_first20": [],
+          "bounds_chunks": [
+            -113,
+            -74,
+            46,
+            85
+          ]
+        },
+        "vanilla": {
+          "chunks": 4096,
+          "requested": 4096,
+          "chunk_sha256": "a96b1870b2c4af1c66a0e8443a51f38f545719d81c796bacd4b38b1700f9f3a6",
+          "missing_first20": [],
+          "bounds_chunks": [
+            -113,
+            -74,
+            46,
+            85
+          ]
+        },
+        "same_chunks": true,
+        "complete": true
+      },
+      "metrics": [
+        {
+          "metric": "ore/coal_ore/y80",
+          "before": 5.953369,
+          "after": 4.93457,
+          "vanilla": 0.684814,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y96",
+          "before": 3.345947,
+          "after": 2.905518,
+          "vanilla": 0.346191,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "before": 17.735149,
+          "after": 12.408544,
+          "vanilla": 18.324607,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "within",
+          "denominator": [
+            265019,
+            573
+          ]
+        },
+        {
+          "metric": "ore/coal_ore/y64",
+          "before": 10.933594,
+          "after": 8.921631,
+          "vanilla": 5.009766,
+          "unit": "per chunk",
+          "tolerance": 1.001953125,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y80",
+          "before": 1.258545,
+          "after": 1.045898,
+          "vanilla": 0.113037,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y64",
+          "before": 4.543457,
+          "after": 3.696533,
+          "vanilla": 2.137207,
+          "unit": "per chunk",
+          "tolerance": 0.42744140625000004,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y112",
+          "before": 1.05249,
+          "after": 0.911865,
+          "vanilla": 0.030273,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/96/underground_air",
+          "before": 10.124408,
+          "after": 5.951313,
+          "vanilla": 3.285023,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": [
+            720446,
+            67549
+          ]
+        },
+        {
+          "metric": "cave_shape_proxy/large_chamber_like",
+          "before": 0.989502,
+          "after": 1.069336,
+          "vanilla": 0.81958,
+          "unit": "chunk-clipped components per chunk",
+          "tolerance": 0.16391601562500002,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y96",
+          "before": 0.316162,
+          "after": 0.361084,
+          "vanilla": 0.042969,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "cave_component_volume/p99",
+          "before": 6855.0,
+          "after": 3438.6,
+          "vanilla": 4556.24,
+          "unit": "blocks (chunk clipped)",
+          "tolerance": 911.248,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-64",
+          "before": 2.725342,
+          "after": 2.702881,
+          "vanilla": 3.532715,
+          "unit": "per chunk",
+          "tolerance": 0.70654296875,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y16",
+          "before": 1.210449,
+          "after": 1.381348,
+          "vanilla": 1.12207,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-16/underground_air",
+          "before": 9.33094,
+          "after": 8.410817,
+          "vanilla": 10.042363,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16773602
+          ]
+        },
+        {
+          "metric": "ore/deepslate_copper_ore/y-16",
+          "before": 5.60498,
+          "after": 4.311035,
+          "vanilla": 5.343994,
+          "unit": "per chunk",
+          "tolerance": 1.068798828125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y96",
+          "before": 0.281738,
+          "after": 0.268066,
+          "vanilla": 0.029541,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-32",
+          "before": 3.470215,
+          "after": 3.237793,
+          "vanilla": 3.976807,
+          "unit": "per chunk",
+          "tolerance": 0.795361328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_shape_proxy/thin_like",
+          "before": 1.889648,
+          "after": 2.952881,
+          "vanilla": 2.536621,
+          "unit": "chunk-clipped components per chunk",
+          "tolerance": 0.50732421875,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-48",
+          "before": 3.370117,
+          "after": 3.570801,
+          "vanilla": 4.246094,
+          "unit": "per chunk",
+          "tolerance": 0.84921875,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/0/underground_air",
+          "before": 12.473762,
+          "after": 6.327534,
+          "vanilla": 7.358923,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            16777216,
+            16763934
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y112",
+          "before": 0.196777,
+          "after": 0.194092,
+          "vanilla": 0.000977,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y48",
+          "before": 1.017822,
+          "after": 1.069824,
+          "vanilla": 1.262451,
+          "unit": "per chunk",
+          "tolerance": 0.252490234375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/raw_iron_block",
+          "before": 0.176758,
+          "after": 0.103027,
+          "vanilla": 0.17749,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/80/underground_air",
+          "before": 6.080165,
+          "after": 4.978915,
+          "vanilla": 5.960601,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            1150331,
+            177566
+          ]
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-32",
+          "before": 6.661377,
+          "after": 5.635254,
+          "vanilla": 6.59375,
+          "unit": "per chunk",
+          "tolerance": 1.31875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-16",
+          "before": 3.495117,
+          "after": 3.271484,
+          "vanilla": 3.824951,
+          "unit": "per chunk",
+          "tolerance": 0.764990234375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-64",
+          "before": 13.894043,
+          "after": 13.152344,
+          "vanilla": 15.281006,
+          "unit": "per chunk",
+          "tolerance": 3.056201171875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/32/underground_air",
+          "before": 9.648383,
+          "after": 5.033354,
+          "vanilla": 4.121313,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            12971212,
+            14609421
+          ]
+        },
+        {
+          "metric": "depth/16/underground_water",
+          "before": 3.806982,
+          "after": 3.009432,
+          "vanilla": 2.104229,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16717172,
+            16658075
+          ]
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-64",
+          "before": 3.308838,
+          "after": 3.390625,
+          "vanilla": 3.919922,
+          "unit": "per chunk",
+          "tolerance": 0.7839843750000001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-48/underground_air",
+          "before": 11.863589,
+          "after": 8.074373,
+          "vanilla": 7.202805,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            16777216,
+            16776382
+          ]
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-32",
+          "before": 3.193359,
+          "after": 2.919922,
+          "vanilla": 3.356934,
+          "unit": "per chunk",
+          "tolerance": 0.67138671875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_component_volume/p50",
+          "before": 53.0,
+          "after": 37.0,
+          "vanilla": 47.0,
+          "unit": "blocks (chunk clipped)",
+          "tolerance": 16,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-32",
+          "before": 5.640625,
+          "after": 5.633789,
+          "vanilla": 6.43042,
+          "unit": "per chunk",
+          "tolerance": 1.286083984375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y0",
+          "before": 1.623291,
+          "after": 1.407227,
+          "vanilla": 1.259033,
+          "unit": "per chunk",
+          "tolerance": 0.251806640625,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y32",
+          "before": 0.13623,
+          "after": 0.140137,
+          "vanilla": 0.000244,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y80",
+          "before": 0.194824,
+          "after": 0.195312,
+          "vanilla": 0.055908,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-48",
+          "before": 6.185059,
+          "after": 6.447021,
+          "vanilla": 7.235352,
+          "unit": "per chunk",
+          "tolerance": 1.4470703125000002,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-48",
+          "before": 8.156738,
+          "after": 7.959229,
+          "vanilla": 8.924316,
+          "unit": "per chunk",
+          "tolerance": 1.78486328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y0",
+          "before": 11.593994,
+          "after": 10.699219,
+          "vanilla": 11.978027,
+          "unit": "per chunk",
+          "tolerance": 2.39560546875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y48",
+          "before": 0.083984,
+          "after": 0.126465,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/water_interface_median_y",
+          "before": 17.0,
+          "after": 16.0,
+          "vanilla": 14.0,
+          "unit": "Y blocks",
+          "tolerance": 4,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_shape_proxy/other",
+          "before": 1.594971,
+          "after": 2.340332,
+          "vanilla": 2.598145,
+          "unit": "chunk-clipped components per chunk",
+          "tolerance": 0.51962890625,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/0/underground_water",
+          "before": 2.89501,
+          "after": 3.108418,
+          "vanilla": 3.752872,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16763934
+          ]
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-48",
+          "before": 5.933105,
+          "after": 4.896729,
+          "vanilla": 5.416748,
+          "unit": "per chunk",
+          "tolerance": 1.0833496093750001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y-16",
+          "before": 0.0,
+          "after": 0.216797,
+          "vanilla": 0.335693,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-16",
+          "before": 10.877686,
+          "after": 11.094238,
+          "vanilla": 12.256104,
+          "unit": "per chunk",
+          "tolerance": 2.451220703125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y16",
+          "before": 19.829346,
+          "after": 17.74707,
+          "vanilla": 16.275879,
+          "unit": "per chunk",
+          "tolerance": 3.25517578125,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/48/underground_air",
+          "before": 3.972588,
+          "after": 2.304676,
+          "vanilla": 1.712708,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            7374877,
+            8565502
+          ]
+        },
+        {
+          "metric": "ore/copper_ore/y16",
+          "before": 26.751465,
+          "after": 22.520264,
+          "vanilla": 20.705078,
+          "unit": "per chunk",
+          "tolerance": 4.1410156250000005,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y0",
+          "before": 0.967529,
+          "after": 0.843262,
+          "vanilla": 0.943604,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y32",
+          "before": 30.933838,
+          "after": 27.115723,
+          "vanilla": 25.107422,
+          "unit": "per chunk",
+          "tolerance": 5.021484375,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y64",
+          "before": 0.24707,
+          "after": 0.303955,
+          "vanilla": 0.210693,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y16",
+          "before": 3.038574,
+          "after": 3.233887,
+          "vanilla": 3.019043,
+          "unit": "per chunk",
+          "tolerance": 0.6038085937500001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y128",
+          "before": 0.128906,
+          "after": 0.087891,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/diamond_ore/y0",
+          "before": 0.373535,
+          "after": 0.473877,
+          "vanilla": 0.386475,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-64",
+          "before": 6.734863,
+          "after": 6.868164,
+          "vanilla": 7.33252,
+          "unit": "per chunk",
+          "tolerance": 1.46650390625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/64/underground_air",
+          "before": 4.016109,
+          "after": 4.449734,
+          "vanilla": 4.0323,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            2496419,
+            1237135
+          ]
+        },
+        {
+          "metric": "depth/32/underground_water",
+          "before": 5.008614,
+          "after": 2.881026,
+          "vanilla": 3.292745,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            12971212,
+            14609421
+          ]
+        },
+        {
+          "metric": "depth/16/underground_air",
+          "before": 12.651007,
+          "after": 8.277219,
+          "vanilla": 7.867386,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            16717172,
+            16658075
+          ]
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y0",
+          "before": 1.150391,
+          "after": 1.094482,
+          "vanilla": 1.018555,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_coal_ore/y-16",
+          "before": 0.03125,
+          "after": 0.022461,
+          "vanilla": 0.093506,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y0",
+          "before": 3.331543,
+          "after": 3.818115,
+          "vanilla": 3.615234,
+          "unit": "per chunk",
+          "tolerance": 0.7230468750000001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-64",
+          "before": 1.81665,
+          "after": 1.728271,
+          "vanilla": 1.829346,
+          "unit": "per chunk",
+          "tolerance": 0.36586914062500003,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-32",
+          "before": 5.362305,
+          "after": 5.272705,
+          "vanilla": 5.570801,
+          "unit": "per chunk",
+          "tolerance": 1.11416015625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_copper_ore/y0",
+          "before": 3.466553,
+          "after": 2.370361,
+          "vanilla": 2.501221,
+          "unit": "per chunk",
+          "tolerance": 0.500244140625,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-16",
+          "before": 5.286133,
+          "after": 4.868408,
+          "vanilla": 5.132568,
+          "unit": "per chunk",
+          "tolerance": 1.026513671875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_copper_ore/y-32",
+          "before": 0.019531,
+          "after": 0.01416,
+          "vanilla": 0.075195,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_component_volume/p95",
+          "before": 3724.25,
+          "after": 1700.0,
+          "vanilla": 1621.4,
+          "unit": "blocks (chunk clipped)",
+          "tolerance": 324.28000000000003,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y-16",
+          "before": 0.0,
+          "after": 0.111084,
+          "vanilla": 0.169922,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y0",
+          "before": 6.033203,
+          "after": 5.804443,
+          "vanilla": 5.548584,
+          "unit": "per chunk",
+          "tolerance": 1.1097167968750001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-16/underground_water",
+          "before": 0.453871,
+          "after": 0.69474,
+          "vanilla": 0.425812,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16773602
+          ]
+        },
+        {
+          "metric": "ore/redstone_ore/y-16",
+          "before": 0.0,
+          "after": 0.048828,
+          "vanilla": 0.099121,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y0",
+          "before": 0.27417,
+          "after": 0.26709,
+          "vanilla": 0.218018,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y32",
+          "before": 1.713623,
+          "after": 1.892334,
+          "vanilla": 1.96875,
+          "unit": "per chunk",
+          "tolerance": 0.39375000000000004,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/redstone_ore/y16",
+          "before": 0.039307,
+          "after": 0.047852,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y32",
+          "before": 29.088135,
+          "after": 26.609619,
+          "vanilla": 25.629395,
+          "unit": "per chunk",
+          "tolerance": 5.1258789062500005,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/amethyst_block",
+          "before": 13.380615,
+          "after": 14.716797,
+          "vanilla": 14.249512,
+          "unit": "per chunk",
+          "tolerance": 2.84990234375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-48/underground_water",
+          "before": 0.842166,
+          "after": 0.424463,
+          "vanilla": 0.210218,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16776382
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y48",
+          "before": 1.784424,
+          "after": 2.192871,
+          "vanilla": 2.134033,
+          "unit": "per chunk",
+          "tolerance": 0.426806640625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-16",
+          "before": 5.751465,
+          "after": 5.757568,
+          "vanilla": 5.920654,
+          "unit": "per chunk",
+          "tolerance": 1.184130859375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/budding_amethyst",
+          "before": 1.227783,
+          "after": 1.3396,
+          "vanilla": 1.304932,
+          "unit": "per chunk",
+          "tolerance": 0.260986328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y-16",
+          "before": 0.0,
+          "after": 0.077393,
+          "vanilla": 0.109619,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/redstone_ore/y0",
+          "before": 2.235596,
+          "after": 2.572266,
+          "vanilla": 2.638916,
+          "unit": "per chunk",
+          "tolerance": 0.527783203125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-64/underground_air",
+          "before": 2.529067,
+          "after": 1.556695,
+          "vanilla": 1.38838,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777177
+          ]
+        },
+        {
+          "metric": "depth/-32/underground_air",
+          "before": 9.425658,
+          "after": 9.65457,
+          "vanilla": 9.810307,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16775632
+          ]
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y0",
+          "before": 4.183594,
+          "after": 3.997314,
+          "vanilla": 3.907959,
+          "unit": "per chunk",
+          "tolerance": 0.781591796875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-16/underground_lava",
+          "before": 0.104767,
+          "after": 0.154436,
+          "vanilla": 0.004889,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16773602
+          ]
+        },
+        {
+          "metric": "ore/raw_iron_block/y-32",
+          "before": 0.069092,
+          "after": 0.038086,
+          "vanilla": 0.064697,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-64",
+          "before": 0.019043,
+          "after": 0.01123,
+          "vanilla": 0.034912,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y0",
+          "before": 12.710938,
+          "after": 15.884277,
+          "vanilla": 16.190186,
+          "unit": "per chunk",
+          "tolerance": 3.238037109375,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y64",
+          "before": 0.023682,
+          "after": 0.024414,
+          "vanilla": 0.002441,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y-16",
+          "before": 0.0,
+          "after": 0.101562,
+          "vanilla": 0.123291,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/48/underground_water",
+          "before": 3.944556,
+          "after": 2.600559,
+          "vanilla": 2.48714,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            7374877,
+            8565502
+          ]
+        },
+        {
+          "metric": "ore/raw_copper_block/y16",
+          "before": 0.07251,
+          "after": 0.042969,
+          "vanilla": 0.021729,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y128",
+          "before": 0.04126,
+          "after": 0.020752,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y-16",
+          "before": 0.0,
+          "after": 0.001709,
+          "vanilla": 0.021729,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y0",
+          "before": 2.05127,
+          "after": 2.679199,
+          "vanilla": 2.637207,
+          "unit": "per chunk",
+          "tolerance": 0.52744140625,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-32/underground_lava",
+          "before": 0.213474,
+          "after": 0.256544,
+          "vanilla": 0.154069,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16775632
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y16",
+          "before": 17.091064,
+          "after": 19.931396,
+          "vanilla": 19.644775,
+          "unit": "per chunk",
+          "tolerance": 3.928955078125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-64/underground_lava",
+          "before": 0.657308,
+          "after": 0.72872,
+          "vanilla": 0.633116,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777177
+          ]
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-16",
+          "before": 3.791748,
+          "after": 3.621582,
+          "vanilla": 3.571777,
+          "unit": "per chunk",
+          "tolerance": 0.71435546875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/raw_copper_block",
+          "before": 0.115967,
+          "after": 0.071289,
+          "vanilla": 0.064453,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-48",
+          "before": 0.081787,
+          "after": 0.050049,
+          "vanilla": 0.067139,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_coal_ore/y0",
+          "before": 0.866211,
+          "after": 0.645752,
+          "vanilla": 0.630371,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-64/underground_water",
+          "before": 0.188971,
+          "after": 0.076979,
+          "vanilla": 0.009972,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777177
+          ]
+        },
+        {
+          "metric": "ore/coal_ore/y48",
+          "before": 25.028809,
+          "after": 21.976318,
+          "vanilla": 22.182129,
+          "unit": "per chunk",
+          "tolerance": 4.4364257812500005,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y64",
+          "before": 0.002686,
+          "after": 0.010254,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-32/underground_water",
+          "before": 0.299859,
+          "after": 0.372696,
+          "vanilla": 0.422601,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16775632
+          ]
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-48",
+          "before": 2.119873,
+          "after": 2.102539,
+          "vanilla": 2.118164,
+          "unit": "per chunk",
+          "tolerance": 0.4236328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_copper_block/y32",
+          "before": 0.025146,
+          "after": 0.016357,
+          "vanilla": 0.025146,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-16",
+          "before": 0.006836,
+          "after": 0.003662,
+          "vanilla": 0.010742,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/diamond_ore/y-16",
+          "before": 0.0,
+          "after": 0.025391,
+          "vanilla": 0.030762,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y96",
+          "before": 0.001221,
+          "after": 0.000977,
+          "vanilla": 0.006348,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-48/underground_lava",
+          "before": 0.201023,
+          "after": 0.106549,
+          "vanilla": 0.078736,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16776382
+          ]
+        },
+        {
+          "metric": "ore/raw_copper_block/y0",
+          "before": 0.016846,
+          "after": 0.010986,
+          "vanilla": 0.015869,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/diamond_ore/y16",
+          "before": 0.004883,
+          "after": 0.004639,
+          "vanilla": 0.000488,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y80",
+          "before": 0.001465,
+          "after": 0.00293,
+          "vanilla": 0.005859,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y32",
+          "before": 0.00415,
+          "after": 0.006348,
+          "vanilla": 0.003906,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/48/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.011616,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            7374877,
+            8565502
+          ]
+        },
+        {
+          "metric": "depth/0/underground_lava",
+          "before": 0.0,
+          "after": 0.000358,
+          "vanilla": 0.01162,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16763934
+          ]
+        },
+        {
+          "metric": "ore/emerald_ore/y16",
+          "before": 0.002441,
+          "after": 0.004395,
+          "vanilla": 0.002441,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/spawner",
+          "before": 0.026367,
+          "after": 0.0271,
+          "vanilla": 0.027832,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/64/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.009134,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            2496419,
+            1237135
+          ]
+        },
+        {
+          "metric": "ore/copper_ore/y48",
+          "before": 17.831299,
+          "after": 15.320068,
+          "vanilla": 15.299316,
+          "unit": "per chunk",
+          "tolerance": 3.05986328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/32/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.008967,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            12971212,
+            14609421
+          ]
+        },
+        {
+          "metric": "depth/16/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.00781,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16717172,
+            16658075
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y32",
+          "before": 8.955078,
+          "after": 10.621338,
+          "vanilla": 10.614014,
+          "unit": "per chunk",
+          "tolerance": 2.122802734375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_emerald_ore/y0",
+          "before": 0.000244,
+          "after": 0.000244,
+          "vanilla": 0.000977,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_copper_block/y48",
+          "before": 0.001465,
+          "after": 0.000977,
+          "vanilla": 0.001709,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_emerald_ore/y-16",
+          "before": 0.000488,
+          "after": 0.000488,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y0",
+          "before": 0.001465,
+          "after": 0.000977,
+          "vanilla": 0.001465,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y48",
+          "before": 0.003662,
+          "after": 0.006104,
+          "vanilla": 0.006592,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y64",
+          "before": 0.008057,
+          "after": 0.01001,
+          "vanilla": 0.009521,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y112",
+          "before": 0.000488,
+          "after": 0.000488,
+          "vanilla": 0.000732,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/64/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 8.1e-05,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            2496419,
+            1237135
+          ]
+        },
+        {
+          "metric": "depth/112/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            265019,
+            573
+          ]
+        },
+        {
+          "metric": "depth/112/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            265019,
+            573
+          ]
+        },
+        {
+          "metric": "depth/80/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            1150331,
+            177566
+          ]
+        },
+        {
+          "metric": "depth/80/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            1150331,
+            177566
+          ]
+        },
+        {
+          "metric": "depth/96/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            720446,
+            67549
+          ]
+        },
+        {
+          "metric": "depth/96/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            720446,
+            67549
+          ]
+        },
+        {
+          "metric": "depth/lava_interface_median_y",
+          "before": -55.0,
+          "after": -55.0,
+          "vanilla": -55.0,
+          "unit": "Y blocks",
+          "tolerance": 4,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        }
+      ],
+      "cave_biome_shares_percent": {
+        "saved_4096_before": {
+          "dripstone_caves": 0.0,
+          "lush_caves": 1.96387,
+          "deep_dark": 0.568771,
+          "sulfur_caves": 0.129032
+        },
+        "fresh_4096": {
+          "dripstone_caves": 0.0,
+          "lush_caves": 1.965014,
+          "deep_dark": 0.536458,
+          "sulfur_caves": 0.129573
+        },
+        "official_4096": {
+          "dripstone_caves": 0.827456,
+          "lush_caves": 1.198228,
+          "deep_dark": 0.00968,
+          "sulfur_caves": 0.38991
+        },
+        "saved_full_before": {
+          "dripstone_caves": 0.013526,
+          "lush_caves": 1.493804,
+          "deep_dark": 0.870761,
+          "sulfur_caves": 0.153575
+        },
+        "official_full": {
+          "dripstone_caves": 1.599326,
+          "lush_caves": 1.256156,
+          "deep_dark": 0.073548,
+          "sulfur_caves": 0.596561
+        }
+      },
+      "objects": {
+        "before": {
+          "interior_shell_components": 104,
+          "interior_chunks": 3136,
+          "shell_components_per_chunk": 0.03316326530612245,
+          "spawners_by_entity": {
+            "minecraft:cave_spider": 22,
+            "minecraft:skeleton": 15,
+            "minecraft:spider": 24,
+            "minecraft:zombie": 47
+          },
+          "dungeons": 86
+        },
+        "after": {
+          "interior_shell_components": 112,
+          "interior_chunks": 3136,
+          "shell_components_per_chunk": 0.03571428571428571,
+          "spawners_by_entity": {
+            "minecraft:cave_spider": 21,
+            "minecraft:skeleton": 15,
+            "minecraft:spider": 27,
+            "minecraft:zombie": 48
+          },
+          "dungeons": 90
+        },
+        "vanilla": {
+          "interior_shell_components": 109,
+          "interior_chunks": 3136,
+          "shell_components_per_chunk": 0.03475765306122449,
+          "spawners_by_entity": {
+            "spider": 22,
+            "cave_spider": 34,
+            "zombie": 42,
+            "skeleton": 16
+          },
+          "dungeons": 80
+        }
+      },
+      "sulfur": {
+        "seed": 1792932773345722119,
+        "selection": "All sulfur-bearing chunks in the saved ours census; each side normalized by its own biome volume",
+        "regenerated_chunks": 2830,
+        "before": {
+          "blocks": {
+            "sulfur": 2379369,
+            "cinnabar": 1785055,
+            "sulfur_spike": 3457,
+            "potent_sulfur": 773
+          },
+          "biome_volume": 5623488,
+          "seed": 1792932773345722119,
+          "chunks": 2830,
+          "per_million_biome_blocks": {
+            "sulfur": 423112.666018,
+            "cinnabar": 317428.435875,
+            "sulfur_spike": 614.743021,
+            "potent_sulfur": 137.459171
+          }
+        },
+        "after": {
+          "seed": 1792932773345722119,
+          "blocks": {
+            "sulfur": 2111554,
+            "cinnabar": 1574058,
+            "sulfur_spike": 12473,
+            "potent_sulfur": 160
+          },
+          "biome_volume": 5628288,
+          "chunks": 2828,
+          "per_million_biome_blocks": {
+            "sulfur": 375168.07953,
+            "cinnabar": 279669.057447,
+            "sulfur_spike": 2216.126822,
+            "potent_sulfur": 28.427827
+          }
+        },
+        "vanilla": {
+          "biome_volume": 21844416,
+          "blocks": {
+            "sulfur": 7656948,
+            "cinnabar": 6314837,
+            "sulfur_spike": 59661,
+            "potent_sulfur": 658
+          },
+          "per_million_biome_blocks": {
+            "sulfur": 350521.982368,
+            "cinnabar": 289082.436445,
+            "sulfur_spike": 2731.178531,
+            "potent_sulfur": 30.122115
+          }
+        },
+        "metrics": [
+          {
+            "material": "sulfur",
+            "before": 423112.66601795895,
+            "after": 375168.07952969,
+            "vanilla": 350521.9823684002,
+            "tolerance": 70104.39647368004,
+            "verdict": "within"
+          },
+          {
+            "material": "cinnabar",
+            "before": 317428.43587467424,
+            "after": 279669.05744695367,
+            "vanilla": 289082.4364450851,
+            "tolerance": 57816.48728901702,
+            "verdict": "within"
+          },
+          {
+            "material": "sulfur_spike",
+            "before": 614.7430207017424,
+            "after": 2216.1268222237386,
+            "vanilla": 2731.1785309344045,
+            "tolerance": 546.235706186881,
+            "verdict": "within"
+          },
+          {
+            "material": "potent_sulfur",
+            "before": 137.45917124745355,
+            "after": 28.42782743171636,
+            "vanilla": 30.1221145028551,
+            "tolerance": 6.024422900571021,
+            "verdict": "within"
+          }
+        ]
+      },
+      "remaining_regular_outliers": [
+        "ore/coal_ore/y80",
+        "ore/coal_ore/y96",
+        "depth/112/underground_air",
+        "ore/coal_ore/y64",
+        "ore/copper_ore/y80",
+        "ore/copper_ore/y64",
+        "ore/coal_ore/y112",
+        "depth/96/underground_air",
+        "cave_shape_proxy/large_chamber_like",
+        "ore/iron_ore/y96",
+        "cave_component_volume/p99",
+        "ore/deepslate_iron_ore/y-64",
+        "ore/gold_ore/y16"
+      ]
+    },
+    "second": {
+      "seed": 100554032945340,
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "plan_sha256": "9c721097e49ca44587a3554f1728e5654482b1c6d505f67bfd9dd340b252cdf5",
+      "reports_sha256": {
+        "before": "5ad14328b3b2df38b6e80859a229a568cad930e65b68905b5dc844c4f54ffa13",
+        "after": "d845a2413c05bb4ba20165501fcce6f7a0f067bb5ea168ea708a270f20908dd3"
+      },
+      "coverage": {
+        "dimension": "overworld",
+        "ours": {
+          "chunks": 4096,
+          "requested": 4096,
+          "chunk_sha256": "e3f2d3f50b0f4d2c56e303d43e985cda68a046054132cd01652a51a6ef60ebdf",
+          "missing_first20": [],
+          "bounds_chunks": [
+            -51,
+            -82,
+            108,
+            77
+          ]
+        },
+        "vanilla": {
+          "chunks": 4096,
+          "requested": 4096,
+          "chunk_sha256": "e3f2d3f50b0f4d2c56e303d43e985cda68a046054132cd01652a51a6ef60ebdf",
+          "missing_first20": [],
+          "bounds_chunks": [
+            -51,
+            -82,
+            108,
+            77
+          ]
+        },
+        "same_chunks": true,
+        "complete": true
+      },
+      "metrics": [
+        {
+          "metric": "depth/112/underground_air",
+          "before": 6.274738,
+          "after": 25.316135,
+          "vanilla": 3.928549,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": [
+            78922,
+            31742
+          ]
+        },
+        {
+          "metric": "ore/gold_ore/y48",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 1.254395,
+          "unit": "per chunk",
+          "tolerance": 0.25087890625000003,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y32",
+          "before": 0.008057,
+          "after": 0.006348,
+          "vanilla": 2.105713,
+          "unit": "per chunk",
+          "tolerance": 0.421142578125,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/96/underground_air",
+          "before": 3.0942,
+          "after": 11.144643,
+          "vanilla": 4.902925,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "within",
+          "denominator": [
+            229635,
+            453260
+          ]
+        },
+        {
+          "metric": "ore/gold_ore/y64",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.746094,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/48/underground_water",
+          "before": 6.116002,
+          "after": 5.407763,
+          "vanilla": 2.327595,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": [
+            5685123,
+            8068027
+          ]
+        },
+        {
+          "metric": "depth/64/underground_air",
+          "before": 4.600862,
+          "after": 2.070147,
+          "vanilla": 5.077393,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "within",
+          "denominator": [
+            1143107,
+            2385220
+          ]
+        },
+        {
+          "metric": "ore/coal_ore/y64",
+          "before": 4.515381,
+          "after": 4.163574,
+          "vanilla": 7.148193,
+          "unit": "per chunk",
+          "tolerance": 1.429638671875,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y64",
+          "before": 1.790039,
+          "after": 1.720947,
+          "vanilla": 2.792725,
+          "unit": "per chunk",
+          "tolerance": 0.558544921875,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/32/underground_water",
+          "before": 8.797429,
+          "after": 6.714023,
+          "vanilla": 4.207309,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": [
+            10133849,
+            13823112
+          ]
+        },
+        {
+          "metric": "ore/coal_ore/y80",
+          "before": 2.51001,
+          "after": 2.133789,
+          "vanilla": 3.323975,
+          "unit": "per chunk",
+          "tolerance": 0.664794921875,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "cave_component_volume/p99",
+          "before": 7237.56,
+          "after": 3780.68,
+          "vanilla": 5622.5,
+          "unit": "blocks (chunk clipped)",
+          "tolerance": 1124.5,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-48/underground_air",
+          "before": 12.257469,
+          "after": 6.471771,
+          "vanilla": 8.596116,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": [
+            16777216,
+            16777216
+          ]
+        },
+        {
+          "metric": "ore/coal_ore/y96",
+          "before": 1.339355,
+          "after": 0.945557,
+          "vanilla": 1.356689,
+          "unit": "per chunk",
+          "tolerance": 0.271337890625,
+          "verdict": "outside",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y80",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.349365,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "outside",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "cave_shape_proxy/large_chamber_like",
+          "before": 0.906494,
+          "after": 0.97876,
+          "vanilla": 0.787109,
+          "unit": "chunk-clipped components per chunk",
+          "tolerance": 0.15742187500000002,
+          "verdict": "outside",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/48/underground_air",
+          "before": 3.842248,
+          "after": 1.89878,
+          "vanilla": 3.66703,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            5685123,
+            8068027
+          ]
+        },
+        {
+          "metric": "depth/0/underground_water",
+          "before": 2.862066,
+          "after": 3.008271,
+          "vanilla": 4.757189,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777214,
+            16768181
+          ]
+        },
+        {
+          "metric": "depth/80/underground_air",
+          "before": 1.866087,
+          "after": 2.205631,
+          "vanilla": 3.734621,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            488341,
+            1085947
+          ]
+        },
+        {
+          "metric": "depth/16/underground_water",
+          "before": 3.996267,
+          "after": 2.870462,
+          "vanilla": 4.308604,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16482468,
+            16612203
+          ]
+        },
+        {
+          "metric": "ore/lapis_ore/y48",
+          "before": 0.701904,
+          "after": 0.741455,
+          "vanilla": 0.98291,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y112",
+          "before": 0.476074,
+          "after": 0.32959,
+          "vanilla": 0.108398,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_copper_ore/y-16",
+          "before": 5.39624,
+          "after": 4.121826,
+          "vanilla": 4.948242,
+          "unit": "per chunk",
+          "tolerance": 0.9896484375000001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y0",
+          "before": 1.588623,
+          "after": 1.39209,
+          "vanilla": 1.197998,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y32",
+          "before": 1.453125,
+          "after": 1.588135,
+          "vanilla": 1.868896,
+          "unit": "per chunk",
+          "tolerance": 0.373779296875,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-48",
+          "before": 5.51709,
+          "after": 4.85791,
+          "vanilla": 4.25293,
+          "unit": "per chunk",
+          "tolerance": 0.8505859375,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y32",
+          "before": 25.748291,
+          "after": 22.275146,
+          "vanilla": 25.813232,
+          "unit": "per chunk",
+          "tolerance": 5.162646484375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-32",
+          "before": 3.51001,
+          "after": 3.227539,
+          "vanilla": 3.739746,
+          "unit": "per chunk",
+          "tolerance": 0.7479492187500001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-64",
+          "before": 13.790527,
+          "after": 13.122559,
+          "vanilla": 15.068115,
+          "unit": "per chunk",
+          "tolerance": 3.0136230468750003,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-64",
+          "before": 3.327148,
+          "after": 3.426514,
+          "vanilla": 3.930176,
+          "unit": "per chunk",
+          "tolerance": 0.7860351562500001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-32",
+          "before": 5.523682,
+          "after": 5.494873,
+          "vanilla": 6.261719,
+          "unit": "per chunk",
+          "tolerance": 1.25234375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-16",
+          "before": 3.497803,
+          "after": 3.202637,
+          "vanilla": 3.647705,
+          "unit": "per chunk",
+          "tolerance": 0.7295410156250001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_shape_proxy/other",
+          "before": 1.525879,
+          "after": 2.175293,
+          "vanilla": 2.456543,
+          "unit": "chunk-clipped components per chunk",
+          "tolerance": 0.49130859375,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y16",
+          "before": 3.022461,
+          "after": 3.277832,
+          "vanilla": 2.943115,
+          "unit": "per chunk",
+          "tolerance": 0.588623046875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y32",
+          "before": 24.593262,
+          "after": 22.259033,
+          "vanilla": 25.069824,
+          "unit": "per chunk",
+          "tolerance": 5.01396484375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-16",
+          "before": 10.473877,
+          "after": 10.617188,
+          "vanilla": 11.92749,
+          "unit": "per chunk",
+          "tolerance": 2.385498046875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y-16",
+          "before": 0.0,
+          "after": 0.196045,
+          "vanilla": 0.326172,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y48",
+          "before": 13.049561,
+          "after": 11.168701,
+          "vanilla": 12.4104,
+          "unit": "per chunk",
+          "tolerance": 2.482080078125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y80",
+          "before": 0.523438,
+          "after": 0.462646,
+          "vanilla": 0.587402,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y32",
+          "before": 7.84082,
+          "after": 9.166016,
+          "vanilla": 10.172852,
+          "unit": "per chunk",
+          "tolerance": 2.0345703125,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y48",
+          "before": 17.634521,
+          "after": 15.773926,
+          "vanilla": 17.415527,
+          "unit": "per chunk",
+          "tolerance": 3.4831054687500003,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/diamond_ore/y0",
+          "before": 0.363525,
+          "after": 0.482666,
+          "vanilla": 0.373779,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-16/underground_air",
+          "before": 9.804648,
+          "after": 10.493773,
+          "vanilla": 11.068104,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16775321
+          ]
+        },
+        {
+          "metric": "ore/lapis_ore/y0",
+          "before": 3.275391,
+          "after": 3.831299,
+          "vanilla": 3.528564,
+          "unit": "per chunk",
+          "tolerance": 0.7057128906250001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-32",
+          "before": 3.260254,
+          "after": 2.978027,
+          "vanilla": 3.241699,
+          "unit": "per chunk",
+          "tolerance": 0.6483398437500001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y0",
+          "before": 2.104492,
+          "after": 2.707764,
+          "vanilla": 2.504883,
+          "unit": "per chunk",
+          "tolerance": 0.5009765625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-64",
+          "before": 6.669189,
+          "after": 6.814453,
+          "vanilla": 7.398682,
+          "unit": "per chunk",
+          "tolerance": 1.479736328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y0",
+          "before": 11.457764,
+          "after": 10.732422,
+          "vanilla": 11.652344,
+          "unit": "per chunk",
+          "tolerance": 2.33046875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y0",
+          "before": 1.148926,
+          "after": 1.088867,
+          "vanilla": 0.991211,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-32/underground_water",
+          "before": 0.3865,
+          "after": 0.318563,
+          "vanilla": 0.828315,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777197
+          ]
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-48",
+          "before": 3.395508,
+          "after": 3.703125,
+          "vanilla": 4.006836,
+          "unit": "per chunk",
+          "tolerance": 0.8013671875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-64",
+          "before": 1.783447,
+          "after": 1.706299,
+          "vanilla": 1.843506,
+          "unit": "per chunk",
+          "tolerance": 0.368701171875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y0",
+          "before": 0.311523,
+          "after": 0.288818,
+          "vanilla": 0.196045,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y16",
+          "before": 1.203369,
+          "after": 1.389648,
+          "vanilla": 1.296875,
+          "unit": "per chunk",
+          "tolerance": 0.259375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y80",
+          "before": 0.07373,
+          "after": 0.083252,
+          "vanilla": 0.168213,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-32",
+          "before": 6.22876,
+          "after": 5.341309,
+          "vanilla": 5.727051,
+          "unit": "per chunk",
+          "tolerance": 1.14541015625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y16",
+          "before": 19.49292,
+          "after": 17.871582,
+          "vanilla": 16.746826,
+          "unit": "per chunk",
+          "tolerance": 3.349365234375,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y0",
+          "before": 4.252686,
+          "after": 4.071777,
+          "vanilla": 3.825928,
+          "unit": "per chunk",
+          "tolerance": 0.7651855468750001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y96",
+          "before": 0.112793,
+          "after": 0.118652,
+          "vanilla": 0.19751,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-32/underground_air",
+          "before": 10.519165,
+          "after": 10.436463,
+          "vanilla": 10.032164,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777197
+          ]
+        },
+        {
+          "metric": "ore/deepslate_iron_ore/y-64",
+          "before": 2.681152,
+          "after": 2.674561,
+          "vanilla": 2.845459,
+          "unit": "per chunk",
+          "tolerance": 0.569091796875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y0",
+          "before": 5.839844,
+          "after": 5.553467,
+          "vanilla": 5.242432,
+          "unit": "per chunk",
+          "tolerance": 1.048486328125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-32/underground_lava",
+          "before": 0.215185,
+          "after": 0.222331,
+          "vanilla": 0.615335,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777197
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y16",
+          "before": 17.324219,
+          "after": 20.445068,
+          "vanilla": 19.309082,
+          "unit": "per chunk",
+          "tolerance": 3.86181640625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_coal_ore/y-16",
+          "before": 0.037598,
+          "after": 0.0271,
+          "vanilla": 0.099121,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y-48",
+          "before": 8.138184,
+          "after": 8.188477,
+          "vanilla": 8.672852,
+          "unit": "per chunk",
+          "tolerance": 1.7345703125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_component_volume/p95",
+          "before": 3981.2,
+          "after": 1878.4,
+          "vanilla": 1779.5,
+          "unit": "blocks (chunk clipped)",
+          "tolerance": 355.90000000000003,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-64/underground_air",
+          "before": 2.297634,
+          "after": 1.209015,
+          "vanilla": 1.551706,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777216
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y112",
+          "before": 0.115723,
+          "after": 0.107422,
+          "vanilla": 0.043213,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/water_interface_median_y",
+          "before": 15.0,
+          "after": 12.0,
+          "vanilla": 13.0,
+          "unit": "Y blocks",
+          "tolerance": 4,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-48",
+          "before": 6.191895,
+          "after": 6.731689,
+          "vanilla": 7.077881,
+          "unit": "per chunk",
+          "tolerance": 1.4155761718750002,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/raw_iron_block",
+          "before": 0.147949,
+          "after": 0.095947,
+          "vanilla": 0.119629,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/redstone_ore/y-16",
+          "before": 0.0,
+          "after": 0.036133,
+          "vanilla": 0.093506,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/raw_copper_block",
+          "before": 0.12207,
+          "after": 0.074707,
+          "vanilla": 0.095459,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_gold_ore/y-16",
+          "before": 5.662598,
+          "after": 5.574707,
+          "vanilla": 5.813965,
+          "unit": "per chunk",
+          "tolerance": 1.16279296875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/redstone_ore/y16",
+          "before": 0.047119,
+          "after": 0.049561,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-16",
+          "before": 5.258789,
+          "after": 4.766357,
+          "vanilla": 4.962646,
+          "unit": "per chunk",
+          "tolerance": 0.992529296875,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-16/underground_lava",
+          "before": 0.203323,
+          "after": 0.292987,
+          "vanilla": 0.035195,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16775321
+          ]
+        },
+        {
+          "metric": "ore/deepslate_redstone_ore/y0",
+          "before": 0.916992,
+          "after": 0.801758,
+          "vanilla": 0.849609,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y64",
+          "before": 0.116211,
+          "after": 0.142334,
+          "vanilla": 0.189453,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y128",
+          "before": 0.140625,
+          "after": 0.044189,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/16/underground_air",
+          "before": 11.494717,
+          "after": 6.9132,
+          "vanilla": 7.132197,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            16482468,
+            16612203
+          ]
+        },
+        {
+          "metric": "ore/deepslate_coal_ore/y0",
+          "before": 0.789062,
+          "after": 0.596924,
+          "vanilla": 0.637451,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/0/underground_air",
+          "before": 13.871163,
+          "after": 7.349099,
+          "vanilla": 7.147162,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            16777214,
+            16768181
+          ]
+        },
+        {
+          "metric": "ore/deepslate_copper_ore/y-32",
+          "before": 0.013916,
+          "after": 0.013916,
+          "vanilla": 0.050781,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y16",
+          "before": 27.34375,
+          "after": 23.110352,
+          "vanilla": 22.488037,
+          "unit": "per chunk",
+          "tolerance": 4.497607421875,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/budding_amethyst",
+          "before": 1.456543,
+          "after": 1.471924,
+          "vanilla": 1.432617,
+          "unit": "per chunk",
+          "tolerance": 0.28652343750000003,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "cave_shape_proxy/thin_like",
+          "before": 1.561035,
+          "after": 2.465332,
+          "vanilla": 2.53418,
+          "unit": "chunk-clipped components per chunk",
+          "tolerance": 0.5068359375,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y0",
+          "before": 12.450928,
+          "after": 15.717285,
+          "vanilla": 16.13208,
+          "unit": "per chunk",
+          "tolerance": 3.2264160156250004,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-48/underground_water",
+          "before": 1.03035,
+          "after": 0.470847,
+          "vanilla": 0.315762,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777216
+          ]
+        },
+        {
+          "metric": "ore/gold_ore/y-16",
+          "before": 0.0,
+          "after": 0.073242,
+          "vanilla": 0.102295,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-48/underground_lava",
+          "before": 0.21143,
+          "after": 0.112247,
+          "vanilla": 0.265759,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777216
+          ]
+        },
+        {
+          "metric": "ore/copper_ore/y-16",
+          "before": 0.0,
+          "after": 0.134521,
+          "vanilla": 0.162598,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/amethyst_block",
+          "before": 16.060303,
+          "after": 16.186035,
+          "vanilla": 15.835205,
+          "unit": "per chunk",
+          "tolerance": 3.167041015625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y-16",
+          "before": 0.0,
+          "after": 0.086182,
+          "vanilla": 0.112793,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/lapis_ore/y64",
+          "before": 0.026611,
+          "after": 0.029053,
+          "vanilla": 0.002686,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "blocks/spawner",
+          "before": 0.03125,
+          "after": 0.039307,
+          "vanilla": 0.029053,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_lapis_ore/y-48",
+          "before": 1.961182,
+          "after": 1.999756,
+          "vanilla": 2.041016,
+          "unit": "per chunk",
+          "tolerance": 0.408203125,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/gold_ore/y96",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.023193,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-32",
+          "before": 5.394775,
+          "after": 5.291748,
+          "vanilla": 5.389893,
+          "unit": "per chunk",
+          "tolerance": 1.0779785156250001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/32/underground_air",
+          "before": 8.429589,
+          "after": 4.856625,
+          "vanilla": 4.743642,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": [
+            10133849,
+            13823112
+          ]
+        },
+        {
+          "metric": "ore/redstone_ore/y0",
+          "before": 2.245605,
+          "after": 2.592529,
+          "vanilla": 2.635742,
+          "unit": "per chunk",
+          "tolerance": 0.5271484375000001,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y48",
+          "before": 0.010986,
+          "after": 0.019287,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-16/underground_water",
+          "before": 0.521529,
+          "after": 0.713855,
+          "vanilla": 0.811907,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16775321
+          ]
+        },
+        {
+          "metric": "ore/iron_ore/y48",
+          "before": 1.323242,
+          "after": 1.616211,
+          "vanilla": 1.594238,
+          "unit": "per chunk",
+          "tolerance": 0.31884765625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/iron_ore/y128",
+          "before": 0.031494,
+          "after": 0.016357,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-64/underground_lava",
+          "before": 0.567645,
+          "after": 0.56023,
+          "vanilla": 0.643301,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777216
+          ]
+        },
+        {
+          "metric": "ore/deepslate_diamond_ore/y-16",
+          "before": 3.776611,
+          "after": 3.54126,
+          "vanilla": 3.582031,
+          "unit": "per chunk",
+          "tolerance": 0.71640625,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_copper_block/y32",
+          "before": 0.030029,
+          "after": 0.016357,
+          "vanilla": 0.030273,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-64",
+          "before": 0.019287,
+          "after": 0.01001,
+          "vanilla": 0.021973,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y64",
+          "before": 0.005371,
+          "after": 0.010498,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y32",
+          "before": 0.008301,
+          "after": 0.01001,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-16",
+          "before": 0.005615,
+          "after": 0.003174,
+          "vanilla": 0.012939,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/-64/underground_water",
+          "before": 0.166142,
+          "after": 0.07202,
+          "vanilla": 0.022066,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777216,
+            16777216
+          ]
+        },
+        {
+          "metric": "ore/emerald_ore/y16",
+          "before": 0.007324,
+          "after": 0.006592,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y80",
+          "before": 0.005127,
+          "after": 0.006592,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/coal_ore/y-16",
+          "before": 0.0,
+          "after": 0.002197,
+          "vanilla": 0.007812,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y96",
+          "before": 0.005127,
+          "after": 0.005615,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_copper_block/y0",
+          "before": 0.016602,
+          "after": 0.010986,
+          "vanilla": 0.016602,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/diamond_ore/y16",
+          "before": 0.003906,
+          "after": 0.006104,
+          "vanilla": 0.001221,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/80/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.021456,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            488341,
+            1085947
+          ]
+        },
+        {
+          "metric": "ore/emerald_ore/y0",
+          "before": 0.001953,
+          "after": 0.003174,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y112",
+          "before": 0.002441,
+          "after": 0.003174,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/deepslate_copper_ore/y0",
+          "before": 3.507324,
+          "after": 2.329346,
+          "vanilla": 2.335205,
+          "unit": "per chunk",
+          "tolerance": 0.467041015625,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-48",
+          "before": 0.061279,
+          "after": 0.043945,
+          "vanilla": 0.045898,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/80/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.009116,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            488341,
+            1085947
+          ]
+        },
+        {
+          "metric": "depth/0/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.008051,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16777214,
+            16768181
+          ]
+        },
+        {
+          "metric": "depth/48/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.007846,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            5685123,
+            8068027
+          ]
+        },
+        {
+          "metric": "depth/64/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.00696,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            1143107,
+            2385220
+          ]
+        },
+        {
+          "metric": "ore/deepslate_emerald_ore/y0",
+          "before": 0.001221,
+          "after": 0.001221,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_copper_block/y16",
+          "before": 0.074219,
+          "after": 0.046387,
+          "vanilla": 0.047607,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "depth/16/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005881,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            16482468,
+            16612203
+          ]
+        },
+        {
+          "metric": "depth/64/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005828,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            1143107,
+            2385220
+          ]
+        },
+        {
+          "metric": "depth/32/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005621,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            10133849,
+            13823112
+          ]
+        },
+        {
+          "metric": "ore/deepslate_emerald_ore/y-16",
+          "before": 0.001709,
+          "after": 0.000732,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/diamond_ore/y-16",
+          "before": 0.0,
+          "after": 0.024414,
+          "vanilla": 0.025146,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/emerald_ore/y-16",
+          "before": null,
+          "after": 0.000732,
+          "vanilla": 0.0,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": null,
+          "denominator": null
+        },
+        {
+          "metric": "depth/112/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.00315,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            78922,
+            31742
+          ]
+        },
+        {
+          "metric": "cave_component_volume/p50",
+          "before": 63.0,
+          "after": 45.0,
+          "vanilla": 45.0,
+          "unit": "blocks (chunk clipped)",
+          "tolerance": 16,
+          "verdict": "within",
+          "before_verdict": "outside",
+          "denominator": null
+        },
+        {
+          "metric": "depth/112/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            78922,
+            31742
+          ]
+        },
+        {
+          "metric": "depth/96/underground_lava",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            229635,
+            453260
+          ]
+        },
+        {
+          "metric": "depth/96/underground_water",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": [
+            229635,
+            453260
+          ]
+        },
+        {
+          "metric": "depth/lava_interface_median_y",
+          "before": -55.0,
+          "after": -55.0,
+          "vanilla": -55.0,
+          "unit": "Y blocks",
+          "tolerance": 4,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/copper_ore/y96",
+          "before": 0.12085,
+          "after": 0.101318,
+          "vanilla": 0.101318,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_copper_block/y48",
+          "before": 0.001221,
+          "after": 0.000977,
+          "vanilla": 0.000977,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        },
+        {
+          "metric": "ore/raw_iron_block/y-32",
+          "before": 0.061768,
+          "after": 0.038818,
+          "vanilla": 0.038818,
+          "unit": "per chunk",
+          "tolerance": 0.25,
+          "verdict": "within",
+          "before_verdict": "within",
+          "denominator": null
+        }
+      ],
+      "cave_biome_shares_percent": {
+        "saved_4096_before": {
+          "dripstone_caves": 1.895571,
+          "lush_caves": 0.311295,
+          "deep_dark": 0.02532,
+          "sulfur_caves": 0.029532
+        },
+        "fresh_4096": {
+          "dripstone_caves": 1.89182,
+          "lush_caves": 0.310818,
+          "deep_dark": 0.022427,
+          "sulfur_caves": 0.029453
+        },
+        "official_4096": {
+          "dripstone_caves": 0.96283,
+          "lush_caves": 1.151689,
+          "deep_dark": 0.040038,
+          "sulfur_caves": 0.640615
+        },
+        "saved_full_before": {
+          "dripstone_caves": 1.891057,
+          "lush_caves": 0.745156,
+          "deep_dark": 0.606915,
+          "sulfur_caves": 0.091038
+        },
+        "official_full": {
+          "dripstone_caves": 0.966729,
+          "lush_caves": 1.314841,
+          "deep_dark": 0.277175,
+          "sulfur_caves": 0.414885
+        }
+      },
+      "objects": {
+        "before": {
+          "interior_shell_components": 110,
+          "interior_chunks": 3136,
+          "shell_components_per_chunk": 0.035076530612244895,
+          "spawners_by_entity": {
+            "minecraft:cave_spider": 46,
+            "minecraft:skeleton": 23,
+            "minecraft:spider": 19,
+            "minecraft:zombie": 40
+          },
+          "dungeons": 82
+        },
+        "after": {
+          "interior_shell_components": 113,
+          "interior_chunks": 3136,
+          "shell_components_per_chunk": 0.036033163265306124,
+          "spawners_by_entity": {
+            "minecraft:cave_spider": 47,
+            "minecraft:skeleton": 29,
+            "minecraft:spider": 29,
+            "minecraft:zombie": 56
+          },
+          "dungeons": 114
+        },
+        "vanilla": {
+          "interior_shell_components": 121,
+          "interior_chunks": 3136,
+          "shell_components_per_chunk": 0.038584183673469385,
+          "spawners_by_entity": {
+            "skeleton": 24,
+            "spider": 22,
+            "zombie": 45,
+            "cave_spider": 28
+          },
+          "dungeons": 91
+        }
+      },
+      "sulfur": {
+        "seed": 100554032945340,
+        "selection": "All sulfur-bearing chunks in the saved ours census; each side normalized by its own biome volume",
+        "regenerated_chunks": 1764,
+        "before": {
+          "blocks": {
+            "sulfur": 1364407,
+            "cinnabar": 1007601,
+            "sulfur_spike": 2236,
+            "potent_sulfur": 543
+          },
+          "biome_volume": 3333568,
+          "seed": 100554032945340,
+          "chunks": 1764,
+          "per_million_biome_blocks": {
+            "sulfur": 409293.285753,
+            "cinnabar": 302259.020965,
+            "sulfur_spike": 670.752779,
+            "potent_sulfur": 162.888533
+          }
+        },
+        "after": {
+          "seed": 100554032945340,
+          "blocks": {
+            "sulfur": 1238926,
+            "cinnabar": 910552,
+            "sulfur_spike": 7930,
+            "potent_sulfur": 109
+          },
+          "biome_volume": 3335104,
+          "chunks": 1764,
+          "per_million_biome_blocks": {
+            "sulfur": 371480.469575,
+            "cinnabar": 273020.571472,
+            "sulfur_spike": 2377.736946,
+            "potent_sulfur": 32.682639
+          }
+        },
+        "vanilla": {
+          "biome_volume": 15191936,
+          "blocks": {
+            "sulfur": 5368661,
+            "cinnabar": 4677754,
+            "sulfur_spike": 30642,
+            "potent_sulfur": 459
+          },
+          "per_million_biome_blocks": {
+            "sulfur": 353388.863671,
+            "cinnabar": 307910.328216,
+            "sulfur_spike": 2016.991119,
+            "potent_sulfur": 30.213397
+          }
+        },
+        "metrics": [
+          {
+            "material": "sulfur",
+            "before": 409293.285752683,
+            "after": 371480.469574562,
+            "vanilla": 353388.86367083166,
+            "tolerance": 70677.77273416634,
+            "verdict": "within"
+          },
+          {
+            "material": "cinnabar",
+            "before": 302259.0209649241,
+            "after": 273020.57147243386,
+            "vanilla": 307910.3282162326,
+            "tolerance": 61582.06564324652,
+            "verdict": "within"
+          },
+          {
+            "material": "sulfur_spike",
+            "before": 670.7527790043581,
+            "after": 2377.7369461342137,
+            "vanilla": 2016.991119499187,
+            "tolerance": 403.39822389983743,
+            "verdict": "within"
+          },
+          {
+            "material": "potent_sulfur",
+            "before": 162.88853264730162,
+            "after": 32.68263898217267,
+            "vanilla": 30.213397423475193,
+            "tolerance": 6.042679484695039,
+            "verdict": "within"
+          }
+        ]
+      },
+      "remaining_regular_outliers": [
+        "depth/112/underground_air",
+        "ore/gold_ore/y48",
+        "ore/gold_ore/y32",
+        "depth/96/underground_air",
+        "ore/gold_ore/y64",
+        "depth/48/underground_water",
+        "depth/64/underground_air",
+        "ore/coal_ore/y64",
+        "ore/copper_ore/y64",
+        "depth/32/underground_water",
+        "ore/coal_ore/y80",
+        "cave_component_volume/p99",
+        "depth/-48/underground_air",
+        "ore/coal_ore/y96",
+        "ore/gold_ore/y80",
+        "cave_shape_proxy/large_chamber_like"
+      ]
+    }
+  },
+  "intermediate_second_full": {
+    "chunks": 37249,
+    "code_state": {
+      "sources": {
+        "src/world/mod.rs": "ae567eb42733781cb8a60506feab135173535ae75d99a231c95f5ef106ac6694",
+        "src/world/terrain.rs": "644e0135d8c5cf5e2bf7f51cedc44f68810d5752b43445d3edf96e162b3e35c1",
+        "src/world/underground.rs": "05745faa32610475f6c1e0e25464e87a1a57a91d147f31920653cbb601437b49",
+        "src/world/sulfur_caves.rs": "37c740828186f68dffe42d107515d367bc447d47449b7b60d663322d91088778"
+      },
+      "binary_sha256": "7b5cf851c3427e8a02079f218b3c2a4f4b9ef8aee74aaad99b9eafa10e2c5422"
+    },
+    "purpose": "Intermediate full-census measurement before ordinary-cluster size and liquid-exposure corrections",
+    "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+    "reports_sha256": {
+      "before": "cea5d945729d590679b2cb46bf85eb90f33bfebf1dd752a2619609d7f5f241c5",
+      "after": "a8568972fc4bd4a419bb5e35c484bb9f0398299ce02c968d400ef7a9eff784aa"
+    },
+    "coverage": {
+      "dimension": "overworld",
+      "ours": {
+        "chunks": 37249,
+        "requested": 37249,
+        "chunk_sha256": "39b95f36f0efa680edc44b94a9be72b38d69a0653bf169aa8877e5992046e05e",
+        "missing_first20": [],
+        "bounds_chunks": [
+          -67,
+          -98,
+          125,
+          94
+        ]
+      },
+      "vanilla": {
+        "chunks": 37249,
+        "requested": 37249,
+        "chunk_sha256": "39b95f36f0efa680edc44b94a9be72b38d69a0653bf169aa8877e5992046e05e",
+        "missing_first20": [],
+        "bounds_chunks": [
+          -67,
+          -98,
+          125,
+          94
+        ]
+      },
+      "same_chunks": true,
+      "complete": true
+    },
+    "metrics": [
+      {
+        "metric": "depth/128/underground_air",
+        "before": 18.696812,
+        "after": 16.250025,
+        "vanilla": 3.34297,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": [
+          1335321,
+          101347
+        ]
+      },
+      {
+        "metric": "depth/112/underground_air",
+        "before": 12.484943,
+        "after": 13.472158,
+        "vanilla": 2.565808,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": [
+          3247683,
+          659948
+        ]
+      },
+      {
+        "metric": "ore/coal_ore/y96",
+        "before": 3.297082,
+        "after": 3.303686,
+        "vanilla": 1.386131,
+        "unit": "per chunk",
+        "tolerance": 0.2772262342613225,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y112",
+        "before": 1.651534,
+        "after": 1.64297,
+        "vanilla": 0.286988,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "depth/144/underground_air",
+        "before": 21.718728,
+        "after": 10.188663,
+        "vanilla": 4.458634,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": [
+          362923,
+          17853
+        ]
+      },
+      {
+        "metric": "ore/gold_ore/y32",
+        "before": 0.209053,
+        "after": 0.217294,
+        "vanilla": 1.177777,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "depth/64/underground_air",
+        "before": 5.052671,
+        "after": 3.017276,
+        "vanilla": 7.247525,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": [
+          19789374,
+          23036223
+        ]
+      },
+      {
+        "metric": "ore/coal_ore/y128",
+        "before": 0.873312,
+        "after": 0.828425,
+        "vanilla": 0.047518,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "depth/160/underground_air",
+        "before": 15.086287,
+        "after": 8.320216,
+        "vanilla": 11.981567,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": [
+          17788,
+          651
+        ]
+      },
+      {
+        "metric": "ore/gold_ore/y48",
+        "before": 0.193535,
+        "after": 0.196086,
+        "vanilla": 0.715724,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "depth/96/underground_air",
+        "before": 8.918448,
+        "after": 8.054985,
+        "vanilla": 5.342666,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": [
+          6050055,
+          3768456
+        ]
+      },
+      {
+        "metric": "ore/coal_ore/y80",
+        "before": 4.991543,
+        "after": 4.950281,
+        "vanilla": 3.598727,
+        "unit": "per chunk",
+        "tolerance": 0.7197454965233967,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y144",
+        "before": 0.405004,
+        "after": 0.431206,
+        "vanilla": 0.003329,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "cave_component_volume/p99",
+        "before": 7327.97,
+        "after": 3787.0,
+        "vanilla": 5529.0,
+        "unit": "blocks (chunk clipped)",
+        "tolerance": 1105.8,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y16",
+        "before": 20.178985,
+        "after": 21.450321,
+        "vanilla": 16.635561,
+        "unit": "per chunk",
+        "tolerance": 3.3271121372385837,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y64",
+        "before": 0.085237,
+        "after": 0.087814,
+        "vanilla": 0.440817,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "cave_shape_proxy/large_chamber_like",
+        "before": 0.976617,
+        "after": 1.04333,
+        "vanilla": 0.813606,
+        "unit": "chunk-clipped components per chunk",
+        "tolerance": 0.16272114687642622,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y16",
+        "before": 27.333271,
+        "after": 27.643239,
+        "vanilla": 21.592714,
+        "unit": "per chunk",
+        "tolerance": 4.318542779671938,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y64",
+        "before": 9.081076,
+        "after": 9.295122,
+        "vanilla": 7.498107,
+        "unit": "per chunk",
+        "tolerance": 1.49962146634809,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_copper_ore/y0",
+        "before": 3.382212,
+        "after": 2.830707,
+        "vanilla": 2.318022,
+        "unit": "per chunk",
+        "tolerance": 0.46360439206421655,
+        "verdict": "outside",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_iron_ore/y-64",
+        "before": 2.687052,
+        "after": 2.355607,
+        "vanilla": 3.006926,
+        "unit": "per chunk",
+        "tolerance": 0.6013852720878413,
+        "verdict": "outside",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y0",
+        "before": 5.872184,
+        "after": 6.535343,
+        "vanilla": 5.397514,
+        "unit": "per chunk",
+        "tolerance": 1.0795028054444415,
+        "verdict": "outside",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_gold_ore/y-64",
+        "before": 3.282316,
+        "after": 3.127413,
+        "vanilla": 3.934414,
+        "unit": "per chunk",
+        "tolerance": 0.7868828693387742,
+        "verdict": "outside",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/48/underground_water",
+        "before": 4.805264,
+        "after": 4.017516,
+        "vanilla": 2.248395,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": [
+          53627593,
+          74360718
+        ]
+      },
+      {
+        "metric": "depth/80/underground_air",
+        "before": 5.131944,
+        "after": 3.908764,
+        "vanilla": 5.664347,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          9111167,
+          10031448
+        ]
+      },
+      {
+        "metric": "depth/0/underground_water",
+        "before": 3.161902,
+        "after": 3.039693,
+        "vanilla": 4.598541,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571890,
+          152493300
+        ]
+      },
+      {
+        "metric": "ore/deepslate_gold_ore/y-32",
+        "before": 5.46761,
+        "after": 5.045129,
+        "vanilla": 6.302048,
+        "unit": "per chunk",
+        "tolerance": 1.2604096754275282,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y112",
+        "before": 0.334157,
+        "after": 0.322237,
+        "vanilla": 0.081774,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_iron_ore/y-16",
+        "before": 10.519289,
+        "after": 9.623963,
+        "vanilla": 11.867567,
+        "unit": "per chunk",
+        "tolerance": 2.3735133829096084,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y64",
+        "before": 3.744557,
+        "after": 3.85911,
+        "vanilla": 3.258101,
+        "unit": "per chunk",
+        "tolerance": 0.6516201777228919,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_gold_ore/y-48",
+        "before": 3.372225,
+        "after": 3.394373,
+        "vanilla": 4.155655,
+        "unit": "per chunk",
+        "tolerance": 0.8311310370748208,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y80",
+        "before": 1.024645,
+        "after": 1.026605,
+        "vanilla": 0.809149,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/lapis_ore/y32",
+        "before": 1.549089,
+        "after": 1.623829,
+        "vanilla": 1.953099,
+        "unit": "per chunk",
+        "tolerance": 0.3906198824129507,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y32",
+        "before": 8.270611,
+        "after": 8.666004,
+        "vanilla": 10.402293,
+        "unit": "per chunk",
+        "tolerance": 2.080458535799619,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_redstone_ore/y-32",
+        "before": 3.484362,
+        "after": 3.248973,
+        "vanilla": 3.895433,
+        "unit": "per chunk",
+        "tolerance": 0.7790866868909233,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-32/underground_air",
+        "before": 11.050034,
+        "after": 10.808649,
+        "vanilla": 9.722345,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571303
+        ]
+      },
+      {
+        "metric": "depth/48/underground_air",
+        "before": 4.105375,
+        "after": 2.520941,
+        "vanilla": 3.596995,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          53627593,
+          74360718
+        ]
+      },
+      {
+        "metric": "ore/deepslate_redstone_ore/y-16",
+        "before": 3.418374,
+        "after": 3.157454,
+        "vanilla": 3.744986,
+        "unit": "per chunk",
+        "tolerance": 0.7489972885178126,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/water_interface_median_y",
+        "before": 15.0,
+        "after": 13.0,
+        "vanilla": 16.0,
+        "unit": "Y blocks",
+        "tolerance": 4,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_lapis_ore/y0",
+        "before": 1.595828,
+        "after": 1.393997,
+        "vanilla": 1.210314,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y128",
+        "before": 0.204301,
+        "after": 0.194394,
+        "vanilla": 0.018792,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y0",
+        "before": 11.445086,
+        "after": 12.881876,
+        "vanilla": 11.301914,
+        "unit": "per chunk",
+        "tolerance": 2.2603828290692367,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_redstone_ore/y-64",
+        "before": 13.800478,
+        "after": 13.146876,
+        "vanilla": 15.200328,
+        "unit": "per chunk",
+        "tolerance": 3.0400655051142316,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/lapis_ore/y48",
+        "before": 0.78386,
+        "after": 0.801498,
+        "vanilla": 0.967462,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-48/underground_air",
+        "before": 13.180092,
+        "after": 7.028605,
+        "vanilla": 7.871244,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": [
+          152571904,
+          152571831
+        ]
+      },
+      {
+        "metric": "depth/-16/underground_air",
+        "before": 9.877955,
+        "after": 9.968744,
+        "vanilla": 10.793159,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152557039
+        ]
+      },
+      {
+        "metric": "ore/iron_ore/y48",
+        "before": 1.394856,
+        "after": 1.432602,
+        "vanilla": 1.632339,
+        "unit": "per chunk",
+        "tolerance": 0.3264678246395877,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_diamond_ore/y-64",
+        "before": 6.693012,
+        "after": 6.432522,
+        "vanilla": 7.328948,
+        "unit": "per chunk",
+        "tolerance": 1.4657896856291446,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_iron_ore/y-48",
+        "before": 5.669629,
+        "after": 4.678515,
+        "vanilla": 4.17775,
+        "unit": "per chunk",
+        "tolerance": 0.8355499476496013,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y48",
+        "before": 18.922253,
+        "after": 19.425837,
+        "vanilla": 17.372547,
+        "unit": "per chunk",
+        "tolerance": 3.474509382802223,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_diamond_ore/y-32",
+        "before": 5.246101,
+        "after": 4.919031,
+        "vanilla": 5.564391,
+        "unit": "per chunk",
+        "tolerance": 1.1128781980724314,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y80",
+        "before": 0.055008,
+        "after": 0.055814,
+        "vanilla": 0.199979,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "cave_shape_proxy/other",
+        "before": 1.536095,
+        "after": 2.238503,
+        "vanilla": 2.527424,
+        "unit": "chunk-clipped components per chunk",
+        "tolerance": 0.505484710998953,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "depth/32/underground_water",
+        "before": 5.950343,
+        "after": 4.147524,
+        "vanilla": 3.386922,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": [
+          96586045,
+          128576435
+        ]
+      },
+      {
+        "metric": "ore/iron_ore/y0",
+        "before": 12.46761,
+        "after": 14.269725,
+        "vanilla": 16.09756,
+        "unit": "per chunk",
+        "tolerance": 3.2195119332062605,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_gold_ore/y-16",
+        "before": 5.708771,
+        "after": 5.193213,
+        "vanilla": 5.846251,
+        "unit": "per chunk",
+        "tolerance": 1.1692501812129186,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_diamond_ore/y-48",
+        "before": 6.227335,
+        "after": 6.327901,
+        "vanilla": 7.110339,
+        "unit": "per chunk",
+        "tolerance": 1.4220677065156113,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y-16",
+        "before": 0.0,
+        "after": 0.188381,
+        "vanilla": 0.325834,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y96",
+        "before": 0.263041,
+        "after": 0.263309,
+        "vanilla": 0.12744,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_lapis_ore/y-32",
+        "before": 3.160971,
+        "after": 2.909286,
+        "vanilla": 3.260786,
+        "unit": "per chunk",
+        "tolerance": 0.6521571048887219,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/32/underground_air",
+        "before": 8.549224,
+        "after": 5.122649,
+        "vanilla": 4.41634,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": [
+          96586045,
+          128576435
+        ]
+      },
+      {
+        "metric": "blocks/amethyst_block",
+        "before": 16.247819,
+        "after": 16.739027,
+        "vanilla": 15.21018,
+        "unit": "per chunk",
+        "tolerance": 3.042036027812827,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "cave_shape_proxy/thin_like",
+        "before": 1.702274,
+        "after": 2.702623,
+        "vanilla": 2.460335,
+        "unit": "chunk-clipped components per chunk",
+        "tolerance": 0.49206690112486245,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y48",
+        "before": 13.886547,
+        "after": 14.184622,
+        "vanilla": 12.984698,
+        "unit": "per chunk",
+        "tolerance": 2.5969395151547694,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "blocks/budding_amethyst",
+        "before": 1.465919,
+        "after": 1.516121,
+        "vanilla": 1.390615,
+        "unit": "per chunk",
+        "tolerance": 0.2781229026282585,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y96",
+        "before": 0.315498,
+        "after": 0.318935,
+        "vanilla": 0.206368,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "cave_component_volume/p50",
+        "before": 60.0,
+        "after": 41.0,
+        "vanilla": 48.0,
+        "unit": "blocks (chunk clipped)",
+        "tolerance": 16,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y32",
+        "before": 25.996591,
+        "after": 27.456146,
+        "vanilla": 25.300464,
+        "unit": "per chunk",
+        "tolerance": 5.060092888399689,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/lapis_ore/y16",
+        "before": 2.973154,
+        "after": 3.178555,
+        "vanilla": 2.944884,
+        "unit": "per chunk",
+        "tolerance": 0.5889768852855111,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_iron_ore/y0",
+        "before": 4.149078,
+        "after": 3.603667,
+        "vanilla": 3.904749,
+        "unit": "per chunk",
+        "tolerance": 0.7809498241563533,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_redstone_ore/y-48",
+        "before": 8.096271,
+        "after": 8.166931,
+        "vanilla": 8.817203,
+        "unit": "per chunk",
+        "tolerance": 1.7634406292786384,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y144",
+        "before": 0.084298,
+        "after": 0.08768,
+        "vanilla": 0.001664,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_lapis_ore/y-64",
+        "before": 1.816344,
+        "after": 1.743993,
+        "vanilla": 1.86397,
+        "unit": "per chunk",
+        "tolerance": 0.3727939005073962,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/copper_ore/y32",
+        "before": 27.15093,
+        "after": 28.122151,
+        "vanilla": 26.448925,
+        "unit": "per chunk",
+        "tolerance": 5.289784960670086,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/lapis_ore/y0",
+        "before": 3.253215,
+        "after": 3.768933,
+        "vanilla": 3.553008,
+        "unit": "per chunk",
+        "tolerance": 0.7106016268893125,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/0/underground_air",
+        "before": 13.50844,
+        "after": 7.172329,
+        "vanilla": 7.566223,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": [
+          152571890,
+          152493300
+        ]
+      },
+      {
+        "metric": "ore/gold_ore/y0",
+        "before": 2.052189,
+        "after": 2.381218,
+        "vanilla": 2.525061,
+        "unit": "per chunk",
+        "tolerance": 0.5050122150930226,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/diamond_ore/y0",
+        "before": 0.356305,
+        "after": 0.427743,
+        "vanilla": 0.36299,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y16",
+        "before": 17.192086,
+        "after": 18.292947,
+        "vanilla": 19.271631,
+        "unit": "per chunk",
+        "tolerance": 3.8543262906386753,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_lapis_ore/y-16",
+        "before": 5.239147,
+        "after": 4.76998,
+        "vanilla": 5.024752,
+        "unit": "per chunk",
+        "tolerance": 1.0049504684689523,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/16/underground_air",
+        "before": 11.617967,
+        "after": 7.364252,
+        "vanilla": 7.044593,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": [
+          149923728,
+          151459306
+        ]
+      },
+      {
+        "metric": "ore/deepslate_coal_ore/y-16",
+        "before": 0.026739,
+        "after": 0.023705,
+        "vanilla": 0.080566,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/16/underground_water",
+        "before": 4.105481,
+        "after": 3.007935,
+        "vanilla": 3.309745,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          149923728,
+          151459306
+        ]
+      },
+      {
+        "metric": "depth/-64/underground_air",
+        "before": 2.674061,
+        "after": 1.299223,
+        "vanilla": 1.594411,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571904
+        ]
+      },
+      {
+        "metric": "ore/deepslate_redstone_ore/y0",
+        "before": 0.934656,
+        "after": 0.807243,
+        "vanilla": 0.861902,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "cave_component_volume/p95",
+        "before": 3973.0,
+        "after": 1838.0,
+        "vanilla": 1764.0,
+        "unit": "blocks (chunk clipped)",
+        "tolerance": 352.8,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_copper_ore/y-32",
+        "before": 0.015195,
+        "after": 0.014175,
+        "vanilla": 0.064431,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-32/underground_water",
+        "before": 0.377502,
+        "after": 0.331379,
+        "vanilla": 0.593981,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571303
+        ]
+      },
+      {
+        "metric": "ore/copper_ore/y-16",
+        "before": 0.0,
+        "after": 0.139198,
+        "vanilla": 0.187817,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/lapis_ore/y-16",
+        "before": 0.0,
+        "after": 0.084217,
+        "vanilla": 0.132728,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y160",
+        "before": 0.055008,
+        "after": 0.048001,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_lapis_ore/y-48",
+        "before": 2.01302,
+        "after": 2.027464,
+        "vanilla": 2.107278,
+        "unit": "per chunk",
+        "tolerance": 0.4214556095465651,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y-16",
+        "before": 0.0,
+        "after": 0.063331,
+        "vanilla": 0.110231,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/redstone_ore/y16",
+        "before": 0.041719,
+        "after": 0.045585,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_copper_ore/y-16",
+        "before": 5.304223,
+        "after": 4.913018,
+        "vanilla": 4.741872,
+        "unit": "per chunk",
+        "tolerance": 0.9483744530054499,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-48/underground_water",
+        "before": 0.961231,
+        "after": 0.48639,
+        "vanilla": 0.257665,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571831
+        ]
+      },
+      {
+        "metric": "ore/iron_ore/y80",
+        "before": 0.149158,
+        "after": 0.148541,
+        "vanilla": 0.190958,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_iron_ore/y-32",
+        "before": 6.751591,
+        "after": 5.4064,
+        "vanilla": 5.589278,
+        "unit": "per chunk",
+        "tolerance": 1.1178555128996752,
+        "verdict": "within",
+        "before_verdict": "outside",
+        "denominator": null
+      },
+      {
+        "metric": "ore/redstone_ore/y-16",
+        "before": 0.0,
+        "after": 0.043947,
+        "vanilla": 0.084432,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_diamond_ore/y-16",
+        "before": 3.732798,
+        "after": 3.426025,
+        "vanilla": 3.531209,
+        "unit": "per chunk",
+        "tolerance": 0.7062417783027732,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-16/underground_water",
+        "before": 0.56793,
+        "after": 0.66839,
+        "vanilla": 0.8638,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152557039
+        ]
+      },
+      {
+        "metric": "depth/-16/underground_lava",
+        "before": 0.158747,
+        "after": 0.201055,
+        "vanilla": 0.008725,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152557039
+        ]
+      },
+      {
+        "metric": "depth/-32/underground_lava",
+        "before": 0.243172,
+        "after": 0.230365,
+        "vanilla": 0.416049,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571303
+        ]
+      },
+      {
+        "metric": "depth/128/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.176621,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          1335321,
+          101347
+        ]
+      },
+      {
+        "metric": "ore/emerald_ore/y48",
+        "before": 0.031974,
+        "after": 0.032538,
+        "vanilla": 0.002738,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_diamond_ore/y0",
+        "before": 0.282236,
+        "after": 0.246047,
+        "vanilla": 0.216704,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y96",
+        "before": 0.040001,
+        "after": 0.042417,
+        "vanilla": 0.013692,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/lapis_ore/y64",
+        "before": 0.030524,
+        "after": 0.030712,
+        "vanilla": 0.003705,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y64",
+        "before": 0.02886,
+        "after": 0.028806,
+        "vanilla": 0.004027,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "blocks/raw_copper_block",
+        "before": 0.119037,
+        "after": 0.084512,
+        "vanilla": 0.076056,
+        "unit": "per chunk",
+        "tolerance": 0.1,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y32",
+        "before": 0.02086,
+        "after": 0.022121,
+        "vanilla": 0.001691,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/raw_copper_block/y16",
+        "before": 0.075653,
+        "after": 0.053961,
+        "vanilla": 0.035088,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y80",
+        "before": 0.024323,
+        "after": 0.024779,
+        "vanilla": 0.006121,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y112",
+        "before": 0.016323,
+        "after": 0.018014,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "blocks/raw_iron_block",
+        "before": 0.173454,
+        "after": 0.121507,
+        "vanilla": 0.11458,
+        "unit": "per chunk",
+        "tolerance": 0.1,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y112",
+        "before": 0.019705,
+        "after": 0.020645,
+        "vanilla": 0.004215,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/80/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.086059,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          9111167,
+          10031448
+        ]
+      },
+      {
+        "metric": "ore/emerald_ore/y128",
+        "before": 0.017101,
+        "after": 0.016698,
+        "vanilla": 0.001074,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_gold_ore/y0",
+        "before": 1.131064,
+        "after": 0.991597,
+        "vanilla": 0.976268,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y16",
+        "before": 0.01788,
+        "after": 0.017584,
+        "vanilla": 0.002792,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y160",
+        "before": 0.018631,
+        "after": 0.014658,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/raw_iron_block/y-32",
+        "before": 0.074848,
+        "after": 0.05176,
+        "vanilla": 0.038471,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y96",
+        "before": 0.019544,
+        "after": 0.020081,
+        "vanilla": 0.008108,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-64/underground_water",
+        "before": 0.180926,
+        "after": 0.071871,
+        "vanilla": 0.010208,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571904
+        ]
+      },
+      {
+        "metric": "ore/raw_iron_block/y-64",
+        "before": 0.018685,
+        "after": 0.012806,
+        "vanilla": 0.024001,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "blocks/spawner",
+        "before": 0.028054,
+        "after": 0.033236,
+        "vanilla": 0.028779,
+        "unit": "per chunk",
+        "tolerance": 0.1,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/raw_iron_block/y-48",
+        "before": 0.073398,
+        "after": 0.052807,
+        "vanilla": 0.043169,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y16",
+        "before": 1.192113,
+        "after": 1.2828,
+        "vanilla": 1.273215,
+        "unit": "per chunk",
+        "tolerance": 0.25464307766651456,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/coal_ore/y-16",
+        "before": 0.0,
+        "after": 0.002067,
+        "vanilla": 0.011007,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y144",
+        "before": 0.00953,
+        "after": 0.008645,
+        "vanilla": 0.000107,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y64",
+        "before": 0.196435,
+        "after": 0.199334,
+        "vanilla": 0.191978,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-48/underground_lava",
+        "before": 0.219898,
+        "after": 0.129463,
+        "vanilla": 0.167933,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571831
+        ]
+      },
+      {
+        "metric": "ore/diamond_ore/y-16",
+        "before": 0.0,
+        "after": 0.02298,
+        "vanilla": 0.029585,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/raw_copper_block/y0",
+        "before": 0.016457,
+        "after": 0.011544,
+        "vanilla": 0.01745,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/diamond_ore/y16",
+        "before": 0.004832,
+        "after": 0.006014,
+        "vanilla": 0.000349,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_coal_ore/y0",
+        "before": 0.766759,
+        "after": 0.662488,
+        "vanilla": 0.657038,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y0",
+        "before": 0.006604,
+        "after": 0.007222,
+        "vanilla": 0.001879,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/raw_iron_block/y-16",
+        "before": 0.006524,
+        "after": 0.004134,
+        "vanilla": 0.00894,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/96/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.024493,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          6050055,
+          3768456
+        ]
+      },
+      {
+        "metric": "ore/raw_copper_block/y32",
+        "before": 0.025692,
+        "after": 0.018175,
+        "vanilla": 0.022175,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/64/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.021019,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          19789374,
+          23036223
+        ]
+      },
+      {
+        "metric": "ore/copper_ore/y112",
+        "before": 0.002309,
+        "after": 0.002255,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/-64/underground_lava",
+        "before": 0.690987,
+        "after": 0.626271,
+        "vanilla": 0.637137,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571904,
+          152571904
+        ]
+      },
+      {
+        "metric": "ore/deepslate_emerald_ore/y-16",
+        "before": 0.003409,
+        "after": 0.002926,
+        "vanilla": 0.000966,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/emerald_ore/y160",
+        "before": 0.002336,
+        "after": 0.001933,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y128",
+        "before": 0.003383,
+        "after": 0.001933,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/48/underground_lava",
+        "before": 1.5e-05,
+        "after": 0.0,
+        "vanilla": 0.010146,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          53627593,
+          74360718
+        ]
+      },
+      {
+        "metric": "depth/0/underground_lava",
+        "before": 0.000218,
+        "after": 6.8e-05,
+        "vanilla": 0.009124,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          152571890,
+          152493300
+        ]
+      },
+      {
+        "metric": "depth/64/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.009073,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          19789374,
+          23036223
+        ]
+      },
+      {
+        "metric": "depth/16/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.008683,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          149923728,
+          151459306
+        ]
+      },
+      {
+        "metric": "depth/32/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.007803,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          96586045,
+          128576435
+        ]
+      },
+      {
+        "metric": "depth/80/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.007496,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          9111167,
+          10031448
+        ]
+      },
+      {
+        "metric": "ore/redstone_ore/y0",
+        "before": 2.225295,
+        "after": 2.560767,
+        "vanilla": 2.563317,
+        "unit": "per chunk",
+        "tolerance": 0.5126634272060996,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/deepslate_emerald_ore/y0",
+        "before": 0.002175,
+        "after": 0.001718,
+        "vanilla": 0.000591,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/112/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.003788,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          3247683,
+          659948
+        ]
+      },
+      {
+        "metric": "depth/96/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.002919,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          6050055,
+          3768456
+        ]
+      },
+      {
+        "metric": "ore/raw_copper_block/y48",
+        "before": 0.001235,
+        "after": 0.000832,
+        "vanilla": 0.001342,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/gold_ore/y144",
+        "before": 0.000242,
+        "after": 0.000349,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/128/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.000987,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          1335321,
+          101347
+        ]
+      },
+      {
+        "metric": "ore/emerald_ore/y-16",
+        "before": 0.0,
+        "after": 0.000134,
+        "vanilla": 2.7e-05,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/112/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.000303,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          3247683,
+          659948
+        ]
+      },
+      {
+        "metric": "ore/gold_ore/y-32",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 5.4e-05,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "ore/iron_ore/y176",
+        "before": 0.000107,
+        "after": 2.7e-05,
+        "vanilla": 0.0,
+        "unit": "per chunk",
+        "tolerance": 0.25,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      },
+      {
+        "metric": "depth/144/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.0,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          362923,
+          17853
+        ]
+      },
+      {
+        "metric": "depth/144/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.0,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          362923,
+          17853
+        ]
+      },
+      {
+        "metric": "depth/160/underground_lava",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.0,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          17788,
+          651
+        ]
+      },
+      {
+        "metric": "depth/160/underground_water",
+        "before": 0.0,
+        "after": 0.0,
+        "vanilla": 0.0,
+        "unit": "percentage points",
+        "tolerance": 2,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": [
+          17788,
+          651
+        ]
+      },
+      {
+        "metric": "depth/lava_interface_median_y",
+        "before": -55.0,
+        "after": -55.0,
+        "vanilla": -55.0,
+        "unit": "Y blocks",
+        "tolerance": 4,
+        "verdict": "within",
+        "before_verdict": "within",
+        "denominator": null
+      }
+    ],
+    "cave_biome_shares_percent": {
+      "fresh": {
+        "dripstone_caves": 1.89026,
+        "lush_caves": 0.745125,
+        "deep_dark": 0.603718,
+        "sulfur_caves": 0.09108
+      },
+      "official": {
+        "dripstone_caves": 0.966729,
+        "lush_caves": 1.314841,
+        "deep_dark": 0.277175,
+        "sulfur_caves": 0.414885
+      }
+    },
+    "dungeons": {
+      "chunks": 37249,
+      "before": 700,
+      "after": 877,
+      "vanilla": 764
+    }
+  },
+  "cache_profile_isolation": {
+    "seed": 1792932773345722119,
+    "change": "Cache keys now include generation profile; single-profile generation is unchanged.",
+    "byte_identical_chunks": [
+      {
+        "x": -113,
+        "z": -74,
+        "chunk_payload_sha256": "3db87038c6e2284d3e49cd0c457f372998aeb0ab6a7894708988fc2816e7d4af"
+      },
+      {
+        "x": -113,
+        "z": -73,
+        "chunk_payload_sha256": "99e6a3fdab05d932931082d9c611200424a20aed7d72483aed18d9177dd3c066"
+      },
+      {
+        "x": -112,
+        "z": -74,
+        "chunk_payload_sha256": "bb9b554ab68e878167a60706695be7839c08ce7da413dcedd110f05e6b986d1d"
+      },
+      {
+        "x": -112,
+        "z": -73,
+        "chunk_payload_sha256": "9589f233c41c8c9b25dcc0085df07ad0ba7abb315f3db395baf277a1616f4f84"
+      }
+    ],
+    "verified_test_binary_sha256": "f04ea4349647617db75e5694fba9eb4e194575d5d9272cbc3ba954982ffbba3b"
+  },
+  "limitations": [
+    "Cave connectivity and geode shell components are observational proxies; not exact noise-cave or feature identities.",
+    "Sulfur selection regenerates all sulfur-bearing chunks in the saved census; fresh biome volume is measured independently and can differ slightly.",
+    "Biome placement, terrain-dependent upper ore layers, upper aquifer coverage, cave volume p99 and some low ore tails remain outside the sampled tolerance; see every retained metric.",
+    "Sulfur pool shape, spike clusters/lengths, springs and geysers, and other seeds need follow-up."
+  ]
+}

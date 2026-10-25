@@ -2,6 +2,7 @@
 //
 // Порядок прохода:
 //   1. переход камня в глубинный сланец — постепенный, в Y 0…8;
+//      в 26.3 до обычной руды (`prepare_ore_hosts`), в старом профиле после;
 //   2. большие рудные жилы — медная и железная;
 //   3. жеоды аметиста;
 //   4. данжи.
@@ -27,6 +28,16 @@ use super::noise::{Noise, Random};
 use super::terrain::{self, Terrain};
 use super::{Chunk, Generator, AIR, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
 
+/// Сланец готовится до руды: иначе руда, заменившая гранит/диорит/андезит,
+/// теряет исходную породу и ошибочно становится глубинной.
+/// Вики: «take place of ores that generate in deepslate».
+/// https://minecraft.wiki/w/Ore_(feature)
+pub(super) fn prepare_ore_hosts(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
+    if let Generator::Normal(terrain) = generator && terrain.preview() {
+        blend_deepslate(chunk, chunk_x, chunk_z, world_key(terrain), &Palette::new());
+    }
+}
+
 /// Дорабатывает подземелье чанка после руды.
 pub(super) fn dig(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
     let Generator::Normal(terrain) = generator else {
@@ -36,8 +47,8 @@ pub(super) fn dig(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_
     let key = world_key(terrain);
     let palette = Palette::new();
 
-    blend_deepslate(chunk, chunk_x, chunk_z, key, &palette);
-    lay_veins(chunk, chunk_x, chunk_z, key, &palette);
+    if !terrain.preview() { blend_deepslate(chunk, chunk_x, chunk_z, key, &palette); }
+    lay_veins(chunk, chunk_x, chunk_z, key, &palette, terrain.preview());
     carvers::carve(chunk, chunk_x, chunk_z, key, &palette);
 
     for geode in geodes_near(terrain, key, chunk_x, chunk_z) {
@@ -286,6 +297,7 @@ enum VeinBlock {
 struct VeinField {
     /// По узлу — переключатель, два гребня и прорехи.
     nodes: Vec<[f64; 4]>,
+    width: f64,
 }
 
 impl VeinField {
@@ -319,7 +331,7 @@ impl VeinField {
             }
         }
 
-        VeinField { nodes }
+        VeinField { nodes, width: RIDGE_WIDTH }
     }
 
     fn node(&self, node_x: usize, layer: usize, node_z: usize) -> [f64; 4] {
@@ -391,7 +403,7 @@ impl VeinField {
             return None;
         }
 
-        let width = RIDGE_WIDTH * (0.5 + 0.5 * edge);
+        let width = self.width * (0.5 + 0.5 * edge);
 
         if ridge_a.abs().max(ridge_b.abs()) >= width {
             return None;
@@ -422,8 +434,14 @@ fn vein_block(key: u64, x: i32, y: i32, z: i32, strength: f64, gap: f64) -> Opti
 
 /// Прокладывает жилы по чанку. Жила идёт только по камню и глубинному
 /// сланцу: пещеры её перебивают, гнёзда руды остаются.
-fn lay_veins(chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, key: u64, palette: &Palette) {
-    let field = VeinField::new(key, chunk_x, chunk_z);
+fn lay_veins(chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, key: u64, palette: &Palette, preview: bool) {
+    let mut field = VeinField::new(key, chunk_x, chunk_z);
+    // Слишком широкое пересечение гребней давало избыток железа в −48…−17
+    // и блоков сырого металла на обоих семенах переписи 26.3.
+    // Это калибровка своего шума, не изменение долей руды внутри жилы
+    // (вики: «70% of the blocks within the vein are not changed»).
+    // https://minecraft.wiki/w/Ore_vein [проверить на других семенах].
+    if preview { field.width = 0.068; }
 
     for y in IRON_LOW..=COPPER_HIGH {
         for local_z in 0..CHUNK_SIZE {
@@ -448,11 +466,14 @@ fn lay_veins(chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, key: u64, palette: &
                 let deep = here == palette.deepslate;
                 let state = match (vein, kind) {
                     (Vein::Copper, VeinBlock::Filler) => palette.granite,
-                    (Vein::Copper, VeinBlock::Ore) if deep => palette.deep_copper_ore,
+                    // Вики, Ore vein: «Copper Ore», «Deepslate Iron Ore».
+                    // У больших жил разновидность фиксирована, в том числе
+                    // у перехода камня в сланец: https://minecraft.wiki/w/Ore_vein
+                    (Vein::Copper, VeinBlock::Ore) if deep && !preview => palette.deep_copper_ore,
                     (Vein::Copper, VeinBlock::Ore) => palette.copper_ore,
                     (Vein::Copper, VeinBlock::Raw) => palette.raw_copper,
                     (Vein::Iron, VeinBlock::Filler) => palette.tuff,
-                    (Vein::Iron, VeinBlock::Ore) if deep => palette.deep_iron_ore,
+                    (Vein::Iron, VeinBlock::Ore) if deep || preview => palette.deep_iron_ore,
                     (Vein::Iron, VeinBlock::Ore) => palette.iron_ore,
                     (Vein::Iron, VeinBlock::Raw) => palette.raw_iron,
                 };
@@ -905,6 +926,209 @@ fn try_dungeon(chunk: &mut Chunk, spot: DungeonSpot, seed: u64, palette: &Palett
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Объёмы из сохранённых регионов оригинала, а не снимок нашего алгоритма.
+    /// Одинаковые полосы Y и чанковые границы на обеих сторонах.
+    #[test]
+    fn generated_caves_match_two_seed_density_and_component_reference() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-u/regression-reference.json"
+        )).unwrap();
+        let mut volumes = Vec::new();
+        let mut lava_surfaces = Vec::new();
+        let (mut air, mut chunks, mut iron) = (0usize, 0usize, 0usize);
+        let mut copper_counts = [0usize; 2];
+        let (mut upper_copper, mut coal) = (0usize, 0usize);
+        let (mut lower_iron, mut lower_gold) = (0usize, 0usize);
+        let deep_iron = terrain::block_named("deepslate_iron_ore");
+        let lava = terrain::block_named("lava");
+        let copper_states = [terrain::block_named("copper_ore"), terrain::block_named("deepslate_copper_ore")];
+        let coal_state = terrain::block_named("coal_ore");
+        let gold_state = terrain::block_named("deepslate_gold_ore");
+        for sample in reference["samples"].as_array().unwrap() {
+            let generator = Generator::Normal(Terrain::new(sample["seed"].as_i64().unwrap(), terrain::Style::Vanilla).with_preview(true));
+            for window in sample["windows"].as_array().unwrap() {
+                let b: Vec<i32> = window.as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+                for cx in b[0]..=b[2] { for cz in b[1]..=b[3] {
+                    let chunk = Chunk::generated(&generator, cx, cz);
+                    chunks += 1;
+                    for y in -64..-48 { for z in 0..16 { for x in 0..16 {
+                        let state = chunk.block(x, y, z);
+                        lower_iron += usize::from(state == deep_iron);
+                        lower_gold += usize::from(state == gold_state);
+                    } } }
+                    for y in -48..-32 { for z in 0..16 { for x in 0..16 {
+                        iron += usize::from(chunk.block(x, y, z) == deep_iron);
+                    } } }
+                    for y in -60..32 { for z in 0..16 { for x in 0..16 {
+                        if chunk.block(x, y, z) == lava && chunk.block(x, y + 1, z) == AIR { lava_surfaces.push(y); }
+                    } } }
+                    let mut empty = Vec::with_capacity(86 * 256);
+                    for y in -54..=31 { for z in 0..16 { for x in 0..16 {
+                        let state = chunk.block(x, y, z);
+                        let free = state == AIR;
+                        if (0..16).contains(&y) && free { air += 1; }
+                        if (0..16).contains(&y) {
+                            for i in 0..2 { copper_counts[i] += usize::from(state == copper_states[i]); }
+                        }
+                        if (16..32).contains(&y) {
+                            upper_copper += usize::from(state == copper_states[0]);
+                            coal += usize::from(state == coal_state);
+                        }
+                        empty.push(free);
+                    } } }
+                    let mut pending = Vec::new();
+                    for first in 0..empty.len() {
+                        if !empty[first] { continue; }
+                        empty[first] = false;
+                        pending.push(first);
+                        let mut volume = 0usize;
+                        while let Some(i) = pending.pop() {
+                            volume += 1;
+                            let (x, z, y) = (i % 16, i / 16 % 16, i / 256);
+                            for (valid, next) in [
+                                (x > 0, i.wrapping_sub(1)), (x < 15, i + 1),
+                                (z > 0, i.wrapping_sub(16)), (z < 15, i + 16),
+                                (y > 0, i.wrapping_sub(256)), (y < 85, i + 256),
+                            ] {
+                                if valid && empty[next] { empty[next] = false; pending.push(next); }
+                            }
+                        }
+                        volumes.push(volume);
+                    }
+                } }
+            }
+        }
+        assert_eq!(chunks as u64, reference["chunks"].as_u64().unwrap());
+        let density = air as f64 / (chunks * 4096) as f64 * 100.0;
+        let official = reference["air_0_15_percent"].as_f64().unwrap();
+        assert!((density - official).abs() <= reference["air_tolerance_pp"].as_f64().unwrap(), "воздух: {density} / {official}");
+        volumes.sort_unstable();
+        let index = (volumes.len() - 1) as f64 * 0.95;
+        let p95 = volumes[index.floor() as usize] as f64 * (1.0 - index.fract())
+            + volumes[index.ceil() as usize] as f64 * index.fract();
+        let official = reference["component_volume_p95"].as_f64().unwrap();
+        assert!((p95 / official - 1.0).abs() <= reference["component_relative_tolerance"].as_f64().unwrap(), "p95: {p95} / {official}");
+        let density = iron as f64 / chunks as f64;
+        let official = reference["deepslate_iron_neg48_per_chunk"].as_f64().unwrap();
+        assert!((density / official - 1.0).abs() <= reference["ore_relative_tolerance"].as_f64().unwrap(), "железо −48…−33: {density} / {official}");
+        lava_surfaces.sort_unstable();
+        assert!(!lava_surfaces.is_empty());
+        let median = lava_surfaces[lava_surfaces.len() / 2];
+        let official = reference["lava_interface_median_y"].as_i64().unwrap() as i32;
+        assert!((median - official).abs() <= reference["fluid_level_tolerance_blocks"].as_i64().unwrap() as i32, "уровень лавы: {median} / {official}");
+        let fraction = copper_counts[1] as f64 / copper_counts.iter().sum::<usize>() as f64;
+        let official = reference["copper_deep_fraction_y0_15"].as_f64().unwrap();
+        assert!((fraction - official).abs() <= reference["ore_variant_fraction_tolerance"].as_f64().unwrap(), "глубинная медь Y 0…15: {fraction} / {official}");
+        for (count, key) in [(upper_copper, "copper_y16_per_chunk"), (coal, "coal_y16_per_chunk"),
+            (lower_iron, "iron_y_neg64_per_chunk"), (lower_gold, "gold_y_neg64_per_chunk")] {
+            let density = count as f64 / chunks as f64;
+            let official = reference[key].as_f64().unwrap();
+            assert!((density / official - 1.0).abs() <= reference["ore_relative_tolerance"].as_f64().unwrap(), "{key}: {density} / {official}");
+        }
+    }
+
+    /// Изменение целей руды 26.3: обычные гнёзда больше не заменяют туф.
+    /// Большие железные жилы — отдельный проход, здесь не запускаются.
+    #[test]
+    fn ordinary_ore_blobs_preserve_tuff_in_263() {
+        let tuff = terrain::block_named("tuff");
+        let count = |preview| {
+            let generator = Generator::Normal(Terrain::new(SEED, terrain::Style::Vanilla).with_preview(preview));
+            let mut chunk = Chunk::new();
+            for y in MIN_Y..32 { for z in 0..16 { for x in 0..16 { chunk.put_generated(x, y, z, tuff, true); } } }
+            generator.lay_ores(&mut chunk, 0, 0);
+            let mut ores = 0;
+            for y in -60..-16 { for z in 0..16 { for x in 0..16 {
+                ores += usize::from(name(chunk.block(x, y, z)).ends_with("_ore"));
+            } } }
+            ores
+        };
+        assert_eq!(count(true), 0);
+        assert!(count(false) > 0);
+    }
+
+    /// Крупная медная жила даёт обычную руду даже в сланце; железная —
+    /// глубинную даже в камне. Проверяется результат шумового прохода.
+    #[test]
+    fn large_veins_keep_their_ore_variants_in_either_host() {
+        let palette = Palette::new();
+        let (mut copper, mut iron) = (0usize, 0usize);
+        for cx in -4..4 { for cz in -4..4 {
+            let mut chunk = Chunk::new();
+            for y in IRON_LOW..=COPPER_HIGH { for z in 0..16 { for x in 0..16 {
+                chunk.put_generated(x, y, z, if y >= 0 { palette.deepslate } else { palette.stone }, true);
+            } } }
+            lay_veins(&mut chunk, cx, cz, key(), &palette, true);
+            for y in IRON_LOW..=COPPER_HIGH { for z in 0..16 { for x in 0..16 {
+                let state = chunk.block(x, y, z);
+                assert_ne!(state, palette.deep_copper_ore);
+                assert_ne!(state, palette.iron_ore);
+                copper += usize::from(state == palette.copper_ore);
+                iron += usize::from(state == palette.deep_iron_ore);
+            } } }
+        } }
+        assert!(copper > 0 && iron > 0);
+    }
+
+    /// Вода не даёт признака «air exposed»: скрытая партия лазурита
+    /// сохраняется у мокрых граней. Контроль старого профиля сохраняет
+    /// прежний результат; проверяется настоящий проход размещения руды.
+    #[test]
+    fn submerged_ore_hosts_are_not_discarded_as_air_exposed() {
+        let count = |preview, liquid| {
+            let generator = Generator::Normal(Terrain::new(SEED, terrain::Style::Vanilla).with_preview(preview));
+            let stone = terrain::block_named("stone");
+            let water = terrain::block_named("water");
+            let lapis = terrain::block_named("lapis_ore");
+            let mut count = 0;
+            for cx in -2..2 { for cz in -2..2 {
+                let mut chunk = Chunk::new();
+                for y in 0..32 { for z in 0..16 { for x in 0..16 {
+                    let state = if (x + z) % 2 == 0 { stone } else if liquid { water } else { AIR };
+                    chunk.put_generated(x, y, z, state, true);
+                } } }
+                generator.lay_ores(&mut chunk, cx, cz);
+                for y in 0..32 { for z in 0..16 { for x in 0..16 { count += usize::from(chunk.block(x, y, z) == lapis); } } }
+            } }
+            count
+        };
+        assert!(count(true, true) > count(true, false));
+        assert_eq!(count(false, true), count(false, false));
+    }
+
+    /// Свежие чанки для переписи: тот же полный проход, что при загрузке мира.
+    /// Каталог и план задаются явно, чтобы тест не писал большие миры в репозиторий.
+    #[test]
+    #[ignore]
+    fn export_genaudit_underground_sample() {
+        let plan_path = std::env::var("GENAUDIT_U_PLAN").expect("GENAUDIT_U_PLAN");
+        let output = std::path::PathBuf::from(std::env::var("GENAUDIT_U_OUTPUT").expect("GENAUDIT_U_OUTPUT"));
+        assert!(output.is_absolute());
+        assert!(!output.starts_with(env!("CARGO_MANIFEST_DIR")));
+        let plan: serde_json::Value = serde_json::from_slice(&std::fs::read(plan_path).unwrap()).unwrap();
+        let seed = plan["seed"].as_i64().unwrap();
+        let generator = Generator::Normal(Terrain::new(seed, terrain::Style::Vanilla).with_preview(true));
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let source = std::env::var("GENAUDIT_U_SOURCE").ok().map(std::path::PathBuf::from);
+        let mut spawners = [std::collections::BTreeMap::<String, usize>::new(), std::collections::BTreeMap::<String, usize>::new()];
+        std::fs::create_dir_all(output.join("region")).unwrap();
+        for window in plan["windows"]["overworld"].as_array().unwrap() {
+            let b: Vec<i32> = window.as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+            for x in b[0]..=b[2] { for z in b[1]..=b[3] {
+                let chunk = Chunk::generated(&generator, x, z);
+                for data in chunk.spawners.values() { *spawners[1].entry(data.entity.clone()).or_default() += 1; }
+                if let Some(source) = &source {
+                    let bytes = super::super::region::read(&source.join("region"), x, z).unwrap().expect("исходный чанк");
+                    let before = Chunk::decode_for_load_with_catalog(&bytes, catalog).expect("исходный чанк");
+                    for data in before.spawners.values() { *spawners[0].entry(data.entity.clone()).or_default() += 1; }
+                }
+                super::super::region::write(&output.join("region"), x, z, &chunk.to_bytes_with_catalog(catalog).unwrap()).unwrap();
+            } }
+            println!("genaudit U: {seed} {b:?}");
+        }
+        std::fs::write(output.join("spawners.json"), serde_json::to_vec_pretty(&spawners).unwrap()).unwrap();
+    }
 
     const SEED: i64 = 100_554_032_945_340;
 

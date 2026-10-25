@@ -708,6 +708,7 @@ impl Chunk {
 
         // Руда и пятна камня — после рельефа и пещер: им надо знать, где
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
+        underground::prepare_ore_hosts(generator, &mut chunk, chunk_x, chunk_z);
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
         sulfur_caves::decorate(generator, &mut chunk, chunk_x, chunk_z);
@@ -5034,6 +5035,7 @@ impl Generator {
         ];
         let water = terrain::block_named("water");
         let lava = terrain::block_named("lava");
+        let tuff = terrain::block_named("tuff");
 
         for (x, y, z, placement) in terrain.ore_blocks_in(chunk_x, chunk_z, chunk.highest()) {
             let (local_x, local_z) = (x - chunk_x * CHUNK_SIZE, z - chunk_z * CHUNK_SIZE);
@@ -5044,7 +5046,9 @@ impl Generator {
 
             let here = chunk.block(local_x, y, local_z);
 
-            if !takes.contains(&here) {
+            // В 26.3 туф исключён из обеих целей руд: «Removed tuff».
+            // https://minecraft.wiki/w/Java_Edition_26.3_Snapshot_3
+            if !takes.contains(&here) || (terrain.preview() && placement.has_deep && here == tuff) {
                 continue;
             }
 
@@ -5065,7 +5069,10 @@ impl Generator {
                     (0..CHUNK_SIZE).contains(&nx)
                         && (0..CHUNK_SIZE).contains(&nz)
                         && (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&ny)
-                        && [AIR, water, lava].contains(&chunk.block(nx, ny, nz))
+                        // «Skipped when air exposed» не включает воду и лаву.
+                        // https://minecraft.wiki/w/Ore_(feature)
+                        && if terrain.preview() { chunk.block(nx, ny, nz) == AIR }
+                            else { [AIR, water, lava].contains(&chunk.block(nx, ny, nz)) }
                 });
 
                 if open && terrain::chance_at(terrain.seed(), x, y, z, placement.air_skip) {
@@ -5073,8 +5080,9 @@ impl Generator {
                 }
             }
 
-            // Под нулём — в глубинном сланце — у руды своя разновидность.
-            let deep = placement.has_deep && (here == deepslate || y < 0);
+            // В 26.3 разновидность определяет порода, а не высота: гранит,
+            // диорит и андезит у границы сланца сохраняют обычную руду.
+            let deep = placement.has_deep && (here == deepslate || (!terrain.preview() && y < 0));
             let name = if deep {
                 format!("deepslate_{}", placement.block)
             } else {

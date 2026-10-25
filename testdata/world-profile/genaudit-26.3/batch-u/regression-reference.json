@@ -1,0 +1,224 @@
+{
+  "source": "Official 26.3 region measurements in both fixed 4,096-chunk plans. Air Y 0..15; six-neighbour components clipped to each chunk and Y -54..31. Regression generates the smaller listed 2,048-chunk subset, without coordinate matching of caves.",
+  "samples": [
+    {
+      "seed": 1792932773345722119,
+      "windows": [
+        [
+          -113,
+          -74,
+          -106,
+          -67
+        ],
+        [
+          -113,
+          -26,
+          -106,
+          -19
+        ],
+        [
+          -113,
+          22,
+          -106,
+          29
+        ],
+        [
+          -113,
+          70,
+          -106,
+          77
+        ],
+        [
+          -65,
+          -74,
+          -58,
+          -67
+        ],
+        [
+          -65,
+          -26,
+          -58,
+          -19
+        ],
+        [
+          -65,
+          22,
+          -58,
+          29
+        ],
+        [
+          -65,
+          70,
+          -58,
+          77
+        ],
+        [
+          -17,
+          -74,
+          -10,
+          -67
+        ],
+        [
+          -17,
+          -26,
+          -10,
+          -19
+        ],
+        [
+          -17,
+          22,
+          -10,
+          29
+        ],
+        [
+          -17,
+          70,
+          -10,
+          77
+        ],
+        [
+          31,
+          -74,
+          38,
+          -67
+        ],
+        [
+          31,
+          -26,
+          38,
+          -19
+        ],
+        [
+          31,
+          22,
+          38,
+          29
+        ],
+        [
+          31,
+          70,
+          38,
+          77
+        ]
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "windows": [
+        [
+          -51,
+          -82,
+          -44,
+          -75
+        ],
+        [
+          -51,
+          -34,
+          -44,
+          -27
+        ],
+        [
+          -51,
+          14,
+          -44,
+          21
+        ],
+        [
+          -51,
+          62,
+          -44,
+          69
+        ],
+        [
+          -3,
+          -82,
+          4,
+          -75
+        ],
+        [
+          -3,
+          -34,
+          4,
+          -27
+        ],
+        [
+          -3,
+          14,
+          4,
+          21
+        ],
+        [
+          -3,
+          62,
+          4,
+          69
+        ],
+        [
+          45,
+          -82,
+          52,
+          -75
+        ],
+        [
+          45,
+          -34,
+          52,
+          -27
+        ],
+        [
+          45,
+          14,
+          52,
+          21
+        ],
+        [
+          45,
+          62,
+          52,
+          69
+        ],
+        [
+          93,
+          -82,
+          100,
+          -75
+        ],
+        [
+          93,
+          -34,
+          100,
+          -27
+        ],
+        [
+          93,
+          14,
+          100,
+          21
+        ],
+        [
+          93,
+          62,
+          100,
+          69
+        ]
+      ]
+    }
+  ],
+  "deepslate_iron_neg48_per_chunk": 4.1912804999999995,
+  "ore_relative_tolerance": 0.2,
+  "chunks": 2048,
+  "air_0_15_percent": 7.263699173927307,
+  "component_volume_p95": 1824.0,
+  "air_tolerance_pp": 2,
+  "component_relative_tolerance": 0.2,
+  "ore_source": "Mean per-chunk Y -48..-33 density in the two full official 37,249-chunk census worlds; vein locations differ between generators",
+  "lava_interface_median_y": -55,
+  "fluid_level_tolerance_blocks": 4,
+  "official_chunks": 8192,
+  "copper_deep_fraction_y0_15": 0.17183896953505146,
+  "ore_variant_fraction_tolerance": 0.04,
+  "copper_y16_per_chunk": 22.09295551558431,
+  "coal_y16_per_chunk": 16.396185132486778,
+  "iron_y_neg64_per_chunk": 2.988630567263551,
+  "gold_y_neg64_per_chunk": 3.940441354130312
+}

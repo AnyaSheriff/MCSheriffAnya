@@ -11,19 +11,24 @@
 use super::terrain::Biome;
 use super::{Chunk, Generator, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
 
-/// Доля камня, что остаётся в клетках биома (замер: после серы и киновари остаётся около
-/// пятой части объёма без воздуха).
-const STONE_LEFT: f64 = 0.12;
+/// Доля исходной породы, остающаяся в клетках биома. Перепись двух семян
+/// даёт 64–66 % серы и киновари от всего объёма биома, включая пустоты.
+/// Прежние 12 % оставленной породы давали 71–74 % минералов [проверить].
+const STONE_LEFT: f64 = 0.24;
 
 /// Порог шума материала: ниже — сера, выше — киноварь. Подобран так, чтобы серы было
 /// 56 % (замер: 1,49 против 1,17 млн блоков); проверяет `material_split_is_near_the_measurement`.
 const MATERIAL_SPLIT: f64 = 0.04;
 
-/// Шанс шипа на открытой грани блока серы. Замер: 0,6 % блоков серы несут шип.
-const SPIKE_CHANCE: f64 = 0.05;
+/// Шанс шипа на открытой грани: в переписи 26.3 2017–2731 шип на миллион
+/// блоков биома. Прежние 5 % давали только 615–671 [проверить форму шипов].
+/// Вики, Sulfur Caves: «sulfur spikes» — https://minecraft.wiki/w/Sulfur_Caves
+const SPIKE_CHANCE: f64 = 0.168;
 
-/// Шанс мощной серы под водой на дне водоёма.
-const POTENT_CHANCE: f64 = 0.12;
+/// Попытка небольшого серного водоёма на клетку биома 4×4×4.
+/// Частота своя [проверить]: цель переписи — около 30 блоков мощной серы
+/// на миллион блоков биома, независимо от площади обычных водоносных слоёв.
+const POOL_CHANCE: f64 = 0.0031;
 
 fn mineral(name: &str) -> i32 {
     crate::gameplay_catalog::MINERALS.iter().find(|row| row.name == name).unwrap_or_else(|| panic!("{} в каталоге", name)).default_state
@@ -89,7 +94,9 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
         }
     }
 
-    // Шипы и мощная сера — вторым проходом, когда стены уже сложены.
+    sulfur_pools(chunk, seed, chunk_x, chunk_z, number, &stone, [sulfur, cinnabar, potent, water]);
+
+    // Шипы — после минералов и водоёмов, когда стены уже сложены.
     for local_x in 0..CHUNK_SIZE {
         for local_z in 0..CHUNK_SIZE {
             let (x, z) = (chunk_x * CHUNK_SIZE + local_x, chunk_z * CHUNK_SIZE + local_z);
@@ -101,12 +108,6 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
 
                 let above = chunk.block(local_x, y + 1, local_z);
                 let below = chunk.block(local_x, y - 1, local_z);
-
-                // Дно водоёма: под водой сера мощная.
-                if above == water && hash(seed, x, y, z, 2) < POTENT_CHANCE {
-                    chunk.put_generated(local_x, y, local_z, potent, true);
-                    continue;
-                }
 
                 // Шип растёт вверх с пола или вниз с потолка: один, два или три блока.
                 for (free, down, dy) in [(above, false, 1), (below, true, -1)] {
@@ -138,6 +139,36 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
             }
         }
     }
+}
+
+/// Вики, Sulfur Caves: «Potent sulfur is found only on the bottom of these pools».
+/// https://minecraft.wiki/w/Sulfur_caves
+/// Обычный аквифер не является серным водоёмом: прежний выбор любого мокрого
+/// пола давал 137/163 вместо 30/30 блоков на миллион блоков биома двух семян.
+/// Малые водоёмы целиком внутри клетки: стенки и дно замкнуты, порядок
+/// соседних чанков не влияет. Размер и очертания свои [проверить].
+fn sulfur_pools(chunk: &mut Chunk, seed: i64, cx: i32, cz: i32, biome: super::BiomeId, stone: &[i32], [sulfur, cinnabar, potent, water]: [i32; 4]) {
+    let rock = |state| state == sulfur || state == cinnabar || stone.contains(&state);
+    for x in (0..16).step_by(4) { for z in (0..16).step_by(4) {
+        for y in (MIN_Y..MIN_Y + WORLD_HEIGHT - 4).step_by(4) {
+            if chunk.biome(x, y, z) != biome
+                || hash(seed, cx * 16 + x, y, cz * 16 + z, 5) >= POOL_CHANCE
+            { continue; }
+            // Водоём не прорезает существующую полость, руду или постройку.
+            if !(x..x + 4).all(|px| (z..z + 4).all(|pz| (y + 1..=y + 3).all(|py| rock(chunk.block(px, py, pz))))) {
+                continue;
+            }
+            for px in x..x + 4 { for pz in z..z + 4 {
+                chunk.put_generated(px, y + 2, pz, sulfur, true);
+                if (x + 1..=x + 2).contains(&px) && (z + 1..=z + 2).contains(&pz) {
+                    chunk.put_generated(px, y + 1, pz, sulfur, true);
+                    chunk.put_generated(px, y + 2, pz, water, true);
+                    chunk.put_generated(px, y + 3, pz, super::AIR, true);
+                }
+            } }
+            chunk.put_generated(x + 1, y + 1, z + 1, potent, true);
+        }
+    } }
 }
 
 #[cfg(test)]
@@ -205,5 +236,45 @@ mod tests {
 
         let share = f64::from(low) / f64::from(all);
         assert!((share - 0.56).abs() < 0.05, "серы {share}");
+    }
+
+    /// Координаты наши, эталон — плотности на блок серного биома оригинала.
+    /// Для редкой мощной серы учитывается шум малого числа наблюдений.
+    #[test]
+    fn generated_sulfur_materials_match_per_biome_reference() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-u/sulfur-reference.json"
+        )).unwrap();
+        let names = ["sulfur", "cinnabar", "sulfur_spike", "potent_sulfur"];
+        let states = [mineral("sulfur"), mineral("cinnabar"), 0, mineral("potent_sulfur")];
+        let mut total_counts = [0usize; 4];
+        let mut total_expected = [0.0_f64; 4];
+        for sample in reference["samples"].as_array().unwrap() {
+            let generator = Generator::Normal(Terrain::new(sample["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true));
+            let mut counts = [0usize; 4];
+            let mut volume = 0usize;
+            for at in sample["chunks"].as_array().unwrap() {
+                let chunk = Chunk::generated(&generator, at[0].as_i64().unwrap() as i32, at[1].as_i64().unwrap() as i32);
+                for y in MIN_Y..MIN_Y + WORLD_HEIGHT { for z in 0..16 { for x in 0..16 {
+                    if chunk.biome(x, y, z) != Biome::SulfurCaves.number() as super::super::BiomeId { continue; }
+                    volume += 1;
+                    let state = chunk.block(x, y, z);
+                    for i in 0..4 {
+                        counts[i] += usize::from(if i == 2 { crate::sulfur_spike::is_spike(state) } else { state == states[i] });
+                    }
+                } } }
+            }
+            assert!(volume > 0);
+            for i in 0..4 {
+                total_counts[i] += counts[i];
+                total_expected[i] += sample["official_per_million"][names[i]].as_f64().unwrap() * volume as f64 / 1e6;
+            }
+        }
+        for i in 0..4 {
+            let expected = total_expected[i];
+            let tolerance = (expected * 0.2).max(3.0 * expected.sqrt());
+            assert!((total_counts[i] as f64 - expected).abs() <= tolerance,
+                "{} на двух семенах: {} / {expected}", names[i], total_counts[i]);
+        }
     }
 }
