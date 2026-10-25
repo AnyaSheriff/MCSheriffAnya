@@ -7,8 +7,8 @@
 //
 // Где: мир Незера поделён на регионы 27×27 чанков, в каждом ровно одна
 // постройка; её чанк — в первых 23 чанках региона по каждой оси (замер:
-// сдвиги 0..22 поровну). В дельтах — всегда крепость, в прочих биомах
-// крепость в 40 % регионов, в остальных бастион (nether_bastion.rs).
+// сдвиги 0..22 поровну). Крепость в 40 % регионов, в остальных попытка
+// бастиона (nether_bastion.rs), которая в дельтах пропускается.
 //
 // Как: крепость — дерево кусков. Первый — перекрёсток моста (nebcr),
 // серединой в клетке (11, 11) чанка старта, низом на высоте 48..69 (чаще
@@ -277,11 +277,15 @@ impl Placed {
 
 /// Решения по региону: чанк старта и бросок «крепость или бастион».
 pub fn region_start(seed: i64, region_x: i32, region_z: i32) -> (i32, i32, f64) {
-    let mut dice = Dice::new(seed, 0xF0_27, region_x, region_z);
-    let chunk_x = region_x * REGION + dice.below(SPREAD as u32);
-    let chunk_z = region_z * REGION + dice.below(SPREAD as u32);
-
-    (chunk_x, chunk_z, dice.unit())
+    // Чанк попытки и выбор семейства имеют независимые потоки.
+    // Параметры проверены по началам обоих сохранённых миров 26.3.
+    let placement_seed = seed.wrapping_add(i64::from(region_x).wrapping_mul(341_873_128_712))
+        .wrapping_add(i64::from(region_z).wrapping_mul(132_897_987_541)).wrapping_add(30_084_232);
+    let mut placement = super::nether::LegacyRandom::new(placement_seed);
+    let chunk_x = region_x * REGION + placement.below(SPREAD);
+    let chunk_z = region_z * REGION + placement.below(SPREAD);
+    let mut selection = super::nether::LegacyRandom::for_chunk(seed, chunk_x, chunk_z);
+    (chunk_x, chunk_z, f64::from(selection.below(5)) / 5.0)
 }
 
 /// Регионы, чья постройка может задеть этот чанк.

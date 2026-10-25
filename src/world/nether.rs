@@ -1,25 +1,15 @@
 // Незер: из чего он сложен.
 //
-// Рельеф подогнан по замеру мира оригинала 26.1.2 (tools/research/nether.md,
-// tools/measure/nether_census.py, nether_layers.py): на каждой высоте доля
-// пустот та же, что у оригинала, и столько же полов и потолков на столбец
-// (1,2 и 1,75 над морем лавы), той же толщины пустоты и перемычки.
+// Рельеф — диапазонный шум с верхним и нижним сплошными слоями,
+// интерполированный в сетке 4×8×4. Фаза климата и рельефа проверяется по
+// сохранённым region-файлам двух семян 26.3, без чтения кода игры.
+// Узкие ходы пока используют собственную пару шумов [проверить]. Ниже
+// моря лавы (y 31) все пустоты залиты лавой.
 //
-// Пустоты двух видов, как и в обычном мире:
-// — большие пещеры — объём между морем лавы и потолком: где объёмный шум
-//   выше порога своей высоты;
-// — узкие ходы — везде от пола до потолка: где два шума разом близки к нулю.
-//   Ниже моря лавы (y 31) пустоты залиты лавой — отсюда лавовые карманы
-//   в толще.
-// Порог каждой высоты берётся из распределения самого шума (квантиль), так
-// что доля пустот на высоте y совпадает с замеренной, а не подбирается
-// вручную.
-//
-// Биомы — по двум плоским климатическим шумам: у оригинала биом Незера по
-// высоте столбца не меняется (замер tools/measure/nether_biomes.py: ни одной
-// клетки 4×4 с разными биомами на y 0..127). Доли площади и размер пятен
-// подогнаны к замеру. От биома зависят только поверхность и наполнение:
-// нилий в лесах, песок и почва душ в долине, базальт и чернокамень в дельтах.
+// Биомы — ближайшие точки температуры, влажности и смещения. Климат
+// считается в клетках 4×4 и не меняется по высоте. От биома зависят
+// поверхность и наполнение: нилий в лесах, песок и почва душ в долине,
+// базальт и чернокамень в дельтах.
 //
 // Крепости — src/world/nether_fortress.rs: кладутся до объектов (опоры
 // доходят до породы) и ещё раз после них (куски чисты от грибов и
@@ -34,7 +24,8 @@
 // объявлен с этими границами, а заполнен только от 0 до 127 — так формат
 // чанков и все расчёты высоты остаются общими.
 
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
 
 #[cfg(not(seedmap_core))]
 use super::nether_bastion as bastion;
@@ -62,21 +53,16 @@ const BEDROCK_LAYERS: i32 = 5;
 /// Блоков в местном куске чанка: 16 × 16 × 128.
 const PIECE: usize = (CHUNK_SIZE * CHUNK_SIZE * (CEILING + 1)) as usize;
 
-/// Доли площади биомов Незера — замер оригинала: 29 областей мира
-/// vanilla-big, 53 тысячи чанков (tools/measure/nether_biomes.py). Вики даёт
-/// близкие числа: 36,3 / 22,2 / 8,5 / 17,1 / 15,9 %. Порядок — как в
-/// `Biome::NETHER`.
-const SHARES: [f64; 5] = [0.346, 0.223, 0.066, 0.181, 0.183];
+/// minecraft.wiki/w/World_generation: «specifies biomes with a single point».
+/// Третья координата — смещение от климатической плоскости, а не вес площади.
+/// Порядок совпадает с `Biome::NETHER`. Проверено по сохранённым биомам 26.3.
+const CLIMATE_POINTS: [(f64, f64, f64); 5] = [
+    (0.0, 0.0, 0.0), (0.4, 0.0, 0.0), (0.0, 0.5, 0.375),
+    (0.0, -0.5, 0.0), (-0.5, 0.0, 0.175),
+];
 
-/// Где биомы лежат на климатической плоскости (жар, сырость) — в долях
-/// разброса шума. Порядок — как в `Biome::NETHER`: пустоши посередине,
-/// остальные по сторонам.
-const PLACES: [(f64, f64); 5] = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.2), (0.0, -1.0), (-1.0, 0.0)];
-
-/// Во сколько блоков крупнейший слой климатического шума: от него размер
-/// пятен биомов. Подогнано к замеру оригинала: у соседних клеток 4×4 биом
-/// сменяется в 1,7 % случаев.
-const CLIMATE_SCALE: f64 = 760.0;
+#[cfg(all(test, not(seedmap_core)))]
+const SHARES: [f64; 5] = [0.363, 0.222, 0.085, 0.171, 0.159];
 
 /// Замер оригинала по высотам (tools/measure/nether_layers.py, 19 тысяч
 /// чанков мира vanilla-big): доля воздуха больших пещер над морем лавы.
@@ -128,55 +114,18 @@ const MEASURED_CAVE_AIR: [(i32, f64); 17] = [
     (121, 0.0),
 ];
 
-/// То же — доля лавы ниже моря (y ≤ 31): море с y ~22 и карманы в толще.
-const MEASURED_LAVA: [(i32, f64); 13] = [
-    (1, 0.0),
-    (2, 0.019),
-    (5, 0.055),
-    (10, 0.066),
-    (16, 0.075),
-    (20, 0.080),
-    (21, 0.097),
-    (22, 0.166),
-    (23, 0.301),
-    (24, 0.470),
-    (26, 0.504),
-    (28, 0.523),
-    (31, 0.533),
-];
-
-/// Во сколько раз воздуха пещер оставлять больше замера: часть его потом
-/// занимают грибы, столбы, светокамень и крепости.
-const AIR_MARGIN: f64 = 1.0;
-
-/// Доля пустот больших пещер на высоте y (0..=127). Ниже моря — начало
-/// моря лавы (от y 21), выше — замер воздуха.
-fn cavern_share(y: i32) -> f64 {
-    const SEA: [(i32, f64); 7] = [(20, 0.0), (21, 0.02), (22, 0.10), (23, 0.24), (24, 0.41), (26, 0.45), (31, 0.47)];
-
-    if y <= LAVA_SEA {
-        interpolate(&SEA, y)
-    } else {
-        (interpolate(&MEASURED_AIR, y) * AIR_MARGIN).min(1.0)
-    }
-}
-
-/// Доля узких ходов на высоте y — так, чтобы вместе с пещерами вышла
-/// замеренная доля: ходы режут только породу, пещеры их поглощают.
-/// Ниже моря лавы это лавовые карманы, выше — cave_air.
+/// Узкие ходы выбираются независимо от основного диапазонного поля.
+/// Внизу доля относится к оставшейся породе: вычитание старой оценки
+/// лавового моря из нового поля давало лишние лавовые карманы.
+/// Геометрия ходов пока статистическая, фаза оригинала [проверить].
 fn tunnel_share(y: i32) -> f64 {
-    let cavern = cavern_share(y);
-    let wanted = if y <= LAVA_SEA {
-        interpolate(&MEASURED_LAVA, y) - cavern
-    } else {
-        interpolate(&MEASURED_CAVE_AIR, y)
-    };
-
-    if y < 2 || wanted <= 0.0 {
-        0.0
-    } else {
-        (wanted / (1.0 - cavern)).min(1.0)
+    if !(2..=120).contains(&y) {
+        return 0.0;
     }
+    if y <= LAVA_SEA {
+        return 0.05;
+    }
+    (interpolate(&MEASURED_CAVE_AIR, y) / (1.0 - interpolate(&MEASURED_AIR, y))).min(1.0)
 }
 
 /// Доля незеррака в толще базальтовых дельт на высоте y — замер: внизу
@@ -350,17 +299,8 @@ impl States {
     }
 }
 
-/// Подгонка климата: разброс шума и сдвиги биомов, при которых доли
-/// площади сходятся с замером.
-struct Fit {
-    spread: f64,
-    weights: [f64; 5],
-}
-
 /// Пороги шумов по высотам 0..=127.
 struct Thresholds {
-    /// Большие пещеры: пусто выше порога.
-    caverns: Vec<f64>,
     /// Узкие ходы: пусто ниже порога.
     tunnels: Vec<f64>,
     /// Дельты: незеррак ниже порога.
@@ -372,11 +312,12 @@ struct Thresholds {
 /// Как складывается Незер этого мира.
 pub struct Nether {
     seed: i64,
-    caverns: Noise,
+    caverns: TerrainNoise,
+    density_columns: Mutex<HashMap<(i32, i32), [f64; 17]>>,
     along: Noise,
     across: Noise,
-    heat: Noise,
-    damp: Noise,
+    heat: ClimateNoise,
+    damp: ClimateNoise,
     /// Породы дельт: базальт, чернокамень, незеррак.
     rocks: Noise,
     /// Пятна поверхности: песок и почва душ, гравий у моря, магма.
@@ -384,7 +325,6 @@ pub struct Nether {
     /// Второй шум пятен — независимый от первого.
     specks: Noise,
     thresholds: OnceLock<Thresholds>,
-    fit: OnceLock<Fit>,
     states: States,
 }
 
@@ -392,16 +332,16 @@ impl Nether {
     pub fn new(seed: i64) -> Nether {
         Nether {
             seed,
-            caverns: Noise::new(seed ^ 0x4E_E7_48_E3),
+            caverns: TerrainNoise::new(seed),
+            density_columns: Mutex::new(HashMap::new()),
             along: Noise::new(seed ^ 0x1B_AD_5E_ED),
             across: Noise::new(seed ^ 0x7A_11_C0_DE),
-            heat: Noise::new(seed ^ 0x3E_A7_0F_1E),
-            damp: Noise::new(seed ^ 0x0D_A3_9B_17),
+            heat: ClimateNoise::new(seed),
+            damp: ClimateNoise::new(seed.wrapping_add(1)),
             rocks: Noise::new(seed ^ 0x5A_B0_C4_77),
             patches: Noise::new(seed ^ 0x2F_09_E1_5D),
             specks: Noise::new(seed ^ 0x61_3C_AA_09),
             thresholds: OnceLock::new(),
-            fit: OnceLock::new(),
             states: States::new(),
         }
     }
@@ -412,27 +352,34 @@ impl Nether {
         self.seed
     }
 
-    /// Шум больших пещер. Растянут по высоте (60 блоков на слой против 72
-    /// по горизонтали): так на столбец над морем лавы приходится столько
-    /// же полов и потолков, как у оригинала, — 1,2 и 1,75 (замер
-    /// tools/measure/nether_layers.py), а пустоты и перемычки между ними
-    /// той же толщины (в среднем 23 и 14 блоков). С прежними 30 блоками
-    /// полов было вдвое больше, а с ними — вдвое больше нилия и мелочи.
-    fn cavern(&self, x: i32, y: i32, z: i32) -> f64 {
-        self.caverns.octaves3(f64::from(x) / 72.0 + 0.37, f64::from(y) / 60.0 + 0.61, f64::from(z) / 72.0 + 0.13, 4)
+    /// Узлы рельефа имеют шаг 4×8×4; внутри ячейки плотность линейная.
+    /// Кэш ограничен и не влияет на результат или порядок генерации.
+    fn density(&self, x: i32, y: i32, z: i32) -> f64 {
+        let (cx, cy, cz) = (x.div_euclid(4), y.div_euclid(8), z.div_euclid(4));
+        let (tx, ty, tz) = (f64::from(x.rem_euclid(4)) / 4.0,
+            f64::from(y.rem_euclid(8)) / 8.0, f64::from(z.rem_euclid(4)) / 4.0);
+        let mut cache = self.density_columns.lock().unwrap();
+        if cache.len() > 16_384 { cache.clear(); }
+        let mut sides = [0.0; 4];
+        for dz in 0..2 {
+            for dx in 0..2 {
+                let row = cache.entry((cx + dx, cz + dz)).or_insert_with(|| {
+                    std::array::from_fn(|i| self.caverns.at(f64::from((cx + dx) * 4), (i * 8) as f64, f64::from((cz + dz) * 4)))
+                });
+                sides[(dz * 2 + dx) as usize] = row[cy as usize] * (1.0 - ty) + row[cy as usize + 1] * ty;
+            }
+        }
+        (sides[0] * (1.0 - tx) + sides[1] * tx) * (1.0 - tz)
+            + (sides[2] * (1.0 - tx) + sides[3] * tx) * tz
     }
 
-    /// Шум узких ходов: насколько далеко от нуля хоть один из двух шумов.
-    /// Ходы редкие и широкие: у оригинала cave_air занимает ~4 % объёма,
-    /// а полов добавляет всего ~0,1 на столбец; частые тонкие ходы давали
-    /// почти целый лишний пол.
+    /// Пересечение двух полей задаёт тонкие связанные ходы. Прежний шаг
+    /// 300 блоков сливал их в большие полости и сглаживал перепады полов.
+    /// Ширина и заполнение сверяются с region-файлами, фаза [проверить].
     fn tunnel(&self, x: i32, y: i32, z: i32) -> f64 {
         let (fx, fy, fz) = (f64::from(x), f64::from(y), f64::from(z));
-
-        self.along
-            .at3(fx / 300.0 + 0.71, fy / 80.0 + 0.29, fz / 300.0 + 0.53)
-            .abs()
-            .max(self.across.at3(fx / 300.0 + 0.19, fy / 80.0 + 0.83, fz / 300.0 + 0.47).abs())
+        self.along.at3(fx / 48.0 + 0.71, fy / 48.0 + 0.29, fz / 48.0 + 0.53)
+            .abs().max(self.across.at3(fx / 48.0 + 0.19, fy / 48.0 + 0.83, fz / 48.0 + 0.47).abs())
     }
 
     /// Шум пород дельт.
@@ -447,7 +394,6 @@ impl Nether {
         self.thresholds.get_or_init(|| {
             const SAMPLES: usize = 60_000;
 
-            let mut caverns = Vec::with_capacity(SAMPLES);
             let mut tunnels = Vec::with_capacity(SAMPLES);
             let mut rocks = Vec::with_capacity(SAMPLES);
             let mut state = (self.seed as u64) ^ 0x5DEE_CE66;
@@ -459,27 +405,16 @@ impl Nether {
                 };
                 let (x, y, z) = (next(), next().rem_euclid(128), next());
 
-                caverns.push(self.cavern(x, y, z));
                 tunnels.push(self.tunnel(x, y, z));
                 rocks.push(self.rock(x, y, z));
             }
 
-            caverns.sort_by(f64::total_cmp);
             tunnels.sort_by(f64::total_cmp);
             rocks.sort_by(f64::total_cmp);
 
             let heights = 0..=CEILING;
 
             Thresholds {
-                // Пещеры: пусто выше порога — порог там, где сверху
-                // остаётся нужная доля. Нет пещер — порог выше всех.
-                caverns: heights
-                    .clone()
-                    .map(|y| match cavern_share(y) {
-                        share if share <= 0.0 => f64::INFINITY,
-                        share => quantile(&caverns, 1.0 - share),
-                    })
-                    .collect(),
                 // Ходы: пусто ниже порога.
                 tunnels: heights
                     .clone()
@@ -517,10 +452,10 @@ impl Nether {
         }
 
         let thresholds = self.thresholds();
-        let (cavern, tunnel) = (thresholds.caverns[y as usize], thresholds.tunnels[y as usize]);
+        let tunnel = thresholds.tunnels[y as usize];
 
         // Где пещер или ходов на этой высоте нет вовсе, их шум не считается.
-        if cavern.is_finite() && self.cavern(x, y, z) > cavern {
+        if self.density(x, y, z) <= 0.0 {
             Void::Cavern
         } else if tunnel.is_finite() && self.tunnel(x, y, z) < tunnel {
             Void::Tunnel
@@ -563,59 +498,20 @@ impl Nether {
         (1..CEILING).contains(&y) && !self.bedrock(x, y, z) && !self.hollow(x, y, z)
     }
 
-    /// Климат столбца: жар и сырость.
+    /// Климат хранится по клеткам 4×4. Две пары октав с периодами 128/64
+    /// клеток сохраняют фазу от семени; нормировка по выборке её разрушала.
     fn climate(&self, x: i32, z: i32) -> (f64, f64) {
-        let (fx, fz) = (f64::from(x) / CLIMATE_SCALE, f64::from(z) / CLIMATE_SCALE);
-
-        (self.heat.octaves(fx + 0.31, fz + 0.77, 4), self.damp.octaves(fx + 0.53, fz + 0.19, 4))
+        let (x, z) = (f64::from(x.div_euclid(4)), f64::from(z.div_euclid(4)));
+        (self.heat.at(x, z), self.damp.at(x, z))
     }
 
-    /// Какой биом из пяти ближе всего к этому климату — со сдвигами,
-    /// подогнанными под доли площади.
-    fn nearest(climate: (f64, f64), spread: f64, weights: &[f64; 5]) -> usize {
-        let (heat, damp) = (climate.0 / spread, climate.1 / spread);
-        let mut best = (f64::INFINITY, 0);
-
-        for (at, (place, weight)) in PLACES.iter().zip(weights).enumerate() {
-            let distance = (heat - place.0).powi(2) + (damp - place.1).powi(2) - weight;
-
-            if distance < best.0 {
-                best = (distance, at);
-            }
-        }
-
-        best.1
-    }
-
-    /// Подгонка климата: по выборке мест находит разброс шума и такие
-    /// сдвиги биомов, чтобы доли площади сошлись с `SHARES`.
-    fn fit(&self) -> &Fit {
-        self.fit.get_or_init(|| {
-            const SAMPLES: usize = 30_000;
-
-            let mut state = (self.seed as u64) ^ 0x0B10_3E5A;
-            let mut next = || {
-                state = scramble(state.wrapping_add(0x9E37_79B9_7F4A_7C15));
-                (state % 8_000_000) as i32 - 4_000_000
-            };
-            let samples: Vec<(f64, f64)> = (0..SAMPLES).map(|_| self.climate(next(), next())).collect();
-            let spread = (samples.iter().map(|(h, d)| h * h + d * d).sum::<f64>() / (2 * SAMPLES) as f64).sqrt();
-            let mut weights = [0.0; 5];
-
-            for _ in 0..400 {
-                let mut counts = [0usize; 5];
-
-                for climate in &samples {
-                    counts[Nether::nearest(*climate, spread, &weights)] += 1;
-                }
-
-                for at in 0..5 {
-                    weights[at] += 0.5 * (SHARES[at] - counts[at] as f64 / SAMPLES as f64);
-                }
-            }
-
-            Fit { spread, weights }
-        })
+    fn nearest((heat, damp): (f64, f64)) -> usize {
+        // Климат сравнивается с точностью 1/10000, в том числе у границ.
+        let quantize = |v: f64| (v * 10_000.0) as i64;
+        let (heat, damp) = (quantize(heat), quantize(damp));
+        CLIMATE_POINTS.iter().enumerate().min_by_key(|(_, (t, h, offset))| {
+            (heat - quantize(*t)).pow(2) + (damp - quantize(*h)).pow(2) + quantize(*offset).pow(2)
+        }).unwrap().0
     }
 
     #[cfg(not(seedmap_core))]
@@ -639,9 +535,7 @@ impl Nether {
 
     /// Биом столбца.
     pub fn biome_at(&self, x: i32, z: i32) -> Biome {
-        let fit = self.fit();
-
-        Biome::NETHER[Nether::nearest(self.climate(x, z), fit.spread, &fit.weights)]
+        Biome::NETHER[Nether::nearest(self.climate(x, z))]
     }
 
     /// Число для решения в этом месте: своё для каждой точки и соли.
@@ -756,7 +650,9 @@ impl Nether {
     pub fn bastion_start(&self, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
         let start = fortress::region_start(self.seed, region_x, region_z);
 
-        self.fortress_start(region_x, region_z).is_none().then_some((start.0, start.1))
+        (start.2 >= fortress::FORTRESS_SHARE
+            && self.biome_at(start.0 * CHUNK_SIZE + 8, start.1 * CHUNK_SIZE + 8) != Biome::BasaltDeltas)
+            .then_some((start.0, start.1))
     }
 
     /// Бастионы, задевающие этот чанк.
@@ -800,13 +696,12 @@ impl Nether {
     }
 
     /// Постройка региона: крепость или бастион (замер оригинала: в каждом
-    /// регионе 27×27 чанков ровно одна; в дельтах — всегда крепость, иначе
-    /// крепость в 40 %). Биом решает середина чанка старта.
+    /// регионе 27×27 чанков одна попытка; крепость в 40 %).
+    /// minecraft.wiki/w/Bastion_Remnant: «except basalt deltas» — неудачная
+    /// попытка бастиона не превращается в дополнительную крепость.
     pub fn fortress_start(&self, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
         let (chunk_x, chunk_z, roll) = fortress::region_start(self.seed, region_x, region_z);
-        let deltas = self.biome_at(chunk_x * CHUNK_SIZE + 8, chunk_z * CHUNK_SIZE + 8) == Biome::BasaltDeltas;
-
-        (deltas || roll < fortress::FORTRESS_SHARE).then_some((chunk_x, chunk_z))
+        (roll < fortress::FORTRESS_SHARE).then_some((chunk_x, chunk_z))
     }
 
     /// Крепости, задевающие этот чанк: каждая раскладывается целиком по
@@ -976,12 +871,9 @@ impl Nether {
                     let above = piece.blocks[Piece::index(local_x, y + 1, local_z)];
                     let below = piece.blocks[Piece::index(local_x, y - 1, local_z)];
                     let forest = matches!(biome, Biome::CrimsonForest | Biome::WarpedForest);
-                    // Пол узкого хода в лесу — часть его тоже в нилии: у нас
-                    // голого незеррака на полу леса без этого 20 %, у оригинала
-                    // 14 % (нилий 52 %) [проверить: как это выходит у оригинала].
-                    let floor = above == AIR
-                        || (above == states.lava && !forest)
-                        || (above == TUNNEL && forest && self.chance(0x7C11, x, y, z, TUNNEL_NYLIUM));
+                    // Поверхность предшествует узким ходам: нилий не
+                    // восстанавливается на обнажённой ими породе.
+                    let floor = above == AIR || (above == states.lava && !forest);
                     let ceiling = below == AIR;
                     let shore = floor && (26..=35).contains(&y);
 
@@ -1088,6 +980,11 @@ impl Nether {
     /// тем же числам.
     #[cfg(not(seedmap_core))]
     fn blobs(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
+        self.blobs_with_culling(piece,chunk_x,chunk_z,true);
+    }
+
+    #[cfg(not(seedmap_core))]
+    fn blobs_with_culling(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32, cull: bool) {
         let states = &self.states;
 
         for near_x in chunk_x - 1..=chunk_x + 1 {
@@ -1108,12 +1005,23 @@ impl Nether {
                     for _ in 0..count {
                         let x = near_x * CHUNK_SIZE + dice.below(CHUNK_SIZE as u32);
                         let z = near_z * CHUNK_SIZE + dice.below(CHUNK_SIZE as u32);
-                        let y = kind.low + dice.below((kind.high - kind.low + 1) as u32);
+                        let y = if kind.state == Blob::DEBRIS && kind.high == 24 {
+                            // minecraft.wiki/w/Ancient_Debris: «triangle distribution».
+                            kind.low + dice.below(9) + dice.below(9)
+                        } else {
+                            kind.low + dice.below((kind.high - kind.low + 1) as u32)
+                        };
+                        // В замере рудная масса смещена ниже выбранной высоты;
+                        // симметричный центр давал лишнюю руду в слое 112..127.
+                        let y = y - i32::from(matches!(kind.state, Blob::QUARTZ | Blob::GOLD));
                         let size = kind.size.0 + dice.unit() * (kind.size.1 - kind.size.0);
                         let radius = (size * 0.75 / std::f64::consts::PI).cbrt();
                         let reach = radius.ceil() as i32 + 1;
 
-                        if !piece.near(x, z, reach) {
+                        // Все броски делаются до отсечения: иначе соседний
+                        // чанк пропускал три числа и следующие пятна расходились.
+                        let (sx, sy, sz) = (0.7 + dice.unit() * 0.6, 0.6 + dice.unit() * 0.5, 0.7 + dice.unit() * 0.6);
+                        if cull && !piece.near(x, z, reach) {
                             // Вся порода пятна за краем чанка: кости уже
                             // брошены, дальше считать нечего.
                             continue;
@@ -1128,9 +1036,6 @@ impl Nether {
                             Blob::MAGMA => states.magma,
                             _ => states.basalt,
                         };
-                        // Сплюснутость и наклон пятна — свои у каждого.
-                        let (sx, sy, sz) = (0.7 + dice.unit() * 0.6, 0.6 + dice.unit() * 0.5, 0.7 + dice.unit() * 0.6);
-
                         for dx in -reach..=reach {
                             for dy in -reach..=reach {
                                 for dz in -reach..=reach {
@@ -1139,13 +1044,19 @@ impl Nether {
                                     let distance = (fx * fx + fy * fy + fz * fz).sqrt();
                                     let edge = radius * (0.8 + 0.4 * unit(self.hash(0xED6E, bx, by, bz)));
 
-                                    if distance > edge {
+                                    // minecraft.wiki/w/Ore_(feature): «Maximum height» 117.
+                                    // В обоих сохранённых мирах крайний рудный слой — 117.
+                                    if distance > edge || (matches!(kind.state, Blob::QUARTZ | Blob::GOLD) && by > kind.high) {
                                         continue;
                                     }
 
                                     if let Some(at) = piece.at(bx, by, bz)
-                                        && piece.blocks[at] == states.netherrack
+                                        && (piece.blocks[at] == states.netherrack
+                                            || (kind.state == Blob::DEBRIS && states.is_rock(piece.blocks[at])))
                                     {
+                                        if kind.state == Blob::DEBRIS && self.exposed_to_air(bx, by, bz) {
+                                            continue;
+                                        }
                                         piece.blocks[at] = state;
                                     }
                                 }
@@ -1155,6 +1066,14 @@ impl Nether {
                 }
             }
         }
+    }
+
+    /// Проверка соседей по исходному рельефу, в том числе за границей чанка.
+    /// Лава не считается воздухом: обломки могут касаться лавовых карманов.
+    #[cfg(not(seedmap_core))]
+    fn exposed_to_air(&self, x: i32, y: i32, z: i32) -> bool {
+        [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
+            .iter().any(|&(dx, dy, dz)| y + dy > LAVA_SEA && self.open(x + dx, y + dy, z + dz))
     }
 
     /// Крупные объекты: столбы базальта, огромные грибы, светокамень,
@@ -1273,6 +1192,14 @@ impl Nether {
             let Some(floor) = self.floor_below(x, from, z) else {
                 continue;
             };
+
+            // Огромный гриб требует нилия; голый пол узкого хода не
+            // подходит. Условие аналитическое и одинаково за краем чанка.
+            if self.void(x, floor + 1, z) != Void::Cavern
+                || self.specks.octaves3(f64::from(x) / 6.0, f64::from(floor) / 6.0, f64::from(z) / 6.0, 2) < -0.6
+            {
+                continue;
+            }
 
             // Ствол не упирается в потолок: не хватает места — гриб ниже,
             // а шляпу срезает потолок. У оригинала так же: пятая часть
@@ -1651,6 +1578,11 @@ impl Nether {
         }
     }
 
+    /// Старт окаменелости ищется в базовой колонке до узких ходов и объектов.
+    pub(super) fn fossil_floor_below(&self, x: i32, from: i32, z: i32) -> Option<i32> {
+        (32..from.min(CEILING)).rev().find(|&y| self.density(x,y,z) > 0.0 && self.density(x,y+1,z) <= 0.0)
+    }
+
     /// Сплошная ли порода в этом месте (для высоты разрушенных порталов).
     pub(super) fn solid_rock(&self, x: i32, y: i32, z: i32) -> bool {
         self.rock_at(x, y, z)
@@ -1709,11 +1641,8 @@ fn gravel_depth(roll: u64) -> i32 {
 /// Попыток лавы в стене на чанк.
 const SPRING_TRIES: usize = 12;
 
-/// Доля полов узких ходов в лесах, покрытых нилием.
-const TUNNEL_NYLIUM: f64 = 0.35;
-
 /// Попыток огромного гриба на чанк.
-const FUNGUS_TRIES: usize = 28;
+const FUNGUS_TRIES: usize = 32;
 
 /// Попыток грозди светокамня на чанк.
 const GLOWSTONE_TRIES: f64 = 0.5;
@@ -1722,7 +1651,7 @@ const GLOWSTONE_TRIES: f64 = 0.5;
 const DELTA_COLUMN_TRIES: usize = 4;
 
 /// Доля потолка багрового леса, откуда свисают лозы.
-const WEEPING_PART: f64 = 0.018;
+const WEEPING_PART: f64 = 0.014;
 
 /// Пятно в толще: что, сколько попыток на чанк (в дельтах — своё число),
 /// на каких высотах и какого размера (блоков, от и до).
@@ -1745,19 +1674,25 @@ impl Blob {
     const BASALT: u8 = 6;
 }
 
+/// Число попыток руд: minecraft.wiki/w/Ore_(feature), «Spawn tries per chunk».
+/// Объём эллипсоида отличается от числа поставленных блоков: граница,
+/// растяжение и замещение породы отбрасывают часть. Диапазоны проверяются
+/// по блокам на чанк и слоям обоих семян переписи, а не по сумме попыток.
 /// Пятна в толще Незера. Высоты и объёмы — по замеру оригинала, блоков на
 /// столбец пустошей: кварц 0,5 (y 8–117), золото 0,18, древние обломки
 /// 0,006 (y 8–24), гравий 0,6 (пятнами y 4–37: по 8 блоков высоты 0,09 /
 /// 0,17 / 0,16 от y 0, выше y 40 почти нет; в дельтах пятен нет), чернокамень 0,74 (y 5–31), магма
 /// 0,77 (y 23–37, гуще всего 27–33), базальт 0,4 (кроме багрового леса и дельт).
-const BLOBS: [Blob; 7] = [
-    Blob { state: Blob::QUARTZ, tries: 26.0, deltas: 52.0, low: 10, high: 117, size: (6.0, 16.0) },
-    Blob { state: Blob::GOLD, tries: 14.0, deltas: 28.0, low: 10, high: 117, size: (4.0, 10.0) },
-    Blob { state: Blob::DEBRIS, tries: 1.2, deltas: 1.2, low: 8, high: 24, size: (1.0, 3.0) },
+const BLOBS: [Blob; 8] = [
+    Blob { state: Blob::QUARTZ, tries: 16.0, deltas: 32.0, low: 10, high: 117, size: (10.0, 24.0) },
+    Blob { state: Blob::GOLD, tries: 10.0, deltas: 20.0, low: 10, high: 117, size: (6.0, 14.0) },
+    Blob { state: Blob::DEBRIS, tries: 1.0, deltas: 1.0, low: 8, high: 24, size: (1.0, 2.5) },
     Blob { state: Blob::GRAVEL, tries: 6.6, deltas: 0.0, low: 4, high: 37, size: (20.0, 50.0) },
     Blob { state: Blob::BLACKSTONE, tries: 8.0, deltas: 3.0, low: 5, high: 31, size: (20.0, 50.0) },
     Blob { state: Blob::MAGMA, tries: 14.5, deltas: 4.0, low: 24, high: 34, size: (20.0, 50.0) },
     Blob { state: Blob::BASALT, tries: 9.0, deltas: 0.0, low: 5, high: 120, size: (10.0, 40.0) },
+    // minecraft.wiki/w/Ancient_Debris: «evenly from levels 8 to 119».
+    Blob { state: Blob::DEBRIS, tries: 1.0, deltas: 1.0, low: 8, high: 119, size: (1.0, 2.0) },
 ];
 
 /// Блоки чанка на высотах 0..=127 — пока он складывается.
@@ -1804,6 +1739,178 @@ impl Piece {
     }
 }
 
+/// Поток java.util.Random: 48-битный LCG из документации Java API.
+/// Нужен для фазы климатических октав и размещения построек Незера.
+pub(super) struct LegacyRandom(u64);
+
+impl LegacyRandom {
+    pub(super) fn new(seed: i64) -> Self {
+        Self((seed as u64 ^ 0x0005_DEEC_E66D) & ((1u64 << 48) - 1))
+    }
+
+    fn bits(&mut self, count: u32) -> u64 {
+        self.0 = self.0.wrapping_mul(0x0005_DEEC_E66D).wrapping_add(11) & ((1u64 << 48) - 1);
+        self.0 >> (48 - count)
+    }
+
+    pub(super) fn below(&mut self, bound: i32) -> i32 {
+        assert!(bound > 0);
+        if (bound as u32).is_power_of_two() {
+            return ((bound as u64 * self.bits(31)) >> 31) as i32;
+        }
+        loop {
+            let bits = self.bits(31) as i32;
+            let value = bits % bound;
+            if bits.wrapping_sub(value).wrapping_add(bound - 1) >= 0 {
+                return value;
+            }
+        }
+    }
+
+    fn long(&mut self) -> i64 {
+        ((self.bits(32) as i32 as i64) << 32).wrapping_add(self.bits(32) as i32 as i64)
+    }
+
+    pub(super) fn for_chunk(seed: i64, x: i32, z: i32) -> Self {
+        let mut random = Self::new(seed);
+        let a = random.long();
+        let b = random.long();
+        Self::new(i64::from(x).wrapping_mul(a) ^ i64::from(z).wrapping_mul(b) ^ seed)
+    }
+
+    fn double(&mut self) -> f64 {
+        ((self.bits(26) << 27) + self.bits(27)) as f64 / (1u64 << 53) as f64
+    }
+}
+
+/// Улучшенный шум Перлина: независимая таблица и начало каждой октавы.
+/// Начальная таблица тасуется вперёд; три дробных сдвига не дают узла в (0,0).
+struct LegacyOctave {
+    origin: [f64; 3],
+    permutation: [u8; 256],
+}
+
+impl LegacyOctave {
+    fn new(random: &mut LegacyRandom) -> Self {
+        let origin = std::array::from_fn(|_| random.double() * 256.0);
+        let mut permutation = std::array::from_fn(|i| i as u8);
+        for i in 0..256 {
+            let j = i + random.below((256 - i) as i32) as usize;
+            permutation.swap(i, j);
+        }
+        Self { origin, permutation }
+    }
+
+    fn at(&self, x: f64, z: f64) -> f64 {
+        self.at3(x, 0.0, z, 0.0)
+    }
+
+    fn at3(&self, x: f64, y: f64, z: f64, smear: f64) -> f64 {
+        let v = [x + self.origin[0], y + self.origin[1], z + self.origin[2]];
+        let floor = v.map(f64::floor);
+        let mut fraction: [f64; 3] = std::array::from_fn(|i| v[i] - floor[i]);
+        let fade = fraction.map(|t| t * t * t * (t * (t * 6.0 - 15.0) + 10.0));
+        // Сглаживание использует исходную высоту, градиент — смазанную.
+        if smear > 0.0 {
+            fraction[1] -= (y.min(fraction[1]) / smear + 1.0e-7).floor() * smear;
+        }
+        let p = |i: i64| i64::from(self.permutation[(i & 255) as usize]);
+        let mut sum = 0.0;
+        for dx in 0..2 {
+            for dy in 0..2 {
+                for dz in 0..2 {
+                    let hash = p(p(p(floor[0] as i64 + dx) + floor[1] as i64 + dy) + floor[2] as i64 + dz) & 15;
+                    let [x, y, z] = [fraction[0] - dx as f64, fraction[1] - dy as f64, fraction[2] - dz as f64];
+                    let u = if hash < 8 { x } else { y };
+                    let v = if hash < 4 { y } else if hash == 12 || hash == 14 { x } else { z };
+                    let gradient = (if hash & 1 == 0 { u } else { -u }) + (if hash & 2 == 0 { v } else { -v });
+                    sum += gradient * (if dx == 0 { 1.0 - fade[0] } else { fade[0] })
+                        * (if dy == 0 { 1.0 - fade[1] } else { fade[1] })
+                        * (if dz == 0 { 1.0 - fade[2] } else { fade[2] });
+                }
+            }
+        }
+        sum
+    }
+}
+
+/// Климат: сумма двух независимых пар октав. Параметры и порядок потока
+/// подтверждены долями и клетками обоих сохранённых миров переписи 26.3.
+struct ClimateNoise([[LegacyOctave; 2]; 2]);
+
+impl ClimateNoise {
+    fn new(seed: i64) -> Self {
+        let mut random = LegacyRandom::new(seed);
+        Self(std::array::from_fn(|_| {
+            // Нулевая октава и пять пропущенных ступеней до частоты 1/64.
+            let _ = LegacyOctave::new(&mut random);
+            for _ in 0..5 * 262 { random.bits(32); }
+            let high = LegacyOctave::new(&mut random);
+            let low = LegacyOctave::new(&mut random);
+            [low, high]
+        }))
+    }
+
+    fn at(&self, x: f64, z: f64) -> f64 {
+        let mut sum = 0.0;
+        for (i, pair) in self.0.iter().enumerate() {
+            let scale = if i == 0 { 1.0 } else { 1.018_126_888_217_522_7 };
+            sum += pair[0].at(x * scale / 128.0, z * scale / 128.0) * (2.0 / 3.0)
+                + pair[1].at(x * scale / 64.0, z * scale / 64.0) / 3.0;
+        }
+        sum * (10.0 / 9.0)
+    }
+}
+
+/// Диапазонный шум: два независимых поля по 16 октав и селектор из восьми.
+/// minecraft.wiki/w/World_generation: «two pairs of base heights».
+/// Фаза и сетка проверены по пустотам двух миров 26.3, без чтения кода игры.
+struct TerrainNoise {
+    lower: [LegacyOctave; 16],
+    upper: [LegacyOctave; 16],
+    selector: [LegacyOctave; 8],
+}
+
+impl TerrainNoise {
+    fn new(seed: i64) -> Self {
+        let mut random = LegacyRandom::new(seed);
+        Self {
+            lower: std::array::from_fn(|_| LegacyOctave::new(&mut random)),
+            upper: std::array::from_fn(|_| LegacyOctave::new(&mut random)),
+            selector: std::array::from_fn(|_| LegacyOctave::new(&mut random)),
+        }
+    }
+
+    fn at(&self, x: f64, y: f64, z: f64) -> f64 {
+        let (fx, fy, fz) = (x * 684.412 * 0.25, y * 684.412 * 0.375, z * 684.412 * 0.25);
+        let smear = 684.412 * 0.375 * 8.0;
+        let mut selector = 0.0;
+        let mut frequency = 1.0;
+        for octave in &self.selector {
+            selector += octave.at3(fx / 80.0 * frequency, fy / 60.0 * frequency,
+                fz / 80.0 * frequency, smear / 60.0 * frequency) / frequency;
+            frequency *= 0.5;
+        }
+        let blend = ((selector / 10.0 + 1.0) * 0.5).clamp(0.0, 1.0);
+        let (mut lower, mut upper) = (0.0, 0.0);
+        frequency = 1.0;
+        for (low, high) in self.lower.iter().zip(&self.upper) {
+            if blend < 1.0 {
+                lower += low.at3(fx * frequency, fy * frequency, fz * frequency, smear * frequency) / frequency;
+            }
+            if blend > 0.0 {
+                upper += high.at3(fx * frequency, fy * frequency, fz * frequency, smear * frequency) / frequency;
+            }
+            frequency *= 0.5;
+        }
+        let density = (lower * (1.0 - blend) + upper * blend) / 65_536.0;
+        let top = ((128.0 - y) / 24.0).clamp(0.0, 1.0);
+        let density = 0.9375 * (1.0 - top) + density * top;
+        let bottom = ((y + 8.0) / 32.0).clamp(0.0, 1.0);
+        2.5 * (1.0 - bottom) + density * bottom
+    }
+}
+
 /// Кости: повторяемый поток чисел из одного зерна.
 struct Dice(u64);
 
@@ -1847,6 +1954,151 @@ fn scramble(mut value: u64) -> u64 {
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    /// Фикстура снята только с биомов сохранённых регионов оригинала 26.3.
+    #[test]
+    fn census_biomes_match_both_seeds() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-biomes.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let nether = Nether::new(case["seed"].as_i64().unwrap());
+            for point in case["points"].as_array().unwrap() {
+                let (x, z) = (point[0].as_i64().unwrap() as i32, point[1].as_i64().unwrap() as i32);
+                assert_eq!(nether.biome_at(x, z).name(), point[2].as_str().unwrap(), "{}, {x}, {z}", nether.seed);
+            }
+            let mut counts = std::collections::BTreeMap::new();
+            for x in (-256..272).step_by(4) {
+                for z in (-256..272).step_by(4) {
+                    *counts.entry(nether.biome_at(x, z).name()).or_insert(0i64) += 1;
+                }
+            }
+            for biome in Biome::NETHER {
+                let actual = counts.get(biome.name()).copied().unwrap_or(0);
+                let expected = case["counts"][biome.name()].as_i64().unwrap_or(0);
+                assert!((actual - expected).abs() <= 8, "{} {}: {actual} / {expected}", nether.seed, biome.name());
+            }
+            // Проверяем также биомы в реально сложенном чанке и отрицательные клетки.
+            for (cx, cz) in [(-16, -16), (-1, -1), (0, 0), (16, 16)] {
+                let chunk = nether.chunk(cx, cz);
+                for x in 0..4 {
+                    for z in 0..4 {
+                        let expected = nether.biome_at(cx * 16 + x as i32 * 4, cz * 16 + z as i32 * 4).number() as BiomeId;
+                        for layer in 0..BIOME_LAYERS {
+                            assert_eq!(chunk.biomes[biome_cell(layer, x, z)], expected);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Независимые блоки оригинала проверяют фазу поля и оба сплошных края.
+    #[test]
+    fn census_terrain_phase_and_slides() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-terrain.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let n = Nether::new(case["seed"].as_i64().unwrap());
+            let points = case["points"].as_array().unwrap();
+            let different = points.iter().filter(|p| {
+                let (x,y,z) = (p[0].as_i64().unwrap() as i32,p[1].as_i64().unwrap() as i32,p[2].as_i64().unwrap() as i32);
+                (n.density(x,y,z) > 0.0) != p[3].as_bool().unwrap()
+            }).count();
+            // Поверхность, объекты и узкие ходы — отдельные стадии.
+            assert!(different * 100 <= points.len() * 5, "{}: {different}/{}", n.seed, points.len());
+            // Очистка кэша и порядок запросов не меняют ни поле, ни чанк.
+            let before = n.chunk(-1,0);
+            n.density_columns.lock().unwrap().clear();
+            let _ = n.chunk(1,-1);
+            let after = n.chunk(-1,0);
+            for y in 0..=CEILING {
+                for x in 0..16 {
+                    for z in 0..16 {
+                        assert_eq!(before.block(x,y,z),after.block(x,y,z));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Отсечение дальних пятен не должно менять поток следующих объектов.
+    #[test]
+    fn ore_halo_culling_preserves_the_random_stream() {
+        let n=Nether::new(1_792_932_773_345_722_119);
+        for (cx,cz) in [(-1,-1),(0,0),(1,-1)] {
+            let mut fast=Piece { x0:cx*16,z0:cz*16,blocks:vec![n.states.netherrack;PIECE] };
+            let mut reference=Piece { x0:cx*16,z0:cz*16,blocks:fast.blocks.clone() };
+            n.blobs_with_culling(&mut fast,cx,cz,true);
+            n.blobs_with_culling(&mut reference,cx,cz,false);
+            assert_eq!(fast.blocks,reference.blocks,"{cx},{cz}");
+        }
+    }
+
+    /// Разреженная выборка настоящих чанков обоих окон переписи.
+    /// Для 81 чанка допуск шире полного окна; верхний проход обломков
+    /// проверяется отдельно, чтобы среднее не скрывало неверную высоту.
+    #[test]
+    fn census_ore_density_and_upper_debris_pass() {
+        for (seed, expected) in [
+            (1_792_932_773_345_722_119, [40.550,116.819,1.557]),
+            (100_554_032_945_340, [30.848,90.104,1.374]),
+        ] {
+            let n = Nether::new(seed);
+            let states = [n.states.gold,n.states.quartz,n.states.debris];
+            let mut counts = [0usize;3];
+            let mut high_debris = 0;
+            for cx in (-16..=16).step_by(4) {
+                for cz in (-16..=16).step_by(4) {
+                    let chunk = n.chunk(cx,cz);
+                    for y in 0..=CEILING {
+                        for x in 0..16 {
+                            for z in 0..16 {
+                                let state = chunk.block(x,y,z);
+                                for (i, ore) in states.iter().enumerate() {
+                                    counts[i] += usize::from(state == *ore);
+                                }
+                                high_debris += usize::from(state == n.states.debris && y >= 32);
+                            }
+                        }
+                    }
+                }
+            }
+            for i in 0..3 {
+                let actual = counts[i] as f64 / 81.0;
+                assert!((actual - expected[i]).abs() <= expected[i] * 0.30,
+                    "{seed} {}: {actual} / {}", states[i], expected[i]);
+            }
+            assert!(high_debris > 0);
+        }
+    }
+
+    #[test]
+    fn census_fortress_starts_and_rejected_delta_bastions() {
+        for (seed, starts) in [
+            (1_792_932_773_345_722_119, vec![(-6i32, -5i32)]),
+            (100_554_032_945_340, vec![(-13i32, -6i32), (-9, 3), (4, -14)]),
+        ] {
+            let nether = Nether::new(seed);
+            for (cx, cz) in starts {
+                assert_eq!(nether.fortress_start(cx.div_euclid(27), cz.div_euclid(27)), Some((cx, cz)));
+                assert!(nether.bastion_start(cx.div_euclid(27), cz.div_euclid(27)).is_none());
+            }
+            let mut rejected = 0;
+            for rx in -8..8 {
+                for rz in -8..8 {
+                    let (cx, cz, roll) = fortress::region_start(seed, rx, rz);
+                    if roll >= fortress::FORTRESS_SHARE && nether.biome_at(cx * 16 + 8, cz * 16 + 8) == Biome::BasaltDeltas {
+                        assert!(nether.fortress_start(rx, rz).is_none());
+                        assert!(nether.bastion_start(rx, rz).is_none());
+                        rejected += 1;
+                    }
+                }
+            }
+            assert!(rejected > 0);
+        }
+    }
 
     /// Доли пустот, лавы и бедрока по высотам — против замера оригинала.
     /// `cargo test --release nether_profile -- --ignored --nocapture`.
@@ -2626,9 +2878,8 @@ mod tests {
         let mut phases = [Duration::ZERO; 6];
         let mut total = Duration::ZERO;
 
-        // Пороги и подгонка климата считаются один раз на мир — не в счёт.
+        // Пороги считаются один раз на мир — не в счёт.
         nether.thresholds();
-        nether.fit();
 
         for i in 0..count {
             let (chunk_x, chunk_z) = (i % 8 - 20, i / 8 + 13);

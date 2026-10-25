@@ -331,14 +331,19 @@ fn cx_in_core(cx: i32, cz: i32, wx: i32, wz: i32, half: i32) -> bool {
 #[test]
 fn measured_bastion_spawner_keeps_magma_cube_on_reload() {
     let generator = Generator::Nether(nether::Nether::new(SEED));
-    let chunk = Chunk::generated(&generator,-496,-7);
-    let pos = (2,39,10);
+    // После исправления размещения Незера старые координаты больше не бастион.
+    let Generator::Nether(n) = &generator else { unreachable!() };
+    let (cx,cz,pos) = (-4..=4).flat_map(|x| (-4..=4).map(move |z| (x,z)))
+        .filter_map(|(x,z)| n.bastion_start(x,z))
+        .flat_map(|(x,z)| (x-4..=x+4).flat_map(move |cx| (z-4..=z+4).map(move |cz| (cx,cz))))
+        .find_map(|(cx,cz)| n.bastion_spawners(cx,cz).into_iter().next().map(|pos| (cx,cz,pos)))
+        .expect("сокровищница бастиона со спаунером");
+    let chunk = Chunk::generated(&generator,cx,cz);
     assert_eq!(blocks::block_at_state(chunk.block(pos.0,pos.1,pos.2)),Some("spawner"));
     assert_eq!(chunk.spawners[&pos].entity,"minecraft:magma_cube");
     let decoded = Chunk::from_bytes(&chunk.to_bytes()).unwrap();
     assert_eq!(decoded.spawners[&pos].entity,"minecraft:magma_cube");
-    let Generator::Nether(n) = &generator else { unreachable!() };
-    assert!(n.bastion_spawners(-496,-7).contains(&pos));
+    assert!(n.bastion_spawners(cx,cz).contains(&pos));
 }
 
 fn template_record(t: &template::Template, orient: template::Orient, (x,y,z): (i32,i32,i32)) -> Value {
