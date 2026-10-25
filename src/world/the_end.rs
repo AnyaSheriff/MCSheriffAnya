@@ -8,7 +8,7 @@
 //   57 у края диска, низ 11 → 19), дальше рваная кайма до ~145 блоков.
 // — Пустота: от ~150 до ~950 блоков ни одного блока.
 // — Внешние острова: с ~950 блоков доля площади растёт до 0,40 к 1050 и
-//   0,45 к 1200, дальше держится около 0,45. Острова огромные (сотни
+//   0,50 к 1200, дальше держится около 0,50. Острова огромные (сотни
 //   блоков), плоские сверху (верх 60–61), с круглым краем: толщина растёт
 //   от 4 у самого края до 47 в 60 блоках от края.
 //
@@ -60,8 +60,9 @@ const MAIN_RADIUS: f64 = 66.0;
 /// Расстояние, с которого начинаются внешние острова.
 const OUTER_FROM: f64 = 945.0;
 
-/// Вес мелких островков в шуме внешних островов.
-const ISLETS: f64 = 0.8;
+/// Вес мелких островков: избыток коротких волн дробил берег на клифы.
+/// Проверяется долей перепадов ≥16 в двух мирах переписи, а не картой семени.
+const ISLETS: f64 = 0.3;
 
 /// Доля площади, занятая внешними островами, по расстоянию от центра
 /// (замер, кольца по 25 блоков).
@@ -69,8 +70,8 @@ fn outer_cover(distance: f64) -> f64 {
     match distance {
         d if d <= OUTER_FROM => 0.0,
         d if d < 1050.0 => (d - OUTER_FROM) * 0.003_81,
-        d if d < 1200.0 => 0.40 + (d - 1050.0) * (0.05 / 150.0),
-        _ => 0.45,
+        d if d < 1200.0 => 0.40 + (d - 1050.0) * (0.10 / 150.0),
+        _ => 0.50,
     }
 }
 
@@ -218,10 +219,9 @@ pub struct End {
     /// Неровность верха и низа.
     top: Noise,
     bottom: Noise,
-    /// Разброс границ биомов.
-    jitter: Noise,
     outer_ranks: OnceLock<Ranks>,
     main_ranks: OnceLock<Ranks>,
+    biome_ranks: OnceLock<Ranks>,
     states: States,
 }
 
@@ -306,9 +306,9 @@ impl End {
             islets: Noise::new(seed ^ 0x2B_7E_15_16),
             top: Noise::new(seed ^ 0x77_B3_04_A9),
             bottom: Noise::new(seed ^ 0x1D_C8_62_5F),
-            jitter: Noise::new(seed ^ 0x6A_09_E6_67),
             outer_ranks: OnceLock::new(),
             main_ranks: OnceLock::new(),
+            biome_ranks: OnceLock::new(),
             states: States::new(),
         }
     }
@@ -411,45 +411,21 @@ impl End {
         (bottom, top.max(bottom))
     }
 
-    /// Биом столбца: главный остров и пустота вокруг него — «край»; дальше
-    /// по толщине острова под клеткой (замер: у пустоты и тонких краёв
-    /// малые острова и пустоши, у толстых — верховья).
+    /// minecraft.wiki/w/End_City: «midlands or highlands». Биом задаёт
+    /// крупное поле островов, до мелкой неровности поверхности: поэтому
+    /// середины захватывают пустоту, а пустоши — берег, а не только воздух.
     pub fn biome_at(&self, x: i32, z: i32) -> Biome {
         if f64::from(x).hypot(f64::from(z)) < 1000.0 {
             return Biome::TheEnd;
         }
 
-        let jitter = self.jitter.octaves(f64::from(x) / 37.0 + 0.5, f64::from(z) / 37.0 + 0.5, 2);
-        let choice = (jitter + 1.0) / 2.0;
-
-        match self.column(x, z) {
-            None => match choice {
-                c if c < 0.56 => Biome::SmallEndIslands,
-                c if c < 0.80 => Biome::EndBarrens,
-                _ => Biome::EndMidlands,
-            },
-            Some((bottom, top)) => {
-                let thick = f64::from(top - bottom + 1) + (jitter * 10.0);
-
-                match thick {
-                    t if t >= 38.0 => Biome::EndHighlands,
-                    t if t >= 24.0 => Biome::EndMidlands,
-                    t if t >= 6.0 => {
-                        if choice < 0.68 {
-                            Biome::EndMidlands
-                        } else {
-                            Biome::EndBarrens
-                        }
-                    }
-                    _ => {
-                        if choice < 0.5 {
-                            Biome::SmallEndIslands
-                        } else {
-                            Biome::EndBarrens
-                        }
-                    }
-                }
-            }
+        let noise = |x: i32, z: i32| self.islands.octaves(f64::from(x) / 190.0 + 0.37, f64::from(z) / 190.0 + 0.71, 3);
+        let ranks = self.biome_ranks.get_or_init(|| Ranks::new(self.seed as u64, noise));
+        match ranks.share_below(noise(x, z)) {
+            t if t >= 0.80 => Biome::EndHighlands,
+            t if t >= 0.51 => Biome::EndMidlands,
+            t if t >= 0.40 => Biome::EndBarrens,
+            _ => Biome::SmallEndIslands,
         }
     }
 
@@ -554,7 +530,8 @@ impl End {
         }
     }
 
-    /// Хорус: простые деревья на внешних островах верховий и середины.
+    /// Хорус: корень в верховьях; ветви могут попадать в соседний биом.
+    /// minecraft.wiki/w/End_highlands: «chorus trees».
     #[cfg(not(seedmap_core))]
     fn chorus(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, tops: &[Option<i32>]) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
@@ -579,7 +556,7 @@ impl End {
                     continue;
                 }
 
-                if !matches!(self.biome_at(x, z), Biome::EndHighlands | Biome::EndMidlands) {
+                if !matches!(self.biome_at(x, z), Biome::EndHighlands) {
                     continue;
                 }
 
@@ -768,10 +745,10 @@ impl End {
     }
 }
 
-/// Сколько деревьев хоруса на столбец верховий и середины. Замер: 0,08
-/// блока стебля и 0,01 цветка на столбец внешних островов; у дерева
-/// ~8 блоков стебля на цветок. Подогнано переписью end_city_census.
-const CHORUS_PER_COLUMN: f64 = 0.0095;
+/// Попытка корня на доступный столбец верховий. Замер 26.3 отдельно
+/// по биомам: около 680 стеблей на миллион блоков верховий; середины
+/// получают только ветви с границы, а не отдельный проход посадки.
+const CHORUS_PER_COLUMN: f64 = 0.021;
 
 /// Кости.
 struct Dice(u64);
@@ -918,6 +895,104 @@ fn scramble(mut value: u64) -> u64 {
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn census_outer_density_shores_and_cliffs() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/end-terrain.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let end = End::new(case["seed"].as_i64().unwrap());
+            let expected = &case["vanilla"];
+            let (mut jumps, mut pairs) = (0, 0);
+            let mut shores = [(0, 0); 2];
+            for (window, (x0, z0, x1, z1)) in [(-12, -12, 12, 12), (112, 112, 144, 144), (-144, 112, -112, 144)].into_iter().enumerate() {
+                let (mut stone, mut columns) = (0, 0);
+                // Разреженная сетка считает соседей через один блок,
+                // а не принимает перепад через четыре блока за клиф.
+                for x in (x0 * 16..(x1 + 1) * 16).step_by(4) {
+                    for z in (z0 * 16..(z1 + 1) * 16).step_by(4) {
+                        let column = end.column(x, z);
+                        let top = column.map_or(-1, |(_, top)| top);
+                        for (dx, dz) in [(1, 0), (0, 1)] {
+                            let other = end.column(x + dx, z + dz).map_or(-1, |(_, top)| top);
+                            jumps += i32::from((top - other).abs() >= 16);
+                            pairs += 1;
+                        }
+                        stone += column.map_or(0, |(bottom, top)| top - bottom + 1);
+                        columns += 1;
+                        let shore = match end.biome_at(x, z) {
+                            Biome::EndBarrens => Some(0),
+                            Biome::EndMidlands => Some(1),
+                            _ => None,
+                        };
+                        if let Some(i) = shore {
+                            shores[i].0 += i32::from(column.is_some());
+                            shores[i].1 += 1;
+                        }
+                    }
+                }
+                if window > 0 {
+                    let density = f64::from(stone) * 256.0 / f64::from(columns);
+                    let target = expected[format!("window{window}/blocks/end_stone")].as_f64().unwrap();
+                    assert!((density - target).abs() <= target * 0.20, "{} window{window}: {density} / {target}", end.seed);
+                }
+            }
+            let cliffs = f64::from(jumps) * 100.0 / f64::from(pairs);
+            let target = expected["jump_ge16_share"].as_f64().unwrap();
+            assert!((cliffs - target).abs() <= 0.25, "{}: {cliffs} / {target}", end.seed);
+            for (i, name) in ["end_barrens", "end_midlands"].into_iter().enumerate() {
+                let land = f64::from(shores[i].0) * 100.0 / f64::from(shores[i].1);
+                let target = expected[format!("top/{name}/end_stone")].as_f64().unwrap();
+                assert!((land - target).abs() <= 5.0, "{} {name}: {land} / {target}", end.seed);
+            }
+        }
+    }
+
+    #[test]
+    fn generated_chorus_roots_belong_to_highlands() {
+        let end = End::new(1_792_932_773_345_722_119);
+        let mut roots = 0;
+        for cx in (112..=144).step_by(4) {
+            for cz in (112..=144).step_by(4) {
+                let chunk = end.chunk(cx, cz);
+                for x in 0..16 {
+                    for z in 0..16 {
+                        let Some(top) = end.surface(cx * 16 + x, cz * 16 + z) else { continue };
+                        let (section, layer) = split(top + 1);
+                        let state = chunk.section(section).map_or(AIR, |b| super::super::unpack(b[layer + (z * 16 + x) as usize]));
+                        if blocks::block_at_state(state) == Some("chorus_plant") {
+                            roots += 1;
+                            assert!(matches!(end.biome_at(cx * 16 + x, cz * 16 + z), Biome::EndHighlands));
+                        }
+                    }
+                }
+            }
+        }
+        assert!(roots > 0, "нет корней в проверенных чанках");
+    }
+
+    /// Свежие чанки для внешней переписи; оригинальные регионы не меняются.
+    #[test]
+    #[ignore]
+    fn end_audit_sample() {
+        let Ok(root) = std::env::var("END_AUDIT_SAMPLE") else { return };
+        for (label, seed) in [("owner", 1_792_932_773_345_722_119), ("second", 100_554_032_945_340)] {
+            let end = End::new(seed);
+            let world = std::path::Path::new(&root).join(label);
+            let regions = world.join("dimensions/minecraft/the_end/region");
+            std::fs::create_dir_all(&regions).unwrap();
+            std::fs::write(world.join("level.dat"), format!("seed={seed}\nspawn=0 64 0\n")).unwrap();
+            for (x0, z0, x1, z1) in [(-12, -12, 12, 12), (112, 112, 144, 144), (-144, 112, -112, 144)] {
+                for x in x0..=x1 {
+                    for z in z0..=z1 {
+                        let chunk = end.chunk(x, z);
+                        super::super::region::write(&regions, x, z, &chunk.to_bytes()).unwrap();
+                    }
+                }
+            }
+        }
+    }
 
     /// Хорус растёт по правилам вики: стебель связан вниз до эндемняка,
     /// цветки только на концах, и деревья есть на внешних островах.

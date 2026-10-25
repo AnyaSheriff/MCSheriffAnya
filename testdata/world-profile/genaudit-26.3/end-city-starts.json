@@ -1,0 +1,29 @@
+{
+  "source": "Read-only official 26.3 region structure start metadata, census worlds and targeted windows",
+  "cases": [
+    {
+      "seed": 1792932773345722119,
+      "starts": [
+        {
+          "chunk": [
+            -57,
+            45
+          ],
+          "pieces": 14
+        }
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "starts": [
+        {
+          "chunk": [
+            145,
+            144
+          ],
+          "pieces": 109
+        }
+      ]
+    }
+  ]
+}

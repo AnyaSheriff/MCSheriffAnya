@@ -379,11 +379,11 @@ mod border;
 #[test]
 fn generated_end_ship_frame_survives_reload_without_duplication() {
     let g = Generator::End(the_end::End::new(SEED));
-    let c = Chunk::generated(&g,-35,-54);
+    let c = Chunk::generated(&g,-97,-165);
     assert_eq!(c.frames.len(),1);
     let f = &c.frames[0];
-    assert_eq!(f.pos,(7,105,5));
-    assert_eq!(f.facing,crate::frame::WEST);
+    assert_eq!(f.pos,(7,109,8));
+    assert_eq!(f.facing,crate::frame::SOUTH);
     assert_eq!(blocks::item_name(f.item.unwrap().item),Some("elytra"));
     let back = Chunk::from_bytes(&c.to_bytes()).unwrap();
     assert_eq!(back.frames,c.frames);
