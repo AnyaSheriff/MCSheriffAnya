@@ -356,7 +356,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
             }
 
             // Деревья над блоками-стыками: земля под ними уже уложена куском.
-            let ground = super::TreeGround { seed, ..super::TreeGround::new() };
+            let ground = super::TreeGround { seed, terrain: Some(terrain), ..super::TreeGround::new() };
 
             for ((a, y, b), pool) in &site.trees {
                 let (x, z) = site.world(*a, *b);

@@ -1241,7 +1241,11 @@ fn grow_azaleas(terrain: &Terrain, key: u64, chunk: &mut Chunk, chunk_x: i32, ch
             };
 
             let tree = trees::azalea_at(terrain.seed(), x, z);
-            let ground = ground.get_or_insert_with(super::TreeGround::new);
+            let ground = ground.get_or_insert_with(|| super::TreeGround {
+                seed: if terrain.preview() { terrain.seed() } else { 0 },
+                terrain: terrain.preview().then_some(terrain),
+                ..super::TreeGround::new()
+            });
 
             super::draw_tree(chunk, &tree, local_x, local_z, column.height, x, z, ground);
 

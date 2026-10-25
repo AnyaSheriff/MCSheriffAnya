@@ -1692,7 +1692,7 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
     // открытом месте рядом. Кроны ищем, только если листьям здесь место.
     let (under, open) = cover.litter;
 
-    if under <= 0.0 || value >= edge + under || snowed {
+    if area.terrain.preview() || under <= 0.0 || value >= edge + under || snowed {
         return;
     }
 
@@ -1712,6 +1712,52 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
         let amount = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3][dice.below(17) as usize];
 
         put_in_air(chunk, local_x, y, local_z, blocks.leaf_litter[dice.below(4) as usize][amount]);
+    }
+}
+
+/// Опад привязан к принятому дереву, а не к независимой россыпи столбцов.
+/// Маски — наблюдения oak/fancy/birch/dark_oak_leaf_litter на оригинале.
+/// Проверки опоры отсекают воду, стекло, листву, песок и гравий: в отдельных
+/// площадках оригинал их не использовал, камень использовал.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn tree_litter(
+    terrain: &Terrain, chunk: &mut Chunk, tree: &super::trees::Tree,
+    (local_x, local_z): (i32, i32), (x, height, z): (i32, i32, i32), biome: Biome,
+) {
+    use super::trees::Shape;
+    if cover(biome).litter.0 <= 0.0 { return; }
+    let feature = match tree.shape {
+        Shape::Oak => "oak_leaf_litter",
+        Shape::Fancy => "fancy_oak_leaf_litter",
+        Shape::Round => "birch_leaf_litter",
+        Shape::DarkOak => "dark_oak_leaf_litter",
+        // 14 изолированных естественных тополей: 17–32 клетки на ствол.
+        Shape::Poplar => "poplar_natural",
+        _ => return,
+    };
+    type Masks = std::collections::HashMap<String, Vec<Vec<(i32, i32)>>>;
+    static MASKS: OnceLock<Masks> = OnceLock::new();
+    let masks = MASKS.get_or_init(|| serde_json::from_str(include_str!("tree_litter_26_3.json")).expect("маски опада 26.3"));
+    let key = key_of(terrain);
+    let mut dice = Dice::new(key,x,z,72_151);
+    let mask = &masks[feature][dice.below(masks[feature].len() as i32) as usize];
+    let rotation = dice.below(4);
+    let reflect = dice.below(2) == 0;
+    let palette = palette();
+    for &(mut dx, mut dz) in mask {
+        if reflect { dx = if tree.wide() { 1-dx } else { -dx }; }
+        for _ in 0..rotation { (dx,dz) = (if tree.wide() { 1-dz } else { -dz },dx); }
+        let (bx,bz) = (local_x+dx,local_z+dz);
+        if !(0..CHUNK_SIZE).contains(&bx) || !(0..CHUNK_SIZE).contains(&bz) { continue; }
+        let surface = ((height-3).max(MIN_Y)..=(height+3).min(MIN_Y+WORLD_HEIGHT-2)).rev().find(|&y| {
+            let here=chunk.block(bx,y,bz);
+            palette.ground.soil(here) || here == palette.ground.stone
+        });
+        if let Some(y) = surface {
+            let mut state = Dice::new(key,x+dx,z+dz,72_157);
+            let amount = [0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,3][state.below(17) as usize];
+            put_in_air(chunk,bx,y+1,bz,palette.leaf_litter[state.below(4) as usize][amount]);
+        }
     }
 }
 

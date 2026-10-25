@@ -2141,3 +2141,36 @@ mod tests {
 #[cfg(test)]
 #[path = "crown_tests.rs"]
 mod crown_tests;
+
+#[cfg(test)]
+mod generated_support_tests {
+    use super::*;
+
+    /// Все формы, включая цветущую азалию и ветвистые кроны: проверяем
+    /// настоящие блоки четырёх чанков после размещения, а не только маску.
+    #[test]
+    fn every_generated_tree_species_has_nondecaying_leaves() {
+        use crate::world::{Chunk,TreeGround};
+        let species=[OAK,FANCY_OAK,SWAMP_OAK,BIRCH,TALL_BIRCH,SPRUCE,PINE,MEGA_SPRUCE,MEGA_PINE,
+            JUNGLE,MEGA_JUNGLE,JUNGLE_BUSH,ACACIA,DARK_OAK,PALE_OAK,CHERRY,MANGROVE,TALL_MANGROVE,AZALEA,POPLAR];
+        let mut checked=0;
+        for species in species {for seed in 0..16 {
+            let terrain=Terrain::new(seed,super::super::terrain::Style::Vanilla).with_preview(true);
+            let tree=Tree {trunk:species.tree.trunk+seed as i32%3,..species.tree}.in_preview(seed);
+            let mut chunks=std::collections::HashMap::new();
+            for cx in 0..2 {for cz in 0..2 {
+                let mut chunk=Chunk::new();
+                for x in 0..16 {for z in 0..16 {chunk.put_generated(x,199,z,super::super::terrain::block_named("grass_block"),true);}}
+                if seed%2==1 {
+                    // Скала обрезает одну ветвь вместе с частью кроны.
+                    for y in 202..230 {for z in 2..11 {chunk.put_generated(2,y,z,super::super::terrain::block_named("stone"),true);}}
+                }
+                let ground=TreeGround {seed,terrain:Some(&terrain),..TreeGround::new()};
+                super::super::draw_tree(&mut chunk,&tree,15-cx*16,15-cz*16,199,15,15,&ground);
+                chunks.insert((cx,cz),chunk);
+            }}
+            checked+=super::super::decoration_tests::leaf_audit(&chunks,|_,_|true).0;
+        }}
+        assert!(checked>10000,"пустая выборка {checked}");
+    }
+}

@@ -1002,7 +1002,13 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         tree.bees=nearby && world.random_unit()<0.05;
     }
     let ground = y - 1;
-    let parts = tree.blocks_in(seed, origin.0, origin.1);
+    let preview = world.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
+    let mut parts = tree.blocks_in(seed, origin.0, origin.1);
+    if preview {
+        parts.retain(|&(dx,dy,dz,part)| !crate::world::tree_leaf(part)
+            || tree_may_replace(world.get_block(origin.0+dx,ground+dy,origin.1+dz)));
+        parts = crate::world::supported_tree_blocks(parts);
+    }
 
     // Ствол должен пройти: брёвна только сквозь воздух, листву и саженцы.
     for (dx, dy, dz, part) in &parts {
@@ -1018,7 +1024,8 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         world.set_block_silently(origin.0 + dx, y, origin.1 + dz, AIR);
     }
 
-    let distances = tree.leaf_distances_in(seed, origin.0, origin.1, &parts);
+    let distances = if preview { crate::world::supported_leaf_distances(&parts) }
+        else { tree.leaf_distances_in(seed, origin.0, origin.1, &parts) };
     let log_state = |axis: &trees::Axis| {
         let axis = match axis {
             trees::Axis::X => "x",
@@ -1049,6 +1056,10 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
 
                 blocks::state_from_text(&format!("{}[distance={}]", tree.leaves, distance))
                     .or_else(|| blocks::state_from_text(tree.leaves))
+            }
+            Part::Block(text) if here == AIR && preview && text.ends_with("_leaves") => {
+                let distance = distances.get(&(*dx,*dy,*dz)).copied().unwrap_or(7);
+                blocks::state_from_text(&format!("{text}[distance={distance},persistent=false]"))
             }
             Part::Block(text) if here == AIR => blocks::state_from_text(text),
             _ => None,

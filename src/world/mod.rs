@@ -5057,7 +5057,7 @@ impl Generator {
             return;
         };
 
-        let ground = TreeGround { seed: terrain.seed(), ..TreeGround::new() };
+        let ground = TreeGround { seed: terrain.seed(), terrain: terrain.preview().then_some(terrain), ..TreeGround::new() };
         let near = TreeColumns::new(self, chunk_x, chunk_z, columns);
 
         for local_x in -REACH..(CHUNK_SIZE + REACH) {
@@ -5095,6 +5095,9 @@ impl Generator {
                 }
 
                 draw_tree(chunk, &tree, local_x, local_z, column.height, x, z, &ground);
+                if terrain.preview() {
+                    vegetation::tree_litter(terrain, chunk, &tree, (local_x, local_z), (x, column.height, z), column.biome);
+                }
             }
         }
 
@@ -5243,7 +5246,7 @@ impl<'a> TreeColumns<'a> {
 
 /// Что дерево видит под собой: воду и землю, которую может заменить.
 /// Ищется по имени один раз на чанк.
-struct TreeGround {
+struct TreeGround<'a> {
     water: i32,
     /// Земля, которую дерево может заменить подзолом или корнями.
     soil: Vec<(i32, i32)>,
@@ -5255,12 +5258,16 @@ struct TreeGround {
     dirt: i32,
     /// Семя мира: форма дерева своя в каждом мире.
     seed: i64,
+    terrain: Option<&'a terrain::Terrain>,
+    heights: std::cell::RefCell<std::collections::HashMap<(i32, i32), i32>>,
 }
 
-impl TreeGround {
-    fn new() -> TreeGround {
+impl TreeGround<'_> {
+    fn new() -> Self {
         TreeGround {
             seed: 0,
+            terrain: None,
+            heights: Default::default(),
             water: terrain::block_named("water"),
             snow: crate::blocks::states_of("snow"),
             dirt: terrain::block_named("dirt"),
@@ -5342,6 +5349,32 @@ pub(crate) fn leaf_distances(blocks: &[(i32, i32, i32, terrain::Part)]) -> std::
     distance
 }
 
+/// Цветущая азалия — тоже проводящая расстояние листва, хотя записана
+/// отдельным блоком. Брёвна в общих клетках имеют приоритет над листьями.
+pub(crate) fn tree_leaf(part: terrain::Part) -> bool {
+    part == terrain::Part::Leaves || matches!(part, terrain::Part::Block(name) if name.ends_with("_leaves"))
+}
+
+fn mushroom_tree(tree: &trees::Tree) -> bool { tree.leaves.contains("mushroom_block") }
+
+pub(crate) fn supported_leaf_distances(blocks: &[trees::TreeBlock]) -> std::collections::HashMap<(i32, i32, i32), i32> {
+    let logs: std::collections::HashSet<_> = blocks.iter().filter(|b| matches!(b.3, terrain::Part::Log(_))).map(|b| (b.0,b.1,b.2)).collect();
+    let geometry: Vec<_> = blocks.iter().filter_map(|&(x,y,z,part)| {
+        if matches!(part, terrain::Part::Log(_)) { Some((x,y,z,part)) }
+        else if tree_leaf(part) && !logs.contains(&(x,y,z)) { Some((x,y,z,terrain::Part::Leaves)) }
+        else { None }
+    }).collect();
+    leaf_distances(&geometry)
+}
+
+/// Не маскируем распад persistent=true: убираем только клетки без пути
+/// длиной до шести через настоящую листву к настоящему бревну.
+pub(crate) fn supported_tree_blocks(mut blocks: Vec<trees::TreeBlock>) -> Vec<trees::TreeBlock> {
+    let distances = supported_leaf_distances(&blocks);
+    blocks.retain(|b| !tree_leaf(b.3) || distances.get(&(b.0,b.1,b.2)).is_some_and(|d| *d < 7));
+    blocks
+}
+
 /// Рисует в чанке ту часть дерева, что попала в него. Ствол стоит в (x, z)
 /// — местные (local_x, local_z) — на земле высоты `height`.
 #[allow(clippy::too_many_arguments)]
@@ -5386,7 +5419,23 @@ fn draw_tree(
         log(terrain::Axis::Y),
         log(terrain::Axis::Z),
     ];
-    let blocks = tree.blocks_in(ground.seed, x, z);
+    let mut blocks = tree.blocks_in(ground.seed, x, z);
+    if let Some(terrain) = ground.terrain {
+        // Опора считается по реально доступной кроне: склон может вырезать
+        // промежуточный лист или ветвь. Полная форма проверяется и за краем
+        // чанка, чтобы обе стороны границы принимали одно решение.
+        blocks.retain(|&(dx, dy, dz, part)| {
+            if !tree_leaf(part) && !matches!(part, terrain::Part::Log(_)) { return true; }
+            let top = *ground.heights.borrow_mut().entry((x + dx, z + dz))
+                .or_insert_with(|| terrain.column_at(x + dx, z + dz).height);
+            let above = height + dy > top || (matches!(part, terrain::Part::Log(_)) && dy <= 1);
+            if !above || !inside(local_x+dx,height+dy,local_z+dz) { return above; }
+            let here = chunk.block(local_x+dx,height+dy,local_z+dz);
+            if matches!(part, terrain::Part::Log(_)) { ground.holds_log(here,dy) }
+            else { here == AIR || here == water || crate::blocks::block_at_state(here).is_some_and(|n| n.ends_with("_leaves") || n.ends_with("_log") || n.ends_with("_wood")) }
+        });
+        if !mushroom_tree(tree) { blocks = supported_tree_blocks(blocks); }
+    }
 
     // Земля под деревом — первой: пока над ней не выросли ни
     // корни, ни ствол, её верх виден сразу. Где нашлась земля, запоминаем:
@@ -5456,13 +5505,15 @@ fn draw_tree(
     // листва считалась бы оторванной и осыпалась бы, как только появится
     // опадание. Считается по блокам самого дерева, поэтому чанки на стыке
     // решают одинаково.
-    let distances = if mushroom { std::collections::HashMap::new() } else { tree.leaf_distances_in(ground.seed, x, z, &blocks) };
+    let distances = if mushroom { std::collections::HashMap::new() }
+        else if ground.terrain.is_some() { supported_leaf_distances(&blocks) }
+        else { tree.leaf_distances_in(ground.seed, x, z, &blocks) };
     let leaf_state = |distance: i32, wet: bool| {
         crate::blocks::state_from_text(&format!("{}[distance={},waterlogged={}]", tree.leaves, distance, wet))
     };
 
     for (dx, dy, dz, part) in &blocks {
-        if *part == terrain::Part::Leaves {
+        if *part == terrain::Part::Leaves || (ground.terrain.is_some() && tree_leaf(*part)) {
             let (bx, by, bz) = (local_x + dx, height + dy, local_z + dz);
 
             if !inside(bx, by, bz) {
@@ -5471,7 +5522,9 @@ fn draw_tree(
 
             let here = chunk.block(bx, by, bz);
             let distance = distances.get(&(*dx, *dy, *dz)).copied().unwrap_or(7);
-            let state = if mushroom {
+            let state = if let terrain::Part::Block(name) = part {
+                crate::blocks::state_from_text(&format!("{name}[distance={distance},persistent=false,waterlogged={}]", here == water))
+            } else if mushroom {
                 Some(cap(tree.leaves, (*dx, *dy, *dz)).unwrap_or(leaves))
             } else {
                 leaf_state(distance, here == water).or(Some(leaves))
@@ -5537,6 +5590,7 @@ fn draw_tree(
         let terrain::Part::Block(text) = part else {
             continue;
         };
+        if ground.terrain.is_some() && text.ends_with("_leaves") { continue; }
         let hanging = text.starts_with("vine") || text.starts_with("pale_hanging_moss");
 
         if hanging && after_cut == Some((*dx, *dy + 1, *dz)) {
@@ -5560,6 +5614,13 @@ fn draw_tree(
             continue;
         }
 
+        if ground.terrain.is_some() && matches!(*text,"moss_carpet"|"pale_moss_carpet") {
+            if by <= MIN_Y { continue; }
+            let below = crate::blocks::block_at_state(chunk.block(bx,by-1,bz)).unwrap_or("");
+            let supported = if *text == "moss_carpet" { matches!(below,"mangrove_roots"|"moss_block") }
+                else { matches!(below,"pale_moss_block"|"pale_moss_carpet") };
+            if !supported { continue; }
+        }
         let here = chunk.block(bx, by, bz);
         let state = if here == AIR && mushroom && text.contains("mushroom_block") {
             cap(text, (*dx, dy, *dz))
@@ -8491,3 +8552,6 @@ mod catalog_tests;
 
 #[cfg(all(test, not(seedmap_core)))]
 mod preview_tests;
+
+#[cfg(test)]
+mod decoration_tests;

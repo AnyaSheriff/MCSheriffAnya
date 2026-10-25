@@ -1,0 +1,981 @@
+{
+  "seed": 1792912664922343905,
+  "base_commit": "a436755bd861c9a154feefa4353b9b34bc4f1ca9",
+  "official": {
+    "version": "26.3",
+    "ports": [
+      26196,
+      26197
+    ],
+    "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "seed_verified_in_saved_world_settings": true,
+    "mode": "normal",
+    "stdin": "/dev/null",
+    "random_tick_speed": 0,
+    "natural_full_chunks_loaded": 3901,
+    "shared_unique_chunk_mask": 2258,
+    "surface_plots": 64,
+    "isolated_natural_poplar_masks": 14,
+    "access": "One successful local observation session; JAR only executed, region files read-only.",
+    "shutdown": "API outage terminated the observation process after final flush; both ports were closed on resume. No second observation session.",
+    "saved_spawn": [
+      -16,
+      66,
+      16
+    ],
+    "natural_poplar_masks_reproduced_exactly": true
+  },
+  "measurement": {
+    "band_y": [
+      32,
+      319
+    ],
+    "nearest": "3D Euclidean to all observed log/wood or leaf blocks; exact in loaded sample; histograms exclude two-chunk edge",
+    "leaf_support": "6-neighbour BFS through all leaf species to any log/wood, capped at 7; one-chunk edge excluded",
+    "biome": "per block at its stored 4x4x4 biome cell; chunk denominators use center surface biome",
+    "ground_replacements": "podzol/coarse/rooted dirt include natural surfaces and decorators; origin cannot be attributed from region blocks alone"
+  },
+  "results": {
+    "official": {
+      "chunks": 2258,
+      "classes": {
+        "coarse_dirt": {
+          "count": 1618,
+          "leaves": {
+            "16": 158,
+            "2": 28,
+            "32": 44,
+            "4": 166,
+            "8": 552
+          },
+          "logs": {
+            "16": 144,
+            "2": 76,
+            "32": 29,
+            "4": 266,
+            "8": 433
+          },
+          "under": {
+            "air": 10,
+            "birch_leaves": 1,
+            "dirt": 1553,
+            "gravel": 5,
+            "sand": 15,
+            "stone": 34
+          }
+        },
+        "leaf_litter": {
+          "count": 51134,
+          "leaves": {
+            "16": 14,
+            "2": 12377,
+            "32": 1,
+            "4": 17145,
+            "8": 8489
+          },
+          "logs": {
+            "16": 8,
+            "2": 15581,
+            "4": 19467,
+            "8": 2970
+          },
+          "under": {
+            "birch_log": 1,
+            "brown_mushroom_block": 12,
+            "coal_ore": 2,
+            "coarse_dirt": 204,
+            "dark_oak_log": 4,
+            "diorite": 1,
+            "dirt": 4,
+            "grass_block": 49896,
+            "gravel": 60,
+            "mossy_cobblestone": 4,
+            "oak_log": 21,
+            "pale_moss_block": 19,
+            "podzol": 143,
+            "poplar_log": 11,
+            "red_mushroom_block": 8,
+            "rooted_dirt": 1,
+            "sand": 695,
+            "stone": 48
+          }
+        },
+        "moss_carpet": {
+          "count": 1397,
+          "leaves": {
+            "2": 501,
+            "32": 18,
+            "4": 164,
+            "8": 20,
+            ">32": 153
+          },
+          "logs": {
+            "2": 395,
+            "32": 17,
+            "4": 259,
+            "8": 31,
+            ">32": 154
+          },
+          "under": {
+            "mangrove_roots": 1093,
+            "moss_block": 304
+          }
+        },
+        "pale_moss_block": {
+          "count": 6873,
+          "leaves": {
+            "16": 260,
+            "2": 152,
+            "32": 16,
+            "4": 826,
+            "8": 2798
+          },
+          "logs": {
+            "16": 139,
+            "2": 822,
+            "32": 17,
+            "4": 2127,
+            "8": 947
+          },
+          "under": {
+            "air": 83,
+            "andesite": 20,
+            "dirt": 6670,
+            "pale_oak_leaves": 1,
+            "stone": 98,
+            "tall_grass": 1
+          }
+        },
+        "pale_moss_carpet": {
+          "count": 1179,
+          "leaves": {
+            "16": 36,
+            "2": 50,
+            "32": 4,
+            "4": 230,
+            "8": 386
+          },
+          "logs": {
+            "16": 16,
+            "2": 240,
+            "32": 6,
+            "4": 304,
+            "8": 140
+          },
+          "under": {
+            "pale_moss_block": 1056,
+            "pale_moss_carpet": 123
+          }
+        },
+        "pink_petals": {
+          "count": 4200,
+          "leaves": {
+            "16": 697,
+            "2": 18,
+            "32": 107,
+            "4": 215,
+            "8": 895
+          },
+          "logs": {
+            "16": 928,
+            "2": 52,
+            "32": 40,
+            "4": 199,
+            "8": 713
+          },
+          "under": {
+            "coarse_dirt": 2,
+            "grass_block": 4198
+          }
+        },
+        "podzol": {
+          "count": 5904,
+          "leaves": {
+            "16": 127,
+            "2": 521,
+            "32": 101,
+            "4": 1582,
+            "8": 1603
+          },
+          "logs": {
+            "16": 94,
+            "2": 758,
+            "32": 96,
+            "4": 1845,
+            "8": 1141
+          },
+          "under": {
+            "air": 36,
+            "coal_ore": 1,
+            "copper_ore": 3,
+            "dirt": 5590,
+            "grass_block": 6,
+            "mossy_cobblestone": 24,
+            "podzol": 8,
+            "stone": 236
+          }
+        },
+        "rooted_dirt": {
+          "count": 807,
+          "leaves": {
+            "16": 190,
+            "32": 368,
+            "4": 11,
+            "8": 106,
+            ">32": 132
+          },
+          "logs": {
+            "16": 186,
+            "2": 5,
+            "32": 383,
+            "4": 47,
+            "8": 111,
+            ">32": 75
+          },
+          "under": {
+            "air": 11,
+            "coal_ore": 8,
+            "dirt": 25,
+            "glow_lichen": 1,
+            "granite": 63,
+            "gravel": 7,
+            "rooted_dirt": 470,
+            "stone": 222
+          }
+        },
+        "wildflowers": {
+          "count": 6209,
+          "leaves": {
+            "16": 8,
+            "2": 617,
+            "32": 49,
+            "4": 2301,
+            "8": 787,
+            ">32": 364
+          },
+          "logs": {
+            "16": 16,
+            "2": 816,
+            "32": 41,
+            "4": 1678,
+            "8": 1202,
+            ">32": 373
+          },
+          "under": {
+            "dirt": 8,
+            "grass_block": 6201
+          }
+        }
+      },
+      "leaves": {
+        "actual1": 77460,
+        "actual2": 119578,
+        "actual3": 95628,
+        "actual4": 33669,
+        "actual5": 10586,
+        "actual6": 1863,
+        "actual7": 345,
+        "leaves": 339129,
+        "persistent": 0,
+        "state_mismatch": 95072,
+        "stored1": 55647,
+        "stored2": 107345,
+        "stored3": 103316,
+        "stored4": 51915,
+        "stored5": 16498,
+        "stored6": 4078,
+        "stored7": 330,
+        "stored7_nonpersistent": 330,
+        "unsupported_nonpersistent": 345
+      },
+      "forest_litter": {
+        "count": 23424,
+        "leaves": {
+          "2": 9242,
+          "4": 8567,
+          "8": 574
+        },
+        "logs": {
+          "2": 7271,
+          "4": 9560,
+          "8": 1552
+        },
+        "under": {
+          "coal_ore": 1,
+          "diorite": 1,
+          "dirt": 2,
+          "grass_block": 23106,
+          "gravel": 29,
+          "oak_log": 18,
+          "sand": 253,
+          "stone": 14
+        }
+      },
+      "forest_chunks_by_center": 237,
+      "forest_litter_per_center_biome_chunk": 98.83544303797468,
+      "forest_litter_more_than_8_from_log": 0,
+      "reported_area": {
+        "center": [
+          790,
+          141,
+          -352
+        ],
+        "horizontal_radius": 16,
+        "shape": "square",
+        "litter_all_heights": 548,
+        "litter_y_at_least_100": 0,
+        "stone_support": 0,
+        "closest_litter": [
+          [
+            "790",
+            "65",
+            "-352",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "4.899",
+            "4.899",
+            "0"
+          ],
+          [
+            "790",
+            "66",
+            "-354",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "3.0",
+            "3.7417",
+            "0"
+          ],
+          [
+            "788",
+            "65",
+            "-352",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "4.2426",
+            "4.4721",
+            "0"
+          ],
+          [
+            "788",
+            "66",
+            "-353",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "3.1623",
+            "3.6056",
+            "0"
+          ],
+          [
+            "788",
+            "66",
+            "-354",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "2.2361",
+            "3.6056",
+            "0"
+          ],
+          [
+            "788",
+            "65",
+            "-350",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "4.1231",
+            "2.8284",
+            "0"
+          ],
+          [
+            "790",
+            "66",
+            "-355",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "2.4495",
+            "3.0",
+            "0"
+          ],
+          [
+            "790",
+            "64",
+            "-349",
+            "leaf_litter",
+            "grass_block",
+            "forest",
+            "4.2426",
+            "3.7417",
+            "0"
+          ]
+        ]
+      }
+    },
+    "ours-before": {
+      "chunks": 2258,
+      "classes": {
+        "leaf_litter": {
+          "count": 22638,
+          "leaves": {
+            "16": 571,
+            "2": 6186,
+            "32": 766,
+            "4": 5883,
+            "8": 1934,
+            ">32": 694
+          },
+          "logs": {
+            "16": 688,
+            "2": 4506,
+            "32": 788,
+            "4": 6507,
+            "8": 2770,
+            ">32": 775
+          },
+          "under": {
+            "dirt": 59,
+            "grass_block": 19805,
+            "gravel": 75,
+            "sand": 37,
+            "stone": 2662
+          }
+        },
+        "pink_petals": {
+          "count": 832,
+          "leaves": {
+            "16": 55,
+            "2": 59,
+            "32": 59,
+            "4": 319,
+            "8": 337,
+            ">32": 3
+          },
+          "logs": {
+            "16": 55,
+            "2": 144,
+            "32": 56,
+            "4": 277,
+            "8": 289,
+            ">32": 11
+          },
+          "under": {
+            "dirt": 76,
+            "grass_block": 756
+          }
+        },
+        "wildflowers": {
+          "count": 48,
+          "leaves": {},
+          "logs": {},
+          "under": {
+            "grass_block": 48
+          }
+        }
+      },
+      "leaves": {
+        "actual1": 16698,
+        "actual2": 26896,
+        "actual3": 22283,
+        "actual4": 10457,
+        "actual5": 5753,
+        "actual6": 2352,
+        "actual7": 1040,
+        "leaves": 85479,
+        "persistent": 0,
+        "state_mismatch": 7358,
+        "stored1": 15383,
+        "stored2": 25166,
+        "stored3": 22224,
+        "stored4": 11553,
+        "stored5": 6416,
+        "stored6": 2968,
+        "stored7": 1769,
+        "stored7_nonpersistent": 1769,
+        "unsupported_nonpersistent": 1040
+      },
+      "forest_litter": {
+        "count": 22638,
+        "leaves": {
+          "16": 571,
+          "2": 6186,
+          "32": 766,
+          "4": 5883,
+          "8": 1934,
+          ">32": 694
+        },
+        "logs": {
+          "16": 688,
+          "2": 4506,
+          "32": 788,
+          "4": 6507,
+          "8": 2770,
+          ">32": 775
+        },
+        "under": {
+          "dirt": 59,
+          "grass_block": 19805,
+          "gravel": 75,
+          "sand": 37,
+          "stone": 2662
+        }
+      },
+      "forest_chunks_by_center": 231,
+      "forest_litter_per_center_biome_chunk": 98.0,
+      "forest_litter_more_than_8_from_log": 2251,
+      "reported_area": {
+        "center": [
+          790,
+          141,
+          -352
+        ],
+        "horizontal_radius": 16,
+        "shape": "square",
+        "litter_all_heights": 266,
+        "litter_y_at_least_100": 266,
+        "stone_support": 261,
+        "closest_litter": [
+          [
+            "790",
+            "141",
+            "-354",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "44.1588",
+            "42.6732",
+            "0"
+          ],
+          [
+            "790",
+            "140",
+            "-350",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "40.5586",
+            "39.1152",
+            "0"
+          ],
+          [
+            "788",
+            "141",
+            "-352",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "42.0714",
+            "40.7063",
+            "0"
+          ],
+          [
+            "789",
+            "141",
+            "-354",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "43.8748",
+            "42.4264",
+            "0"
+          ],
+          [
+            "788",
+            "141",
+            "-354",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "43.6119",
+            "42.2019",
+            "0"
+          ],
+          [
+            "790",
+            "140",
+            "-349",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "39.8246",
+            "38.4057",
+            "0"
+          ],
+          [
+            "791",
+            "142",
+            "-355",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "45.793",
+            "44.2945",
+            "0"
+          ],
+          [
+            "793",
+            "141",
+            "-351",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "42.9185",
+            "41.3884",
+            "0"
+          ]
+        ]
+      }
+    },
+    "ours-after": {
+      "chunks": 2258,
+      "classes": {
+        "leaf_litter": {
+          "count": 23149,
+          "leaves": {
+            "16": 2,
+            "2": 8041,
+            "4": 6964,
+            "8": 1030
+          },
+          "logs": {
+            "2": 5855,
+            "4": 8333,
+            "8": 1849
+          },
+          "under": {
+            "dirt": 76,
+            "grass_block": 22935,
+            "stone": 138
+          }
+        },
+        "pink_petals": {
+          "count": 833,
+          "leaves": {
+            "16": 57,
+            "2": 23,
+            "32": 59,
+            "4": 291,
+            "8": 400,
+            ">32": 3
+          },
+          "logs": {
+            "16": 55,
+            "2": 145,
+            "32": 56,
+            "4": 277,
+            "8": 289,
+            ">32": 11
+          },
+          "under": {
+            "dirt": 76,
+            "grass_block": 757
+          }
+        },
+        "wildflowers": {
+          "count": 48,
+          "leaves": {},
+          "logs": {},
+          "under": {
+            "grass_block": 48
+          }
+        }
+      },
+      "leaves": {
+        "actual1": 16533,
+        "actual2": 26512,
+        "actual3": 21910,
+        "actual4": 10287,
+        "actual5": 5645,
+        "actual6": 2222,
+        "leaves": 83109,
+        "persistent": 0,
+        "state_mismatch": 3808,
+        "stored1": 15783,
+        "stored2": 25369,
+        "stored3": 21926,
+        "stored4": 10761,
+        "stored5": 6238,
+        "stored6": 3032,
+        "stored7_nonpersistent": 0,
+        "unsupported_nonpersistent": 0
+      },
+      "forest_litter": {
+        "count": 22117,
+        "leaves": {
+          "16": 2,
+          "2": 7823,
+          "4": 6569,
+          "8": 856
+        },
+        "logs": {
+          "2": 5718,
+          "4": 7929,
+          "8": 1603
+        },
+        "under": {
+          "dirt": 75,
+          "grass_block": 21926,
+          "stone": 116
+        }
+      },
+      "forest_chunks_by_center": 231,
+      "forest_litter_per_center_biome_chunk": 95.74458874458874,
+      "forest_litter_more_than_8_from_log": 0,
+      "reported_area": {
+        "center": [
+          790,
+          141,
+          -352
+        ],
+        "horizontal_radius": 16,
+        "shape": "square",
+        "litter_all_heights": 0,
+        "litter_y_at_least_100": 0,
+        "stone_support": 0,
+        "closest_litter": []
+      }
+    },
+    "saved-repro": {
+      "chunks": 866,
+      "classes": {
+        "leaf_litter": {
+          "count": 13561,
+          "leaves": {
+            "16": 437,
+            "2": 3293,
+            "32": 671,
+            "4": 3024,
+            "8": 1087,
+            ">32": 697
+          },
+          "logs": {
+            "16": 515,
+            "2": 2395,
+            "32": 674,
+            "4": 3397,
+            "8": 1453,
+            ">32": 775
+          },
+          "under": {
+            "dirt": 45,
+            "grass_block": 11121,
+            "gravel": 59,
+            "sand": 37,
+            "stone": 2299
+          }
+        },
+        "pink_petals": {
+          "count": 1005,
+          "leaves": {
+            "16": 66,
+            "2": 63,
+            "32": 77,
+            "4": 376,
+            "8": 420,
+            ">32": 3
+          },
+          "logs": {
+            "16": 66,
+            "2": 193,
+            "32": 69,
+            "4": 331,
+            "8": 330,
+            ">32": 16
+          },
+          "under": {
+            "dirt": 97,
+            "grass_block": 908
+          }
+        }
+      },
+      "leaves": {
+        "actual1": 9647,
+        "actual2": 15678,
+        "actual3": 13401,
+        "actual4": 6776,
+        "actual5": 4195,
+        "actual6": 1982,
+        "actual7": 562,
+        "leaves": 52241,
+        "persistent": 0,
+        "state_mismatch": 3016,
+        "stored1": 9033,
+        "stored2": 14949,
+        "stored3": 13667,
+        "stored4": 7507,
+        "stored5": 4442,
+        "stored6": 2077,
+        "stored7": 566,
+        "stored7_nonpersistent": 566,
+        "unsupported_nonpersistent": 562
+      },
+      "forest_litter": {
+        "count": 12827,
+        "leaves": {
+          "16": 437,
+          "2": 3293,
+          "32": 671,
+          "4": 3024,
+          "8": 1087,
+          ">32": 697
+        },
+        "logs": {
+          "16": 515,
+          "2": 2395,
+          "32": 674,
+          "4": 3397,
+          "8": 1453,
+          ">32": 775
+        },
+        "under": {
+          "dirt": 45,
+          "grass_block": 10409,
+          "gravel": 58,
+          "sand": 37,
+          "stone": 2278
+        }
+      },
+      "forest_chunks_by_center": 135,
+      "forest_litter_per_center_biome_chunk": 95.01481481481481,
+      "forest_litter_more_than_8_from_log": 1964,
+      "reported_area": {
+        "center": [
+          790,
+          141,
+          -352
+        ],
+        "horizontal_radius": 16,
+        "shape": "square",
+        "litter_all_heights": 266,
+        "litter_y_at_least_100": 266,
+        "stone_support": 261,
+        "closest_litter": [
+          [
+            "790",
+            "141",
+            "-354",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "44.1588",
+            "42.6732",
+            "0"
+          ],
+          [
+            "790",
+            "140",
+            "-350",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "40.5586",
+            "39.1152",
+            "0"
+          ],
+          [
+            "788",
+            "141",
+            "-352",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "42.0714",
+            "40.7063",
+            "0"
+          ],
+          [
+            "789",
+            "141",
+            "-354",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "43.8748",
+            "42.4264",
+            "0"
+          ],
+          [
+            "788",
+            "141",
+            "-354",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "43.6119",
+            "42.2019",
+            "0"
+          ],
+          [
+            "790",
+            "140",
+            "-349",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "39.8246",
+            "38.4057",
+            "0"
+          ],
+          [
+            "791",
+            "142",
+            "-355",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "45.793",
+            "44.2945",
+            "0"
+          ],
+          [
+            "793",
+            "141",
+            "-351",
+            "leaf_litter",
+            "stone",
+            "forest",
+            "42.9185",
+            "41.3884",
+            "0"
+          ]
+        ]
+      }
+    }
+  },
+  "verification": {
+    "rust_passed": 3312,
+    "rust_ignored": 105,
+    "new_active_regressions": 5,
+    "species_fixture_cases": 320,
+    "isolated_litter_trials": 128,
+    "real_chunks_in_leaf_regression": 150,
+    "native_26_1_2_digest": "0xb35e0e1e458713b0 unchanged",
+    "strict_clippy": "PASS",
+    "release_workspace_build": "PASS",
+    "final_export_decompressed_sha256": "a8c4fc9ba8cb91748aac2c45cbd323928650866a8dbe40a277c6943c7df60d90",
+    "export_identical_after_poplar_calibration": true,
+    "release_binary_sha256": "d251ee5a911f94371fb1dfbe07205ce2669c98ee69aabdcb5b6915cc15aa16dc"
+  },
+  "limitations": [
+    "Terrain and biome maps differ between generators; counts for different biomes do not prove whole-world parity.",
+    "Surface occupancy, decoration counts, supports and both tree-distance histograms are retained per biome and per chunk.",
+    "Natural vanilla has a small decay-prone tail (principally mangrove); the fixed generator deliberately emits no unsupported leaves.",
+    "The saved repro was inspected read-only; changes apply to fresh generation, not retroactive cleanup.",
+    "Runtime masks are empirical observed footprints, not a reproduction of vanilla RNG or its complete configured features."
+  ],
+  "sha256": {
+    "src/world/tree_litter_26_3.json": "ba615d8f6822e560021655914bd14031e815c952071a5410ebc04d095758541c",
+    "testdata/world-profile/decorations-26.3-observed-plots.json.gz": "7c3d5df8d9c4455a4286f3c5f0b988b5dda70be548000e5331af2d824fa4aa27",
+    "testdata/world-profile/decorations-26.3-poplar.json": "1e7c51dfb16a089f494cb535ac94284462660da43386c5e64ebaae4acda1689f"
+  },
+  "repro_spawn": [
+    544.5,
+    63,
+    -511.5
+  ]
+}
