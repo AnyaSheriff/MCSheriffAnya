@@ -1,12 +1,24 @@
 {
-  "seed": 100554032945340,
+  "seed": 1792932773345722119,
   "chunk": [
-    -12,
-    -4
+    108,
+    -207
   ],
-  "before_surface_biome": "deep_cold_ocean",
-  "before_mushroom_fields_possible": false,
-  "reason": "Continentalness clipped at -1.0; biome requires below -1.05.",
-  "official_reference": "Mushroom Fields island/underwater surface rules on minecraft.wiki; independent owner-seed 26.3 locate window in census.",
-  "before_ground_height": 33
+  "reference_window": [
+    105,
+    -211,
+    113,
+    -203
+  ],
+  "source": "Official 26.3 read-only region measurements; shore window, not a globally representative sample.",
+  "previous_probe": {
+    "seed": 100554032945340,
+    "chunk": [
+      -12,
+      -4
+    ],
+    "before_ground_height": 33,
+    "before_surface_biome": "deep_cold_ocean"
+  },
+  "reason": "Named octave streams replace the common phase and the continentalness clip."
 }

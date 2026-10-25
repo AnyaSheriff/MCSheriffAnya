@@ -85,7 +85,9 @@ impl Map {
     }
 
     pub fn spawn(&self) -> (f64, f64, f64) {
-        spawn_search::find(|x, z| self.terrain.column_at(x, z))
+        if self.terrain.preview() {
+            spawn_search::find_preview(|x, z| self.terrain.column_at(x, z))
+        } else { spawn_search::find(|x, z| self.terrain.column_at(x, z)) }
     }
 
     pub fn raster(&self, x: i32, z: i32, width: u32, height: u32, step: u32) -> Result<Vec<u8>, String> {

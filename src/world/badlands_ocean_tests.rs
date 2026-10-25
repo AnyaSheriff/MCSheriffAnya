@@ -24,10 +24,10 @@ fn export_badlands_263_chunks() {
 fn eroded_badlands_spires_reach_the_chunk_as_solid_terracotta() {
     let generator = Generator::Normal(Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true));
     let Generator::Normal(terrain) = &generator else { unreachable!() };
-    // После смены масштаба материков берём новое пятно того же семени.
-    let places = [(47, 219), (48, 219)];
+    // После восстановления фаз берём пятно из официального окна переписи.
+    let places = [(-346, -53), (-345, -53)];
     let chunks: Vec<_> = places.iter().map(|&(cx, cz)| Chunk::generated(&generator, cx, cz)).collect();
-    let wide = terrain.relief_grid(751, 3503, 784, 3520);
+    let wide = terrain.relief_grid(-5537, -849, -5504, -832);
     let mut columns = 0;
     let mut tallest = 0;
     for (i, &(cx, cz)) in places.iter().enumerate() {
@@ -53,11 +53,15 @@ fn eroded_badlands_spires_reach_the_chunk_as_solid_terracotta() {
     for (i, &(cx, cz)) in places.iter().enumerate().rev() {
         assert_eq!(chunks[i].sections, Chunk::generated(&generator, cx, cz).sections);
     }
-    let west = &chunks[0]; let east = &chunks[1];
+    // Полосы сравниваются в искусственном сплошном столбе: ниже настоящего
+    // основания возможна пещера, что не является разрывом цвета терракоты.
+    let column = terrain::Column { biome: terrain::Biome::ErodedBadlands,
+        hoodoo_base: Some(64), ..terrain::Column::flat(128) };
+    let (wx,wz) = (places[0].0*16+15,places[0].1*16);
     let mut colors = std::collections::BTreeSet::new();
     for y in 80..100 {
-        let a = crate::blocks::block_at_state(west.block(15, y, 8)).unwrap();
-        let b = crate::blocks::block_at_state(east.block(0, y, 8)).unwrap();
+        let a = crate::blocks::block_at_state(terrain.block_at(&column,wx,y,wz)).unwrap();
+        let b = crate::blocks::block_at_state(terrain.block_at(&column,wx+1,y,wz)).unwrap();
         assert_eq!(a, b, "полоса через границу чанка на {y}");
         colors.insert(a);
     }

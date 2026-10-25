@@ -4921,7 +4921,10 @@ impl World {
             return (f64::from(x) + 0.5, f64::from(y + 1), f64::from(z) + 0.5);
         }
 
-        let place = spawn_search::find(|x, z| self.generator.column_at(x, z));
+        let column_at = |x, z| self.generator.column_at(x, z);
+        let place = if matches!(&*self.generator, Generator::Normal(terrain) if terrain.preview()) {
+            spawn_search::find_preview(column_at)
+        } else { spawn_search::find(column_at) };
         log_info!("Точка появления: {} {} {}", place.0, place.1, place.2);
         place
     }

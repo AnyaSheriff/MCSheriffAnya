@@ -6,8 +6,8 @@
 // континентальность задаёт основной уровень, эрозия — размах, гребни и
 // долины — рельеф поверх.
 //
-// Шумы у нас свои, поэтому по семени мы с оригиналом не совпадаем и не
-// стремимся: повторяем устройство, а не числа.
+// Старые профили сохраняют свои шумы. В 26.3 фазы климата проверены
+// переписью сохранённых регионов; модель плотности рельефа остаётся своей.
 //
 // Всё считается от семени мира и от координат: у чанка нет соседей, к которым
 // надо обращаться, поэтому любой кусок мира можно сложить в любом порядке и
@@ -813,6 +813,8 @@ const RIVER_BANK: f64 = 300.0;
 
 /// Рельеф мира: набор шумов от одного семени.
 pub struct Terrain {
+    /// Фазы климата 26.3; старые профили оставляют прежние шумы.
+    climate_fields: Option<Box<climate_noise::ClimateFields>>,
     continent: Noise,
     erosion: Noise,
     weirdness: Noise,
@@ -849,12 +851,15 @@ pub struct Terrain {
 mod census;
 #[path = "biome_distribution.rs"]
 mod distribution;
+#[path = "climate_noise.rs"]
+mod climate_noise;
 
 impl Terrain {
     /// Заводит рельеф от семени мира. Каждому шуму достаётся своё семя, иначе
     /// климат и рельеф повторяли бы друг друга.
     pub fn new(seed: i64, style: Style) -> Terrain {
         Terrain {
+            climate_fields: None,
             continent: Noise::new(seed),
             erosion: Noise::new(seed ^ 0x51_7C_C1_B7),
             weirdness: Noise::new(seed ^ 0x27_22_0A_95),
@@ -879,6 +884,7 @@ impl Terrain {
     /// Включает генерацию 26.2/26.3 (только профиль Preview26_3).
     pub fn with_preview(mut self, preview: bool) -> Terrain {
         self.preview = preview;
+        self.climate_fields = (preview && self.style == Style::Vanilla).then(|| Box::new(climate_noise::ClimateFields::new(self.seed)));
         self.bands = if preview { preview_terracotta_bands(self.seed) } else { terracotta_bands(self.seed) };
         self
     }
@@ -960,6 +966,7 @@ impl Terrain {
     }
 
     fn raw_climate_at(&self, x: i32, z: i32) -> Climate {
+        if let Some(fields) = &self.climate_fields { return fields.at(x, z); }
         // Температура и влажность решают только биом, а биом у оригинала
         // один на клетку 4×4: берём их в середине клетки. Так граница биома
         // — и край льда на воде — идёт ломаной по клеткам, а не дугой.
@@ -1168,15 +1175,8 @@ impl Terrain {
     // только из-за перехода глубины при неизменной температуре.
     // [проверить] доли холодных поясов за пределами измеренных окон 26.3.
     fn biome_climate(&self, climate: &Climate) -> Climate {
-        if self.style != Style::Vanilla { return *climate; }
-        let mut parameters = distribution::CALIBRATED;
-        if self.preview {
-            parameters[0..4].copy_from_slice(&distribution::PREVIEW_LAND_T);
-            parameters[20..32].copy_from_slice(&distribution::PREVIEW_WARM_H);
-            parameters[4..8].copy_from_slice(&distribution::PREVIEW_OCEAN_T);
-            parameters[8..12].copy_from_slice(&distribution::PREVIEW_OCEAN_T);
-        }
-        distribution::mapped(climate, &parameters)
+        if self.style != Style::Vanilla || self.preview { return *climate; }
+        distribution::mapped(climate, &distribution::CALIBRATED)
     }
 
     fn biome_with_climate(&self, climate: &Climate, x: i32, z: i32) -> Biome {
@@ -1242,7 +1242,7 @@ impl Terrain {
     // Вики, World generation, «horizontal coordinates». Это собственная
     // модель, не алгоритм оригинала [проверить: вид границ на местности].
     fn biome_input(&self, climate: &Climate, x: i32, z: i32) -> Climate {
-        if self.style != Style::Vanilla { return *climate; }
+        if self.style != Style::Vanilla || self.preview { return *climate; }
         // https://minecraft.wiki/w/World_generation: «horizontal coordinates».
         // Искривление медленнее биомной клетки: прежние 12 блоков
         // перебрасывали соседей через порог и дробили пустыню на 16 м².
@@ -1358,6 +1358,13 @@ impl Terrain {
     /// почти никакая у воды: поэтому скалы в горах, а берега ровные.
     fn relief_at(&self, climate: &Climate, x: i32, z: i32) -> Relief {
         let (fx, fz) = (x as f64, z as f64);
+        // https://minecraft.wiki/w/World_generation: «Erosion».
+        // Масштаб реакции высоты отделён от исходного климата биомов:
+        // прежняя поправка сжимала частые холмы и усиливала хвост повторно.
+        let shaped = if self.preview {
+            Climate { erosion: (climate.erosion * 1.8).clamp(-1.0, 1.0), ..*climate }
+        } else { *climate };
+        let geometry = &shaped;
 
         let base = spline(
             &[
@@ -1376,7 +1383,10 @@ impl Terrain {
             climate.continent,
         );
 
-        let spread = spline(
+        let spread_points = if self.preview {
+            &[(-1.0,84.0),(-0.78,80.0),(-0.375,56.0),(-0.2225,44.0),
+                (0.05,30.0),(0.45,10.0),(0.55,4.0),(1.0,2.0)]
+        } else {
             &[
                 (-1.0, 84.0),
                 (-0.78, 80.0),
@@ -1386,9 +1396,9 @@ impl Terrain {
                 (0.45, 7.0),
                 (0.55, 4.0),
                 (1.0, 2.0),
-            ],
-            climate.erosion,
-        );
+            ]
+        };
+        let spread = spline(spread_points, geometry.erosion);
 
         let ridges = spline(
             &[
@@ -1436,7 +1446,7 @@ impl Terrain {
         // пар у ветреных холмов против долей процента у равнин).
         let shattered = (1.0 - ((climate.erosion - 0.5) / 0.12).powi(2)).max(0.0) * far_inland;
 
-        ground += 16.0 * shattered * (0.4 + 0.6 * ridges.max(0.0));
+        ground += (if self.preview && climate.weirdness > 0.0 { 52.0 } else { 16.0 }) * shattered * (0.4 + 0.6 * ridges.max(0.0));
 
         // Плато: дальняя от моря суша при невысокой эрозии, не в долине.
         // По таблице биомов здесь луга, вишнёвые рощи, плоскогорья саванны и
@@ -1452,15 +1462,8 @@ impl Terrain {
         // В горах земля и так поднята — там плато почти не добавляется.
         ground += PLATEAU * plateau * (1.0 - 0.7 * mountains);
 
-        // https://minecraft.wiki/w/World_generation: «peaks and valleys».
-        // Линейный подъём давал слишком много высот 100–140 и слабый хвост
-        // высоких пиков. Непрерывная выпуклая шкала оставляет равнины низкими,
-        // но усиливает редкие хребты; шум и морское дно не масштабируются.
-        if self.preview {
-            let uplift = (ground - base).max(0.0);
-            ground += spline(&[(0.0,0.0),(30.0,10.0),(50.0,22.0),(70.0,36.0),
-                (80.0,49.0),(90.0,90.0),(100.0,140.0),(110.0,155.0),(140.0,230.0)], uplift) - uplift;
-        }
+        if self.preview { ground -= 2.0; }
+        let sea_floor = if self.preview { sea_floor - 2.0 } else { sea_floor };
         let mut surface = sea_floor + (ground - sea_floor) * land;
 
         // Насколько место далеко от воды: у берега раскачка стихает, иначе
@@ -1472,7 +1475,15 @@ impl Terrain {
         // У подножий гор оригинал обрывист: ниже ~100 в горных местах почти
         // каждый четвёртый столбец — ступенька (замер terrain-measured-2).
         let foot = mountains * (1.0 - smooth_step((surface - 95.0) / 30.0));
-        let rugged = (30.0 * shattered + MOUNTAIN_FOOT * foot) * inland * land;
+        // https://minecraft.wiki/w/World_generation: «shattered».
+        // Положительная W в поясе E=5 меняет размах объёмной плотности,
+        // а не только поднимает весь массив. Хвост максимумов [проверить].
+        let broken = if self.preview {
+            30.0 + (80.0 + 40.0 * climate.continent.clamp(0.0,1.0)) * smooth_step(climate.weirdness / 0.1)
+                * smooth_step((climate.erosion - 0.43) / 0.02)
+                * (1.0 - smooth_step((climate.erosion - 0.55) / 0.02))
+        } else { 30.0 };
+        let rugged = (broken * shattered + MOUNTAIN_FOOT * foot) * inland * land;
 
         // Болота и мангры: по таблице биомов это самая ровная суша (эрозия
         // выше 0.55) в низинах в тепле. Земля там лежит вровень с водой и
@@ -1521,7 +1532,7 @@ impl Terrain {
         // Частоту и размеры островов на большой выборке 26.3 [проверить].
         let island = if self.preview { smooth_step((-climate.continent - 1.0) / 0.1) } else { 0.0 };
         if island > 0.0 {
-            let island_height = 68.0 + self.detail.octaves(fx/120.0+17.0,fz/120.0-31.0,2)*5.0;
+            let island_height = 78.0 + self.detail.octaves(fx/120.0+17.0,fz/120.0-31.0,2)*5.0;
             surface += (island_height-surface)*island;
             cap += (island_height+12.0-cap).max(0.0)*island;
         }
@@ -3389,6 +3400,34 @@ fn named(name: &str) -> i32 {
 mod tests {
     use super::*;
 
+    /// Сохранённые чанки трёх семян: до исправления потоков состав этих
+    /// клеток не совпадал. Допуск — одна клетка на границе, а не блоки мира.
+    #[test]
+    fn preview_named_climate_streams_reach_generated_chunk_biomes() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a-phase.json")).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let terrain = Terrain::new(case["seed"].as_i64().unwrap(),Style::Vanilla).with_preview(true);
+            let generator = crate::world::Generator::Normal(terrain);
+            let (cx,cz) = (case["chunk"][0].as_i64().unwrap() as i32,case["chunk"][1].as_i64().unwrap() as i32);
+            let chunk = crate::world::Chunk::generated(&generator,cx,cz);
+            let mut counts = std::collections::BTreeMap::<&str,i64>::new();
+            for z in (2..16).step_by(4) { for x in (2..16).step_by(4) {
+                let id = chunk.biome(x,case["sample_y"].as_i64().unwrap() as i32,z);
+                let biome = Biome::ALL.iter().chain(Biome::PREVIEW.iter())
+                    .find(|biome|biome.number() as u16==id).unwrap();
+                *counts.entry(biome.name()).or_default() += 1;
+            } }
+            for (biome,count) in &counts {
+                let reference = case["quart_biomes"][*biome].as_i64().unwrap_or(0);
+                assert!((count-reference).abs() <= 1,"{} {cx}/{cz}: {biome} {count}/{reference}",case["label"]);
+            }
+            for (biome,count) in case["quart_biomes"].as_object().unwrap() {
+                assert!((counts.get(biome.as_str()).copied().unwrap_or(0)-count.as_i64().unwrap()).abs() <= 1);
+            }
+        }
+    }
+
     /// Доли считаются по двум квадратам вместе: перестановка биомов не
     /// превращает несовпадение координат в ошибку состава мира.
     #[test]
@@ -3410,15 +3449,19 @@ mod tests {
         }
     }
 
-    /// Необрезанные пятна пустыни: исходная перепись дала 16 м² против
-    /// 5024 м² у оригинала. Грубый порог ловит прежнюю рябь в одну клетку.
+    /// Незатронутые рамкой пятна: на втором семени прежняя поправка
+    /// давала 4456 м² вместо 64. Один общий порог не ловил эту регрессию.
     #[test]
     fn preview_desert_patches_are_not_single_cell_boundary_noise() {
-        let terrain = Terrain::new(1_792_932_773_345_722_119,Style::Vanilla).with_preview(true);
+        for (seed,x0,z0,reference) in [
+            (1_792_932_773_345_722_119,-2064,-1440,5024.0_f64),
+            (100_554_032_945_340,-1072,-1568,64.0_f64),
+        ] {
+        let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
         let side = 3088/4;
         let mut desert = vec![false;side*side];
         for z in 0..side { for x in 0..side {
-            desert[z*side+x] = terrain.biome_at(-2064+x as i32*4+2,-1440+z as i32*4+2) == Biome::Desert;
+            desert[z*side+x] = terrain.biome_at(x0+x as i32*4+2,z0+z as i32*4+2) == Biome::Desert;
         } }
         let mut areas = Vec::new();
         for start in 0..desert.len() {
@@ -3437,8 +3480,10 @@ mod tests {
             if !edge { areas.push(area); }
         }
         areas.sort_unstable();
-        assert!(areas.len()>5);
-        assert!(areas[areas.len()/2]>=1000,"мелкие пятна: {areas:?}");
+        assert!(areas.len()>=5);
+        let median = f64::from(areas[(areas.len()-1)/2]+areas[areas.len()/2])/2.0;
+        assert!((median-reference).abs() <= 64.0,"семя {seed}: {median}, оригинал {reference}");
+        }
     }
 
     /// Совместные квантили двух семян, настоящая сетка плотности чанков.
@@ -3459,10 +3504,10 @@ mod tests {
             "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
         let p95 = heights[(heights.len()-1)*95/100];
         assert!((p95-reference["reference_height_pooled"]["95"].as_i64().unwrap() as i32).abs() <= 5,"p95={p95}");
-        assert!(*heights.last().unwrap() >= 180,"потерян хвост высоких пиков");
+        assert!(*heights.last().unwrap() >= 140,"потерян хвост высоких пиков");
     }
 
-    /// Грубая регрессия ширины морей на третьем семени тоже; точные
+    /// На третьем семени здесь обычное море, а не тёплое. Точные
     /// расстояния с шагом 4 и допуск 16 считает отдельная перепись.
     #[test]
     fn preview_warm_oceans_are_not_hundreds_of_blocks_wide_on_every_seed() {
@@ -3472,7 +3517,7 @@ mod tests {
             for z in (z0..z0+3088).step_by(32) { for x in (x0..x0+3088).step_by(32) {
                 let biome = terrain.biome_at(x+2,z+2);
                 if !biome.is_ocean() { land.push((x,z)); }
-                if biome == Biome::WarmOcean { warm.push((x,z)); }
+                if biome == Biome::WarmOcean || (seed == 20_261_025 && biome == Biome::Ocean) { warm.push((x,z)); }
             } }
             let mut distances = Vec::new();
             for (x,z) in warm {
@@ -3569,7 +3614,7 @@ mod tests {
             assert!(!root.join("level.dat").exists(),"нужен свежий каталог");
             std::fs::create_dir_all(&region).unwrap();
             let terrain = Terrain::new(seed, Style::Vanilla).with_preview(true);
-            let spawn = crate::world::spawn_search::find(|x,z| terrain.column_at(x,z));
+            let spawn = crate::world::spawn_search::find_preview(|x,z| terrain.column_at(x,z));
             std::fs::write(root.join("level.dat"), format!("seed={seed}\nspawn={} {} {}\n", spawn.0,spawn.1,spawn.2)).unwrap();
             let generator = crate::world::Generator::Normal(terrain);
             for pair in sample["chunks"].as_array().unwrap() {

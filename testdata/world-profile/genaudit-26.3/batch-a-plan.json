@@ -225,10 +225,10 @@
       "windows": {
         "overworld": [
           [
-            -112,
-            -89,
-            -104,
-            -81
+            157,
+            -125,
+            165,
+            -117
           ]
         ],
         "the_nether": [],
@@ -237,14 +237,14 @@
       "output_relative": "dappled-regenerated/world"
     },
     "mushroom": {
-      "seed": 100554032945340,
+      "seed": 1792932773345722119,
       "windows": {
         "overworld": [
           [
-            -16,
-            -8,
-            -8,
-            0
+            105,
+            -211,
+            113,
+            -203
           ]
         ],
         "the_nether": [],

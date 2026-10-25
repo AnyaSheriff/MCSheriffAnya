@@ -61,9 +61,13 @@ fn reported_cliff_is_continuous_and_independent_of_chunk_order() {
 
 #[test]
 fn village_floors_do_not_bury_grass() {
-    let generator = Generator::Normal(Terrain::new(SEED, Style::Vanilla).with_preview(true));
+    let terrain = Terrain::new(SEED, Style::Vanilla).with_preview(true);
+    // Координаты биомов меняются с фазами климата: пол проверяется у
+    // действительной деревни, а не на месте прежнего старта.
+    let (cx,cz) = village::nearest(&terrain,village::Kind::Plains,0,0,8).expect("равнинная деревня");
+    let generator = Generator::Normal(terrain);
     let mut floors = 0;
-    for (cx, cz) in [(73, -26), (74, -25), (75, -24), (75, -21)] {
+    for (cx, cz) in [(cx,cz),(cx+1,cz),(cx,cz+1),(cx+1,cz+1)] {
         let chunk = Chunk::generated(&generator, cx, cz);
         for x in 0..16 { for z in 0..16 { for y in 40..160 {
             if matches!(crate::blocks::block_at_state(chunk.block(x, y + 1, z)), Some("dirt_path" | "farmland" | "dirt" | "stone")) {

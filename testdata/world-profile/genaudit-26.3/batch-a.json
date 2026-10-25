@@ -6,14 +6,43 @@
     20261025
   ],
   "pooled_reference_surface_percent": {
-    "desert": 7.989287464092996,
-    "dark_forest": 2.216114442669602,
+    "badlands": 1.1080834384815699,
+    "bamboo_jungle": 0.9699452921554942,
+    "beach": 3.220986217750812,
     "birch_forest": 1.6640547397245564,
-    "old_growth_birch_forest": 2.4135715052753097,
+    "cherry_grove": 0.04702307444495154,
+    "dark_forest": 2.216114442669602,
+    "deep_lukewarm_ocean": 4.558511637896319,
+    "deep_ocean": 0.2605774651668501,
+    "desert": 7.989287464092996,
+    "dripstone_caves": 0.0273235103626943,
+    "eroded_badlands": 0.0286081505543773,
+    "flower_forest": 2.1153671910655323,
+    "forest": 10.630145901567825,
+    "grove": 0.010570753577277244,
     "jungle": 5.131912098311364,
+    "lukewarm_ocean": 8.303945659615023,
+    "lush_caves": 0.005862154017557519,
+    "mangrove_swamp": 2.297240781631722,
+    "meadow": 0.4835490550081882,
+    "ocean": 4.634897916722597,
+    "old_growth_birch_forest": 2.4135715052753093,
+    "pale_garden": 0.1881814360788209,
+    "plains": 6.697778379956509,
+    "river": 8.15772738865473,
+    "savanna": 8.333340324572472,
+    "savanna_plateau": 0.15042350130204837,
+    "snowy_slopes": 0.07231737764772209,
     "sparse_jungle": 3.14668682380735,
-    "bamboo_jungle": 0.969945292155494,
-    "warm_ocean": 11.278548375459746
+    "stony_shore": 0.7809773416736019,
+    "sulfur_caves": 0.00747713025853043,
+    "sunflower_plains": 0.4701573364385621,
+    "swamp": 0.13968495798544928,
+    "warm_ocean": 11.278548375459742,
+    "windswept_forest": 0.023071089156755886,
+    "windswept_hills": 0.2946387822491879,
+    "windswept_savanna": 0.17508859298236193,
+    "wooded_badlands": 1.9663227116835351
   },
   "reference_height_pooled": {
     "50": 62,
@@ -23,8 +52,8 @@
   },
   "dappled_chunk": {
     "seed": 1792932773345722119,
-    "x": -108,
-    "z": -85
+    "x": 163,
+    "z": -121
   },
   "source": "Official 26.3 read-only region census: docs/genaudit-26.3.md; two 37249-chunk squares. Third seed is held out, never fitted."
 }

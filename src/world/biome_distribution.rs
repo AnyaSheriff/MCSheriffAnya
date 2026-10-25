@@ -60,23 +60,8 @@ pub const CALIBRATED: [f64; 45] = [
     -0.026647, 0.713323,
 ];
 
-// Единая шкала моря для 26.3. Квантили сохраняют суммарные температурные
-// доли холодных поясов прежней калибровки. Верхняя граница уточнена по
-// двум квадратам 26.3: общая доля тёплого моря 11,28%, без выбора координат.
-// Глубина больше не переключает температуру. Это своя модель;
-// [проверить] глобальная перепись 26.3 вне выбранных окон.
-pub const PREVIEW_OCEAN_T: [f64; 4] = [-0.499077, -0.218470, 0.046497, 0.503456];
-
-// Профиль 26.3: доли двух полных квадратов переписи, без подгонки координат.
-// https://minecraft.wiki/w/World_generation: «Temperature» и «Humidity».
-// Холодные пояса, эрозия и странность закреплены прежними: два тёплых окна
-// не дают основания удалять холодные биомы в остальном мире [проверить].
-pub const PREVIEW_LAND_T: [f64; 4] = [-0.667443, -0.420703, -0.012796, 0.240521];
-pub const PREVIEW_WARM_H: [f64; 12] = [
-    -0.452567, -0.115472, 0.125220, 0.347575,
-    -0.350000, -0.133287, -0.087439, 0.294735,
-    -0.350000, -0.238465, -0.083823, 0.098062,
-];
+// 26.3 использует исходный климат именованных октав (climate_noise.rs).
+// Прежние переносы порогов остаются только у профиля 26.1.2.
 
 #[cfg(test)]
 mod tests {
@@ -85,7 +70,6 @@ mod tests {
 
     #[test]
     fn calibration_is_monotone_and_finite() {
-        assert!(PREVIEW_OCEAN_T.windows(2).all(|p| p[0] < p[1]));
         for range in [0..4,4..8,8..12,12..16,16..20,20..24,24..28,28..32,32..37,37..43] {
             assert!(CALIBRATED[range].windows(2).all(|p| p[0]<p[1]));
         }
@@ -166,66 +150,5 @@ mod tests {
                 assert_eq!(terrain.biome_at(bx,bz),terrain.biome_at(bx+3,bz+3));
             }
         }
-    }
-}
-
-// Подбор порогов только по измеренным долям, без координат оригинала.
-#[cfg(all(test, not(seedmap_core)))]
-#[test]
-#[ignore]
-fn fit_preview_census_shares() {
-    use super::{Biome, Terrain, Style, biome_of, dappled_climate};
-    let reference: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
-        std::env::var("BATCH_A_REFERENCE").expect("BATCH_A_REFERENCE")).unwrap()).unwrap();
-    let mut target = [0.0_f64; 67];
-    for (name, value) in reference.as_object().unwrap() {
-        if let Some(b) = Biome::by_name(name, true) { target[b.number() as usize] = value.as_f64().unwrap(); }
-    }
-    let mut samples = Vec::new();
-    for (seed, x0, z0) in [(1_792_932_773_345_722_119, -2064, -1440), (100_554_032_945_340, -1072, -1568)] {
-        let terrain = Terrain::new(seed, Style::Vanilla).with_preview(true);
-        for z in (z0..z0+3088).step_by(32) { for x in (x0..x0+3088).step_by(32) {
-            samples.push(terrain.climate_at(x+2,z+2));
-        } }
-    }
-    let score = |p: &[f64; 45]| {
-        let mut counts = [0_usize; 67];
-        for raw in &samples {
-            let c = mapped(raw, p);
-            let mut b = biome_of(&c);
-            if b == Biome::Plains && dappled_climate(&c) { b = Biome::DappledForest; }
-            counts[b.number() as usize] += 1;
-        }
-        let loss = counts.iter().zip(target).map(|(&n, want)| {
-            let got = n as f64 / samples.len() as f64;
-            (got-want).powi(2) / want.max(0.01)
-        }).sum::<f64>();
-        let regularization = p.iter().zip(CALIBRATED).map(|(a,b)| (a-b).powi(2)).sum::<f64>() * 0.01;
-        (loss + regularization, counts)
-    };
-    let mut p = CALIBRATED;
-    p[4..8].copy_from_slice(&PREVIEW_OCEAN_T);
-    p[8..12].copy_from_slice(&PREVIEW_OCEAN_T);
-    let mut best = score(&p).0;
-    for round in 0..50 {
-        let step = (0.05 * 0.94_f64.powi(round)).max(0.002);
-        for i in (2..4).chain(20..32) {
-            let old = p[i]; let mut chosen = old;
-            for sign in [-1.0, 1.0] {
-                p[i] = old + step * sign;
-                let groups = [0..4,12..16,16..20,20..24,24..28,28..32,32..37,37..43];
-                if groups.iter().all(|g| p[g.clone()].windows(2).all(|v| v[1]-v[0] > 0.005)) && p[i].abs() < 1.1 && p[44] > 0.1 {
-                    let loss = score(&p).0;
-                    if loss < best { best = loss; chosen = p[i]; }
-                }
-            }
-            p[i] = chosen;
-        }
-    }
-    let (_, counts) = score(&p);
-    println!("parameters {p:?}, loss {best}");
-    for b in Biome::ALL.into_iter().chain(Biome::PREVIEW) {
-        let i = b.number() as usize;
-        println!("{}\t{}\t{}", b.name(), target[i], counts[i] as f64 / samples.len() as f64);
     }
 }
