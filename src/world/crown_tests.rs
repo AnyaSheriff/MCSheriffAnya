@@ -138,7 +138,7 @@ fn old_profile_does_not_select_observed_shapes() {
 fn observed_leaf_support_survives_rotations_and_reflections() {
     use std::io::Read;
     let mut json=String::new();
-    flate2::read::GzDecoder::new(&include_bytes!("../../verification/crowns-26.3/observed-blocks.json.gz")[..]).read_to_string(&mut json).unwrap();
+    flate2::read::GzDecoder::new(&include_bytes!("../../testdata/world-profile/crowns-26.3-observed-blocks.json.gz")[..]).read_to_string(&mut json).unwrap();
     let raw: HashMap<String,Vec<Sample>>=serde_json::from_str(&json).unwrap();
     for (name,species,sapling) in CASES {
 

@@ -1,10 +1,25 @@
 """Проверки измерителя на малых наблюдаемых формах."""
 import unittest
+import gzip
+import json
+from pathlib import Path
 from crowns_263 import sample
-from crown_statistics import metrics
+from crown_statistics import metrics, population
 from pack_crowns_263 import pack
 
 class Crowns(unittest.TestCase):
+    def test_tracked_observations_match_all_forms_and_statistics(self):
+        root = Path(__file__).resolve().parents[2]
+        data = root / 'testdata/world-profile'
+        with gzip.open(data / 'crowns-26.3-observed-blocks.json.gz', 'rt') as stream:
+            raw = json.load(stream)
+        self.assertEqual(sum(map(len, raw.values())), 576)
+        self.assertEqual({name: len(trees) for name, trees in raw.items()},
+                         {name: 128 if name == 'poplar' else 64 for name in raw})
+        self.assertEqual(pack(raw), json.loads((root / 'src/world/tree_shapes_26_3.json').read_text()))
+        self.assertEqual({name: population(trees) for name, trees in raw.items()},
+                         json.loads((data / 'crowns-26.3.json').read_text()))
+
     def test_default_axis_and_trunk_reference(self):
         blocks={(0,y,0):('poplar_log',{}) for y in range(200,207)}
         blocks[1,206,0]=('yellow_poplar_leaves',{'distance':'1'})

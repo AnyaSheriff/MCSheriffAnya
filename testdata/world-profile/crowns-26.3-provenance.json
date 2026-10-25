@@ -1,0 +1,173 @@
+{
+  "recovered_fixture": {
+    "path": "testdata/world-profile/crowns-26.3-observed-blocks.json.gz",
+    "bytes": 68309,
+    "method": "Lossless inverse of the committed row masks and log axes using tools/measure/recover_crowns_263.py. This restores historical observations; it is not an independent new measurement.",
+    "forms": 576,
+    "repacked_models_identical": true,
+    "all_historical_statistics_identical": true
+  },
+  "fresh_observation": {
+    "path": "testdata/world-profile/crowns-26.3-regenerated-blocks.json.gz",
+    "bytes": 67771,
+    "date": "2026-10-25",
+    "server_version": "26.3",
+    "seed": 1792855987123998292,
+    "ports": [
+      26190,
+      26191
+    ],
+    "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "method": "One official observation world, isolated trees at y=200, read-only region extraction with tools/measure/crowns_263.py; no game code or JAR contents read.",
+    "plot_layout": {
+      "features": {
+        "species_order": [
+          "oak",
+          "fancy_oak",
+          "birch",
+          "acacia",
+          "swamp_oak",
+          "spruce",
+          "natural_poplar"
+        ],
+        "x": "4096 + species_index*256 + 12 + i*24",
+        "z": "4096 + 12 + j*24",
+        "i": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "j": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "floor_y": 199,
+        "floor": "dirt",
+        "command": "place feature minecraft:<species> x 200 z",
+        "natural_poplar_features": [
+          "yellow_poplar",
+          "orange_poplar",
+          "red_poplar"
+        ],
+        "natural_poplar_feature_index": "(i*8+j)%3"
+      },
+      "saplings": {
+        "x": "2048 + 12 + i*24",
+        "z": "2304 + 12 + j*24",
+        "i": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "j": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "floor_y": 199,
+        "floor": "dirt",
+        "block": "poplar_sapling[stage=1]",
+        "player_position": [
+          2230,
+          215,
+          2400
+        ],
+        "time": "noon",
+        "random_tick_speed": 1024,
+        "growth_seconds": 25
+      }
+    },
+    "settling": "random_tick_speed=0; tick sprint 40; save-all flush; remove forceloads; save-all flush",
+    "continuation": "The player was initially rejected by the whitelist. The same saved world was resumed with white-list=false; only the unfinished sapling plot was planted and grown. No feature trees were regenerated.",
+    "shutdown": "Both Java processes were stopped by their recorded subprocess PID (SIGTERM); final exit 143.",
+    "comparison": {
+      "oak": {
+        "n": 64,
+        "identical_at_same_index": 0,
+        "present_in_original_library": 1
+      },
+      "fancy_oak": {
+        "n": 64,
+        "identical_at_same_index": 1,
+        "present_in_original_library": 15
+      },
+      "birch": {
+        "n": 64,
+        "identical_at_same_index": 0,
+        "present_in_original_library": 1
+      },
+      "acacia": {
+        "n": 64,
+        "identical_at_same_index": 0,
+        "present_in_original_library": 2
+      },
+      "swamp_oak": {
+        "n": 64,
+        "identical_at_same_index": 0,
+        "present_in_original_library": 1
+      },
+      "spruce": {
+        "n": 64,
+        "identical_at_same_index": 1,
+        "present_in_original_library": 46
+      },
+      "natural_poplar": {
+        "n": 64,
+        "identical_at_same_index": 0,
+        "present_in_original_library": 0
+      },
+      "poplar": {
+        "n": 128,
+        "identical_at_same_index": 0,
+        "present_in_original_library": 0
+      }
+    },
+    "same_order_models_identical": false,
+    "limitation": "World seed and plot coordinates do not pin command feature and random-tick RNG. The fresh 576 trees are a new sample, not a reproduction of the original 576 forms. The runtime library and historical reference statistics are unchanged."
+  },
+  "sha256": {
+    "src/world/tree_shapes_26_3.json": "ca0221bd48ab8626af23bd8223cc28373f0764e2b9134b5998ff030dff751be3",
+    "testdata/world-profile/crowns-26.3.json": "ed5eff22e4e8111368e316e4c06b737410d89de2aac9cef18319d2e5264ec47b",
+    "testdata/world-profile/crowns-26.3-observed-blocks.json.gz": "602ab261214baf3e7a544dfaf3e929c5b0db5534dbdfc2e417205881c2ea73c2",
+    "testdata/world-profile/crowns-26.3-regenerated-blocks.json.gz": "95c78adb0c8ae19c5ce5f7ce51ffa0e4e042a9478a4f1b8781a7a1ad15f22ec0"
+  },
+  "validation": {
+    "rust_workspace_passed": 3300,
+    "rust_workspace_ignored": 104,
+    "active_crown_tests_passed": 12,
+    "python_crown_tests_passed": 4,
+    "clippy": "cargo clippy --release --workspace --all-targets -- -D warnings: PASS",
+    "build": "cargo build --release --workspace: PASS",
+    "tests": "cargo test --release --workspace -- --test-threads=6: PASS"
+  },
+  "fixture_audit": "git grep across tracked files: no remaining include_bytes!, include_str!, or direct fs reads of observation fixtures under verification/ or tmp/. Remaining tmp paths are runtime state, outputs, and manual observation tooling."
+}
