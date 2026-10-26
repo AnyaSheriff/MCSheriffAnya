@@ -58,9 +58,13 @@ fn fitness(climate: Climate, x: i32, z: i32) -> f64 {
         + gap(climate.erosion,-1.0,1.0).powi(2)
         + (0.16-climate.weirdness.abs()).max(0.0).powi(2);
     // https://minecraft.wiki/w/Tutorial:Adding_a_new_dimension: «spawn_target».
-    // Формула вики использует квантованные на 10000 климатические числа.
+    // https://minecraft.wiki/w/Noise_settings: «any density function».
+    // В 26.3 цель больше не ограничена старой биомной метрикой. Прежняя
+    // нормировка делала малый выход за диапазон дешевле округления окружности.
+    // Эффективный вес собственной модели проверен независимыми спавнами;
+    // точные единицы целей плотности оригинала [проверить].
     let squared = f64::from(x).powi(2)+f64::from(z).powi(2);
-    penalty + squared.powi(2)/(390_625.0 * 100_000_000.0)
+    penalty * 1_000_000.0 + squared.powi(2)/(390_625.0 * 100_000_000.0)
 }
 
 pub fn find(column_at: impl Fn(i32, i32) -> Column) -> (f64, f64, f64) {
@@ -119,6 +123,34 @@ mod tests {
         let spawn = find_preview(|x,z|terrain.column_at(x,z));
         assert_eq!((spawn.0.floor() as i32,spawn.2.floor() as i32),(16,-48));
         assert!(safe(&terrain.column_at(16,-48)));
+    }
+
+    /// https://minecraft.wiki/w/World_spawn: «climate thresholds».
+    /// Независимые сохранённые миры включают случаи, в которых прежний
+    /// вес выбирал совсем другой чанк, и обычные контрольные семена.
+    #[test]
+    fn preview_spawn_matches_independent_black_box_worlds() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a4/spawn.json")).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let seed = case["seed"].as_i64().unwrap();
+            let terrain = terrain::Terrain::new(seed,terrain::Style::Vanilla).with_preview(true);
+            let spawn = find_preview(|x,z|terrain.column_at(x,z));
+            let x = spawn.0.floor() - case["vanilla"][0].as_f64().unwrap();
+            let z = spawn.2.floor() - case["vanilla"][1].as_f64().unwrap();
+            assert!(x.hypot(z) <= fixture["tolerance_blocks"].as_f64().unwrap(),
+                "seed={seed}, spawn={spawn:?}, offset={}",x.hypot(z));
+            assert!(safe(&terrain.column_at(spawn.0.floor() as i32,spawn.2.floor() as i32)));
+            #[cfg(not(seedmap_core))]
+            {
+                let (x,y,z) = (spawn.0.floor() as i32,spawn.1 as i32-1,spawn.2.floor() as i32);
+                let generator = crate::world::Generator::Normal(terrain);
+                let chunk = crate::world::Chunk::generated(&generator,x.div_euclid(16),z.div_euclid(16));
+                let support = crate::blocks::block_at_state(chunk.block(x.rem_euclid(16),y,z.rem_euclid(16)));
+                assert!(!matches!(support,None | Some("air" | "cave_air" | "void_air" | "water" | "lava")),
+                    "seed={seed}, spawn={spawn:?}, support={support:?}");
+            }
+        }
     }
 
     fn water() -> Column { Column { biome: Biome::Ocean, ..Column::flat(40) } }

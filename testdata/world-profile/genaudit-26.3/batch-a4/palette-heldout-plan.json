@@ -1,0 +1,16 @@
+{
+  "seed": 123456789,
+  "windows": {
+    "overworld": [
+      [
+        -132,
+        -157,
+        -125,
+        -150
+      ]
+    ],
+    "the_nether": [],
+    "the_end": []
+  },
+  "method": "Third seed black-box locate badlands, save fresh 8x8 chunk window; compare per biome, not coordinate equality."
+}

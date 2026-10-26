@@ -1,0 +1,6708 @@
+{
+  "schema": 1,
+  "all_requested_items_closed": false,
+  "baseline_commit": "bc41a2f2",
+  "method": {
+    "native": "Fresh full chunks from this worktree via export_batch_a_263_chunks; isolated target directory and copied test binaries.",
+    "plan": "../batch-a3/measurement-plan.json",
+    "reference": "Read-only official 26.3 worlds and their A3 profiles; analyzer and reader SHA256 unchanged. Per-biome/per-depth statistics; not coordinate equality.",
+    "red_counts": "Rare-biome-enriched sample. The second seed has 5895 chunks: fresh before 150.114673 red blocks/chunk, reference 9.652248; do not mix these denominators with historical whole-census 23.7777 / 1.53601.",
+    "artifact_directory": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genA4"
+  },
+  "samples": {
+    "owner": {
+      "seed": 1792932773345722119,
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 3274,
+            "requested": 3274,
+            "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -116,
+              -90,
+              63,
+              102
+            ]
+          },
+          "vanilla": {
+            "chunks": 3274,
+            "requested": 3274,
+            "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -116,
+              -90,
+              63,
+              102
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "spawn": {
+        "before": [
+          16,
+          -48
+        ],
+        "after": [
+          16,
+          -48
+        ],
+        "vanilla": [
+          16,
+          -48
+        ]
+      },
+      "metrics": [
+        {
+          "metric": "slope/p100",
+          "batch": "A",
+          "before": 138.0,
+          "after": 138.0,
+          "vanilla": 215.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/192/underground_air",
+          "batch": "U",
+          "before": 100.0,
+          "after": 100.0,
+          "vanilla": 1.062092,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            145,
+            1224
+          ]
+        },
+        {
+          "metric": "depth/176/underground_air",
+          "batch": "U",
+          "before": 99.862069,
+          "after": 99.862069,
+          "vanilla": 5.496054,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            725,
+            3548
+          ]
+        },
+        {
+          "metric": "depth/160/underground_air",
+          "batch": "U",
+          "before": 97.575959,
+          "after": 97.575959,
+          "vanilla": 7.623061,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            6023,
+            5221
+          ]
+        },
+        {
+          "metric": "slope/p99",
+          "batch": "A",
+          "before": 30.0,
+          "after": 30.0,
+          "vanilla": 9.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/144/underground_air",
+          "batch": "U",
+          "before": 88.468699,
+          "after": 88.468699,
+          "vanilla": 44.946754,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            32763,
+            14555
+          ]
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "batch": "U",
+          "before": 59.01234,
+          "after": 59.01234,
+          "vanilla": 22.311496,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            390681,
+            98075
+          ]
+        },
+        {
+          "metric": "height_biome/windswept_hills/p100",
+          "batch": "A",
+          "before": 208.0,
+          "after": 208.0,
+          "vanilla": 137.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "height_biome/beach/p100",
+          "batch": "A",
+          "before": 77.0,
+          "after": 77.0,
+          "vanilla": 143.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "feature_biome/windswept_hills/snow",
+          "batch": "A",
+          "before": 777.126431,
+          "after": 777.126431,
+          "vanilla": 92.673328,
+          "unit": "per million biome blocks",
+          "tolerance": 18.53466556104848,
+          "verdict": "outside",
+          "denominator": [
+            20152448,
+            20221568
+          ]
+        },
+        {
+          "metric": "height_biome/windswept_hills/p95",
+          "batch": "A",
+          "before": 152.0,
+          "after": 152.0,
+          "vanilla": 116.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "height_biome/windswept_savanna/p100",
+          "batch": "A",
+          "before": 176.0,
+          "after": 176.0,
+          "vanilla": 210.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "height_biome/windswept_savanna/p95",
+          "batch": "A",
+          "before": 112.0,
+          "after": 112.0,
+          "vanilla": 141.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/128/underground_air",
+          "batch": "U",
+          "before": 75.126024,
+          "after": 75.126024,
+          "vanilla": 65.93327,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            118827,
+            30361
+          ]
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "batch": "A",
+          "before": 32.418699,
+          "after": 32.418699,
+          "vanilla": 49.199695,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            7872,
+            7872
+          ]
+        },
+        {
+          "metric": "layer/beach/-4/stone",
+          "batch": "A",
+          "before": 22.087264,
+          "after": 22.087264,
+          "vanilla": 18.720491,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "denominator": [
+            33920,
+            33888
+          ]
+        },
+        {
+          "metric": "top/meadow/grass_block",
+          "batch": "A",
+          "before": 97.870025,
+          "after": 97.870025,
+          "vanilla": 98.456983,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "denominator": [
+            6432,
+            6416
+          ]
+        },
+        {
+          "metric": "blocks/red_terracotta",
+          "batch": "A",
+          "before": 0.019853,
+          "after": 0.019853,
+          "vanilla": 0.022602,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within"
+        },
+        {
+          "metric": "slope/p5",
+          "batch": "A",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "within"
+        },
+        {
+          "metric": "slope/p50",
+          "batch": "A",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "within"
+        },
+        {
+          "metric": "slope/p95",
+          "batch": "A",
+          "before": 3.0,
+          "after": 3.0,
+          "vanilla": 3.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "within"
+        },
+        {
+          "metric": "spawn_offset",
+          "batch": "A",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks from official spawn",
+          "tolerance": 16,
+          "verdict": "within"
+        }
+      ],
+      "new_outside_common_rows": [],
+      "new_unpaired_outside_rows": [],
+      "missing_rows": [],
+      "outside_before": 622,
+      "outside_after": 622
+    },
+    "second": {
+      "seed": 100554032945340,
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 5895,
+            "requested": 5895,
+            "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -67,
+              -98,
+              97,
+              94
+            ]
+          },
+          "vanilla": {
+            "chunks": 5895,
+            "requested": 5895,
+            "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -67,
+              -98,
+              97,
+              94
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "spawn": {
+        "before": [
+          -48,
+          112
+        ],
+        "after": [
+          -240,
+          16
+        ],
+        "vanilla": [
+          -240,
+          16
+        ]
+      },
+      "metrics": [
+        {
+          "metric": "slope/p100",
+          "batch": "A",
+          "before": 93.0,
+          "after": 93.0,
+          "vanilla": 171.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "outside"
+        },
+        {
+          "metric": "surface_band/badlands/red_terracotta/y80",
+          "batch": "A",
+          "before": 71.975403,
+          "after": 71.975403,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "outside"
+        },
+        {
+          "metric": "surface_band/wooded_badlands/red_terracotta/y80",
+          "batch": "A",
+          "before": 48.642578,
+          "after": 48.642578,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "outside"
+        },
+        {
+          "metric": "blocks/red_terracotta",
+          "batch": "A",
+          "before": 150.114673,
+          "after": 150.114673,
+          "vanilla": 9.652248,
+          "unit": "per chunk",
+          "tolerance": 1.9304495335029686,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/160/underground_air",
+          "batch": "U",
+          "before": 100.0,
+          "after": 100.0,
+          "vanilla": 11.981567,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            9,
+            651
+          ]
+        },
+        {
+          "metric": "height_biome/windswept_savanna/p100",
+          "batch": "A",
+          "before": 68.0,
+          "after": 68.0,
+          "vanilla": 165.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/144/underground_air",
+          "batch": "U",
+          "before": 38.936687,
+          "after": 38.936687,
+          "vanilla": 4.458634,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            4533,
+            17853
+          ]
+        },
+        {
+          "metric": "depth/128/underground_air",
+          "batch": "U",
+          "before": 24.225194,
+          "after": 24.225194,
+          "vanilla": 3.345908,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            99896,
+            101258
+          ]
+        },
+        {
+          "metric": "layer/eroded_badlands/-2/red_terracotta",
+          "batch": "A",
+          "before": 37.481672,
+          "after": 37.481672,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            5456,
+            5456
+          ]
+        },
+        {
+          "metric": "layer/eroded_badlands/-1/red_terracotta",
+          "batch": "A",
+          "before": 36.015396,
+          "after": 36.015396,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            5456,
+            5456
+          ]
+        },
+        {
+          "metric": "layer/eroded_badlands/-3/red_terracotta",
+          "batch": "A",
+          "before": 35.593842,
+          "after": 35.593842,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            5456,
+            5456
+          ]
+        },
+        {
+          "metric": "layer/eroded_badlands/-4/red_terracotta",
+          "batch": "A",
+          "before": 30.920088,
+          "after": 30.920088,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            5456,
+            5456
+          ]
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "batch": "U",
+          "before": 13.565178,
+          "after": 13.565178,
+          "vanilla": 2.149357,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "denominator": [
+            759990,
+            569054
+          ]
+        },
+        {
+          "metric": "layer/eroded_badlands/-5/red_terracotta",
+          "batch": "A",
+          "before": 27.089443,
+          "after": 27.089443,
+          "vanilla": 0.0,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            5456,
+            5456
+          ]
+        },
+        {
+          "metric": "surface_band/eroded_badlands/red_terracotta/y80",
+          "batch": "A",
+          "before": 3.588974,
+          "after": 3.588974,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "outside"
+        },
+        {
+          "metric": "slope/p99",
+          "batch": "A",
+          "before": 4.0,
+          "after": 4.0,
+          "vanilla": 6.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-4/stone",
+          "batch": "A",
+          "before": 23.064721,
+          "after": 23.064721,
+          "vanilla": 18.05203,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "denominator": [
+            6304,
+            6304
+          ]
+        },
+        {
+          "metric": "surface_band/desert/red_terracotta/y80",
+          "batch": "A",
+          "before": 0.400339,
+          "after": 0.400339,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "outside"
+        },
+        {
+          "metric": "height_biome/windswept_savanna/p95",
+          "batch": "A",
+          "before": 63.0,
+          "after": 63.0,
+          "vanilla": 66.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "within"
+        },
+        {
+          "metric": "surface_band/forest/red_terracotta/y80",
+          "batch": "A",
+          "before": 0.101442,
+          "after": 0.101442,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "within"
+        },
+        {
+          "metric": "top/meadow/grass_block",
+          "batch": "A",
+          "before": 99.013902,
+          "after": 99.013902,
+          "vanilla": 98.362547,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "denominator": [
+            86604,
+            85804
+          ]
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "batch": "A",
+          "before": 35.475352,
+          "after": 35.475352,
+          "vanilla": 35.036496,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "denominator": [
+            1136,
+            1096
+          ]
+        },
+        {
+          "metric": "surface_band/jungle/red_terracotta/y80",
+          "batch": "A",
+          "before": 0.054114,
+          "after": 0.054114,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "within"
+        },
+        {
+          "metric": "surface_band/sparse_jungle/red_terracotta/y80",
+          "batch": "A",
+          "before": 0.00475,
+          "after": 0.00475,
+          "vanilla": 0.0,
+          "unit": "blocks per sampled chunk",
+          "tolerance": 0.25,
+          "verdict": "within"
+        },
+        {
+          "metric": "height_biome/beach/p100",
+          "batch": "A",
+          "before": 69.0,
+          "after": 69.0,
+          "vanilla": 69.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "within"
+        },
+        {
+          "metric": "slope/p5",
+          "batch": "A",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "within"
+        },
+        {
+          "metric": "slope/p50",
+          "batch": "A",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "within"
+        },
+        {
+          "metric": "slope/p95",
+          "batch": "A",
+          "before": 2.0,
+          "after": 2.0,
+          "vanilla": 2.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "within"
+        },
+        {
+          "metric": "spawn_offset",
+          "batch": "A",
+          "before": 214.662526,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks from official spawn",
+          "tolerance": 16,
+          "verdict": "within"
+        }
+      ],
+      "new_outside_common_rows": [],
+      "new_unpaired_outside_rows": [],
+      "missing_rows": [],
+      "outside_before": 859,
+      "outside_after": 858
+    }
+  },
+  "rejected_experiments": {
+    "candidate2": {
+      "owner": {
+        "seed": 1792932773345722119,
+        "coverage": [
+          {
+            "dimension": "overworld",
+            "ours": {
+              "chunks": 3274,
+              "requested": 3274,
+              "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -116,
+                -90,
+                63,
+                102
+              ]
+            },
+            "vanilla": {
+              "chunks": 3274,
+              "requested": 3274,
+              "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -116,
+                -90,
+                63,
+                102
+              ]
+            },
+            "same_chunks": true,
+            "complete": true
+          },
+          {
+            "dimension": "the_nether",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          },
+          {
+            "dimension": "the_end",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          }
+        ],
+        "spawn": {
+          "before": [
+            16,
+            -48
+          ],
+          "after": [
+            16,
+            -48
+          ],
+          "vanilla": [
+            16,
+            -48
+          ]
+        },
+        "metrics": [
+          {
+            "metric": "slope/p100",
+            "batch": "A",
+            "before": 138.0,
+            "after": 287.0,
+            "vanilla": 215.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/176/underground_air",
+            "batch": "U",
+            "before": 99.862069,
+            "after": 42.475881,
+            "vanilla": 5.496054,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              11091,
+              3548
+            ]
+          },
+          {
+            "metric": "depth/128/underground_air",
+            "batch": "U",
+            "before": 75.126024,
+            "after": 29.895473,
+            "vanilla": 65.93327,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              92034,
+              30361
+            ]
+          },
+          {
+            "metric": "depth/192/underground_air",
+            "batch": "U",
+            "before": 100.0,
+            "after": 33.522191,
+            "vanilla": 1.062092,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              5295,
+              1224
+            ]
+          },
+          {
+            "metric": "depth/160/underground_air",
+            "batch": "U",
+            "before": 97.575959,
+            "after": 35.337272,
+            "vanilla": 7.623061,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              25217,
+              5221
+            ]
+          },
+          {
+            "metric": "slope/p99",
+            "batch": "A",
+            "before": 30.0,
+            "after": 19.0,
+            "vanilla": 9.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p100",
+            "batch": "A",
+            "before": 176.0,
+            "after": 258.0,
+            "vanilla": 210.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/beach/p100",
+            "batch": "A",
+            "before": 77.0,
+            "after": 181.0,
+            "vanilla": 143.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/144/underground_air",
+            "batch": "U",
+            "before": 88.468699,
+            "after": 31.396429,
+            "vanilla": 44.946754,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              50579,
+              14555
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 112.0,
+            "after": 162.0,
+            "vanilla": 141.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/cherry_grove/-3/dirt",
+            "batch": "A",
+            "before": 32.418699,
+            "after": 32.418699,
+            "vanilla": 49.199695,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              7872,
+              7872
+            ]
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 3.0,
+            "after": 5.0,
+            "vanilla": 3.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_hills/p95",
+            "batch": "A",
+            "before": 152.0,
+            "after": 108.0,
+            "vanilla": 116.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_hills/snow",
+            "batch": "A",
+            "before": 777.126431,
+            "after": 23.771165,
+            "vanilla": 92.673328,
+            "unit": "per million biome blocks",
+            "tolerance": 18.53466556104848,
+            "verdict": "outside",
+            "denominator": [
+              20150464,
+              20221568
+            ]
+          },
+          {
+            "metric": "depth/112/underground_air",
+            "batch": "U",
+            "before": 59.01234,
+            "after": 19.956676,
+            "vanilla": 22.311496,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              227588,
+              98075
+            ]
+          },
+          {
+            "metric": "layer/beach/-4/stone",
+            "batch": "A",
+            "before": 22.087264,
+            "after": 20.510024,
+            "vanilla": 18.720491,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              33920,
+              33888
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_hills/p100",
+            "batch": "A",
+            "before": 208.0,
+            "after": 136.0,
+            "vanilla": 137.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/meadow/grass_block",
+            "batch": "A",
+            "before": 97.870025,
+            "after": 97.870025,
+            "vanilla": 98.456983,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              6432,
+              6416
+            ]
+          },
+          {
+            "metric": "blocks/red_terracotta",
+            "batch": "A",
+            "before": 0.019853,
+            "after": 0.019853,
+            "vanilla": 0.022602,
+            "unit": "per chunk",
+            "tolerance": 0.1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p5",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p50",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "spawn_offset",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks from official spawn",
+            "tolerance": 16,
+            "verdict": "within"
+          }
+        ],
+        "new_outside_common_rows": [
+          {
+            "metric": "height/p100",
+            "batch": "A",
+            "before": 208.0,
+            "after": 258.0,
+            "vanilla": 210.0,
+            "unit": "blocks",
+            "tolerance": 4,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/savanna/p100",
+            "batch": "A",
+            "before": 125.0,
+            "after": 162.0,
+            "vanilla": 125.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_mean/windswept_savanna",
+            "batch": "A",
+            "before": 74.15088,
+            "after": 86.762462,
+            "vanilla": 72.391946,
+            "unit": "blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/64/underground_air",
+            "batch": "U",
+            "before": 10.733742,
+            "after": 5.214838,
+            "vanilla": 10.68327,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              3257052,
+              2946289
+            ]
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 3.0,
+            "after": 5.0,
+            "vanilla": 3.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/forest/p95",
+            "batch": "A",
+            "before": 109.0,
+            "after": 101.0,
+            "vanilla": 111.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/windswept_forest/-4/andesite",
+            "batch": "A",
+            "before": 3.188776,
+            "after": 12.372449,
+            "vanilla": 4.209184,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              784,
+              784
+            ]
+          },
+          {
+            "metric": "layer/swamp/-2/dirt",
+            "batch": "A",
+            "before": 92.237634,
+            "after": 95.99766,
+            "vanilla": 88.596051,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              11968,
+              11952
+            ]
+          },
+          {
+            "metric": "layer/windswept_forest/-5/andesite",
+            "batch": "A",
+            "before": 3.69898,
+            "after": 11.607143,
+            "vanilla": 4.846939,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              784,
+              784
+            ]
+          },
+          {
+            "metric": "layer/sparse_jungle/-4/stone",
+            "batch": "A",
+            "before": 77.154859,
+            "after": 87.497898,
+            "vanilla": 81.221923,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              17837,
+              17808
+            ]
+          },
+          {
+            "metric": "layer/beach/-5/sandstone",
+            "batch": "A",
+            "before": 56.739387,
+            "after": 58.717571,
+            "vanilla": 52.608593,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              33920,
+              33888
+            ]
+          },
+          {
+            "metric": "depth/64/air",
+            "batch": "U",
+            "before": 62.638602,
+            "after": 62.193243,
+            "vanilla": 64.486845,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              13410304,
+              13410304
+            ]
+          },
+          {
+            "metric": "top/windswept_savanna/dirt",
+            "batch": "A",
+            "before": 13.038734,
+            "after": 15.940496,
+            "vanilla": 10.365521,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              29309,
+              29328
+            ]
+          },
+          {
+            "metric": "ore/coal_ore/y128",
+            "batch": "U",
+            "before": 0.280086,
+            "after": 0.473732,
+            "vanilla": 0.071472,
+            "unit": "per chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/beach/-3/sand",
+            "batch": "A",
+            "before": 38.70283,
+            "after": 40.032429,
+            "vanilla": 35.030099,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              33920,
+              33888
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/oak_log",
+            "batch": "F-tree",
+            "before": 29.89477,
+            "after": 16.608206,
+            "vanilla": 36.538053,
+            "unit": "per million biome blocks",
+            "tolerance": 7.307610544217687,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/oak_leaves",
+            "batch": "F-tree",
+            "before": 68.522814,
+            "after": 32.370188,
+            "vanilla": 64.568345,
+            "unit": "per million biome blocks",
+            "tolerance": 12.913669064748204,
+            "verdict": "outside",
+            "denominator": [
+              11121344,
+              11120000
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/acacia_leaves",
+            "batch": "F-tree",
+            "before": 212.942287,
+            "after": 91.086113,
+            "vanilla": 180.57554,
+            "unit": "per million biome blocks",
+            "tolerance": 36.115107913669064,
+            "verdict": "outside",
+            "denominator": [
+              11121344,
+              11120000
+            ]
+          },
+          {
+            "metric": "feature_biome/river/mangrove_leaves",
+            "batch": "F-tree",
+            "before": 20.434135,
+            "after": 13.819294,
+            "vanilla": 25.402823,
+            "unit": "per million biome blocks",
+            "tolerance": 5.080564531320186,
+            "verdict": "outside",
+            "denominator": [
+              22070592,
+              22084160
+            ]
+          },
+          {
+            "metric": "blocks/vine",
+            "batch": "F",
+            "before": 19.519243,
+            "after": 18.909591,
+            "vanilla": 23.991448,
+            "unit": "per chunk",
+            "tolerance": 4.798289554062309,
+            "verdict": "outside"
+          },
+          {
+            "metric": "blocks/jungle_log",
+            "batch": "F-tree",
+            "before": 1.322236,
+            "after": 1.294136,
+            "vanilla": 1.618815,
+            "unit": "per chunk",
+            "tolerance": 0.32376298106292,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_hills/oak_leaves",
+            "batch": "F-tree",
+            "before": 186.974803,
+            "after": 211.60803,
+            "vanilla": 161.362363,
+            "unit": "per million biome blocks",
+            "tolerance": 32.27247263911483,
+            "verdict": "outside",
+            "denominator": [
+              20150464,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/tall_seagrass",
+            "batch": "F-ocean",
+            "before": 0.294989,
+            "after": 6.784885,
+            "vanilla": 0.0,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6779776,
+              6762432
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/spruce_leaves",
+            "batch": "F-tree",
+            "before": 969.919218,
+            "after": 601.217049,
+            "vanilla": 813.802083,
+            "unit": "per million biome blocks",
+            "tolerance": 162.76041666666669,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "feature_biome/lush_caves/oak_log",
+            "batch": "F-tree",
+            "before": 1.233277,
+            "after": 6.171255,
+            "vanilla": 0.0,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1620416,
+              1631296
+            ]
+          },
+          {
+            "metric": "feature_biome/dark_forest/moss_block",
+            "batch": "A",
+            "before": 17.421025,
+            "after": 26.130843,
+            "vanilla": 19.973369,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              2410944,
+              2403200
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/fern",
+            "batch": "F",
+            "before": 195.725485,
+            "after": 166.672173,
+            "vanilla": 220.187057,
+            "unit": "per million biome blocks",
+            "tolerance": 44.03741139282436,
+            "verdict": "outside",
+            "denominator": [
+              6779776,
+              6762432
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/short_grass",
+            "batch": "F",
+            "before": 581.424162,
+            "after": 477.5969,
+            "vanilla": 615.311178,
+            "unit": "per million biome blocks",
+            "tolerance": 123.0622355980807,
+            "verdict": "outside",
+            "denominator": [
+              6779776,
+              6762432
+            ]
+          },
+          {
+            "metric": "feature_biome/mangrove_swamp/moss_carpet",
+            "batch": "F",
+            "before": 170.679198,
+            "after": 163.070916,
+            "vanilla": 207.297081,
+            "unit": "per million biome blocks",
+            "tolerance": 41.45941617985168,
+            "verdict": "outside",
+            "denominator": [
+              14325056,
+              14307968
+            ]
+          },
+          {
+            "metric": "feature_biome/old_growth_birch_forest/dark_oak_log",
+            "batch": "F-tree",
+            "before": 2.951431,
+            "after": 2.213504,
+            "vanilla": 7.488882,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              24395712,
+              24436224
+            ]
+          },
+          {
+            "metric": "feature_biome/old_growth_birch_forest/oak_leaves",
+            "batch": "F-tree",
+            "before": 18.405453,
+            "after": 18.814782,
+            "vanilla": 13.545464,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              24395712,
+              24436224
+            ]
+          },
+          {
+            "metric": "feature_biome/swamp/seagrass",
+            "batch": "F-ocean",
+            "before": 9.380674,
+            "after": 9.839277,
+            "vanilla": 4.58097,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              4370240,
+              4365888
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/tall_seagrass",
+            "batch": "F-ocean",
+            "before": 7.193996,
+            "after": 11.869069,
+            "vanilla": 6.654676,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              11121344,
+              11120000
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/mangrove_roots",
+            "batch": "F",
+            "before": 6.489767,
+            "after": 5.604905,
+            "vanilla": 10.794933,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6779776,
+              6762432
+            ]
+          }
+        ],
+        "new_unpaired_outside_rows": [
+          {
+            "metric": "feature_biome/windswept_forest/seagrass",
+            "batch": "F-ocean",
+            "after": 6.643282,
+            "vanilla": 0.0,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/tall_grass",
+            "batch": "F",
+            "after": 6.643282,
+            "vanilla": 0.0,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          }
+        ],
+        "missing_rows": [
+          {
+            "metric": "tree_span/windswept_savanna/mangrove_log/p50",
+            "batch": "F-tree",
+            "before": 1.0,
+            "vanilla": 4.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/leaf_litter",
+            "batch": "U",
+            "before": 3.61645,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/oak_leaves",
+            "batch": "U",
+            "before": 3.61645,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/snow",
+            "batch": "U",
+            "before": 0.925138,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-1/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-3/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-3/iron_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_forest/coal_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_forest/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/plains/snow",
+            "batch": "A",
+            "before": 0.337582,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/hanging_roots",
+            "batch": "F",
+            "before": 0.294989,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/birch_leaves",
+            "batch": "U",
+            "before": 0.168207,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y144",
+            "batch": "U",
+            "before": 0.003665,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/pointed_dripstone",
+            "batch": "A",
+            "before": 0.023287,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/swamp/-1/copper_ore",
+            "batch": "A",
+            "before": 0.016711,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y160",
+            "batch": "U",
+            "before": 0.000916,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-1/muddy_mangrove_roots",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-1/rooted_dirt",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-2/rooted_dirt",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-3/rooted_dirt",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-4/rooted_dirt",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-5/rooted_dirt",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-5/mud_bricks",
+            "batch": "A",
+            "before": 0.010229,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "tree_base_estimates/dripstone_caves/oak_log",
+            "batch": "U",
+            "before": 0.000305,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/andesite",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/copper_ore",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-3/mud_brick_slab",
+            "batch": "A",
+            "before": 0.006819,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-3/muddy_mangrove_roots",
+            "batch": "A",
+            "before": 0.006819,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/birch_forest/-1/andesite",
+            "batch": "A",
+            "before": 0.006365,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-2/mangrove_roots",
+            "batch": "A",
+            "before": 0.005601,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/sparse_jungle/rooted_dirt",
+            "batch": "A",
+            "before": 0.005601,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-5/vine",
+            "batch": "A",
+            "before": 0.004572,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y176",
+            "batch": "U",
+            "before": 0.000305,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_hills/-5/dripstone_block",
+            "batch": "A",
+            "before": 0.003577,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-1/orange_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-2/mud_brick_slab",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-2/orange_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-3/hanging_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-3/vine",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/mud_brick_slab",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/mud_bricks",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/orange_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/vine",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/white_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-5/mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-5/muddy_mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-5/vine",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_savanna/orange_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-3/mangrove_propagule",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-4/light_gray_glazed_terracotta",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/netherrack",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_hills/-5/stone_brick_slab",
+            "batch": "A",
+            "before": 0.001789,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/cave_vines",
+            "batch": "A",
+            "before": 0.001035,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-3/vine",
+            "batch": "A",
+            "before": 0.001524,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-4/vine",
+            "batch": "A",
+            "before": 0.001524,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/forest/emerald_ore",
+            "batch": "A",
+            "before": 0.000906,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-2/emerald_ore",
+            "batch": "A",
+            "before": 0.000453,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-4/dripstone_block",
+            "batch": "A",
+            "before": 0.000453,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/magma_block",
+            "batch": "A",
+            "before": 0.000172,
+            "vanilla": 0.0,
+            "verdict": "within"
+          }
+        ],
+        "outside_before": 622,
+        "outside_after": 609
+      },
+      "second": {
+        "seed": 100554032945340,
+        "coverage": [
+          {
+            "dimension": "overworld",
+            "ours": {
+              "chunks": 5895,
+              "requested": 5895,
+              "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -67,
+                -98,
+                97,
+                94
+              ]
+            },
+            "vanilla": {
+              "chunks": 5895,
+              "requested": 5895,
+              "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -67,
+                -98,
+                97,
+                94
+              ]
+            },
+            "same_chunks": true,
+            "complete": true
+          },
+          {
+            "dimension": "the_nether",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          },
+          {
+            "dimension": "the_end",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          }
+        ],
+        "spawn": {
+          "before": [
+            -48,
+            112
+          ],
+          "after": [
+            -240,
+            16
+          ],
+          "vanilla": [
+            -240,
+            16
+          ]
+        },
+        "metrics": [
+          {
+            "metric": "slope/p100",
+            "batch": "A",
+            "before": 93.0,
+            "after": 245.0,
+            "vanilla": 171.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "blocks/red_terracotta",
+            "batch": "A",
+            "before": 150.114673,
+            "after": 121.573028,
+            "vanilla": 9.652248,
+            "unit": "per chunk",
+            "tolerance": 1.9304495335029686,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/128/underground_air",
+            "batch": "U",
+            "before": 24.225194,
+            "after": 18.092905,
+            "vanilla": 3.345908,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              160422,
+              101258
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 63.0,
+            "after": 100.0,
+            "vanilla": 66.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/144/underground_air",
+            "batch": "U",
+            "before": 38.936687,
+            "after": 16.952075,
+            "vanilla": 4.458634,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              41753,
+              17853
+            ]
+          },
+          {
+            "metric": "depth/112/underground_air",
+            "batch": "U",
+            "before": 13.565178,
+            "after": 12.424178,
+            "vanilla": 2.149357,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              822155,
+              569054
+            ]
+          },
+          {
+            "metric": "depth/160/underground_air",
+            "batch": "U",
+            "before": 100.0,
+            "after": 21.871141,
+            "vanilla": 11.981567,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              13767,
+              651
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p100",
+            "batch": "A",
+            "before": 68.0,
+            "after": 155.0,
+            "vanilla": 165.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/beach/-4/stone",
+            "batch": "A",
+            "before": 23.064721,
+            "after": 23.064721,
+            "vanilla": 18.05203,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6304,
+              6304
+            ]
+          },
+          {
+            "metric": "slope/p99",
+            "batch": "A",
+            "before": 4.0,
+            "after": 5.0,
+            "vanilla": 6.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/eroded_badlands/-5/red_terracotta",
+            "batch": "A",
+            "before": 27.089443,
+            "after": 2.987537,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-4/red_terracotta",
+            "batch": "A",
+            "before": 30.920088,
+            "after": 2.382698,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-3/red_terracotta",
+            "batch": "A",
+            "before": 35.593842,
+            "after": 1.796188,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-2/red_terracotta",
+            "batch": "A",
+            "before": 37.481672,
+            "after": 1.631232,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-1/red_terracotta",
+            "batch": "A",
+            "before": 36.015396,
+            "after": 1.576246,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "top/meadow/grass_block",
+            "batch": "A",
+            "before": 99.013902,
+            "after": 99.013902,
+            "vanilla": 98.362547,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              86604,
+              85804
+            ]
+          },
+          {
+            "metric": "layer/cherry_grove/-3/dirt",
+            "batch": "A",
+            "before": 35.475352,
+            "after": 35.475352,
+            "vanilla": 35.036496,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              1136,
+              1096
+            ]
+          },
+          {
+            "metric": "height_biome/beach/p100",
+            "batch": "A",
+            "before": 69.0,
+            "after": 69.0,
+            "vanilla": 69.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p5",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p50",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 2.0,
+            "after": 2.0,
+            "vanilla": 2.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "spawn_offset",
+            "batch": "A",
+            "before": 214.662526,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks from official spawn",
+            "tolerance": 16,
+            "verdict": "within"
+          }
+        ],
+        "new_outside_common_rows": [
+          {
+            "metric": "height/p100",
+            "batch": "A",
+            "before": 168.0,
+            "after": 258.0,
+            "vanilla": 168.0,
+            "unit": "blocks",
+            "tolerance": 4,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/desert/p100",
+            "batch": "A",
+            "before": 168.0,
+            "after": 258.0,
+            "vanilla": 168.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 63.0,
+            "after": 100.0,
+            "vanilla": 66.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/eroded_badlands/-1/terracotta",
+            "batch": "A",
+            "before": 26.228006,
+            "after": 57.716276,
+            "vanilla": 28.464076,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "top/windswept_savanna/grass_block",
+            "batch": "A",
+            "before": 10.251976,
+            "after": 27.274975,
+            "vanilla": 7.923228,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              4044,
+              4064
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-4/terracotta",
+            "batch": "A",
+            "before": 31.451613,
+            "after": 48.497067,
+            "vanilla": 30.626833,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-3/terracotta",
+            "batch": "A",
+            "before": 28.610704,
+            "after": 49.578446,
+            "vanilla": 32.258065,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "height_mean/windswept_savanna",
+            "batch": "A",
+            "before": 58.309289,
+            "after": 64.780168,
+            "vanilla": 55.395423,
+            "unit": "blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/river/p100",
+            "batch": "A",
+            "before": 76.0,
+            "after": 89.0,
+            "vanilla": 79.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/eroded_badlands/-3/light_gray_terracotta",
+            "batch": "A",
+            "before": 5.516862,
+            "after": 0.0,
+            "vanilla": 9.824047,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/badlands/-5/white_terracotta",
+            "batch": "A",
+            "before": 8.56215,
+            "after": 0.0,
+            "vanilla": 9.224996,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-5/terracotta",
+            "batch": "A",
+            "before": 31.315331,
+            "after": 45.29522,
+            "vanilla": 36.07804,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-4/light_gray_terracotta",
+            "batch": "A",
+            "before": 8.458472,
+            "after": 0.0,
+            "vanilla": 8.659998,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-2/white_terracotta",
+            "batch": "A",
+            "before": 6.891496,
+            "after": 0.0,
+            "vanilla": 8.632698,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "surface_band/badlands/white_terracotta/y96",
+            "batch": "A",
+            "before": 24.30212,
+            "after": 0.0,
+            "vanilla": 20.600679,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 4.120135708227312,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/white_terracotta/y96",
+            "batch": "A",
+            "before": 7.153859,
+            "after": 0.0,
+            "vanilla": 6.428838,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 1.2857675996607296,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/badlands/-4/white_terracotta",
+            "batch": "A",
+            "before": 8.495398,
+            "after": 0.0,
+            "vanilla": 8.302733,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-3/light_gray_terracotta",
+            "batch": "A",
+            "before": 8.324496,
+            "after": 0.0,
+            "vanilla": 7.962031,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-5/light_gray_terracotta",
+            "batch": "A",
+            "before": 8.529011,
+            "after": 0.0,
+            "vanilla": 7.677639,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "surface_band/eroded_badlands/terracotta/y80",
+            "batch": "A",
+            "before": 1.933503,
+            "after": 3.709415,
+            "vanilla": 1.93469,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.38693808312128924,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/brown_terracotta/y64",
+            "batch": "A",
+            "before": 0.0,
+            "after": 1.281595,
+            "vanilla": 0.171501,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/eroded_badlands/-2/light_gray_terracotta",
+            "batch": "A",
+            "before": 6.506598,
+            "after": 0.0,
+            "vanilla": 7.203079,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/badlands/-1/white_terracotta",
+            "batch": "A",
+            "before": 8.308874,
+            "after": 0.0,
+            "vanilla": 7.049705,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-3/white_terracotta",
+            "batch": "A",
+            "before": 8.389827,
+            "after": 0.0,
+            "vanilla": 6.922414,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-2/white_terracotta",
+            "batch": "A",
+            "before": 8.217032,
+            "after": 0.0,
+            "vanilla": 6.910584,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/badlands/-1/light_gray_terracotta",
+            "batch": "A",
+            "before": 8.360476,
+            "after": 0.0,
+            "vanilla": 6.835819,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-4/light_gray_terracotta",
+            "batch": "A",
+            "before": 6.158358,
+            "after": 0.0,
+            "vanilla": 6.689883,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-5/white_terracotta",
+            "batch": "A",
+            "before": 4.783724,
+            "after": 0.0,
+            "vanilla": 6.653226,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-5/light_gray_terracotta",
+            "batch": "A",
+            "before": 5.42522,
+            "after": 0.0,
+            "vanilla": 6.579912,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "surface_band/eroded_badlands/terracotta/y96",
+            "batch": "A",
+            "before": 0.834606,
+            "after": 1.639525,
+            "vanilla": 0.66056,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/badlands/-2/light_gray_terracotta",
+            "batch": "A",
+            "before": 8.498239,
+            "after": 0.0,
+            "vanilla": 6.405682,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              211232,
+              211328
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-1/white_terracotta",
+            "batch": "A",
+            "before": 7.019795,
+            "after": 0.0,
+            "vanilla": 6.01173,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "top/wooded_badlands/orange_terracotta",
+            "batch": "A",
+            "before": 6.182924,
+            "after": 4.563264,
+            "vanilla": 10.536337,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              375696,
+              375007
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/short_grass",
+            "batch": "F",
+            "before": 14.503607,
+            "after": 34.263906,
+            "vanilla": 16.428001,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1517632,
+              1521792
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-4/white_terracotta",
+            "batch": "A",
+            "before": 5.003666,
+            "after": 0.0,
+            "vanilla": 5.590176,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-1/light_gray_terracotta",
+            "batch": "A",
+            "before": 8.61437,
+            "after": 0.0,
+            "vanilla": 5.333578,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "surface_band/badlands/terracotta/y64",
+            "batch": "A",
+            "before": 44.110263,
+            "after": 27.826633,
+            "vanilla": 50.745377,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 10.149075487701444,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/acacia_log",
+            "batch": "F-tree",
+            "before": 4.614784,
+            "after": 17.790874,
+            "vanilla": 6.5712,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1517632,
+              1521792
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/sugar_cane",
+            "batch": "F",
+            "before": 2.63702,
+            "after": 13.837347,
+            "vanilla": 2.62848,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1517632,
+              1521792
+            ]
+          },
+          {
+            "metric": "surface_band/wooded_badlands/orange_terracotta/y48",
+            "batch": "A",
+            "before": 186.648346,
+            "after": 104.091603,
+            "vanilla": 163.485157,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 32.69703138252756,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/terracotta/y64",
+            "batch": "A",
+            "before": 77.641561,
+            "after": 50.255471,
+            "vanilla": 73.080746,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 14.616149279050044,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/desert/terracotta/y80",
+            "batch": "A",
+            "before": 0.249025,
+            "after": 0.407294,
+            "vanilla": 0.028329,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/mangrove_swamp/sulfur_spike",
+            "batch": "U",
+            "before": 5.028967,
+            "after": 7.963385,
+            "vanilla": 2.090357,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              2385920,
+              2391936
+            ]
+          },
+          {
+            "metric": "surface_band/river/light_gray_terracotta/y48",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.448855,
+            "vanilla": 0.184394,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/mangrove_swamp/mangrove_log",
+            "batch": "F-tree",
+            "before": 655.861093,
+            "after": 643.357698,
+            "vanilla": 811.894633,
+            "unit": "per million biome blocks",
+            "tolerance": 162.37892652646224,
+            "verdict": "outside",
+            "denominator": [
+              2385920,
+              2391936
+            ]
+          },
+          {
+            "metric": "feature_biome/river/tall_seagrass",
+            "batch": "F-ocean",
+            "before": 228.831966,
+            "after": 227.121228,
+            "vanilla": 286.005115,
+            "unit": "per million biome blocks",
+            "tolerance": 57.20102299633941,
+            "verdict": "outside",
+            "denominator": [
+              45508736,
+              45544640
+            ]
+          },
+          {
+            "metric": "surface_band/jungle/terracotta/y48",
+            "batch": "A",
+            "before": 0.558779,
+            "after": 0.413401,
+            "vanilla": 0.666836,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          }
+        ],
+        "new_unpaired_outside_rows": [
+          {
+            "metric": "surface_band/wooded_badlands/red_terracotta/y48",
+            "batch": "A",
+            "after": 82.903817,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/badlands/red_terracotta/y112",
+            "batch": "A",
+            "after": 17.73011,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/badlands/red_terracotta/y48",
+            "batch": "A",
+            "after": 15.53011,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/badlands/yellow_terracotta/y112",
+            "batch": "A",
+            "after": 6.850042,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/red_terracotta/y112",
+            "batch": "A",
+            "after": 2.028668,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/river/red_terracotta/y48",
+            "batch": "A",
+            "after": 0.72095,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/desert/red_terracotta/y48",
+            "batch": "A",
+            "after": 0.677863,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/red_terracotta/y112",
+            "batch": "A",
+            "after": 0.403732,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/badlands/yellow_terracotta/y128",
+            "batch": "A",
+            "after": 0.253265,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          }
+        ],
+        "missing_rows": [
+          {
+            "metric": "surface_band/badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 71.975403,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 48.642578,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/badlands/yellow_terracotta/y96",
+            "batch": "A",
+            "before": 8.575742,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 3.588974,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/yellow_terracotta/y96",
+            "batch": "A",
+            "before": 2.750466,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/yellow_terracotta/y32",
+            "batch": "A",
+            "before": 0.865649,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/white_terracotta/y112",
+            "batch": "A",
+            "before": 0.410687,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/desert/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.400339,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/red_terracotta/y96",
+            "batch": "A",
+            "before": 0.373707,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/light_gray_terracotta/y112",
+            "batch": "A",
+            "before": 0.360305,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/yellow_terracotta/y96",
+            "batch": "A",
+            "before": 0.142663,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/forest/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.101442,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/big_dripleaf_stem",
+            "batch": "F",
+            "before": 1.977765,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/badlands/yellow_terracotta/y32",
+            "batch": "A",
+            "before": 0.079898,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/firefly_bush",
+            "batch": "F",
+            "before": 1.31851,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/jungle/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.054114,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/tall_grass",
+            "batch": "F",
+            "before": 0.659255,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/desert/white_terracotta/y96",
+            "batch": "A",
+            "before": 0.02799,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-3/red_terracotta",
+            "batch": "A",
+            "before": 0.185134,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/desert/light_gray_terracotta/y96",
+            "batch": "A",
+            "before": 0.027311,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-4/red_terracotta",
+            "batch": "A",
+            "before": 0.161135,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-2/red_terracotta",
+            "batch": "A",
+            "before": 0.15085,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/forest/red_terracotta",
+            "batch": "A",
+            "before": 0.113138,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/jungle/red_terracotta",
+            "batch": "A",
+            "before": 0.096539,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/brown_terracotta/y128",
+            "batch": "A",
+            "before": 0.012214,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/sparse_jungle/red_terracotta",
+            "batch": "A",
+            "before": 0.079982,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/desert/yellow_terracotta/y96",
+            "batch": "A",
+            "before": 0.010178,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/forest/yellow_terracotta/y96",
+            "batch": "A",
+            "before": 0.007294,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/desert/light_gray_terracotta/y112",
+            "batch": "A",
+            "before": 0.005428,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/sparse_jungle/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.00475,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/desert/white_terracotta/y112",
+            "batch": "A",
+            "before": 0.003902,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/lapis_ore",
+            "batch": "A",
+            "before": 0.016026,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/brown_terracotta/y112",
+            "batch": "A",
+            "before": 0.001866,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/terracotta/y128",
+            "batch": "A",
+            "before": 0.000339,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/desert/-1/muddy_mangrove_roots",
+            "batch": "A",
+            "before": 0.000441,
+            "vanilla": 0.0,
+            "verdict": "within"
+          }
+        ],
+        "outside_before": 859,
+        "outside_after": 834
+      },
+      "shipped": false,
+      "native_verification": "Rejected: sulfur generated-chunk regression failed; full census also introduced new failures."
+    },
+    "candidate3": {
+      "owner": {
+        "seed": 1792932773345722119,
+        "coverage": [
+          {
+            "dimension": "overworld",
+            "ours": {
+              "chunks": 3274,
+              "requested": 3274,
+              "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -116,
+                -90,
+                63,
+                102
+              ]
+            },
+            "vanilla": {
+              "chunks": 3274,
+              "requested": 3274,
+              "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -116,
+                -90,
+                63,
+                102
+              ]
+            },
+            "same_chunks": true,
+            "complete": true
+          },
+          {
+            "dimension": "the_nether",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          },
+          {
+            "dimension": "the_end",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          }
+        ],
+        "spawn": {
+          "before": [
+            16,
+            -48
+          ],
+          "after": [
+            16,
+            -48
+          ],
+          "vanilla": [
+            16,
+            -48
+          ]
+        },
+        "metrics": [
+          {
+            "metric": "slope/p100",
+            "batch": "A",
+            "before": 138.0,
+            "after": 141.0,
+            "vanilla": 215.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "slope/p99",
+            "batch": "A",
+            "before": 30.0,
+            "after": 16.0,
+            "vanilla": 9.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/112/underground_air",
+            "batch": "U",
+            "before": 59.01234,
+            "after": 33.463614,
+            "vanilla": 22.311496,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              142513,
+              98075
+            ]
+          },
+          {
+            "metric": "depth/128/underground_air",
+            "batch": "U",
+            "before": 75.126024,
+            "after": 55.567181,
+            "vanilla": 65.93327,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              27716,
+              30361
+            ]
+          },
+          {
+            "metric": "depth/192/underground_air",
+            "batch": "U",
+            "before": 100.0,
+            "after": 9.677419,
+            "vanilla": 1.062092,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              31,
+              1224
+            ]
+          },
+          {
+            "metric": "height_biome/beach/p100",
+            "batch": "A",
+            "before": 77.0,
+            "after": 123.0,
+            "vanilla": 143.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 112.0,
+            "after": 121.0,
+            "vanilla": 141.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/cherry_grove/-3/dirt",
+            "batch": "A",
+            "before": 32.418699,
+            "after": 32.418699,
+            "vanilla": 49.199695,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              7872,
+              7872
+            ]
+          },
+          {
+            "metric": "depth/160/underground_air",
+            "batch": "U",
+            "before": 97.575959,
+            "after": 11.996459,
+            "vanilla": 7.623061,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              4518,
+              5221
+            ]
+          },
+          {
+            "metric": "depth/176/underground_air",
+            "batch": "U",
+            "before": 99.862069,
+            "after": 9.136213,
+            "vanilla": 5.496054,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              1204,
+              3548
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p100",
+            "batch": "A",
+            "before": 176.0,
+            "after": 201.0,
+            "vanilla": 210.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/144/underground_air",
+            "batch": "U",
+            "before": 88.468699,
+            "after": 48.306564,
+            "vanilla": 44.946754,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              11456,
+              14555
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_hills/p100",
+            "batch": "A",
+            "before": 208.0,
+            "after": 144.0,
+            "vanilla": 137.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_hills/snow",
+            "batch": "A",
+            "before": 777.126431,
+            "after": 52.652369,
+            "vanilla": 92.673328,
+            "unit": "per million biome blocks",
+            "tolerance": 18.53466556104848,
+            "verdict": "outside",
+            "denominator": [
+              20151040,
+              20221568
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_hills/p95",
+            "batch": "A",
+            "before": 152.0,
+            "after": 113.0,
+            "vanilla": 116.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/beach/-4/stone",
+            "batch": "A",
+            "before": 22.087264,
+            "after": 21.146816,
+            "vanilla": 18.720491,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              33920,
+              33888
+            ]
+          },
+          {
+            "metric": "top/meadow/grass_block",
+            "batch": "A",
+            "before": 97.870025,
+            "after": 97.870025,
+            "vanilla": 98.456983,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              6432,
+              6416
+            ]
+          },
+          {
+            "metric": "blocks/red_terracotta",
+            "batch": "A",
+            "before": 0.019853,
+            "after": 0.019853,
+            "vanilla": 0.022602,
+            "unit": "per chunk",
+            "tolerance": 0.1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p5",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p50",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 3.0,
+            "after": 3.0,
+            "vanilla": 3.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "spawn_offset",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks from official spawn",
+            "tolerance": 16,
+            "verdict": "within"
+          }
+        ],
+        "new_outside_common_rows": [
+          {
+            "metric": "height_biome/lukewarm_ocean/p100",
+            "batch": "A",
+            "before": 65.0,
+            "after": 89.0,
+            "vanilla": 64.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height/p100",
+            "batch": "A",
+            "before": 208.0,
+            "after": 201.0,
+            "vanilla": 210.0,
+            "unit": "blocks",
+            "tolerance": 4,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/64/underground_air",
+            "batch": "U",
+            "before": 10.733742,
+            "after": 6.54837,
+            "vanilla": 10.68327,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              3504231,
+              2946289
+            ]
+          },
+          {
+            "metric": "height_biome/forest/p95",
+            "batch": "A",
+            "before": 109.0,
+            "after": 101.0,
+            "vanilla": 111.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_mean/windswept_savanna",
+            "batch": "A",
+            "before": 74.15088,
+            "after": 79.131064,
+            "vanilla": 72.391946,
+            "unit": "blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/64/air",
+            "batch": "U",
+            "before": 62.638602,
+            "after": 61.100971,
+            "vanilla": 64.486845,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              13410304,
+              13410304
+            ]
+          },
+          {
+            "metric": "layer/swamp/-2/dirt",
+            "batch": "A",
+            "before": 92.237634,
+            "after": 96.47393,
+            "vanilla": 88.596051,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              11968,
+              11952
+            ]
+          },
+          {
+            "metric": "layer/windswept_forest/-5/andesite",
+            "batch": "A",
+            "before": 3.69898,
+            "after": 11.862245,
+            "vanilla": 4.846939,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              784,
+              784
+            ]
+          },
+          {
+            "metric": "layer/windswept_forest/-4/andesite",
+            "batch": "A",
+            "before": 3.188776,
+            "after": 11.096939,
+            "vanilla": 4.209184,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              784,
+              784
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/spruce_leaves",
+            "batch": "F-tree",
+            "before": 969.919218,
+            "after": 1471.487032,
+            "vanilla": 813.802083,
+            "unit": "per million biome blocks",
+            "tolerance": 162.76041666666669,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "height_biome/mangrove_swamp/p95",
+            "batch": "A",
+            "before": 82.0,
+            "after": 83.0,
+            "vanilla": 77.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_forest/short_grass",
+            "batch": "F",
+            "before": 16.608206,
+            "after": 29.89477,
+            "vanilla": 13.286565,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/stone",
+            "batch": "A",
+            "before": 78.69871,
+            "after": 79.750952,
+            "vanilla": 74.52086,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              37824,
+              37776
+            ]
+          },
+          {
+            "metric": "depth/48/water",
+            "batch": "U",
+            "before": 17.606469,
+            "after": 17.289302,
+            "vanilla": 19.373647,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              13410304,
+              13410304
+            ]
+          },
+          {
+            "metric": "layer/beach/-5/sandstone",
+            "batch": "A",
+            "before": 56.739387,
+            "after": 57.650354,
+            "vanilla": 52.608593,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              33920,
+              33888
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/wildflowers",
+            "batch": "F",
+            "before": 43.181335,
+            "after": 53.146259,
+            "vanilla": 36.538053,
+            "unit": "per million biome blocks",
+            "tolerance": 7.307610544217687,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "ore/copper_ore/y48",
+            "batch": "U",
+            "before": 22.47526,
+            "after": 22.945021,
+            "vanilla": 19.014966,
+            "unit": "per chunk",
+            "tolerance": 3.802993280390959,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_hills/oak_leaves",
+            "batch": "F-tree",
+            "before": 186.974803,
+            "after": 226.539176,
+            "vanilla": 161.362363,
+            "unit": "per million biome blocks",
+            "tolerance": 32.27247263911483,
+            "verdict": "outside",
+            "denominator": [
+              20151040,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_hills/short_grass",
+            "batch": "F",
+            "before": 40.789089,
+            "after": 44.414581,
+            "vanilla": 35.655,
+            "unit": "per million biome blocks",
+            "tolerance": 7.130999930371374,
+            "verdict": "outside",
+            "denominator": [
+              20151040,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_hills/oak_log",
+            "batch": "F-tree",
+            "before": 13.596363,
+            "after": 15.383821,
+            "vanilla": 9.395908,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              20151040,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/birch_leaves",
+            "batch": "F-tree",
+            "before": 25.221596,
+            "after": 29.054813,
+            "vanilla": 23.364375,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6780288,
+              6762432
+            ]
+          },
+          {
+            "metric": "feature_biome/lukewarm_ocean/kelp",
+            "batch": "F-ocean",
+            "before": 104.493768,
+            "after": 101.338446,
+            "vanilla": 130.205704,
+            "unit": "per million biome blocks",
+            "tolerance": 26.041140795487436,
+            "verdict": "outside",
+            "denominator": [
+              19015488,
+              19016064
+            ]
+          },
+          {
+            "metric": "feature_biome/old_growth_birch_forest/oak_leaves",
+            "batch": "F-tree",
+            "before": 18.405453,
+            "after": 18.979243,
+            "vanilla": 13.545464,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              24395072,
+              24436224
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/mangrove_roots",
+            "batch": "F",
+            "before": 6.489767,
+            "after": 5.751968,
+            "vanilla": 10.794933,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6780288,
+              6762432
+            ]
+          },
+          {
+            "metric": "feature_biome/swamp/seagrass",
+            "batch": "F-ocean",
+            "before": 9.380674,
+            "after": 9.60919,
+            "vanilla": 4.58097,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              4370816,
+              4365888
+            ]
+          }
+        ],
+        "new_unpaired_outside_rows": [
+          {
+            "metric": "feature_biome/lush_caves/acacia_leaves",
+            "batch": "F-tree",
+            "after": 6.78329,
+            "vanilla": 0.0,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1621632,
+              1631296
+            ]
+          }
+        ],
+        "missing_rows": [
+          {
+            "metric": "feature_biome/windswept_forest/snow",
+            "batch": "A",
+            "before": 558.035714,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/leaf_litter",
+            "batch": "U",
+            "before": 3.61645,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/oak_leaves",
+            "batch": "U",
+            "before": 3.61645,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_forest/diorite",
+            "batch": "A",
+            "before": 0.637755,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/snow",
+            "batch": "U",
+            "before": 0.925138,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-1/gravel",
+            "batch": "A",
+            "before": 0.255102,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/old_growth_birch_forest/snow",
+            "batch": "A",
+            "before": 0.491905,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-1/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-3/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-3/iron_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_forest/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/plains/snow",
+            "batch": "A",
+            "before": 0.337582,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/hanging_roots",
+            "batch": "F",
+            "before": 0.294989,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/birch_leaves",
+            "batch": "U",
+            "before": 0.168207,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y144",
+            "batch": "U",
+            "before": 0.003665,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/pointed_dripstone",
+            "batch": "A",
+            "before": 0.023287,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/swamp/-1/copper_ore",
+            "batch": "A",
+            "before": 0.016711,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y160",
+            "batch": "U",
+            "before": 0.000916,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-1/muddy_mangrove_roots",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-5/rooted_dirt",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "tree_base_estimates/dripstone_caves/oak_log",
+            "batch": "U",
+            "before": 0.000305,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/swamp/-2/vine",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/andesite",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/copper_ore",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/old_growth_birch_forest/-1/iron_ore",
+            "batch": "A",
+            "before": 0.007088,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/old_growth_birch_forest/iron_ore",
+            "batch": "A",
+            "before": 0.007088,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-2/mangrove_roots",
+            "batch": "A",
+            "before": 0.005601,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y176",
+            "batch": "U",
+            "before": 0.000305,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_hills/-5/dripstone_block",
+            "batch": "A",
+            "before": 0.003577,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/hanging_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/white_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-5/mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-3/mangrove_propagule",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/moss_carpet",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/netherrack",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_hills/-5/stone_brick_slab",
+            "batch": "A",
+            "before": 0.001789,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/river/-5/suspicious_gravel",
+            "batch": "A",
+            "before": 0.001649,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-3/vine",
+            "batch": "A",
+            "before": 0.001524,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/forest/emerald_ore",
+            "batch": "A",
+            "before": 0.000906,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-2/emerald_ore",
+            "batch": "A",
+            "before": 0.000453,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-4/dripstone_block",
+            "batch": "A",
+            "before": 0.000453,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/magma_block",
+            "batch": "A",
+            "before": 0.000172,
+            "vanilla": 0.0,
+            "verdict": "within"
+          }
+        ],
+        "outside_before": 622,
+        "outside_after": 617
+      },
+      "second": {
+        "seed": 100554032945340,
+        "coverage": [
+          {
+            "dimension": "overworld",
+            "ours": {
+              "chunks": 5895,
+              "requested": 5895,
+              "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -67,
+                -98,
+                97,
+                94
+              ]
+            },
+            "vanilla": {
+              "chunks": 5895,
+              "requested": 5895,
+              "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -67,
+                -98,
+                97,
+                94
+              ]
+            },
+            "same_chunks": true,
+            "complete": true
+          },
+          {
+            "dimension": "the_nether",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          },
+          {
+            "dimension": "the_end",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          }
+        ],
+        "spawn": {
+          "before": [
+            -48,
+            112
+          ],
+          "after": [
+            -240,
+            16
+          ],
+          "vanilla": [
+            -240,
+            16
+          ]
+        },
+        "metrics": [
+          {
+            "metric": "surface_band/badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 71.975403,
+            "after": 71.975403,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "slope/p100",
+            "batch": "A",
+            "before": 93.0,
+            "after": 108.0,
+            "vanilla": 171.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 48.642578,
+            "after": 48.642578,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "blocks/red_terracotta",
+            "batch": "A",
+            "before": 150.114673,
+            "after": 150.114673,
+            "vanilla": 9.652248,
+            "unit": "per chunk",
+            "tolerance": 1.9304495335029686,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p100",
+            "batch": "A",
+            "before": 68.0,
+            "after": 104.0,
+            "vanilla": 165.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/128/underground_air",
+            "batch": "U",
+            "before": 24.225194,
+            "after": 22.036753,
+            "vanilla": 3.345908,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              105079,
+              101258
+            ]
+          },
+          {
+            "metric": "depth/144/underground_air",
+            "batch": "U",
+            "before": 38.936687,
+            "after": 22.047244,
+            "vanilla": 4.458634,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              8509,
+              17853
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-2/red_terracotta",
+            "batch": "A",
+            "before": 37.481672,
+            "after": 37.481672,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-1/red_terracotta",
+            "batch": "A",
+            "before": 36.015396,
+            "after": 36.015396,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-3/red_terracotta",
+            "batch": "A",
+            "before": 35.593842,
+            "after": 35.593842,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-4/red_terracotta",
+            "batch": "A",
+            "before": 30.920088,
+            "after": 30.920088,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-5/red_terracotta",
+            "batch": "A",
+            "before": 27.089443,
+            "after": 27.089443,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "depth/112/underground_air",
+            "batch": "U",
+            "before": 13.565178,
+            "after": 12.824793,
+            "vanilla": 2.149357,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              763833,
+              569054
+            ]
+          },
+          {
+            "metric": "depth/160/underground_air",
+            "batch": "U",
+            "before": 100.0,
+            "after": 2.202381,
+            "vanilla": 11.981567,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              1680,
+              651
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 63.0,
+            "after": 90.0,
+            "vanilla": 66.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/eroded_badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 3.588974,
+            "after": 3.588974,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "slope/p99",
+            "batch": "A",
+            "before": 4.0,
+            "after": 4.0,
+            "vanilla": 6.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/beach/-4/stone",
+            "batch": "A",
+            "before": 23.064721,
+            "after": 23.064721,
+            "vanilla": 18.05203,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6304,
+              6304
+            ]
+          },
+          {
+            "metric": "surface_band/desert/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.400339,
+            "after": 0.400339,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/forest/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.101442,
+            "after": 0.101442,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/meadow/grass_block",
+            "batch": "A",
+            "before": 99.013902,
+            "after": 99.013902,
+            "vanilla": 98.362547,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              86604,
+              85804
+            ]
+          },
+          {
+            "metric": "layer/cherry_grove/-3/dirt",
+            "batch": "A",
+            "before": 35.475352,
+            "after": 35.475352,
+            "vanilla": 35.036496,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              1136,
+              1096
+            ]
+          },
+          {
+            "metric": "surface_band/jungle/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.054114,
+            "after": 0.054114,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/sparse_jungle/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.00475,
+            "after": 0.00475,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "within"
+          },
+          {
+            "metric": "height_biome/beach/p100",
+            "batch": "A",
+            "before": 69.0,
+            "after": 69.0,
+            "vanilla": 69.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p5",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p50",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 2.0,
+            "after": 2.0,
+            "vanilla": 2.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "spawn_offset",
+            "batch": "A",
+            "before": 214.662526,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks from official spawn",
+            "tolerance": 16,
+            "verdict": "within"
+          }
+        ],
+        "new_outside_common_rows": [
+          {
+            "metric": "height/p100",
+            "batch": "A",
+            "before": 168.0,
+            "after": 199.0,
+            "vanilla": 168.0,
+            "unit": "blocks",
+            "tolerance": 4,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/desert/p100",
+            "batch": "A",
+            "before": 168.0,
+            "after": 199.0,
+            "vanilla": 168.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 63.0,
+            "after": 90.0,
+            "vanilla": 66.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "top/windswept_savanna/grass_block",
+            "batch": "A",
+            "before": 10.251976,
+            "after": 31.101779,
+            "vanilla": 7.923228,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              4048,
+              4064
+            ]
+          },
+          {
+            "metric": "height_biome/warm_ocean/p100",
+            "batch": "A",
+            "before": 62.0,
+            "after": 82.0,
+            "vanilla": 59.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_mean/windswept_savanna",
+            "batch": "A",
+            "before": 58.309289,
+            "after": 63.66749,
+            "vanilla": 55.395423,
+            "unit": "blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/river/p100",
+            "batch": "A",
+            "before": 76.0,
+            "after": 87.0,
+            "vanilla": 79.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/short_grass",
+            "batch": "F",
+            "before": 14.503607,
+            "after": 39.531942,
+            "vanilla": 16.428001,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1517760,
+              1521792
+            ]
+          },
+          {
+            "metric": "feature_biome/river/tall_seagrass",
+            "batch": "F-ocean",
+            "before": 228.831966,
+            "after": 227.953347,
+            "vanilla": 286.005115,
+            "unit": "per million biome blocks",
+            "tolerance": 57.20102299633941,
+            "verdict": "outside",
+            "denominator": [
+              45509312,
+              45544640
+            ]
+          }
+        ],
+        "new_unpaired_outside_rows": [
+          {
+            "metric": "tree_span/desert/acacia_log/p50",
+            "batch": "F-tree",
+            "after": 1.0,
+            "vanilla": 6.0,
+            "unit": "blocks (trunk span estimator)",
+            "tolerance": 2,
+            "verdict": "outside"
+          }
+        ],
+        "missing_rows": [
+          {
+            "metric": "top/windswept_savanna/andesite",
+            "batch": "A",
+            "before": 0.049407,
+            "vanilla": 0.0,
+            "verdict": "within"
+          }
+        ],
+        "outside_before": 859,
+        "outside_after": 864
+      },
+      "shipped": false,
+      "native_verification": "Rejected despite workspace tests and Clippy passing: fresh census introduced new failures."
+    },
+    "candidate4": {
+      "owner": {
+        "seed": 1792932773345722119,
+        "coverage": [
+          {
+            "dimension": "overworld",
+            "ours": {
+              "chunks": 3274,
+              "requested": 3274,
+              "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -116,
+                -90,
+                63,
+                102
+              ]
+            },
+            "vanilla": {
+              "chunks": 3274,
+              "requested": 3274,
+              "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -116,
+                -90,
+                63,
+                102
+              ]
+            },
+            "same_chunks": true,
+            "complete": true
+          },
+          {
+            "dimension": "the_nether",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          },
+          {
+            "dimension": "the_end",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          }
+        ],
+        "spawn": {
+          "before": [
+            16,
+            -48
+          ],
+          "after": [
+            16,
+            -48
+          ],
+          "vanilla": [
+            16,
+            -48
+          ]
+        },
+        "metrics": [
+          {
+            "metric": "slope/p100",
+            "batch": "A",
+            "before": 138.0,
+            "after": 148.0,
+            "vanilla": 215.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "slope/p99",
+            "batch": "A",
+            "before": 30.0,
+            "after": 15.0,
+            "vanilla": 9.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/112/underground_air",
+            "batch": "U",
+            "before": 59.01234,
+            "after": 33.436782,
+            "vanilla": 22.311496,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              140489,
+              98075
+            ]
+          },
+          {
+            "metric": "depth/128/underground_air",
+            "batch": "U",
+            "before": 75.126024,
+            "after": 55.482349,
+            "vanilla": 65.93327,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              26713,
+              30361
+            ]
+          },
+          {
+            "metric": "depth/192/underground_air",
+            "batch": "U",
+            "before": 100.0,
+            "after": 10.079576,
+            "vanilla": 1.062092,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              377,
+              1224
+            ]
+          },
+          {
+            "metric": "height_biome/beach/p100",
+            "batch": "A",
+            "before": 77.0,
+            "after": 122.0,
+            "vanilla": 143.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 112.0,
+            "after": 120.0,
+            "vanilla": 141.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/cherry_grove/-3/dirt",
+            "batch": "A",
+            "before": 32.418699,
+            "after": 32.418699,
+            "vanilla": 49.199695,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              7872,
+              7872
+            ]
+          },
+          {
+            "metric": "depth/160/underground_air",
+            "batch": "U",
+            "before": 97.575959,
+            "after": 13.317022,
+            "vanilla": 7.623061,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              5722,
+              5221
+            ]
+          },
+          {
+            "metric": "depth/176/underground_air",
+            "batch": "U",
+            "before": 99.862069,
+            "after": 9.688733,
+            "vanilla": 5.496054,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              2281,
+              3548
+            ]
+          },
+          {
+            "metric": "depth/144/underground_air",
+            "batch": "U",
+            "before": 88.468699,
+            "after": 47.031651,
+            "vanilla": 44.946754,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              11690,
+              14555
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_hills/snow",
+            "batch": "A",
+            "before": 777.126431,
+            "after": 54.088065,
+            "vanilla": 92.673328,
+            "unit": "per million biome blocks",
+            "tolerance": 18.53466556104848,
+            "verdict": "outside",
+            "denominator": [
+              20152320,
+              20221568
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_hills/p100",
+            "batch": "A",
+            "before": 208.0,
+            "after": 132.0,
+            "vanilla": 137.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/beach/-4/stone",
+            "batch": "A",
+            "before": 22.087264,
+            "after": 21.182193,
+            "vanilla": 18.720491,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              33920,
+              33888
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_hills/p95",
+            "batch": "A",
+            "before": 152.0,
+            "after": 114.0,
+            "vanilla": 116.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/meadow/grass_block",
+            "batch": "A",
+            "before": 97.870025,
+            "after": 97.870025,
+            "vanilla": 98.456983,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              6432,
+              6416
+            ]
+          },
+          {
+            "metric": "blocks/red_terracotta",
+            "batch": "A",
+            "before": 0.019853,
+            "after": 0.019853,
+            "vanilla": 0.022602,
+            "unit": "per chunk",
+            "tolerance": 0.1,
+            "verdict": "within"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p100",
+            "batch": "A",
+            "before": 176.0,
+            "after": 210.0,
+            "vanilla": 210.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p5",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p50",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 3.0,
+            "after": 3.0,
+            "vanilla": 3.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "spawn_offset",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks from official spawn",
+            "tolerance": 16,
+            "verdict": "within"
+          }
+        ],
+        "new_outside_common_rows": [
+          {
+            "metric": "height_biome/lukewarm_ocean/p100",
+            "batch": "A",
+            "before": 65.0,
+            "after": 85.0,
+            "vanilla": 64.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/64/underground_air",
+            "batch": "U",
+            "before": 10.733742,
+            "after": 6.434879,
+            "vanilla": 10.68327,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              3524604,
+              2946289
+            ]
+          },
+          {
+            "metric": "height_biome/forest/p95",
+            "batch": "A",
+            "before": 109.0,
+            "after": 101.0,
+            "vanilla": 111.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/64/air",
+            "batch": "U",
+            "before": 62.638602,
+            "after": 61.018863,
+            "vanilla": 64.486845,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              13410304,
+              13410304
+            ]
+          },
+          {
+            "metric": "layer/swamp/-2/dirt",
+            "batch": "A",
+            "before": 92.237634,
+            "after": 96.716243,
+            "vanilla": 88.596051,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              11968,
+              11952
+            ]
+          },
+          {
+            "metric": "height_mean/windswept_savanna",
+            "batch": "A",
+            "before": 74.15088,
+            "after": 78.415939,
+            "vanilla": 72.391946,
+            "unit": "blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_forest/spruce_leaves",
+            "batch": "F-tree",
+            "before": 969.919218,
+            "after": 1557.849702,
+            "vanilla": 813.802083,
+            "unit": "per million biome blocks",
+            "tolerance": 162.76041666666669,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/short_grass",
+            "batch": "F",
+            "before": 16.608206,
+            "after": 29.89477,
+            "vanilla": 13.286565,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/stone",
+            "batch": "A",
+            "before": 78.69871,
+            "after": 79.737733,
+            "vanilla": 74.52086,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              37824,
+              37776
+            ]
+          },
+          {
+            "metric": "depth/48/water",
+            "batch": "U",
+            "before": 17.606469,
+            "after": 17.289213,
+            "vanilla": 19.373647,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              13410304,
+              13410304
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_forest/oak_log",
+            "batch": "F-tree",
+            "before": 29.89477,
+            "after": 16.608206,
+            "vanilla": 36.538053,
+            "unit": "per million biome blocks",
+            "tolerance": 7.307610544217687,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "ore/copper_ore/y48",
+            "batch": "U",
+            "before": 22.47526,
+            "after": 22.95449,
+            "vanilla": 19.014966,
+            "unit": "per chunk",
+            "tolerance": 3.802993280390959,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_forest/wildflowers",
+            "batch": "F",
+            "before": 43.181335,
+            "after": 49.824617,
+            "vanilla": 36.538053,
+            "unit": "per million biome blocks",
+            "tolerance": 7.307610544217687,
+            "verdict": "outside",
+            "denominator": [
+              301056,
+              301056
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_hills/oak_leaves",
+            "batch": "F-tree",
+            "before": 186.974803,
+            "after": 214.565866,
+            "vanilla": 161.362363,
+            "unit": "per million biome blocks",
+            "tolerance": 32.27247263911483,
+            "verdict": "outside",
+            "denominator": [
+              20152320,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_hills/short_grass",
+            "batch": "F",
+            "before": 40.789089,
+            "after": 45.999667,
+            "vanilla": 35.655,
+            "unit": "per million biome blocks",
+            "tolerance": 7.130999930371374,
+            "verdict": "outside",
+            "denominator": [
+              20152320,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/birch_leaves",
+            "batch": "F-tree",
+            "before": 25.221596,
+            "after": 28.910056,
+            "vanilla": 23.364375,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6779648,
+              6762432
+            ]
+          },
+          {
+            "metric": "feature_biome/lukewarm_ocean/kelp",
+            "batch": "F-ocean",
+            "before": 104.493768,
+            "after": 101.338446,
+            "vanilla": 130.205704,
+            "unit": "per million biome blocks",
+            "tolerance": 26.041140795487436,
+            "verdict": "outside",
+            "denominator": [
+              19015488,
+              19016064
+            ]
+          },
+          {
+            "metric": "feature_biome/old_growth_birch_forest/oak_leaves",
+            "batch": "F-tree",
+            "before": 18.405453,
+            "after": 18.979243,
+            "vanilla": 13.545464,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              24395072,
+              24436224
+            ]
+          },
+          {
+            "metric": "feature_biome/windswept_hills/oak_log",
+            "batch": "F-tree",
+            "before": 13.596363,
+            "after": 14.638513,
+            "vanilla": 9.395908,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              20152320,
+              20221568
+            ]
+          },
+          {
+            "metric": "feature_biome/forest/mangrove_leaves",
+            "batch": "F-tree",
+            "before": 10.645233,
+            "after": 9.794442,
+            "vanilla": 14.957044,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              79943296,
+              80029184
+            ]
+          },
+          {
+            "metric": "feature_biome/swamp/seagrass",
+            "batch": "F-ocean",
+            "before": 9.380674,
+            "after": 9.610315,
+            "vanilla": 4.58097,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              4370304,
+              4365888
+            ]
+          }
+        ],
+        "new_unpaired_outside_rows": [],
+        "missing_rows": [
+          {
+            "metric": "feature_biome/windswept_forest/snow",
+            "batch": "A",
+            "before": 558.035714,
+            "vanilla": 0.0,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/leaf_litter",
+            "batch": "U",
+            "before": 3.61645,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/oak_leaves",
+            "batch": "U",
+            "before": 3.61645,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_forest/diorite",
+            "batch": "A",
+            "before": 0.637755,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/snow",
+            "batch": "U",
+            "before": 0.925138,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-1/gravel",
+            "batch": "A",
+            "before": 0.255102,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/sparse_jungle/big_dripleaf_stem",
+            "batch": "F",
+            "before": 0.737474,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/old_growth_birch_forest/snow",
+            "batch": "A",
+            "before": 0.491905,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-1/copper_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-1/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-3/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_forest/-3/iron_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/windswept_forest/emerald_ore",
+            "batch": "A",
+            "before": 0.127551,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/plains/snow",
+            "batch": "A",
+            "before": 0.337582,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/granite",
+            "batch": "A",
+            "before": 0.066845,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "feature_biome/dripstone_caves/birch_leaves",
+            "batch": "U",
+            "before": 0.168207,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y144",
+            "batch": "U",
+            "before": 0.003665,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/pointed_dripstone",
+            "batch": "A",
+            "before": 0.023287,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/swamp/-1/copper_ore",
+            "batch": "A",
+            "before": 0.016711,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y160",
+            "batch": "U",
+            "before": 0.000916,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-1/muddy_mangrove_roots",
+            "batch": "A",
+            "before": 0.011201,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "tree_base_estimates/dripstone_caves/oak_log",
+            "batch": "U",
+            "before": 0.000305,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/swamp/-2/vine",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/andesite",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/swamp/copper_ore",
+            "batch": "A",
+            "before": 0.008356,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/old_growth_birch_forest/-1/iron_ore",
+            "batch": "A",
+            "before": 0.007088,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/old_growth_birch_forest/iron_ore",
+            "batch": "A",
+            "before": 0.007088,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/sparse_jungle/-2/mangrove_roots",
+            "batch": "A",
+            "before": 0.005601,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-5/vine",
+            "batch": "A",
+            "before": 0.004572,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "ore/emerald_ore/y176",
+            "batch": "U",
+            "before": 0.000305,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_hills/-5/dripstone_block",
+            "batch": "A",
+            "before": 0.003577,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/hanging_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-4/white_terracotta",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_savanna/-5/mangrove_roots",
+            "batch": "A",
+            "before": 0.00341,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-3/mangrove_propagule",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/mangrove_swamp/-5/moss_carpet",
+            "batch": "A",
+            "before": 0.002644,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/windswept_hills/-5/stone_brick_slab",
+            "batch": "A",
+            "before": 0.001789,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/river/-5/suspicious_gravel",
+            "batch": "A",
+            "before": 0.001649,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-3/vine",
+            "batch": "A",
+            "before": 0.001524,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/plains/-4/vine",
+            "batch": "A",
+            "before": 0.001524,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/forest/emerald_ore",
+            "batch": "A",
+            "before": 0.000906,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-2/emerald_ore",
+            "batch": "A",
+            "before": 0.000453,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "layer/forest/-4/dripstone_block",
+            "batch": "A",
+            "before": 0.000453,
+            "vanilla": 0.0,
+            "verdict": "within"
+          },
+          {
+            "metric": "covered_grass_by/magma_block",
+            "batch": "A",
+            "before": 0.000172,
+            "vanilla": 0.0,
+            "verdict": "within"
+          }
+        ],
+        "outside_before": 622,
+        "outside_after": 610
+      },
+      "second": {
+        "seed": 100554032945340,
+        "coverage": [
+          {
+            "dimension": "overworld",
+            "ours": {
+              "chunks": 5895,
+              "requested": 5895,
+              "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -67,
+                -98,
+                97,
+                94
+              ]
+            },
+            "vanilla": {
+              "chunks": 5895,
+              "requested": 5895,
+              "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+              "missing_first20": [],
+              "bounds_chunks": [
+                -67,
+                -98,
+                97,
+                94
+              ]
+            },
+            "same_chunks": true,
+            "complete": true
+          },
+          {
+            "dimension": "the_nether",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          },
+          {
+            "dimension": "the_end",
+            "ours": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "vanilla": {
+              "chunks": 0,
+              "requested": 0
+            },
+            "same_chunks": true,
+            "complete": true,
+            "status": "not requested by this plan"
+          }
+        ],
+        "spawn": {
+          "before": [
+            -48,
+            112
+          ],
+          "after": [
+            -240,
+            16
+          ],
+          "vanilla": [
+            -240,
+            16
+          ]
+        },
+        "metrics": [
+          {
+            "metric": "surface_band/badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 71.975403,
+            "after": 71.975403,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "slope/p100",
+            "batch": "A",
+            "before": 93.0,
+            "after": 110.0,
+            "vanilla": 171.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/wooded_badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 48.642578,
+            "after": 48.642578,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "blocks/red_terracotta",
+            "batch": "A",
+            "before": 150.114673,
+            "after": 150.114673,
+            "vanilla": 9.652248,
+            "unit": "per chunk",
+            "tolerance": 1.9304495335029686,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p100",
+            "batch": "A",
+            "before": 68.0,
+            "after": 101.0,
+            "vanilla": 165.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/128/underground_air",
+            "batch": "U",
+            "before": 24.225194,
+            "after": 22.265043,
+            "vanilla": 3.345908,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              105349,
+              101258
+            ]
+          },
+          {
+            "metric": "depth/144/underground_air",
+            "batch": "U",
+            "before": 38.936687,
+            "after": 22.642329,
+            "vanilla": 4.458634,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              9204,
+              17853
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-2/red_terracotta",
+            "batch": "A",
+            "before": 37.481672,
+            "after": 37.481672,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-1/red_terracotta",
+            "batch": "A",
+            "before": 36.015396,
+            "after": 36.015396,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-3/red_terracotta",
+            "batch": "A",
+            "before": 35.593842,
+            "after": 35.593842,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-4/red_terracotta",
+            "batch": "A",
+            "before": 30.920088,
+            "after": 30.920088,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "layer/eroded_badlands/-5/red_terracotta",
+            "batch": "A",
+            "before": 27.089443,
+            "after": 27.089443,
+            "vanilla": 0.0,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              5456,
+              5456
+            ]
+          },
+          {
+            "metric": "depth/112/underground_air",
+            "batch": "U",
+            "before": 13.565178,
+            "after": 12.884748,
+            "vanilla": 2.149357,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              763096,
+              569054
+            ]
+          },
+          {
+            "metric": "surface_band/eroded_badlands/red_terracotta/y80",
+            "batch": "A",
+            "before": 3.588974,
+            "after": 3.588974,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "depth/160/underground_air",
+            "batch": "U",
+            "before": 100.0,
+            "after": 3.425267,
+            "vanilla": 11.981567,
+            "unit": "percentage points",
+            "tolerance": 2,
+            "verdict": "outside",
+            "denominator": [
+              2248,
+              651
+            ]
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 63.0,
+            "after": 84.0,
+            "vanilla": 66.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "slope/p99",
+            "batch": "A",
+            "before": 4.0,
+            "after": 4.0,
+            "vanilla": 6.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "outside"
+          },
+          {
+            "metric": "layer/beach/-4/stone",
+            "batch": "A",
+            "before": 23.064721,
+            "after": 23.064721,
+            "vanilla": 18.05203,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              6304,
+              6304
+            ]
+          },
+          {
+            "metric": "surface_band/desert/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.400339,
+            "after": 0.400339,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "outside"
+          },
+          {
+            "metric": "surface_band/forest/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.101442,
+            "after": 0.101442,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "within"
+          },
+          {
+            "metric": "top/meadow/grass_block",
+            "batch": "A",
+            "before": 99.013902,
+            "after": 99.013902,
+            "vanilla": 98.362547,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              86604,
+              85804
+            ]
+          },
+          {
+            "metric": "layer/cherry_grove/-3/dirt",
+            "batch": "A",
+            "before": 35.475352,
+            "after": 35.475352,
+            "vanilla": 35.036496,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "within",
+            "denominator": [
+              1136,
+              1096
+            ]
+          },
+          {
+            "metric": "surface_band/jungle/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.054114,
+            "after": 0.054114,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "within"
+          },
+          {
+            "metric": "surface_band/sparse_jungle/red_terracotta/y80",
+            "batch": "A",
+            "before": 0.00475,
+            "after": 0.00475,
+            "vanilla": 0.0,
+            "unit": "blocks per sampled chunk",
+            "tolerance": 0.25,
+            "verdict": "within"
+          },
+          {
+            "metric": "height_biome/beach/p100",
+            "batch": "A",
+            "before": 69.0,
+            "after": 69.0,
+            "vanilla": 69.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p5",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p50",
+            "batch": "A",
+            "before": 0.0,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "slope/p95",
+            "batch": "A",
+            "before": 2.0,
+            "after": 2.0,
+            "vanilla": 2.0,
+            "unit": "blocks per block",
+            "tolerance": 1,
+            "verdict": "within"
+          },
+          {
+            "metric": "spawn_offset",
+            "batch": "A",
+            "before": 214.662526,
+            "after": 0.0,
+            "vanilla": 0.0,
+            "unit": "blocks from official spawn",
+            "tolerance": 16,
+            "verdict": "within"
+          }
+        ],
+        "new_outside_common_rows": [
+          {
+            "metric": "height/p100",
+            "batch": "A",
+            "before": 168.0,
+            "after": 207.0,
+            "vanilla": 168.0,
+            "unit": "blocks",
+            "tolerance": 4,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/desert/p100",
+            "batch": "A",
+            "before": 168.0,
+            "after": 207.0,
+            "vanilla": 168.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "top/windswept_savanna/grass_block",
+            "batch": "A",
+            "before": 10.251976,
+            "after": 28.33498,
+            "vanilla": 7.923228,
+            "unit": "percentage points",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              4048,
+              4064
+            ]
+          },
+          {
+            "metric": "height_biome/warm_ocean/p100",
+            "batch": "A",
+            "before": 62.0,
+            "after": 78.0,
+            "vanilla": 59.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_biome/windswept_savanna/p95",
+            "batch": "A",
+            "before": 63.0,
+            "after": 84.0,
+            "vanilla": 66.0,
+            "unit": "Y blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "height_mean/windswept_savanna",
+            "batch": "A",
+            "before": 58.309289,
+            "after": 62.456028,
+            "vanilla": 55.395423,
+            "unit": "blocks",
+            "tolerance": 5,
+            "verdict": "outside"
+          },
+          {
+            "metric": "feature_biome/windswept_savanna/short_grass",
+            "batch": "F",
+            "before": 14.503607,
+            "after": 34.940509,
+            "vanilla": 16.428001,
+            "unit": "per million biome blocks",
+            "tolerance": 5,
+            "verdict": "outside",
+            "denominator": [
+              1516864,
+              1521792
+            ]
+          },
+          {
+            "metric": "feature_biome/river/tall_seagrass",
+            "batch": "F-ocean",
+            "before": 228.831966,
+            "after": 227.996974,
+            "vanilla": 286.005115,
+            "unit": "per million biome blocks",
+            "tolerance": 57.20102299633941,
+            "verdict": "outside",
+            "denominator": [
+              45509376,
+              45544640
+            ]
+          }
+        ],
+        "new_unpaired_outside_rows": [],
+        "missing_rows": [
+          {
+            "metric": "top/windswept_savanna/andesite",
+            "batch": "A",
+            "before": 0.049407,
+            "vanilla": 0.0,
+            "verdict": "within"
+          }
+        ],
+        "outside_before": 859,
+        "outside_after": 864
+      },
+      "shipped": false,
+      "native_verification": "Rejected: targeted native regressions passed, but fresh census introduced new failures. Its earlier full serialized test run was interrupted; final accepted-source workspace run is recorded separately."
+    },
+    "candidate1": {
+      "shipped": false,
+      "native_export_failed_after_saved_chunks": 2815,
+      "failure": "Native chunk generation indexed below build floor at owner chunk [27,-49]; three workspace regressions also failed."
+    },
+    "named_palette": {
+      "shipped": false,
+      "independent_seed": 123456789,
+      "chunks": 64,
+      "counts_per_chunk": {
+        "before": {
+          "ours": 3.328125,
+          "vanilla": 2.515625,
+          "tolerance": 0.503125,
+          "verdict": "outside"
+        },
+        "after": {
+          "ours": 77.671875,
+          "vanilla": 2.515625,
+          "tolerance": 0.503125,
+          "verdict": "outside"
+        }
+      },
+      "reason": "Modern named-stream hypothesis does not reproduce the palette. It worsened the independent third seed and left the second seed far outside tolerance; restored baseline palette."
+    }
+  },
+  "source_sha256": {
+    "src/world/terrain.rs": "2c873377361d708daba2263f052e63a33b00fbd4cf51d28eaedf47fd9f67aa30",
+    "src/world/biome_distribution.rs": "0c5aff2d3bf08857c015d19c2438f8ec95be66f363aefb2ff833bff50f14dc29",
+    "src/world/climate_noise.rs": "6f646f9589a0cbe581a57c2555bc5a615a23b9e9c2aaf8be5ae050ceb54ebfc9",
+    "src/world/noise.rs": "53be0d41d36279da9e6804ae9c2b3dc7fbb721dc21f4b371de4ff3785a79a482",
+    "src/world/spawn_search.rs": "bf8b2396b443bcb9b9b46696acde0bb04ee692087b3032fa564d3d4b613627ec",
+    "tools/measure/genaudit_263.py": "3f59c5b1a7d5a17f8807ec1fea92cc4d33345575de0cb58ed59cec4beb76a4bb",
+    "tools/measure/genaudit_263_io.py": "a3b1c3ea47e17bd80ab9cf07c58246f01c47a8fed9ddf25e55c4f6e58bbbb3e8",
+    "testdata/world-profile/genaudit-26.3/batch-a4/spawn.json": "cd5db18f43edd176a0a8b688f5bb0b162e44f0fb63f62a617b537a9c559d86ca"
+  },
+  "verification": {
+    "cargo_test_release_workspace": {
+      "passed": 3465,
+      "failed": 0,
+      "ignored": 113,
+      "nested_filtered_subprocess_excluded": true,
+      "test_threads": 1
+    },
+    "cargo_clippy_release_all_targets_workspace_D_warnings": "clean",
+    "all_cargo_under_shared_lock": true,
+    "cargo_build_jobs": 4,
+    "cargo_fmt_run": false,
+    "commits_created": false,
+    "handoff_journal_modified": false
+  },
+  "regression_free_common_rows": true,
+  "remaining": [
+    "Maximum slopes, high-altitude air, beach height tail, red palette and windswept snow remain outside the unchanged census tolerances unless explicitly shown within in the metrics.",
+    "Exact official spawn fitness units are unverified; effective climate weight is validated on 24 black-box seeds, including five held out after calibration."
+  ],
+  "terrain_source_unchanged_from_fresh_baseline": true,
+  "spawn_validation": {
+    "cases": [
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          16.0,
+          -48.0
+        ],
+        "seed": 1792932773345722119,
+        "vanilla": [
+          16,
+          -48
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          -240.0,
+          16.0
+        ],
+        "seed": 100554032945340,
+        "vanilla": [
+          -240,
+          16
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          0.0,
+          112.0
+        ],
+        "seed": 20261025,
+        "vanilla": [
+          0,
+          112
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          -32.0,
+          0.0
+        ],
+        "seed": 42,
+        "vanilla": [
+          -32,
+          0
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          96.0,
+          -32.0
+        ],
+        "seed": 12345,
+        "vanilla": [
+          96,
+          -32
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          16.0,
+          80.0
+        ],
+        "seed": 8675309,
+        "vanilla": [
+          16,
+          80
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          0.0,
+          0.0
+        ],
+        "seed": 987654321,
+        "vanilla": [
+          0,
+          0
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          160.0,
+          160.0
+        ],
+        "seed": 1,
+        "vanilla": [
+          160,
+          160
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          -64.0,
+          512.0
+        ],
+        "seed": 6,
+        "vanilla": [
+          -64,
+          512
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          208.0,
+          528.0
+        ],
+        "seed": 7,
+        "vanilla": [
+          208,
+          528
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          -16.0,
+          -48.0
+        ],
+        "seed": 12,
+        "vanilla": [
+          -16,
+          -48
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 4.0,
+        "ours": [
+          368.0,
+          404.0
+        ],
+        "seed": 14,
+        "vanilla": [
+          368,
+          400
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          -64.0,
+          512.0
+        ],
+        "seed": 27,
+        "vanilla": [
+          -64,
+          512
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          -352.0,
+          -480.0
+        ],
+        "seed": 57,
+        "vanilla": [
+          -352,
+          -480
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          0.0,
+          -32.0
+        ],
+        "seed": 58,
+        "vanilla": [
+          0,
+          -32
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 5.0,
+        "ours": [
+          -1136.0,
+          133.0
+        ],
+        "seed": 73,
+        "vanilla": [
+          -1136,
+          128
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          16.0,
+          0.0
+        ],
+        "seed": 88,
+        "vanilla": [
+          16,
+          0
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 2.0,
+        "ours": [
+          -688.0,
+          0.0
+        ],
+        "seed": 153,
+        "vanilla": [
+          -688,
+          2
+        ]
+      },
+      {
+        "held_out": false,
+        "offset": 0.0,
+        "ours": [
+          0.0,
+          0.0
+        ],
+        "seed": 318,
+        "vanilla": [
+          0,
+          0
+        ]
+      },
+      {
+        "held_out": true,
+        "offset": 0.0,
+        "ours": [
+          0.0,
+          0.0
+        ],
+        "seed": 20261026,
+        "vanilla": [
+          0,
+          0
+        ]
+      },
+      {
+        "held_out": true,
+        "offset": 15.0,
+        "ours": [
+          48.0,
+          -17.0
+        ],
+        "seed": 998244353,
+        "vanilla": [
+          48,
+          -32
+        ]
+      },
+      {
+        "held_out": true,
+        "offset": 0.0,
+        "ours": [
+          64.0,
+          -48.0
+        ],
+        "seed": 123456789,
+        "vanilla": [
+          64,
+          -48
+        ]
+      },
+      {
+        "held_out": true,
+        "offset": 0.0,
+        "ours": [
+          -32.0,
+          0.0
+        ],
+        "seed": 0,
+        "vanilla": [
+          -32,
+          0
+        ]
+      },
+      {
+        "held_out": true,
+        "offset": 0.0,
+        "ours": [
+          -96.0,
+          32.0
+        ],
+        "seed": 13579,
+        "vanilla": [
+          -96,
+          32
+        ]
+      }
+    ],
+    "native_support_test": "preview_spawn_matches_independent_black_box_worlds: all 24 final selected positions have non-air, non-fluid support in a fully generated chunk",
+    "largest_offset_blocks": 15.0,
+    "held_out_after_calibration": 5,
+    "tolerance_blocks": 16
+  },
+  "native_region_identity": {
+    "owner": {
+      "files_before": 35,
+      "files_after": 35,
+      "identical_paths": true,
+      "byte_identical_files": 26,
+      "all_byte_identical": false
+    },
+    "second": {
+      "files_before": 38,
+      "files_after": 38,
+      "identical_paths": true,
+      "byte_identical_files": 29,
+      "all_byte_identical": false
+    }
+  },
+  "decoded_chunk_identity": {
+    "method": "Compare decoded internal block-state IDs and biome IDs at every cell, all 24 sections, every freshly exported native chunk. Block entities and other trailing chunk metadata are not included; binary region identity is reported separately.",
+    "owner": {
+      "chunks_before": 3274,
+      "chunks_after": 3274,
+      "all_block_states_and_biomes_identical": true,
+      "different_chunks": []
+    },
+    "second": {
+      "chunks_before": 5895,
+      "chunks_after": 5895,
+      "all_block_states_and_biomes_identical": true,
+      "different_chunks": []
+    }
+  },
+  "changed_common_metrics": {
+    "owner": [],
+    "second": [
+      {
+        "dimension": "overworld",
+        "metric": "spawn_offset",
+        "before": 214.662526,
+        "after": 0.0
+      }
+    ]
+  }
+}
