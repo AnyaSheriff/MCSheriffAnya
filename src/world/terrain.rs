@@ -3496,6 +3496,57 @@ fn named(name: &str) -> i32 {
 mod tests {
     use super::*;
 
+    /// Независимый контроль формы в готовых чанках: биомы и природный верх,
+    /// а не совпадение координат с оригиналом. Границы — перепись регионов,
+    /// допуск высоты прежний, пять блоков. Пока корень A5 не исправлен,
+    /// этот воспроизводитель должен явно оставаться незакрытым [проверить].
+    #[test]
+    #[ignore = "A5: полки и профили гор пока вне допуска переписи [проверить]"]
+    fn preview_a5_high_terrain_profiles_match_saved_regions() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a5/regression-plan.json")).unwrap();
+        let generator = crate::world::Generator::Normal(
+            Terrain::new(fixture["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true));
+        let natural = |name: &str| {
+            matches!(name, "grass_block" | "dirt" | "coarse_dirt" | "rooted_dirt" | "podzol" | "mycelium"
+                | "mud" | "clay" | "sand" | "red_sand" | "sandstone" | "red_sandstone" | "gravel"
+                | "stone" | "granite" | "diorite" | "andesite" | "deepslate" | "tuff" | "calcite"
+                | "terracotta" | "snow_block" | "powder_snow" | "ice" | "packed_ice" | "blue_ice"
+                | "moss_block" | "pale_moss_block" | "netherrack" | "soul_sand" | "soul_soil"
+                | "basalt" | "blackstone" | "end_stone" | "bedrock" | "obsidian" | "sulfur" | "cinnabar")
+                || name.ends_with("_ore") || name.ends_with("_terracotta") || name.starts_with("raw_")
+        };
+        let mut failures = Vec::new();
+        for case in fixture["cases"].as_array().unwrap() {
+            let biome = Biome::by_name(case["biome"].as_str().unwrap(), true).unwrap();
+            let mut heights = Vec::new();
+            for window in case["windows"].as_array().unwrap() {
+                let [x0, z0, x1, z1] = std::array::from_fn(|i| window[i].as_i64().unwrap() as i32);
+                for cx in x0..=x1 { for cz in z0..=z1 {
+                    let chunk = crate::world::Chunk::generated(&generator, cx, cz);
+                    for x in 0..16 { for z in 0..16 {
+                        let top = (BOTTOM..BOTTOM + crate::world::WORLD_HEIGHT).rev().find(|&y| {
+                            crate::blocks::block_at_state(chunk.block(x, y, z)).is_some_and(natural)
+                        }).unwrap();
+                        if chunk.biome(x, top, z) == biome.number() as u16 { heights.push(top); }
+                    } }
+                } }
+            }
+            assert!(heights.len() >= case["minimum_columns"].as_u64().unwrap() as usize,
+                "{}: недостаточная выборка {}", biome.name(), heights.len());
+            heights.sort_unstable();
+            let maximum = *heights.last().unwrap();
+            let median = f64::from(heights[(heights.len()-1)/2] + heights[heights.len()/2]) / 2.0;
+            println!("{}: {} столбцов, медиана {median}, максимум {maximum}", biome.name(), heights.len());
+            if case["maximum_height"].as_i64().is_some_and(|limit| i64::from(maximum) > limit)
+                || case["median_height_min"].as_f64().is_some_and(|limit| median < limit)
+                || case["median_height_max"].as_f64().is_some_and(|limit| median > limit) {
+                failures.push(format!("{}: медиана {median}, максимум {maximum}", biome.name()));
+            }
+        }
+        assert!(failures.is_empty(), "A5 [проверить]: {}", failures.join("; "));
+    }
+
     /// Регрессии переписи: считаем готовые блоки в своём биоме, а не
     /// совпадение координат с оригиналом. Малые окна имеют широкий допуск;
     /// строгие пять процентных пунктов проверяются полной переписью.

@@ -1,0 +1,61 @@
+{
+  "method": "Independent saved official 26.3 regions. Per-biome natural-surface height windows; no equal-coordinate height requirement. The hill maximum bound uses the larger of both official census windows plus the unchanged five-block height tolerance. These controls currently fail and are explicitly ignored until a valid density repair passes the full census.",
+  "seed": 1792932773345722119,
+  "cases": [
+    {
+      "biome": "windswept_hills",
+      "windows": [
+        [
+          11,
+          -33,
+          16,
+          -26
+        ]
+      ],
+      "maximum_height": 142,
+      "minimum_columns": 64
+    },
+    {
+      "biome": "frozen_peaks",
+      "windows": [
+        [
+          147,
+          25,
+          155,
+          33
+        ]
+      ],
+      "median_height_min": 93,
+      "median_height_max": 103,
+      "minimum_columns": 64
+    },
+    {
+      "biome": "jagged_peaks",
+      "windows": [
+        [
+          139,
+          105,
+          147,
+          113
+        ]
+      ],
+      "median_height_min": 146,
+      "median_height_max": 156,
+      "minimum_columns": 64
+    },
+    {
+      "biome": "stony_peaks",
+      "windows": [
+        [
+          -87,
+          133,
+          -79,
+          141
+        ]
+      ],
+      "median_height_min": 133,
+      "median_height_max": 143,
+      "minimum_columns": 64
+    }
+  ]
+}

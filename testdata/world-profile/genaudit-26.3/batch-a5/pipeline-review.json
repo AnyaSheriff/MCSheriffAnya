@@ -1,0 +1,227 @@
+{
+  "baseline_head": "b375294cfec5daa4518f06ed4f0d47600fc799a0",
+  "sources": [
+    {
+      "url": "https://minecraft.wiki/w/Noise_router",
+      "raw_sha256": "59ffeca80dd67075ebd9283ecb04f0158f63c7fa89b3545f8710294c455111d2"
+    },
+    {
+      "url": "https://minecraft.wiki/w/Density_function",
+      "raw_sha256": "587058203ae20a23ca68148e27456aed5e369edbab4a7d4ba9dfdebf71ffb884"
+    },
+    {
+      "url": "https://minecraft.wiki/w/World_generation",
+      "raw_sha256": "e92004cc54bda10993cf7c4856a2e059cba38d90e031d923b89bb7912b05a677"
+    },
+    {
+      "url": "https://minecraft.wiki/w/Tutorial:Custom_world_generation",
+      "raw_sha256": "b5a3d4e83d435593c7c56c9d5132b17f19383d13a5e4670432a861cf9e8b6792"
+    },
+    {
+      "url": "https://minecraft.wiki/w/Badlands",
+      "raw_sha256": "bd38fbc6914b54f2fbb648752509441cb38fe4e97431cec3407be5b19bd71ed5"
+    },
+    {
+      "url": "https://minecraft.wiki/w/Terracotta",
+      "raw_sha256": "4abcdedd409aeb7ed8a1ba49024da44598d82fddab1593fcf99b0929a7efd365"
+    },
+    {
+      "url": "https://minecraft.wiki/w/Terrain_features",
+      "raw_sha256": "d92c24c707625288c9d523365a70c97672f02453f1c9ae5250d886d6e0a80abd"
+    }
+  ],
+  "pipeline": [
+    {
+      "stage": "depth",
+      "wiki": "Depth grows by 1/128 per block downward; offset sets the zero plane.",
+      "ours": "The zero plane is Relief.surface in block units; surface-y is the bias. No independent router depth/factor objects.",
+      "finding": "The missing support is above this plane, so stronger positive-depth bias cannot repair it."
+    },
+    {
+      "stage": "factor",
+      "wiki": "A positive spline over continentalness, erosion, weirdness and PV controls the effect of the base 3D noise.",
+      "ours": "wobble and rugged are additive displacement amplitudes. Positive E5 weirdness raises both the 2D plane and a separate fine 3D contribution; the enhanced amplitude also grows with continentalness.",
+      "finding": "The documented offset/stretch separation is absent. The inflated far-inland E5 term creates high hills while near-coast savanna and beach height tails remain too low."
+    },
+    {
+      "stage": "jaggedness",
+      "wiki": "A separate 2D contribution creates small peaks; it is stronger in low-erosion, high-PV terrain with negative weirdness.",
+      "ours": "A 2D detail ridge is applied at positive PV without a weirdness-sign gate. The E5 rugged term instead oscillates in 3D every 12 blocks.",
+      "finding": "Peak profiles distinguish the missing sign-dependent response: frozen peaks are too high and jagged peaks too low in the sampled windows."
+    },
+    {
+      "stage": "interpolation",
+      "wiki": "Density can be interpolated between grid samples.",
+      "ours": "Canonical 4x8x4 trilinear grid; fine terrain noise has vertical lattice scales of 12 and 6 blocks. The finest lattice spacing is smaller than the vertical grid spacing.",
+      "finding": "At (200,-480), negative density Y128..168 is followed by positive density at Y176; the fine rugged contribution creates an upper stone island before carving. Large amplitude and short vertical correlation are demonstrated causes in our model. Undersampling is an additional risk, not proof of the sole cause; Perlin noise is not strictly band-limited."
+    },
+    {
+      "stage": "squeeze",
+      "wiki": "Clamp to [-1,1], then x/2-x^3/24.",
+      "ours": "Absent; raw block-unit bias is interpolated.",
+      "finding": "This monotone sign-preserving transform cannot create missing support at an already negative sampled node. Applying it at a different interpolation stage can move zero crossings, so it is not assumed to preserve generated block states."
+    },
+    {
+      "stage": "top_slide",
+      "wiki": "A height-dependent transition controls the top; the old slide density type was removed and replaced by gradient arithmetic.",
+      "ours": "min(density, cap-y), with cap=259 at the diagnostic inland node.",
+      "finding": "The cap is positive at Y160/Y192 and does not cause their negative density; it does not model a smooth top slide."
+    },
+    {
+      "stage": "initial_density_without_jaggedness",
+      "wiki": "Replaced by preliminary_surface_level in 1.21.9; renamed chunk_surface_level in 26.3 snapshot 10.",
+      "ours": "The top of the same geometry grid is reused for column height and cave depth.",
+      "finding": "The removed router entry must not be reintroduced as if it were current 26.3 final density."
+    },
+    {
+      "stage": "peaks_and_valleys",
+      "wiki": "PV folds weirdness symmetrically; weirdness sign still independently influences terrain shaping.",
+      "ours": "1-abs(3*abs(W)-2) is correct; later relief responses omit part of the independent sign-dependent shaping.",
+      "finding": "Changing the PV formula would be the wrong repair."
+    }
+  ],
+  "density_trace": [
+    "column 232,-440: Climate { continent: 0.3981494485999277, erosion: 0.5111757155136537, weirdness: 0.6084264863733994, temperature: 0.18811546969603565, humidity: 0.021457428293797876 } relief Relief { surface: 114.8366394167991, wobble: 10.947959742815783, rugged: 124.83377456426719, cap: 259.0 }",
+    "64: depth 50.837 coarse -2.460 fine -2.037 density 46.340 positive_bias 198.850",
+    "72: depth 42.837 coarse -2.955 fine 46.457 density 86.338 positive_bias 214.848",
+    "80: depth 34.837 coarse -4.070 fine 14.602 density 45.369 positive_bias 149.879",
+    "88: depth 26.837 coarse -3.266 fine -1.912 density 21.658 positive_bias 102.168",
+    "96: depth 18.837 coarse 0.529 fine 68.185 density 87.550 positive_bias 144.060",
+    "104: depth 10.837 coarse 3.355 fine 22.104 density 36.296 positive_bias 68.806",
+    "112: depth 2.837 coarse 2.821 fine -15.191 density -9.534 positive_bias -1.024",
+    "120: depth -5.163 coarse 0.169 fine 41.015 density 36.021 positive_bias 36.021",
+    "128: depth -13.163 coarse -0.666 fine -36.834 density -50.664 positive_bias -50.664",
+    "136: depth -21.163 coarse 1.049 fine 33.397 density 13.283 positive_bias 13.283",
+    "144: depth -29.163 coarse 2.953 fine 8.137 density -18.074 positive_bias -18.074",
+    "152: depth -37.163 coarse 4.849 fine 31.520 density -0.794 positive_bias -0.794",
+    "160: depth -45.163 coarse 2.889 fine 2.856 density -39.418 positive_bias -39.418",
+    "168: depth -53.163 coarse 1.797 fine 12.564 density -38.802 positive_bias -38.802",
+    "176: depth -61.163 coarse 1.316 fine 48.500 density -11.347 positive_bias -11.347",
+    "184: depth -69.163 coarse 0.163 fine 63.634 density -5.367 positive_bias -5.367",
+    "192: depth -77.163 coarse 0.598 fine 59.883 density -16.682 positive_bias -16.682",
+    "200: depth -85.163 coarse 1.501 fine 3.616 density -80.047 positive_bias -80.047",
+    "208: depth -93.163 coarse 4.713 fine -20.560 density -109.011 positive_bias -109.011",
+    "216: depth -101.163 coarse 4.317 fine 51.150 density -45.697 positive_bias -45.697",
+    "column 200,-480: Climate { continent: 0.4827154844753625, erosion: 0.48294604444107203, weirdness: 0.5966632583900754, temperature: 0.18114774063535888, humidity: 0.05031688321993559 } relief Relief { surface: 114.38962176754355, wobble: 10.878817749914212, rugged: 126.69696780370855, cap: 259.0 }",
+    "64: depth 50.390 coarse 0.893 fine 6.405 density 57.687 positive_bias 208.856",
+    "72: depth 42.390 coarse -3.143 fine -16.684 density 22.563 positive_bias 149.732",
+    "80: depth 34.390 coarse -5.356 fine -66.139 density -37.105 positive_bias 66.063",
+    "88: depth 26.390 coarse -6.832 fine 12.365 density 31.923 positive_bias 111.092",
+    "96: depth 18.390 coarse -2.815 fine 25.548 density 41.123 positive_bias 96.291",
+    "104: depth 10.390 coarse 1.287 fine 15.049 density 26.726 positive_bias 57.895",
+    "112: depth 2.390 coarse 1.198 fine -5.355 density -1.768 positive_bias 5.401",
+    "120: depth -5.610 coarse 2.268 fine 34.412 density 31.069 positive_bias 31.069",
+    "128: depth -13.610 coarse 0.564 fine -69.583 density -82.629 positive_bias -82.629",
+    "136: depth -21.610 coarse -2.979 fine -60.172 density -84.761 positive_bias -84.761",
+    "144: depth -29.610 coarse -1.926 fine -43.275 density -74.812 positive_bias -74.812",
+    "152: depth -37.610 coarse 3.426 fine -72.704 density -106.889 positive_bias -106.889",
+    "160: depth -45.610 coarse 3.295 fine -59.522 density -101.838 positive_bias -101.838",
+    "168: depth -53.610 coarse 2.142 fine -25.548 density -77.016 positive_bias -77.016",
+    "176: depth -61.610 coarse 1.254 fine 93.489 density 33.133 positive_bias 33.133",
+    "184: depth -69.610 coarse 1.941 fine 21.229 density -46.441 positive_bias -46.441",
+    "192: depth -77.610 coarse 1.324 fine 41.190 density -35.097 positive_bias -35.097",
+    "200: depth -85.610 coarse -0.137 fine -31.940 density -117.688 positive_bias -117.688",
+    "208: depth -93.610 coarse -1.906 fine 19.143 density -76.373 positive_bias -76.373",
+    "216: depth -101.610 coarse -4.341 fine 1.043 density -104.909 positive_bias -104.909",
+    "column 968,-112: Climate { continent: -0.11013274417115029, erosion: 0.5494378231583452, weirdness: 0.15944612120812543, temperature: 0.3141315147282057, humidity: -0.37980888696291426 } relief Relief { surface: 66.25257590570668, wobble: 5.2365732401139145, rugged: 17.49498386924544, cap: 258.9989436747363 }",
+    "64: depth 2.253 coarse 0.854 fine -1.163 density 1.943 positive_bias 8.701",
+    "72: depth -5.747 coarse -0.211 fine 0.227 density -5.732 positive_bias -5.732",
+    "80: depth -13.747 coarse -1.037 fine 0.311 density -14.474 positive_bias -14.474",
+    "88: depth -21.747 coarse -0.822 fine -3.187 density -25.757 positive_bias -25.757",
+    "96: depth -29.747 coarse -0.360 fine -1.819 density -31.927 positive_bias -31.927",
+    "104: depth -37.747 coarse -0.389 fine -10.115 density -48.252 positive_bias -48.252",
+    "112: depth -45.747 coarse 0.425 fine -2.226 density -47.548 positive_bias -47.548",
+    "120: depth -53.747 coarse 0.212 fine 5.432 density -48.104 positive_bias -48.104",
+    "128: depth -61.747 coarse -0.755 fine 3.080 density -59.422 positive_bias -59.422",
+    "136: depth -69.747 coarse -0.040 fine 2.519 density -67.268 positive_bias -67.268",
+    "144: depth -77.747 coarse 0.006 fine -0.515 density -78.256 positive_bias -78.256",
+    "152: depth -85.747 coarse -0.107 fine -3.289 density -89.143 positive_bias -89.143",
+    "160: depth -93.747 coarse 1.374 fine 3.024 density -89.349 positive_bias -89.349",
+    "168: depth -101.747 coarse 2.546 fine -8.649 density -107.851 positive_bias -107.851",
+    "176: depth -109.747 coarse 3.206 fine 2.626 density -103.916 positive_bias -103.916",
+    "184: depth -117.747 coarse 0.970 fine 2.751 density -114.026 positive_bias -114.026",
+    "192: depth -125.747 coarse 1.089 fine -0.143 density -124.802 positive_bias -124.802",
+    "200: depth -133.747 coarse 1.050 fine -1.236 density -133.933 positive_bias -133.933",
+    "208: depth -141.747 coarse 0.292 fine 1.255 density -140.200 positive_bias -140.200",
+    "216: depth -149.747 coarse -0.198 fine 8.136 density -141.810 positive_bias -141.810",
+    "column 492,-872: Climate { continent: -0.05012544996949242, erosion: 0.45030298712608824, weirdness: 0.4368783999325099, temperature: 0.20047278383508396, humidity: 0.2938221565016813 } relief Relief { surface: 82.24454809831201, wobble: 7.927006914745668, rugged: 53.66179343700391, cap: 259.0 }",
+    "64: depth 18.245 coarse 1.064 fine 13.880 density 33.188 positive_bias 87.922",
+    "72: depth 10.245 coarse 2.366 fine 3.754 density 16.364 positive_bias 47.098",
+    "80: depth 2.245 coarse 2.870 fine 12.999 density 18.114 positive_bias 24.847",
+    "88: depth -5.755 coarse 1.421 fine 6.974 density 2.639 positive_bias 2.639",
+    "96: depth -13.755 coarse -0.296 fine -3.754 density -17.805 positive_bias -17.805",
+    "104: depth -21.755 coarse -0.761 fine 13.874 density -8.642 positive_bias -8.642",
+    "112: depth -29.755 coarse -3.128 fine 11.769 density -21.114 positive_bias -21.114",
+    "120: depth -37.755 coarse -3.287 fine 17.446 density -23.597 positive_bias -23.597",
+    "128: depth -45.755 coarse -2.321 fine 4.098 density -43.979 positive_bias -43.979",
+    "136: depth -53.755 coarse -1.683 fine -6.186 density -61.625 positive_bias -61.625",
+    "144: depth -61.755 coarse 0.583 fine -17.446 density -78.618 positive_bias -78.618",
+    "152: depth -69.755 coarse 1.291 fine -19.973 density -88.438 positive_bias -88.438",
+    "160: depth -77.755 coarse 1.714 fine -6.908 density -82.950 positive_bias -82.950",
+    "168: depth -85.755 coarse 1.285 fine -24.954 density -109.424 positive_bias -109.424",
+    "176: depth -93.755 coarse 2.022 fine 14.828 density -76.905 positive_bias -76.905",
+    "184: depth -101.755 coarse 2.412 fine -4.010 density -103.354 positive_bias -103.354",
+    "192: depth -109.755 coarse 1.360 fine 0.442 density -107.954 positive_bias -107.954",
+    "200: depth -117.755 coarse 1.341 fine -3.127 density -119.542 positive_bias -119.542",
+    "208: depth -125.755 coarse 1.400 fine -25.139 density -149.495 positive_bias -149.495",
+    "216: depth -133.755 coarse 3.541 fine -18.329 density -148.543 positive_bias -148.543"
+  ],
+  "ablation_definition": "Own density grid only, sixteen columns per chunk at offsets 2,6,10,14. Not generated-chunk census, not a comparison of equal-position official cells. No terrain candidate is accepted on these numbers.",
+  "ablations": {
+    "depth": [
+      "seed1792932773345722119 maxslope89 air[[10854, 23499], [3942, 5599], [1089, 1219], [153, 153], [9, 9], [0, 0]]",
+      "beach n2120 q[52, 62, 64, 67, 77]",
+      "windswept_forest n49 q[77, 108, 132, 137, 137]",
+      "windswept_hills n3501 q[63, 95, 145, 160, 184]",
+      "windswept_savanna n1833 q[55, 71, 107, 128, 152]",
+      "seed100554032945340 maxslope59 air[[1267, 58730], [207, 8485], [36, 281], [0, 0], [0, 0], [0, 0]]",
+      "beach n394 q[52, 62, 63, 69, 71]",
+      "windswept_savanna n253 q[55, 61, 64, 66, 68]"
+    ],
+    "vertical": [
+      "seed1792932773345722119 maxslope112 air[[2313, 17491], [927, 3526], [425, 998], [130, 252], [0, 20], [0, 0]]",
+      "beach n2120 q[49, 59, 64, 67, 77]",
+      "windswept_forest n49 q[57, 89, 137, 139, 140]",
+      "windswept_hills n3501 q[23, 84, 139, 163, 187]",
+      "windswept_savanna n1833 q[39, 65, 99, 120, 132]",
+      "seed100554032945340 maxslope62 air[[288, 46851], [13, 5882], [1, 192], [0, 0], [0, 0], [0, 0]]",
+      "beach n394 q[49, 60, 62, 67, 69]",
+      "windswept_savanna n253 q[55, 58, 63, 65, 66]"
+    ],
+    "factor": [
+      "seed1792932773345722119 maxslope92 air[[2273, 19986], [927, 3697], [425, 998], [130, 252], [0, 20], [0, 0]]",
+      "beach n2120 q[52, 62, 64, 67, 77]",
+      "windswept_forest n49 q[69, 89, 137, 139, 140]",
+      "windswept_hills n3501 q[62, 88, 139, 163, 187]",
+      "windswept_savanna n1833 q[53, 70, 99, 120, 132]",
+      "seed100554032945340 maxslope50 air[[288, 58667], [9, 8397], [1, 253], [0, 0], [0, 0], [0, 0]]",
+      "beach n394 q[52, 62, 63, 69, 71]",
+      "windswept_savanna n253 q[55, 61, 64, 66, 67]"
+    ],
+    "routing": [
+      "seed1792932773345722119 maxslope77 air[[139, 6185], [48, 461], [16, 27], [0, 0], [0, 0], [0, 0]]",
+      "beach n2120 q[49, 59, 64, 67, 77]",
+      "windswept_forest n49 q[56, 66, 81, 83, 86]",
+      "windswept_hills n3501 q[52, 72, 85, 90, 104]",
+      "windswept_savanna n1833 q[39, 65, 99, 120, 132]",
+      "seed100554032945340 maxslope55 air[[221, 46121], [5, 5757], [0, 183], [0, 0], [0, 0], [0, 0]]",
+      "beach n394 q[49, 60, 62, 67, 69]",
+      "windswept_savanna n253 q[55, 58, 63, 65, 66]"
+    ],
+    "factor_routing": [
+      "seed1792932773345722119 maxslope59 air[[139, 8679], [48, 632], [16, 27], [0, 0], [0, 0], [0, 0]]",
+      "beach n2120 q[52, 62, 64, 67, 77]",
+      "windswept_forest n49 q[66, 70, 81, 83, 86]",
+      "windswept_hills n3501 q[63, 75, 85, 90, 104]",
+      "windswept_savanna n1833 q[53, 70, 99, 120, 132]",
+      "seed100554032945340 maxslope49 air[[221, 57937], [1, 8272], [0, 244], [0, 0], [0, 0], [0, 0]]",
+      "beach n394 q[52, 62, 63, 69, 71]",
+      "windswept_savanna n253 q[55, 61, 64, 66, 67]"
+    ]
+  },
+  "palette_review": {
+    "index": "Badlands wiki explicitly gives (noiseValue+Y+192)%192; subtracting 63 is not supported. Existing modulo-192 Y index is consistent.",
+    "offset": "One 2D offset per column is consistent, but our field and truncation are own approximations.",
+    "layout": "Fixed band counts and widths are own approximations. No new seed-stream guess or phase rotation accepted."
+  }
+}
