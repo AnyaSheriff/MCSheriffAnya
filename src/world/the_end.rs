@@ -1,11 +1,12 @@
 // Энд: из чего он сложен.
 //
-// Рельеф подогнан по замеру мира оригинала 26.1.2 (tools/research/end.md,
+// Базовый профиль снят с мира оригинала 26.1.2 (tools/research/end.md,
 // tools/measure/end_census.py, end_islands.py, end_profile.py, end_main.py,
 // end_biomes.py): 67 600 чанков вокруг центра, ±2048 блоков.
 //
 // — Главный остров: сплошной диск радиусом ~66 блоков (верх 61 в центре и
-//   57 у края диска, низ 11 → 19), дальше рваная кайма до ~145 блоков.
+//   57 у края диска, низ 11 → 19), дальше рваная кайма до ~156 блоков.
+//   Площадь каймы уточнена на двух сохранённых мирах переписи 26.3.
 // — Пустота: от ~150 до ~950 блоков ни одного блока.
 // — Внешние острова: с ~950 блоков доля площади растёт до 0,40 к 1050 и
 //   0,50 к 1200, дальше держится около 0,50. Острова огромные (сотни
@@ -62,7 +63,7 @@ const OUTER_FROM: f64 = 945.0;
 
 /// Вес мелких островков: избыток коротких волн дробил берег на клифы.
 /// Проверяется долей перепадов ≥16 в двух мирах переписи, а не картой семени.
-const ISLETS: f64 = 0.3;
+const ISLETS: f64 = 0.225;
 
 /// Доля площади, занятая внешними островами, по расстоянию от центра
 /// (замер, кольца по 25 блоков).
@@ -77,30 +78,25 @@ fn outer_cover(distance: f64) -> f64 {
 
 /// Доля площади, занятая эндемняком главного острова и его каймы, по
 /// расстоянию от центра (замер, кольца по 4 блока).
-const MAIN_COVER: [(f64, f64); 24] = [
+// Два мира 26.3: средняя доля суши по радиальным кольцам; внешний
+// тонкий край доходит за прежнюю границу 148 блоков (26.1.2).
+const MAIN_COVER: [(f64, f64); 17] = [
     (0.0, 1.0),
     (66.0, 0.99),
-    (72.0, 0.99),
-    (76.0, 0.86),
-    (80.0, 0.76),
-    (84.0, 0.64),
-    (88.0, 0.60),
-    (92.0, 0.54),
-    (96.0, 0.47),
-    (100.0, 0.43),
-    (104.0, 0.40),
-    (108.0, 0.33),
-    (112.0, 0.26),
-    (116.0, 0.20),
-    (120.0, 0.14),
-    (124.0, 0.12),
-    (128.0, 0.11),
-    (132.0, 0.09),
-    (136.0, 0.07),
-    (140.0, 0.05),
-    (144.0, 0.01),
-    (148.0, 0.0),
-    (150.0, 0.0),
+    (72.0, 0.98),
+    (80.0, 0.90),
+    (88.0, 0.76),
+    (96.0, 0.65),
+    (104.0, 0.54),
+    (112.0, 0.44),
+    (120.0, 0.35),
+    (128.0, 0.25),
+    (136.0, 0.16),
+    (144.0, 0.06),
+    (148.0, 0.025),
+    (152.0, 0.01),
+    (156.0, 0.0),
+    (160.0, 0.0),
     (1.0e9, 0.0),
 ];
 
@@ -169,7 +165,7 @@ fn main_cover(distance: f64) -> f64 {
         .windows(2)
         .find(|pair| distance <= pair[1].0)
         .map(|pair| (pair[0], pair[1]))
-        .unwrap_or((MAIN_COVER[22], MAIN_COVER[23]));
+        .unwrap_or((MAIN_COVER[MAIN_COVER.len() - 2], MAIN_COVER[MAIN_COVER.len() - 1]));
 
     from.1 + (to.1 - from.1) * ((distance - from.0) / (to.0 - from.0)).clamp(0.0, 1.0)
 }
@@ -220,7 +216,7 @@ pub struct End {
     top: Noise,
     bottom: Noise,
     outer_ranks: OnceLock<Ranks>,
-    main_ranks: OnceLock<Ranks>,
+    main_ranks: OnceLock<Vec<Ranks>>,
     biome_ranks: OnceLock<Ranks>,
     states: States,
 }
@@ -323,10 +319,11 @@ impl End {
     fn island_noise(&self, x: i32, z: i32) -> f64 {
         let (fx, fz) = (f64::from(x), f64::from(z));
 
-        // Крупные острова и, поверх них, мелкие пятна — отдельные островки
-        // в сотни блоков площадью (замер: их вдвое-втрое больше, чем даёт
-        // один слой шума).
-        self.islands.octaves(fx / 190.0 + 0.37, fz / 190.0 + 0.71, 5) + ISLETS * self.islets.octaves(fx / 55.0 + 0.19, fz / 55.0 + 0.83, 2)
+        // Крупные острова и широкая неровность берега. Короткие волны
+        // прежних октав 4–5 создавали лишние клифы; отдельные мелкие островки
+        // теперь даёт проход признаков. 28/31 сохраняет амплитуду оставшихся
+        // октав, а вес берега — дисперсию его прежних двух октав.
+        self.islands.octaves(fx / 190.0 + 0.37, fz / 190.0 + 0.71, 3) * (28.0 / 31.0) + ISLETS * self.islets.octaves(fx / 55.0 + 0.19, fz / 55.0 + 0.83, 1)
     }
 
     /// Шум каймы главного острова в точке.
@@ -336,10 +333,20 @@ impl End {
 
     /// Верх и низ эндемняка в этом столбце; None — пустота.
     pub fn column(&self, x: i32, z: i32) -> Option<(i32, i32)> {
+        let terrain = self.terrain_column(x, z);
+        if f64::from(x).hypot(f64::from(z)) <= OUTER_FROM {
+            return terrain;
+        }
+        // Для высоты берётся самый верхний слой. При записи чанка слои
+        // кладутся отдельно: воздух между двумя островками не заполняется.
+        terrain.into_iter().chain(self.small_island_columns(x, z)).max_by_key(|&(_, top)| top)
+    }
+
+    fn terrain_column(&self, x: i32, z: i32) -> Option<(i32, i32)> {
         let distance = f64::from(x).hypot(f64::from(z));
 
         // Главный остров: диск, дальше кайма.
-        if distance < 150.0 {
+        if distance < 160.0 {
             return self.main_column(x, z, distance);
         }
 
@@ -355,10 +362,44 @@ impl End {
         if above < 1.0 - cover {
             return None;
         }
-
         let depth = edge_by_share((above - (1.0 - cover)) / cover);
-
         Some(self.shape(x, z, depth, 0.0))
+    }
+
+    /// minecraft.wiki/w/End_Island: «Y=55 to Y=70», «1⁄14».
+    /// Отдельный проход мелких островков нужен даже там, где поле больших
+    /// островов не дало столбца. Форма слоёв по регионам 26.3 [проверить].
+    fn small_island_columns(&self, x: i32, z: i32) -> Vec<(i32, i32)> {
+        let mut result = Vec::new();
+        for cx in (x - 6).div_euclid(16)..=(x + 6).div_euclid(16) {
+            for cz in (z - 6).div_euclid(16)..=(z + 6).div_euclid(16) {
+                if !matches!(self.biome_at(cx * 16 + 8, cz * 16 + 8), Biome::SmallEndIslands) {
+                    continue;
+                }
+                let mut roll = self.dice(cx * 16, cz * 16);
+                if roll.below(14) != 0 {
+                    continue;
+                }
+                let count = 1 + i32::from(roll.below(4) == 0);
+                for _ in 0..count {
+                    let (ix, iz) = (cx * 16 + roll.below(16), cz * 16 + roll.below(16));
+                    let top = 55 + roll.below(16);
+                    let radius = 4 + roll.below(3);
+                    let d2 = (x - ix).pow(2) + (z - iz).pow(2);
+                    if d2 > radius * radius {
+                        continue;
+                    }
+                    let mut bottom = top;
+                    for layer in 1..radius {
+                        if d2 <= (radius - layer).pow(2) {
+                            bottom = top - layer;
+                        }
+                    }
+                    result.push((bottom, top));
+                }
+            }
+        }
+        result
     }
 
     fn main_column(&self, x: i32, z: i32, distance: f64) -> Option<(i32, i32)> {
@@ -378,8 +419,19 @@ impl End {
             return None;
         }
 
-        let ranks = self.main_ranks.get_or_init(|| Ranks::new(self.seed as u64, |x, z| self.fringe_noise(x, z)));
-        let above = ranks.share_below(self.fringe_noise(x, z));
+        // Глобальные квантили шума не описывают единственный остров:
+        // короткая кайма могла целиком попасть в одну фазу поля. Выборка
+        // по углу своего кольца сохраняет радиальную площадь, а семя — берег.
+        let rings = self.main_ranks.get_or_init(|| (0..160).map(|radius| {
+            let mut values: Vec<f32> = (0..512).map(|step| {
+                let angle = f64::from(step) * std::f64::consts::TAU / 512.0;
+                let r = f64::from(radius) + 0.5;
+                self.fringe_noise((r * angle.cos()).round() as i32, (r * angle.sin()).round() as i32) as f32
+            }).collect();
+            values.sort_by(f32::total_cmp);
+            Ranks(values)
+        }).collect());
+        let above = rings[distance.floor() as usize].share_below(self.fringe_noise(x, z));
 
         if above < 1.0 - cover {
             return None;
@@ -387,7 +439,9 @@ impl End {
 
         let depth = edge_by_share((above - (1.0 - cover)) / cover);
 
-        Some(self.shape(x, z, depth, -2.0))
+        // Кайма главного острова тоньше внешних островов: прежний профиль
+        // после исправления площади завышал блоки/чанк второго семени.
+        Some(self.shape(x, z, depth * 0.5, -2.0))
     }
 
     /// Верх и низ столбца по расстоянию до края острова.
@@ -415,9 +469,13 @@ impl End {
     /// крупное поле островов, до мелкой неровности поверхности: поэтому
     /// середины захватывают пустоту, а пустоши — берег, а не только воздух.
     pub fn biome_at(&self, x: i32, z: i32) -> Biome {
-        if f64::from(x).hypot(f64::from(z)) < 1000.0 {
+        // minecraft.wiki/w/Dimension_definition: «based on each chunk».
+        // Отрицательные координаты тоже округляются к началу чанка.
+        let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
+        if i64::from(cx).pow(2) + i64::from(cz).pow(2) <= 64 * 64 {
             return Biome::TheEnd;
         }
+        let (x, z) = (cx * 16 + 8, cz * 16 + 8);
 
         let noise = |x: i32, z: i32| self.islands.octaves(f64::from(x) / 190.0 + 0.37, f64::from(z) / 190.0 + 0.71, 3);
         let ranks = self.biome_ranks.get_or_init(|| Ranks::new(self.seed as u64, noise));
@@ -440,13 +498,10 @@ impl End {
     pub(super) fn chunk(&self, chunk_x: i32, chunk_z: i32) -> Chunk {
         let mut chunk = Chunk::new();
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
-        let mut tops = [None::<i32>; (CHUNK_SIZE * CHUNK_SIZE) as usize];
-
         for local_z in 0..CHUNK_SIZE {
             for local_x in 0..CHUNK_SIZE {
-                if let Some((bottom, top)) = self.column(x0 + local_x, z0 + local_z) {
-                    tops[(local_z * CHUNK_SIZE + local_x) as usize] = Some(top);
-
+                let (x, z) = (x0 + local_x, z0 + local_z);
+                for (bottom, top) in self.terrain_column(x, z).into_iter().chain(self.small_island_columns(x, z)) {
                     for y in bottom..=top {
                         put(&mut chunk, local_x, y, local_z, self.states.end_stone);
                     }
@@ -454,8 +509,9 @@ impl End {
             }
         }
 
-        self.chorus(&mut chunk, chunk_x, chunk_z, &tops);
+        self.chorus(&mut chunk, chunk_x, chunk_z);
         self.cities(&mut chunk, chunk_x, chunk_z);
+        self.natural_gateway(&mut chunk, chunk_x, chunk_z);
         self.podium(&mut chunk, x0, z0);
         self.spikes(&mut chunk, x0, z0);
 
@@ -471,6 +527,40 @@ impl End {
         }
 
         chunk
+    }
+
+    /// minecraft.wiki/w/End_Gateway: «End Highlands in Java Edition».
+    /// Перепись дала одни естественные врата на два окна верховий; частота
+    /// 1/700 подходящих чанков и высота над землёй ещё [проверить].
+    #[cfg(not(seedmap_core))]
+    fn gateway_position(&self, cx: i32, cz: i32) -> Option<(i32, i32, i32)> {
+        if !matches!(self.biome_at(cx * 16 + 8, cz * 16 + 8), Biome::EndHighlands) {
+            return None;
+        }
+        let mut roll = Dice(scramble(self.dice(cx, cz).0 ^ 0x06A7_E263));
+        if roll.below(700) != 0 {
+            return None;
+        }
+        let (x, z) = (cx * 16 + 1 + roll.below(14), cz * 16 + 1 + roll.below(14));
+        Some((x, self.surface(x, z)? + 8, z))
+    }
+
+    #[cfg(not(seedmap_core))]
+    fn natural_gateway(&self, chunk: &mut Chunk, cx: i32, cz: i32) {
+        let Some((wx, y, wz)) = self.gateway_position(cx, cz) else { return };
+        // Вся рамка помещается в чанк, поэтому генерация соседей не нужна.
+        let (x, z) = (wx - cx * 16, wz - cz * 16);
+        for dy in -2i32..=2 {
+            for dz in -1i32..=1 {
+                for dx in -1i32..=1 {
+                    let bedrock = if dy.abs() == 2 { dx == 0 && dz == 0 }
+                        else if dy.abs() == 1 { dx == 0 || dz == 0 } else { false };
+                    put(chunk, x + dx, y + dy, z + dz, if bedrock { self.states.bedrock } else { AIR });
+                }
+            }
+        }
+        put(chunk, x, y, z, blocks::state_by_name("end_gateway").expect("врата в таблице"));
+        chunk.gateways.insert((x, y, z), (PLATFORM.0, PLATFORM.1 + 1, PLATFORM.2, true));
     }
 
     /// Столбы: обсидиановый диск от дна, бедрок и огонь сверху, клетка.
@@ -533,34 +623,61 @@ impl End {
     /// Хорус: корень в верховьях; ветви могут попадать в соседний биом.
     /// minecraft.wiki/w/End_highlands: «chorus trees».
     #[cfg(not(seedmap_core))]
-    fn chorus(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, tops: &[Option<i32>]) {
+    fn chorus(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
-        // Клетки, занятые деревьями этого чанка: соседние деревья не растут
-        // друг сквозь друга.
-        let mut taken = std::collections::HashSet::new();
-
-        // Дерево растёт в столбце, если выпал жребий; ветви не выходят за
-        // чанк — столбцы у краёв пропускаем.
-        for local_z in 3..CHUNK_SIZE - 3 {
-            for local_x in 3..CHUNK_SIZE - 3 {
-                let Some(top) = tops[(local_z * CHUNK_SIZE + local_x) as usize] else { continue };
-                let (x, z) = (x0 + local_x, z0 + local_z);
-
-                if f64::from(x).hypot(f64::from(z)) < 1000.0 {
-                    continue;
+        // Видимый корень отстоит не дальше радиуса дерева; его возможные
+        // соседи — ещё на два радиуса. Приоритет целого дерева исключает
+        // перезапись опоры чужим цветком независимо от порядка чанков.
+        let mut trees = Vec::new();
+        let mut owner = std::collections::HashMap::new();
+        // Город кладёт также воздух образцов. Дерево, пересекающее его
+        // рамку, нельзя оставлять над срезанной опорой. Проверяется целая
+        // форма во всём ореоле конкурирующих корней, а не только этот чанк.
+        // Отказ по всей рамке консервативен [проверить].
+        let mut regions = std::collections::HashSet::new();
+        for cx in [chunk_x - 3, chunk_x + 3] {
+            for cz in [chunk_z - 3, chunk_z + 3] {
+                regions.extend(end_city::regions_near(cx, cz));
+            }
+        }
+        let mut obstacles: Vec<_> = regions.into_iter().filter_map(|(rx, rz)| self.city_at(rx, rz))
+            .flat_map(|(cx, cz, y)| end_city::plan(self.seed, cx, cz, y).into_iter().map(|p| p.bounds)).collect();
+        for cx in chunk_x - 3..=chunk_x + 3 {
+            for cz in chunk_z - 3..=chunk_z + 3 {
+                if let Some((x, y, z)) = self.gateway_position(cx, cz) {
+                    obstacles.push([x - 1, y - 2, z - 1, x + 1, y + 2, z + 1]);
                 }
-
+            }
+        }
+        for z in z0 - 3 * CHORUS_REACH..z0 + CHUNK_SIZE + 3 * CHORUS_REACH {
+            for x in x0 - 3 * CHORUS_REACH..x0 + CHUNK_SIZE + 3 * CHORUS_REACH {
                 let mut roll = self.dice(x, z);
-
-                if roll.unit() >= CHORUS_PER_COLUMN {
+                let priority = roll.0;
+                if roll.unit() >= CHORUS_PER_COLUMN || !matches!(self.biome_at(x, z), Biome::EndHighlands) {
                     continue;
                 }
-
-                if !matches!(self.biome_at(x, z), Biome::EndHighlands) {
+                let Some(top) = self.surface(x, z) else { continue };
+                let cells = self.tree(x, top + 1, z, &mut roll);
+                if cells.iter().any(|&(x, y, z, _)| obstacles.iter().any(|b| {
+                    (b[0]..=b[3]).contains(&x) && (b[1]..=b[4]).contains(&y) && (b[2]..=b[5]).contains(&z)
+                })) {
                     continue;
                 }
-
-                self.tree(chunk, local_x, top + 1, local_z, &mut roll, &mut taken);
+                for &(cx, cy, cz, _) in &cells {
+                    let first = owner.entry((cx, cy, cz)).or_insert(priority);
+                    *first = (*first).min(priority);
+                }
+                trees.push((priority, cells));
+            }
+        }
+        for (priority, cells) in trees {
+            if cells.iter().any(|&(x, y, z, _)| owner[&(x, y, z)] != priority) {
+                continue;
+            }
+            for (x, y, z, state) in cells {
+                if (0..CHUNK_SIZE).contains(&(x - x0)) && (0..CHUNK_SIZE).contains(&(z - z0)) {
+                    put(chunk, x - x0, y, z - z0, state);
+                }
             }
         }
     }
@@ -642,26 +759,28 @@ impl End {
     /// unbranched plant or 0–3 on a branched plant», в сторону, где пусто
     /// вокруг и снизу); не вырос никуда — засыхает (age 5).
     #[cfg(not(seedmap_core))]
-    fn tree(&self, chunk: &mut Chunk, x: i32, y: i32, z: i32, roll: &mut Dice, taken: &mut std::collections::HashSet<(i32, i32, i32)>) {
+    fn tree(&self, x: i32, y: i32, z: i32, roll: &mut Dice) -> Vec<(i32, i32, i32, i32)> {
         let mut cells: Vec<(i32, i32, i32)> = Vec::new();
         // Живые цветки: место и сколько блоков стебля под ним и ветвился ли он.
         let mut flowers: Vec<((i32, i32, i32), i32, bool)> = vec![((x, y, z), 0, false)];
         let mut dead: Vec<(i32, i32, i32)> = Vec::new();
-        let free = |cells: &[(i32, i32, i32)], flowers: &[((i32, i32, i32), i32, bool)], dead: &[(i32, i32, i32)], c: (i32, i32, i32)| {
-            (3..CHUNK_SIZE - 3).contains(&c.0)
-                && (3..CHUNK_SIZE - 3).contains(&c.2)
-                && c.1 < y + 22
-                && !taken.contains(&c)
-                && !cells.contains(&c)
-                && !flowers.iter().any(|f| f.0 == c)
-                && !dead.contains(&c)
-        };
 
         for _ in 0..40 {
             if flowers.is_empty() {
                 break;
             }
 
+            let active: Vec<_> = flowers.iter().map(|&(at, _, _)| at).collect();
+            let free = |cells: &[(i32, i32, i32)], flowers: &[((i32, i32, i32), i32, bool)], dead: &[(i32, i32, i32)], c: (i32, i32, i32)| {
+                (c.0 - x).abs() <= CHORUS_REACH
+                    && (c.2 - z).abs() <= CHORUS_REACH
+                    && c.1 < y + 22
+                    && c.1 > self.surface(c.0, c.2).unwrap_or(-1)
+                    && !active.contains(&c)
+                    && !cells.contains(&c)
+                    && !flowers.iter().any(|f| f.0 == c)
+                    && !dead.contains(&c)
+            };
             let mut next = Vec::new();
 
             for (at, height, branched) in flowers {
@@ -714,6 +833,7 @@ impl End {
 
         let has = |cx: i32, cy: i32, cz: i32| cells.contains(&(cx, cy, cz)) || dead.contains(&(cx, cy, cz)) || flowers.iter().any(|f| f.0 == (cx, cy, cz));
 
+        let mut out = Vec::new();
         for &(cx, cy, cz) in &cells {
             let text = format!(
                 "chorus_plant[down={},east={},north={},south={},up={},west={}]",
@@ -726,15 +846,13 @@ impl End {
             );
             let state = blocks::state_from_text(&text).unwrap_or_else(|| panic!("хорус в таблице: {}", text));
 
-            put(chunk, cx, cy, cz, state);
+            out.push((cx, cy, cz, state));
         }
 
         for (fx, fy, fz) in dead.into_iter().chain(flowers.into_iter().map(|f| f.0)) {
-            put(chunk, fx, fy, fz, self.states.chorus_flower);
-            taken.insert((fx, fy, fz));
+            out.push((fx, fy, fz, self.states.chorus_flower));
         }
-
-        taken.extend(cells);
+        out
     }
 
     /// Кости для решений по столбцу.
@@ -748,7 +866,9 @@ impl End {
 /// Попытка корня на доступный столбец верховий. Замер 26.3 отдельно
 /// по биомам: около 680 стеблей на миллион блоков верховий; середины
 /// получают только ветви с границы, а не отдельный проход посадки.
-const CHORUS_PER_COLUMN: f64 = 0.021;
+const CHORUS_PER_COLUMN: f64 = 0.0042;
+/// Ограничение формы дерева относительно корня, а не границ чанка [проверить].
+const CHORUS_REACH: i32 = 8;
 
 /// Кости.
 struct Dice(u64);
@@ -896,6 +1016,103 @@ fn scramble(mut value: u64) -> u64 {
 mod tests {
     use super::*;
 
+    /// Регрессия: биом не меняется на четырёхблочной сетке внутри чанка.
+    #[test]
+    fn end_biomes_are_constant_in_positive_and_negative_chunks() {
+        let end = End::new(100_554_032_945_340);
+        for (cx, cz) in [(0, 0), (64, 0), (65, 0), (-64, 0), (-65, 0), (128, 128), (-128, 128)] {
+            let chunk = end.chunk(cx, cz);
+            let expected = end.biome_at(cx * 16 + 8, cz * 16 + 8);
+            for x in 0..16 {
+                for z in 0..16 {
+                    assert_eq!(end.biome_at(cx * 16 + x, cz * 16 + z), expected);
+                }
+            }
+            assert!(chunk.biomes.iter().all(|&b| b == expected.number() as BiomeId));
+        }
+        assert_eq!(end.biome_at(1024, 0), Biome::TheEnd);
+        assert!(!matches!(end.biome_at(1040, 0), Biome::TheEnd));
+    }
+
+    /// Площадь главного острова — допуск переписи, не совпадение координат.
+    #[test]
+    fn main_island_footprint_matches_both_census_samples() {
+        for (seed, target) in [(1_792_932_773_345_722_119, 27.791875), (100_554_032_945_340, 20.279375)] {
+            let end = End::new(seed);
+            let mut land = 0;
+            for z in (-192..208).step_by(4) {
+                for x in (-192..208).step_by(4) {
+                    land += usize::from(end.column(x, z).is_some());
+                }
+            }
+            let share = land as f64 / 100.0;
+            assert!((share - target).abs() <= 5.0, "{seed}: {share} / {target}");
+        }
+    }
+
+    /// Новые естественные врата имеют рамку и сохраняют выход после загрузки.
+    #[test]
+    fn natural_return_gateway_is_generated_and_persists() {
+        let end = End::new(1_792_932_773_345_722_119);
+        let mut found = None;
+        'search: for cx in 80..180 {
+            for cz in 80..180 {
+                let mut probe = Chunk::new();
+                end.natural_gateway(&mut probe, cx, cz);
+                if !probe.gateways.is_empty() {
+                    found = Some((cx, cz));
+                    break 'search;
+                }
+            }
+        }
+        let (cx, cz) = found.expect("врата в выборке верховий");
+        let chunk = end.chunk(cx, cz);
+        let (&(x, y, z), &exit) = chunk.gateways.iter().next().unwrap();
+        let at = |x, y, z| {
+            let (section, layer) = split(y);
+            chunk.section(section).map_or(AIR, |b| super::super::unpack(b[layer + (z * 16 + x) as usize]))
+        };
+        assert_eq!(blocks::block_at_state(at(x, y, z)), Some("end_gateway"));
+        let mut frame = 0;
+        for dy in -2..=2 {
+            for dz in -1..=1 {
+                for dx in -1..=1 {
+                    frame += usize::from(at(x + dx, y + dy, z + dz) == end.states.bedrock);
+                }
+            }
+        }
+        assert_eq!(frame, 12);
+        assert_eq!(exit, (100, 49, 0, true));
+        let back = Chunk::from_bytes(&chunk.to_bytes()).unwrap();
+        assert_eq!(back.gateways, chunk.gateways);
+    }
+
+    /// Отдельные высокие островки не зависят от наличия большого острова.
+    #[test]
+    fn small_island_features_reach_the_measured_high_band() {
+        let end = End::new(100_554_032_945_340);
+        let mut high = 0;
+        for cx in 112..=144 {
+            for cz in 112..=144 {
+                if !matches!(end.biome_at(cx * 16 + 8, cz * 16 + 8), Biome::SmallEndIslands) {
+                    continue;
+                }
+                let chunk = end.chunk(cx, cz);
+                for x in 0..16 {
+                    for z in 0..16 {
+                        let Some((_, top)) = end.column(cx * 16 + x, cz * 16 + z) else { continue };
+                        if top >= 65 {
+                            let (section, layer) = split(top);
+                            assert_eq!(chunk.section(section).map(|b| super::super::unpack(b[layer + (z * 16 + x) as usize])), Some(end.states.end_stone));
+                            high += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert!(high > 0, "пропали мелкие островки выше Y64");
+    }
+
     #[test]
     fn census_outer_density_shores_and_cliffs() {
         let fixture: serde_json::Value = serde_json::from_str(include_str!(
@@ -1001,14 +1218,16 @@ mod tests {
         let end = End::new(100554032945340);
         let plant = |state: i32| blocks::block_at_state(state) == Some("chorus_plant");
         let flower = |state: i32| blocks::block_at_state(state) == Some("chorus_flower");
-        let (mut plants, mut flowers, mut covered) = (0, 0, 0);
+        let (mut plants, mut flowers, mut covered, mut crossing) = (0, 0, 0, 0);
 
+        let chunks: std::collections::HashMap<_, _> = (69..111).flat_map(|cx| (59..81).map(move |cz| (cx, cz)))
+            .map(|(cx, cz)| ((cx, cz), end.chunk(cx, cz))).collect();
         for chunk_x in 70..110 {
             for chunk_z in 60..80 {
-                let chunk = end.chunk(chunk_x, chunk_z);
                 let at = |x: i32, y: i32, z: i32| {
                     let (section, layer) = split(y);
-                    chunk.section(section).map_or(AIR, |blocks| super::super::unpack(blocks[layer + (z * CHUNK_SIZE + x) as usize]))
+                    let chunk = &chunks[&(chunk_x + x.div_euclid(16), chunk_z + z.div_euclid(16))];
+                    chunk.section(section).map_or(AIR, |blocks| super::super::unpack(blocks[layer + (z.rem_euclid(16) * CHUNK_SIZE + x.rem_euclid(16)) as usize]))
                 };
 
                 for x in 0..16 {
@@ -1018,10 +1237,13 @@ mod tests {
 
                             if plant(state) {
                                 plants += 1;
+                                if (x == 0 && plant(at(-1, y, z))) || (z == 0 && plant(at(x, y, -1))) {
+                                    crossing += 1;
+                                }
                                 let below = at(x, y - 1, z);
                                 let sideways = [(1, 0), (-1, 0), (0, 1), (0, -1)]
                                     .iter()
-                                    .any(|(dx, dz)| (0..16).contains(&(x + dx)) && (0..16).contains(&(z + dz)) && (plant(at(x + dx, y, z + dz)) || flower(at(x + dx, y, z + dz))));
+                                    .any(|(dx, dz)| plant(at(x + dx, y, z + dz)) || flower(at(x + dx, y, z + dz)));
                                 assert!(plant(below) || blocks::block_at_state(below) == Some("end_stone") || sideways, "стебель висит в {} {} {}", x, y, z);
                             } else if flower(state) {
                                 flowers += 1;
@@ -1037,6 +1259,7 @@ mod tests {
             }
         }
 
+        assert!(crossing > 0, "пропали ветви через границы чанков");
         assert!(plants > 200, "стеблей {}", plants);
         assert!(flowers > 20, "цветков {}", flowers);
         assert!(covered * 50 < flowers, "накрытых цветков {} из {}", covered, flowers);
