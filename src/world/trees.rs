@@ -241,7 +241,9 @@ impl Tree {
         }
         // Вики, Dappled Forest: «Shelf mushrooms grow on all poplar trees».
         // Замер 26.3: около 0,5 гриба на дерево. [проверить] сторону и выбор бревна.
-        if self.shelf {
+        if self.shelf && self.shape == Shape::Poplar && self.observation.is_some() {
+            super::tree_shapes_26_3::poplar_shelf(&mut random,&mut blocks);
+        } else if self.shelf {
             let logs: Vec<(i32, i32, i32)> = blocks
                 .iter()
                 .filter(|b| matches!(b.3, Part::Log(Axis::Y)) && b.0 == 0 && b.2 == 0 && b.1 >= 2)
@@ -1479,7 +1481,16 @@ impl Terrain {
                 Biome::BirchForest => density = 0.040,
                 Biome::FlowerForest => { density = 0.035; mix = &[(0.1, FANCY_OAK), (0.15, BIRCH), (0.75, OAK)]; }
                 Biome::DarkForest => density = 0.035,
+                // После устранения лишних старых хвойных деревьев их
+                // кроны больше не завышают тайгу у общей границы.
+                Biome::Taiga => density = 0.032,
                 Biome::SnowyTaiga => density = 0.018,
+                // Старый общий порог 0,045 давал избыток и брёвен, и
+                // листвы в обоих типах старой тайги. Восемь разнесённых
+                // окон подтверждают частоту целых деревьев; кроны и
+                // соотношение обычных/больших пород не прореживаем.
+                Biome::OldGrowthPineTaiga => density = 0.018,
+                Biome::OldGrowthSpruceTaiga => density = 0.013,
                 // minecraft.wiki/w/Meadow: «oak or birch».
                 Biome::Meadow => mix = &[(0.8, OAK), (0.2, TALL_BIRCH)],
                 Biome::SparseJungle => { density = 0.0065; mix = &[(0.16, FANCY_OAK), (0.5, JUNGLE_BUSH), (0.34, JUNGLE)]; }
@@ -2278,6 +2289,82 @@ mod crown_tests;
 #[cfg(test)]
 mod generated_support_tests {
     use super::*;
+
+    /// Пустые группы и несколько грибов, оба возраста и опора на бревно
+    /// проверяются после рисования через границы четырёх чанков.
+    #[test]
+    fn preview_poplar_shelf_matches_measured_groups_and_log_support() {
+        use crate::world::{Chunk,TreeGround};
+        let states: Vec<_> = ["north","south","west","east"].into_iter()
+            .zip([(0,1),(0,-1),(1,0),(-1,0)])
+            .flat_map(|(face,offset)| (0..=1).map(move |age| (
+                crate::blocks::state_from_text(&format!("shelf_mushroom[age={age},facing={face}]")).unwrap(),offset,age)))
+            .collect();
+        let (mut total,mut empty,mut largest,mut large) = (0,0,0,0);
+        for seed in 0..256 {
+            let tree = Tree {shelf:true,..POPLAR.tree}.in_preview(seed);
+            let ground = TreeGround {seed,..TreeGround::new()};
+            let mut chunks = std::collections::HashMap::new();
+            for cx in 0..2 {for cz in 0..2 {
+                let mut chunk = Chunk::new();
+                for x in 0..16 {for z in 0..16 {
+                    chunk.put_generated(x,199,z,super::super::terrain::block_named("grass_block"),true);
+                }}
+                super::super::draw_tree(&mut chunk,&tree,15-cx*16,15-cz*16,199,15,15,&ground);
+                chunks.insert((cx,cz),chunk);
+            }}
+            let mut count = 0;
+            for (&(cx,cz),chunk) in &chunks {
+                for (sy,section) in chunk.sections.iter().enumerate() {
+                    let Some(section) = section else {continue;};
+                    for (index,&state) in section.iter().enumerate() {
+                        let Some(&(_, (dx,dz), age)) = states.iter().find(|s|s.0==i32::from(state)) else {continue;};
+                        let y = super::super::MIN_Y+sy as i32*16+(index>>8) as i32;
+                        assert!((200..=203).contains(&y),"гриб оказался в кроне: {y}");
+                        let x = cx*16+(index&15) as i32+dx;
+                        let z = cz*16+((index>>4)&15) as i32+dz;
+                        let neighbor = &chunks[&(x.div_euclid(16),z.div_euclid(16))];
+                        assert_eq!(crate::blocks::block_at_state(neighbor.block(x.rem_euclid(16),y,z.rem_euclid(16))),Some("poplar_log"));
+                        count += 1;
+                        large += usize::from(age==1);
+                    }
+                }
+            }
+            assert!(count<=4);
+            total += count;
+            empty += usize::from(count==0);
+            largest = largest.max(count);
+        }
+        let mean = total as f64/256.0;
+        assert!((0.45..0.85).contains(&mean) && empty>80 && largest>=3 && large>0,
+            "группы грибов: среднее {mean}, пустых {empty}, максимум {largest}, крупных {large}; эталон 0.6354167");
+    }
+
+    /// Крона и четыре основания измерены на отдельных площадках, затем
+    /// проверяются после настоящей постановки через границу четырёх чанков.
+    #[test]
+    fn preview_dark_oak_keeps_measured_crown_and_four_trunks() {
+        use crate::world::{Chunk, TreeGround};
+        let mut leaves = 0;
+        for seed in 0..64 {
+            let tree = DARK_OAK.tree.in_preview(seed);
+            let ground = TreeGround { seed, ..TreeGround::new() };
+            for cx in 0..2 { for cz in 0..2 {
+                let mut chunk = Chunk::new();
+                for x in 0..16 { for z in 0..16 {
+                    chunk.put_generated(x,199,z,super::super::terrain::block_named("grass_block"),true);
+                }}
+                super::super::draw_tree(&mut chunk,&tree,15-cx*16,15-cz*16,199,15,15,&ground);
+                let log = super::super::terrain::block_named("dark_oak_log");
+                assert_eq!(chunk.block(if cx == 0 {15} else {0},200,if cz == 0 {15} else {0}),log);
+                for section in chunk.sections.iter().flatten() { for &state in section.iter() {
+                    leaves += usize::from(crate::blocks::block_at_state(i32::from(state)) == Some("dark_oak_leaves"));
+                }}
+            }}
+        }
+        let mean = leaves as f64/64.0;
+        assert!((100.0..140.0).contains(&mean),"объём кроны: {mean}, оригинал 118.96875");
+    }
 
     /// Все формы, включая цветущую азалию и ветвистые кроны: проверяем
     /// настоящие блоки четырёх чанков после размещения, а не только маску.

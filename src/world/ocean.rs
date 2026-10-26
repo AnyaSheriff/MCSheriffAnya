@@ -857,9 +857,10 @@ fn reef_density(noise: &Noise, x: i32, z: i32) -> f64 {
 /// украшают общий риф одинаково.
 fn reefs(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
     let noise = Noise::new(area.terrain.seed() ^ SALT_REEF_ZONE);
-    // Частота попыток после нормировки на блоки тёплого океана 26.3;
-    // глобальные блоки/чанк зависят ещё и от доли этого биома.
-    let densest = if area.terrain.preview() { 0.070 } else { REEF_DENSEST };
+    // Частота попыток по разнесённым окнам тёплого океана 26.3:
+    // прежнее одиночное окно скрывало избыток всех пяти видов рифов.
+    // Меняем число целых рифов, сохраняя их геометрию и украшения.
+    let densest = if area.terrain.preview() { 0.050 } else { REEF_DENSEST };
     let reach = REEF_REACH + 1;
     let mut placed: Vec<(i32, i32, i32)> = Vec::new();
 

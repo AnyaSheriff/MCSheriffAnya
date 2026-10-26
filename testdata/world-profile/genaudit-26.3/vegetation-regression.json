@@ -6,17 +6,240 @@
   "samples": [
     {
       "biome": "forest",
-      "bounds": [-100, -74, -97, -71],
-      "before": {"short_grass": 36.24},
-      "vanilla_full_census": {"short_grass": 62.279014},
-      "bounds_per_million": {"short_grass": [45, 90]}
+      "bounds": [
+        -514,
+        -178,
+        -511,
+        -175
+      ],
+      "before": {
+        "short_grass": 36.24
+      },
+      "vanilla_full_census": {
+        "short_grass": 62.279014
+      },
+      "bounds_per_million": {
+        "short_grass": [
+          45,
+          90
+        ]
+      },
+      "v2_selection": {
+        "biome_blocks": 1044480,
+        "densities": {
+          "short_grass": 63.189338235294116
+        }
+      }
     },
     {
       "biome": "mangrove_swamp",
-      "bounds": [-55, -5, -52, -2],
-      "before": {"mangrove_roots": 616.919, "muddy_mangrove_roots": 217.324},
-      "vanilla_full_census": {"mangrove_roots": 1218.899247, "muddy_mangrove_roots": 586.456574},
-      "bounds_per_million": {"mangrove_roots": [900, 1600], "muddy_mangrove_roots": [400, 750]}
+      "bounds": [
+        -10,
+        -186,
+        -7,
+        -183
+      ],
+      "before": {
+        "mangrove_roots": 616.919,
+        "muddy_mangrove_roots": 217.324
+      },
+      "vanilla_full_census": {
+        "mangrove_roots": 1218.899247,
+        "muddy_mangrove_roots": 586.456574
+      },
+      "bounds_per_million": {
+        "mangrove_roots": [
+          900,
+          1600
+        ],
+        "muddy_mangrove_roots": [
+          400,
+          750
+        ]
+      },
+      "v2_selection": {
+        "biome_blocks": 1542720,
+        "densities": {
+          "mangrove_roots": 1077.9661895872225,
+          "muddy_mangrove_roots": 422.6301597179008
+        }
+      }
+    },
+    {
+      "biome": "dark_forest",
+      "bounds": [
+        -510,
+        410,
+        -507,
+        413
+      ],
+      "bounds_per_million": {
+        "dark_oak_leaves": [
+          2700,
+          4900
+        ]
+      },
+      "vanilla_full_census": {
+        "dark_oak_leaves": 3786.905224
+      },
+      "v2_selection": {
+        "biome_blocks": 1566208,
+        "densities": {
+          "dark_oak_leaves": 3856.448185681595
+        }
+      }
+    },
+    {
+      "biome": "old_growth_pine_taiga",
+      "bounds": [
+        -448,
+        444,
+        -440,
+        452
+      ],
+      "v2_before": {
+        "spruce_log": 2087.874337,
+        "spruce_leaves": 4960.305708,
+        "short_grass": 86.37778,
+        "tall_grass": 6.910222,
+        "fern": 245.559689,
+        "large_fern": 61.451621,
+        "brown_mushroom": 53.924414
+      },
+      "vanilla_full_census": {
+        "spruce_log": 1031.510025,
+        "spruce_leaves": 2884.333419,
+        "short_grass": 63.001723,
+        "tall_grass": 2.863715,
+        "fern": 191.29614,
+        "large_fern": 26.346175,
+        "brown_mushroom": 40.664748
+      },
+      "bounds_per_million": {
+        "spruce_log": [
+          825.20802,
+          1237.81203
+        ],
+        "spruce_leaves": [
+          2307.466735,
+          3461.200103
+        ],
+        "short_grass": [
+          50.401378,
+          75.602068
+        ],
+        "tall_grass": [
+          0,
+          7.863715
+        ],
+        "fern": [
+          153.036912,
+          229.555368
+        ],
+        "large_fern": [
+          21.07694,
+          31.61541
+        ],
+        "brown_mushroom": [
+          32.531798,
+          48.797698
+        ]
+      },
+      "selection_note": "9x9 window from the V2 census; full census tolerance retained for logs and leaves."
+    },
+    {
+      "biome": "old_growth_spruce_taiga",
+      "bounds": [
+        -296,
+        284,
+        -288,
+        292
+      ],
+      "v2_before": {
+        "spruce_log": 2062.921491,
+        "spruce_leaves": 12542.679306,
+        "short_grass": 78.99648,
+        "tall_grass": 11.928999,
+        "fern": 247.460449,
+        "large_fern": 79.791746,
+        "brown_mushroom": 27.436697
+      },
+      "vanilla_full_census": {
+        "spruce_log": 906.573943,
+        "spruce_leaves": 5010.627191,
+        "short_grass": 68.750466,
+        "tall_grass": 0.0,
+        "fern": 222.565068,
+        "large_fern": 32.62734,
+        "brown_mushroom": 25.635767
+      },
+      "bounds_per_million": {
+        "spruce_log": [
+          725.259154,
+          1087.888732
+        ],
+        "spruce_leaves": [
+          4008.501753,
+          6012.752629
+        ],
+        "short_grass": [
+          55.000373,
+          82.500559
+        ],
+        "tall_grass": [
+          0,
+          5.0
+        ],
+        "fern": [
+          178.052054,
+          267.078082
+        ],
+        "large_fern": [
+          26.101872,
+          39.152808
+        ],
+        "brown_mushroom": [
+          20.508614,
+          30.76292
+        ]
+      },
+      "selection_note": "9x9 window from the V2 census; full census tolerance retained for logs and leaves."
+    },
+    {
+      "biome": "taiga",
+      "bounds": [
+        -424,
+        476,
+        -416,
+        484
+      ],
+      "v2_before": {
+        "spruce_log": 361.889015,
+        "spruce_leaves": 3182.343914
+      },
+      "vanilla_full_census": {
+        "spruce_log": 408.898919,
+        "spruce_leaves": 3387.601013
+      },
+      "bounds_per_million": {
+        "spruce_log": [
+          327.119135,
+          490.678703
+        ],
+        "spruce_leaves": [
+          2710.08081,
+          4065.121216
+        ]
+      },
+      "selection_note": "9x9 V2 census window; full census tolerance retained."
     }
-  ]
+  ],
+  "kelp_bounds": [
+    -490,
+    386,
+    -487,
+    389
+  ],
+  "climate_revision": "9910307",
+  "window_selection": "Nearest valid 4x4 window to nine-point pure biome centre, preserving original bounds and biome volume assertion after 9910307."
 }

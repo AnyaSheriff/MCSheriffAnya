@@ -8,8 +8,11 @@ from crown_statistics import population
 
 def pack(raw):
     models=[]
-    for name in ['acacia','birch','fancy_oak','natural_poplar','oak','poplar','spruce','swamp_oak']:
-        for tree in raw[name]:
+    names=['acacia','birch','fancy_oak','natural_poplar','oak','poplar','spruce','swamp_oak']
+    # Порядок старых моделей сохраняется; отдельный новый замер можно
+    # упаковать без подстановки пустых образцов остальных пород.
+    for name in names+sorted(raw.keys()-set(names)):
+        for tree in raw.get(name,[]):
             rows=collections.defaultdict(int)
             for x,y,z,distance in tree['leaves']:
                 assert -8<=x<=8 and -8<=z<=8
