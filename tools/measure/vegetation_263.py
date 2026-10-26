@@ -45,6 +45,7 @@ def measure(world, plan):
     kelp = Counter()
     heights = defaultdict(Counter)
     surfaces = defaultdict(Counter)
+    projected_columns = Counter()
     files = []
     folder = region_dir(world, 'overworld')
     for path in sorted([*folder.glob('*.mcs'), *folder.glob('*.mca')]):
@@ -54,6 +55,10 @@ def measure(world, plan):
                 raise ValueError('Повтор чанка')
             seen.add((x, z))
             bio = np.asarray(biomes).reshape(96, 4, 4)
+            # Верхний слой — наземные биомы без вычета пещер. Площадь
+            # не меняется при исправлении подземного выбора биомов.
+            keys, ns = np.unique(bio[-1], return_counts=True)
+            projected_columns.update({str(k): int(n)*16 for k,n in zip(keys,ns)})
             keys, ns = np.unique(bio, return_counts=True)
             volume.update({str(k): int(n) for k, n in zip(keys, ns)})
             # Та же естественная поверхность, что у полной переписи.
@@ -95,7 +100,8 @@ def measure(world, plan):
                 json.dumps(sorted(seen)).encode()).hexdigest(), 'files': files,
             'biomes_3d': dict(volume), 'features_by_biome': dict(counts),
             'kelp_height_histogram': dict(sorted(kelp.items())),
-            'height_by_biome':dict(heights), 'surface_blocks_by_biome':dict(surfaces)}
+            'height_by_biome':dict(heights), 'surface_blocks_by_biome':dict(surfaces),
+            'projected_surface_columns_by_biome':dict(projected_columns)}
 
 
 def compare(ours, vanilla):

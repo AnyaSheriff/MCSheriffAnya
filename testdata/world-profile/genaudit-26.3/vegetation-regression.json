@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "seed": 1792932773345722119,
-  "unit": "blocks per million 3D biome blocks",
-  "note": "Small generated-chunk regressions; bounds include sampling variation. Full census tolerance remains 20%, with floor 5. Reselect windows if biome placement changes.",
+  "unit": "blocks per million 3D biome blocks; samples with surface_reference use surface columns times the official mean biome depth, preserving the original numerical bounds",
+  "note": "Small generated-chunk regressions; bounds include sampling variation. Full census tolerance remains 20%, with floor 5. Surface-reference samples are independent of underground biome volume; old-growth windows come from the preselected V2 population plan.",
   "samples": [
     {
       "biome": "forest",
@@ -91,12 +91,6 @@
     },
     {
       "biome": "old_growth_pine_taiga",
-      "bounds": [
-        -448,
-        444,
-        -440,
-        452
-      ],
       "v2_before": {
         "spruce_log": 2087.874337,
         "spruce_leaves": 4960.305708,
@@ -145,16 +139,73 @@
           48.797698
         ]
       },
-      "selection_note": "9x9 window from the V2 census; full census tolerance retained for logs and leaves."
+      "selection_note": "All eight spatially separated windows preselected in vegetation-v2-population-plan.json, without plant-count selection. Bounds unchanged; compare surface-area rates standardized to the official reference biome depth (biome_blocks / columns), so cave-biome volume cannot change a surface-vegetation regression.",
+      "v2_single_window": [
+        -448,
+        444,
+        -440,
+        452
+      ],
+      "windows": [
+        [
+          368,
+          488,
+          376,
+          496
+        ],
+        [
+          -424,
+          452,
+          -416,
+          460
+        ],
+        [
+          68,
+          -496,
+          76,
+          -488
+        ],
+        [
+          104,
+          -488,
+          112,
+          -480
+        ],
+        [
+          264,
+          236,
+          272,
+          244
+        ],
+        [
+          308,
+          196,
+          316,
+          204
+        ],
+        [
+          -284,
+          276,
+          -276,
+          284
+        ],
+        [
+          -300,
+          364,
+          -292,
+          372
+        ]
+      ],
+      "surface_reference": {
+        "columns": 5040,
+        "biome_blocks": 1745984,
+        "brown_mushrooms": 71,
+        "report": "biome-old_growth_pine_taiga.json",
+        "report_sha256": "1f6f1b1d5efc7ecbaa1c5a79c5fb9f5f5869d6f849bfb26b68ebe93422d0ebc2"
+      }
     },
     {
       "biome": "old_growth_spruce_taiga",
-      "bounds": [
-        -296,
-        284,
-        -288,
-        292
-      ],
       "v2_before": {
         "spruce_log": 2062.921491,
         "spruce_leaves": 12542.679306,
@@ -203,7 +254,70 @@
           30.76292
         ]
       },
-      "selection_note": "9x9 window from the V2 census; full census tolerance retained for logs and leaves."
+      "selection_note": "All eight spatially separated windows preselected in vegetation-v2-population-plan.json, without plant-count selection. Bounds unchanged; compare surface-area rates standardized to the official reference biome depth (biome_blocks / columns), so cave-biome volume cannot change a surface-vegetation regression.",
+      "v2_single_window": [
+        -296,
+        284,
+        -288,
+        292
+      ],
+      "windows": [
+        [
+          324,
+          -340,
+          332,
+          -332
+        ],
+        [
+          240,
+          -284,
+          248,
+          -276
+        ],
+        [
+          -412,
+          468,
+          -404,
+          476
+        ],
+        [
+          96,
+          -504,
+          104,
+          -496
+        ],
+        [
+          360,
+          488,
+          368,
+          496
+        ],
+        [
+          140,
+          -440,
+          148,
+          -432
+        ],
+        [
+          -300,
+          284,
+          -292,
+          292
+        ],
+        [
+          -108,
+          388,
+          -100,
+          396
+        ]
+      ],
+      "surface_reference": {
+        "columns": 2416,
+        "biome_blocks": 858176,
+        "brown_mushrooms": 22,
+        "report": "biome-old_growth_spruce_taiga.json",
+        "report_sha256": "0248ef4076cf1e1d341511dc925014e14e7c25013aad2a928f5594b32ae4dc8f"
+      }
     },
     {
       "biome": "taiga",
@@ -231,7 +345,14 @@
           4065.121216
         ]
       },
-      "selection_note": "9x9 V2 census window; full census tolerance retained."
+      "selection_note": "Original V2 window and all original bounds retained. Surface-area normalization at official reference depth removes dependence on cave-biome volume.",
+      "surface_reference": {
+        "columns": 9776,
+        "biome_blocks": 3753984,
+        "report": "biome-taiga.json",
+        "report_sha256": "39216b850195c2c8f53bb3021bf664a24faced453f77f8d632541a62a8443315"
+      },
+      "source_sample": "main"
     }
   ],
   "kelp_bounds": [

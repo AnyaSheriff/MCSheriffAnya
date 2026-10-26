@@ -199,7 +199,9 @@ fn retain_ground(area: &Area, biome: Biome, x: i32, z: i32, plant: GroundPlant) 
     let (salt,part) = match plant {
         GroundPlant::TallGrass => (SALT_TALL_GRASS,if pine {0.5} else {0.0}),
         GroundPlant::LargeFern => (SALT_LARGE_FERN,if pine {0.5} else {0.43}),
-        GroundPlant::Grass => (SALT_SHORT_GRASS,if pine {0.8} else {0.95}),
+        // Сверка по площади, без вычета пещер: в еловой тайге прежние
+        // 0,95 давали 29,52 травинки на 1000 столбцов вместо 24,42.
+        GroundPlant::Grass => (SALT_SHORT_GRASS,0.8),
         GroundPlant::Fern => (SALT_FERN,if pine {0.85} else {0.95}),
         GroundPlant::BrownMushroom => (SALT_BROWN_MUSHROOM,if pine {0.8} else {0.9}),
     };
@@ -2064,13 +2066,18 @@ mod tests {
         let generator = Generator::Normal(terrain);
         for sample in fixture["samples"].as_array().unwrap() {
             let biome = Biome::by_name(sample["biome"].as_str().unwrap(),true).unwrap();
-            let bounds: Vec<_> = sample["bounds"].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+            let windows = sample.get("windows").map_or_else(
+                || vec![sample["bounds"].clone()], |windows| windows.as_array().unwrap().clone());
             let limits = sample["bounds_per_million"].as_object().unwrap();
             let mut counts = std::collections::BTreeMap::<&str,usize>::new();
             let mut volume = 0;
+            let mut surface_columns = 0;
+            for window in windows {
+            let bounds: Vec<_> = window.as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
             for cx in bounds[0]..=bounds[2] { for cz in bounds[1]..=bounds[3] {
                 let chunk = Chunk::generated(&generator,cx,cz);
                 volume += chunk.biomes.iter().filter(|&&b| b == biome.number() as u16).count()*64;
+                surface_columns += regression_surface_columns(&chunk,biome);
                 for (sy,section) in chunk.sections.iter().enumerate() {
                     let Some(section) = section else { continue; };
                     for (index,&state) in section.iter().enumerate() {
@@ -2081,13 +2088,43 @@ mod tests {
                     }
                 }
             }}
+            }
             assert!(volume > 500_000,"биом сместился: {biome:?}, {volume}");
+            // Плотность наземного покрова не должна зависеть от объёма
+            // пещер под ним. Сохраняем прежние границы и глубину эталона,
+            // но площадь берём из заранее разнесённых окон переписи V2.
+            let denominator = sample.get("surface_reference").map_or(volume as f64, |reference| {
+                assert!(surface_columns > 4_000,"малая наземная выборка: {biome:?}, {surface_columns}");
+                surface_columns as f64 * reference["biome_blocks"].as_f64().unwrap()
+                    / reference["columns"].as_f64().unwrap()
+            });
             for (name,range) in limits {
-                let density = counts.get(name.as_str()).copied().unwrap_or(0) as f64*1e6/volume as f64;
+                let density = counts.get(name.as_str()).copied().unwrap_or(0) as f64*1e6/denominator;
                 let (low,high) = (range[0].as_f64().unwrap(),range[1].as_f64().unwrap());
                 assert!((low..=high).contains(&density),"{biome:?}/{name}: {density}, границы {low}…{high}");
             }
         }
+    }
+
+    /// Верхние клетки сохраняют наземный биом независимо от пещер.
+    fn regression_surface_columns(chunk: &Chunk, biome: Biome) -> usize {
+        (0..16).flat_map(|x| (0..16).map(move |z| (x,z)))
+            .filter(|&(x,z)| chunk.biome(x,MIN_Y+super::super::WORLD_HEIGHT-1,z) == biome.number() as u16).count()
+    }
+
+    #[test]
+    fn preview_surface_regression_ignores_cave_biome_volume() {
+        let biome = Biome::OldGrowthPineTaiga;
+        let mut chunk = Chunk::generated(&Generator::Flat,0,0);
+        chunk.biomes.fill(biome.number() as u16);
+        let columns = regression_surface_columns(&chunk,biome);
+        // Только подземная часть меняет биом: наземных столбцов столько же.
+        for y in 0..32 { for z in 0..4 { for x in 0..4 {
+            chunk.biomes[super::super::biome_cell(y,x,z)] = Biome::LushCaves.number() as u16;
+        }}}
+        assert_eq!(columns,256);
+        assert_eq!(regression_surface_columns(&chunk,biome),columns);
+        assert!(chunk.biomes.iter().filter(|&&b| b == biome.number() as u16).count()*64 < columns*384);
     }
 
     #[test]
