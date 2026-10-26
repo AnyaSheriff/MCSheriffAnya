@@ -477,6 +477,35 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
     }
 }
 
+/// minecraft.wiki/w/Structure_definition: «removing terrain inside the structure».
+/// Контрольные миры без структур сохраняют землю в пустотах площадки,
+/// естественные лагеря её вырезают. Все измеренные стыки дают одну высоту
+/// земли: PosY куска + ground_level_delta = PosY шатра + 1.
+#[cfg(not(seedmap_core))]
+pub(super) fn beards_near(terrain: &super::terrain::Terrain, cx: i32, cz: i32) -> Vec<super::structure_terrain::Beard> {
+    if !terrain.preview() { return Vec::new(); }
+    let reach = REACH_CHUNKS + (super::structure_terrain::FALLOFF + 15) / 16;
+    let mut out = Vec::new();
+    for rx in (cx - reach).div_euclid(SPACING)..=(cx + reach).div_euclid(SPACING) {
+        for rz in (cz - reach).div_euclid(SPACING)..=(cz + reach).div_euclid(SPACING) {
+            let (x, z) = attempt(terrain.seed(), rx, rz);
+            if (x - cx).abs() > reach || (z - cz).abs() > reach { continue; }
+            let Some(site) = site_in(terrain, rx, rz) else { continue };
+            for piece in &site.pieces {
+                let t = &library().templates[piece.template];
+                let a = site.world(piece.offset.0, piece.offset.2);
+                let b = site.world(piece.offset.0 + t.width - 1, piece.offset.2 + t.length - 1);
+                out.push(super::structure_terrain::Beard {
+                    bounds: [a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1)],
+                    floor: site.base_y + 1,
+                    ceiling: site.base_y + piece.offset.1 + t.height - 1,
+                });
+            }
+        }
+    }
+    out
+}
+
 /// Бамбук над блоком-стыком: стебель 5–12 блоков и листва на трёх верхних [проверить: высота].
 fn bamboo(chunk: &mut super::Chunk, seed: i64, at: (i32, i32, i32), world: (i32, i32)) {
     let height = 5 + (template::roll(seed, world.0, world.1, 0xBA3B) % 8) as i32;
@@ -644,5 +673,20 @@ mod tests {
                 assert!((0..SPACING - SEPARATION).contains(&(z - region_z * SPACING)));
             }
         }
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn camp_voids_remove_slope_material_in_generated_chunks() {
+    use super::terrain::{Terrain, Style};
+    let f: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r3.json")).unwrap();
+    for row in f["camp_terrain_controls"].as_array().unwrap() {
+        let generator = super::Generator::Normal(Terrain::new(row["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true));
+        let x = row["point"][0].as_i64().unwrap() as i32;
+        let y = row["point"][1].as_i64().unwrap() as i32;
+        let z = row["point"][2].as_i64().unwrap() as i32;
+        let chunk = super::Chunk::generated(&generator, x.div_euclid(16), z.div_euclid(16));
+        assert_eq!(blocks::block_at_state(chunk.block(x.rem_euclid(16), y, z.rem_euclid(16))), Some("air"), "{row}");
     }
 }

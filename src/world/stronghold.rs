@@ -810,7 +810,8 @@ fn land(terrain: &super::terrain::Terrain, x: i32, z: i32) -> bool {
     preferred(super::cave_biomes::biome_at(&column, 0).unwrap_or(column.biome))
 }
 
-// Вики, Biome tag (Java Edition), oldid=3502708: stronghold_biased_to.
+// minecraft.wiki/w/Java_Edition_26.2_Snapshot_1: «Added sulfur_caves»
+// к stronghold_biased_to. Старый список до 26.2 терял предпочтительные клетки.
 // Пляж, болото и deep_dark не предпочтительны, но крепость там допустима.
 fn preferred(biome: super::terrain::Biome) -> bool {
     use super::terrain::Biome::*;
@@ -821,7 +822,7 @@ fn preferred(biome: super::terrain::Biome) -> bool {
         | WindsweptForest | WindsweptSavanna | Jungle | SparseJungle | BambooJungle
         | Badlands | ErodedBadlands | WoodedBadlands | Meadow | CherryGrove | Grove
         | SnowySlopes | FrozenPeaks | JaggedPeaks | StonyPeaks | MushroomFields
-        | DripstoneCaves | LushCaves)
+        | DripstoneCaves | LushCaves | SulfurCaves)
 }
 
 /// Чанки стартов крепостей мира с этим рельефом.
@@ -1245,5 +1246,30 @@ fn all_distant_rings_and_measured_relocation_masks() {
         });
         assert_eq!(out[row["index"].as_u64().unwrap() as usize],
             (row["expected"][0].as_i64().unwrap() as i32,row["expected"][1].as_i64().unwrap() as i32));
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn sulfur_caves_are_preferred_by_preview_strongholds() {
+    use super::terrain::{Terrain, Style, Biome};
+    assert!(preferred(Biome::SulfurCaves));
+    assert!(!preferred(Biome::DappledForest));
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r3.json")).unwrap();
+    for row in fixture["stronghold_sulfur_controls"].as_array().unwrap() {
+        let t = Terrain::new(row["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true);
+        let start = starts_of(&t)[row["index"].as_u64().unwrap() as usize];
+        assert_eq!(start, (row["expected"][0].as_i64().unwrap() as i32, row["expected"][1].as_i64().unwrap() as i32));
+    }
+    for row in fixture["stronghold_measured_masks"].as_array().unwrap() {
+        let raw = (row["raw"][0].as_i64().unwrap() as i32, row["raw"][1].as_i64().unwrap() as i32);
+        let mask = row["preferred"].as_str().unwrap().as_bytes();
+        let points = biased_points(row["seed"].as_i64().unwrap(), &|x, z| {
+            let dx = x.div_euclid(4) - (raw.0 * 4 + 2 - 28);
+            let dz = z.div_euclid(4) - (raw.1 * 4 + 2 - 28);
+            (0..57).contains(&dx) && (0..57).contains(&dz) && mask[(dz * 57 + dx) as usize] == b'1'
+        });
+        assert_eq!(points[row["index"].as_u64().unwrap() as usize],
+            (row["expected"][0].as_i64().unwrap() as i32, row["expected"][1].as_i64().unwrap() as i32));
     }
 }

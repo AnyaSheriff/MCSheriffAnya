@@ -18,10 +18,10 @@
 // Mirror нет). Сундуки — с таблицами по месту (поле LootTable у экземпляров:
 // в носу — припасы, в корме — карта и сокровище).
 //
-// Высота (замер: TPY против дна вокруг, 70 кораблей): низ рамки — на
-// срединной высоте дна под рамкой (TPY − медиана дна в рамке+6: −1…+2 у
-// большинства) [проверить: у оригинала — своё правило «height_adjusted»].
-// У выброшенных на берег — то же по верху суши.
+// Высота океанских кораблей 26.3: среднее первой свободной клетки над дном
+// по неповёрнутому размеру от TP. Проверено 35 окнами без структур и
+// четырьмя дополнительными контролями. Старые профили и береговые корабли
+// сохраняют медиану и прежнее заглубление [проверить].
 //
 // Зарытое сокровище (вики, Buried Treasure; Structure set: spacing 1,
 // «probability of 1%», locate_offset 9, 0, 9): в чанке пляжа с долей 1 %
@@ -166,21 +166,26 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
             frame_corner(x, z, &library()[template], orient.turns)
         } else { (x, z) };
         let woods = WOODS[((dice >> 24) % WOODS.len() as u64) as usize];
-        let (sx, sz) = library()[template].footprint(orient);
-        let mut heights = Vec::new();
-
-        // Срединная высота дна (суши у берега) по рамке, через 2 блока.
-        for dx in (0..sx).step_by(2) {
-            for dz in (0..sz).step_by(2) {
-                let height = terrain.column_at(x + dx, z + dz).height;
-
-                heights.push(if beached { height.max(super::terrain::SEA) } else { height });
+        let y = if terrain.generation_profile() & 2 != 0 && !beached {
+            let t = &library()[template];
+            let (tx, tz) = (chunk_x * 16, chunk_z * 16);
+            let grid = (terrain.style() == super::terrain::Style::Vanilla)
+                .then(|| terrain.relief_grid(tx, tz, tx + t.width - 1, tz + t.length - 1));
+            ocean_height(tx, tz, t.width, t.length, &|wx, wz| terrain.column_in(wx, wz, grid.as_ref()).height)
+        } else {
+            let (sx, sz) = library()[template].footprint(orient);
+            let mut heights = Vec::new();
+            // Прежний профиль и береговые корабли сохраняют старое заглубление [проверить].
+            for dx in (0..sx).step_by(2) {
+                for dz in (0..sz).step_by(2) {
+                    let height = terrain.column_at(x + dx, z + dz).height;
+                    heights.push(if beached { height.max(super::terrain::SEA) } else { height });
+                }
             }
-        }
-
-        heights.sort_unstable();
-        let median = heights.get(heights.len() / 2).copied().unwrap_or(super::terrain::SEA);
-        let y = placement_height(median,library()[template].height,beached,dice);
+            heights.sort_unstable();
+            let median = heights.get(heights.len() / 2).copied().unwrap_or(super::terrain::SEA);
+            placement_height(median, library()[template].height, beached, dice)
+        };
 
         Ship { template, orient, origin: (x, y, z), woods, beached, chunk: (chunk_x, chunk_z) }
     });
@@ -188,6 +193,20 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
+}
+
+/// minecraft.wiki/w/Heightmap: «OCEAN_FLOOR_WG». Контроль без структур
+/// отделяет дно от кораллов и корабля. 39 естественных начал подтверждают
+/// среднее первой свободной клетки по НЕповёрнутому размеру от TP, а не
+/// медиану по повёрнутой рамке; диапазоны не включают дальний край size.
+fn ocean_height(x: i32, z: i32, width: i32, length: i32, ground: &dyn Fn(i32, i32) -> i32) -> i32 {
+    let mut sum = 0i64;
+    for dx in 0..width {
+        for dz in 0..length {
+            sum += i64::from(ground(x + dx, z + dz)) + 1;
+        }
+    }
+    (sum / (i64::from(width) * i64::from(length))) as i32
 }
 
 /// Дерево образца (дуб — основное, ель — второе) → дерево корабля.
@@ -577,5 +596,22 @@ mod r2_tests {
             }
         }
         assert!(wood > 100, "{wood}");
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn ocean_ship_height_uses_the_unrotated_first_free_mean() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r3.json")).unwrap();
+    for row in fixture["ship_ground_controls"].as_array().unwrap() {
+        let x = row["position"][0].as_i64().unwrap() as i32;
+        let z = row["position"][1].as_i64().unwrap() as i32;
+        let width = row["size"][0].as_i64().unwrap() as i32;
+        let length = row["size"][1].as_i64().unwrap() as i32;
+        let bytes: Vec<_> = row["ground_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+            .map(|s| i32::from(u8::from_str_radix(std::str::from_utf8(s).unwrap(), 16).unwrap()) - 64).collect();
+        assert_eq!(bytes.len(), (width * length) as usize);
+        let height = ocean_height(x, z, width, length, &|wx, wz| bytes[((wx - x) * length + wz - z) as usize]);
+        assert_eq!(i64::from(height), row["expected_y"].as_i64().unwrap(), "{row}");
     }
 }

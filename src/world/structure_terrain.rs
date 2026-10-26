@@ -123,6 +123,7 @@ pub fn street_height(ground: &Ground<'_>, x: i32, z: i32, beards: &[Beard]) -> i
 pub(super) fn near(terrain: &Terrain, cx: i32, cz: i32) -> Vec<Beard> {
     let mut beards = super::village::beards_near(terrain, cx, cz);
     beards.extend(super::pillager_outpost::beards_near(terrain, cx, cz));
+    beards.extend(super::abandoned_camp::beards_near(terrain, cx, cz));
     beards
 }
 

@@ -774,11 +774,11 @@ impl Chunk {
         ocean_ruin::build(generator, &mut chunk, chunk_x, chunk_z);
         // Руины тропы (trail_ruins.rs).
         trail_ruins::build(generator, &mut chunk, chunk_x, chunk_z);
-        // Заброшенные лагеря 26.3 (только профиль Preview26_3, abandoned_camp.rs).
-        abandoned_camp::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         structure_terrain::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Заброшенные лагеря кладутся после подгонки рельефа, чтобы она не стёрла пол и добычу.
+        abandoned_camp::build(generator, &mut chunk, chunk_x, chunk_z);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
         // Лесные особняки — после деревьев: воздух комнат вырезает деревья
         // в рамке, фундамент заливает стволы под полом (mansion.rs).

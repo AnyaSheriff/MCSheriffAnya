@@ -64,7 +64,7 @@ impl Kind {
         }
     }
 
-    /// Вид деревни по биому середины чанка (вики, Village: «Generation»).
+    /// Вид деревни по биому места сбора (вики, Village: «meeting point»).
     pub fn of_biome(biome: super::terrain::Biome) -> Option<Kind> {
         use super::terrain::Biome;
 
@@ -113,9 +113,54 @@ pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, regi
 /// Стоит ли деревня с чанком старта в этой области, и какая.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32, Kind)> {
     let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
+    if terrain.generation_profile() & 2 != 0 {
+        for kind in [Kind::Plains, Kind::Desert, Kind::Savanna] {
+            let (pick, turns) = first_piece(terrain.seed(), chunk_x, chunk_z, kind)?;
+            let (width, length) = first_sizes(kind)[pick % first_sizes(kind).len()];
+            let (dx, dz) = turn(width - 1, length - 1, turns);
+            let x = chunk_x * 16 + dx.min(0) + (dx.abs() + 1) / 2;
+            let z = chunk_z * 16 + dz.min(0) + (dz.abs() + 1) / 2;
+            if Kind::of_biome(terrain.column_in(x, z, None).biome) == Some(kind) {
+                return Some((chunk_x, chunk_z, kind));
+            }
+        }
+        // Для таёжного пула ещё нет полного замера выбора и размеров [проверить].
+        let kind = Kind::of_biome(super::template::jigsaw_surface_biome(terrain, chunk_x, chunk_z))?;
+        return (kind == Kind::Taiga).then_some((chunk_x, chunk_z, kind));
+    }
     let kind = Kind::of_biome(super::template::jigsaw_surface_biome(terrain, chunk_x, chunk_z))?;
 
     library(kind).map(|_| (chunk_x, chunk_z, kind))
+}
+
+/// minecraft.wiki/w/Village: «biome at the village center or meeting point».
+/// Размер первого куска и его поворот задают точку биома. Подмена её углом
+/// чанка теряла деревню на краю пустыни/равнин. Веса и порядок подтверждены
+/// 20 сохранёнными началами и восемью дополнительными естественными началами.
+fn first_piece(seed: i64, x: i32, z: i32, kind: Kind) -> Option<(usize, u8)> {
+    let weights: &[i32] = match kind {
+        Kind::Plains => &[50, 50, 50, 50, 1, 1, 1, 1],
+        Kind::Desert => &[98, 98, 49, 2, 2, 1],
+        Kind::Savanna => &[100, 50, 150, 150, 2, 1, 3, 3],
+        _ => return None,
+    };
+    let mut random = super::template::StructureRandom::for_chunk(seed, x, z);
+    let turns = random.below(4) as u8;
+    let mut pick = random.below(weights.iter().sum());
+    for (index, weight) in weights.iter().enumerate() {
+        if pick < *weight { return Some((index, turns)); }
+        pick -= weight;
+    }
+    unreachable!("вес выбранного места сбора")
+}
+
+fn first_sizes(kind: Kind) -> &'static [(i32, i32)] {
+    match kind {
+        Kind::Plains => &[(9, 9), (10, 10), (8, 15), (11, 11)],
+        Kind::Desert => &[(17, 9), (12, 12), (15, 15)],
+        Kind::Savanna => &[(14, 12), (11, 11), (9, 11), (9, 9)],
+        _ => &[],
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -874,5 +919,65 @@ mod taiga_measurement_tests {
         }
         assert_eq!(rotations.len(),4);
         assert!(library(Kind::Snowy).is_none(),"без измерения снежная деревня не подменяется другой");
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn preview_meeting_point_selection_and_main_square_spacing() {
+    use super::terrain::{Terrain, Style};
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r3.json")).unwrap();
+    for row in fixture["village_pieces"].as_array().unwrap() {
+        let kind = match row["kind"].as_str().unwrap() {
+            "plains" => Kind::Plains, "desert" => Kind::Desert, "savanna" => Kind::Savanna,
+            _ => unreachable!(),
+        };
+        let x = row["chunk"][0].as_i64().unwrap() as i32;
+        let z = row["chunk"][1].as_i64().unwrap() as i32;
+        let (pick, turns) = first_piece(row["seed"].as_i64().unwrap(), x, z, kind).unwrap();
+        assert_eq!((pick as u64, turns as u64), (row["pool_index"].as_u64().unwrap(), row["turns"].as_u64().unwrap()), "{row}");
+        let (width, length) = first_sizes(kind)[pick % first_sizes(kind).len()];
+        let (dx, dz) = turn(width - 1, length - 1, turns);
+        assert_eq!([x * 16 + dx.min(0), z * 16 + dz.min(0), x * 16 + dx.max(0), z * 16 + dz.max(0)],
+            [row["box"][0].as_i64().unwrap() as i32, row["box"][2].as_i64().unwrap() as i32,
+             row["box"][3].as_i64().unwrap() as i32, row["box"][5].as_i64().unwrap() as i32]);
+    }
+    for row in fixture["village_squares"].as_array().unwrap() {
+        let terrain = Terrain::new(row["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true);
+        let bounds: Vec<i32> = row["bounds"].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+        let expected: std::collections::BTreeSet<_> = row["chunks"].as_array().unwrap().iter().map(|v| (v[0].as_i64().unwrap() as i32, v[1].as_i64().unwrap() as i32)).collect();
+        let mut actual = std::collections::BTreeSet::new();
+        for rx in bounds[0].div_euclid(SPACING)..=bounds[2].div_euclid(SPACING) {
+            for rz in bounds[1].div_euclid(SPACING)..=bounds[3].div_euclid(SPACING) {
+                if let Some((x, z, _)) = start_in(&terrain, rx, rz)
+                    && x >= bounds[0] && x <= bounds[2] && z >= bounds[1] && z <= bounds[3] {
+                    actual.insert((x, z));
+                }
+            }
+        }
+        assert_eq!(actual, expected, "{}", row["label"]);
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn preview_border_villages_place_blocks_in_fresh_chunks() {
+    use super::terrain::{Terrain, Style};
+    for (seed, x, z) in [(1_792_932_773_345_722_119, -34, -82), (100_554_032_945_340, -54, -23)] {
+        let generator = super::Generator::Normal(Terrain::new(seed, Style::Vanilla).with_preview(true));
+        let mut planks = 0;
+        for cx in x - 1..=x + 1 {
+            for cz in z - 1..=z + 1 {
+                let chunk = super::Chunk::generated(&generator, cx, cz);
+                for y in 50..130 {
+                    for a in 0..16 {
+                        for b in 0..16 {
+                            if blocks::block_at_state(chunk.block(a, y, b)).is_some_and(|name| name.ends_with("_planks")) { planks += 1; }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(planks > 20, "деревня ({x},{z}): {planks}");
     }
 }
