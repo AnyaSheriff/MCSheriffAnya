@@ -190,7 +190,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         else { template::chance(seed, region_x, 0, region_z, SALT ^ 0xF4E9) < 0.2 };
     let found = (lucky
         && !library().layouts.is_empty()
-        && fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)
+        && fits(template::jigsaw_surface_biome(terrain, chunk_x, chunk_z))
         && !near_village(terrain, chunk_x, chunk_z))
     .then_some((chunk_x, chunk_z));
 
@@ -595,7 +595,7 @@ mod tests {
 
         for &(chunk_x, chunk_z) in &starts {
             assert!(!near_village(&terrain, chunk_x, chunk_z));
-            assert!(fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome));
+            assert!(fits(template::jigsaw_surface_biome(&terrain, chunk_x, chunk_z)));
 
             let (x, y, z) = top_of(&terrain, chunk_x, chunk_z).expect("башня есть");
 

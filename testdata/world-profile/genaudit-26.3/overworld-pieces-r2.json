@@ -1,0 +1,10014 @@
+{
+  "source": "Persisted official 26.3 naturally generated starts: existing census/targets, 64 beach locates and three natural large-ruin overlap probes in fresh R2 worlds; no game archives or code.",
+  "ships": [
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -31,
+        49
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 2,
+      "box": [
+        -496,
+        48,
+        798,
+        -488,
+        56,
+        814
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -9,
+        82
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 2,
+      "box": [
+        -144,
+        47,
+        1319,
+        -136,
+        55,
+        1342
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -63,
+        65
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 2,
+      "box": [
+        -1008,
+        40,
+        1054,
+        -1000,
+        48,
+        1070
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -62,
+        83
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_full_degraded",
+      "turns": 0,
+      "box": [
+        -992,
+        45,
+        1328,
+        -984,
+        53,
+        1355
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -44,
+        85
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_full_degraded",
+      "turns": 1,
+      "box": [
+        -712,
+        39,
+        1371,
+        -685,
+        47,
+        1379
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -82,
+        -42
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_full",
+      "turns": 1,
+      "box": [
+        -1320,
+        47,
+        -661,
+        -1293,
+        55,
+        -653
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -89,
+        -81
+      ],
+      "beached": false,
+      "template": "shipwreck/with_mast",
+      "turns": 2,
+      "box": [
+        -1424,
+        47,
+        -1293,
+        -1416,
+        67,
+        -1266
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -92,
+        -68
+      ],
+      "beached": false,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 1,
+      "box": [
+        -1480,
+        47,
+        -1077,
+        -1453,
+        67,
+        -1069
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -68,
+        41
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 1,
+      "box": [
+        -1084,
+        52,
+        667,
+        -1069,
+        60,
+        675
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -86,
+        53
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf_degraded",
+      "turns": 0,
+      "box": [
+        -1376,
+        46,
+        848,
+        -1368,
+        54,
+        864
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -82,
+        81
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_backhalf",
+      "turns": 2,
+      "box": [
+        -1312,
+        49,
+        1311,
+        -1304,
+        57,
+        1326
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -118,
+        -5
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 1,
+      "box": [
+        -1884,
+        47,
+        -69,
+        -1869,
+        55,
+        -61
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -103,
+        33
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_backhalf_degraded",
+      "turns": 1,
+      "box": [
+        -1644,
+        51,
+        539,
+        -1629,
+        59,
+        547
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        2,
+        28
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 3,
+      "box": [
+        21,
+        58,
+        459,
+        48,
+        66,
+        467
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        9,
+        84
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_full",
+      "turns": 0,
+      "box": [
+        144,
+        56,
+        1344,
+        152,
+        64,
+        1371
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        40,
+        -17
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full_degraded",
+      "turns": 0,
+      "box": [
+        640,
+        58,
+        -272,
+        648,
+        66,
+        -245
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        60,
+        -14
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_fronthalf_degraded",
+      "turns": 1,
+      "box": [
+        956,
+        48,
+        -213,
+        979,
+        56,
+        -205
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        40,
+        -43
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_fronthalf_degraded",
+      "turns": 3,
+      "box": [
+        629,
+        54,
+        -677,
+        652,
+        62,
+        -669
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -6,
+        -33
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_full_degraded",
+      "turns": 3,
+      "box": [
+        -107,
+        46,
+        -517,
+        -80,
+        54,
+        -509
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -18,
+        30
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_full_degraded",
+      "turns": 3,
+      "box": [
+        -299,
+        51,
+        491,
+        -272,
+        59,
+        499
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -29,
+        61
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf_degraded",
+      "turns": 1,
+      "box": [
+        -461,
+        55,
+        987,
+        -445,
+        63,
+        995
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -5,
+        63
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_full_degraded",
+      "turns": 1,
+      "box": [
+        -88,
+        38,
+        1019,
+        -61,
+        46,
+        1027
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -9,
+        81
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 2,
+      "box": [
+        -144,
+        38,
+        1311,
+        -136,
+        46,
+        1326
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -42,
+        -12
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_fronthalf",
+      "turns": 3,
+      "box": [
+        -683,
+        48,
+        -181,
+        -662,
+        56,
+        -173
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -54,
+        80
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_fronthalf",
+      "turns": 2,
+      "box": [
+        -864,
+        54,
+        1289,
+        -856,
+        62,
+        1310
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -66,
+        -46
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_full",
+      "turns": 0,
+      "box": [
+        -1056,
+        50,
+        -736,
+        -1048,
+        58,
+        -709
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        28,
+        -7
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 1,
+      "box": [
+        440,
+        46,
+        -101,
+        467,
+        54,
+        -93
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        7,
+        -33
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_fronthalf",
+      "turns": 1,
+      "box": [
+        110,
+        48,
+        -517,
+        131,
+        56,
+        -509
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        31,
+        -91
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_fronthalf",
+      "turns": 0,
+      "box": [
+        496,
+        51,
+        -1456,
+        504,
+        59,
+        -1435
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        10,
+        -70
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 3,
+      "box": [
+        149,
+        49,
+        -1109,
+        172,
+        57,
+        -1101
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        0,
+        31
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf_degraded",
+      "turns": 3,
+      "box": [
+        -11,
+        52,
+        507,
+        5,
+        60,
+        515
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        0,
+        64
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 3,
+      "box": [
+        -11,
+        38,
+        1035,
+        4,
+        46,
+        1043
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        26,
+        67
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_backhalf",
+      "turns": 3,
+      "box": [
+        405,
+        47,
+        1083,
+        420,
+        55,
+        1091
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        4,
+        87
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 3,
+      "box": [
+        53,
+        37,
+        1403,
+        69,
+        45,
+        1411
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        51,
+        -78
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 2,
+      "box": [
+        816,
+        53,
+        -1234,
+        824,
+        61,
+        -1218
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        36,
+        -65
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 2,
+      "box": [
+        576,
+        47,
+        -1033,
+        584,
+        55,
+        -1010
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        34,
+        77
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_backhalf_degraded",
+      "turns": 1,
+      "box": [
+        547,
+        52,
+        1243,
+        563,
+        60,
+        1251
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -396,
+        180
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_fronthalf_degraded",
+      "turns": 1,
+      "box": [
+        -6338,
+        51,
+        2891,
+        -6317,
+        59,
+        2899
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        178,
+        -63
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_backhalf",
+      "turns": 0,
+      "box": [
+        2848,
+        47,
+        -1008,
+        2856,
+        55,
+        -993
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        175,
+        -77
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_fronthalf",
+      "turns": 1,
+      "box": [
+        2798,
+        47,
+        -1221,
+        2819,
+        55,
+        -1213
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        178,
+        -204
+      ],
+      "beached": false,
+      "template": "shipwreck/rightsideup_backhalf_degraded",
+      "turns": 1,
+      "box": [
+        2852,
+        56,
+        -3253,
+        2867,
+        64,
+        -3245
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        161,
+        -197
+      ],
+      "beached": false,
+      "template": "shipwreck/sideways_full",
+      "turns": 3,
+      "box": [
+        2565,
+        48,
+        -3141,
+        2592,
+        56,
+        -3133
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        204,
+        -177
+      ],
+      "beached": false,
+      "template": "shipwreck/upsidedown_full",
+      "turns": 2,
+      "box": [
+        3264,
+        28,
+        -2829,
+        3272,
+        36,
+        -2802
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -2053,
+        -1019
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 3,
+      "box": [
+        -32859,
+        58,
+        -16293,
+        -32843,
+        66,
+        -16285
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1383,
+        -902
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast",
+      "turns": 0,
+      "box": [
+        -22128,
+        51,
+        -14432,
+        -22120,
+        71,
+        -14405
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -994,
+        -1086
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 2,
+      "box": [
+        -15904,
+        57,
+        -17369,
+        -15896,
+        65,
+        -17346
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -544,
+        -1078
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 0,
+      "box": [
+        -8704,
+        58,
+        -17248,
+        -8696,
+        66,
+        -17225
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -35,
+        -1014
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf",
+      "turns": 0,
+      "box": [
+        -560,
+        58,
+        -16224,
+        -552,
+        66,
+        -16201
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        494,
+        -957
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 1,
+      "box": [
+        7900,
+        57,
+        -15301,
+        7923,
+        65,
+        -15293
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1062,
+        -1094
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 1,
+      "box": [
+        16984,
+        52,
+        -17493,
+        17011,
+        72,
+        -17485
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1588,
+        -1076
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 3,
+      "box": [
+        25397,
+        61,
+        -17205,
+        25413,
+        69,
+        -17197
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -2098,
+        -504
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 0,
+      "box": [
+        -33568,
+        57,
+        -8064,
+        -33560,
+        65,
+        -8037
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1602,
+        -486
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full_degraded",
+      "turns": 0,
+      "box": [
+        -25632,
+        57,
+        -7776,
+        -25624,
+        65,
+        -7749
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -920,
+        -500
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast",
+      "turns": 3,
+      "box": [
+        -14731,
+        53,
+        -7989,
+        -14704,
+        73,
+        -7981
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -488,
+        -463
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 1,
+      "box": [
+        -7812,
+        58,
+        -7397,
+        -7789,
+        66,
+        -7389
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        43,
+        -565
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 1,
+      "box": [
+        684,
+        59,
+        -9029,
+        707,
+        67,
+        -9021
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        538,
+        -522
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 3,
+      "box": [
+        8597,
+        51,
+        -8341,
+        8624,
+        71,
+        -8333
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1035,
+        -455
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 0,
+      "box": [
+        16560,
+        59,
+        -7280,
+        16568,
+        67,
+        -7265
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1501,
+        -442
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 0,
+      "box": [
+        24016,
+        58,
+        -7072,
+        24024,
+        66,
+        -7045
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -2074,
+        101
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 3,
+      "box": [
+        -33195,
+        63,
+        1627,
+        -33179,
+        71,
+        1635
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1522,
+        56
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 0,
+      "box": [
+        -24352,
+        53,
+        896,
+        -24344,
+        73,
+        923
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1038,
+        14
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 3,
+      "box": [
+        -16619,
+        59,
+        235,
+        -16604,
+        67,
+        243
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -600,
+        -30
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 1,
+      "box": [
+        -9608,
+        30,
+        -469,
+        -9581,
+        50,
+        -461
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        2,
+        28
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 3,
+      "box": [
+        21,
+        58,
+        459,
+        48,
+        66,
+        467
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        559,
+        -16
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf",
+      "turns": 1,
+      "box": [
+        8940,
+        58,
+        -245,
+        8963,
+        66,
+        -237
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1083,
+        -131
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full_degraded",
+      "turns": 2,
+      "box": [
+        17328,
+        62,
+        -2093,
+        17336,
+        70,
+        -2066
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1385,
+        62
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 3,
+      "box": [
+        22149,
+        59,
+        1003,
+        22164,
+        67,
+        1011
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1992,
+        533
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 1,
+      "box": [
+        -31869,
+        57,
+        8539,
+        -31853,
+        65,
+        8547
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1576,
+        514
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 0,
+      "box": [
+        -25216,
+        59,
+        8224,
+        -25208,
+        67,
+        8240
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -1003,
+        440
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 3,
+      "box": [
+        -16059,
+        58,
+        7051,
+        -16036,
+        66,
+        7059
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -623,
+        444
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 2,
+      "box": [
+        -9968,
+        57,
+        7111,
+        -9960,
+        65,
+        7134
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -63,
+        516
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 2,
+      "box": [
+        -1008,
+        57,
+        8259,
+        -1000,
+        65,
+        8286
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        494,
+        560
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 3,
+      "box": [
+        7893,
+        51,
+        8971,
+        7920,
+        71,
+        8979
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1065,
+        611
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 3,
+      "box": [
+        17029,
+        59,
+        9787,
+        17052,
+        67,
+        9795
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        1519,
+        554
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_backhalf",
+      "turns": 2,
+      "box": [
+        24304,
+        62,
+        8878,
+        24312,
+        70,
+        8894
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -2033,
+        -983
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_full",
+      "turns": 2,
+      "box": [
+        -32528,
+        59,
+        -15725,
+        -32520,
+        67,
+        -15698
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -1448,
+        -1018
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 2,
+      "box": [
+        -23168,
+        51,
+        -16285,
+        -23160,
+        71,
+        -16258
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -1046,
+        -1001
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 2,
+      "box": [
+        -16736,
+        58,
+        -16009,
+        -16728,
+        66,
+        -15986
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -502,
+        -1089
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 1,
+      "box": [
+        -8028,
+        59,
+        -17413,
+        -8013,
+        67,
+        -17405
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -105,
+        -981
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 0,
+      "box": [
+        -1680,
+        57,
+        -15696,
+        -1672,
+        65,
+        -15681
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        588,
+        -974
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 0,
+      "box": [
+        9408,
+        58,
+        -15584,
+        9416,
+        66,
+        -15561
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        974,
+        -1029
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 2,
+      "box": [
+        15584,
+        59,
+        -16457,
+        15592,
+        67,
+        -16434
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        1674,
+        -950
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 3,
+      "box": [
+        26773,
+        59,
+        -15189,
+        26800,
+        67,
+        -15181
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -2003,
+        -417
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 1,
+      "box": [
+        -32052,
+        57,
+        -6661,
+        -32029,
+        65,
+        -6653
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -1440,
+        -593
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 2,
+      "box": [
+        -23040,
+        58,
+        -9473,
+        -23032,
+        66,
+        -9458
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -967,
+        -544
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast",
+      "turns": 1,
+      "box": [
+        -15480,
+        51,
+        -8693,
+        -15453,
+        71,
+        -8685
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -541,
+        -569
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf",
+      "turns": 3,
+      "box": [
+        -8667,
+        57,
+        -9093,
+        -8644,
+        65,
+        -9085
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -7,
+        -565
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 3,
+      "box": [
+        -123,
+        59,
+        -9029,
+        -100,
+        67,
+        -9021
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        536,
+        -472
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_full",
+      "turns": 2,
+      "box": [
+        8576,
+        58,
+        -7549,
+        8584,
+        66,
+        -7522
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        1099,
+        -561
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_full",
+      "turns": 0,
+      "box": [
+        17584,
+        57,
+        -8976,
+        17592,
+        65,
+        -8949
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        1524,
+        -475
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_full",
+      "turns": 3,
+      "box": [
+        24373,
+        59,
+        -7589,
+        24400,
+        67,
+        -7581
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -2008,
+        -68
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 3,
+      "box": [
+        -32139,
+        58,
+        -1077,
+        -32124,
+        66,
+        -1069
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -1456,
+        53
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 1,
+      "box": [
+        -23292,
+        58,
+        859,
+        -23277,
+        66,
+        867
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -998,
+        -22
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 2,
+      "box": [
+        -15968,
+        58,
+        -345,
+        -15960,
+        66,
+        -322
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -589,
+        39
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf_degraded",
+      "turns": 1,
+      "box": [
+        -9428,
+        59,
+        635,
+        -9405,
+        67,
+        643
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        150,
+        -32
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf",
+      "turns": 1,
+      "box": [
+        2396,
+        58,
+        -501,
+        2419,
+        66,
+        -493
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        558,
+        -22
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 1,
+      "box": [
+        8932,
+        57,
+        -341,
+        8947,
+        65,
+        -333
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        1024,
+        29
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf",
+      "turns": 1,
+      "box": [
+        16388,
+        59,
+        475,
+        16403,
+        67,
+        483
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        1525,
+        11
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast_degraded",
+      "turns": 1,
+      "box": [
+        24392,
+        53,
+        187,
+        24419,
+        73,
+        195
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -2120,
+        441
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast",
+      "turns": 2,
+      "box": [
+        -33920,
+        51,
+        7059,
+        -33912,
+        71,
+        7086
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -1486,
+        529
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf",
+      "turns": 3,
+      "box": [
+        -23787,
+        58,
+        8475,
+        -23764,
+        66,
+        8483
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -1091,
+        547
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_fronthalf",
+      "turns": 1,
+      "box": [
+        -17460,
+        62,
+        8763,
+        -17437,
+        70,
+        8771
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -490,
+        516
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_fronthalf",
+      "turns": 3,
+      "box": [
+        -7851,
+        60,
+        8267,
+        -7828,
+        68,
+        8275
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        42,
+        636
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast",
+      "turns": 1,
+      "box": [
+        664,
+        51,
+        10187,
+        691,
+        71,
+        10195
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        523,
+        497
+      ],
+      "beached": true,
+      "template": "shipwreck/rightsideup_backhalf_degraded",
+      "turns": 0,
+      "box": [
+        8368,
+        59,
+        7952,
+        8376,
+        67,
+        7967
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        850,
+        391
+      ],
+      "beached": true,
+      "template": "shipwreck/with_mast",
+      "turns": 3,
+      "box": [
+        13589,
+        52,
+        6267,
+        13616,
+        72,
+        6275
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        1455,
+        558
+      ],
+      "beached": true,
+      "template": "shipwreck/sideways_full",
+      "turns": 3,
+      "box": [
+        23269,
+        58,
+        8939,
+        23296,
+        66,
+        8947
+      ]
+    }
+  ],
+  "ruins": [
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -29,
+        50
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_4",
+      "turns": 0,
+      "box": [
+        -464,
+        60,
+        800,
+        -459,
+        66,
+        806
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -19,
+        83
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_4",
+      "turns": 0,
+      "box": [
+        -304,
+        41,
+        1328,
+        -299,
+        47,
+        1334
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -32,
+        85
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_7",
+      "turns": 0,
+      "box": [
+        -512,
+        39,
+        1360,
+        -497,
+        54,
+        1375
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -56,
+        -29
+      ],
+      "warm": false,
+      "big": true,
+      "template": "cold_big_3",
+      "turns": 0,
+      "box": [
+        -896,
+        49,
+        -464,
+        -881,
+        64,
+        -449
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -59,
+        48
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_5",
+      "turns": 3,
+      "box": [
+        -944,
+        39,
+        763,
+        -938,
+        45,
+        768
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -60,
+        62
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_3",
+      "turns": 1,
+      "box": [
+        -966,
+        39,
+        992,
+        -960,
+        45,
+        997
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -36,
+        63
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 2,
+      "box": [
+        -581,
+        43,
+        1002,
+        -576,
+        49,
+        1008
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -58,
+        80
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 3,
+      "box": [
+        -928,
+        39,
+        1275,
+        -922,
+        45,
+        1280
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -78,
+        48
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_3",
+      "turns": 3,
+      "box": [
+        -1248,
+        47,
+        763,
+        -1242,
+        53,
+        768
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -89,
+        60
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_6",
+      "turns": 0,
+      "box": [
+        -1424,
+        31,
+        960,
+        -1419,
+        37,
+        966
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -74,
+        64
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_6",
+      "turns": 2,
+      "box": [
+        -1199,
+        37,
+        1009,
+        -1184,
+        52,
+        1024
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -91,
+        81
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 0,
+      "box": [
+        -1456,
+        48,
+        1296,
+        -1451,
+        54,
+        1302
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -69,
+        83
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_7",
+      "turns": 0,
+      "box": [
+        -1104,
+        47,
+        1328,
+        -1089,
+        62,
+        1343
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -109,
+        -29
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_5",
+      "turns": 1,
+      "box": [
+        -1750,
+        47,
+        -464,
+        -1744,
+        53,
+        -459
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -98,
+        -40
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_3",
+      "turns": 2,
+      "box": [
+        -1573,
+        58,
+        -646,
+        -1568,
+        64,
+        -640
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -110,
+        23
+      ],
+      "warm": false,
+      "big": true,
+      "template": "cold_big_1",
+      "turns": 0,
+      "box": [
+        -1760,
+        53,
+        368,
+        -1745,
+        68,
+        383
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        -109,
+        87
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_8",
+      "turns": 2,
+      "box": [
+        -1749,
+        47,
+        1386,
+        -1744,
+        53,
+        1392
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        10,
+        80
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 2,
+      "box": [
+        155,
+        46,
+        1274,
+        160,
+        52,
+        1280
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        46,
+        -31
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_7",
+      "turns": 2,
+      "box": [
+        721,
+        48,
+        -511,
+        736,
+        63,
+        -496
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        46,
+        -20
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_4",
+      "turns": 1,
+      "box": [
+        721,
+        37,
+        -320,
+        736,
+        52,
+        -305
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        45,
+        -52
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_7",
+      "turns": 2,
+      "box": [
+        715,
+        53,
+        -838,
+        720,
+        59,
+        -832
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "owner",
+      "chunk": [
+        41,
+        49
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 1,
+      "box": [
+        650,
+        34,
+        784,
+        656,
+        40,
+        789
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -12,
+        -58
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_8",
+      "turns": 2,
+      "box": [
+        -197,
+        47,
+        -934,
+        -192,
+        53,
+        -928
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -12,
+        -33
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_8",
+      "turns": 3,
+      "box": [
+        -192,
+        46,
+        -533,
+        -186,
+        52,
+        -528
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -15,
+        47
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_5",
+      "turns": 0,
+      "box": [
+        -240,
+        49,
+        752,
+        -235,
+        55,
+        758
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -17,
+        60
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 1,
+      "box": [
+        -278,
+        47,
+        960,
+        -272,
+        53,
+        965
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -20,
+        89
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 2,
+      "box": [
+        -325,
+        25,
+        1418,
+        -320,
+        31,
+        1424
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -54,
+        -19
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_7",
+      "turns": 1,
+      "box": [
+        -870,
+        50,
+        -304,
+        -864,
+        56,
+        -299
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -35,
+        -34
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 0,
+      "box": [
+        -560,
+        48,
+        -544,
+        -555,
+        54,
+        -538
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -59,
+        65
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 2,
+      "box": [
+        -949,
+        48,
+        1034,
+        -944,
+        54,
+        1040
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        -33,
+        71
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 2,
+      "box": [
+        -533,
+        51,
+        1130,
+        -528,
+        57,
+        1136
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        9,
+        -9
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_8",
+      "turns": 3,
+      "box": [
+        144,
+        47,
+        -149,
+        150,
+        53,
+        -144
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        26,
+        -9
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 2,
+      "box": [
+        411,
+        50,
+        -150,
+        416,
+        56,
+        -144
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        4,
+        -59
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 2,
+      "box": [
+        59,
+        42,
+        -950,
+        64,
+        48,
+        -944
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        7,
+        -38
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 0,
+      "box": [
+        112,
+        43,
+        -608,
+        117,
+        49,
+        -602
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        30,
+        -92
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_5",
+      "turns": 2,
+      "box": [
+        475,
+        51,
+        -1478,
+        480,
+        57,
+        -1472
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        1,
+        -77
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_6",
+      "turns": 1,
+      "box": [
+        10,
+        48,
+        -1232,
+        16,
+        54,
+        -1227
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        25,
+        -77
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_3",
+      "turns": 1,
+      "box": [
+        394,
+        50,
+        -1232,
+        400,
+        56,
+        -1227
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        27,
+        6
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_6",
+      "turns": 0,
+      "box": [
+        432,
+        52,
+        96,
+        447,
+        67,
+        111
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        27,
+        41
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_5",
+      "turns": 0,
+      "box": [
+        432,
+        45,
+        656,
+        437,
+        51,
+        662
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        8,
+        51
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 3,
+      "box": [
+        128,
+        45,
+        811,
+        134,
+        51,
+        816
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        22,
+        64
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 0,
+      "box": [
+        352,
+        38,
+        1024,
+        357,
+        44,
+        1030
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        0,
+        65
+      ],
+      "warm": true,
+      "big": true,
+      "template": "warm_big_6",
+      "turns": 2,
+      "box": [
+        -15,
+        37,
+        1025,
+        0,
+        52,
+        1040
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        21,
+        80
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 2,
+      "box": [
+        331,
+        36,
+        1274,
+        336,
+        42,
+        1280
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        5,
+        87
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_1",
+      "turns": 0,
+      "box": [
+        80,
+        37,
+        1392,
+        85,
+        43,
+        1398
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        49,
+        -49
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_2",
+      "turns": 0,
+      "box": [
+        784,
+        46,
+        -784,
+        789,
+        52,
+        -778
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        41,
+        -75
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_2",
+      "turns": 0,
+      "box": [
+        656,
+        44,
+        -1200,
+        661,
+        50,
+        -1194
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "label": "second",
+      "chunk": [
+        64,
+        -69
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_8",
+      "turns": 1,
+      "box": [
+        1018,
+        55,
+        -1104,
+        1024,
+        61,
+        -1099
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        -400,
+        182
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_6",
+      "turns": 2,
+      "box": [
+        -6405,
+        48,
+        2906,
+        -6400,
+        54,
+        2912
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        109,
+        -213
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_2",
+      "turns": 0,
+      "box": [
+        1744,
+        37,
+        -3408,
+        1749,
+        43,
+        -3402
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        190,
+        -92
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_7",
+      "turns": 2,
+      "box": [
+        3035,
+        44,
+        -1478,
+        3040,
+        50,
+        -1472
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        182,
+        -80
+      ],
+      "warm": false,
+      "big": true,
+      "template": "cold_big_1",
+      "turns": 0,
+      "box": [
+        2912,
+        46,
+        -1280,
+        2927,
+        61,
+        -1265
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        163,
+        -149
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_2",
+      "turns": 1,
+      "box": [
+        2602,
+        49,
+        -2384,
+        2608,
+        55,
+        -2379
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        181,
+        -196
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_5",
+      "turns": 0,
+      "box": [
+        2896,
+        36,
+        -3136,
+        2901,
+        42,
+        -3130
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        170,
+        -195
+      ],
+      "warm": false,
+      "big": false,
+      "template": "cold_small_4",
+      "turns": 0,
+      "box": [
+        2720,
+        46,
+        -3120,
+        2725,
+        52,
+        -3114
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "label": "targets",
+      "chunk": [
+        204,
+        -178
+      ],
+      "warm": false,
+      "big": true,
+      "template": "cold_big_3",
+      "turns": 1,
+      "box": [
+        3249,
+        35,
+        -2848,
+        3264,
+        50,
+        -2833
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "label": "camps",
+      "chunk": [
+        -100,
+        308
+      ],
+      "warm": true,
+      "big": false,
+      "template": "warm_small_7",
+      "turns": 2,
+      "box": [
+        -1605,
+        48,
+        4922,
+        -1600,
+        54,
+        4928
+      ]
+    }
+  ],
+  "rings": [
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        37,
+        -111
+      ],
+      "expected": [
+        32,
+        -117
+      ],
+      "search_seed": -2518141425308556604
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        100,
+        114
+      ],
+      "expected": [
+        102,
+        117
+      ],
+      "search_seed": -8551323492173311941
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -93,
+        19
+      ],
+      "expected": [
+        -94,
+        17
+      ],
+      "search_seed": 5592681446928995823
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -306,
+        -22
+      ],
+      "expected": [
+        -306,
+        -22
+      ],
+      "search_seed": 2320813987408283162
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -123,
+        -253
+      ],
+      "expected": [
+        -121,
+        -258
+      ],
+      "search_seed": 1955853395835562042
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        180,
+        -266
+      ],
+      "expected": [
+        177,
+        -263
+      ],
+      "search_seed": -7241392133684909586
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        319,
+        23
+      ],
+      "expected": [
+        323,
+        22
+      ],
+      "search_seed": 3496977381100573597
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        143,
+        294
+      ],
+      "expected": [
+        146,
+        301
+      ],
+      "search_seed": 6158438504347263316
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -170,
+        251
+      ],
+      "expected": [
+        -164,
+        244
+      ],
+      "search_seed": 2762856875518259874
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -132,
+        523
+      ],
+      "expected": [
+        -132,
+        530
+      ],
+      "search_seed": 8583467362953518879
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -388,
+        324
+      ],
+      "expected": [
+        -393,
+        322
+      ],
+      "search_seed": 45488991629194102
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -509,
+        34
+      ],
+      "expected": [
+        -514,
+        37
+      ],
+      "search_seed": 713657306680872738
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -455,
+        -286
+      ],
+      "expected": [
+        -452,
+        -287
+      ],
+      "search_seed": 8140918978264833506
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -181,
+        -451
+      ],
+      "expected": [
+        -181,
+        -447
+      ],
+      "search_seed": -7022347470237619624
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        121,
+        -481
+      ],
+      "expected": [
+        116,
+        -487
+      ],
+      "search_seed": -1597516512019070960
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        398,
+        -333
+      ],
+      "expected": [
+        398,
+        -333
+      ],
+      "search_seed": 2853866055648291265
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        538,
+        -36
+      ],
+      "expected": [
+        535,
+        -39
+      ],
+      "search_seed": 6927343726484918225
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        443,
+        278
+      ],
+      "expected": [
+        442,
+        285
+      ],
+      "search_seed": 8273579274080107294
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        179,
+        447
+      ],
+      "expected": [
+        180,
+        442
+      ],
+      "search_seed": -2027530441068331013
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -293,
+        664
+      ],
+      "expected": [
+        -290,
+        667
+      ],
+      "search_seed": -5573641677152882800
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -510,
+        463
+      ],
+      "expected": [
+        -512,
+        466
+      ],
+      "search_seed": 2330132658365409181
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -645,
+        212
+      ],
+      "expected": [
+        -651,
+        205
+      ],
+      "search_seed": 1646053580506754303
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -718,
+        -73
+      ],
+      "expected": [
+        -716,
+        -69
+      ],
+      "search_seed": 330000524601823492
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -632,
+        -362
+      ],
+      "expected": [
+        -625,
+        -361
+      ],
+      "search_seed": 5783668251967510720
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -417,
+        -570
+      ],
+      "expected": [
+        -417,
+        -576
+      ],
+      "search_seed": 1834980498884512564
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -146,
+        -674
+      ],
+      "expected": [
+        -144,
+        -680
+      ],
+      "search_seed": 7838070867516538283
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        142,
+        -680
+      ],
+      "expected": [
+        142,
+        -680
+      ],
+      "search_seed": 2251228680115208807
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        417,
+        -578
+      ],
+      "expected": [
+        422,
+        -580
+      ],
+      "search_seed": 3770453515512143229
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        590,
+        -343
+      ],
+      "expected": [
+        591,
+        -338
+      ],
+      "search_seed": 7818133265800012797
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        728,
+        -79
+      ],
+      "expected": [
+        729,
+        -73
+      ],
+      "search_seed": 6912847730826455381
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        672,
+        216
+      ],
+      "expected": [
+        673,
+        216
+      ],
+      "search_seed": 845366031243828982
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        514,
+        459
+      ],
+      "expected": [
+        514,
+        453
+      ],
+      "search_seed": -6912218824281241033
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        294,
+        655
+      ],
+      "expected": [
+        297,
+        652
+      ],
+      "search_seed": -8796052988006386566
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        2,
+        679
+      ],
+      "expected": [
+        8,
+        678
+      ],
+      "search_seed": 5367258973584406925
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        164,
+        -874
+      ],
+      "expected": [
+        163,
+        -867
+      ],
+      "search_seed": 3758102069587498179
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        427,
+        -810
+      ],
+      "expected": [
+        425,
+        -805
+      ],
+      "search_seed": -4393417184888968864
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        605,
+        -607
+      ],
+      "expected": [
+        610,
+        -613
+      ],
+      "search_seed": 3158099319445289104
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        787,
+        -418
+      ],
+      "expected": [
+        784,
+        -423
+      ],
+      "search_seed": -5210499431795097002
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        871,
+        -166
+      ],
+      "expected": [
+        878,
+        -166
+      ],
+      "search_seed": 8026097829735995198
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        854,
+        95
+      ],
+      "expected": [
+        858,
+        95
+      ],
+      "search_seed": -7270890318867092251
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        811,
+        352
+      ],
+      "expected": [
+        814,
+        349
+      ],
+      "search_seed": -6203555896105879874
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        670,
+        575
+      ],
+      "expected": [
+        664,
+        574
+      ],
+      "search_seed": 8241758796130469650
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        470,
+        745
+      ],
+      "expected": [
+        468,
+        740
+      ],
+      "search_seed": -730409198522909624
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        230,
+        854
+      ],
+      "expected": [
+        229,
+        856
+      ],
+      "search_seed": 4585538956078677606
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -32,
+        883
+      ],
+      "expected": [
+        -38,
+        876
+      ],
+      "search_seed": 8967631872494866647
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -301,
+        864
+      ],
+      "expected": [
+        -294,
+        867
+      ],
+      "search_seed": 8108405805341408366
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -545,
+        741
+      ],
+      "expected": [
+        -541,
+        747
+      ],
+      "search_seed": 5043133257862337962
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -713,
+        528
+      ],
+      "expected": [
+        -709,
+        527
+      ],
+      "search_seed": -6490557559207828677
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -836,
+        294
+      ],
+      "expected": [
+        -830,
+        301
+      ],
+      "search_seed": -2897601032454428475
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -899,
+        35
+      ],
+      "expected": [
+        -894,
+        37
+      ],
+      "search_seed": 9138974185179404771
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -884,
+        -235
+      ],
+      "expected": [
+        -884,
+        -238
+      ],
+      "search_seed": -7978825124240819858
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -756,
+        -473
+      ],
+      "expected": [
+        -756,
+        -473
+      ],
+      "search_seed": 8776384107288176894
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -601,
+        -697
+      ],
+      "expected": [
+        -597,
+        -691
+      ],
+      "search_seed": 8594900614527642800
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -353,
+        -805
+      ],
+      "expected": [
+        -358,
+        -809
+      ],
+      "search_seed": 5877290302416152361
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -101,
+        -881
+      ],
+      "expected": [
+        -94,
+        -880
+      ],
+      "search_seed": 4742092544253415899
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -991,
+        -439
+      ],
+      "expected": [
+        -996,
+        -439
+      ],
+      "search_seed": -850890539050405663
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -843,
+        -630
+      ],
+      "expected": [
+        -843,
+        -630
+      ],
+      "search_seed": -1189484978048293445
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -694,
+        -816
+      ],
+      "expected": [
+        -693,
+        -810
+      ],
+      "search_seed": 8590039906848199665
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -485,
+        -932
+      ],
+      "expected": [
+        -491,
+        -931
+      ],
+      "search_seed": 42158003436619938
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -269,
+        -1028
+      ],
+      "expected": [
+        -263,
+        -1027
+      ],
+      "search_seed": 8115383723773586022
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -35,
+        -1112
+      ],
+      "expected": [
+        -35,
+        -1112
+      ],
+      "search_seed": 3563953669346438834
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        212,
+        -1084
+      ],
+      "expected": [
+        219,
+        -1083
+      ],
+      "search_seed": -3978834413680131712
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        454,
+        -1023
+      ],
+      "expected": [
+        461,
+        -1021
+      ],
+      "search_seed": 858188026263847726
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        667,
+        -892
+      ],
+      "expected": [
+        672,
+        -898
+      ],
+      "search_seed": -1099281292253642586
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        803,
+        -683
+      ],
+      "expected": [
+        798,
+        -682
+      ],
+      "search_seed": -7711952952432080450
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        958,
+        -499
+      ],
+      "expected": [
+        958,
+        -499
+      ],
+      "search_seed": -1606413098264507934
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1072,
+        -280
+      ],
+      "expected": [
+        1072,
+        -280
+      ],
+      "search_seed": -541556554719869200
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1119,
+        -35
+      ],
+      "expected": [
+        1118,
+        -38
+      ],
+      "search_seed": -7302162746361255325
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1071,
+        209
+      ],
+      "expected": [
+        1070,
+        203
+      ],
+      "search_seed": -2558853626932660046
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1019,
+        452
+      ],
+      "expected": [
+        1018,
+        445
+      ],
+      "search_seed": -761149684810720518
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        887,
+        663
+      ],
+      "expected": [
+        887,
+        663
+      ],
+      "search_seed": -8763637954905202982
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        689,
+        810
+      ],
+      "expected": [
+        691,
+        815
+      ],
+      "search_seed": -6375492394199936866
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        493,
+        946
+      ],
+      "expected": [
+        493,
+        946
+      ],
+      "search_seed": -6144338944594455650
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        284,
+        1087
+      ],
+      "expected": [
+        286,
+        1085
+      ],
+      "search_seed": 8529341604546747624
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        33,
+        1055
+      ],
+      "expected": [
+        40,
+        1050
+      ],
+      "search_seed": 1739566355649721372
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -210,
+        1075
+      ],
+      "expected": [
+        -210,
+        1075
+      ],
+      "search_seed": -1005065283519177065
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -442,
+        998
+      ],
+      "expected": [
+        -449,
+        1004
+      ],
+      "search_seed": 7828840458875934932
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -652,
+        872
+      ],
+      "expected": [
+        -649,
+        869
+      ],
+      "search_seed": -2559363029501885938
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -815,
+        693
+      ],
+      "expected": [
+        -813,
+        690
+      ],
+      "search_seed": -6020321188805960152
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -938,
+        488
+      ],
+      "expected": [
+        -941,
+        495
+      ],
+      "search_seed": 9119399564054876625
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1082,
+        283
+      ],
+      "expected": [
+        -1078,
+        287
+      ],
+      "search_seed": -2302467190906831645
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1113,
+        35
+      ],
+      "expected": [
+        -1112,
+        38
+      ],
+      "search_seed": 2878168011592062732
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1105,
+        -216
+      ],
+      "expected": [
+        -1102,
+        -216
+      ],
+      "search_seed": -2954355056896068945
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -142,
+        1252
+      ],
+      "expected": [
+        -143,
+        1254
+      ],
+      "search_seed": -6537240501458917016
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -369,
+        1250
+      ],
+      "expected": [
+        -369,
+        1250
+      ],
+      "search_seed": -6194141865054725099
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -576,
+        1159
+      ],
+      "expected": [
+        -579,
+        1164
+      ],
+      "search_seed": -3444545816807380506
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -781,
+        1057
+      ],
+      "expected": [
+        -781,
+        1057
+      ],
+      "search_seed": 7021128373112147430
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -937,
+        891
+      ],
+      "expected": [
+        -933,
+        897
+      ],
+      "search_seed": -4044921571342914638
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1083,
+        718
+      ],
+      "expected": [
+        -1082,
+        725
+      ],
+      "search_seed": 4734513628310723712
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1142,
+        498
+      ],
+      "expected": [
+        -1137,
+        492
+      ],
+      "search_seed": 299237250416707682
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1273,
+        307
+      ],
+      "expected": [
+        -1271,
+        301
+      ],
+      "search_seed": -1223790363163127860
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1292,
+        80
+      ],
+      "expected": [
+        -1298,
+        86
+      ],
+      "search_seed": -2004664286890931885
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1306,
+        -148
+      ],
+      "expected": [
+        -1308,
+        -142
+      ],
+      "search_seed": 7563302175429629879
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1189,
+        -351
+      ],
+      "expected": [
+        -1191,
+        -350
+      ],
+      "search_seed": 8160994970185604131
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1138,
+        -566
+      ],
+      "expected": [
+        -1138,
+        -566
+      ],
+      "search_seed": 3332671855499036850
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1029,
+        -760
+      ],
+      "expected": [
+        -1030,
+        -767
+      ],
+      "search_seed": -2178841837825845451
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -880,
+        -925
+      ],
+      "expected": [
+        -873,
+        -926
+      ],
+      "search_seed": 941544943291754547
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -729,
+        -1099
+      ],
+      "expected": [
+        -733,
+        -1098
+      ],
+      "search_seed": -6075188366861349328
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -513,
+        -1177
+      ],
+      "expected": [
+        -515,
+        -1171
+      ],
+      "search_seed": 8173154984295713074
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -306,
+        -1270
+      ],
+      "expected": [
+        -312,
+        -1270
+      ],
+      "search_seed": 8346441977650919040
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -80,
+        -1295
+      ],
+      "expected": [
+        -84,
+        -1288
+      ],
+      "search_seed": 1449831078133135533
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        144,
+        -1276
+      ],
+      "expected": [
+        148,
+        -1277
+      ],
+      "search_seed": 852362883661732820
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        370,
+        -1252
+      ],
+      "expected": [
+        370,
+        -1254
+      ],
+      "search_seed": -1864280191956092380
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        584,
+        -1173
+      ],
+      "expected": [
+        578,
+        -1173
+      ],
+      "search_seed": -101969289609304930
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        761,
+        -1031
+      ],
+      "expected": [
+        768,
+        -1024
+      ],
+      "search_seed": -752328588547124195
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        937,
+        -890
+      ],
+      "expected": [
+        932,
+        -883
+      ],
+      "search_seed": -2325927542982515050
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1038,
+        -688
+      ],
+      "expected": [
+        1036,
+        -692
+      ],
+      "search_seed": -3277218739203167071
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1147,
+        -500
+      ],
+      "expected": [
+        1140,
+        -495
+      ],
+      "search_seed": -5757058587424027848
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1218,
+        -293
+      ],
+      "expected": [
+        1213,
+        -287
+      ],
+      "search_seed": -6091130619025181251
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1301,
+        -81
+      ],
+      "expected": [
+        1302,
+        -80
+      ],
+      "search_seed": 3360724083704923201
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1264,
+        143
+      ],
+      "expected": [
+        1265,
+        141
+      ],
+      "search_seed": -1012993358633883134
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1221,
+        361
+      ],
+      "expected": [
+        1214,
+        368
+      ],
+      "search_seed": -2751761586474627018
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1173,
+        584
+      ],
+      "expected": [
+        1171,
+        586
+      ],
+      "search_seed": -2757870993596802810
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1031,
+        762
+      ],
+      "expected": [
+        1024,
+        761
+      ],
+      "search_seed": -4920597481618845988
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        881,
+        927
+      ],
+      "expected": [
+        887,
+        928
+      ],
+      "search_seed": 7915562722532836321
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        698,
+        1053
+      ],
+      "expected": [
+        694,
+        1049
+      ],
+      "search_seed": -2917081592037956159
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        496,
+        1139
+      ],
+      "expected": [
+        497,
+        1135
+      ],
+      "search_seed": 5186570105615665585
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        294,
+        1219
+      ],
+      "expected": [
+        298,
+        1216
+      ],
+      "search_seed": 3793038877524931762
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        81,
+        1306
+      ],
+      "expected": [
+        81,
+        1306
+      ],
+      "search_seed": 3464156403719431190
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -120,
+        -1432
+      ],
+      "expected": [
+        -126,
+        -1425
+      ],
+      "search_seed": 308867879683545014
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        744,
+        -1228
+      ],
+      "expected": [
+        751,
+        -1226
+      ],
+      "search_seed": 413704524349881233
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1374,
+        -577
+      ],
+      "expected": [
+        1380,
+        -571
+      ],
+      "search_seed": 8482818768468410664
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        1436,
+        338
+      ],
+      "expected": [
+        1443,
+        331
+      ],
+      "search_seed": -3814379934735850974
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        982,
+        1138
+      ],
+      "expected": [
+        988,
+        1135
+      ],
+      "search_seed": -1064496232419244026
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        126,
+        1506
+      ],
+      "expected": [
+        130,
+        1509
+      ],
+      "search_seed": 3788887691326800861
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -749,
+        1236
+      ],
+      "expected": [
+        -755,
+        1237
+      ],
+      "search_seed": 5529425532070714390
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1355,
+        569
+      ],
+      "expected": [
+        -1350,
+        565
+      ],
+      "search_seed": 392841336261874856
+    },
+    {
+      "seed": 1792932773345722119,
+      "raw": [
+        -1433,
+        -337
+      ],
+      "expected": [
+        -1434,
+        -344
+      ],
+      "search_seed": 7336746045082523005
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -74,
+        57
+      ],
+      "expected": [
+        -67,
+        57
+      ],
+      "search_seed": 125630462185561737
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -17,
+        -124
+      ],
+      "expected": [
+        -13,
+        -121
+      ],
+      "search_seed": 7081194086571281248
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        150,
+        62
+      ],
+      "expected": [
+        156,
+        57
+      ],
+      "search_seed": -6336487725755311452
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        277,
+        -161
+      ],
+      "expected": [
+        275,
+        -167
+      ],
+      "search_seed": -2934207743272752290
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        270,
+        154
+      ],
+      "expected": [
+        265,
+        154
+      ],
+      "search_seed": -3646207062811051505
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1,
+        346
+      ],
+      "expected": [
+        3,
+        352
+      ],
+      "search_seed": -3171656373021609467
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -299,
+        174
+      ],
+      "expected": [
+        -296,
+        180
+      ],
+      "search_seed": -2103241530164232548
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -307,
+        -176
+      ],
+      "expected": [
+        -305,
+        -174
+      ],
+      "search_seed": -2093991457252056149
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1,
+        -281
+      ],
+      "expected": [
+        5,
+        -281
+      ],
+      "search_seed": 3947686186368861140
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        172,
+        476
+      ],
+      "expected": [
+        175,
+        476
+      ],
+      "search_seed": 987958144809459985
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -131,
+        456
+      ],
+      "expected": [
+        -125,
+        460
+      ],
+      "search_seed": 5301073253499208405
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -381,
+        297
+      ],
+      "expected": [
+        -378,
+        303
+      ],
+      "search_seed": 379790860706426076
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -511,
+        17
+      ],
+      "expected": [
+        -511,
+        17
+      ],
+      "search_seed": 4134930244395540912
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -416,
+        -282
+      ],
+      "expected": [
+        -422,
+        -283
+      ],
+      "search_seed": 1949237144661761423
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -185,
+        -511
+      ],
+      "expected": [
+        -179,
+        -515
+      ],
+      "search_seed": -2506329790608902562
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        150,
+        -520
+      ],
+      "expected": [
+        149,
+        -516
+      ],
+      "search_seed": 5622241969573283549
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        434,
+        -338
+      ],
+      "expected": [
+        436,
+        -336
+      ],
+      "search_seed": 1343380446315452699
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        548,
+        -18
+      ],
+      "expected": [
+        554,
+        -23
+      ],
+      "search_seed": -2398027793570511828
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        457,
+        309
+      ],
+      "expected": [
+        457,
+        309
+      ],
+      "search_seed": 9062557899730710810
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -454,
+        -588
+      ],
+      "expected": [
+        -451,
+        -582
+      ],
+      "search_seed": -8839337541913687107
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -169,
+        -692
+      ],
+      "expected": [
+        -176,
+        -687
+      ],
+      "search_seed": 5302481994049523532
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        123,
+        -679
+      ],
+      "expected": [
+        130,
+        -677
+      ],
+      "search_seed": -4599761044940817453
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        415,
+        -608
+      ],
+      "expected": [
+        410,
+        -603
+      ],
+      "search_seed": 7517508393253321565
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        570,
+        -352
+      ],
+      "expected": [
+        564,
+        -359
+      ],
+      "search_seed": 1052009188568876544
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        701,
+        -95
+      ],
+      "expected": [
+        701,
+        -95
+      ],
+      "search_seed": -8830654299979567754
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        691,
+        202
+      ],
+      "expected": [
+        693,
+        195
+      ],
+      "search_seed": -1982044966178484756
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        562,
+        476
+      ],
+      "expected": [
+        562,
+        476
+      ],
+      "search_seed": 7491800901914310682
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        301,
+        625
+      ],
+      "expected": [
+        305,
+        632
+      ],
+      "search_seed": -713871876470577005
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        22,
+        724
+      ],
+      "expected": [
+        22,
+        719
+      ],
+      "search_seed": -1714092397414997923
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -280,
+        684
+      ],
+      "expected": [
+        -276,
+        689
+      ],
+      "search_seed": -2547487422025764156
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -484,
+        463
+      ],
+      "expected": [
+        -484,
+        463
+      ],
+      "search_seed": -3320817083351540630
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -689,
+        247
+      ],
+      "expected": [
+        -689,
+        247
+      ],
+      "search_seed": -8716128106249848925
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -731,
+        -55
+      ],
+      "expected": [
+        -724,
+        -49
+      ],
+      "search_seed": 7277162944420651519
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -642,
+        -346
+      ],
+      "expected": [
+        -642,
+        -346
+      ],
+      "search_seed": -192809455260670169
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -800,
+        363
+      ],
+      "expected": [
+        -793,
+        359
+      ],
+      "search_seed": -1299014661348552711
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -867,
+        111
+      ],
+      "expected": [
+        -866,
+        113
+      ],
+      "search_seed": 6869002112417839879
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -872,
+        -151
+      ],
+      "expected": [
+        -865,
+        -157
+      ],
+      "search_seed": 5885891640526946967
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -767,
+        -391
+      ],
+      "expected": [
+        -767,
+        -391
+      ],
+      "search_seed": -1029234658843439059
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -619,
+        -600
+      ],
+      "expected": [
+        -619,
+        -600
+      ],
+      "search_seed": 7622440476506992135
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -433,
+        -791
+      ],
+      "expected": [
+        -432,
+        -791
+      ],
+      "search_seed": 8172853711994146707
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -179,
+        -875
+      ],
+      "expected": [
+        -176,
+        -871
+      ],
+      "search_seed": 2939231514177662240
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        86,
+        -879
+      ],
+      "expected": [
+        86,
+        -879
+      ],
+      "search_seed": -8343537202470312232
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        344,
+        -823
+      ],
+      "expected": [
+        339,
+        -828
+      ],
+      "search_seed": 796947043898876653
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        592,
+        -709
+      ],
+      "expected": [
+        587,
+        -702
+      ],
+      "search_seed": 366708538229381907
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        764,
+        -496
+      ],
+      "expected": [
+        759,
+        -497
+      ],
+      "search_seed": 7642949617192799533
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        838,
+        -238
+      ],
+      "expected": [
+        838,
+        -238
+      ],
+      "search_seed": -159331914404625590
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        868,
+        19
+      ],
+      "expected": [
+        871,
+        23
+      ],
+      "search_seed": -1867150733075110190
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        879,
+        293
+      ],
+      "expected": [
+        876,
+        291
+      ],
+      "search_seed": -151046331987455236
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        713,
+        510
+      ],
+      "expected": [
+        707,
+        509
+      ],
+      "search_seed": -4046441302535595389
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        521,
+        685
+      ],
+      "expected": [
+        517,
+        679
+      ],
+      "search_seed": -2278864451550940008
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        314,
+        856
+      ],
+      "expected": [
+        308,
+        858
+      ],
+      "search_seed": 2012900824650532121
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        48,
+        910
+      ],
+      "expected": [
+        49,
+        914
+      ],
+      "search_seed": 8377297430255891459
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -225,
+        895
+      ],
+      "expected": [
+        -223,
+        894
+      ],
+      "search_seed": -1000131025372149723
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -451,
+        743
+      ],
+      "expected": [
+        -446,
+        740
+      ],
+      "search_seed": -8503731983704819434
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -661,
+        587
+      ],
+      "expected": [
+        -656,
+        582
+      ],
+      "search_seed": -7293055989864584087
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        597,
+        895
+      ],
+      "expected": [
+        593,
+        897
+      ],
+      "search_seed": 2882184586419052010
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        400,
+        1051
+      ],
+      "expected": [
+        405,
+        1057
+      ],
+      "search_seed": 6681727151158729286
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        153,
+        1093
+      ],
+      "expected": [
+        148,
+        1097
+      ],
+      "search_seed": -5410389697860677680
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -95,
+        1114
+      ],
+      "expected": [
+        -100,
+        1116
+      ],
+      "search_seed": -1370115422151840764
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -320,
+        1002
+      ],
+      "expected": [
+        -313,
+        1001
+      ],
+      "search_seed": 3405342311269304144
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -561,
+        949
+      ],
+      "expected": [
+        -563,
+        955
+      ],
+      "search_seed": 469749357172841190
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -769,
+        812
+      ],
+      "expected": [
+        -771,
+        816
+      ],
+      "search_seed": 4474761429277671379
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -937,
+        625
+      ],
+      "expected": [
+        -937,
+        625
+      ],
+      "search_seed": -237726034194101424
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1024,
+        390
+      ],
+      "expected": [
+        -1025,
+        393
+      ],
+      "search_seed": 4614137099414740056
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1095,
+        154
+      ],
+      "expected": [
+        -1092,
+        160
+      ],
+      "search_seed": -4619871064638345606
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1086,
+        -92
+      ],
+      "expected": [
+        -1085,
+        -88
+      ],
+      "search_seed": 9050497931740169712
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1016,
+        -325
+      ],
+      "expected": [
+        -1018,
+        -328
+      ],
+      "search_seed": 6593803605910735087
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -951,
+        -562
+      ],
+      "expected": [
+        -951,
+        -562
+      ],
+      "search_seed": -1961945402444932544
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -778,
+        -737
+      ],
+      "expected": [
+        -780,
+        -731
+      ],
+      "search_seed": 8337393427082397966
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -625,
+        -937
+      ],
+      "expected": [
+        -624,
+        -942
+      ],
+      "search_seed": -8573858911741220350
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -383,
+        -1005
+      ],
+      "expected": [
+        -385,
+        -1006
+      ],
+      "search_seed": -855320445695496820
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -155,
+        -1104
+      ],
+      "expected": [
+        -160,
+        -1101
+      ],
+      "search_seed": 5885143147476453251
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        90,
+        -1055
+      ],
+      "expected": [
+        93,
+        -1050
+      ],
+      "search_seed": -878897760377996303
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        336,
+        -1050
+      ],
+      "expected": [
+        335,
+        -1048
+      ],
+      "search_seed": -669459931440487129
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        570,
+        -965
+      ],
+      "expected": [
+        570,
+        -965
+      ],
+      "search_seed": -6042016124236740842
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        760,
+        -803
+      ],
+      "expected": [
+        765,
+        -800
+      ],
+      "search_seed": -6195508103900953631
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        888,
+        -592
+      ],
+      "expected": [
+        892,
+        -599
+      ],
+      "search_seed": 4872341036976997805
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1006,
+        -383
+      ],
+      "expected": [
+        1003,
+        -376
+      ],
+      "search_seed": -7935988417004916293
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1092,
+        -153
+      ],
+      "expected": [
+        1097,
+        -152
+      ],
+      "search_seed": 1619770279407155385
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1072,
+        91
+      ],
+      "expected": [
+        1072,
+        91
+      ],
+      "search_seed": -8707200872553408428
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1073,
+        343
+      ],
+      "expected": [
+        1071,
+        341
+      ],
+      "search_seed": 1926398990223991313
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        967,
+        571
+      ],
+      "expected": [
+        970,
+        568
+      ],
+      "search_seed": 6963784626940844893
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        800,
+        757
+      ],
+      "expected": [
+        805,
+        757
+      ],
+      "search_seed": -704713271469782302
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -942,
+        860
+      ],
+      "expected": [
+        -948,
+        854
+      ],
+      "search_seed": 4504698944710757112
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1072,
+        681
+      ],
+      "expected": [
+        -1070,
+        676
+      ],
+      "search_seed": -7965539653128720325
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1206,
+        497
+      ],
+      "expected": [
+        -1208,
+        492
+      ],
+      "search_seed": 5789900697687521754
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1246,
+        274
+      ],
+      "expected": [
+        -1251,
+        268
+      ],
+      "search_seed": 7372512590171467007
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1259,
+        53
+      ],
+      "expected": [
+        -1261,
+        54
+      ],
+      "search_seed": 2886902367079854965
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1279,
+        -170
+      ],
+      "expected": [
+        -1272,
+        -174
+      ],
+      "search_seed": -702166429725410655
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1183,
+        -375
+      ],
+      "expected": [
+        -1185,
+        -371
+      ],
+      "search_seed": 6239955495243828658
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1108,
+        -579
+      ],
+      "expected": [
+        -1107,
+        -581
+      ],
+      "search_seed": -7567023828893966569
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1016,
+        -782
+      ],
+      "expected": [
+        -1010,
+        -786
+      ],
+      "search_seed": -2485023130092882639
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -876,
+        -959
+      ],
+      "expected": [
+        -869,
+        -952
+      ],
+      "search_seed": -3385847665421898166
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -701,
+        -1103
+      ],
+      "expected": [
+        -695,
+        -1106
+      ],
+      "search_seed": -7476266878304219196
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -479,
+        -1161
+      ],
+      "expected": [
+        -480,
+        -1154
+      ],
+      "search_seed": 6768761239249982613
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -276,
+        -1256
+      ],
+      "expected": [
+        -273,
+        -1258
+      ],
+      "search_seed": 7926103588600835826
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -53,
+        -1266
+      ],
+      "expected": [
+        -53,
+        -1266
+      ],
+      "search_seed": 4092223493538165066
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        171,
+        -1284
+      ],
+      "expected": [
+        168,
+        -1284
+      ],
+      "search_seed": 8366753670387454581
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        389,
+        -1228
+      ],
+      "expected": [
+        391,
+        -1233
+      ],
+      "search_seed": 6006135315072041261
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        595,
+        -1139
+      ],
+      "expected": [
+        600,
+        -1134
+      ],
+      "search_seed": -7998468639830459716
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        792,
+        -1029
+      ],
+      "expected": [
+        788,
+        -1033
+      ],
+      "search_seed": 3430748054976518391
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        945,
+        -863
+      ],
+      "expected": [
+        942,
+        -857
+      ],
+      "search_seed": 6910797048635394922
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1095,
+        -695
+      ],
+      "expected": [
+        1095,
+        -697
+      ],
+      "search_seed": -8007016552878346284
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1215,
+        -501
+      ],
+      "expected": [
+        1213,
+        -494
+      ],
+      "search_seed": 1018914832978034133
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1233,
+        -271
+      ],
+      "expected": [
+        1233,
+        -271
+      ],
+      "search_seed": -5461984481167623707
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1278,
+        -54
+      ],
+      "expected": [
+        1284,
+        -56
+      ],
+      "search_seed": -6158727757227170936
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1307,
+        174
+      ],
+      "expected": [
+        1307,
+        173
+      ],
+      "search_seed": 288811198707356351
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1257,
+        398
+      ],
+      "expected": [
+        1256,
+        391
+      ],
+      "search_seed": -1713113704339801919
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1140,
+        596
+      ],
+      "expected": [
+        1135,
+        594
+      ],
+      "search_seed": 523457963444516843
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1008,
+        776
+      ],
+      "expected": [
+        1008,
+        776
+      ],
+      "search_seed": -6475752918622402828
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        877,
+        960
+      ],
+      "expected": [
+        874,
+        966
+      ],
+      "search_seed": 6951368223708222308
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        683,
+        1076
+      ],
+      "expected": [
+        688,
+        1079
+      ],
+      "search_seed": -6588970270219954362
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        497,
+        1206
+      ],
+      "expected": [
+        494,
+        1206
+      ],
+      "search_seed": 956995174435444252
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        273,
+        1239
+      ],
+      "expected": [
+        277,
+        1234
+      ],
+      "search_seed": -5553939946919791342
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        55,
+        1313
+      ],
+      "expected": [
+        53,
+        1313
+      ],
+      "search_seed": -4923916286112357769
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -167,
+        1252
+      ],
+      "expected": [
+        -162,
+        1252
+      ],
+      "search_seed": 5153978855657848936
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -379,
+        1194
+      ],
+      "expected": [
+        -378,
+        1187
+      ],
+      "search_seed": -735283041249130803
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -598,
+        1144
+      ],
+      "expected": [
+        -598,
+        1150
+      ],
+      "search_seed": -2033366590138036087
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -773,
+        1004
+      ],
+      "expected": [
+        -772,
+        1002
+      ],
+      "search_seed": 1881077345734985709
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -598,
+        -1378
+      ],
+      "expected": [
+        -598,
+        -1371
+      ],
+      "search_seed": 5178882721796707816
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        321,
+        -1442
+      ],
+      "expected": [
+        321,
+        -1443
+      ],
+      "search_seed": -1213990322077924837
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1086,
+        -959
+      ],
+      "expected": [
+        1082,
+        -957
+      ],
+      "search_seed": -417780461557095243
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1463,
+        -139
+      ],
+      "expected": [
+        1462,
+        -137
+      ],
+      "search_seed": -2509369615482112781
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        1282,
+        757
+      ],
+      "expected": [
+        1286,
+        752
+      ],
+      "search_seed": -2289919534031869990
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        601,
+        1387
+      ],
+      "expected": [
+        601,
+        1387
+      ],
+      "search_seed": -1804155360107544764
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -321,
+        1442
+      ],
+      "expected": [
+        -317,
+        1439
+      ],
+      "search_seed": -8572428858021562821
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1078,
+        952
+      ],
+      "expected": [
+        -1075,
+        953
+      ],
+      "search_seed": 1572114229807799945
+    },
+    {
+      "seed": 100554032945340,
+      "raw": [
+        -1467,
+        140
+      ],
+      "expected": [
+        -1467,
+        147
+      ],
+      "search_seed": 3389882721756808079
+    }
+  ],
+  "relocation_masks": [
+    {
+      "seed": 1792932773345722119,
+      "index": 0,
+      "raw": [
+        37,
+        -111
+      ],
+      "expected": [
+        32,
+        -117
+      ],
+      "preferred": "111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111100111111111111111111111111111111111111111111111111111111001111111111111111111111111111111111111111111111111111100001111111111111111111111111111111111111111111000111110001111111111111111111111111111111111111111111111000011100011111111111111111111111111111111111111111111111000000000111111111111111111111111111111111111111111111111100000001111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111001111110000111111111111111111111111111111111111111111110000001100001111111111111111111111111111111111111111111111000000000011111111111111111111111111111111111111111111111000000011111111111111111111111111111111111111111111111110000011111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111110000000011111111111111111111111111111111111111111111111100000001111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111110001111111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111111001111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100111111111111111111111111111111111111111111111111111100001111111111111111111111111111111111111111111111111100000000111111111111111111111111111111111111111111111"
+    },
+    {
+      "seed": 1792932773345722119,
+      "index": 34,
+      "raw": [
+        164,
+        -874
+      ],
+      "expected": [
+        163,
+        -867
+      ],
+      "preferred": "111111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111111111000000111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111111111000000111111111111111111111111111111111111111111111111111000000111111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111100000001111111111111111111111111111111111111111111111110000000001111111111111111111111111111111111111111111111100000000111111111111111111111111111111111111111111111100000000000111111111111111111111111111111111111111111111000000000000111111111111111111111111111111111111111000000000000000000011111111111111111111111111111111111110000000000000000000011111111111111111111111111111111111000000000001110000010111111111111111111111111111111111110000000000111111011111111111111111111111111111111111111000000000000111111111111111111111111111111111111111111100000001110011111111111111111111111111111111111111111110000000111111111111111111111111111111111111111111111111100000011111111111111111111111111111111111111111111111111000000111111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111111000011111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111100000011111111111111111111111111111111111111111111111111000011111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111100001111111111111111111111111111111111111111111111111110000000111111111111111111111111111111111111110100010000000000000101111111111111111111111111111111111100000000000000000000011111111111111111111111111111111111000000000000000000000111111111111111111111111111111111111000000000000000000001111111111111111111111111111111111111000000000000000000011111111111111111111111111111111111111000000000000000000011111111111111111111111111111111111111000000000000001110011111111111111111111111111111111111111000111100000001111111111111111111111111111111111111111111100111111100011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "seed": 1792932773345722119,
+      "index": 119,
+      "raw": [
+        -120,
+        -1432
+      ],
+      "expected": [
+        -126,
+        -1425
+      ],
+      "preferred": "000000001111111111111111111111111111111111111111111111111000000001111111111111111111111111111111111111111111111111000000001111111111111111111111111111111111111111111111111000000111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "seed": 100554032945340,
+      "index": 34,
+      "raw": [
+        -800,
+        363
+      ],
+      "expected": [
+        -793,
+        359
+      ],
+      "preferred": "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111101111111111111111111111111111111111111111111111111111111001111111111111111111111111111111111111111111111111111111000110111111111111111111111111111111111111111111111111111100000011111111111111111111111111111111111111111111111111110000001111111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111111100111111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111110000011111111111111111111111111111111111111111111111111111000001111111111111111111111111111111111111111111111111111100000111111111111111111111111111111111111111111111111111111000011111111111111111111111111111111111111111111111111111100001111111111111111111111111111111111111111111111111111000000111111111111111111111111111111111111111111111111111100000011111111111111111111111111111111111111111111111111100000001111111111111111111111111111111111111111111111111100000011111111111111111111111111111111111111111111111111100000011111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111100011111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111110011111111111111111111111111111111111111111111111111111000011111111111111111111111111111111111111111111111111110000111111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111111001111111111111111111111111111111111111111111111111111111000111111111111111111111111111111111111111111111111111111001111111111111111111111111111111111111111111111111111111101111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "seed": 100554032945340,
+      "index": 119,
+      "raw": [
+        -598,
+        -1378
+      ],
+      "expected": [
+        -598,
+        -1371
+      ],
+      "preferred": "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+    }
+  ],
+  "portals": [
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -31,
+        -27
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_9",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -495,
+        63,
+        -432,
+        -487,
+        70,
+        -423
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -31,
+        8
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "turns": 0,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -507,
+        63,
+        128,
+        -496,
+        70,
+        137
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -25,
+        58
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_8",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -397,
+        50,
+        926,
+        -389,
+        58,
+        939
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -23,
+        80
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_4",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -368,
+        37,
+        1273,
+        -360,
+        45,
+        1280
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -33,
+        -72
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/portal_1",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -522,
+        101,
+        -1151,
+        -517,
+        110,
+        -1146
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -62,
+        0
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_3",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -984,
+        62,
+        0,
+        -977,
+        70,
+        8
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -65,
+        -25
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        -1039,
+        38,
+        -399,
+        -1028,
+        45,
+        -390
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -96,
+        -24
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_9",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -1535,
+        67,
+        -394,
+        -1527,
+        74,
+        -385
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -69,
+        -65
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_1",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        -1104,
+        -28,
+        -1034,
+        -1099,
+        -19,
+        -1029
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -65,
+        44
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_2",
+      "turns": 0,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1040,
+        51,
+        704,
+        -1032,
+        62,
+        712
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -68,
+        84
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_9",
+      "turns": 0,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1088,
+        49,
+        1344,
+        -1079,
+        56,
+        1352
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -104,
+        -57
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_7",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        -1664,
+        27,
+        -904,
+        -1656,
+        33,
+        -896
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -110,
+        18
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_10",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1759,
+        51,
+        288,
+        -1750,
+        58,
+        299
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -112,
+        56
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_3",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -1792,
+        62,
+        904,
+        -1784,
+        70,
+        911
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -105,
+        89
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_8",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1677,
+        22,
+        1408,
+        -1669,
+        30,
+        1421
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        15,
+        -25
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/giant_portal_2",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        237,
+        86,
+        -387,
+        252,
+        101,
+        -377
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        21,
+        -71
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_3",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        336,
+        -38,
+        -1136,
+        344,
+        -30,
+        -1129
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        20,
+        6
+      ],
+      "variant": "ruined_portal_swamp",
+      "template": "ruined_portal/portal_1",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        321,
+        67,
+        97,
+        326,
+        76,
+        102
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        17,
+        60
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_8",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        275,
+        64,
+        944,
+        283,
+        72,
+        957
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        15,
+        93
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_10",
+      "turns": 0,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        229,
+        70,
+        1488,
+        240,
+        77,
+        1497
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        60,
+        -16
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_3",
+      "turns": 0,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        953,
+        49,
+        -256,
+        960,
+        57,
+        -248
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        55,
+        -67
+      ],
+      "variant": "ruined_portal_swamp",
+      "template": "ruined_portal/portal_1",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        880,
+        63,
+        -1066,
+        885,
+        72,
+        -1061
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        45,
+        11
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        732,
+        63,
+        177,
+        743,
+        70,
+        186
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        41,
+        51
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_3",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        656,
+        53,
+        824,
+        664,
+        61,
+        831
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        42,
+        90
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_1",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        678,
+        65,
+        1441,
+        683,
+        74,
+        1446
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -29,
+        -63
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_2",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        -464,
+        39,
+        -1000,
+        -456,
+        50,
+        -992
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -17,
+        62
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_1",
+      "turns": 0,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -277,
+        52,
+        992,
+        -272,
+        61,
+        997
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -39,
+        -26
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_3",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -624,
+        47,
+        -408,
+        -616,
+        55,
+        -401
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -60,
+        -78
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_8",
+      "turns": 0,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -973,
+        62,
+        -1248,
+        -960,
+        70,
+        -1240
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -33,
+        16
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_2",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -520,
+        45,
+        256,
+        -512,
+        56,
+        264
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -59,
+        23
+      ],
+      "variant": "ruined_portal_desert",
+      "template": "ruined_portal/portal_5",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "partly_buried",
+      "air_pocket": false,
+      "box": [
+        -943,
+        64,
+        368,
+        -934,
+        73,
+        374
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -33,
+        81
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/giant_portal_3",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -527,
+        47,
+        1296,
+        -512,
+        62,
+        1311
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -61,
+        89
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_3",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        -976,
+        -28,
+        1425,
+        -968,
+        -20,
+        1432
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -66,
+        -33
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_6",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1057,
+        47,
+        -527,
+        -1051,
+        53,
+        -523
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -67,
+        59
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_7",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1072,
+        52,
+        944,
+        -1064,
+        58,
+        952
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        21,
+        -21
+      ],
+      "variant": "ruined_portal_desert",
+      "template": "ruined_portal/portal_10",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "partly_buried",
+      "air_pocket": false,
+      "box": [
+        337,
+        61,
+        -325,
+        346,
+        68,
+        -314
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        21,
+        -67
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_8",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        339,
+        47,
+        -1074,
+        347,
+        55,
+        -1061
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        9,
+        16
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_2",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        144,
+        -17,
+        256,
+        152,
+        -6,
+        264
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        22,
+        45
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_4",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        360,
+        44,
+        720,
+        367,
+        52,
+        728
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        0,
+        92
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_6",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -1,
+        35,
+        1477,
+        5,
+        41,
+        1481
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        48,
+        -35
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_5",
+      "turns": 0,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        768,
+        95,
+        -560,
+        777,
+        104,
+        -554
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        53,
+        -67
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_10",
+      "turns": 0,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        837,
+        52,
+        -1072,
+        848,
+        59,
+        -1063
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        53,
+        17
+      ],
+      "variant": "ruined_portal_desert",
+      "template": "ruined_portal/portal_4",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "partly_buried",
+      "air_pocket": false,
+      "box": [
+        848,
+        61,
+        280,
+        856,
+        69,
+        287
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        61,
+        41
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/portal_9",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        977,
+        95,
+        655,
+        985,
+        102,
+        664
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        53,
+        84
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/portal_7",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "in_mountain",
+      "air_pocket": true,
+      "box": [
+        848,
+        56,
+        1344,
+        856,
+        62,
+        1352
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        86,
+        -22
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_7",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        1376,
+        75,
+        -352,
+        1384,
+        81,
+        -344
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        87,
+        -76
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_8",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        1395,
+        49,
+        -1232,
+        1403,
+        57,
+        -1219
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        90,
+        23
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_4",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        1440,
+        63,
+        369,
+        1448,
+        71,
+        376
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        90,
+        52
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_7",
+      "turns": 0,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        1440,
+        68,
+        832,
+        1448,
+        74,
+        840
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        120,
+        52
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_3",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        1920,
+        55,
+        832,
+        1928,
+        63,
+        839
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -27,
+        -159
+      ],
+      "variant": "ruined_portal_swamp",
+      "template": "ruined_portal/portal_5",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        -430,
+        61,
+        -2536,
+        -424,
+        70,
+        -2527
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -459,
+        -545
+      ],
+      "variant": "ruined_portal_jungle",
+      "template": "ruined_portal/portal_4",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -7344,
+        65,
+        -8712,
+        -7336,
+        73,
+        -8705
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -96,
+        120
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/portal_4",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "in_mountain",
+      "air_pocket": true,
+      "box": [
+        -1536,
+        53,
+        1920,
+        -1528,
+        61,
+        1927
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -160,
+        182
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_5",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -2559,
+        66,
+        2912,
+        -2550,
+        75,
+        2918
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -216,
+        95
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        -3454,
+        22,
+        1519,
+        -3445,
+        29,
+        1530
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        176,
+        -74
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_3",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        2824,
+        36,
+        -1184,
+        2831,
+        44,
+        -1176
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        172,
+        -151
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_3",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "underground",
+      "air_pocket": true,
+      "box": [
+        2760,
+        24,
+        -2416,
+        2767,
+        32,
+        -2408
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        178,
+        -185
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_4",
+      "turns": 2,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        2856,
+        47,
+        -2960,
+        2863,
+        55,
+        -2952
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        210,
+        -24
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/giant_portal_3",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        3361,
+        68,
+        -399,
+        3376,
+        83,
+        -384
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        200,
+        -195
+      ],
+      "variant": "ruined_portal_ocean",
+      "template": "ruined_portal/portal_6",
+      "turns": 1,
+      "mirror": false,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        3199,
+        29,
+        -3119,
+        3205,
+        35,
+        -3115
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -28,
+        42
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -447,
+        64,
+        672,
+        -438,
+        71,
+        683
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -96,
+        51
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_5",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        -1535,
+        62,
+        816,
+        -1526,
+        71,
+        822
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        45,
+        3
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_8",
+      "turns": 2,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        721,
+        72,
+        48,
+        734,
+        80,
+        56
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        82,
+        -151
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/portal_4",
+      "turns": 1,
+      "mirror": true,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        1312,
+        131,
+        -2423,
+        1320,
+        139,
+        -2416
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        81,
+        47
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "turns": 3,
+      "mirror": false,
+      "vertical": "on_land_surface",
+      "air_pocket": false,
+      "box": [
+        1297,
+        72,
+        752,
+        1306,
+        79,
+        763
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        128,
+        -62
+      ],
+      "variant": "ruined_portal_swamp",
+      "template": "ruined_portal/portal_4",
+      "turns": 3,
+      "mirror": true,
+      "vertical": "on_ocean_floor",
+      "air_pocket": false,
+      "box": [
+        2048,
+        65,
+        -984,
+        2056,
+        73,
+        -977
+      ]
+    }
+  ],
+  "camps": [
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -15,
+        -34
+      ],
+      "turns": 0,
+      "tent": 10,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_10",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_12",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        -240,
+        66,
+        -544,
+        -233,
+        73,
+        -537
+      ],
+      "camp_box": [
+        -250,
+        65,
+        -545,
+        -241,
+        68,
+        -536
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -16,
+        -85
+      ],
+      "turns": 3,
+      "tent": 3,
+      "tent_template": "abandoned_camp/tent/birch_forest/tent_birch_forest_3",
+      "folder": "birch_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_6",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        -256,
+        73,
+        -1365,
+        -249,
+        80,
+        -1360
+      ],
+      "camp_box": [
+        -257,
+        72,
+        -1359,
+        -248,
+        75,
+        -1350
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -22,
+        -69
+      ],
+      "turns": 2,
+      "tent": 10,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_10",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_1",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -359,
+        64,
+        -1111,
+        -352,
+        71,
+        -1104
+      ],
+      "camp_box": [
+        -351,
+        64,
+        -1112,
+        -342,
+        66,
+        -1103
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -20,
+        18
+      ],
+      "turns": 0,
+      "tent": 8,
+      "tent_template": "abandoned_camp/tent/savanna/tent_savanna_8",
+      "folder": "savanna",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_2",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -320,
+        67,
+        288,
+        -315,
+        74,
+        295
+      ],
+      "camp_box": [
+        -330,
+        67,
+        287,
+        -321,
+        69,
+        296
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -51,
+        -65
+      ],
+      "turns": 2,
+      "tent": 9,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_9",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_6",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        -823,
+        58,
+        -1047,
+        -816,
+        65,
+        -1040
+      ],
+      "camp_box": [
+        -815,
+        57,
+        -1048,
+        -806,
+        60,
+        -1039
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -53,
+        21
+      ],
+      "turns": 2,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/savanna/tent_savanna_4",
+      "folder": "savanna",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_3",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -855,
+        64,
+        329,
+        -848,
+        71,
+        336
+      ],
+      "camp_box": [
+        -847,
+        64,
+        328,
+        -838,
+        66,
+        337
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -104,
+        -61
+      ],
+      "turns": 3,
+      "tent": 1,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_1",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_1",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -1664,
+        62,
+        -983,
+        -1657,
+        69,
+        -976
+      ],
+      "camp_box": [
+        -1665,
+        62,
+        -975,
+        -1656,
+        64,
+        -966
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        21,
+        55
+      ],
+      "turns": 0,
+      "tent": 3,
+      "tent_template": "abandoned_camp/tent/savanna/tent_savanna_3",
+      "folder": "savanna",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_14",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        336,
+        64,
+        880,
+        341,
+        71,
+        887
+      ],
+      "camp_box": [
+        326,
+        64,
+        879,
+        335,
+        66,
+        888
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        44,
+        21
+      ],
+      "turns": 3,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/savanna/tent_savanna_4",
+      "folder": "savanna",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_4",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        704,
+        66,
+        329,
+        711,
+        73,
+        336
+      ],
+      "camp_box": [
+        703,
+        66,
+        337,
+        712,
+        68,
+        346
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -57,
+        -49
+      ],
+      "turns": 1,
+      "tent": 7,
+      "tent_template": "abandoned_camp/tent/flower_forest/tent_flower_forest_7",
+      "folder": "flower_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_1",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -919,
+        63,
+        -784,
+        -912,
+        70,
+        -777
+      ],
+      "camp_box": [
+        -920,
+        63,
+        -794,
+        -911,
+        65,
+        -785
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -36,
+        -98
+      ],
+      "turns": 0,
+      "tent": 9,
+      "tent_template": "abandoned_camp/tent/flower_forest/tent_flower_forest_9",
+      "folder": "flower_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_12",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -576,
+        104,
+        -1568,
+        -569,
+        111,
+        -1561
+      ],
+      "camp_box": [
+        -586,
+        104,
+        -1569,
+        -577,
+        106,
+        -1560
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        6,
+        18
+      ],
+      "turns": 2,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/wooded_badlands/tent_wooded_badlands_4",
+      "folder": "wooded_badlands",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_9",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        5,
+        10
+      ],
+      "tent_box": [
+        89,
+        68,
+        281,
+        96,
+        75,
+        288
+      ],
+      "camp_box": [
+        97,
+        66,
+        280,
+        106,
+        70,
+        289
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        39,
+        -15
+      ],
+      "turns": 3,
+      "tent": 5,
+      "tent_template": "abandoned_camp/tent/wooded_badlands/tent_wooded_badlands_5",
+      "folder": "wooded_badlands",
+      "camp_template": "abandoned_camp/camp/wooded_badlands/campsite_wooded_badlands_3",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        10,
+        10
+      ],
+      "tent_box": [
+        624,
+        68,
+        -247,
+        631,
+        75,
+        -240
+      ],
+      "camp_box": [
+        623,
+        67,
+        -239,
+        632,
+        76,
+        -230
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        61,
+        -71
+      ],
+      "turns": 1,
+      "tent": 6,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_6",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_15",
+      "tent_size": [
+        8,
+        9,
+        8
+      ],
+      "camp_size": [
+        10,
+        5,
+        10
+      ],
+      "tent_box": [
+        969,
+        63,
+        -1136,
+        976,
+        71,
+        -1129
+      ],
+      "camp_box": [
+        968,
+        61,
+        -1146,
+        977,
+        65,
+        -1137
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        39,
+        -98
+      ],
+      "turns": 3,
+      "tent": 8,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_8",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_12",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        624,
+        81,
+        -1573,
+        631,
+        88,
+        -1568
+      ],
+      "camp_box": [
+        623,
+        81,
+        -1567,
+        632,
+        83,
+        -1558
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        57,
+        23
+      ],
+      "turns": 1,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/wooded_badlands/tent_wooded_badlands_4",
+      "folder": "wooded_badlands",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_14",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        905,
+        119,
+        368,
+        912,
+        126,
+        375
+      ],
+      "camp_box": [
+        904,
+        118,
+        358,
+        913,
+        121,
+        367
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        56,
+        76
+      ],
+      "turns": 2,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/wooded_badlands/tent_wooded_badlands_4",
+      "folder": "wooded_badlands",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_5",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        889,
+        65,
+        1209,
+        896,
+        72,
+        1216
+      ],
+      "camp_box": [
+        897,
+        65,
+        1208,
+        906,
+        67,
+        1217
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        80,
+        -15
+      ],
+      "turns": 3,
+      "tent": 7,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_7",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_8",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        1280,
+        66,
+        -247,
+        1287,
+        73,
+        -240
+      ],
+      "camp_box": [
+        1279,
+        66,
+        -239,
+        1288,
+        68,
+        -230
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        84,
+        93
+      ],
+      "turns": 2,
+      "tent": 10,
+      "tent_template": "abandoned_camp/tent/birch_forest/tent_birch_forest_10",
+      "folder": "birch_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_9",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        5,
+        10
+      ],
+      "tent_box": [
+        1337,
+        70,
+        1481,
+        1344,
+        77,
+        1488
+      ],
+      "camp_box": [
+        1345,
+        68,
+        1480,
+        1354,
+        72,
+        1489
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        99,
+        -54
+      ],
+      "turns": 0,
+      "tent": 6,
+      "tent_template": "abandoned_camp/tent/sparse_jungle/tent_sparse_jungle_6",
+      "folder": "sparse_jungle",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_14",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        1584,
+        70,
+        -864,
+        1591,
+        77,
+        -857
+      ],
+      "camp_box": [
+        1574,
+        70,
+        -865,
+        1583,
+        72,
+        -856
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        102,
+        52
+      ],
+      "turns": 2,
+      "tent": 1,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_1",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/forest/campsite_forest_1",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        10,
+        10
+      ],
+      "tent_box": [
+        1625,
+        64,
+        825,
+        1632,
+        71,
+        832
+      ],
+      "camp_box": [
+        1633,
+        63,
+        824,
+        1642,
+        72,
+        833
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -29,
+        -160
+      ],
+      "turns": 2,
+      "tent": 1,
+      "tent_template": "abandoned_camp/tent/swamp/tent_swamp_1",
+      "folder": "swamp",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_13",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -471,
+        62,
+        -2567,
+        -464,
+        69,
+        -2560
+      ],
+      "camp_box": [
+        -463,
+        62,
+        -2568,
+        -454,
+        64,
+        -2559
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -332,
+        -54
+      ],
+      "turns": 1,
+      "tent": 3,
+      "tent_template": "abandoned_camp/tent/savanna/tent_savanna_3",
+      "folder": "savanna",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_3",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -5319,
+        107,
+        -864,
+        -5312,
+        114,
+        -859
+      ],
+      "camp_box": [
+        -5320,
+        107,
+        -874,
+        -5311,
+        109,
+        -865
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -11,
+        -50
+      ],
+      "turns": 2,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/taiga/tent_taiga_4",
+      "folder": "taiga",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_7",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        -183,
+        62,
+        -807,
+        -176,
+        69,
+        -800
+      ],
+      "camp_box": [
+        -175,
+        61,
+        -808,
+        -166,
+        64,
+        -799
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -31,
+        46
+      ],
+      "turns": 2,
+      "tent": 4,
+      "tent_template": "abandoned_camp/tent/birch_forest/tent_birch_forest_4",
+      "folder": "birch_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_11",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -503,
+        66,
+        729,
+        -496,
+        73,
+        736
+      ],
+      "camp_box": [
+        -495,
+        66,
+        728,
+        -486,
+        68,
+        737
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -327,
+        97
+      ],
+      "turns": 0,
+      "tent": 5,
+      "tent_template": "abandoned_camp/tent/flower_forest/tent_flower_forest_5",
+      "folder": "flower_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_10",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -5232,
+        73,
+        1552,
+        -5225,
+        80,
+        1559
+      ],
+      "camp_box": [
+        -5242,
+        73,
+        1551,
+        -5233,
+        75,
+        1560
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -438,
+        360
+      ],
+      "turns": 2,
+      "tent": 6,
+      "tent_template": "abandoned_camp/tent/old_growth_spruce_taiga/tent_old_growth_spruce_taiga_6",
+      "folder": "old_growth_spruce_taiga",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_3",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -7015,
+        62,
+        5753,
+        -7008,
+        69,
+        5760
+      ],
+      "camp_box": [
+        -7007,
+        62,
+        5752,
+        -6998,
+        64,
+        5761
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -582,
+        629
+      ],
+      "turns": 3,
+      "tent": 9,
+      "tent_template": "abandoned_camp/tent/windswept_forest/tent_windswept_forest_9",
+      "folder": "windswept_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_11",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -9312,
+        70,
+        10057,
+        -9305,
+        77,
+        10064
+      ],
+      "camp_box": [
+        -9313,
+        70,
+        10065,
+        -9304,
+        72,
+        10074
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -47,
+        13
+      ],
+      "turns": 1,
+      "tent": 7,
+      "tent_template": "abandoned_camp/tent/forest/tent_forest_7",
+      "folder": "forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_1",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -759,
+        88,
+        208,
+        -752,
+        95,
+        215
+      ],
+      "camp_box": [
+        -760,
+        88,
+        198,
+        -751,
+        90,
+        207
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -57,
+        46
+      ],
+      "turns": 3,
+      "tent": 2,
+      "tent_template": "abandoned_camp/tent/old_growth_birch_forest/tent_old_growth_birch_forest_2",
+      "folder": "old_growth_birch_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_2",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -912,
+        70,
+        729,
+        -905,
+        77,
+        736
+      ],
+      "camp_box": [
+        -913,
+        70,
+        737,
+        -904,
+        72,
+        746
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -90,
+        299
+      ],
+      "turns": 3,
+      "tent": 3,
+      "tent_template": "abandoned_camp/tent/sparse_jungle/tent_sparse_jungle_3",
+      "folder": "sparse_jungle",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_10",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        -1440,
+        63,
+        4779,
+        -1433,
+        70,
+        4784
+      ],
+      "camp_box": [
+        -1441,
+        63,
+        4785,
+        -1432,
+        65,
+        4794
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -98,
+        52
+      ],
+      "turns": 0,
+      "tent": 10,
+      "tent_template": "abandoned_camp/tent/savanna/tent_savanna_10",
+      "folder": "savanna",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_10",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        5,
+        10
+      ],
+      "tent_box": [
+        -1568,
+        70,
+        832,
+        -1561,
+        77,
+        839
+      ],
+      "camp_box": [
+        -1578,
+        68,
+        831,
+        -1569,
+        72,
+        840
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        -259,
+        -146
+      ],
+      "turns": 1,
+      "tent": 6,
+      "tent_template": "abandoned_camp/tent/old_growth_pine_taiga/tent_old_growth_pine_taiga_6",
+      "folder": "old_growth_pine_taiga",
+      "camp_template": "abandoned_camp/camp/old_growth_pine_taiga/campsite_old_growth_pine_taiga_3",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        10,
+        10
+      ],
+      "tent_box": [
+        -4151,
+        107,
+        -2336,
+        -4144,
+        114,
+        -2329
+      ],
+      "camp_box": [
+        -4152,
+        107,
+        -2346,
+        -4143,
+        116,
+        -2337
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        38,
+        2
+      ],
+      "turns": 3,
+      "tent": 2,
+      "tent_template": "abandoned_camp/tent/snowy_taiga/tent_snowy_taiga_2",
+      "folder": "snowy_taiga",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_7",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        608,
+        69,
+        25,
+        615,
+        76,
+        32
+      ],
+      "camp_box": [
+        607,
+        68,
+        33,
+        616,
+        71,
+        42
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        53,
+        201
+      ],
+      "turns": 3,
+      "tent": 9,
+      "tent_template": "abandoned_camp/tent/wooded_badlands/tent_wooded_badlands_9",
+      "folder": "wooded_badlands",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_3",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        848,
+        102,
+        3209,
+        855,
+        109,
+        3216
+      ],
+      "camp_box": [
+        847,
+        102,
+        3217,
+        856,
+        104,
+        3226
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        79,
+        -158
+      ],
+      "turns": 1,
+      "tent": 10,
+      "tent_template": "abandoned_camp/tent/cherry_grove/tent_cherry_grove_10",
+      "folder": "cherry_grove",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_barrel_15",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        1257,
+        120,
+        -2528,
+        1264,
+        127,
+        -2521
+      ],
+      "camp_box": [
+        1256,
+        119,
+        -2538,
+        1265,
+        122,
+        -2529
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        78,
+        56
+      ],
+      "turns": 2,
+      "tent": 8,
+      "tent_template": "abandoned_camp/tent/meadow/tent_meadow_8",
+      "folder": "meadow",
+      "camp_template": "abandoned_camp/camp/meadow/campsite_meadow_1",
+      "tent_size": [
+        6,
+        8,
+        8
+      ],
+      "camp_size": [
+        11,
+        10,
+        10
+      ],
+      "tent_box": [
+        1243,
+        86,
+        889,
+        1248,
+        93,
+        896
+      ],
+      "camp_box": [
+        1249,
+        86,
+        888,
+        1259,
+        95,
+        897
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        126,
+        -55
+      ],
+      "turns": 2,
+      "tent": 9,
+      "tent_template": "abandoned_camp/tent/swamp/tent_swamp_9",
+      "folder": "swamp",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_chest_9",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        4,
+        10
+      ],
+      "tent_box": [
+        2009,
+        62,
+        -887,
+        2016,
+        69,
+        -880
+      ],
+      "camp_box": [
+        2017,
+        61,
+        -888,
+        2026,
+        64,
+        -879
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        176,
+        -101
+      ],
+      "turns": 0,
+      "tent": 5,
+      "tent_template": "abandoned_camp/tent/pale_garden/tent_pale_garden_5",
+      "folder": "pale_garden",
+      "camp_template": "abandoned_camp/camp/pale_garden/campsite_pale_garden_4",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        10,
+        10
+      ],
+      "tent_box": [
+        2816,
+        111,
+        -1616,
+        2823,
+        118,
+        -1609
+      ],
+      "camp_box": [
+        2806,
+        111,
+        -1617,
+        2815,
+        120,
+        -1608
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        206,
+        138
+      ],
+      "turns": 0,
+      "tent": 10,
+      "tent_template": "abandoned_camp/tent/dappled_forest/tent_dappled_forest_10",
+      "folder": "dappled_forest",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_2",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        5,
+        10
+      ],
+      "tent_box": [
+        3296,
+        67,
+        2208,
+        3303,
+        74,
+        2215
+      ],
+      "camp_box": [
+        3286,
+        65,
+        2207,
+        3295,
+        69,
+        2216
+      ]
+    },
+    {
+      "seed": 1792939653127071019,
+      "chunk": [
+        266,
+        -14
+      ],
+      "turns": 3,
+      "tent": 5,
+      "tent_template": "abandoned_camp/tent/bamboo_jungle/tent_bamboo_jungle_5",
+      "folder": "bamboo_jungle",
+      "camp_template": "abandoned_camp/camp/default/campsite_default_special_3",
+      "tent_size": [
+        8,
+        8,
+        8
+      ],
+      "camp_size": [
+        10,
+        3,
+        10
+      ],
+      "tent_box": [
+        4256,
+        62,
+        -231,
+        4263,
+        69,
+        -224
+      ],
+      "camp_box": [
+        4255,
+        62,
+        -223,
+        4264,
+        64,
+        -214
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -32,
+        85
+      ],
+      "warm": true,
+      "corner": [
+        -512,
+        1360
+      ],
+      "parts": [
+        {
+          "template": "warm_small_6",
+          "turns": 0,
+          "point": [
+            -489,
+            1364
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 2,
+          "point": [
+            -506,
+            1350
+          ]
+        },
+        {
+          "template": "warm_small_4",
+          "turns": 3,
+          "point": [
+            -523,
+            1364
+          ]
+        },
+        {
+          "template": "warm_small_8",
+          "turns": 1,
+          "point": [
+            -526,
+            1382
+          ]
+        },
+        {
+          "template": "warm_small_3",
+          "turns": 0,
+          "point": [
+            -492,
+            1379
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -56,
+        -29
+      ],
+      "warm": false,
+      "corner": [
+        -896,
+        -464
+      ],
+      "parts": [
+        {
+          "template": "cold_small_8",
+          "turns": 0,
+          "point": [
+            -873,
+            -472
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 0,
+          "point": [
+            -894,
+            -474
+          ]
+        },
+        {
+          "template": "cold_small_7",
+          "turns": 3,
+          "point": [
+            -906,
+            -473
+          ]
+        },
+        {
+          "template": "cold_small_7",
+          "turns": 1,
+          "point": [
+            -894,
+            -441
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -74,
+        64
+      ],
+      "warm": true,
+      "corner": [
+        -1199,
+        1009
+      ],
+      "parts": [
+        {
+          "template": "warm_small_8",
+          "turns": 2,
+          "point": [
+            -1211,
+            997
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 1,
+          "point": [
+            -1198,
+            1030
+          ]
+        },
+        {
+          "template": "warm_small_2",
+          "turns": 3,
+          "point": [
+            -1181,
+            1012
+          ]
+        },
+        {
+          "template": "warm_small_2",
+          "turns": 0,
+          "point": [
+            -1214,
+            1031
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -69,
+        83
+      ],
+      "warm": true,
+      "corner": [
+        -1104,
+        1328
+      ],
+      "parts": [
+        {
+          "template": "warm_small_5",
+          "turns": 1,
+          "point": [
+            -1082,
+            1349
+          ]
+        },
+        {
+          "template": "warm_small_4",
+          "turns": 1,
+          "point": [
+            -1100,
+            1316
+          ]
+        },
+        {
+          "template": "warm_small_2",
+          "turns": 3,
+          "point": [
+            -1113,
+            1334
+          ]
+        },
+        {
+          "template": "warm_small_3",
+          "turns": 1,
+          "point": [
+            -1103,
+            1347
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 0,
+          "point": [
+            -1086,
+            1318
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -110,
+        23
+      ],
+      "warm": false,
+      "corner": [
+        -1760,
+        368
+      ],
+      "parts": [
+        {
+          "template": "cold_small_7",
+          "turns": 1,
+          "point": [
+            -1739,
+            359
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 1,
+          "point": [
+            -1755,
+            357
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 3,
+          "point": [
+            -1772,
+            374
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 0,
+          "point": [
+            -1768,
+            385
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 3,
+          "point": [
+            -1772,
+            359
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        46,
+        -31
+      ],
+      "warm": true,
+      "corner": [
+        721,
+        -511
+      ],
+      "parts": [
+        {
+          "template": "warm_small_7",
+          "turns": 0,
+          "point": [
+            710,
+            -491
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 1,
+          "point": [
+            744,
+            -492
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 2,
+          "point": [
+            728,
+            -523
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 3,
+          "point": [
+            741,
+            -522
+          ]
+        },
+        {
+          "template": "warm_small_3",
+          "turns": 2,
+          "point": [
+            710,
+            -509
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        46,
+        -20
+      ],
+      "warm": true,
+      "corner": [
+        721,
+        -320
+      ],
+      "parts": [
+        {
+          "template": "warm_small_2",
+          "turns": 0,
+          "point": [
+            742,
+            -332
+          ]
+        },
+        {
+          "template": "warm_small_1",
+          "turns": 1,
+          "point": [
+            724,
+            -301
+          ]
+        },
+        {
+          "template": "warm_small_8",
+          "turns": 1,
+          "point": [
+            725,
+            -330
+          ]
+        },
+        {
+          "template": "warm_small_2",
+          "turns": 3,
+          "point": [
+            713,
+            -331
+          ]
+        },
+        {
+          "template": "warm_small_5",
+          "turns": 0,
+          "point": [
+            710,
+            -302
+          ]
+        }
+      ],
+      "source": "owner"
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        27,
+        6
+      ],
+      "warm": true,
+      "corner": [
+        432,
+        96
+      ],
+      "parts": [
+        {
+          "template": "warm_small_4",
+          "turns": 2,
+          "point": [
+            423,
+            113
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 1,
+          "point": [
+            449,
+            88
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 2,
+          "point": [
+            420,
+            102
+          ]
+        },
+        {
+          "template": "warm_small_1",
+          "turns": 0,
+          "point": [
+            451,
+            119
+          ]
+        },
+        {
+          "template": "warm_small_4",
+          "turns": 3,
+          "point": [
+            439,
+            84
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 1,
+          "point": [
+            417,
+            87
+          ]
+        },
+        {
+          "template": "warm_small_2",
+          "turns": 2,
+          "point": [
+            439,
+            119
+          ]
+        },
+        {
+          "template": "warm_small_3",
+          "turns": 3,
+          "point": [
+            453,
+            102
+          ]
+        }
+      ],
+      "source": "second"
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        0,
+        65
+      ],
+      "warm": true,
+      "corner": [
+        -15,
+        1025
+      ],
+      "parts": [
+        {
+          "template": "warm_small_2",
+          "turns": 1,
+          "point": [
+            3,
+            1016
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 1,
+          "point": [
+            -13,
+            1048
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 3,
+          "point": [
+            -27,
+            1014
+          ]
+        },
+        {
+          "template": "warm_small_4",
+          "turns": 0,
+          "point": [
+            -9,
+            1013
+          ]
+        },
+        {
+          "template": "warm_small_8",
+          "turns": 3,
+          "point": [
+            -25,
+            1030
+          ]
+        },
+        {
+          "template": "warm_small_8",
+          "turns": 0,
+          "point": [
+            6,
+            1044
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 3,
+          "point": [
+            -25,
+            1047
+          ]
+        }
+      ],
+      "source": "second"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        182,
+        -80
+      ],
+      "warm": false,
+      "corner": [
+        2912,
+        -1280
+      ],
+      "parts": [
+        {
+          "template": "cold_small_1",
+          "turns": 3,
+          "point": [
+            2904,
+            -1279
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 0,
+          "point": [
+            2904,
+            -1289
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 0,
+          "point": [
+            2913,
+            -1292
+          ]
+        },
+        {
+          "template": "cold_small_5",
+          "turns": 1,
+          "point": [
+            2897,
+            -1259
+          ]
+        },
+        {
+          "template": "cold_small_5",
+          "turns": 2,
+          "point": [
+            2933,
+            -1257
+          ]
+        },
+        {
+          "template": "cold_small_7",
+          "turns": 3,
+          "point": [
+            2934,
+            -1289
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 0,
+          "point": [
+            2930,
+            -1276
+          ]
+        }
+      ],
+      "source": "targets"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        204,
+        -178
+      ],
+      "warm": false,
+      "corner": [
+        3249,
+        -2848
+      ],
+      "parts": [
+        {
+          "template": "cold_small_6",
+          "turns": 2,
+          "point": [
+            3254,
+            -2826
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 3,
+          "point": [
+            3238,
+            -2846
+          ]
+        },
+        {
+          "template": "cold_small_8",
+          "turns": 0,
+          "point": [
+            3270,
+            -2841
+          ]
+        },
+        {
+          "template": "cold_small_5",
+          "turns": 1,
+          "point": [
+            3251,
+            -2860
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 2,
+          "point": [
+            3270,
+            -2856
+          ]
+        },
+        {
+          "template": "cold_small_4",
+          "turns": 2,
+          "point": [
+            3234,
+            -2856
+          ]
+        },
+        {
+          "template": "cold_small_1",
+          "turns": 0,
+          "point": [
+            3269,
+            -2826
+          ]
+        }
+      ],
+      "source": "targets"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        206,
+        565
+      ],
+      "warm": false,
+      "corner": [
+        3296,
+        9040
+      ],
+      "parts": [
+        {
+          "template": "cold_small_8",
+          "turns": 2,
+          "point": [
+            3317,
+            9061
+          ]
+        },
+        {
+          "template": "cold_small_4",
+          "turns": 3,
+          "point": [
+            3283,
+            9061
+          ]
+        },
+        {
+          "template": "cold_small_6",
+          "turns": 3,
+          "point": [
+            3299,
+            9028
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 1,
+          "point": [
+            3283,
+            9032
+          ]
+        },
+        {
+          "template": "cold_small_6",
+          "turns": 3,
+          "point": [
+            3318,
+            9044
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 0,
+          "point": [
+            3317,
+            9030
+          ]
+        }
+      ],
+      "source": "R2 fresh natural collision control"
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -737,
+        -656
+      ],
+      "warm": true,
+      "corner": [
+        -11807,
+        -10496
+      ],
+      "parts": [
+        {
+          "template": "warm_small_8",
+          "turns": 0,
+          "point": [
+            -11789,
+            -10508
+          ]
+        },
+        {
+          "template": "warm_small_6",
+          "turns": 3,
+          "point": [
+            -11805,
+            -10508
+          ]
+        },
+        {
+          "template": "warm_small_4",
+          "turns": 1,
+          "point": [
+            -11818,
+            -10478
+          ]
+        },
+        {
+          "template": "warm_small_7",
+          "turns": 3,
+          "point": [
+            -11806,
+            -10475
+          ]
+        },
+        {
+          "template": "warm_small_4",
+          "turns": 0,
+          "point": [
+            -11788,
+            -10475
+          ]
+        }
+      ],
+      "source": "R2 fresh natural collision control"
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -773,
+        -240
+      ],
+      "warm": false,
+      "corner": [
+        -12368,
+        -3840
+      ],
+      "parts": [
+        {
+          "template": "cold_small_7",
+          "turns": 2,
+          "point": [
+            -12346,
+            -3817
+          ]
+        },
+        {
+          "template": "cold_small_4",
+          "turns": 1,
+          "point": [
+            -12362,
+            -3852
+          ]
+        },
+        {
+          "template": "cold_small_4",
+          "turns": 3,
+          "point": [
+            -12383,
+            -3836
+          ]
+        },
+        {
+          "template": "cold_small_4",
+          "turns": 3,
+          "point": [
+            -12382,
+            -3822
+          ]
+        },
+        {
+          "template": "cold_small_3",
+          "turns": 2,
+          "point": [
+            -12346,
+            -3835
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 3,
+          "point": [
+            -12376,
+            -3851
+          ]
+        },
+        {
+          "template": "cold_small_2",
+          "turns": 2,
+          "point": [
+            -12347,
+            -3851
+          ]
+        }
+      ],
+      "source": "R2 fresh natural collision control"
+    }
+  ]
+}

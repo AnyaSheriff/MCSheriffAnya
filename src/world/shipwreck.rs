@@ -57,6 +57,44 @@ pub fn library() -> &'static [Template] {
     LIBRARY.get_or_init(|| template::parse(include_str!("shipwreck.txt")))
 }
 
+/// Порядок выбора снят с полей Template/Rot сохранённых начал 26.3.
+/// minecraft.wiki/w/Shipwreck: «upright, keeled sideways, or upside-down».
+const OCEAN_POOL: [&str; 20] = [
+    "with_mast", "upsidedown_full", "upsidedown_fronthalf", "upsidedown_backhalf",
+    "sideways_full", "sideways_fronthalf", "sideways_backhalf", "rightsideup_full",
+    "rightsideup_fronthalf", "rightsideup_backhalf", "with_mast_degraded",
+    "upsidedown_full_degraded", "upsidedown_fronthalf_degraded", "upsidedown_backhalf_degraded",
+    "sideways_full_degraded", "sideways_fronthalf_degraded", "sideways_backhalf_degraded",
+    "rightsideup_full_degraded", "rightsideup_fronthalf_degraded", "rightsideup_backhalf_degraded",
+];
+
+const BEACHED_POOL: [&str; 11] = [
+    "with_mast", "sideways_full", "sideways_fronthalf", "sideways_backhalf", "rightsideup_full",
+    "rightsideup_fronthalf", "rightsideup_backhalf", "with_mast_degraded",
+    "rightsideup_full_degraded", "rightsideup_fronthalf_degraded", "rightsideup_backhalf_degraded",
+];
+
+fn selection(seed: i64, x: i32, z: i32, beached: bool) -> (usize, Orient) {
+    let mut random = template::StructureRandom::for_chunk(seed, x, z);
+    let orient = Orient { turns: random.below(4) as u8, mirror: false };
+    let pool: &[&str] = if beached { &BEACHED_POOL } else { &OCEAN_POOL };
+    let name = pool[random.below(pool.len() as i32) as usize];
+    let index = library().iter().position(|t| t.name.strip_prefix("shipwreck/") == Some(name)).expect("образец корабля");
+    (index, orient)
+}
+
+/// Поворот рамки вокруг (4, 15), подтверждён BB/TPX/TPZ всех измеренных
+/// кораблей: Orient принимает нижний угол, а сохранённый TP — опорную точку.
+fn frame_corner(x: i32, z: i32, t: &Template, turns: u8) -> (i32, i32) {
+    let (dx, dz) = match turns % 4 {
+        0 => (0, 0),
+        1 => (20 - t.length, 11),
+        2 => (9 - t.width, 31 - t.length),
+        _ => (-11, 20 - t.width),
+    };
+    (x + dx, z + dz)
+}
+
 /// Корабль области: образец, поворот, угол рамки, дерево, на берегу ли.
 #[derive(Clone, Copy, Debug)]
 pub struct Ship {
@@ -121,6 +159,12 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x5419);
         let template = (dice % library().len() as u64) as usize;
         let orient = Orient { turns: ((dice >> 16) % 4) as u8, mirror: false };
+        let (template, orient) = if terrain.generation_profile() & 2 != 0 {
+            selection(seed, chunk_x, chunk_z, beached)
+        } else { (template, orient) };
+        let (x, z) = if terrain.generation_profile() & 2 != 0 {
+            frame_corner(x, z, &library()[template], orient.turns)
+        } else { (x, z) };
         let woods = WOODS[((dice >> 24) % WOODS.len() as u64) as usize];
         let (sx, sz) = library()[template].footprint(orient);
         let mut heights = Vec::new();
@@ -484,4 +528,54 @@ fn beached_ship_is_partly_buried_and_preserves_its_loot() {
         assert_eq!(back.containers.len(),c.containers.len());
     }}
     assert!(chest_count>0);
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+mod r2_tests {
+    use super::*;
+
+    #[test]
+    fn measured_ship_templates_rotations_and_pivots() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+        let rows = fixture["ships"].as_array().unwrap();
+        assert_eq!(rows.len(), 107);
+        for row in rows {
+            let seed = row["seed"].as_i64().unwrap();
+            let x = row["chunk"][0].as_i64().unwrap() as i32;
+            let z = row["chunk"][1].as_i64().unwrap() as i32;
+            let (index, orient) = selection(seed, x, z, row["beached"].as_bool().unwrap());
+            let t = &library()[index];
+            assert_eq!(t.name, row["template"].as_str().unwrap(), "{seed} {x}/{z}");
+            assert_eq!(i64::from(orient.turns), row["turns"].as_i64().unwrap());
+            let corner = frame_corner(x * 16, z * 16, t, orient.turns);
+            assert_eq!(corner, (row["box"][0].as_i64().unwrap() as i32, row["box"][2].as_i64().unwrap() as i32));
+            let (sx, sz) = t.footprint(orient);
+            assert_eq!(i64::from(sx), row["box"][3].as_i64().unwrap() - row["box"][0].as_i64().unwrap() + 1);
+            assert_eq!(i64::from(sz), row["box"][5].as_i64().unwrap() - row["box"][2].as_i64().unwrap() + 1);
+        }
+    }
+
+    /// Проверка постановки в настоящем чанке, а не только выбора плана.
+    #[test]
+    fn rotated_ship_is_present_in_its_persisted_frame() {
+        use super::super::{Chunk, Generator, terrain::{Terrain, Style}};
+        let terrain = Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true);
+        let ship = start_in(&terrain, (-31i32).div_euclid(SPACING), 49i32.div_euclid(SPACING)).unwrap();
+        assert_eq!(ship.chunk, (-31, 49));
+        assert!(library()[ship.template].name.ends_with("sideways_backhalf"));
+        let generator = Generator::Normal(terrain);
+        let (sx, sz) = ship.footprint();
+        let mut wood = 0;
+        for cx in ship.origin.0.div_euclid(16)..=(ship.origin.0 + sx - 1).div_euclid(16) {
+            for cz in ship.origin.2.div_euclid(16)..=(ship.origin.2 + sz - 1).div_euclid(16) {
+                let chunk = Chunk::generated(&generator, cx, cz);
+                for y in ship.origin.1..ship.origin.1 + library()[ship.template].height {
+                    for z in 0..16 { for x in 0..16 {
+                        if blocks::block_at_state(chunk.block(x,y,z)).is_some_and(|n| n.ends_with("_planks")) { wood += 1; }
+                    }}
+                }
+            }
+        }
+        assert!(wood > 100, "{wood}");
+    }
 }

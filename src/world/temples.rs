@@ -244,12 +244,12 @@ impl Start {
 
 /// Стоит ли постройка вида в области.
 pub fn start_in(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Start> {
-    type Starts = Mutex<HashMap<(Kind, i64, bool, i32, i32), Option<Start>>>;
+    type Starts = Mutex<HashMap<(Kind, i64, u8, i32, i32), Option<Start>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (kind, terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (kind, terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -277,6 +277,14 @@ fn decide(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z
     let [x0, z0, x1, z1] = start.area();
 
     if !kind.biome_fits(terrain.column_in((x0 + x1) / 2, (z0 + z1) / 2, None).biome) {
+        return None;
+    }
+
+    // minecraft.wiki/w/Desert_Pyramid: «no longer able to generate above
+    // water sources». Нельзя поднимать мокрые углы до уровня моря и затем
+    // принимать получившуюся сухую рамку за пригодную площадку.
+    if terrain.generation_profile() & 2 != 0 && kind == Kind::DesertPyramid
+        && [x0, x1].iter().any(|&x| [z0, z1].iter().any(|&z| terrain.column_at(x, z).height <= super::terrain::SEA)) {
         return None;
     }
 
@@ -1011,4 +1019,17 @@ fn desert_pyramid_uses_the_documented_set_and_only_desert() {
     assert!(Kind::DesertPyramid.biome_fits(super::terrain::Biome::Desert));
     assert!(!Kind::DesertPyramid.biome_fits(super::terrain::Biome::Badlands));
     assert!(!Kind::DesertPyramid.biome_fits(super::terrain::Biome::Savanna));
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn preview_pyramid_rejects_water_and_has_its_own_cache() {
+    use super::terrain::{Terrain, Style};
+    let seed = 100_554_032_945_340;
+    let old = Terrain::new(seed,Style::Vanilla);
+    let t = Terrain::new(seed,Style::Vanilla).with_preview(true);
+    let _ = start_in(Kind::DesertPyramid,&old,1,0);
+    assert_eq!(start_in(Kind::DesertPyramid,&t,1,0).unwrap().chunk,(48,2));
+    assert!(start_in(Kind::DesertPyramid,&t,(-62i32).div_euclid(SPACING),36i32.div_euclid(SPACING)).is_none());
+    assert_eq!(start_in(Kind::DesertPyramid,&t,1,0).unwrap().chunk,(48,2));
 }

@@ -1222,3 +1222,28 @@ fn legacy_biased_points(seed:i64,land:&dyn Fn(i32,i32)->bool) -> Vec<(i32,i32)> 
         best
     }).collect()
 }
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn all_distant_rings_and_measured_relocation_masks() {
+    let f: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+    let rows = f["rings"].as_array().unwrap();
+    assert_eq!(rows.len(), 256);
+    for (i,row) in rows.iter().enumerate() {
+        let seed = row["seed"].as_i64().unwrap();
+        let point = ring_points(seed)[i % 128];
+        let expected = (row["expected"][0].as_i64().unwrap() as i32,row["expected"][1].as_i64().unwrap() as i32);
+        assert!((point.0-expected.0).abs()<=7 && (point.1-expected.1).abs()<=7, "кольцо {i}: {point:?} / {expected:?}");
+    }
+    for row in f["relocation_masks"].as_array().unwrap() {
+        let raw=(row["raw"][0].as_i64().unwrap() as i32,row["raw"][1].as_i64().unwrap() as i32);
+        let bits=row["preferred"].as_str().unwrap().as_bytes();
+        let out=biased_points(row["seed"].as_i64().unwrap(), &|x,z| {
+            let dx=x.div_euclid(4)-(raw.0*4+2-28);
+            let dz=z.div_euclid(4)-(raw.1*4+2-28);
+            (0..57).contains(&dx) && (0..57).contains(&dz) && bits[(dz*57+dx) as usize]==b'1'
+        });
+        assert_eq!(out[row["index"].as_u64().unwrap() as usize],
+            (row["expected"][0].as_i64().unwrap() as i32,row["expected"][1].as_i64().unwrap() as i32));
+    }
+}

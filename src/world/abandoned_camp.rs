@@ -10,8 +10,9 @@
 //
 // Чем — замер официального 26.3 (tools/measure/camp_templates_263.py): `/place template` каждого
 // из 297 кусков (180 шатров: 18 биомов × 10; 45 общих лагерей: особый, сундук, бочка по 15; 72
-// лагеря по биомам: 4 на биом) в залитую барьером ячейку; воздух образца затирает барьер, поэтому
-// рамка точная. Раскладка — как у оригинала по стыкам jigsaw: шатёр (старт) с блоком, смотрящим
+// лагеря по биомам: 4 на биом) в залитую барьером ячейку. Воздух затирает барьер,
+// но крайние structure_void не видны: размеры исправлены по естественным началам
+// ниже; остальные рамки ещё [проверить]. Раскладка — как у оригинала по стыкам jigsaw: шатёр (старт) с блоком, смотрящим
 // на запад, и лагерь с блоком, смотрящим на восток, прикладываются стык к стыку, дерево растёт
 // над блоком-стыком с пулом `abandoned_camp/trees/*`. Весь лагерь поворачивается как целое
 // вокруг угла чанка старта (замер: PosX/PosZ шатра = угол чанка). Выбор шатра — один из десяти
@@ -60,7 +61,49 @@ fn library() -> &'static Library {
 
     LIBRARY.get_or_init(|| {
         let text = include_str!("abandoned_camp.txt");
-        let templates = template::parse(text);
+        let mut templates = template::parse(text);
+        // minecraft.wiki/w/Structure_template: «size». Проба барьером не
+        // видит крайние structure_void; размеры ниже — из 69 естественных
+        // записей 26.3. Пустое обрамление не меняет локальные блоки куска.
+        for t in &mut templates {
+            let size = match t.name.as_str() {
+                "abandoned_camp/camp/default/campsite_default_barrel_1" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_10" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_12" => Some((10, 4, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_14" => Some((10, 4, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_15" => Some((10, 4, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_2" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_3" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_barrel_8" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_1" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_10" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_11" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_12" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_13" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_14" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_2" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_3" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_4" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_5" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_6" => Some((10, 4, 10)),
+                "abandoned_camp/camp/default/campsite_default_chest_9" => Some((10, 4, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_10" => Some((10, 5, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_12" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_14" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_15" => Some((10, 5, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_2" => Some((10, 5, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_3" => Some((10, 3, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_6" => Some((10, 4, 10)),
+                "abandoned_camp/camp/default/campsite_default_special_7" => Some((10, 4, 10)),
+                "abandoned_camp/camp/forest/campsite_forest_1" => Some((10, 10, 10)),
+                "abandoned_camp/camp/meadow/campsite_meadow_1" => Some((11, 10, 10)),
+                "abandoned_camp/camp/old_growth_pine_taiga/campsite_old_growth_pine_taiga_3" => Some((10, 10, 10)),
+                "abandoned_camp/camp/pale_garden/campsite_pale_garden_4" => Some((10, 10, 10)),
+                "abandoned_camp/camp/wooded_badlands/campsite_wooded_badlands_3" => Some((10, 10, 10)),
+                _ => None, // Неизмеренные рамки каталога ещё требуют проверки [проверить].
+            };
+            if let Some((width, height, length)) = size { t.extend_bounds(width, height, length); }
+        }
         let mut joints: Vec<Vec<Joint>> = vec![Vec::new(); templates.len()];
 
         for line in text.lines() {
@@ -187,21 +230,85 @@ fn assemble(tent: usize, camp: usize) -> Option<(Vec<Piece>, Vec<TreeSpot>)> {
     Some((vec![Piece { template: tent, offset: (0, 0, 0) }, Piece { template: camp, offset }], trees))
 }
 
-/// Какие образцы выбраны для биома по случаю `dice`: шатёр из десяти, лагерь из сорока девяти.
-/// `retry` сдвигает выбор лагеря: если выбранный не стыкуется (у `campsite_pale_garden_2` нет блока
-/// `end_connector`), игра берёт другой элемент пула, и мы тоже.
+/// Порядок пула подтверждён сохранёнными кусками 26.3: по 15 сундуков,
+/// бочек и особых площадок, затем четыре площадки биома.
+fn campsite(folder: &str, pick: usize) -> Option<usize> {
+    if pick < 45 {
+        let kind = ["chest", "barrel", "special"][pick / 15];
+        find(&format!("abandoned_camp/camp/default/campsite_default_{kind}_{}", 1 + pick % 15))
+    } else {
+        find(&format!("abandoned_camp/camp/{folder}/campsite_{folder}_{}", pick - 44))
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
 fn choose(folder: &str, dice: u64, retry: u64) -> Option<(usize, usize)> {
     let tent = find(&format!("abandoned_camp/tent/{folder}/tent_{folder}_{}", 1 + dice % 10))?;
-    let pick = ((dice >> 8) + retry) % 49;
-    let camp = if pick < 45 {
-        let kind = ["special", "chest", "barrel"][(pick / 15) as usize];
+    Some((tent, campsite(folder, (((dice >> 8) + retry) % 49) as usize)?))
+}
 
-        find(&format!("abandoned_camp/camp/default/campsite_default_{kind}_{}", 1 + pick % 15))?
-    } else {
-        find(&format!("abandoned_camp/camp/{folder}/campsite_{folder}_{}", pick - 44))?
-    };
+fn shuffle<T>(random: &mut template::StructureRandom, values: &mut [T]) {
+    for count in (2..=values.len()).rev() {
+        let at = random.below(count as i32) as usize;
+        values.swap(count - 1, at);
+    }
+}
 
-    Some((tent, camp))
+/// minecraft.wiki/w/Abandoned_camp: «a tent and a campsite».
+/// Сначала перемешиваются стыки шатра. Дерево перед лагерем расходует
+/// перестановку четырёх вращений. Затем перемешивается пул площадок.
+/// Выбор куска подтверждён 41 началом, первые вращения деревьев — 3/3.
+fn piece_selection(seed: i64, x: i32, z: i32, folder: &str) -> Option<(usize, usize, u8)> {
+    let mut random = template::StructureRandom::for_chunk(seed, x, z);
+    let turns = random.below(4) as u8;
+    let pick = random.below(10);
+    let tent = find(&format!("abandoned_camp/tent/{folder}/tent_{folder}_{}", pick + 1))?;
+    let mut joints: Vec<_> = library().joints[tent].iter().collect();
+    shuffle(&mut random, &mut joints);
+    for joint in joints {
+        if joint.pool.starts_with("abandoned_camp/camp/") {
+            let mut pool: Vec<_> = (0..49).collect();
+            shuffle(&mut random, &mut pool);
+            // Не каждый элемент имеет end_connector: пропускаем несоединяемые.
+            for pick in pool {
+                let camp = campsite(folder, pick)?;
+                if assemble(tent, camp).is_some() { return Some((tent, camp, turns)); }
+                // Расход вращений отвергнутого куска ещё не измерен [проверить].
+            }
+            return None;
+        }
+        if joint.pool.starts_with("abandoned_camp/trees/") {
+            let mut rotations = [0, 1, 2, 3];
+            shuffle(&mut random, &mut rotations);
+        }
+    }
+    None
+}
+
+/// minecraft.wiki/w/Abandoned_camp: «a tent and a campsite».
+/// Поворот, затем шатёр: порядок подтверждён 41 сохранённым началом 26.3.
+fn tent_selection(seed: i64, x: i32, z: i32) -> (u8, u64) {
+    let mut random = template::StructureRandom::for_chunk(seed, x, z);
+    (random.below(4) as u8, random.below(10) as u64)
+}
+
+/// minecraft.wiki/w/Abandoned_camp: «biome variants». Сначала выбираем
+/// шатёр варианта; биом проверяем в середине его повёрнутой рамки.
+fn tent_in(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Option<(&'static str, u8, u64)> {
+    let (turns, pick) = tent_selection(terrain.seed(), chunk_x, chunk_z);
+    let suffix = format!("_{}", pick + 1);
+    for t in &library().templates {
+        if !t.name.starts_with("abandoned_camp/tent/") || !t.name.ends_with(&suffix) { continue; }
+        let name = t.name.split('/').nth(2)?;
+        let corners = [spin(0, 0, turns), spin(t.width - 1, 0, turns),
+            spin(0, t.length - 1, turns), spin(t.width - 1, t.length - 1, turns)];
+        let x = chunk_x * 16 + (corners.iter().map(|p| p.0).min()? + corners.iter().map(|p| p.0).max()?).div_euclid(2);
+        let z = chunk_z * 16 + (corners.iter().map(|p| p.1).min()? + corners.iter().map(|p| p.1).max()?).div_euclid(2);
+        if folder(terrain.column_in(x, z, None).biome) == Some(name) {
+            return Some((name, turns, pick));
+        }
+    }
+    None
 }
 
 pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Arc<Site>> {
@@ -223,19 +330,13 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
     let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
     let pivot = (chunk_x * 16, chunk_z * 16);
     let found = (|| {
-        let folder = folder(terrain.column_in(pivot.0 + 8, pivot.1 + 8, None).biome)?;
-        let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x51DE);
-        let ((tent, _), (pieces, trees)) = (0..49).find_map(|retry| {
-            let pair = choose(folder, dice >> 8, retry)?;
-
-            assemble(pair.0, pair.1).map(|joined| (pair, joined))
-        })?;
-        let turns = (dice % 4) as u8;
+        let (folder, _, _) = tent_in(terrain, chunk_x, chunk_z)?;
+        let (tent, camp, turns) = piece_selection(seed, chunk_x, chunk_z, folder)?;
+        let (pieces, trees) = assemble(tent, camp)?;
         let library = library();
         let size = (library.templates[tent].width, library.templates[tent].length);
         let mut site = Site { chunk: (chunk_x, chunk_z), pivot, turns, base_y: 0, pieces, trees };
         let centre = site.world(size.0 / 2, size.1 / 2);
-
         // Низ шатра — верхний блок земли в середине шатра (замер: PosY шатра = высота земли).
         site.base_y = terrain.column_at(centre.0, centre.1).height;
         Some(Arc::new(site))
@@ -401,6 +502,64 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32, ri
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tent_random_stream_matches_saved_starts() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+        for row in fixture["camps"].as_array().unwrap() {
+            let seed = row["seed"].as_i64().unwrap();
+            let x = row["chunk"][0].as_i64().unwrap() as i32;
+            let z = row["chunk"][1].as_i64().unwrap() as i32;
+            let (turns, pick) = tent_selection(seed, x, z);
+            assert_eq!(turns as u64, row["turns"].as_u64().unwrap());
+            assert_eq!(pick + 1, row["tent"].as_u64().unwrap());
+        }
+    }
+
+    #[test]
+    fn camp_pool_shuffle_matches_saved_parts() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+        for row in fixture["camps"].as_array().unwrap() {
+            let (tent, camp, turns) = piece_selection(row["seed"].as_i64().unwrap(),
+                row["chunk"][0].as_i64().unwrap() as i32, row["chunk"][1].as_i64().unwrap() as i32,
+                row["folder"].as_str().unwrap()).unwrap();
+            assert_eq!(library().templates[tent].name, row["tent_template"].as_str().unwrap());
+            assert_eq!(library().templates[camp].name, row["camp_template"].as_str().unwrap());
+            for (index, key) in [(tent, "tent_size"), (camp, "camp_size")] {
+                let t = &library().templates[index];
+                assert_eq!([t.width, t.height, t.length], [row[key][0].as_i64().unwrap() as i32,
+                    row[key][1].as_i64().unwrap() as i32, row[key][2].as_i64().unwrap() as i32]);
+            }
+            assert_eq!(u64::from(turns), row["turns"].as_u64().unwrap());
+            let (pieces, trees) = assemble(tent, camp).unwrap();
+            let site = Site { chunk: (0, 0), pivot: (row["chunk"][0].as_i64().unwrap() as i32 * 16,
+                row["chunk"][1].as_i64().unwrap() as i32 * 16), turns,
+                base_y: row["tent_box"][1].as_i64().unwrap() as i32, pieces, trees };
+            for (piece, key) in site.pieces.iter().zip(["tent_box", "camp_box"]) {
+                let t = &library().templates[piece.template];
+                let corners = [site.world(piece.offset.0, piece.offset.2),
+                    site.world(piece.offset.0 + t.width - 1, piece.offset.2),
+                    site.world(piece.offset.0, piece.offset.2 + t.length - 1),
+                    site.world(piece.offset.0 + t.width - 1, piece.offset.2 + t.length - 1)];
+                let actual = [corners.iter().map(|p| p.0).min().unwrap(), site.base_y + piece.offset.1,
+                    corners.iter().map(|p| p.1).min().unwrap(), corners.iter().map(|p| p.0).max().unwrap(),
+                    site.base_y + piece.offset.1 + t.height - 1, corners.iter().map(|p| p.1).max().unwrap()];
+                let expected: Vec<_> = row[key].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+                assert_eq!(actual.as_slice(), expected.as_slice(), "{key}: {}", t.name);
+            }
+        }
+    }
+
+    #[test]
+    fn camp_biome_uses_the_rotated_tent_frame() {
+        use super::super::terrain::{Terrain, Style};
+        let terrain = Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true);
+        assert_eq!(folder(template::jigsaw_surface_biome(&terrain, -63, 37)), Some("savanna"));
+        assert!(site_in(&terrain, (-63i32).div_euclid(SPACING), 37i32.div_euclid(SPACING)).is_none());
+        let site = site_in(&terrain, (-15i32).div_euclid(SPACING), (-34i32).div_euclid(SPACING)).unwrap();
+        assert_eq!(site.chunk, (-15, -34));
+        assert!(site.names()[0].ends_with("forest_10"));
+    }
 
     /// 297 образцов: 180 шатров, 45 общих лагерей и 72 лагеря по биомам.
     #[test]

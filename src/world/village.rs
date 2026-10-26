@@ -2,7 +2,7 @@
 //
 // Где — по вики (Village; Structure set: «spacing 34, separation 8»): мир
 // поделён на области 34×34 чанка, в каждой одна попытка — чанк со случайным
-// сдвигом 0…25 по каждой оси; деревня встаёт, если биом в середине чанка её
+// сдвигом 0…25 по каждой оси; деревня встаёт, если биом в точке начала её
 // (вики: равнинная — равнины и луг, пустынная — пустыня, саванная — саванна,
 // таёжная — тайга, снежная — снежные равнины). Случай — свой (своя
 // генерация), закон — оригинала.
@@ -113,7 +113,7 @@ pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, regi
 /// Стоит ли деревня с чанком старта в этой области, и какая.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32, Kind)> {
     let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
-    let kind = Kind::of_biome(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)?;
+    let kind = Kind::of_biome(super::template::jigsaw_surface_biome(terrain, chunk_x, chunk_z))?;
 
     library(kind).map(|_| (chunk_x, chunk_z, kind))
 }

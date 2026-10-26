@@ -51,6 +51,27 @@ impl Template {
         self.cells[((y * self.length + b) * self.width + a) as usize]
     }
 
+    /// Достраивает объявленную рамку пустотами structure_void. Размеры
+    /// некоторых снятых образцов описывали лишь изменённые пробой клетки.
+    /// minecraft.wiki/w/Structure_template: «size»; локальные блоки и добыча
+    /// остаются на своих местах, новые клетки не трогают рельеф.
+    pub fn extend_bounds(&mut self, width: i32, height: i32, length: i32) {
+        assert!(width >= self.width && height >= self.height && length >= self.length);
+        if (width, height, length) == (self.width, self.height, self.length) { return; }
+        let mut cells = vec![Cell::Keep; (width * height * length) as usize];
+        for y in 0..self.height {
+            for b in 0..self.length {
+                for a in 0..self.width {
+                    cells[((y * length + b) * width + a) as usize] = self.cell(a, y, b);
+                }
+            }
+        }
+        self.width = width;
+        self.height = height;
+        self.length = length;
+        self.cells = cells;
+    }
+
     /// Имя блока палитры без свойств.
     #[cfg(all(test, not(seedmap_core)))]
     pub fn block_name(&self, index: u16) -> &str {
@@ -296,6 +317,15 @@ pub fn attempt(seed: i64, region_x: i32, region_z: i32, spacing: i32, separation
     (region_x * spacing + (dice % span) as i32, region_z * spacing + ((dice >> 24) % span) as i32)
 }
 
+/// minecraft.wiki/w/World_generation: «starting point». Для наземного
+/// jigsaw биом проверяется у опорной точки старта, а не середины чанка.
+/// Разница подтверждена началами на границах реки, берега и леса 26.3.
+/// Точный центр первого куска стартового пула деревни ещё [проверить].
+pub fn jigsaw_surface_biome(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> super::terrain::Biome {
+    let offset = if terrain.generation_profile() & 2 != 0 { 0 } else { 8 };
+    terrain.column_in(chunk_x * 16 + offset, chunk_z * 16 + offset, None).biome
+}
+
 /// Поток области: minecraft.wiki/w/Structure_set, «salt», «linear».
 /// Подтверждён сохранёнными началами двух миров 26.3; декор использует свой поток.
 pub fn placement_random(seed: i64, x: i32, z: i32, salt: u64) -> StructureRandom {
@@ -524,4 +554,34 @@ mod overworld_placement_tests {
         }
         assert_eq!(checked, 609);
     }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn jigsaw_start_anchor_matches_saved_border_starts() {
+    use super::terrain::{Terrain,Style};
+    let owner=Terrain::new(1_792_932_773_345_722_119,Style::Vanilla).with_preview(true);
+    let second=Terrain::new(100_554_032_945_340,Style::Vanilla).with_preview(true);
+    for (x,z) in [(-100i32,37i32),(44,41)] {
+        assert!(super::village::start_in(&owner,x.div_euclid(super::village::SPACING),z.div_euclid(super::village::SPACING)).is_some());
+    }
+    assert!(super::village::start_in(&owner,(-33i32).div_euclid(super::village::SPACING),14i32.div_euclid(super::village::SPACING)).is_none());
+    assert!(super::abandoned_camp::site_in(&owner,(-18i32).div_euclid(37),38i32.div_euclid(37)).is_none());
+    assert!(super::abandoned_camp::site_in(&second,102i32.div_euclid(37),52i32.div_euclid(37)).is_some());
+    assert!(super::trail_ruins::site_in(&owner,35i32.div_euclid(34),(-55i32).div_euclid(34)).is_some());
+    assert!(super::trail_ruins::site_in(&owner,(-93i32).div_euclid(34),(-29i32).div_euclid(34)).is_none());
+    assert!(super::pillager_outpost::start_in(&owner,(-80i32).div_euclid(32),41i32.div_euclid(32)).is_some());
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn declared_void_frame_preserves_visible_template_and_loot_coordinates() {
+    let mut t = parse("template frame 2 2 2 1\n A oak_planks\nlayer 0\n A_\n ..\nlayer 1\n .A\n _.\nloot 1 0 0 shipwreck_supply\n").remove(0);
+    let before: Vec<_> = t.cells().collect();
+    let loot = t.loot.clone();
+    t.extend_bounds(4, 5, 6);
+    assert_eq!(t.cells().collect::<Vec<_>>(), before);
+    assert_eq!(t.loot, loot);
+    assert_eq!((t.width, t.height, t.length), (4, 5, 6));
+    assert_eq!(t.cell(3, 4, 5), Cell::Keep);
 }

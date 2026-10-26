@@ -159,7 +159,7 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
     let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let library = library();
-    let found = (fits(terrain.column_in(x + 8, z + 8, None).biome) && !library.layouts.is_empty()).then(|| {
+    let found = (fits(template::jigsaw_surface_biome(terrain, chunk_x, chunk_z)) && !library.layouts.is_empty()).then(|| {
         let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x7A11);
         let layout = &library.layouts[(dice % library.layouts.len() as u64) as usize];
         let turns = ((dice >> 16) % 4) as u8;

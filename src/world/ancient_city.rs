@@ -90,7 +90,11 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
 
     let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let column = terrain.column_at(chunk_x * 16 + 8, chunk_z * 16 + 8);
-    let dark = super::cave_biomes::biome_at(&column, FLOOR).is_some_and(|biome| biome == super::terrain::Biome::DeepDark);
+    // minecraft.wiki/w/Ancient_City: «generate in the deep dark». Высота
+    // пола не равна высоте проверки начала; контрольные регионы 26.3:
+    // у отвергнутого кандидата на −51 deep_dark, а на −27 уже plains.
+    let biome_y = if terrain.generation_profile() & 2 != 0 { -27 } else { FLOOR };
+    let dark = super::cave_biomes::biome_at(&column, biome_y).is_some_and(|biome| biome == super::terrain::Biome::DeepDark);
     let found = (dark && !library().is_empty()).then_some((chunk_x, chunk_z));
 
     #[cfg(not(seedmap_core))]
@@ -401,4 +405,20 @@ pub(super) fn audit_box(seed: i64, cx: i32, cz: i32) -> serde_json::Value {
     let b = p.to_world(p.template.width-1,p.template.depth-1);
     let y = p.template.bottom;
     serde_json::json!({"name":"whole_snapshot","rotation":p.turns,"box":[a.0.min(b.0),y,a.1.min(b.1),a.0.max(b.0),y+p.template.height-1,a.1.max(b.1)]})
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn city_biome_is_checked_above_the_floor() {
+    use super::terrain::{Terrain, Style};
+    let t = Terrain::new(100_554_032_945_340, Style::Vanilla).with_preview(true);
+    let c = t.column_at(-11 * 16 + 8, -87 * 16 + 8);
+    assert_eq!(super::cave_biomes::biome_at(&c, FLOOR), Some(super::terrain::Biome::DeepDark));
+    assert_ne!(super::cave_biomes::biome_at(&c, -27), Some(super::terrain::Biome::DeepDark));
+    assert!(start_in(&t, (-11i32).div_euclid(SPACING), (-87i32).div_euclid(SPACING)).is_none());
+    for (seed, x, z) in [(1_792_932_773_345_722_119, -347i32, -57i32),
+        (1_792_932_773_345_722_119,145,97), (1_792_939_653_127_071_019,-250,-155)] {
+        let t = Terrain::new(seed,Style::Vanilla).with_preview(true);
+        assert_eq!(start_in(&t,x.div_euclid(SPACING),z.div_euclid(SPACING)),Some((x,z)));
+    }
 }

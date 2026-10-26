@@ -131,6 +131,41 @@ fn floor(terrain: &super::terrain::Terrain, x: i32, z: i32, sx: i32, sz: i32) ->
     heights[heights.len() / 2]
 }
 
+/// minecraft.wiki/w/Ocean_Ruins: «clusters». Кандидаты относительно нижнего
+/// угла большой рамки 16×16, порядок и поток сняты с 14 естественных начал.
+/// Отсев пересечения использует пробную рамку 6×7 до выбора малого образца;
+/// три дополнительных начала различают её с соседними размерами 5×6…8×7.
+fn cluster_plans(random: &mut template::StructureRandom, warm: bool, x: i32, z: i32) -> Vec<(usize, Orient, i32, i32)> {
+    let mut positions = vec![
+        (random.below(8) - 15, random.below(7) + 17),
+        (random.below(8) - 15, random.below(7) + 1),
+        (random.below(8) - 15, random.below(5) - 12),
+        (random.below(7) + 1, random.below(7) + 17),
+        (random.below(7) + 1, random.below(3) - 12),
+        (random.below(7) + 17, random.below(6) + 19),
+        (random.below(7) + 17, random.below(7) + 1),
+        (random.below(7) + 17, random.below(5) - 12),
+    ];
+    let count = 4 + random.below(5);
+    let pool = kinds(warm, false);
+    let mut out = Vec::new();
+    for _ in 0..count {
+        let index = random.below(positions.len() as i32) as usize;
+        let (px, pz) = positions.remove(index);
+        let turns = random.below(4) as u8;
+        let (dx, dz, sx, sz) = match turns {
+            0 => (0, 0, 6, 7),
+            1 => (-6, 0, 7, 6),
+            2 => (-5, -6, 6, 7),
+            _ => (0, -5, 7, 6),
+        };
+        if px + dx <= 15 && px + dx + sx > 0 && pz + dz <= 15 && pz + dz + sz > 0 { continue; }
+        let template = pool[random.below(pool.len() as i32) as usize];
+        out.push((template, Orient { turns, mirror: false }, x + px, z + pz));
+    }
+    out
+}
+
 fn decide(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Site> {
     let seed = terrain.seed();
     let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
@@ -138,7 +173,12 @@ fn decide(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Op
     let warm = warm_of(terrain.column_in(x + 8, z + 8, None).biome)?;
     let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x0C3A);
     let unit = |shift: u32| ((dice >> shift) & 0xFFFF) as f64 / 65536.0;
-    let big = unit(0) < BIG_SHARE;
+    let preview = terrain.generation_profile() & 2 != 0;
+    // minecraft.wiki/w/Ocean_Ruins: «30%»; последовательность вращение,
+    // размер, образец подтверждена 57 сохранёнными началами 26.3.
+    let mut random = template::StructureRandom::for_chunk(seed, chunk_x, chunk_z);
+    let rotation = random.below(4) as u8;
+    let big = if preview { f64::from(random.float()) < BIG_SHARE } else { unit(0) < BIG_SHARE };
     let pool = kinds(warm, big);
 
     if pool.is_empty() {
@@ -147,16 +187,32 @@ fn decide(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Op
 
     let place = |template: usize, orient: Orient, x: i32, z: i32, big: bool| {
         let (sx, sz) = library()[template].footprint(orient);
+        // Сохранённый TP — точка поворота (0, 0), а origin — низ рамки.
+        let (x, z) = if preview {
+            match orient.turns % 4 {
+                0 => (x, z),
+                1 => (x - sx + 1, z),
+                2 => (x - sx + 1, z - sz + 1),
+                _ => (x, z - sz + 1),
+            }
+        } else { (x, z) };
         let y = floor(terrain, x, z, sx, sz) + if big { -1 } else { 1 };
 
         Ruin { template, orient, origin: (x, y, z) }
     };
-    let main = place(pool[((dice >> 16) % pool.len() as u64) as usize], Orient { turns: ((dice >> 24) % 4) as u8, mirror: false }, x, z, big);
+    let index = if preview { random.below(pool.len() as i32) as usize } else { ((dice >> 16) % pool.len() as u64) as usize };
+    let turns = if preview { rotation } else { ((dice >> 24) % 4) as u8 };
+    let main = place(pool[index], Orient { turns, mirror: false }, x, z, big);
     let mut ruins = vec![main];
 
     // Скопление малых вокруг большой: 4…8, середины на 12…26 блоков от
     // середины большой по большей оси (замер).
-    if big && unit(32) < CLUSTER_SHARE {
+    let clustered = if preview { f64::from(random.float()) < CLUSTER_SHARE } else { unit(32) < CLUSTER_SHARE };
+    if big && clustered && preview {
+        for (template, orient, x, z) in cluster_plans(&mut random, warm, main.origin.0, main.origin.2) {
+            ruins.push(place(template, orient, x, z, false));
+        }
+    } else if big && clustered {
         let small = kinds(warm, false);
         let (msx, msz) = main.footprint();
         let (cx, cz) = (x + msx / 2, z + msz / 2);
@@ -426,5 +482,52 @@ mod tests {
         }
 
         assert!(sites > 0);
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn measured_primary_ruin_variants_and_frames() {
+    let f: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+    let mut checked = 0;
+    for row in f["ruins"].as_array().unwrap() {
+        if !matches!(row["label"].as_str().unwrap(), "owner" | "second") { continue; }
+        let t = super::terrain::Terrain::new(row["seed"].as_i64().unwrap(), super::terrain::Style::Vanilla).with_preview(true);
+        let x = row["chunk"][0].as_i64().unwrap() as i32;
+        let z = row["chunk"][1].as_i64().unwrap() as i32;
+        let site = site_in(&t, x.div_euclid(SPACING), z.div_euclid(SPACING)).unwrap();
+        let ruin = &site.ruins[0];
+        assert_eq!(library()[ruin.template].name, row["template"].as_str().unwrap());
+        assert_eq!(i64::from(ruin.orient.turns), row["turns"].as_i64().unwrap());
+        assert_eq!((ruin.origin.0, ruin.origin.2), (row["box"][0].as_i64().unwrap() as i32, row["box"][2].as_i64().unwrap() as i32));
+        checked += 1;
+    }
+    assert_eq!(checked, 48);
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn measured_ruin_clusters_keep_candidate_order_and_overlap_rejection() {
+    let f: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+    let rows = f["clusters"].as_array().unwrap();
+    assert_eq!(rows.len(), 14);
+    for row in rows {
+        let seed = row["seed"].as_i64().unwrap();
+        let x = row["chunk"][0].as_i64().unwrap() as i32;
+        let z = row["chunk"][1].as_i64().unwrap() as i32;
+        let mut random = template::StructureRandom::for_chunk(seed, x, z);
+        random.below(4);
+        assert!(random.float() < BIG_SHARE as f32);
+        random.below(4);
+        assert!(random.float() < CLUSTER_SHARE as f32);
+        let plans = cluster_plans(&mut random, row["warm"].as_bool().unwrap(),
+            row["corner"][0].as_i64().unwrap() as i32, row["corner"][1].as_i64().unwrap() as i32);
+        let measured = row["parts"].as_array().unwrap();
+        assert_eq!(plans.len(), measured.len(), "{seed} {x}/{z}");
+        for ((template, orient, px, pz), part) in plans.iter().zip(measured) {
+            assert_eq!(library()[*template].name, part["template"].as_str().unwrap());
+            assert_eq!(i64::from(orient.turns), part["turns"].as_i64().unwrap());
+            assert_eq!((*px, *pz), (part["point"][0].as_i64().unwrap() as i32, part["point"][1].as_i64().unwrap() as i32));
+        }
     }
 }

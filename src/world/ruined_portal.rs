@@ -196,6 +196,46 @@ fn pick_template(dice: u64) -> usize {
     pool[((dice >> 8) % pool.len().max(1) as u64) as usize]
 }
 
+/// minecraft.wiki/w/Ruined_Portal: «5% chance» гигантского образца.
+/// Поток, порядок выбора и флаги подтверждены 66 сохранёнными началами.
+fn selection_263(seed: i64, x: i32, z: i32, variant: Variant) -> (usize, Orient, Vertical, bool) {
+    let mut random = template::StructureRandom::for_chunk(seed, x, z);
+    let vertical = match variant {
+        Variant::Standard => if random.float() < 0.5 { Vertical::Underground } else { Vertical::OnLandSurface },
+        Variant::Mountain => if random.float() < 0.5 { Vertical::InMountain } else { Vertical::OnLandSurface },
+        Variant::Desert => Vertical::PartlyBuried,
+        Variant::Ocean | Variant::Swamp => Vertical::OnOceanFloor,
+        Variant::Jungle => Vertical::OnLandSurface,
+        Variant::Nether => unreachable!("поток Незера сохранён отдельно"),
+    };
+    let giant = random.float() < 0.05;
+    let number = 1 + random.below(if giant { 3 } else { 10 });
+    let name = format!("ruined_portal/{}portal_{number}", if giant { "giant_" } else { "" });
+    let index = library().iter().position(|t| t.name == name).expect("образец портала");
+    let orient = Orient { turns: random.below(4) as u8, mirror: random.below(2) == 1 };
+    (index, orient, vertical, matches!(vertical, Vertical::Underground | Vertical::InMountain))
+}
+
+/// BB/TPX/TPZ подтверждают поворот вокруг середины образца; отражение
+/// FRONT_BACK меняет знак X до поворота, а не переносит опорную точку.
+fn frame_corner(x: i32, z: i32, t: &Template, orient: Orient) -> (i32, i32) {
+    let (px, pz) = (t.width / 2, t.length / 2);
+    let mut low = (i32::MAX, i32::MAX);
+    for a in [0, t.width - 1] {
+        for b in [0, t.length - 1] {
+            let a = if orient.mirror { -a } else { a };
+            let (dx, dz) = match orient.turns % 4 {
+                0 => (a, b),
+                1 => (px + pz - b, pz - px + a),
+                2 => (2 * px - a, 2 * pz - b),
+                _ => (px - pz + b, pz + px - a),
+            };
+            low = (low.0.min(x + dx), low.1.min(z + dz));
+        }
+    }
+    low
+}
+
 /// Высота по правилу вида: `top` — наименьший верх у четырёх углов рамки.
 fn height_for(vertical: Vertical, top: i32, height: i32, dice: u64) -> i32 {
     let between = |low: i32, high: i32| if high <= low { low } else { low + ((dice >> 20) % (high - low + 1) as u64) as i32 };
@@ -295,6 +335,10 @@ fn decide(seed: i64, region_x: i32, region_z: i32, preview: bool, biome: &dyn Fn
     let (vertical, air_pocket, mossiness, overgrown, vines) = properties(variant, dice);
     let template = pick_template(dice >> 16);
     let orient = Orient::from_roll(dice >> 48);
+    let (template, orient, vertical, air_pocket) = if preview {
+        selection_263(seed, chunk_x, chunk_z, variant)
+    } else { (template, orient, vertical, air_pocket) };
+    let (x, z) = if preview { frame_corner(x, z, &library()[template], orient) } else { (x, z) };
     let (sx, sz) = library()[template].footprint(orient);
     let floor = vertical == Vertical::OnOceanFloor;
     let corners = [(x, z), (x + sx - 1, z), (x, z + sz - 1), (x + sx - 1, z + sz - 1)];
@@ -920,4 +964,31 @@ mod tests {
         assert!(totals.len() >= 5);
     }
 
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn measured_portal_variants_flags_and_frames() {
+    let f: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+    let rows=f["portals"].as_array().unwrap();
+    assert_eq!(rows.len(),66);
+    for row in rows {
+        let seed=row["seed"].as_i64().unwrap();
+        let (x,z)=(row["chunk"][0].as_i64().unwrap() as i32,row["chunk"][1].as_i64().unwrap() as i32);
+        let variant=Variant::by_name(row["variant"].as_str().unwrap()).unwrap();
+        let (index,orient,vertical,air)=selection_263(seed,x,z,variant);
+        let t=&library()[index];
+        assert_eq!(t.name,row["template"].as_str().unwrap(),"{seed} {x}/{z}");
+        assert_eq!(i64::from(orient.turns),row["turns"].as_i64().unwrap());
+        assert_eq!(orient.mirror,row["mirror"].as_bool().unwrap());
+        assert_eq!(air,row["air_pocket"].as_bool().unwrap());
+        let expected=match row["vertical"].as_str().unwrap() {
+            "underground"=>Vertical::Underground,"on_land_surface"=>Vertical::OnLandSurface,
+            "partly_buried"=>Vertical::PartlyBuried,"on_ocean_floor"=>Vertical::OnOceanFloor,
+            "in_mountain"=>Vertical::InMountain,_=>panic!("неизвестная высота"),
+        };
+        assert_eq!(vertical,expected);
+        assert_eq!(frame_corner(x*16,z*16,t,orient),
+            (row["box"][0].as_i64().unwrap() as i32,row["box"][2].as_i64().unwrap() as i32));
+    }
 }
