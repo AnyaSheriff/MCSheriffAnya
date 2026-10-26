@@ -544,6 +544,8 @@ pub struct Column {
     pub hoodoo_base: Option<i32>,
     pub biome: Biome,
     pub climate: Climate,
+    /// Именованные октавы 26.3: пещерам не нужны поправки старого климата.
+    pub climate_263: bool,
     /// Крутой склон: у соседа с одной стороны земля на четыре блока и
     /// больше выше, чем с другой. Там вместо травы камень. Решает чанк —
     /// ему видны соседние столбцы.
@@ -565,6 +567,7 @@ impl Column {
                 humidity: 0.0,
             },
             steep: false,
+            climate_263: false,
         }
     }
 }
@@ -910,6 +913,8 @@ impl Terrain {
     }
 
     /// Серная пещера в клетке 4×4×4 с серединой (x, y, z) под столбцом `column`.
+    /// В климате 26.3 выбирается общим расстоянием до интервалов биомов;
+    /// перечисленные ниже шумовые пороги сохранены для старого климата.
     /// Вики, Sulfur Caves: на глубине пышных и капельниковых пещер, низкая странность,
     /// высокая эрозия, умеренная континентальность, мелкие разорванные пятна.
     /// Пороги подобраны по переписи официального 26.3 (tools/measure/census_263.py):
@@ -917,6 +922,11 @@ impl Terrain {
     pub fn sulfur_cell(&self, column: &Column, x: i32, y: i32, z: i32) -> bool {
         if !self.preview {
             return false;
+        }
+
+        if column.climate_263 {
+            return super::cave_biomes::cave_biome_263(&column.climate, f64::from(column.height - y) / 128.0)
+                == Some(Biome::SulfurCaves);
         }
 
         let depth = column.height - y;
@@ -1160,6 +1170,7 @@ impl Terrain {
             hoodoo_base: (height > base_height).then_some(base_height),
             biome,
             climate,
+            climate_263: self.climate_fields.is_some(),
             steep: false,
         }
     }

@@ -25,6 +25,9 @@
 //   - капельниковым пещерам нужна континентальность 1 (самая глубь суши),
 //     а глубина — точкой 0,5 посреди промежутка; по таблице вики они
 //     занимали бы треть всей толщи.
+// Эти поправки сохраняются только у старого климата. Именованные октавы
+// профиля 26.3 используют интервалы вики без растяжения расстояний;
+// сера участвует в том же выборе, а не перекрывает его независимым шумом.
 //
 // Глубину мы считаем от поверхности столбца: у игры она идёт от сглаженной
 // высоты рельефа, у нас — от настоящей, по смыслу это то же самое. Глубокая
@@ -1065,7 +1068,11 @@ impl Rim {
                     }
                 }
 
-                if near(outside).climate.erosion >= DEEP_DARK_NEAR {
+                let outside_column = near(outside);
+                // Без веса ×3 допустимый промах эрозии шире. Запас 0,7
+                // покрывает всю высоту мира: иначе теряется скалк на швах.
+                let erosion_limit = if outside_column.climate_263 { DEEP_DARK_EROSION + 0.7 } else { DEEP_DARK_NEAR };
+                if outside_column.climate.erosion >= erosion_limit {
                     continue;
                 }
 
@@ -1201,11 +1208,10 @@ fn azalea_at(terrain: &Terrain, key: u64, x: i32, z: i32) -> Option<Column> {
         return None;
     }
 
-    if !lush_below(&terrain.climate_at(x, z)) {
+    let column = terrain.column_at(x, z);
+    if !lush_below(&column) {
         return None;
     }
-
-    let column = terrain.column_at(x, z);
 
     if column.height < SEA || !grassy(column.biome) {
         return None;
@@ -1332,6 +1338,64 @@ mod tests {
 
         // Океан: ни капельника, ни тьмы.
         assert_ne!(cave_biome(&climate(0.0, -0.5, -0.8), 0.5), Some(Biome::DripstoneCaves));
+    }
+
+    /// Профиль колонок выбирает масштаб климата и для чанков, и для построек.
+    #[test]
+    fn preview_caves_use_unweighted_parameter_intervals() {
+        let mut column = Column { climate: climate(0.0, 0.4, 0.2), ..Column::flat(64) };
+        assert_eq!(biome_at(&column, 0), None);
+        column.climate_263 = true;
+        assert_eq!(biome_at(&column, 0), Some(Biome::DripstoneCaves));
+        column.climate = climate(0.3, 0.0, 0.2);
+        assert_eq!(biome_at(&column, 0), Some(Biome::LushCaves));
+        assert!(lush_below(&column));
+        column.climate = Climate { weirdness: -0.9, ..climate(0.0, 0.2, 0.6) };
+        assert_eq!(biome_at(&column, 0), Some(Biome::SulfurCaves));
+        assert_eq!(biome_at(&column, 64), None);
+        column.climate_263 = false;
+        assert_eq!(biome_at(&column, 0), None);
+    }
+
+    /// Редкую глубокую тьму проверяем суммарно; по каждому семени её доли
+    /// дополнительно сохраняет полная перепись [проверить хвост высот].
+    #[test]
+    fn preview_cave_biome_shares_match_official_census() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-u/cave-biomes-reference.json"
+        )).unwrap();
+        let names = ["lush_caves", "dripstone_caves", "deep_dark", "sulfur_caves"];
+        let mut counts = [0usize; 4];
+        let mut expected = [0.0; 4];
+        let mut total = 0usize;
+        for sample in reference["samples"].as_array().unwrap() {
+            let terrain = Terrain::new(sample["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true);
+            let mut local = [0usize; 4];
+            let mut cells = 0usize;
+            for window in sample["windows"].as_array().unwrap() {
+                let b: Vec<i32> = window.as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+                for x in b[0]..=b[2] { for z in b[1]..=b[3] {
+                    let column = terrain.column_at(x * 16 + 10, z * 16 + 10);
+                    for y in (-62..320).step_by(4) {
+                        cells += 1;
+                        if let Some(biome) = biome_at(&column, y)
+                            && let Some(index) = names.iter().position(|name| *name == biome.name())
+                        { local[index] += 1; }
+                    }
+                } }
+            }
+            for i in 0..4 {
+                counts[i] += local[i];
+                expected[i] += sample["official_percent"][names[i]].as_f64().unwrap() / 100.0 * cells as f64;
+            }
+            total += cells;
+        }
+        for i in 0..4 {
+            let tolerance = (expected[i] * reference["relative_tolerance"].as_f64().unwrap())
+                .max(total as f64 * reference["minimum_tolerance_pp"].as_f64().unwrap() / 100.0);
+            assert!((counts[i] as f64 - expected[i]).abs() <= tolerance,
+                "{}: {} / {} клеток", names[i], counts[i], expected[i]);
+        }
     }
 
     /// Толщина капельника от крепления к кончику.

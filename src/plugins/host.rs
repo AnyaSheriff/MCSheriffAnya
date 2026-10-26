@@ -126,6 +126,8 @@ pub struct Host {
     registry: CommandRegistry,
     names: Arc<Mutex<Vec<String>>>,
     epochs: Option<Arc<AtomicBool>>,
+    #[cfg(test)]
+    test_call_epochs: Option<u64>,
     /// Сколько хозяин тратит на такт целиком (задачи всех плагинов).
     pub tick_stats: Stats,
 }
@@ -193,8 +195,18 @@ impl Host {
             registry: Arc::new(Mutex::new(HashMap::new())),
             names: Arc::new(Mutex::new(Vec::new())),
             epochs: None,
+            #[cfg(test)]
+            test_call_epochs: None,
             tick_stats: Stats::default(),
         })
+    }
+
+    /// Функциональные тесты не измеряют задержки планировщика ОС под нагрузкой.
+    /// Топливо и память остаются ограничены; рабочий сервер этого метода не имеет.
+    #[cfg(test)]
+    pub(super) fn with_test_call_epochs(mut self, epochs: u64) -> Self {
+        self.test_call_epochs = Some(epochs);
+        self
     }
 
     /// Запускает часы эпох при первой загрузке плагина (без плагинов поток
@@ -286,6 +298,8 @@ impl Host {
         let component = Component::new(&self.engine, &bytes).map_err(|error| format!("{}: не wasm-компонент: {}", manifest.wasm_file(), short(&error)))?;
 
         let limits = if trusted { MODULE_LIMITS } else { PLUGIN_LIMITS };
+        #[cfg(test)]
+        let limits = Limits { epochs: self.test_call_epochs.unwrap_or(limits.epochs), ..limits };
 
         let ctx = PluginCtx {
             name: manifest.name.clone(),

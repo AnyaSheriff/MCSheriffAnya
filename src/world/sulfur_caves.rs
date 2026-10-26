@@ -21,9 +21,11 @@ const STONE_LEFT: f64 = 0.24;
 const MATERIAL_SPLIT: f64 = 0.04;
 
 /// Шанс шипа на открытой грани: в переписи 26.3 2017–2731 шип на миллион
-/// блоков биома. Прежние 5 % давали только 615–671 [проверить форму шипов].
+/// блоков биома. После исправления интервалов биома 16,8 % давали 3151/3080
+/// в распределённой выборке двух семян: открытых граней стало больше.
+/// Частота 12,8 % проверяется полной условной переписью [проверить форму].
 /// Вики, Sulfur Caves: «sulfur spikes» — https://minecraft.wiki/w/Sulfur_Caves
-const SPIKE_CHANCE: f64 = 0.168;
+const SPIKE_CHANCE: f64 = 0.128;
 
 /// Попытка небольшого серного водоёма на клетку биома 4×4×4.
 /// Частота своя [проверить]: цель переписи — около 30 блоков мощной серы
@@ -176,8 +178,8 @@ mod tests {
     use super::super::terrain::{Style, Terrain};
     use super::*;
 
-    /// Доля клеток биома среди всех клеток столбцов; печатается для сверки с замером
-    /// 0,0016 (`cargo test --release sulfur_census -- --ignored --nocapture`).
+    /// Доля клеток биома среди всех клеток столбцов; высота — из настоящей
+    /// сетки плотности. На других семенах доля может отличаться [проверить].
     #[test]
     #[ignore]
     fn sulfur_census() {
@@ -188,7 +190,7 @@ mod tests {
 
             for x in (-4096..4096).step_by(16) {
                 for z in (-4096..4096).step_by(16) {
-                    let column = terrain.column_in(x + 2, z + 2, None);
+                    let column = terrain.column_at(x + 2, z + 2);
                     total += 96;
 
                     for layer in 0..96 {
@@ -202,7 +204,7 @@ mod tests {
                 }
             }
 
-            println!("seed {seed}: серных клеток {sulfur} из {total} = {:.5} (замер 0.00160), по 16 блоков глубины {by_depth:?}", sulfur as f64 / total as f64);
+            println!("seed {seed}: серных клеток {sulfur} из {total} = {:.5}, по 16 блоков глубины {by_depth:?}", sulfur as f64 / total as f64);
         }
     }
 
@@ -254,6 +256,7 @@ mod tests {
             let mut counts = [0usize; 4];
             let mut volume = 0usize;
             for at in sample["chunks"].as_array().unwrap() {
+                let previous_volume = volume;
                 let chunk = Chunk::generated(&generator, at[0].as_i64().unwrap() as i32, at[1].as_i64().unwrap() as i32);
                 for y in MIN_Y..MIN_Y + WORLD_HEIGHT { for z in 0..16 { for x in 0..16 {
                     if chunk.biome(x, y, z) != Biome::SulfurCaves.number() as super::super::BiomeId { continue; }
@@ -263,8 +266,10 @@ mod tests {
                         counts[i] += usize::from(if i == 2 { crate::sulfur_spike::is_spike(state) } else { state == states[i] });
                     }
                 } } }
+                assert!(volume > previous_volume, "серный биом покинул выбранный чанк {at}");
             }
             assert!(volume > 0);
+            eprintln!("серная выборка {}: объём {volume}, блоки {counts:?}", sample["seed"]);
             for i in 0..4 {
                 total_counts[i] += counts[i];
                 total_expected[i] += sample["official_per_million"][names[i]].as_f64().unwrap() * volume as f64 / 1e6;

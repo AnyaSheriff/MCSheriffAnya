@@ -132,6 +132,48 @@ def official_spawners(world, plan):
             'dungeons': sum(entities[k] for k in ('zombie', 'skeleton', 'spider'))}
 
 
+def ore_host_profiles(world, plan):
+    """Руды по Y и биому на остаточную породу, без подгонки координат.
+
+    Знаменатель — камень/сланец/гранит/диорит/андезит и уже лежащая руда.
+    Это наблюдаемая оценка подложки, а не восстановление состояния до декораций.
+    """
+    from collections import Counter, defaultdict
+    import numpy as np
+    from genaudit_263_io import Reader, region_dir
+    wanted = {(x, z) for x0, z0, x1, z1 in plan['windows']['overworld']
+              for x in range(x0, x1 + 1) for z in range(z0, z1 + 1)}
+    reader = Reader()
+    by_y, by_biome = defaultdict(Counter), defaultdict(Counter)
+    present = set()
+    for file in sorted(region_dir(world, 'overworld').glob('*')):
+        if file.suffix not in ('.mca', '.mcs'):
+            continue
+        for x, z, blocks, biomes, _ in reader.read(file, wanted):
+            present.add((x, z))
+            ores = {i: n for i, n in enumerate(reader.names) if n.endswith('_ore')}
+            hosts = [reader.names.index(n) for n in ('stone', 'deepslate', 'granite', 'diorite', 'andesite')]
+            host = np.isin(blocks, hosts + list(ores))
+            labels, indices = np.unique(np.asarray(biomes).reshape(96, 4, 4), return_inverse=True)
+            bio = indices.reshape(96, 4, 4).repeat(4, 0).repeat(4, 1).repeat(4, 2)
+            for y in range(-64, 112, 16):
+                band = blocks[y + 64:y + 80]
+                by_y[str(y)]['hosts'] += int(host[y + 64:y + 80].sum())
+                for i, count in zip(*np.unique(band, return_counts=True)):
+                    if i in ores:
+                        by_y[str(y)][ores[i]] += int(count)
+            for i, count in enumerate(np.bincount(bio[host], minlength=len(labels))):
+                by_biome[str(labels[i])]['hosts'] += int(count)
+            ore_mask = np.isin(blocks, list(ores))
+            joint = bio[ore_mask] * len(reader.names) + blocks[ore_mask]
+            for code, count in zip(*np.unique(joint, return_counts=True)):
+                biome, material = divmod(int(code), len(reader.names))
+                by_biome[str(labels[biome])][ores[material]] += int(count)
+    if present != wanted:
+        raise ValueError('Incomplete ore-host profile coverage')
+    return {'chunks': len(present), 'by_y16': dict(by_y), 'by_biome': dict(by_biome)}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--test-executable', required=True)
@@ -142,14 +184,20 @@ def main():
     parser.add_argument('--sulfur-only', action='store_true', help='Regenerate all sulfur-bearing chunks in the full census')
     parser.add_argument('--reference-report', help='Full official census JSON, required with --sulfur-only')
     parser.add_argument('--sulfur-baseline', help='Previously measured sulfur_counts JSON for the unchanged census world')
+    parser.add_argument('--sulfur-selection', help='Current-climate sulfur_chunks JSON from genaudit_263_biomes.rs')
     parser.add_argument('--measure-only', action='store_true', help='Remeasure an existing complete --sulfur-only export')
     parser.add_argument('--full-census', action='store_true', help='Regenerate the entire original overworld window; reuse its validated reference statistics')
+    parser.add_argument('--ore-host-profiles', action='store_true', help='Also count ores per observed host block by Y and biome')
     args = parser.parse_args()
     output = Path(args.output).resolve()
     if output.is_relative_to(REPO):
         raise ValueError('Generated worlds must be outside the repository')
     if args.sulfur_only and args.full_census:
         raise ValueError('Choose one measurement mode')
+    if args.sulfur_selection and not args.sulfur_only:
+        raise ValueError('--sulfur-selection requires --sulfur-only')
+    if args.ore_host_profiles and (args.sulfur_only or args.full_census):
+        raise ValueError('--ore-host-profiles applies to the regular replay')
     if args.measure_only and not (args.sulfur_only or args.full_census):
         raise ValueError('--measure-only requires --sulfur-only or --full-census')
     output.mkdir(parents=True, exist_ok=args.measure_only)
@@ -176,6 +224,16 @@ def main():
         if before['seed'] != plan['seed'] or before['source_world'] != str(reference / f'{args.label}-ours/world'):
             raise ValueError('Sulfur baseline belongs to another world')
         plan['windows'] = {'overworld': before['windows'], 'the_nether': [], 'the_end': []}
+        if args.sulfur_selection:
+            selected = json.loads(Path(args.sulfur_selection).read_text())
+            if selected['seed'] != plan['seed'] or not selected['sulfur_chunks']:
+                raise ValueError('Current sulfur selection has another seed or is empty')
+            points = [tuple(row['chunk']) for row in selected['sulfur_chunks']]
+            original = json.loads((reference / f'{args.label}-plan.json').read_text())['windows']['overworld']
+            if len(set(points)) != len(points) or any(not any(x0 <= x <= x1 and z0 <= z <= z1
+                    for x0, z0, x1, z1 in original) for x, z in points):
+                raise ValueError('Sulfur selection repeats chunks or leaves the census footprint')
+            plan['windows']['overworld'] = [[x, z, x, z] for x, z in sorted(points)]
         plan_path = output / 'plan.json'
         if not args.measure_only:
             plan_path.write_text(json.dumps(plan, indent=2) + '\n')
@@ -206,6 +264,8 @@ def main():
         result = {'seed': plan['seed'], 'selection': 'All sulfur-bearing chunks in the saved ours census; each side normalized by its own biome volume',
                   'regenerated_chunks': len(plan['windows']['overworld']),
                   'before': before, 'after': after, 'vanilla': vanilla}
+        if args.sulfur_selection:
+            result['selection'] = 'All sulfur-bearing chunks in the current-climate census footprint; saved baseline and fresh sample each normalized by their own biome volume'
         (output / 'conditional.json').write_text(json.dumps(result, indent=2) + '\n')
         return
     if args.full_census:
@@ -250,6 +310,10 @@ def main():
         features[stage]['dungeons'] = sum(counts.get('minecraft:' + k, 0)
                                          for k in ('zombie', 'skeleton', 'spider'))
     (output / 'feature-counts.json').write_text(json.dumps(features, indent=2) + '\n')
+    if args.ore_host_profiles:
+        profiles = {stage: ore_host_profiles(path, plan) for stage, path in [
+            ('before', reference / f'{args.label}-ours/world'), ('after', world), ('vanilla', vanilla)]}
+        (output / 'ore-host-profiles.json').write_text(json.dumps(profiles, indent=2) + '\n')
 
 
 if __name__ == '__main__':
