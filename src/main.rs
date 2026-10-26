@@ -281,10 +281,11 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     };
     let overworld = open_world(Path::new(WORLD_PATH), properties.level_seed, properties.world_kind)?;
     // Структуры для достижений используют ленивый неизменяемый кэш.
-    // Прогреваем его до входа игроков, не держа сетевые ответы за расчётом стартов.
+    // Прогреваем его в своём потоке: расчёт стартов занимает секунды, и
+    // запуск сервера его не ждёт.
     let warming = std::time::Instant::now();
     let spawn = overworld.spawn_position();
-    let _ = overworld.progress_structure(spawn.0.floor() as i32, spawn.1.floor() as i32, spawn.2.floor() as i32);
+    overworld.warm_structures((spawn.0.floor() as i32, spawn.1.floor() as i32, spawn.2.floor() as i32));
     if std::env::var_os("MCSA_NET_TIMING").is_some() {
         eprintln!("NET_TIMING stage=startup_progression us={}", warming.elapsed().as_micros());
     }

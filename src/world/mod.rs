@@ -4261,12 +4261,21 @@ impl World {
     /// Вики, Advancement: «Enter a ...» — внутри рамки строения, а не рядом
     /// с похожими блоками. Рамки нашей генерации; [проверить] границы оригинала.
     pub fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
-        match &*self.generator {
-            Generator::Nether(nether) => nether.progress_structure(x, y, z),
-            Generator::Normal(terrain) if stronghold::contains(terrain, x, y, z) => Some("story/follow_ender_eye"),
-            Generator::End(end) if end.in_city(x, y, z) => Some("end/find_end_city"),
-            _ => None,
-        }
+        self.generator.progress_structure(x, y, z)
+    }
+
+    /// Прогрев ленивых кэшей построек для достижений (кольца крепостей Края
+    /// считаются секунды) — в своём потоке, чтобы не держать на нём запуск
+    /// сервера. Кэши общие по семени, поэтому замок мира не нужен.
+    pub fn warm_structures(&self, (x, y, z): (i32, i32, i32)) {
+        let generator = Arc::clone(&self.generator);
+
+        std::thread::spawn(move || {
+            let warming = std::time::Instant::now();
+            let _ = generator.progress_structure(x, y, z);
+
+            log_debug!("Кэш построек для достижений прогрет за {:.3} с", warming.elapsed().as_secs_f64());
+        });
     }
 
     /// Биом поверхности столбца по генератору (команда `locate biome`):
@@ -4931,6 +4940,15 @@ impl World {
 }
 
 impl Generator {
+    fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
+        match self {
+            Generator::Nether(nether) => nether.progress_structure(x, y, z),
+            Generator::Normal(terrain) if stronghold::contains(terrain, x, y, z) => Some("story/follow_ender_eye"),
+            Generator::End(end) if end.in_city(x, y, z) => Some("end/find_end_city"),
+            _ => None,
+        }
+    }
+
     /// Всё про столбец в этом месте: высота поверхности и биом. Считается
     /// один раз на место — дальше столбец заполняется по нему.
     fn column_at(&self, x: i32, z: i32) -> Column {
