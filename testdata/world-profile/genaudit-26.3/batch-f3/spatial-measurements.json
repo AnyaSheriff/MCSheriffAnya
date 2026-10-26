@@ -1,0 +1,593 @@
+{
+  "method": "Independent biome statistics. Distances use projected X/Z Euclidean blocks; connected components link points within 4 blocks (same species required for meadow). Window compositions include >=5 flowers; variance is mean sum of squared deviations from global species fractions, equal weight per window. Cherry occupancy uses chunk-interior natural soil columns, >=10 per window. No coordinate matching between worlds.",
+  "results": [
+    {
+      "label": "owner",
+      "kind": "ours",
+      "raw_sha256": "b586542ee00f3212642c73fc128dafac163f3c7d69af45ffecdb9b4e87be87f2",
+      "meadow": {
+        "counts": {
+          "poppy": 86,
+          "cornflower": 41,
+          "azure_bluet": 46,
+          "dandelion": 73,
+          "oxeye_daisy": 17,
+          "allium": 16
+        },
+        "pairs": {
+          "4": {
+            "count": 259,
+            "same_type": 0.2084942084942085,
+            "shuffled_expectation": 0.21644619788040537
+          },
+          "8": {
+            "count": 1056,
+            "same_type": 0.22727272727272727,
+            "shuffled_expectation": 0.21644619788040537
+          },
+          "16": {
+            "count": 3924,
+            "same_type": 0.22196738022426096,
+            "shuffled_expectation": 0.21644619788040537
+          }
+        },
+        "windows": {
+          "16": {
+            "windows_ge5": 25,
+            "mean_dominant_share": 0.4288745143745144,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.09667175178530277,
+            "shuffled_expected_deviation": 0.08308507761727787
+          },
+          "32": {
+            "windows_ge5": 9,
+            "mean_dominant_share": 0.34751323363802133,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.026898786132170657,
+            "shuffled_expected_deviation": 0.03184786062995761
+          },
+          "64": {
+            "windows_ge5": 6,
+            "mean_dominant_share": 0.3481510160764121,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.023110030550263935,
+            "shuffled_expected_deviation": 0.03061416981539126
+          }
+        },
+        "same_type_components_distance4": {
+          "count": 230,
+          "size_quantiles": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            4.0
+          ],
+          "mean_size": 1.2130434782608697,
+          "fraction_in_size_ge5": 0.0
+        }
+      },
+      "cherry": {
+        "petals": 2639,
+        "components_distance4": {
+          "count": 10,
+          "size_quantiles": [
+            2.0,
+            5.0,
+            12.5,
+            31.0,
+            1496.0
+          ],
+          "mean_size": 263.9,
+          "fraction_in_size_ge5": 0.997726411519515
+        },
+        "windows": {
+          "16": {
+            "windows_ge10_soil": 45,
+            "mean_occupancy": 0.33612008289134726,
+            "occupancy_variance": 0.04470283982487928
+          },
+          "32": {
+            "windows_ge10_soil": 20,
+            "mean_occupancy": 0.32945927302914946,
+            "occupancy_variance": 0.03597875021405844
+          },
+          "64": {
+            "windows_ge10_soil": 10,
+            "mean_occupancy": 0.38866969586862155,
+            "occupancy_variance": 0.03712139686389605
+          }
+        }
+      }
+    },
+    {
+      "label": "owner",
+      "kind": "final",
+      "raw_sha256": "24aa3c4a2b2c734e448d00b78aba96308eb0f5d8f22c23d8194d50c0fe73b3ac",
+      "meadow": {
+        "counts": {
+          "azure_bluet": 246,
+          "dandelion": 97,
+          "cornflower": 208
+        },
+        "pairs": {
+          "4": {
+            "count": 2910,
+            "same_type": 0.931958762886598,
+            "shuffled_expectation": 0.37168124071935327
+          },
+          "8": {
+            "count": 6805,
+            "same_type": 0.8578986039676708,
+            "shuffled_expectation": 0.37168124071935327
+          },
+          "16": {
+            "count": 14932,
+            "same_type": 0.6792793999464238,
+            "shuffled_expectation": 0.37168124071935327
+          }
+        },
+        "windows": {
+          "16": {
+            "windows_ge5": 27,
+            "mean_dominant_share": 0.9055912086613842,
+            "pure_windows": 19,
+            "mean_squared_composition_deviation": 0.4953257235378479,
+            "shuffled_expected_deviation": 0.03346882950473575
+          },
+          "32": {
+            "windows_ge5": 9,
+            "mean_dominant_share": 0.7026211191032241,
+            "pure_windows": 2,
+            "mean_squared_composition_deviation": 0.286886859999561,
+            "shuffled_expected_deviation": 0.012825822183580632
+          },
+          "64": {
+            "windows_ge5": 6,
+            "mean_dominant_share": 0.6466621211506122,
+            "pure_windows": 1,
+            "mean_squared_composition_deviation": 0.20386348230870657,
+            "shuffled_expected_deviation": 0.012486817886352447
+          }
+        },
+        "same_type_components_distance4": {
+          "count": 27,
+          "size_quantiles": [
+            1.0,
+            11.5,
+            19.0,
+            29.0,
+            46.0
+          ],
+          "mean_size": 20.40740740740741,
+          "fraction_in_size_ge5": 0.9945553539019963
+        }
+      },
+      "cherry": {
+        "petals": 2180,
+        "components_distance4": {
+          "count": 9,
+          "size_quantiles": [
+            1.0,
+            1.0,
+            2.0,
+            63.0,
+            1372.0
+          ],
+          "mean_size": 242.22222222222223,
+          "fraction_in_size_ge5": 0.9972477064220183
+        },
+        "windows": {
+          "16": {
+            "windows_ge10_soil": 45,
+            "mean_occupancy": 0.26782451936354623,
+            "occupancy_variance": 0.01808473329294728
+          },
+          "32": {
+            "windows_ge10_soil": 20,
+            "mean_occupancy": 0.2210988844184501,
+            "occupancy_variance": 0.018232753500184173
+          },
+          "64": {
+            "windows_ge10_soil": 10,
+            "mean_occupancy": 0.2142422473777273,
+            "occupancy_variance": 0.013053486760287138
+          }
+        }
+      }
+    },
+    {
+      "label": "owner",
+      "kind": "vanilla",
+      "raw_sha256": "8502f3471d9c49be715662bdafd18b9b5a6d9de06f381878bb5079e650942337",
+      "meadow": {
+        "counts": {
+          "cornflower": 188,
+          "dandelion": 87,
+          "azure_bluet": 246
+        },
+        "pairs": {
+          "4": {
+            "count": 2199,
+            "same_type": 0.7103228740336517,
+            "shuffled_expectation": 0.3798464491362764
+          },
+          "8": {
+            "count": 6049,
+            "same_type": 0.5617457430980327,
+            "shuffled_expectation": 0.3798464491362764
+          },
+          "16": {
+            "count": 14470,
+            "same_type": 0.48956461644782306,
+            "shuffled_expectation": 0.3798464491362764
+          }
+        },
+        "windows": {
+          "16": {
+            "windows_ge5": 27,
+            "mean_dominant_share": 0.7076788867343369,
+            "pure_windows": 2,
+            "mean_squared_composition_deviation": 0.23773577802011367,
+            "shuffled_expected_deviation": 0.04097191932191033
+          },
+          "32": {
+            "windows_ge5": 9,
+            "mean_dominant_share": 0.5751079816364117,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.12322163145311943,
+            "shuffled_expected_deviation": 0.01666930492098782
+          },
+          "64": {
+            "windows_ge5": 6,
+            "mean_dominant_share": 0.5651801315215949,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.11959567780410317,
+            "shuffled_expected_deviation": 0.017191052088562492
+          }
+        },
+        "same_type_components_distance4": {
+          "count": 70,
+          "size_quantiles": [
+            1.0,
+            2.0,
+            4.0,
+            11.75,
+            28.0
+          ],
+          "mean_size": 7.442857142857143,
+          "fraction_in_size_ge5": 0.8560460652591171
+        }
+      },
+      "cherry": {
+        "petals": 2566,
+        "components_distance4": {
+          "count": 7,
+          "size_quantiles": [
+            1.0,
+            10.0,
+            20.0,
+            604.0,
+            1317.0
+          ],
+          "mean_size": 366.57142857142856,
+          "fraction_in_size_ge5": 0.9992205767731879
+        },
+        "windows": {
+          "16": {
+            "windows_ge10_soil": 45,
+            "mean_occupancy": 0.2847936045656371,
+            "occupancy_variance": 0.017583256612252667
+          },
+          "32": {
+            "windows_ge10_soil": 20,
+            "mean_occupancy": 0.2484133515879105,
+            "occupancy_variance": 0.013317764656635783
+          },
+          "64": {
+            "windows_ge10_soil": 10,
+            "mean_occupancy": 0.26516493756452386,
+            "occupancy_variance": 0.012474650994077916
+          }
+        }
+      }
+    },
+    {
+      "label": "second",
+      "kind": "ours",
+      "raw_sha256": "c55a292d30fdcedbbfbd74701f884c3f3a4c7db627784e50e1d861a719eac9dd",
+      "meadow": {
+        "counts": {
+          "allium": 301,
+          "cornflower": 643,
+          "poppy": 1172,
+          "azure_bluet": 663,
+          "dandelion": 1127,
+          "oxeye_daisy": 311
+        },
+        "pairs": {
+          "4": {
+            "count": 4887,
+            "same_type": 0.20851237978309803,
+            "shuffled_expectation": 0.20697803550191485
+          },
+          "8": {
+            "count": 19405,
+            "same_type": 0.20468951301211027,
+            "shuffled_expectation": 0.20697803550191485
+          },
+          "16": {
+            "count": 74863,
+            "same_type": 0.2059762499499085,
+            "shuffled_expectation": 0.20697803550191485
+          }
+        },
+        "windows": {
+          "16": {
+            "windows_ge5": 344,
+            "mean_dominant_share": 0.3817709156378697,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.07145043664358681,
+            "shuffled_expected_deviation": 0.07348652291600498
+          },
+          "32": {
+            "windows_ge5": 105,
+            "mean_dominant_share": 0.34260338048742106,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.03265495357307058,
+            "shuffled_expected_deviation": 0.029736903572288993
+          },
+          "64": {
+            "windows_ge5": 41,
+            "mean_dominant_share": 0.31504479724228773,
+            "pure_windows": 0,
+            "mean_squared_composition_deviation": 0.01675507264130695,
+            "shuffled_expected_deviation": 0.019824254176843765
+          }
+        },
+        "same_type_components_distance4": {
+          "count": 3295,
+          "size_quantiles": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            6.0
+          ],
+          "mean_size": 1.2798179059180577,
+          "fraction_in_size_ge5": 0.023713540431586435
+        }
+      },
+      "cherry": {
+        "petals": 469,
+        "components_distance4": {
+          "count": 3,
+          "size_quantiles": [
+            47.0,
+            54.0,
+            61.0,
+            211.0,
+            361.0
+          ],
+          "mean_size": 156.33333333333334,
+          "fraction_in_size_ge5": 1.0
+        },
+        "windows": {
+          "16": {
+            "windows_ge10_soil": 9,
+            "mean_occupancy": 0.41985412767893654,
+            "occupancy_variance": 0.02031697222731636
+          },
+          "32": {
+            "windows_ge10_soil": 5,
+            "mean_occupancy": 0.40461316783624673,
+            "occupancy_variance": 0.01584313275710338
+          },
+          "64": {
+            "windows_ge10_soil": 3,
+            "mean_occupancy": 0.4391029856961615,
+            "occupancy_variance": 0.01521863546746747
+          }
+        }
+      }
+    },
+    {
+      "label": "second",
+      "kind": "final",
+      "raw_sha256": "25eca9af520e526eec1f7be0fbb19c07d37a1ed30235983c0fc311d119f1e756",
+      "meadow": {
+        "counts": {
+          "dandelion": 977,
+          "azure_bluet": 823,
+          "oxeye_daisy": 15,
+          "poppy": 1301,
+          "cornflower": 1213,
+          "allium": 249
+        },
+        "pairs": {
+          "4": {
+            "count": 22990,
+            "same_type": 0.8807307525010875,
+            "shuffled_expectation": 0.23163073520965893
+          },
+          "8": {
+            "count": 55633,
+            "same_type": 0.8140492153937411,
+            "shuffled_expectation": 0.23163073520965893
+          },
+          "16": {
+            "count": 121817,
+            "same_type": 0.7394534424587701,
+            "shuffled_expectation": 0.23163073520965893
+          }
+        },
+        "windows": {
+          "16": {
+            "windows_ge5": 257,
+            "mean_dominant_share": 0.8895380474221029,
+            "pure_windows": 149,
+            "mean_squared_composition_deviation": 0.6193236926939034,
+            "shuffled_expected_deviation": 0.05401363843998576
+          },
+          "32": {
+            "windows_ge5": 96,
+            "mean_dominant_share": 0.7869770053358408,
+            "pure_windows": 23,
+            "mean_squared_composition_deviation": 0.48562978073997104,
+            "shuffled_expected_deviation": 0.028295418132057406
+          },
+          "64": {
+            "windows_ge5": 41,
+            "mean_dominant_share": 0.7560112499220515,
+            "pure_windows": 9,
+            "mean_squared_composition_deviation": 0.44948906982455417,
+            "shuffled_expected_deviation": 0.01569956754233235
+          }
+        },
+        "same_type_components_distance4": {
+          "count": 301,
+          "size_quantiles": [
+            1.0,
+            4.0,
+            9.0,
+            19.0,
+            148.0
+          ],
+          "mean_size": 15.209302325581396,
+          "fraction_in_size_ge5": 0.9622105723023154
+        }
+      },
+      "cherry": {
+        "petals": 264,
+        "components_distance4": {
+          "count": 3,
+          "size_quantiles": [
+            16.0,
+            56.0,
+            96.0,
+            124.0,
+            152.0
+          ],
+          "mean_size": 88.0,
+          "fraction_in_size_ge5": 1.0
+        },
+        "windows": {
+          "16": {
+            "windows_ge10_soil": 9,
+            "mean_occupancy": 0.20285388042259667,
+            "occupancy_variance": 0.013053633444642155
+          },
+          "32": {
+            "windows_ge10_soil": 5,
+            "mean_occupancy": 0.20989280979111524,
+            "occupancy_variance": 0.003176203625254294
+          },
+          "64": {
+            "windows_ge10_soil": 3,
+            "mean_occupancy": 0.22055998014971157,
+            "occupancy_variance": 9.433515574401391e-05
+          }
+        }
+      }
+    },
+    {
+      "label": "second",
+      "kind": "vanilla",
+      "raw_sha256": "08f459c0294fa57c0dbd58818bc0c71b1cc4b9fac7a4f0b68d7d5168ec3ce9c0",
+      "meadow": {
+        "counts": {
+          "allium": 225,
+          "oxeye_daisy": 12,
+          "poppy": 1218,
+          "dandelion": 948,
+          "azure_bluet": 993,
+          "cornflower": 1380
+        },
+        "pairs": {
+          "4": {
+            "count": 18139,
+            "same_type": 0.8229229836264402,
+            "shuffled_expectation": 0.2332197637401668
+          },
+          "8": {
+            "count": 46519,
+            "same_type": 0.7344955824501816,
+            "shuffled_expectation": 0.2332197637401668
+          },
+          "16": {
+            "count": 113431,
+            "same_type": 0.6864878207897313,
+            "shuffled_expectation": 0.2332197637401668
+          }
+        },
+        "windows": {
+          "16": {
+            "windows_ge5": 308,
+            "mean_dominant_share": 0.8221103051766269,
+            "pure_windows": 128,
+            "mean_squared_composition_deviation": 0.5371301837001144,
+            "shuffled_expected_deviation": 0.06268859832266163
+          },
+          "32": {
+            "windows_ge5": 99,
+            "mean_dominant_share": 0.75395281452392,
+            "pure_windows": 32,
+            "mean_squared_composition_deviation": 0.4761057013520495,
+            "shuffled_expected_deviation": 0.0275127312390372
+          },
+          "64": {
+            "windows_ge5": 40,
+            "mean_dominant_share": 0.7639525278568478,
+            "pure_windows": 11,
+            "mean_squared_composition_deviation": 0.5125307179984444,
+            "shuffled_expected_deviation": 0.0177783085458909
+          }
+        },
+        "same_type_components_distance4": {
+          "count": 574,
+          "size_quantiles": [
+            1.0,
+            1.0,
+            4.0,
+            11.0,
+            119.0
+          ],
+          "mean_size": 8.320557491289199,
+          "fraction_in_size_ge5": 0.8911222780569514
+        }
+      },
+      "cherry": {
+        "petals": 227,
+        "components_distance4": {
+          "count": 6,
+          "size_quantiles": [
+            1.0,
+            9.75,
+            22.0,
+            36.5,
+            135.0
+          ],
+          "mean_size": 37.833333333333336,
+          "fraction_in_size_ge5": 0.9955947136563876
+        },
+        "windows": {
+          "16": {
+            "windows_ge10_soil": 9,
+            "mean_occupancy": 0.2311716309870292,
+            "occupancy_variance": 0.008127355173850985
+          },
+          "32": {
+            "windows_ge10_soil": 5,
+            "mean_occupancy": 0.2246532325926987,
+            "occupancy_variance": 0.006097061339351524
+          },
+          "64": {
+            "windows_ge10_soil": 3,
+            "mean_occupancy": 0.22924243692002622,
+            "occupancy_variance": 0.0009252078654289044
+          }
+        }
+      }
+    }
+  ]
+}

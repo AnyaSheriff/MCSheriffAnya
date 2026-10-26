@@ -1,0 +1,6025 @@
+{
+  "schema": 2,
+  "status": "partial; statistical approximation, remaining and worsened rows explicit",
+  "base_commit": "7f7be8d2e54ba5c650ef3149ecb029eb83e36528",
+  "unit": "blocks per million 3D biome blocks; double plants count both halves",
+  "tolerance": "max(5, 20% vanilla), unchanged",
+  "method": "Fresh full generated chunks for all occurrences of ten target biomes in the two original main census windows; independent biome-conditioned statistics, never coordinate matches",
+  "code_scope": [
+    "src/world/vegetation.rs"
+  ],
+  "before_binary_sha256": "278c27a932bea1fc01353ba4475adf44c621455a3f53d3efee06e89b884f57d0",
+  "before_vegetation_sha256": "525ee283b3a3b371671c4ebc9405841d039ca25da21c4c86505f91da8a239263",
+  "after_provenance": {
+    "source_sha256": {
+      "src/world/vegetation.rs": "6923329725f170a0458604cc8bfb0df5b02cdd2c797a0c9f6f47c51f80935c53",
+      "src/vegetation.rs": "8cb8b71e1269a85d50fb562b91ca4e96b5c017500f3efe95f427441a8c64404c",
+      "src/world/terrain.rs": "2c873377361d708daba2263f052e63a33b00fbd4cf51d28eaedf47fd9f67aa30",
+      "testdata/world-profile/genaudit-26.3/batch-f3/regression.json": "9de149e9bb9459b182f459aad7cfd3301a0c995ef0e48cd60ec5c72f5f5bb9a5",
+      "testdata/world-profile/genaudit-26.3/batch-f3/ground-cover.json": "cd3bdd451d99d1b0812ab536dd6c957b877bf61e1f9f1728f4325af97b0d08a7"
+    },
+    "binary_sha256": "7c1740fc81449650106ba783f907073d1aab86c0572e1a42e643c9fc679366cf"
+  },
+  "samples": [
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "chunks": 4955,
+      "coverage_sha256": "fa146d9e07c7e42be56697a6a24974931e703214ebecac87bb41351b98ed351a",
+      "original_reference_sha256": "d1ea672fbbe7bbd2278a9d27f05e587dc3994983a2614728365421b3f60ef40a",
+      "vanilla_level": {
+        "seed": 1792932773345722119,
+        "spawn": [
+          16,
+          -48
+        ],
+        "version": {
+          "Snapshot": 0,
+          "Series": "main",
+          "Id": 5023,
+          "Name": "26.3"
+        },
+        "data_version": 5023
+      },
+      "before": {
+        "beach": {
+          "biome_blocks": 189056192,
+          "counts": {
+            "short_grass": 399,
+            "sugar_cane": 1545,
+            "leaf_litter": 509,
+            "tall_grass": 43,
+            "red_mushroom_block": 29,
+            "wildflowers": 25,
+            "brown_mushroom_block": 21,
+            "firefly_bush": 9,
+            "cactus": 2,
+            "dead_bush": 1,
+            "red_mushroom": 6
+          },
+          "surface_blocks": {
+            "grass_block": 9269,
+            "sand": 390757,
+            "gravel": 94668,
+            "dirt": 4810,
+            "clay": 412,
+            "stone": 1965,
+            "diorite": 119,
+            "granite": 92,
+            "coal_ore": 27,
+            "andesite": 85,
+            "copper_ore": 11,
+            "sandstone": 22,
+            "lapis_ore": 2,
+            "mud": 1097,
+            "netherrack": 17,
+            "red_terracotta": 7
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 2824192,
+          "counts": {
+            "pink_petals": 3594,
+            "short_grass": 1391,
+            "tall_grass": 170,
+            "leaf_litter": 24
+          },
+          "surface_blocks": {
+            "dirt": 189,
+            "grass_block": 7490,
+            "netherrack": 87,
+            "stone": 88,
+            "obsidian": 4,
+            "diorite": 11,
+            "gravel": 3
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 67918464,
+          "counts": {
+            "wildflowers": 122,
+            "short_grass": 5259,
+            "red_mushroom_block": 9789,
+            "leaf_litter": 79201,
+            "mushroom_stem": 2309,
+            "tall_grass": 379,
+            "brown_mushroom_block": 7951,
+            "sugar_cane": 99,
+            "firefly_bush": 18,
+            "fern": 63,
+            "cactus": 2,
+            "dead_bush": 1,
+            "pumpkin": 4
+          },
+          "surface_blocks": {
+            "grass_block": 166177,
+            "rooted_dirt": 226,
+            "dirt": 20754,
+            "sand": 6916,
+            "clay": 442,
+            "gravel": 4127,
+            "stone": 1709,
+            "granite": 68,
+            "coal_ore": 33,
+            "andesite": 85,
+            "iron_ore": 4,
+            "diorite": 71,
+            "copper_ore": 27,
+            "lapis_ore": 1
+          }
+        },
+        "desert": {
+          "biome_blocks": 37595648,
+          "counts": {
+            "cactus": 90,
+            "dead_bush": 281,
+            "tall_dry_grass": 438,
+            "short_dry_grass": 432,
+            "sugar_cane": 1606,
+            "cactus_flower": 16,
+            "tall_grass": 14
+          },
+          "surface_blocks": {
+            "clay": 40,
+            "grass_block": 978,
+            "gravel": 7746,
+            "sand": 92032,
+            "stone": 184,
+            "dirt": 244,
+            "granite": 8,
+            "andesite": 13,
+            "coal_ore": 3
+          }
+        },
+        "meadow": {
+          "biome_blocks": 2190592,
+          "counts": {
+            "poppy": 87,
+            "short_grass": 1007,
+            "wildflowers": 574,
+            "azure_bluet": 45,
+            "cornflower": 42,
+            "dandelion": 73,
+            "tall_grass": 140,
+            "oxeye_daisy": 18,
+            "allium": 17,
+            "leaf_litter": 40
+          },
+          "surface_blocks": {
+            "grass_block": 6295,
+            "stone": 129,
+            "dirt": 4,
+            "gravel": 3,
+            "coal_ore": 1
+          }
+        },
+        "swamp": {
+          "biome_blocks": 9834496,
+          "counts": {
+            "lily_pad": 159,
+            "short_grass": 2684,
+            "blue_orchid": 37,
+            "brown_mushroom": 571,
+            "firefly_bush": 41,
+            "azure_bluet": 13,
+            "dead_bush": 44,
+            "leaf_litter": 186,
+            "pink_tulip": 24,
+            "red_tulip": 6,
+            "fern": 10,
+            "orange_tulip": 5,
+            "white_tulip": 5,
+            "sugar_cane": 18,
+            "wildflowers": 17
+          },
+          "surface_blocks": {
+            "dirt": 3676,
+            "grass_block": 21105,
+            "stone": 448,
+            "clay": 217,
+            "gravel": 622,
+            "mud": 348,
+            "sand": 55,
+            "copper_ore": 1,
+            "coal_ore": 5,
+            "andesite": 1,
+            "granite": 18
+          }
+        },
+        "windswept_forest": {
+          "biome_blocks": 1684736,
+          "counts": {
+            "wildflowers": 47,
+            "short_grass": 77,
+            "bush": 29,
+            "pumpkin": 11,
+            "fern": 3,
+            "tall_grass": 4,
+            "sweet_berry_bush": 3,
+            "large_fern": 2
+          },
+          "surface_blocks": {
+            "grass_block": 3235,
+            "gravel": 24,
+            "stone": 892,
+            "coal_ore": 3,
+            "dirt": 166,
+            "granite": 11,
+            "iron_ore": 1,
+            "andesite": 21,
+            "copper_ore": 1,
+            "diorite": 8,
+            "emerald_ore": 1,
+            "sand": 37
+          }
+        }
+      },
+      "after": {
+        "beach": {
+          "biome_blocks": 189056192,
+          "counts": {
+            "short_grass": 1363,
+            "sugar_cane": 189,
+            "leaf_litter": 441,
+            "tall_grass": 43,
+            "red_mushroom_block": 29,
+            "wildflowers": 25,
+            "firefly_bush": 4,
+            "cactus": 2,
+            "dead_bush": 1,
+            "red_mushroom": 6
+          },
+          "surface_blocks": {
+            "grass_block": 9269,
+            "sand": 390757,
+            "gravel": 94668,
+            "dirt": 4810,
+            "clay": 412,
+            "stone": 1965,
+            "diorite": 119,
+            "granite": 92,
+            "coal_ore": 27,
+            "andesite": 85,
+            "copper_ore": 11,
+            "sandstone": 22,
+            "lapis_ore": 2,
+            "mud": 1097,
+            "netherrack": 17,
+            "red_terracotta": 7
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 2824192,
+          "counts": {
+            "pink_petals": 2180,
+            "short_grass": 867,
+            "tall_grass": 168,
+            "leaf_litter": 39
+          },
+          "surface_blocks": {
+            "dirt": 189,
+            "grass_block": 7490,
+            "netherrack": 87,
+            "stone": 88,
+            "obsidian": 4,
+            "diorite": 11,
+            "gravel": 3
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 67918464,
+          "counts": {
+            "wildflowers": 122,
+            "short_grass": 5263,
+            "red_mushroom_block": 9805,
+            "leaf_litter": 79201,
+            "mushroom_stem": 1613,
+            "tall_grass": 379,
+            "brown_mushroom_block": 2820,
+            "sugar_cane": 99,
+            "firefly_bush": 18,
+            "fern": 63,
+            "cactus": 2,
+            "dead_bush": 1,
+            "pumpkin": 4
+          },
+          "surface_blocks": {
+            "grass_block": 166177,
+            "rooted_dirt": 226,
+            "dirt": 20754,
+            "sand": 6916,
+            "clay": 442,
+            "gravel": 4127,
+            "stone": 1709,
+            "granite": 68,
+            "coal_ore": 33,
+            "andesite": 85,
+            "iron_ore": 4,
+            "diorite": 71,
+            "copper_ore": 27,
+            "lapis_ore": 1
+          }
+        },
+        "desert": {
+          "biome_blocks": 37595648,
+          "counts": {
+            "short_dry_grass": 443,
+            "cactus": 90,
+            "dead_bush": 368,
+            "tall_dry_grass": 441,
+            "cactus_flower": 16,
+            "tall_grass": 14,
+            "sugar_cane": 270
+          },
+          "surface_blocks": {
+            "clay": 40,
+            "grass_block": 978,
+            "gravel": 7746,
+            "sand": 92032,
+            "stone": 184,
+            "dirt": 244,
+            "granite": 8,
+            "andesite": 13,
+            "coal_ore": 3
+          }
+        },
+        "meadow": {
+          "biome_blocks": 2190592,
+          "counts": {
+            "azure_bluet": 246,
+            "short_grass": 502,
+            "wildflowers": 300,
+            "tall_grass": 74,
+            "dandelion": 97,
+            "cornflower": 208,
+            "leaf_litter": 42
+          },
+          "surface_blocks": {
+            "grass_block": 6295,
+            "stone": 129,
+            "dirt": 4,
+            "gravel": 3,
+            "coal_ore": 1
+          }
+        },
+        "swamp": {
+          "biome_blocks": 9834496,
+          "counts": {
+            "lily_pad": 159,
+            "short_grass": 1994,
+            "blue_orchid": 37,
+            "brown_mushroom": 87,
+            "firefly_bush": 41,
+            "azure_bluet": 13,
+            "dead_bush": 44,
+            "leaf_litter": 204,
+            "pink_tulip": 24,
+            "red_tulip": 6,
+            "fern": 10,
+            "orange_tulip": 5,
+            "white_tulip": 5,
+            "sugar_cane": 18,
+            "wildflowers": 17
+          },
+          "surface_blocks": {
+            "dirt": 3676,
+            "grass_block": 21105,
+            "stone": 448,
+            "clay": 217,
+            "gravel": 622,
+            "mud": 348,
+            "sand": 55,
+            "copper_ore": 1,
+            "coal_ore": 5,
+            "andesite": 1,
+            "granite": 18
+          }
+        },
+        "windswept_forest": {
+          "biome_blocks": 1684736,
+          "counts": {
+            "short_grass": 122,
+            "wildflowers": 47,
+            "tall_grass": 24,
+            "pumpkin": 11,
+            "fern": 1,
+            "bush": 2,
+            "sweet_berry_bush": 3,
+            "firefly_bush": 1
+          },
+          "surface_blocks": {
+            "grass_block": 3235,
+            "gravel": 24,
+            "stone": 892,
+            "coal_ore": 3,
+            "dirt": 166,
+            "granite": 11,
+            "iron_ore": 1,
+            "andesite": 21,
+            "copper_ore": 1,
+            "diorite": 8,
+            "emerald_ore": 1,
+            "sand": 37
+          }
+        }
+      },
+      "vanilla": {
+        "beach": {
+          "biome_blocks": 188956160,
+          "counts": {
+            "short_grass": 1797,
+            "tall_grass": 403,
+            "sugar_cane": 329,
+            "leaf_litter": 2779,
+            "melon": 1,
+            "fern": 90,
+            "brown_mushroom_block": 40,
+            "wildflowers": 13,
+            "rose_bush": 2,
+            "lilac": 8,
+            "poppy": 4,
+            "mushroom_stem": 17,
+            "red_mushroom_block": 72,
+            "red_mushroom": 29,
+            "pumpkin": 1,
+            "azure_bluet": 1,
+            "dandelion": 6,
+            "oxeye_daisy": 1,
+            "firefly_bush": 3,
+            "lily_pad": 55,
+            "dead_bush": 5
+          },
+          "surface_blocks": {
+            "dirt": 3783,
+            "grass_block": 7619,
+            "sand": 399627,
+            "sandstone": 2974,
+            "stone": 7145,
+            "gravel": 78045,
+            "andesite": 716,
+            "granite": 928,
+            "clay": 225,
+            "diorite": 682,
+            "coal_ore": 115,
+            "copper_ore": 82,
+            "iron_ore": 33,
+            "lapis_ore": 8,
+            "moss_block": 17,
+            "mud": 860,
+            "netherrack": 17,
+            "deepslate": 3,
+            "coarse_dirt": 66,
+            "calcite": 1,
+            "podzol": 100,
+            "rooted_dirt": 12
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 2913344,
+          "counts": {
+            "pink_petals": 2566,
+            "short_grass": 1112,
+            "tall_grass": 156,
+            "bush": 1,
+            "leaf_litter": 57
+          },
+          "surface_blocks": {
+            "grass_block": 7638,
+            "netherrack": 177,
+            "dirt": 26,
+            "stone": 26,
+            "gravel": 1,
+            "obsidian": 4
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 67916672,
+          "counts": {
+            "leaf_litter": 76295,
+            "bush": 5,
+            "mushroom_stem": 1629,
+            "wildflowers": 82,
+            "brown_mushroom_block": 3163,
+            "red_mushroom_block": 10335,
+            "short_grass": 5265,
+            "poppy": 37,
+            "tall_grass": 308,
+            "dandelion": 13,
+            "red_mushroom": 2,
+            "firefly_bush": 21,
+            "fern": 86,
+            "brown_mushroom": 2,
+            "sugar_cane": 18,
+            "lilac": 2,
+            "rose_bush": 8
+          },
+          "surface_blocks": {
+            "dirt": 18212,
+            "grass_block": 164284,
+            "gravel": 4725,
+            "sand": 8732,
+            "clay": 664,
+            "stone": 2819,
+            "andesite": 290,
+            "granite": 377,
+            "copper_ore": 20,
+            "diorite": 289,
+            "iron_ore": 14,
+            "podzol": 192,
+            "sandstone": 4,
+            "coal_ore": 26,
+            "rooted_dirt": 4,
+            "lapis_ore": 4
+          }
+        },
+        "desert": {
+          "biome_blocks": 37586816,
+          "counts": {
+            "leaf_litter": 26,
+            "dead_bush": 450,
+            "cactus": 81,
+            "short_grass": 143,
+            "sugar_cane": 193,
+            "cactus_flower": 16,
+            "tall_grass": 55,
+            "fern": 3
+          },
+          "surface_blocks": {
+            "sand": 91023,
+            "gravel": 8478,
+            "grass_block": 131,
+            "dirt": 218,
+            "sandstone": 367,
+            "andesite": 21,
+            "granite": 39,
+            "stone": 803,
+            "diorite": 38,
+            "copper_ore": 3,
+            "coal_ore": 4,
+            "iron_ore": 4,
+            "clay": 17,
+            "deepslate": 2,
+            "lapis_ore": 1
+          }
+        },
+        "meadow": {
+          "biome_blocks": 2237440,
+          "counts": {
+            "azure_bluet": 246,
+            "cornflower": 188,
+            "dandelion": 87,
+            "short_grass": 563,
+            "tall_grass": 80,
+            "wildflowers": 343,
+            "leaf_litter": 101
+          },
+          "surface_blocks": {
+            "grass_block": 6317,
+            "stone": 96,
+            "dirt": 3
+          }
+        },
+        "swamp": {
+          "biome_blocks": 9896384,
+          "counts": {
+            "short_grass": 2058,
+            "brown_mushroom": 76,
+            "leaf_litter": 404,
+            "dead_bush": 54,
+            "firefly_bush": 53,
+            "lilac": 8,
+            "red_mushroom": 6,
+            "lily_pad": 135,
+            "blue_orchid": 52,
+            "wildflowers": 32,
+            "sugar_cane": 16,
+            "bush": 4
+          },
+          "surface_blocks": {
+            "grass_block": 22126,
+            "stone": 291,
+            "dirt": 3647,
+            "mud": 113,
+            "coal_ore": 4,
+            "clay": 293,
+            "gravel": 47,
+            "granite": 2,
+            "sand": 114,
+            "diorite": 3
+          }
+        },
+        "windswept_forest": {
+          "biome_blocks": 1684160,
+          "counts": {
+            "wildflowers": 58,
+            "short_grass": 118,
+            "fern": 4,
+            "bush": 1,
+            "tall_grass": 14,
+            "dandelion": 2,
+            "poppy": 4
+          },
+          "surface_blocks": {
+            "grass_block": 4139,
+            "dirt": 139,
+            "stone": 23,
+            "gravel": 49,
+            "sand": 50
+          }
+        }
+      },
+      "rows": [
+        {
+          "metric": "feature_biome/beach/azure_bluet",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005292,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/brown_mushroom_block",
+          "before": 0.111078,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.211689,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/cactus",
+          "before": 0.010579,
+          "reviewed_before": 0.010579,
+          "after": 0.010579,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/dandelion",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.031753,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/dead_bush",
+          "before": 0.005289,
+          "reviewed_before": 0.005289,
+          "after": 0.005289,
+          "vanilla": 0.026461,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/fern",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.476301,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/firefly_bush",
+          "before": 0.047605,
+          "reviewed_before": 0.047605,
+          "after": 0.021158,
+          "vanilla": 0.015877,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.692321,
+          "reviewed_before": 2.692321,
+          "after": 2.33264,
+          "vanilla": 14.707115,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/lilac",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.042338,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/lily_pad",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.291073,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/melon",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005292,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/mushroom_stem",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.089968,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/oxeye_daisy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005292,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/poppy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.021169,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/pumpkin",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005292,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/red_mushroom",
+          "before": 0.031737,
+          "reviewed_before": 0.031737,
+          "after": 0.031737,
+          "vanilla": 0.153475,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/red_mushroom_block",
+          "before": 0.153394,
+          "reviewed_before": 0.153394,
+          "after": 0.153394,
+          "vanilla": 0.381041,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/rose_bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.010584,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/short_dry_grass",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005292,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/beach/short_grass",
+          "before": 2.110484,
+          "reviewed_before": 2.131641,
+          "after": 7.209497,
+          "vanilla": 9.510142,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/sugar_cane",
+          "before": 8.172173,
+          "reviewed_before": 0.999703,
+          "after": 0.999703,
+          "vanilla": 1.741145,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/tall_dry_grass",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.005292,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/beach/tall_grass",
+          "before": 0.227446,
+          "reviewed_before": 0.227446,
+          "after": 0.227446,
+          "vanilla": 2.13277,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/wildflowers",
+          "before": 0.132236,
+          "reviewed_before": 0.132236,
+          "after": 0.132236,
+          "vanilla": 0.068799,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.343248,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/leaf_litter",
+          "before": 8.498006,
+          "reviewed_before": 14.163343,
+          "after": 13.809259,
+          "vanilla": 19.565146,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/pink_petals",
+          "before": 1272.576369,
+          "reviewed_before": 934.426555,
+          "after": 771.902194,
+          "vanilla": 880.774807,
+          "tolerance": 176.1549614463654,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/short_grass",
+          "before": 492.530253,
+          "reviewed_before": 355.499909,
+          "after": 306.99046,
+          "vanilla": 381.691966,
+          "tolerance": 76.33839326904067,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/tall_grass",
+          "before": 60.194208,
+          "reviewed_before": 57.361539,
+          "after": 59.486041,
+          "vanilla": 53.546715,
+          "tolerance": 10.709342940620814,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/brown_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.029448,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/brown_mushroom_block",
+          "before": 117.066841,
+          "reviewed_before": 41.520374,
+          "after": 41.520374,
+          "vanilla": 46.571775,
+          "tolerance": 9.314355096786839,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.07362,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/cactus",
+          "before": 0.029447,
+          "reviewed_before": 0.029447,
+          "after": 0.029447,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/dandelion",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.191411,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/dead_bush",
+          "before": 0.014724,
+          "reviewed_before": 0.014724,
+          "after": 0.014724,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/fern",
+          "before": 0.927583,
+          "reviewed_before": 0.927583,
+          "after": 0.927583,
+          "vanilla": 1.266258,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/firefly_bush",
+          "before": 0.265024,
+          "reviewed_before": 0.265024,
+          "after": 0.265024,
+          "vanilla": 0.309202,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/leaf_litter",
+          "before": 1166.118833,
+          "reviewed_before": 1166.118833,
+          "after": 1166.118833,
+          "vanilla": 1123.361875,
+          "tolerance": 224.6723749950528,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/lilac",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.029448,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/mushroom_stem",
+          "before": 33.996646,
+          "reviewed_before": 23.749065,
+          "after": 23.749065,
+          "vanilla": 23.985274,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/poppy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.544785,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/pumpkin",
+          "before": 0.058894,
+          "reviewed_before": 0.058894,
+          "after": 0.058894,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/red_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.029448,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/red_mushroom_block",
+          "before": 144.128701,
+          "reviewed_before": 144.364278,
+          "after": 144.364278,
+          "vanilla": 152.171767,
+          "tolerance": 30.434353438283907,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/rose_bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.117791,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/short_grass",
+          "before": 77.43108,
+          "reviewed_before": 77.489974,
+          "after": 77.489974,
+          "vanilla": 77.521466,
+          "tolerance": 15.504293261012556,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/sugar_cane",
+          "before": 1.45763,
+          "reviewed_before": 1.45763,
+          "after": 1.45763,
+          "vanilla": 0.265031,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/tall_grass",
+          "before": 5.58022,
+          "reviewed_before": 5.58022,
+          "after": 5.58022,
+          "vanilla": 4.534969,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/wildflowers",
+          "before": 1.796271,
+          "reviewed_before": 1.796271,
+          "after": 1.796271,
+          "vanilla": 1.207362,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/cactus",
+          "before": 2.393894,
+          "reviewed_before": 2.393894,
+          "after": 2.393894,
+          "vanilla": 2.155011,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/cactus_flower",
+          "before": 0.425581,
+          "reviewed_before": 0.425581,
+          "after": 0.425581,
+          "vanilla": 0.425681,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/dead_bush",
+          "before": 7.474269,
+          "reviewed_before": 9.788367,
+          "after": 9.788367,
+          "vanilla": 11.972283,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/fern",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.079815,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/leaf_litter",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.691732,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/short_dry_grass",
+          "before": 11.490692,
+          "reviewed_before": 11.783279,
+          "after": 11.783279,
+          "vanilla": 15.803414,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/desert/short_grass",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 3.804526,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/sugar_cane",
+          "before": 42.71771,
+          "reviewed_before": 7.181682,
+          "after": 7.181682,
+          "vanilla": 5.134779,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/tall_dry_grass",
+          "before": 11.650285,
+          "reviewed_before": 11.730081,
+          "after": 11.730081,
+          "vanilla": 15.590573,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/desert/tall_grass",
+          "before": 0.372384,
+          "reviewed_before": 0.372384,
+          "after": 0.372384,
+          "vanilla": 1.463279,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/allium",
+          "before": 7.760459,
+          "reviewed_before": 7.303962,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/azure_bluet",
+          "before": 20.542392,
+          "reviewed_before": 20.99889,
+          "after": 112.298411,
+          "vanilla": 109.947082,
+          "tolerance": 21.989416475972543,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/cornflower",
+          "before": 19.172899,
+          "reviewed_before": 18.716402,
+          "after": 94.951502,
+          "vanilla": 84.0246,
+          "tolerance": 16.80491990846682,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/dandelion",
+          "before": 33.324325,
+          "reviewed_before": 33.324325,
+          "after": 44.280268,
+          "vanilla": 38.883724,
+          "tolerance": 7.776744851258582,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/leaf_litter",
+          "before": 18.259904,
+          "reviewed_before": 19.629397,
+          "after": 19.172899,
+          "vanilla": 45.140875,
+          "tolerance": 9.028175057208237,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/oxeye_daisy",
+          "before": 8.216957,
+          "reviewed_before": 7.760459,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/poppy",
+          "before": 39.715292,
+          "reviewed_before": 39.258794,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/short_grass",
+          "before": 459.693088,
+          "reviewed_before": 244.226218,
+          "after": 229.161797,
+          "vanilla": 251.626859,
+          "tolerance": 50.32537185354691,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/tall_grass",
+          "before": 63.909665,
+          "reviewed_before": 67.561645,
+          "after": 33.780823,
+          "vanilla": 35.755149,
+          "tolerance": 7.1510297482837535,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/wildflowers",
+          "before": 262.029625,
+          "reviewed_before": 136.949281,
+          "after": 136.949281,
+          "vanilla": 153.3002,
+          "tolerance": 30.660040045766593,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/azure_bluet",
+          "before": 1.321878,
+          "reviewed_before": 1.321878,
+          "after": 1.321878,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/blue_orchid",
+          "before": 3.762267,
+          "reviewed_before": 3.762267,
+          "after": 3.762267,
+          "vanilla": 5.254444,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/brown_mushroom",
+          "before": 58.060932,
+          "reviewed_before": 8.846412,
+          "after": 8.846412,
+          "vanilla": 7.679573,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.404188,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/dead_bush",
+          "before": 4.474047,
+          "reviewed_before": 4.474047,
+          "after": 4.474047,
+          "vanilla": 5.456538,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/fern",
+          "before": 1.016829,
+          "reviewed_before": 1.016829,
+          "after": 1.016829,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/firefly_bush",
+          "before": 4.168999,
+          "reviewed_before": 4.168999,
+          "after": 4.168999,
+          "vanilla": 5.355491,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/leaf_litter",
+          "before": 18.913018,
+          "reviewed_before": 19.523115,
+          "after": 20.74331,
+          "vanilla": 40.822992,
+          "tolerance": 8.164598301763553,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/lilac",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.808376,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/lily_pad",
+          "before": 16.16758,
+          "reviewed_before": 16.16758,
+          "after": 16.16758,
+          "vanilla": 13.641346,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/orange_tulip",
+          "before": 0.508414,
+          "reviewed_before": 0.508414,
+          "after": 0.508414,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/pink_tulip",
+          "before": 2.440389,
+          "reviewed_before": 2.440389,
+          "after": 2.440389,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/red_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.606282,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/red_tulip",
+          "before": 0.610097,
+          "reviewed_before": 0.610097,
+          "after": 0.610097,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/short_grass",
+          "before": 272.916884,
+          "reviewed_before": 272.916884,
+          "after": 202.755688,
+          "vanilla": 207.954744,
+          "tolerance": 41.59094877482523,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/sugar_cane",
+          "before": 1.830292,
+          "reviewed_before": 1.830292,
+          "after": 1.830292,
+          "vanilla": 1.616752,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/white_tulip",
+          "before": 0.508414,
+          "reviewed_before": 0.508414,
+          "after": 0.508414,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/wildflowers",
+          "before": 1.728609,
+          "reviewed_before": 1.728609,
+          "after": 1.728609,
+          "vanilla": 3.233504,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/bush",
+          "before": 17.213379,
+          "reviewed_before": 1.18713,
+          "after": 1.18713,
+          "vanilla": 0.593768,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/dandelion",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 1.187536,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/fern",
+          "before": 1.780694,
+          "reviewed_before": 1.780694,
+          "after": 0.593565,
+          "vanilla": 2.375071,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/firefly_bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.593565,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/large_fern",
+          "before": 1.18713,
+          "reviewed_before": 1.18713,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/poppy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 2.375071,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/pumpkin",
+          "before": 6.529213,
+          "reviewed_before": 6.529213,
+          "after": 6.529213,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/short_grass",
+          "before": 45.70449,
+          "reviewed_before": 46.298055,
+          "after": 72.414907,
+          "vanilla": 70.064602,
+          "tolerance": 14.01292038761163,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/sweet_berry_bush",
+          "before": 1.780694,
+          "reviewed_before": 1.780694,
+          "after": 1.780694,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/tall_grass",
+          "before": 2.374259,
+          "reviewed_before": 2.374259,
+          "after": 14.245555,
+          "vanilla": 8.312749,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/wildflowers",
+          "before": 27.897546,
+          "reviewed_before": 27.897546,
+          "after": 27.897546,
+          "vanilla": 34.438533,
+          "tolerance": 6.8877066311989354,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        }
+      ],
+      "new_failures": [],
+      "new_failures_all_measured_features": [],
+      "worsened_outside_tolerance": [
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.692321,
+          "reviewed_before": 2.692321,
+          "after": 2.33264,
+          "vanilla": 14.707115,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        }
+      ],
+      "remaining": [
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.692321,
+          "reviewed_before": 2.692321,
+          "after": 2.33264,
+          "vanilla": 14.707115,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/leaf_litter",
+          "before": 8.498006,
+          "reviewed_before": 14.163343,
+          "after": 13.809259,
+          "vanilla": 19.565146,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/leaf_litter",
+          "before": 18.259904,
+          "reviewed_before": 19.629397,
+          "after": 19.172899,
+          "vanilla": 45.140875,
+          "tolerance": 9.028175057208237,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/leaf_litter",
+          "before": 18.913018,
+          "reviewed_before": 19.523115,
+          "after": 20.74331,
+          "vanilla": 40.822992,
+          "tolerance": 8.164598301763553,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/pumpkin",
+          "before": 6.529213,
+          "reviewed_before": 6.529213,
+          "after": 6.529213,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/tall_grass",
+          "before": 2.374259,
+          "reviewed_before": 2.374259,
+          "after": 14.245555,
+          "vanilla": 8.312749,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        }
+      ],
+      "entered_tolerance": [
+        {
+          "metric": "feature_biome/beach/short_grass",
+          "before": 2.110484,
+          "reviewed_before": 2.131641,
+          "after": 7.209497,
+          "vanilla": 9.510142,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/sugar_cane",
+          "before": 8.172173,
+          "reviewed_before": 0.999703,
+          "after": 0.999703,
+          "vanilla": 1.741145,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/pink_petals",
+          "before": 1272.576369,
+          "reviewed_before": 934.426555,
+          "after": 771.902194,
+          "vanilla": 880.774807,
+          "tolerance": 176.1549614463654,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/short_grass",
+          "before": 492.530253,
+          "reviewed_before": 355.499909,
+          "after": 306.99046,
+          "vanilla": 381.691966,
+          "tolerance": 76.33839326904067,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/brown_mushroom_block",
+          "before": 117.066841,
+          "reviewed_before": 41.520374,
+          "after": 41.520374,
+          "vanilla": 46.571775,
+          "tolerance": 9.314355096786839,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/mushroom_stem",
+          "before": 33.996646,
+          "reviewed_before": 23.749065,
+          "after": 23.749065,
+          "vanilla": 23.985274,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/sugar_cane",
+          "before": 42.71771,
+          "reviewed_before": 7.181682,
+          "after": 7.181682,
+          "vanilla": 5.134779,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/allium",
+          "before": 7.760459,
+          "reviewed_before": 7.303962,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/azure_bluet",
+          "before": 20.542392,
+          "reviewed_before": 20.99889,
+          "after": 112.298411,
+          "vanilla": 109.947082,
+          "tolerance": 21.989416475972543,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/cornflower",
+          "before": 19.172899,
+          "reviewed_before": 18.716402,
+          "after": 94.951502,
+          "vanilla": 84.0246,
+          "tolerance": 16.80491990846682,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/oxeye_daisy",
+          "before": 8.216957,
+          "reviewed_before": 7.760459,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/poppy",
+          "before": 39.715292,
+          "reviewed_before": 39.258794,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/short_grass",
+          "before": 459.693088,
+          "reviewed_before": 244.226218,
+          "after": 229.161797,
+          "vanilla": 251.626859,
+          "tolerance": 50.32537185354691,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/tall_grass",
+          "before": 63.909665,
+          "reviewed_before": 67.561645,
+          "after": 33.780823,
+          "vanilla": 35.755149,
+          "tolerance": 7.1510297482837535,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/wildflowers",
+          "before": 262.029625,
+          "reviewed_before": 136.949281,
+          "after": 136.949281,
+          "vanilla": 153.3002,
+          "tolerance": 30.660040045766593,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/brown_mushroom",
+          "before": 58.060932,
+          "reviewed_before": 8.846412,
+          "after": 8.846412,
+          "vanilla": 7.679573,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/swamp/short_grass",
+          "before": 272.916884,
+          "reviewed_before": 272.916884,
+          "after": 202.755688,
+          "vanilla": 207.954744,
+          "tolerance": 41.59094877482523,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/bush",
+          "before": 17.213379,
+          "reviewed_before": 1.18713,
+          "after": 1.18713,
+          "vanilla": 0.593768,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/windswept_forest/short_grass",
+          "before": 45.70449,
+          "reviewed_before": 46.298055,
+          "after": 72.414907,
+          "vanilla": 70.064602,
+          "tolerance": 14.01292038761163,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        }
+      ],
+      "outside_counts": [
+        25,
+        15,
+        6
+      ],
+      "region_sha256": {
+        "before": [
+          [
+            "r.-1.-1.mcs",
+            "4502331d598ecf3bb718324981ac5aed2fc60b144cff9e8276ad2690c9b2f054"
+          ],
+          [
+            "r.-1.-2.mcs",
+            "df440ec03159f2ab03ccd4fefd286a19f60f7b11b52fbc5050ce3cbe95f033d8"
+          ],
+          [
+            "r.-1.-3.mcs",
+            "dab88f828fc7f274110f5af3d51d7c3a951ab0a18c0954828a0151d8c5c4181e"
+          ],
+          [
+            "r.-1.0.mcs",
+            "039185646e9501e0fb00b5ee90a99a7c064a3aa11ea3f6b4df5a495f44981a88"
+          ],
+          [
+            "r.-1.1.mcs",
+            "08e0e79418c2eefe3b9aa071eed614b3de2ebffcd44703a9bac832af02936923"
+          ],
+          [
+            "r.-1.2.mcs",
+            "e16d2937a74bc9f7811364a81d844889fcee562cb80b8627715a74f341fdb293"
+          ],
+          [
+            "r.-2.-1.mcs",
+            "25bb879a61b2d734e6eb2eaa2e3d019e9798f5e32b0e7e9c6b2b92b5b8da0b03"
+          ],
+          [
+            "r.-2.-2.mcs",
+            "519cf3f35b4ee7a2e3236b2aa6b48ea4afea2d9be9ca8fb06a074e19eb2ecc49"
+          ],
+          [
+            "r.-2.-3.mcs",
+            "3fa9f4424625b055d0fabd84dcd43efc905f030ced02eaefcefa6b26cdee33c2"
+          ],
+          [
+            "r.-2.0.mcs",
+            "f56813d24630b892654ba8e4f2572f544bee251b3fb2e0082747745062234d63"
+          ],
+          [
+            "r.-2.1.mcs",
+            "3bde71383ee3d406992a6888064c3972b2e7e1dabb34e25b8a2951da6175e2e0"
+          ],
+          [
+            "r.-2.2.mcs",
+            "6c29f3d19f2d271fc992eacd9cd4b55b3231b5d850a625f5646f164f112ee066"
+          ],
+          [
+            "r.-2.3.mcs",
+            "15c0e39dbcdbee0e10f46ff42feb6fc025ee2b7ad7e76602129775794e905f70"
+          ],
+          [
+            "r.-3.-1.mcs",
+            "dfe5a128e008eb5ac4d9e0c120cc1d4bfeb894d50dc33fc5f4e56ca93d427e37"
+          ],
+          [
+            "r.-3.-2.mcs",
+            "0052bdd28869ae4451ca286ecfc119fa1c3c1e32f8f2665df82630887f6e7974"
+          ],
+          [
+            "r.-3.-3.mcs",
+            "af18ae654d0dc78b2e8b4075014f1aed5c0062e2f502a21f3d144ab6a5393929"
+          ],
+          [
+            "r.-3.0.mcs",
+            "ba478bfb7b97bf77a8f66f768a27a390296acadf42516fac1c63caddf8fe2510"
+          ],
+          [
+            "r.-3.1.mcs",
+            "41c6959982f15a1f6849d220772102a5edcda299117efe582481124d2599f151"
+          ],
+          [
+            "r.-3.2.mcs",
+            "e6c2ef88b52cd24d3c764f2a9733ef1c89629d05250e9c6cb78a913f5a29972d"
+          ],
+          [
+            "r.-3.3.mcs",
+            "1d115fef015067a7bfb65a3a2d62ee06f69092cc56f745c80348a23d802673c0"
+          ],
+          [
+            "r.-4.-1.mcs",
+            "c33a10e33d5e6ad88937b195ae5b3f26483c8c130ec62fcbc896c1861aafd701"
+          ],
+          [
+            "r.-4.-2.mcs",
+            "c5bede09083cc10c55ff4ec4f7d156d06de953df8f7eef9b00df991f3e7e13c9"
+          ],
+          [
+            "r.-4.-3.mcs",
+            "57ea550379f9ae7682fcb65a25313a62e8bab2805c0f06335bd1f686ecc611c3"
+          ],
+          [
+            "r.-4.0.mcs",
+            "f988bc4619c01864c99a11dad36bf9d345a64cae3efbffa3993047c813769774"
+          ],
+          [
+            "r.-4.1.mcs",
+            "50e6ddd6b5d98ec83268c43ad6af04f9ff17b91d2e54d5eeadcd77b8654ee993"
+          ],
+          [
+            "r.-4.2.mcs",
+            "3d3a92398ae74a03319e7f41990017ecd7c19759e2fe1355241b6e3375fc2221"
+          ],
+          [
+            "r.-4.3.mcs",
+            "306809be6a99c6426b546f7c193740ac384bf56a4eca3f3c71cb75b7137d4455"
+          ],
+          [
+            "r.-5.-1.mcs",
+            "42db29b126eaafb2a84d040fff77bbbd523d875576969b2714fe4f4485fc599a"
+          ],
+          [
+            "r.-5.-2.mcs",
+            "6fe60e272511b21153754dde93ceee7c841021a3333982f8423f1e754da8991e"
+          ],
+          [
+            "r.-5.0.mcs",
+            "4b1c2d5425ee235a9554ebf149dd7e537d1edd7e8169169dbabc83e74b425548"
+          ],
+          [
+            "r.-5.1.mcs",
+            "ff0c7181768079b3ff5fdd4b9592f8037c1db5814debcf6dbc68c208882ec229"
+          ],
+          [
+            "r.-5.2.mcs",
+            "f28126c3a686820e1c75c443ee08c97d5d583ea07b5278043fb165e187a548e0"
+          ],
+          [
+            "r.-5.3.mcs",
+            "de00ad2a3a6c08f65410c6372b505f5cea9c3b3f14140ecb41e169dbc59903ca"
+          ],
+          [
+            "r.0.-1.mcs",
+            "68af4197c7c3c537c920e8e4fdc13615112c1587a455565e0e5df9c509a13c89"
+          ],
+          [
+            "r.0.-2.mcs",
+            "e8653a02083763d4439d23def76feb76b75ddf8b9850a35fe1289d3e1f02a4c0"
+          ],
+          [
+            "r.0.-3.mcs",
+            "b08d1851fb9da2644566397eb4c084d5cc6402b82ac7a674f589c03feef8550b"
+          ],
+          [
+            "r.0.0.mcs",
+            "ded1cf3c229a1cb2b09dc8aff04d26c5d8b506408c916e8180153c720cd01757"
+          ],
+          [
+            "r.0.1.mcs",
+            "1073f91dee6215debfc7459fd09286c9db4338f557e7368cc56154a09c4cd290"
+          ],
+          [
+            "r.0.2.mcs",
+            "09a1d4f264f6857227d4e52236499f9dfe20ea34ccdf6422e621addbb475bade"
+          ],
+          [
+            "r.0.3.mcs",
+            "27d7738ddd6ddf1e11eaabaf49ae366e7ef3f97c5769207db36699c6ed6853ea"
+          ],
+          [
+            "r.1.-1.mcs",
+            "23627b067ccd1c8923dcb60b9816c917f0a2151ff8360fb58a8bfea49ce4d646"
+          ],
+          [
+            "r.1.-2.mcs",
+            "9708f8f00812a93e1fc8e7e1ec0c41b2f78004a1fd2f38e54342f7b0a54d69cf"
+          ],
+          [
+            "r.1.-3.mcs",
+            "ddc078fcf65ac4b7f152af75d75f180fcec9b544cde70fc91d8e8c1ca920ebd3"
+          ],
+          [
+            "r.1.0.mcs",
+            "95f854cb307bb3d569944551af9eee7d5a33a7384d1ffa5f4abda8158968328b"
+          ],
+          [
+            "r.1.1.mcs",
+            "b0aa98ff32e0f2790e387fe7988656d3091f1dfa78ac0fbe06547061a84a4b7b"
+          ],
+          [
+            "r.1.2.mcs",
+            "fb52f336b9aad7b7af1d9410b20e5a5e797756bcea2825611d8d762511ce00d9"
+          ],
+          [
+            "r.1.3.mcs",
+            "1ce6001740eee0d7d200e2969bc60570cf9cf8ecd633028bd5c8f63a563154da"
+          ]
+        ],
+        "after": [
+          [
+            "r.-1.-1.mcs",
+            "76d79cf58929f7e80c6d97c177b85acf3af51d780f6c9277dd69e716fec86df5"
+          ],
+          [
+            "r.-1.-2.mcs",
+            "32ebd8ddbc86c0e0607c8919257945aeb078c45d6b166185e151186950586915"
+          ],
+          [
+            "r.-1.-3.mcs",
+            "139a8ad71b0328fc80df91a9ba63304d194e00ea77cfa6e2f18b958f3078c0c4"
+          ],
+          [
+            "r.-1.0.mcs",
+            "085dde55aa8ee52236bafa5a021b6e9fe62bf63136add30311b362e458b89ec7"
+          ],
+          [
+            "r.-1.1.mcs",
+            "0f72880f53e3783c25e5166091759c3f1b784c1819df3cd85c8d566ece109309"
+          ],
+          [
+            "r.-1.2.mcs",
+            "7990a102f6fe19ddaf7a7292417d8f556e3630a5f6a6c369db78264c7cc85faf"
+          ],
+          [
+            "r.-2.-1.mcs",
+            "011693afb2312f9f468828bfac2b9662e586dbb2eef0a64384da58a77ad9e59c"
+          ],
+          [
+            "r.-2.-2.mcs",
+            "78abf83e46c6f4fbc91b25424bd347ce04a3ef5a85a2493bada6c628f26d71e2"
+          ],
+          [
+            "r.-2.-3.mcs",
+            "e09bb166bdd8aaff328fc12955e017bdbc66a98033e67f7b090862941297d6c6"
+          ],
+          [
+            "r.-2.0.mcs",
+            "4dceaca505cf93fd56ccfc621c16442963f4a25ca2036c020561a17b04ef3f4c"
+          ],
+          [
+            "r.-2.1.mcs",
+            "3bde71383ee3d406992a6888064c3972b2e7e1dabb34e25b8a2951da6175e2e0"
+          ],
+          [
+            "r.-2.2.mcs",
+            "f0a20d6574f461b8ca7dcb2b4fc0419abc93a1704cf402a68cb46b686b913fe6"
+          ],
+          [
+            "r.-2.3.mcs",
+            "6f4852e803a54a8b19d7cce29e20d980cfc42cf3bdc18fab424773777d2ce58c"
+          ],
+          [
+            "r.-3.-1.mcs",
+            "3c41035f527c6d178c76c41b32c14904e576f5494d54f114e02c993aeb743692"
+          ],
+          [
+            "r.-3.-2.mcs",
+            "ccbfe0fc708cd6e59473527b5f4f21cb3047321c54afe3b4bfc3780c136fd24e"
+          ],
+          [
+            "r.-3.-3.mcs",
+            "cd8098c86406b8fb61be81de92e261f7816f5522acc53b2297ee75376b42b8fa"
+          ],
+          [
+            "r.-3.0.mcs",
+            "cc1b35c680100cae479f9e9ba83e5a2c67adf9e22a679d9864e1511bbb2f7354"
+          ],
+          [
+            "r.-3.1.mcs",
+            "4cfe45612b6871241d82901af63b789788954b6c3cf2493264735277e1e27cda"
+          ],
+          [
+            "r.-3.2.mcs",
+            "57278beac7e7686e1fcfc4871ea017dad2c8231f70e640b5993d1d3918e08e8b"
+          ],
+          [
+            "r.-3.3.mcs",
+            "f960ba97751c4428d165fa1677a981e224267a88ed102c805b2ba0fc910e6a2f"
+          ],
+          [
+            "r.-4.-1.mcs",
+            "323c08b78e2d384fbf59908e21ae7b8d2f14013f2ad92730bb171cbfcf7da767"
+          ],
+          [
+            "r.-4.-2.mcs",
+            "bbbd6ea35bc64c2966c23b4da27db222b05a3b392637086ec00940bd8209c335"
+          ],
+          [
+            "r.-4.-3.mcs",
+            "420ea57bf998df699b7c348222e2b5f574fd51191bda1ed5c57394e3feb519a4"
+          ],
+          [
+            "r.-4.0.mcs",
+            "e5748fb6b1bc1cba2a6f3ec80815f5eea1fa7280939adafbebe726e4e3541073"
+          ],
+          [
+            "r.-4.1.mcs",
+            "f511d936bbf89c418d79711df45f0eda729abe23c4e70df3704559f7cd727e11"
+          ],
+          [
+            "r.-4.2.mcs",
+            "24c9f13e81b5c6227d14c25f682f589ffaf26a08d912b0a647651009e3c96c20"
+          ],
+          [
+            "r.-4.3.mcs",
+            "8135f7452f357c1cfe5ce8df758a9a31e522d2d3d086df3313bfec5c670810cf"
+          ],
+          [
+            "r.-5.-1.mcs",
+            "21ff1133b26b53c2470c80fb7bddcf5a570cce7bd44beb481404ba81e0d7ea6c"
+          ],
+          [
+            "r.-5.-2.mcs",
+            "e4616212c9c108b54e484ac5b0fe200d404e7b007c2bdefbbcd4610d1f30f964"
+          ],
+          [
+            "r.-5.0.mcs",
+            "4b1c2d5425ee235a9554ebf149dd7e537d1edd7e8169169dbabc83e74b425548"
+          ],
+          [
+            "r.-5.1.mcs",
+            "69a66743042c9adb88d6cad80971ac2e10daf7ebf1112dc4204aaf31f8454ce6"
+          ],
+          [
+            "r.-5.2.mcs",
+            "d122b5758ac758cc008edd0c26112a6c2ccab63059433c3a24c9ab5b63443c83"
+          ],
+          [
+            "r.-5.3.mcs",
+            "de00ad2a3a6c08f65410c6372b505f5cea9c3b3f14140ecb41e169dbc59903ca"
+          ],
+          [
+            "r.0.-1.mcs",
+            "4b6d18600fd192fd35e0a7fe2dfaa240efd1ff01fc5352801f56d4cd39cea44d"
+          ],
+          [
+            "r.0.-2.mcs",
+            "9051b37ff70b73fdce95dc526a832bb8dc9694b3e573fd717674920cad098067"
+          ],
+          [
+            "r.0.-3.mcs",
+            "c8d0dd4b26b98c8258b2bd2a1d184ef5f91b0481d66d5a32e8d1c393a52e888c"
+          ],
+          [
+            "r.0.0.mcs",
+            "ac578b15394850e23bc003f6cef368c9ef7dcd22b7b9839f9d23c834cec995d3"
+          ],
+          [
+            "r.0.1.mcs",
+            "8daf1a5455ff7c6bd1e33a6ea9fb6dea76a0e2f58413eed0d9b6501a436241d7"
+          ],
+          [
+            "r.0.2.mcs",
+            "04482250293c27e2f208bc45ed08d9ad20faa9428250738e9a736caef16a6ed1"
+          ],
+          [
+            "r.0.3.mcs",
+            "fccd4f4ee8c6fb7f47f00718165518d00b5fef08ae7caa00af30947036e90b91"
+          ],
+          [
+            "r.1.-1.mcs",
+            "9d2425d6aa62aaa25500491e0251da4cd451e0b31c8cb86dfa56bdc700476a77"
+          ],
+          [
+            "r.1.-2.mcs",
+            "3a314e83363f44f592777cdab64d21cfb884d5a8f4a866a262a309b2b9fbaa0d"
+          ],
+          [
+            "r.1.-3.mcs",
+            "a60b6383cbb22c1c438d7499c4d2ff6828217cf089c46c10c84b987627ab5f90"
+          ],
+          [
+            "r.1.0.mcs",
+            "28f07d97dd1b7b13716ff9c303c3d94aa5ac7783534ec2c28d17021cd9b73b21"
+          ],
+          [
+            "r.1.1.mcs",
+            "26944eb00be0a151c9c90b83956435eb02048efcc74b161a3508b17ac0a625b3"
+          ],
+          [
+            "r.1.2.mcs",
+            "9f7c131702f0f98b626c280256862a46de20ab4ecc85eb38fc9d067245b963af"
+          ],
+          [
+            "r.1.3.mcs",
+            "5e9f2151481fd9f72342bac8fade2218f55f3d71282194b9506ab40f14de7080"
+          ]
+        ],
+        "reviewed_before": [
+          [
+            "r.-1.-1.mcs",
+            "f5999b368e8b889fa119223a583ab49ea25624b75e8909c30eda2b3f0bd4ebba"
+          ],
+          [
+            "r.-1.-2.mcs",
+            "32ebd8ddbc86c0e0607c8919257945aeb078c45d6b166185e151186950586915"
+          ],
+          [
+            "r.-1.-3.mcs",
+            "5f80bec9659f58ea0a41eaf16dab0e30e86616a1c188ce8637597cb7ad60d159"
+          ],
+          [
+            "r.-1.0.mcs",
+            "e1ed0ac6e712034e649272d8229a4079acafe3e5db7b18fb675dba6403ff8106"
+          ],
+          [
+            "r.-1.1.mcs",
+            "c1a33ad598224a6977b0a17bea6bfc551b3556e30a2f22da9c3513b2343b794f"
+          ],
+          [
+            "r.-1.2.mcs",
+            "7d8f72c556f03bf4c0023711d207fa55f6c33fcc1433bd6848535c8f90baafb3"
+          ],
+          [
+            "r.-2.-1.mcs",
+            "6437fc8430bec3c6d305536c5b6692f70c4ad80c9db080e764f21ddced45794c"
+          ],
+          [
+            "r.-2.-2.mcs",
+            "2f30cb1cdccd8f1bddf9f5ef34091593f98c03dd5d56bde3ea66d11c5cdbf53e"
+          ],
+          [
+            "r.-2.-3.mcs",
+            "144dc112e30905a3d689e6a2096f9a4837ae95b357f571211b4c35e43d1bc2de"
+          ],
+          [
+            "r.-2.0.mcs",
+            "c2964d01a516c6b93cf9c7fe34d470583003b65381add5cc7fe58703fc25fe0b"
+          ],
+          [
+            "r.-2.1.mcs",
+            "3bde71383ee3d406992a6888064c3972b2e7e1dabb34e25b8a2951da6175e2e0"
+          ],
+          [
+            "r.-2.2.mcs",
+            "dbf510b0a557444891f37cf2f8844e7f267ed5114f8fd19ce44f39cdb12aab67"
+          ],
+          [
+            "r.-2.3.mcs",
+            "15c0e39dbcdbee0e10f46ff42feb6fc025ee2b7ad7e76602129775794e905f70"
+          ],
+          [
+            "r.-3.-1.mcs",
+            "21c0038ace1ac0ed079049acdfec601423e3136369707d4eba39eccf83d0cbe5"
+          ],
+          [
+            "r.-3.-2.mcs",
+            "429c9cea462c4c595ebeababf99098703cd31ce8774fd8442756b5eb9c225018"
+          ],
+          [
+            "r.-3.-3.mcs",
+            "96a091c690c660e66c843ac2dda2296e51e4150fb8f3cda4f3c809012c4b0030"
+          ],
+          [
+            "r.-3.0.mcs",
+            "276645ffb1fbb01228863563dce1daf6b1d7c49cadf1215e5e8771ea87a8cbdf"
+          ],
+          [
+            "r.-3.1.mcs",
+            "eee114828d28e7e9aa8a8c5a18a1e7936b94bfebde4df1efbe11ff4c3babdbac"
+          ],
+          [
+            "r.-3.2.mcs",
+            "57278beac7e7686e1fcfc4871ea017dad2c8231f70e640b5993d1d3918e08e8b"
+          ],
+          [
+            "r.-3.3.mcs",
+            "2835eddd0e81a68e022da009c45fd49cbfb308df9fd3d71379fb840226d5cc33"
+          ],
+          [
+            "r.-4.-1.mcs",
+            "39556e32ca908860926b29460171e54a219eda074d434c520489287efe21ae82"
+          ],
+          [
+            "r.-4.-2.mcs",
+            "04f748718cce826ebd2b344b13829d3108cf676be2ae1c126c694fdef867c308"
+          ],
+          [
+            "r.-4.-3.mcs",
+            "5f966294642c4ac704b286c125552679ffc34e33008c52e14a7f442ad9c88760"
+          ],
+          [
+            "r.-4.0.mcs",
+            "b253dd279665df11e46a8719724fb19142311c55418ffb46dfb717e34b7a605b"
+          ],
+          [
+            "r.-4.1.mcs",
+            "0312cc339d4495e57e14298c280d7f7924e3c300b3fe59eae6db5557ab9d57e8"
+          ],
+          [
+            "r.-4.2.mcs",
+            "09488c61aa1dc5fdecb9b795b964c2d2b51e12b7e8b1d7576ca219cd5bc0b797"
+          ],
+          [
+            "r.-4.3.mcs",
+            "8135f7452f357c1cfe5ce8df758a9a31e522d2d3d086df3313bfec5c670810cf"
+          ],
+          [
+            "r.-5.-1.mcs",
+            "93752ac6f282084af92ff40d19017ce4b1819c91a7c995b3a78c60508ab54cc8"
+          ],
+          [
+            "r.-5.-2.mcs",
+            "6fe60e272511b21153754dde93ceee7c841021a3333982f8423f1e754da8991e"
+          ],
+          [
+            "r.-5.0.mcs",
+            "4b1c2d5425ee235a9554ebf149dd7e537d1edd7e8169169dbabc83e74b425548"
+          ],
+          [
+            "r.-5.1.mcs",
+            "ff0c7181768079b3ff5fdd4b9592f8037c1db5814debcf6dbc68c208882ec229"
+          ],
+          [
+            "r.-5.2.mcs",
+            "9551175abf19dc3de4487b8745d5b174e6617a7029a84bb3e4bb7be27f6b0f76"
+          ],
+          [
+            "r.-5.3.mcs",
+            "de00ad2a3a6c08f65410c6372b505f5cea9c3b3f14140ecb41e169dbc59903ca"
+          ],
+          [
+            "r.0.-1.mcs",
+            "a9ed9222ec568ea20b2d22cc737de4155f3fdfeca8de56038c708627bb55e217"
+          ],
+          [
+            "r.0.-2.mcs",
+            "6bbb5631e5d7c461b377a1dc01abdf64df79762316c9e5c4c9f2032f5831acac"
+          ],
+          [
+            "r.0.-3.mcs",
+            "c8d0dd4b26b98c8258b2bd2a1d184ef5f91b0481d66d5a32e8d1c393a52e888c"
+          ],
+          [
+            "r.0.0.mcs",
+            "6a6868c29a48aabcc5a0f50ae49fe9ffc1a1177585e0ec2de360e6f7fcfd4439"
+          ],
+          [
+            "r.0.1.mcs",
+            "34820c4aca6d3f315fb92c35945ce303ce134f8b93c73266f5ccfa903549ed6c"
+          ],
+          [
+            "r.0.2.mcs",
+            "1d6f5c0ec40bc69fefc6314ccdcb65849a2c327cc0341ca968e7f4dfec0118d8"
+          ],
+          [
+            "r.0.3.mcs",
+            "27d7738ddd6ddf1e11eaabaf49ae366e7ef3f97c5769207db36699c6ed6853ea"
+          ],
+          [
+            "r.1.-1.mcs",
+            "f5e9be9020bf9f6981fba20e1f9c3e15935a628e81b6c4c835499219dfccc380"
+          ],
+          [
+            "r.1.-2.mcs",
+            "b2f4faa97f8f236f228809cf6f1223820c88338c5ec89ebf9d377cf2dc819d81"
+          ],
+          [
+            "r.1.-3.mcs",
+            "a2e92f604678a0c054c6c27b67a224c7ffdefc6bbed402296583b1a2cf7652cd"
+          ],
+          [
+            "r.1.0.mcs",
+            "d505fb12e57b90dabd1d6a75a8e3882589b7063f2479cf9280a7247e6ccb3fee"
+          ],
+          [
+            "r.1.1.mcs",
+            "3f430e7a395cd05204ced8e089f9c7984d87c1e0d6b68c90033b87c6a009b4f9"
+          ],
+          [
+            "r.1.2.mcs",
+            "1c772290679a306ff9ef9db80c4f5c9891be64fd7d8ef7938bb45fd3f2a32a85"
+          ],
+          [
+            "r.1.3.mcs",
+            "1ce6001740eee0d7d200e2969bc60570cf9cf8ecd633028bd5c8f63a563154da"
+          ]
+        ]
+      },
+      "reviewed_before": {
+        "beach": {
+          "biome_blocks": 189056192,
+          "counts": {
+            "short_grass": 403,
+            "sugar_cane": 189,
+            "leaf_litter": 509,
+            "tall_grass": 43,
+            "red_mushroom_block": 29,
+            "wildflowers": 25,
+            "firefly_bush": 9,
+            "cactus": 2,
+            "dead_bush": 1,
+            "red_mushroom": 6
+          },
+          "surface_blocks": {
+            "grass_block": 9269,
+            "sand": 390757,
+            "gravel": 94668,
+            "dirt": 4810,
+            "clay": 412,
+            "stone": 1965,
+            "diorite": 119,
+            "granite": 92,
+            "coal_ore": 27,
+            "andesite": 85,
+            "copper_ore": 11,
+            "sandstone": 22,
+            "lapis_ore": 2,
+            "mud": 1097,
+            "netherrack": 17,
+            "red_terracotta": 7
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 2824192,
+          "counts": {
+            "pink_petals": 2639,
+            "short_grass": 1004,
+            "tall_grass": 162,
+            "leaf_litter": 40
+          },
+          "surface_blocks": {
+            "dirt": 189,
+            "grass_block": 7490,
+            "netherrack": 87,
+            "stone": 88,
+            "obsidian": 4,
+            "diorite": 11,
+            "gravel": 3
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 67918464,
+          "counts": {
+            "wildflowers": 122,
+            "short_grass": 5263,
+            "red_mushroom_block": 9805,
+            "leaf_litter": 79201,
+            "mushroom_stem": 1613,
+            "tall_grass": 379,
+            "brown_mushroom_block": 2820,
+            "sugar_cane": 99,
+            "firefly_bush": 18,
+            "fern": 63,
+            "cactus": 2,
+            "dead_bush": 1,
+            "pumpkin": 4
+          },
+          "surface_blocks": {
+            "grass_block": 166177,
+            "rooted_dirt": 226,
+            "dirt": 20754,
+            "sand": 6916,
+            "clay": 442,
+            "gravel": 4127,
+            "stone": 1709,
+            "granite": 68,
+            "coal_ore": 33,
+            "andesite": 85,
+            "iron_ore": 4,
+            "diorite": 71,
+            "copper_ore": 27,
+            "lapis_ore": 1
+          }
+        },
+        "desert": {
+          "biome_blocks": 37595648,
+          "counts": {
+            "short_dry_grass": 443,
+            "cactus": 90,
+            "dead_bush": 368,
+            "tall_dry_grass": 441,
+            "cactus_flower": 16,
+            "tall_grass": 14,
+            "sugar_cane": 270
+          },
+          "surface_blocks": {
+            "clay": 40,
+            "grass_block": 978,
+            "gravel": 7746,
+            "sand": 92032,
+            "stone": 184,
+            "dirt": 244,
+            "granite": 8,
+            "andesite": 13,
+            "coal_ore": 3
+          }
+        },
+        "meadow": {
+          "biome_blocks": 2190592,
+          "counts": {
+            "poppy": 86,
+            "short_grass": 535,
+            "wildflowers": 300,
+            "azure_bluet": 46,
+            "cornflower": 41,
+            "dandelion": 73,
+            "tall_grass": 148,
+            "oxeye_daisy": 17,
+            "allium": 16,
+            "leaf_litter": 43
+          },
+          "surface_blocks": {
+            "grass_block": 6295,
+            "stone": 129,
+            "dirt": 4,
+            "gravel": 3,
+            "coal_ore": 1
+          }
+        },
+        "swamp": {
+          "biome_blocks": 9834496,
+          "counts": {
+            "lily_pad": 159,
+            "short_grass": 2684,
+            "blue_orchid": 37,
+            "brown_mushroom": 87,
+            "firefly_bush": 41,
+            "azure_bluet": 13,
+            "dead_bush": 44,
+            "leaf_litter": 192,
+            "pink_tulip": 24,
+            "red_tulip": 6,
+            "fern": 10,
+            "orange_tulip": 5,
+            "white_tulip": 5,
+            "sugar_cane": 18,
+            "wildflowers": 17
+          },
+          "surface_blocks": {
+            "dirt": 3676,
+            "grass_block": 21105,
+            "stone": 448,
+            "clay": 217,
+            "gravel": 622,
+            "mud": 348,
+            "sand": 55,
+            "copper_ore": 1,
+            "coal_ore": 5,
+            "andesite": 1,
+            "granite": 18
+          }
+        },
+        "windswept_forest": {
+          "biome_blocks": 1684736,
+          "counts": {
+            "wildflowers": 47,
+            "short_grass": 78,
+            "pumpkin": 11,
+            "fern": 3,
+            "tall_grass": 4,
+            "bush": 2,
+            "sweet_berry_bush": 3,
+            "large_fern": 2
+          },
+          "surface_blocks": {
+            "grass_block": 3235,
+            "gravel": 24,
+            "stone": 892,
+            "coal_ore": 3,
+            "dirt": 166,
+            "granite": 11,
+            "iron_ore": 1,
+            "andesite": 21,
+            "copper_ore": 1,
+            "diorite": 8,
+            "emerald_ore": 1,
+            "sand": 37
+          }
+        }
+      },
+      "new_failures_since_review": [],
+      "new_failures_all_measured_features_since_review": [],
+      "worsened_outside_tolerance_since_review": [
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.692321,
+          "reviewed_before": 2.692321,
+          "after": 2.33264,
+          "vanilla": 14.707115,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/leaf_litter",
+          "before": 8.498006,
+          "reviewed_before": 14.163343,
+          "after": 13.809259,
+          "vanilla": 19.565146,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/leaf_litter",
+          "before": 18.259904,
+          "reviewed_before": 19.629397,
+          "after": 19.172899,
+          "vanilla": 45.140875,
+          "tolerance": 9.028175057208237,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        }
+      ]
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "chunks": 11099,
+      "coverage_sha256": "bc773f765737032ec7b79e3e3228de3750c13150e96d8f4b15762e4a81236d55",
+      "original_reference_sha256": "cf7169f689bf08136e0c1f25e96e4e7e823b4cf8702e47960c919811519fa570",
+      "vanilla_level": {
+        "seed": 100554032945340,
+        "spawn": [
+          -240,
+          16
+        ],
+        "version": {
+          "Snapshot": 0,
+          "Series": "main",
+          "Id": 5023,
+          "Name": "26.3"
+        },
+        "data_version": 5023
+      },
+      "before": {
+        "badlands": {
+          "biome_blocks": 77810944,
+          "counts": {
+            "dead_bush": 6469,
+            "short_dry_grass": 385,
+            "sugar_cane": 193,
+            "tall_dry_grass": 413,
+            "red_mushroom": 2,
+            "leaf_litter": 40,
+            "cactus": 34,
+            "cactus_flower": 4
+          },
+          "surface_blocks": {
+            "clay": 118,
+            "dirt": 2313,
+            "gravel": 1093,
+            "red_sand": 42412,
+            "sand": 2111,
+            "stone": 528,
+            "orange_terracotta": 33325,
+            "terracotta": 52882,
+            "red_terracotta": 29967,
+            "light_gray_terracotta": 18251,
+            "white_terracotta": 17945,
+            "yellow_terracotta": 3250,
+            "coarse_dirt": 90,
+            "grass_block": 961,
+            "granite": 26,
+            "brown_terracotta": 5887,
+            "diorite": 24,
+            "andesite": 23,
+            "coal_ore": 6,
+            "copper_ore": 2,
+            "netherrack": 18
+          }
+        },
+        "beach": {
+          "biome_blocks": 42289600,
+          "counts": {
+            "sugar_cane": 464,
+            "short_grass": 144,
+            "leaf_litter": 107,
+            "tall_grass": 5,
+            "wildflowers": 4,
+            "red_mushroom_block": 14,
+            "firefly_bush": 1
+          },
+          "surface_blocks": {
+            "dirt": 1090,
+            "gravel": 20906,
+            "sand": 85947,
+            "clay": 127,
+            "grass_block": 2588,
+            "diorite": 10,
+            "stone": 477,
+            "andesite": 28,
+            "granite": 12,
+            "copper_ore": 5,
+            "coal_ore": 7,
+            "sandstone": 3
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 420288,
+          "counts": {
+            "pink_petals": 643,
+            "short_grass": 177,
+            "tall_grass": 10
+          },
+          "surface_blocks": {
+            "grass_block": 1116,
+            "dirt": 20
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 73709184,
+          "counts": {
+            "leaf_litter": 84692,
+            "brown_mushroom_block": 9016,
+            "short_grass": 6152,
+            "mushroom_stem": 2624,
+            "red_mushroom_block": 11373,
+            "wildflowers": 73,
+            "tall_grass": 389,
+            "firefly_bush": 33,
+            "sugar_cane": 95,
+            "fern": 63,
+            "red_mushroom": 3,
+            "pumpkin": 3
+          },
+          "surface_blocks": {
+            "dirt": 20997,
+            "grass_block": 186869,
+            "sand": 5331,
+            "rooted_dirt": 290,
+            "clay": 299,
+            "diorite": 94,
+            "gravel": 3506,
+            "stone": 3808,
+            "andesite": 54,
+            "pale_moss_block": 825,
+            "coal_ore": 60,
+            "granite": 53,
+            "copper_ore": 9,
+            "iron_ore": 13
+          }
+        },
+        "desert": {
+          "biome_blocks": 527221888,
+          "counts": {
+            "sugar_cane": 19953,
+            "tall_dry_grass": 6522,
+            "short_dry_grass": 6392,
+            "dead_bush": 4400,
+            "cactus": 1859,
+            "cactus_flower": 301,
+            "red_mushroom": 32,
+            "tall_grass": 113,
+            "leaf_litter": 16
+          },
+          "surface_blocks": {
+            "gravel": 94407,
+            "sand": 1311362,
+            "dirt": 2383,
+            "grass_block": 7913,
+            "clay": 365,
+            "stone": 1805,
+            "coal_ore": 21,
+            "copper_ore": 23,
+            "andesite": 107,
+            "granite": 84,
+            "terracotta": 518,
+            "sandstone": 429,
+            "diorite": 70,
+            "red_sand": 2462,
+            "orange_terracotta": 275,
+            "iron_ore": 4,
+            "lime_terracotta": 4,
+            "white_glazed_terracotta": 2,
+            "obsidian": 7,
+            "mud": 258,
+            "netherrack": 84,
+            "red_terracotta": 304,
+            "blue_terracotta": 1,
+            "light_gray_terracotta": 16,
+            "white_terracotta": 20,
+            "yellow_terracotta": 7
+          }
+        },
+        "eroded_badlands": {
+          "biome_blocks": 2069696,
+          "counts": {
+            "tall_dry_grass": 7,
+            "dead_bush": 64,
+            "short_dry_grass": 6
+          },
+          "surface_blocks": {
+            "orange_terracotta": 853,
+            "red_terracotta": 1898,
+            "sand": 166,
+            "terracotta": 1504,
+            "light_gray_terracotta": 393,
+            "white_terracotta": 477,
+            "yellow_terracotta": 82,
+            "brown_terracotta": 83
+          }
+        },
+        "meadow": {
+          "biome_blocks": 26825728,
+          "counts": {
+            "allium": 297,
+            "cornflower": 626,
+            "short_grass": 13939,
+            "wildflowers": 8406,
+            "poppy": 1137,
+            "tall_grass": 1948,
+            "azure_bluet": 665,
+            "dandelion": 1097,
+            "oxeye_daisy": 300
+          },
+          "surface_blocks": {
+            "grass_block": 85750,
+            "stone": 585,
+            "coal_ore": 8,
+            "gravel": 10,
+            "dirt": 231,
+            "iron_ore": 2,
+            "granite": 2,
+            "diorite": 7,
+            "rooted_dirt": 1,
+            "pale_moss_block": 8
+          }
+        },
+        "wooded_badlands": {
+          "biome_blocks": 141032256,
+          "counts": {
+            "tall_dry_grass": 1404,
+            "dead_bush": 12419,
+            "short_dry_grass": 1382,
+            "sugar_cane": 918,
+            "cactus": 245,
+            "cactus_flower": 50,
+            "tall_grass": 29,
+            "short_grass": 132,
+            "leaf_litter": 11034,
+            "fern": 29
+          },
+          "surface_blocks": {
+            "red_sand": 229411,
+            "sand": 10012,
+            "clay": 503,
+            "copper_ore": 7,
+            "dirt": 10712,
+            "gravel": 4392,
+            "stone": 1928,
+            "orange_terracotta": 23229,
+            "granite": 68,
+            "terracotta": 36257,
+            "grass_block": 25127,
+            "red_terracotta": 23669,
+            "diorite": 71,
+            "andesite": 98,
+            "coal_ore": 24,
+            "gold_ore": 14,
+            "red_sandstone": 11,
+            "coarse_dirt": 9786,
+            "yellow_terracotta": 267,
+            "light_gray_terracotta": 46,
+            "white_terracotta": 61,
+            "iron_ore": 2,
+            "sandstone": 1
+          }
+        }
+      },
+      "after": {
+        "badlands": {
+          "biome_blocks": 77810944,
+          "counts": {
+            "dead_bush": 12285,
+            "short_dry_grass": 829,
+            "sugar_cane": 193,
+            "tall_dry_grass": 847,
+            "red_mushroom": 2,
+            "leaf_litter": 40,
+            "cactus": 34,
+            "cactus_flower": 4
+          },
+          "surface_blocks": {
+            "clay": 118,
+            "dirt": 2313,
+            "gravel": 1093,
+            "red_sand": 42412,
+            "sand": 2111,
+            "stone": 528,
+            "orange_terracotta": 33325,
+            "terracotta": 52882,
+            "red_terracotta": 29967,
+            "light_gray_terracotta": 18251,
+            "white_terracotta": 17945,
+            "yellow_terracotta": 3250,
+            "coarse_dirt": 90,
+            "grass_block": 961,
+            "granite": 26,
+            "brown_terracotta": 5887,
+            "diorite": 24,
+            "andesite": 23,
+            "coal_ore": 6,
+            "copper_ore": 2,
+            "netherrack": 18
+          }
+        },
+        "beach": {
+          "biome_blocks": 42289600,
+          "counts": {
+            "short_grass": 394,
+            "sugar_cane": 127,
+            "firefly_bush": 3,
+            "leaf_litter": 96,
+            "tall_grass": 5,
+            "wildflowers": 4,
+            "red_mushroom_block": 14
+          },
+          "surface_blocks": {
+            "dirt": 1090,
+            "gravel": 20906,
+            "sand": 85947,
+            "clay": 127,
+            "grass_block": 2588,
+            "diorite": 10,
+            "stone": 477,
+            "andesite": 28,
+            "granite": 12,
+            "copper_ore": 5,
+            "coal_ore": 7,
+            "sandstone": 3
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 420288,
+          "counts": {
+            "short_grass": 137,
+            "pink_petals": 264,
+            "tall_grass": 16
+          },
+          "surface_blocks": {
+            "grass_block": 1116,
+            "dirt": 20
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 73709184,
+          "counts": {
+            "leaf_litter": 84692,
+            "short_grass": 6155,
+            "mushroom_stem": 1936,
+            "red_mushroom_block": 11393,
+            "wildflowers": 73,
+            "brown_mushroom_block": 3748,
+            "tall_grass": 389,
+            "firefly_bush": 33,
+            "sugar_cane": 95,
+            "fern": 63,
+            "red_mushroom": 3,
+            "pumpkin": 3
+          },
+          "surface_blocks": {
+            "dirt": 20995,
+            "grass_block": 186869,
+            "sand": 5331,
+            "rooted_dirt": 292,
+            "clay": 299,
+            "diorite": 94,
+            "gravel": 3506,
+            "stone": 3808,
+            "andesite": 54,
+            "pale_moss_block": 825,
+            "coal_ore": 60,
+            "granite": 53,
+            "copper_ore": 9,
+            "iron_ore": 13
+          }
+        },
+        "desert": {
+          "biome_blocks": 527221888,
+          "counts": {
+            "tall_dry_grass": 6575,
+            "short_dry_grass": 6464,
+            "dead_bush": 5527,
+            "sugar_cane": 2836,
+            "cactus": 1873,
+            "cactus_flower": 303,
+            "red_mushroom": 32,
+            "tall_grass": 113,
+            "leaf_litter": 16
+          },
+          "surface_blocks": {
+            "gravel": 94407,
+            "sand": 1311362,
+            "dirt": 2383,
+            "grass_block": 7913,
+            "clay": 365,
+            "stone": 1805,
+            "coal_ore": 21,
+            "copper_ore": 23,
+            "andesite": 107,
+            "granite": 84,
+            "terracotta": 518,
+            "sandstone": 429,
+            "diorite": 70,
+            "red_sand": 2462,
+            "orange_terracotta": 275,
+            "iron_ore": 4,
+            "lime_terracotta": 4,
+            "white_glazed_terracotta": 2,
+            "obsidian": 7,
+            "mud": 258,
+            "netherrack": 84,
+            "red_terracotta": 304,
+            "blue_terracotta": 1,
+            "light_gray_terracotta": 16,
+            "white_terracotta": 20,
+            "yellow_terracotta": 7
+          }
+        },
+        "eroded_badlands": {
+          "biome_blocks": 2069696,
+          "counts": {
+            "dead_bush": 206,
+            "short_dry_grass": 18,
+            "tall_dry_grass": 27
+          },
+          "surface_blocks": {
+            "orange_terracotta": 853,
+            "red_terracotta": 1898,
+            "sand": 166,
+            "terracotta": 1504,
+            "light_gray_terracotta": 393,
+            "white_terracotta": 477,
+            "yellow_terracotta": 82,
+            "brown_terracotta": 83
+          }
+        },
+        "meadow": {
+          "biome_blocks": 26825728,
+          "counts": {
+            "dandelion": 977,
+            "short_grass": 7209,
+            "tall_grass": 1912,
+            "wildflowers": 4291,
+            "azure_bluet": 823,
+            "oxeye_daisy": 15,
+            "poppy": 1301,
+            "cornflower": 1213,
+            "allium": 249
+          },
+          "surface_blocks": {
+            "grass_block": 85750,
+            "stone": 585,
+            "coal_ore": 8,
+            "gravel": 10,
+            "dirt": 231,
+            "iron_ore": 2,
+            "granite": 2,
+            "diorite": 7,
+            "rooted_dirt": 1,
+            "pale_moss_block": 8
+          }
+        },
+        "wooded_badlands": {
+          "biome_blocks": 141032256,
+          "counts": {
+            "dead_bush": 16383,
+            "tall_dry_grass": 1817,
+            "short_dry_grass": 1733,
+            "cactus": 246,
+            "sugar_cane": 178,
+            "cactus_flower": 50,
+            "tall_grass": 29,
+            "short_grass": 1227,
+            "leaf_litter": 10657,
+            "fern": 18
+          },
+          "surface_blocks": {
+            "red_sand": 229411,
+            "sand": 10012,
+            "clay": 503,
+            "copper_ore": 7,
+            "dirt": 10712,
+            "gravel": 4392,
+            "stone": 1928,
+            "orange_terracotta": 23229,
+            "granite": 68,
+            "terracotta": 36257,
+            "grass_block": 25127,
+            "red_terracotta": 23669,
+            "diorite": 71,
+            "andesite": 98,
+            "coal_ore": 24,
+            "gold_ore": 14,
+            "red_sandstone": 11,
+            "coarse_dirt": 9786,
+            "yellow_terracotta": 267,
+            "light_gray_terracotta": 46,
+            "white_terracotta": 61,
+            "iron_ore": 2,
+            "sandstone": 1
+          }
+        }
+      },
+      "vanilla": {
+        "badlands": {
+          "biome_blocks": 78156288,
+          "counts": {
+            "dead_bush": 11000,
+            "cactus": 18,
+            "leaf_litter": 118,
+            "cactus_flower": 1,
+            "short_grass": 4,
+            "sugar_cane": 10
+          },
+          "surface_blocks": {
+            "red_sand": 22534,
+            "sand": 630,
+            "terracotta": 137281,
+            "brown_terracotta": 17524,
+            "light_gray_terracotta": 7372,
+            "red_sandstone": 174,
+            "yellow_terracotta": 5860,
+            "orange_terracotta": 11131,
+            "white_terracotta": 5914,
+            "stone": 400,
+            "coarse_dirt": 58,
+            "grass_block": 312,
+            "red_terracotta": 1580,
+            "dirt": 222,
+            "gravel": 111,
+            "clay": 7,
+            "diorite": 47,
+            "granite": 6,
+            "coal_ore": 3,
+            "lapis_ore": 3,
+            "netherrack": 140,
+            "andesite": 6,
+            "obsidian": 5,
+            "copper_ore": 2,
+            "deepslate": 2,
+            "gold_ore": 4
+          }
+        },
+        "beach": {
+          "biome_blocks": 42295488,
+          "counts": {
+            "short_grass": 345,
+            "sugar_cane": 58,
+            "white_tulip": 2,
+            "azure_bluet": 1,
+            "leaf_litter": 537,
+            "red_mushroom": 8,
+            "tall_grass": 53,
+            "fern": 18,
+            "firefly_bush": 2,
+            "wildflowers": 3,
+            "bush": 1,
+            "lilac": 4,
+            "lily_of_the_valley": 2,
+            "orange_tulip": 3
+          },
+          "surface_blocks": {
+            "dirt": 756,
+            "sand": 85322,
+            "gravel": 19068,
+            "grass_block": 1767,
+            "sandstone": 523,
+            "andesite": 353,
+            "diorite": 261,
+            "stone": 2825,
+            "granite": 174,
+            "coal_ore": 28,
+            "netherrack": 62,
+            "obsidian": 2,
+            "clay": 47,
+            "iron_ore": 10,
+            "copper_ore": 32,
+            "lapis_ore": 2
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 406336,
+          "counts": {
+            "pink_petals": 227,
+            "short_grass": 112,
+            "tall_grass": 24,
+            "sunflower": 2
+          },
+          "surface_blocks": {
+            "grass_block": 905,
+            "stone": 153,
+            "andesite": 11,
+            "diorite": 15,
+            "dirt": 9,
+            "gravel": 3
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 73504896,
+          "counts": {
+            "tall_grass": 622,
+            "fern": 2,
+            "leaf_litter": 78867,
+            "short_grass": 6140,
+            "bush": 5,
+            "wildflowers": 41,
+            "mushroom_stem": 1713,
+            "red_mushroom_block": 9795,
+            "brown_mushroom_block": 3477,
+            "sugar_cane": 43,
+            "firefly_bush": 10,
+            "lily_of_the_valley": 18,
+            "lilac": 34,
+            "brown_mushroom": 4,
+            "dandelion": 17,
+            "poppy": 27,
+            "peony": 44,
+            "rose_bush": 118,
+            "red_mushroom": 6
+          },
+          "surface_blocks": {
+            "dirt": 23677,
+            "grass_block": 173965,
+            "gravel": 4186,
+            "sand": 13587,
+            "stone": 3696,
+            "clay": 899,
+            "diorite": 199,
+            "pale_moss_block": 1029,
+            "rooted_dirt": 25,
+            "iron_ore": 9,
+            "andesite": 328,
+            "copper_ore": 51,
+            "coal_ore": 37,
+            "granite": 176,
+            "sandstone": 19,
+            "moss_block": 106,
+            "lapis_ore": 1
+          }
+        },
+        "desert": {
+          "biome_blocks": 527330176,
+          "counts": {
+            "dead_bush": 7203,
+            "short_grass": 2183,
+            "cactus": 1688,
+            "cactus_flower": 249,
+            "sugar_cane": 2825,
+            "tall_grass": 819,
+            "red_mushroom": 29,
+            "poppy": 4,
+            "bush": 4,
+            "dandelion": 1,
+            "firefly_bush": 2,
+            "leaf_litter": 38,
+            "fern": 14
+          },
+          "surface_blocks": {
+            "grass_block": 2225,
+            "sand": 1305011,
+            "dirt": 3111,
+            "gravel": 71726,
+            "clay": 216,
+            "diorite": 1476,
+            "sandstone": 15026,
+            "stone": 16725,
+            "granite": 1389,
+            "andesite": 1950,
+            "copper_ore": 159,
+            "coal_ore": 124,
+            "deepslate": 100,
+            "iron_ore": 81,
+            "tuff": 117,
+            "terracotta": 397,
+            "white_glazed_terracotta": 17,
+            "lapis_ore": 18,
+            "orange_terracotta": 351,
+            "red_sand": 1577,
+            "rooted_dirt": 31,
+            "blue_terracotta": 2,
+            "netherrack": 245,
+            "obsidian": 17,
+            "cinnabar": 40,
+            "sulfur": 72,
+            "mud": 191,
+            "red_sandstone": 1,
+            "yellow_terracotta": 59,
+            "light_gray_terracotta": 23,
+            "white_terracotta": 20,
+            "brown_terracotta": 6,
+            "calcite": 18,
+            "lime_terracotta": 2,
+            "gold_ore": 4
+          }
+        },
+        "eroded_badlands": {
+          "biome_blocks": 2091584,
+          "counts": {
+            "dead_bush": 248,
+            "cactus": 2
+          },
+          "surface_blocks": {
+            "orange_terracotta": 139,
+            "red_sand": 1503,
+            "sand": 140,
+            "terracotta": 3043,
+            "yellow_terracotta": 344,
+            "brown_terracotta": 74,
+            "light_gray_terracotta": 52,
+            "white_terracotta": 78,
+            "stone": 81,
+            "coal_ore": 2
+          }
+        },
+        "meadow": {
+          "biome_blocks": 26902080,
+          "counts": {
+            "allium": 225,
+            "pink_tulip": 24,
+            "oxeye_daisy": 12,
+            "short_grass": 7344,
+            "wildflowers": 4072,
+            "poppy": 1218,
+            "tall_grass": 1978,
+            "orange_tulip": 25,
+            "white_tulip": 17,
+            "red_tulip": 16,
+            "dandelion": 948,
+            "azure_bluet": 993,
+            "cornflower": 1380,
+            "red_mushroom": 28,
+            "lily_of_the_valley": 1
+          },
+          "surface_blocks": {
+            "grass_block": 84399,
+            "stone": 1239,
+            "copper_ore": 3,
+            "dirt": 81,
+            "coal_ore": 19,
+            "granite": 35,
+            "diorite": 1,
+            "gravel": 7,
+            "iron_ore": 1,
+            "clay": 2,
+            "sand": 2,
+            "andesite": 6,
+            "pale_moss_block": 9
+          }
+        },
+        "wooded_badlands": {
+          "biome_blocks": 140601088,
+          "counts": {
+            "dead_bush": 18263,
+            "sugar_cane": 105,
+            "cactus": 116,
+            "short_grass": 1260,
+            "tall_grass": 281,
+            "cactus_flower": 24,
+            "poppy": 2,
+            "fern": 22,
+            "leaf_litter": 8420,
+            "bush": 3,
+            "red_mushroom": 1
+          },
+          "surface_blocks": {
+            "red_sand": 202980,
+            "sand": 2896,
+            "orange_terracotta": 39512,
+            "sandstone": 31,
+            "red_sandstone": 903,
+            "stone": 3715,
+            "terracotta": 70547,
+            "dirt": 1272,
+            "light_gray_terracotta": 4853,
+            "white_terracotta": 4196,
+            "yellow_terracotta": 6729,
+            "andesite": 306,
+            "coal_ore": 53,
+            "copper_ore": 27,
+            "gold_ore": 20,
+            "diorite": 251,
+            "grass_block": 13555,
+            "gravel": 355,
+            "granite": 182,
+            "clay": 76,
+            "rooted_dirt": 4,
+            "iron_ore": 9,
+            "brown_terracotta": 9024,
+            "coarse_dirt": 13504,
+            "red_terracotta": 3,
+            "lapis_ore": 3,
+            "netherrack": 1
+          }
+        }
+      },
+      "rows": [
+        {
+          "metric": "feature_biome/badlands/cactus",
+          "before": 0.436957,
+          "reviewed_before": 0.436957,
+          "after": 0.436957,
+          "vanilla": 0.230308,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/cactus_flower",
+          "before": 0.051407,
+          "reviewed_before": 0.051407,
+          "after": 0.051407,
+          "vanilla": 0.012795,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/dead_bush",
+          "before": 83.137405,
+          "reviewed_before": 157.882675,
+          "after": 157.882675,
+          "vanilla": 140.743634,
+          "tolerance": 28.148726817732182,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/leaf_litter",
+          "before": 0.514067,
+          "reviewed_before": 0.514067,
+          "after": 0.514067,
+          "vanilla": 1.509795,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/red_mushroom",
+          "before": 0.025703,
+          "reviewed_before": 0.025703,
+          "after": 0.025703,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/short_dry_grass",
+          "before": 4.94789,
+          "reviewed_before": 10.654028,
+          "after": 10.654028,
+          "vanilla": 8.943618,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/badlands/short_grass",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.05118,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/sugar_cane",
+          "before": 2.480371,
+          "reviewed_before": 2.480371,
+          "after": 2.480371,
+          "vanilla": 0.127949,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/badlands/tall_dry_grass",
+          "before": 5.307737,
+          "reviewed_before": 10.885358,
+          "after": 10.885358,
+          "vanilla": 8.29108,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/beach/azure_bluet",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.023643,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.023643,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/fern",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.425577,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/firefly_bush",
+          "before": 0.023646,
+          "reviewed_before": 0.023646,
+          "after": 0.070939,
+          "vanilla": 0.047286,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.530173,
+          "reviewed_before": 2.530173,
+          "after": 2.270062,
+          "vanilla": 12.69639,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/lilac",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.094573,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/lily_of_the_valley",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.047286,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/orange_tulip",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.07093,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/red_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.189145,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/red_mushroom_block",
+          "before": 0.331051,
+          "reviewed_before": 0.331051,
+          "after": 0.331051,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/short_grass",
+          "before": 3.405093,
+          "reviewed_before": 3.452385,
+          "after": 9.316711,
+          "vanilla": 8.156898,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/sugar_cane",
+          "before": 10.971965,
+          "reviewed_before": 3.003102,
+          "after": 3.003102,
+          "vanilla": 1.371305,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/tall_grass",
+          "before": 0.118232,
+          "reviewed_before": 0.118232,
+          "after": 0.118232,
+          "vanilla": 1.253089,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/white_tulip",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.047286,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/wildflowers",
+          "before": 0.094586,
+          "reviewed_before": 0.094586,
+          "after": 0.094586,
+          "vanilla": 0.07093,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/pink_petals",
+          "before": 1529.903304,
+          "reviewed_before": 1115.901477,
+          "after": 628.140704,
+          "vanilla": 558.650969,
+          "tolerance": 111.73019373129628,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/short_grass",
+          "before": 421.13979,
+          "reviewed_before": 306.932389,
+          "after": 325.966956,
+          "vanilla": 275.633958,
+          "tolerance": 55.12679162072767,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/sunflower",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 4.922035,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/tall_grass",
+          "before": 23.793208,
+          "reviewed_before": 28.55185,
+          "after": 38.069134,
+          "vanilla": 59.06442,
+          "tolerance": 11.812883918727358,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/brown_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.054418,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/brown_mushroom_block",
+          "before": 122.318543,
+          "reviewed_before": 50.84848,
+          "after": 50.84848,
+          "vanilla": 47.302971,
+          "tolerance": 9.460594298371635,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.068023,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/dandelion",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.231277,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/fern",
+          "before": 0.85471,
+          "reviewed_before": 0.85471,
+          "after": 0.85471,
+          "vanilla": 0.027209,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/firefly_bush",
+          "before": 0.447705,
+          "reviewed_before": 0.447705,
+          "after": 0.447705,
+          "vanilla": 0.136045,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/leaf_litter",
+          "before": 1149.002002,
+          "reviewed_before": 1149.002002,
+          "after": 1149.002002,
+          "vanilla": 1072.948937,
+          "tolerance": 214.5897873251872,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/lilac",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.462554,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/lily_of_the_valley",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.244882,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/mushroom_stem",
+          "before": 35.599363,
+          "reviewed_before": 26.265384,
+          "after": 26.265384,
+          "vanilla": 23.30457,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/peony",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.5986,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/poppy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.367322,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/pumpkin",
+          "before": 0.0407,
+          "reviewed_before": 0.0407,
+          "after": 0.0407,
+          "vanilla": 0.0,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/red_mushroom",
+          "before": 0.0407,
+          "reviewed_before": 0.0407,
+          "after": 0.0407,
+          "vanilla": 0.081627,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/red_mushroom_block",
+          "before": 154.295562,
+          "reviewed_before": 154.566899,
+          "after": 154.566899,
+          "vanilla": 133.25643,
+          "tolerance": 26.65128592250508,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/rose_bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 1.605335,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/short_grass",
+          "before": 83.463141,
+          "reviewed_before": 83.503841,
+          "after": 83.503841,
+          "vanilla": 83.531851,
+          "tolerance": 16.706370144377868,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/sugar_cane",
+          "before": 1.288849,
+          "reviewed_before": 1.288849,
+          "after": 1.288849,
+          "vanilla": 0.584995,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/tall_grass",
+          "before": 5.277497,
+          "reviewed_before": 5.277497,
+          "after": 5.277497,
+          "vanilla": 8.462021,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/wildflowers",
+          "before": 0.990379,
+          "reviewed_before": 0.990379,
+          "after": 0.990379,
+          "vanilla": 0.557786,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.007585,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/cactus",
+          "before": 3.52603,
+          "reviewed_before": 3.552584,
+          "after": 3.552584,
+          "vanilla": 3.201031,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/cactus_flower",
+          "before": 0.570917,
+          "reviewed_before": 0.574711,
+          "after": 0.574711,
+          "vanilla": 0.47219,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/dandelion",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.001896,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/dead_bush",
+          "before": 8.345632,
+          "reviewed_before": 10.483252,
+          "after": 10.483252,
+          "vanilla": 13.659374,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/fern",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.026549,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/firefly_bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.003793,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/leaf_litter",
+          "before": 0.030348,
+          "reviewed_before": 0.030348,
+          "after": 0.030348,
+          "vanilla": 0.072061,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/poppy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.007585,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/red_mushroom",
+          "before": 0.060696,
+          "reviewed_before": 0.060696,
+          "after": 0.060696,
+          "vanilla": 0.054994,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/short_dry_grass",
+          "before": 12.123928,
+          "reviewed_before": 12.260492,
+          "after": 12.260492,
+          "vanilla": 15.696048,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/desert/short_grass",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 4.139721,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/sugar_cane",
+          "before": 37.845546,
+          "reviewed_before": 5.379139,
+          "after": 5.379139,
+          "vanilla": 5.357175,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/tall_dry_grass",
+          "before": 12.370503,
+          "reviewed_before": 12.47103,
+          "after": 12.47103,
+          "vanilla": 15.773799,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/desert/tall_grass",
+          "before": 0.214331,
+          "reviewed_before": 0.214331,
+          "after": 0.214331,
+          "vanilla": 1.553107,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/cactus",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.956213,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/dead_bush",
+          "before": 30.922416,
+          "reviewed_before": 99.531525,
+          "after": 99.531525,
+          "vanilla": 118.570423,
+          "tolerance": 23.71408463633304,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/short_dry_grass",
+          "before": 2.898976,
+          "reviewed_before": 8.696929,
+          "after": 8.696929,
+          "vanilla": 10.040237,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/tall_dry_grass",
+          "before": 3.382139,
+          "reviewed_before": 13.045394,
+          "after": 13.045394,
+          "vanilla": 9.084024,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/meadow/allium",
+          "before": 11.071461,
+          "reviewed_before": 11.220572,
+          "after": 9.282134,
+          "vanilla": 8.363666,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/azure_bluet",
+          "before": 24.789635,
+          "reviewed_before": 24.715079,
+          "after": 30.679503,
+          "vanilla": 36.911644,
+          "tolerance": 7.382328801341756,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/cornflower",
+          "before": 23.335807,
+          "reviewed_before": 23.969527,
+          "after": 45.217785,
+          "vanilla": 51.297149,
+          "tolerance": 10.259429754130537,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/dandelion",
+          "before": 40.893578,
+          "reviewed_before": 42.011907,
+          "after": 36.42026,
+          "vanilla": 35.238911,
+          "tolerance": 7.047782178924455,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/lily_of_the_valley",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.037172,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/orange_tulip",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.929296,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/oxeye_daisy",
+          "before": 11.183294,
+          "reviewed_before": 11.593348,
+          "after": 0.559165,
+          "vanilla": 0.446062,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/pink_tulip",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.892124,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/poppy",
+          "before": 42.384684,
+          "reviewed_before": 43.689401,
+          "after": 48.498218,
+          "vanilla": 45.27531,
+          "tolerance": 9.055061913428256,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/red_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 1.040812,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/red_tulip",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.59475,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/short_grass",
+          "before": 519.613112,
+          "reviewed_before": 276.301914,
+          "after": 268.734552,
+          "vanilla": 272.990044,
+          "tolerance": 54.59800877850337,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/tall_grass",
+          "before": 72.616855,
+          "reviewed_before": 76.34462,
+          "after": 71.27486,
+          "vanilla": 73.525913,
+          "tolerance": 14.705182647587103,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/white_tulip",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.631921,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/wildflowers",
+          "before": 313.355895,
+          "reviewed_before": 159.95838,
+          "after": 159.95838,
+          "vanilla": 151.363761,
+          "tolerance": 30.272752144072133,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/bush",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.021337,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/cactus",
+          "before": 1.737191,
+          "reviewed_before": 1.744282,
+          "after": 1.744282,
+          "vanilla": 0.825029,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/cactus_flower",
+          "before": 0.354529,
+          "reviewed_before": 0.354529,
+          "after": 0.354529,
+          "vanilla": 0.170696,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/dead_bush",
+          "before": 88.05787,
+          "reviewed_before": 116.164915,
+          "after": 116.164915,
+          "vanilla": 129.892309,
+          "tolerance": 25.978461845188566,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/fern",
+          "before": 0.205627,
+          "reviewed_before": 0.12763,
+          "after": 0.12763,
+          "vanilla": 0.156471,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/leaf_litter",
+          "before": 78.237421,
+          "reviewed_before": 75.564274,
+          "after": 75.564274,
+          "vanilla": 59.885739,
+          "tolerance": 11.977147715955086,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/poppy",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.014225,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/red_mushroom",
+          "before": 0.0,
+          "reviewed_before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.007112,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/short_dry_grass",
+          "before": 9.799177,
+          "reviewed_before": 12.287969,
+          "after": 12.287969,
+          "vanilla": 8.854839,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/short_grass",
+          "before": 0.935956,
+          "reviewed_before": 8.700137,
+          "after": 8.700137,
+          "vanilla": 8.961524,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/sugar_cane",
+          "before": 6.509149,
+          "reviewed_before": 1.262123,
+          "after": 1.262123,
+          "vanilla": 0.746794,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/tall_dry_grass",
+          "before": 9.955169,
+          "reviewed_before": 12.883577,
+          "after": 12.883577,
+          "vanilla": 9.110883,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/tall_grass",
+          "before": 0.205627,
+          "reviewed_before": 0.205627,
+          "after": 0.205627,
+          "vanilla": 1.998562,
+          "tolerance": 5,
+          "before_outside": false,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        }
+      ],
+      "new_failures": [],
+      "new_failures_all_measured_features": [],
+      "worsened_outside_tolerance": [
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.530173,
+          "reviewed_before": 2.530173,
+          "after": 2.270062,
+          "vanilla": 12.69639,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        }
+      ],
+      "remaining": [
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.530173,
+          "reviewed_before": 2.530173,
+          "after": 2.270062,
+          "vanilla": 12.69639,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/tall_grass",
+          "before": 23.793208,
+          "reviewed_before": 28.55185,
+          "after": 38.069134,
+          "vanilla": 59.06442,
+          "tolerance": 11.812883918727358,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/leaf_litter",
+          "before": 78.237421,
+          "reviewed_before": 75.564274,
+          "after": 75.564274,
+          "vanilla": 59.885739,
+          "tolerance": 11.977147715955086,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        }
+      ],
+      "entered_tolerance": [
+        {
+          "metric": "feature_biome/badlands/dead_bush",
+          "before": 83.137405,
+          "reviewed_before": 157.882675,
+          "after": 157.882675,
+          "vanilla": 140.743634,
+          "tolerance": 28.148726817732182,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/beach/sugar_cane",
+          "before": 10.971965,
+          "reviewed_before": 3.003102,
+          "after": 3.003102,
+          "vanilla": 1.371305,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/pink_petals",
+          "before": 1529.903304,
+          "reviewed_before": 1115.901477,
+          "after": 628.140704,
+          "vanilla": 558.650969,
+          "tolerance": 111.73019373129628,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/short_grass",
+          "before": 421.13979,
+          "reviewed_before": 306.932389,
+          "after": 325.966956,
+          "vanilla": 275.633958,
+          "tolerance": 55.12679162072767,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/brown_mushroom_block",
+          "before": 122.318543,
+          "reviewed_before": 50.84848,
+          "after": 50.84848,
+          "vanilla": 47.302971,
+          "tolerance": 9.460594298371635,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/dark_forest/mushroom_stem",
+          "before": 35.599363,
+          "reviewed_before": 26.265384,
+          "after": 26.265384,
+          "vanilla": 23.30457,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/dead_bush",
+          "before": 8.345632,
+          "reviewed_before": 10.483252,
+          "after": 10.483252,
+          "vanilla": 13.659374,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/desert/sugar_cane",
+          "before": 37.845546,
+          "reviewed_before": 5.379139,
+          "after": 5.379139,
+          "vanilla": 5.357175,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/dead_bush",
+          "before": 30.922416,
+          "reviewed_before": 99.531525,
+          "after": 99.531525,
+          "vanilla": 118.570423,
+          "tolerance": 23.71408463633304,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/short_dry_grass",
+          "before": 2.898976,
+          "reviewed_before": 8.696929,
+          "after": 8.696929,
+          "vanilla": 10.040237,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/tall_dry_grass",
+          "before": 3.382139,
+          "reviewed_before": 13.045394,
+          "after": 13.045394,
+          "vanilla": 9.084024,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "official read-only subset supplement"
+        },
+        {
+          "metric": "feature_biome/meadow/azure_bluet",
+          "before": 24.789635,
+          "reviewed_before": 24.715079,
+          "after": 30.679503,
+          "vanilla": 36.911644,
+          "tolerance": 7.382328801341756,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/cornflower",
+          "before": 23.335807,
+          "reviewed_before": 23.969527,
+          "after": 45.217785,
+          "vanilla": 51.297149,
+          "tolerance": 10.259429754130537,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/oxeye_daisy",
+          "before": 11.183294,
+          "reviewed_before": 11.593348,
+          "after": 0.559165,
+          "vanilla": 0.446062,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/short_grass",
+          "before": 519.613112,
+          "reviewed_before": 276.301914,
+          "after": 268.734552,
+          "vanilla": 272.990044,
+          "tolerance": 54.59800877850337,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/meadow/wildflowers",
+          "before": 313.355895,
+          "reviewed_before": 159.95838,
+          "after": 159.95838,
+          "vanilla": 151.363761,
+          "tolerance": 30.272752144072133,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/dead_bush",
+          "before": 88.05787,
+          "reviewed_before": 116.164915,
+          "after": 116.164915,
+          "vanilla": 129.892309,
+          "tolerance": 25.978461845188566,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/short_grass",
+          "before": 0.935956,
+          "reviewed_before": 8.700137,
+          "after": 8.700137,
+          "vanilla": 8.961524,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        },
+        {
+          "metric": "feature_biome/wooded_badlands/sugar_cane",
+          "before": 6.509149,
+          "reviewed_before": 1.262123,
+          "after": 1.262123,
+          "vanilla": 0.746794,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": false,
+          "after_outside": false,
+          "reference": "original full official census"
+        }
+      ],
+      "outside_counts": [
+        22,
+        7,
+        3
+      ],
+      "region_sha256": {
+        "before": [
+          [
+            "r.-1.-1.mcs",
+            "fef1773a56085b5798f317c24529d73fe2cf1177893be80d628db567253d4407"
+          ],
+          [
+            "r.-1.-2.mcs",
+            "42225e1f65a9b443860ea1c9a07e77729255e2a697ae37687cbd5dabc8c3040b"
+          ],
+          [
+            "r.-1.-3.mcs",
+            "8a03d52a3b232329c22d295ee406be8e9066e32397c2914a3a10702f00d514cb"
+          ],
+          [
+            "r.-1.-4.mcs",
+            "02aa49fcef59f9584df1f94f5154e45338b6a317db287049ddaf0230df1d6bbf"
+          ],
+          [
+            "r.-1.0.mcs",
+            "f0170904fab3c57c158a826bb9f9c2b206c2eee21655d52e0d342ed19493841a"
+          ],
+          [
+            "r.-1.1.mcs",
+            "62c61f03ccf95e61373df8bfbd7c5eb4b496d11bbc5ae3071d5422940cbe1216"
+          ],
+          [
+            "r.-1.2.mcs",
+            "21c9e8ba9a9aec7ded0c50303a81b3158948aef71ee0c43bce23f6943bf1eb5a"
+          ],
+          [
+            "r.-2.-1.mcs",
+            "eea352b37beb7047453eeea83064c23491af28c3a542d2eb9332799ccdfebd40"
+          ],
+          [
+            "r.-2.-2.mcs",
+            "94f38ad7b69d0214249fea7363fc9a424a2b261ba510496273e7dbe9028ff2fc"
+          ],
+          [
+            "r.-2.-3.mcs",
+            "9a008c23817e15a9606c77227cddf10dcf63b394751b870d18748f4a7d438f63"
+          ],
+          [
+            "r.-2.-4.mcs",
+            "d6d90f0375b2de5d474357af7f429c4bd4af8b8be6bbe51746e730951650b4ba"
+          ],
+          [
+            "r.-2.0.mcs",
+            "c5472a0d4a657bcc35078a2cc2062b408f8241cbcc349ff31c6a1f2cb3e4bd1f"
+          ],
+          [
+            "r.-2.1.mcs",
+            "f10b283c0bfda656ec335beaf7bec9e03ec8e562a91878a2ac7bbc40e3ee8d9f"
+          ],
+          [
+            "r.-2.2.mcs",
+            "4f9990b8a5dc2e20cd320c64d336ef5979e1b4f5d1292cc5a78db5305b1303f3"
+          ],
+          [
+            "r.-3.-2.mcs",
+            "97bfdf656174c93796942f18bec955789165c35927df39afc75fcfee5cb0f2c6"
+          ],
+          [
+            "r.-3.-3.mcs",
+            "f4cbbaad8f49942488ffa52ad472ede70b108b3196c09e98f8baa3aeae452fe2"
+          ],
+          [
+            "r.-3.0.mcs",
+            "4b8950777fa70fa6ce046f0d108b76ac79e8be480e5e3f5100d8e950ebcb2380"
+          ],
+          [
+            "r.-3.1.mcs",
+            "5b6e31203c660074518764366dd0e72812b146883eff539474e24cf5b1f4a12d"
+          ],
+          [
+            "r.-3.2.mcs",
+            "b934efeb1578c9b2d531dd6fa19c215c9afc28bac55669a587d0e70cbec0797a"
+          ],
+          [
+            "r.0.-1.mcs",
+            "58065431975bc0ced5098ba2421129fd3529360b0f242d6f31e8955fad1b4852"
+          ],
+          [
+            "r.0.-2.mcs",
+            "eb7de26164606e3b33f53d074e65da2a22b403d417c5b8ae67ec70d1afcc4d98"
+          ],
+          [
+            "r.0.0.mcs",
+            "6c1b7fe6d9f79d1c9b415cab53f7ba8edf481aecaea2eea9080f8bbbe31ddb8b"
+          ],
+          [
+            "r.0.1.mcs",
+            "a47b5484578790de713a34907279432400371fb7158d6b51e56a78c5e5315c72"
+          ],
+          [
+            "r.1.-1.mcs",
+            "a0d2a1010e32441dcc4821c5a241f84ac1401b6bb5dbb5e2860d6a68efac85a2"
+          ],
+          [
+            "r.1.-2.mcs",
+            "5457bba2f2467f6b6b4991b059d286ede462104e119a5c7d5eb1aa31fbc1351a"
+          ],
+          [
+            "r.1.-3.mcs",
+            "c3ba9a5991deaa2ecc1295cd3e36a52d4c3215d28c5008cc3838a913caec23e4"
+          ],
+          [
+            "r.1.0.mcs",
+            "dc6b8808e0f7ef1757b755049f3c3d07ffa7c2d751d8f86088ab234854270983"
+          ],
+          [
+            "r.1.1.mcs",
+            "b2b52d4c9bbeaf53982e9339a7a2f9350c98c66047de572fe1804b9a165ee80c"
+          ],
+          [
+            "r.1.2.mcs",
+            "0a643e8be4bcae1229b9a4afcfb9915176c08b1a9c67bd5626cf6edbd73698f6"
+          ],
+          [
+            "r.2.-2.mcs",
+            "d19f92e472203a061d8b3752dc3d60b1f8453b988b2937256b764696af809ac1"
+          ],
+          [
+            "r.2.-3.mcs",
+            "0c8ba574258c6043c75bb24545f8f56c377a39f33829f808f69536de34a63a51"
+          ],
+          [
+            "r.2.-4.mcs",
+            "c29ec4b92a31c1c78bae0675d5d4d89826774d63b7a541d1b866d97b9e9a51fb"
+          ],
+          [
+            "r.2.0.mcs",
+            "d943b2003e82df48a65c71d2fd401e12cd83a90f0e897835207a52e43f7a70c3"
+          ],
+          [
+            "r.2.1.mcs",
+            "f2b46535a5961d95951a07e8e377487aca82983b369d44acbc8aed7b87b5a18e"
+          ],
+          [
+            "r.2.2.mcs",
+            "3a8f99ae26a0ad091c2c9f7b210082ff730892bdd877255feaec4e0b05d4c78b"
+          ],
+          [
+            "r.3.-2.mcs",
+            "4fa70ebd1979c7cd181e830d59a7c2a80883e8e96aaa216b9748c8c860b29540"
+          ],
+          [
+            "r.3.-3.mcs",
+            "c8830767c3d8ce7e80d5542e311fc2e2f070f6069dce7105f684613257d09bbe"
+          ],
+          [
+            "r.3.-4.mcs",
+            "ed3b0526186367bb0a8b998c567b42450ca16055fe8dd50d01a3d400c2b985f3"
+          ],
+          [
+            "r.3.1.mcs",
+            "f09495bdd4b8125cf5b9ae7a1de9abe9c379d1316d54b3ca50994b51d6ae3cff"
+          ],
+          [
+            "r.3.2.mcs",
+            "eba2023f9b6b9191ab6a7ef6aeb7da284801d2feb9491b31fcbbdae709af0faf"
+          ]
+        ],
+        "after": [
+          [
+            "r.-1.-1.mcs",
+            "a93745641290d4c06005650c4cc531a1a78a1b2170d50fb4524dc1e6afc8e84c"
+          ],
+          [
+            "r.-1.-2.mcs",
+            "513975ac52da4176c2b7a9748f83afad12e664dda1980e385e0f77fda9faf21f"
+          ],
+          [
+            "r.-1.-3.mcs",
+            "6445cf165fb18bc88c0aa2c14eeb831a50b5dff914c8e18196aaab7091f180f4"
+          ],
+          [
+            "r.-1.-4.mcs",
+            "f0c9a0b60b0267b5b03e32e1280982cff3be60519e31d231f0909c9bbda030ce"
+          ],
+          [
+            "r.-1.0.mcs",
+            "29b41d1c834643981b5d19ff4315ad8277c1f02bfb8117b375a29f19fa4ae638"
+          ],
+          [
+            "r.-1.1.mcs",
+            "e3628cf87f521103ad18ce517ed6f071e96a8da7ef894777284aa7adb3946ab4"
+          ],
+          [
+            "r.-1.2.mcs",
+            "d0d2b64e7c7b3baab7f700b0980c311ef9277b11ea67ab5676de8cd581ab2ace"
+          ],
+          [
+            "r.-2.-1.mcs",
+            "f2ca55c4e3009be147f33164ef9bf9e2a147ce59f704a6de08515b3dd96e026b"
+          ],
+          [
+            "r.-2.-2.mcs",
+            "c95fb6ff2164e212510881e2781f017fa0cc6658e7b88e675f520c4becb3c0d2"
+          ],
+          [
+            "r.-2.-3.mcs",
+            "c9da1d11d4702f0178df5f92760f0b7c8cf2eab404f0ae8c4992d20f4e97f311"
+          ],
+          [
+            "r.-2.-4.mcs",
+            "eefb306ae691d7018e333915986a43c4144e1d9560cd19421f75ea1469206150"
+          ],
+          [
+            "r.-2.0.mcs",
+            "e3bdd45bb74d26ac35c568f828d82e2856451a81a9f4c9da9a840b2d91c36b58"
+          ],
+          [
+            "r.-2.1.mcs",
+            "039c6f970a217057a85176b47b26229a8cfd44fdc3e1aad9ffb3aa0bdd93aa86"
+          ],
+          [
+            "r.-2.2.mcs",
+            "a5aa810f7b49e581d855c5f341c640be1c5a1ca16265ffe9454e3f2104d13269"
+          ],
+          [
+            "r.-3.-2.mcs",
+            "6d35d221149a3f931f7db3ca6c259642f5f5508b3a1eedf4ea642fff6b541f79"
+          ],
+          [
+            "r.-3.-3.mcs",
+            "bfa45d10dcb7bbad32b3035abbbfc7dfe58b32c28337c1bd02fd07261b9a8ebd"
+          ],
+          [
+            "r.-3.0.mcs",
+            "1d14a17f2947b107a1b9e0db1d72ebe27a0cbf971a261591008bf09fdbd6c586"
+          ],
+          [
+            "r.-3.1.mcs",
+            "2093c38391b9ded7848d08d4260da9f38886142ff675ea9101a015e6a4d79e2a"
+          ],
+          [
+            "r.-3.2.mcs",
+            "76476288791a25a41837ed8e540ef26391c33a86e41d3fc1ab51540834f6da1b"
+          ],
+          [
+            "r.0.-1.mcs",
+            "f7a99bd339ef6563b8d3382972f4ee08fa1630da022ca611bbc7fc9ed25fb58f"
+          ],
+          [
+            "r.0.-2.mcs",
+            "7072a4779631da0bd7e3c107bfc2499ed68fea0a0c2fe1e37da3354d5c268dd0"
+          ],
+          [
+            "r.0.0.mcs",
+            "d476d27cb796b2460fa7b7ae05817ddbdbb6f541792642abcd28809dca61858e"
+          ],
+          [
+            "r.0.1.mcs",
+            "3e30819d394e3691a275ddc9313312383040c7ef89f436d367a57d7b16df55c0"
+          ],
+          [
+            "r.1.-1.mcs",
+            "c79ef972baa80b94ab977908682554ec988d759fab6230cb46e1b0f624252228"
+          ],
+          [
+            "r.1.-2.mcs",
+            "69e6bd94984796c698ba335d50998cdcd51326ed14766f6a236d538c21b1dcce"
+          ],
+          [
+            "r.1.-3.mcs",
+            "6304deb21588a75d3fbbce52b71b97ec8c30a5f4436e20b295e67a2a89adc218"
+          ],
+          [
+            "r.1.0.mcs",
+            "0a598d4786276ae7e3483012c5175eaf7a6c689aa1af1da17b99c4207e654105"
+          ],
+          [
+            "r.1.1.mcs",
+            "d124dcbe32cf817f78ffe8aa00d7643dd0b190ec5624ddd906cc77d59ed40d8c"
+          ],
+          [
+            "r.1.2.mcs",
+            "e155202b9957615f9fbac1a1e08b74bd1eec14339e17f738e1cf5fa0b817de64"
+          ],
+          [
+            "r.2.-2.mcs",
+            "339613b391781a2605f612bece1d97f111f5bf58e52dd7dd19d77f05a6e30187"
+          ],
+          [
+            "r.2.-3.mcs",
+            "2c5e0592b48ea7e9bf05922753346b94cee18c8fd9010db1b810394b4b5ddae3"
+          ],
+          [
+            "r.2.-4.mcs",
+            "5177deda15d25fd5564b99d8e02542742f3f62b9f94c0071df23728fc207fa7d"
+          ],
+          [
+            "r.2.0.mcs",
+            "3ebe4a96d203d6080e23e6cacb59591eb679ff25ff04a7734f67c45fa0fdd3e2"
+          ],
+          [
+            "r.2.1.mcs",
+            "03810087582cd67648819fb0bc607ca0a07a9c57a22b449606688ab65c108d9b"
+          ],
+          [
+            "r.2.2.mcs",
+            "f32cc5ebcc505eadb951e3160aacd842fda02a318654ab986c0d9ba037f31afc"
+          ],
+          [
+            "r.3.-2.mcs",
+            "19fbd767c25abd7bf0d85e73648b6532c65cb20924e7ae851effb55786a57a5e"
+          ],
+          [
+            "r.3.-3.mcs",
+            "da25ef1403fd3d5e8403eda63cee384d273044bb3208cc6b7dff8ac5fa44ab16"
+          ],
+          [
+            "r.3.-4.mcs",
+            "af1037657fc0e70ddc21e16913c799d0e39d0532edebe5d7eeb5456cabbe437d"
+          ],
+          [
+            "r.3.1.mcs",
+            "841d257fe9957e99959e3992d9262f320105ea99370b5fbc68ee9b4fbb87c36c"
+          ],
+          [
+            "r.3.2.mcs",
+            "fc22a748309ad9acfbb274b9ac1ced687e8f367a5a0138ace210ba66ee9fd90c"
+          ]
+        ],
+        "reviewed_before": [
+          [
+            "r.-1.-1.mcs",
+            "a93745641290d4c06005650c4cc531a1a78a1b2170d50fb4524dc1e6afc8e84c"
+          ],
+          [
+            "r.-1.-2.mcs",
+            "65213b91dd32e243cf0ea222c4c2153ea3e716ae246d45531a1c98ada2ffc5cf"
+          ],
+          [
+            "r.-1.-3.mcs",
+            "5807dceada138a8751aed03b2105c5b903503594686810ba6c7f757429938584"
+          ],
+          [
+            "r.-1.-4.mcs",
+            "cf1e29f0a6b39e41938dc1c45f14c8c85928100d7b0e4903a1e4c9e8567d9fcc"
+          ],
+          [
+            "r.-1.0.mcs",
+            "29b41d1c834643981b5d19ff4315ad8277c1f02bfb8117b375a29f19fa4ae638"
+          ],
+          [
+            "r.-1.1.mcs",
+            "e3628cf87f521103ad18ce517ed6f071e96a8da7ef894777284aa7adb3946ab4"
+          ],
+          [
+            "r.-1.2.mcs",
+            "d0d2b64e7c7b3baab7f700b0980c311ef9277b11ea67ab5676de8cd581ab2ace"
+          ],
+          [
+            "r.-2.-1.mcs",
+            "5cc1dbcdbdcf5c0a551db23a43c5ed1480113b220e69c19b11025ef47bdf4b9a"
+          ],
+          [
+            "r.-2.-2.mcs",
+            "b86907061bf8dc49fc90a9f044680f2ca29e66345641521a3611b5467aa18b62"
+          ],
+          [
+            "r.-2.-3.mcs",
+            "f0c31576b30b3553128d8bf94d70a298ef13577723f64db1ea656732941d0fd8"
+          ],
+          [
+            "r.-2.-4.mcs",
+            "81871f04b1720d3f2229cdcde813a59e00079a3b91a9490089e80c390872ffd6"
+          ],
+          [
+            "r.-2.0.mcs",
+            "e3bdd45bb74d26ac35c568f828d82e2856451a81a9f4c9da9a840b2d91c36b58"
+          ],
+          [
+            "r.-2.1.mcs",
+            "4c95532c2f84253b7693987e3650f0cd1e4d91f69ea12a790e45700521b58436"
+          ],
+          [
+            "r.-2.2.mcs",
+            "a5aa810f7b49e581d855c5f341c640be1c5a1ca16265ffe9454e3f2104d13269"
+          ],
+          [
+            "r.-3.-2.mcs",
+            "97bfdf656174c93796942f18bec955789165c35927df39afc75fcfee5cb0f2c6"
+          ],
+          [
+            "r.-3.-3.mcs",
+            "bed65b1887d550dce80cb2298cde48f4e44b09f1eace3be29e46c37445ee2fde"
+          ],
+          [
+            "r.-3.0.mcs",
+            "1d14a17f2947b107a1b9e0db1d72ebe27a0cbf971a261591008bf09fdbd6c586"
+          ],
+          [
+            "r.-3.1.mcs",
+            "2093c38391b9ded7848d08d4260da9f38886142ff675ea9101a015e6a4d79e2a"
+          ],
+          [
+            "r.-3.2.mcs",
+            "76476288791a25a41837ed8e540ef26391c33a86e41d3fc1ab51540834f6da1b"
+          ],
+          [
+            "r.0.-1.mcs",
+            "f7a99bd339ef6563b8d3382972f4ee08fa1630da022ca611bbc7fc9ed25fb58f"
+          ],
+          [
+            "r.0.-2.mcs",
+            "7072a4779631da0bd7e3c107bfc2499ed68fea0a0c2fe1e37da3354d5c268dd0"
+          ],
+          [
+            "r.0.0.mcs",
+            "d476d27cb796b2460fa7b7ae05817ddbdbb6f541792642abcd28809dca61858e"
+          ],
+          [
+            "r.0.1.mcs",
+            "3e30819d394e3691a275ddc9313312383040c7ef89f436d367a57d7b16df55c0"
+          ],
+          [
+            "r.1.-1.mcs",
+            "c79ef972baa80b94ab977908682554ec988d759fab6230cb46e1b0f624252228"
+          ],
+          [
+            "r.1.-2.mcs",
+            "14c4269f3254668c42f99dfff7a6f38eb84870bf35b02ae9b74f6dee74835453"
+          ],
+          [
+            "r.1.-3.mcs",
+            "c3ba9a5991deaa2ecc1295cd3e36a52d4c3215d28c5008cc3838a913caec23e4"
+          ],
+          [
+            "r.1.0.mcs",
+            "0a598d4786276ae7e3483012c5175eaf7a6c689aa1af1da17b99c4207e654105"
+          ],
+          [
+            "r.1.1.mcs",
+            "d124dcbe32cf817f78ffe8aa00d7643dd0b190ec5624ddd906cc77d59ed40d8c"
+          ],
+          [
+            "r.1.2.mcs",
+            "e155202b9957615f9fbac1a1e08b74bd1eec14339e17f738e1cf5fa0b817de64"
+          ],
+          [
+            "r.2.-2.mcs",
+            "a2bc8a7834fd091599a8b840c94c50857daf874ed74bc97c8136d31638944b71"
+          ],
+          [
+            "r.2.-3.mcs",
+            "d2e76d856c2772a95878c0285089270a373050dd83ab2cf13dea3dcaf2c75508"
+          ],
+          [
+            "r.2.-4.mcs",
+            "114d363b4e2ea79ab28aacea07c1d499d9d538255c022e44343cd658b94bd782"
+          ],
+          [
+            "r.2.0.mcs",
+            "3ebe4a96d203d6080e23e6cacb59591eb679ff25ff04a7734f67c45fa0fdd3e2"
+          ],
+          [
+            "r.2.1.mcs",
+            "03810087582cd67648819fb0bc607ca0a07a9c57a22b449606688ab65c108d9b"
+          ],
+          [
+            "r.2.2.mcs",
+            "f32cc5ebcc505eadb951e3160aacd842fda02a318654ab986c0d9ba037f31afc"
+          ],
+          [
+            "r.3.-2.mcs",
+            "08fcc35981a3ba9e5a90b416a85dd90589ca9d3c5dada21ac1a7cea0fb5f3ad9"
+          ],
+          [
+            "r.3.-3.mcs",
+            "da25ef1403fd3d5e8403eda63cee384d273044bb3208cc6b7dff8ac5fa44ab16"
+          ],
+          [
+            "r.3.-4.mcs",
+            "af1037657fc0e70ddc21e16913c799d0e39d0532edebe5d7eeb5456cabbe437d"
+          ],
+          [
+            "r.3.1.mcs",
+            "45d2c2de89542ce9a7c6a1e65bdca59f37c58e86898dadada86dfb7e27b52ad1"
+          ],
+          [
+            "r.3.2.mcs",
+            "3212f6e58ca3b2d4064be67ab108ba7b12f74198791b495634a0e8e97fd29ea4"
+          ]
+        ]
+      },
+      "reviewed_before": {
+        "badlands": {
+          "biome_blocks": 77810944,
+          "counts": {
+            "dead_bush": 12285,
+            "short_dry_grass": 829,
+            "sugar_cane": 193,
+            "tall_dry_grass": 847,
+            "red_mushroom": 2,
+            "leaf_litter": 40,
+            "cactus": 34,
+            "cactus_flower": 4
+          },
+          "surface_blocks": {
+            "clay": 118,
+            "dirt": 2313,
+            "gravel": 1093,
+            "red_sand": 42412,
+            "sand": 2111,
+            "stone": 528,
+            "orange_terracotta": 33325,
+            "terracotta": 52882,
+            "red_terracotta": 29967,
+            "light_gray_terracotta": 18251,
+            "white_terracotta": 17945,
+            "yellow_terracotta": 3250,
+            "coarse_dirt": 90,
+            "grass_block": 961,
+            "granite": 26,
+            "brown_terracotta": 5887,
+            "diorite": 24,
+            "andesite": 23,
+            "coal_ore": 6,
+            "copper_ore": 2,
+            "netherrack": 18
+          }
+        },
+        "beach": {
+          "biome_blocks": 42289600,
+          "counts": {
+            "short_grass": 146,
+            "sugar_cane": 127,
+            "leaf_litter": 107,
+            "tall_grass": 5,
+            "wildflowers": 4,
+            "red_mushroom_block": 14,
+            "firefly_bush": 1
+          },
+          "surface_blocks": {
+            "dirt": 1090,
+            "gravel": 20906,
+            "sand": 85947,
+            "clay": 127,
+            "grass_block": 2588,
+            "diorite": 10,
+            "stone": 477,
+            "andesite": 28,
+            "granite": 12,
+            "copper_ore": 5,
+            "coal_ore": 7,
+            "sandstone": 3
+          }
+        },
+        "cherry_grove": {
+          "biome_blocks": 420288,
+          "counts": {
+            "short_grass": 129,
+            "pink_petals": 469,
+            "tall_grass": 12
+          },
+          "surface_blocks": {
+            "grass_block": 1116,
+            "dirt": 20
+          }
+        },
+        "dark_forest": {
+          "biome_blocks": 73709184,
+          "counts": {
+            "leaf_litter": 84692,
+            "short_grass": 6155,
+            "mushroom_stem": 1936,
+            "red_mushroom_block": 11393,
+            "wildflowers": 73,
+            "brown_mushroom_block": 3748,
+            "tall_grass": 389,
+            "firefly_bush": 33,
+            "sugar_cane": 95,
+            "fern": 63,
+            "red_mushroom": 3,
+            "pumpkin": 3
+          },
+          "surface_blocks": {
+            "dirt": 20995,
+            "grass_block": 186869,
+            "sand": 5331,
+            "rooted_dirt": 292,
+            "clay": 299,
+            "diorite": 94,
+            "gravel": 3506,
+            "stone": 3808,
+            "andesite": 54,
+            "pale_moss_block": 825,
+            "coal_ore": 60,
+            "granite": 53,
+            "copper_ore": 9,
+            "iron_ore": 13
+          }
+        },
+        "desert": {
+          "biome_blocks": 527221888,
+          "counts": {
+            "tall_dry_grass": 6575,
+            "short_dry_grass": 6464,
+            "dead_bush": 5527,
+            "sugar_cane": 2836,
+            "cactus": 1873,
+            "cactus_flower": 303,
+            "red_mushroom": 32,
+            "tall_grass": 113,
+            "leaf_litter": 16
+          },
+          "surface_blocks": {
+            "gravel": 94407,
+            "sand": 1311362,
+            "dirt": 2383,
+            "grass_block": 7913,
+            "clay": 365,
+            "stone": 1805,
+            "coal_ore": 21,
+            "copper_ore": 23,
+            "andesite": 107,
+            "granite": 84,
+            "terracotta": 518,
+            "sandstone": 429,
+            "diorite": 70,
+            "red_sand": 2462,
+            "orange_terracotta": 275,
+            "iron_ore": 4,
+            "lime_terracotta": 4,
+            "white_glazed_terracotta": 2,
+            "obsidian": 7,
+            "mud": 258,
+            "netherrack": 84,
+            "red_terracotta": 304,
+            "blue_terracotta": 1,
+            "light_gray_terracotta": 16,
+            "white_terracotta": 20,
+            "yellow_terracotta": 7
+          }
+        },
+        "eroded_badlands": {
+          "biome_blocks": 2069696,
+          "counts": {
+            "dead_bush": 206,
+            "short_dry_grass": 18,
+            "tall_dry_grass": 27
+          },
+          "surface_blocks": {
+            "orange_terracotta": 853,
+            "red_terracotta": 1898,
+            "sand": 166,
+            "terracotta": 1504,
+            "light_gray_terracotta": 393,
+            "white_terracotta": 477,
+            "yellow_terracotta": 82,
+            "brown_terracotta": 83
+          }
+        },
+        "meadow": {
+          "biome_blocks": 26825728,
+          "counts": {
+            "allium": 301,
+            "cornflower": 643,
+            "short_grass": 7412,
+            "poppy": 1172,
+            "tall_grass": 2048,
+            "wildflowers": 4291,
+            "azure_bluet": 663,
+            "dandelion": 1127,
+            "oxeye_daisy": 311
+          },
+          "surface_blocks": {
+            "grass_block": 85750,
+            "stone": 585,
+            "coal_ore": 8,
+            "gravel": 10,
+            "dirt": 231,
+            "iron_ore": 2,
+            "granite": 2,
+            "diorite": 7,
+            "rooted_dirt": 1,
+            "pale_moss_block": 8
+          }
+        },
+        "wooded_badlands": {
+          "biome_blocks": 141032256,
+          "counts": {
+            "dead_bush": 16383,
+            "tall_dry_grass": 1817,
+            "short_dry_grass": 1733,
+            "cactus": 246,
+            "sugar_cane": 178,
+            "cactus_flower": 50,
+            "tall_grass": 29,
+            "short_grass": 1227,
+            "leaf_litter": 10657,
+            "fern": 18
+          },
+          "surface_blocks": {
+            "red_sand": 229411,
+            "sand": 10012,
+            "clay": 503,
+            "copper_ore": 7,
+            "dirt": 10712,
+            "gravel": 4392,
+            "stone": 1928,
+            "orange_terracotta": 23229,
+            "granite": 68,
+            "terracotta": 36257,
+            "grass_block": 25127,
+            "red_terracotta": 23669,
+            "diorite": 71,
+            "andesite": 98,
+            "coal_ore": 24,
+            "gold_ore": 14,
+            "red_sandstone": 11,
+            "coarse_dirt": 9786,
+            "yellow_terracotta": 267,
+            "light_gray_terracotta": 46,
+            "white_terracotta": 61,
+            "iron_ore": 2,
+            "sandstone": 1
+          }
+        }
+      },
+      "new_failures_since_review": [],
+      "new_failures_all_measured_features_since_review": [],
+      "worsened_outside_tolerance_since_review": [
+        {
+          "metric": "feature_biome/beach/leaf_litter",
+          "before": 2.530173,
+          "reviewed_before": 2.530173,
+          "after": 2.270062,
+          "vanilla": 12.69639,
+          "tolerance": 5,
+          "before_outside": true,
+          "reviewed_before_outside": true,
+          "after_outside": true,
+          "reference": "original full official census"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "cargo_test": {
+      "passed": 3462,
+      "failed": 0,
+      "ignored": 112,
+      "nested_filtered_child_excluded": true,
+      "log_sha256": "50e29544a9aa333ca9f24118ba23f3bce4ad0d7361d1a5a8966381d9f2f4a89a"
+    },
+    "cargo_clippy": {
+      "clean": true,
+      "log_sha256": "f7b7943ac321f55d2ddb8294b9456845115abcaf56d622d35c4971d336a614dd"
+    },
+    "python_tests": {
+      "passed": 21,
+      "log_sha256": "4cafe23bc1a33f484abf252f7c8dcc59918160d429989ec9fb33146b9e0f7aa8"
+    },
+    "cargo_build_jobs": 4,
+    "cargo_lock": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/.cargo.lock"
+  },
+  "regression_before": [
+    {
+      "seed": 1792932773345722119,
+      "biome": "meadow",
+      "columns": 6432,
+      "counts": {
+        "short_grass": 1007,
+        "wildflowers": 574
+      },
+      "densities": {
+        "short_grass": 156.56094527363183,
+        "wildflowers": 89.2412935323383
+      }
+    },
+    {
+      "seed": 100554032945340,
+      "biome": "meadow",
+      "columns": 20736,
+      "counts": {
+        "short_grass": 3442,
+        "wildflowers": 2144
+      },
+      "densities": {
+        "short_grass": 165.991512345679,
+        "wildflowers": 103.39506172839506
+      }
+    },
+    {
+      "seed": 1792932773345722119,
+      "biome": "cherry_grove",
+      "columns": 4752,
+      "counts": {
+        "short_grass": 853,
+        "pink_petals": 2137
+      },
+      "densities": {
+        "short_grass": 179.503367003367,
+        "pink_petals": 449.7053872053872
+      }
+    }
+  ],
+  "limitations": [
+    "The meadow provider is an original smooth three-field statistical approximation calibrated on both reference worlds, not a reconstruction of original parameters or an exact dual_noise implementation. Original phase and third-seed generalization remain unverified.",
+    "The meadow attempt mask selects one 8x8 quadrant per chunk; exact natural patch shape/streams remain unverified.",
+    "Cherry placement uses measured triangular attempts and replacement rules; original attempt count/streams and third-seed generalization remain unverified.",
+    "Leaf-litter masks and tree selection are unchanged; boundary and tree-population dependent rows remain explicit.",
+    "Exact original placement streams and cross-chunk incoming light for mushroom checks remain unverified.",
+    "Cave, tree and structure rows automatically classified as F are not assigned to this batch merely because of that label."
+  ],
+  "fixes": [
+    {
+      "rows": "meadow/short_grass, meadow/wildflowers",
+      "cause": "An extra meadow wildflower multiplier doubled patches; grass density compensated for the missing soil restored by A3. Remove the multiplier and independently retain whole grass candidates without shifting flower intervals."
+    },
+    {
+      "rows": "cherry_grove/short_grass, cherry_grove/pink_petals",
+      "cause": "Rates tuned for incomplete soil became excessive after A3. Reduce whole patch centers and retain whole grass candidates. Exact original attempt counts remain unverified; the second-seed petal row remains outside tolerance."
+    },
+    {
+      "rows": "dark_forest/brown_mushroom_block, dark_forest/mushroom_stem",
+      "cause": "Vegetation added a second brown giant-mushroom population on top of the tree pass. Retain only rare whole extra mushrooms; keep red candidates unchanged."
+    },
+    {
+      "rows": "swamp/brown_mushroom",
+      "cause": "Ground mushroom candidates ignored light on ordinary soil. Check actual chunk light <=12; preserve podzol/mycelium exceptions. Incoming neighbor light remains unverified."
+    },
+    {
+      "rows": "desert/sugar_cane, beach/sugar_cane, wooded_badlands/sugar_cane",
+      "cause": "Biome clump frequencies were too high after selecting suitable shoreline. Adjust whole clump density; preserve stalk heights and individual placement stream. Exact original attempt counts remain unverified."
+    },
+    {
+      "rows": "badlands/dead_bush, eroded_badlands/dead_bush, dry grasses",
+      "cause": "Habitat accepted plain terracotta but rejected colored terracotta; dry grasses additionally rejected dirt. Restore supported natural substrate types, exclude glazed terracotta, and adjust rates for the complete habitat."
+    },
+    {
+      "rows": "wooded_badlands/short_grass, wooded_badlands/dead_bush, desert/dead_bush",
+      "cause": "Ground-cover profiles underpopulated measured suitable habitat. Adjust profile frequencies. Exact original attempt counts remain unverified."
+    },
+    {
+      "rows": "windswept_forest/bush",
+      "cause": "Dense-forest patch multiplier was applied to sparse windswept forest. Lower whole patch share; exact original attempt counts remain unverified."
+    }
+  ],
+  "reviewed_before_provenance": {
+    "binary_sha256": "4a06335ce8ee43051163d9bf4c824ec8871673f518140889547b4c8ad1d55e90",
+    "source_sha256": {
+      "src/world/vegetation.rs": "51c7ad98132252332638d36eb3ad27b5a694eb964c622ba2a4ec41ae10f837f7",
+      "src/vegetation.rs": "8cb8b71e1269a85d50fb562b91ca4e96b5c017500f3efe95f427441a8c64404c",
+      "src/world/terrain.rs": "2c873377361d708daba2263f052e63a33b00fbd4cf51d28eaedf47fd9f67aa30"
+    }
+  },
+  "measurement_script_sha256": {
+    "measure-final.py": "4d57e091ab220fdd032857e1c6b959adcc442f6c42767b22a45665e3da45919e",
+    "spatial-final.py": "1abbacdc32aa62577672de4a25924d65f0cf454f84705e520ce3481ee61e01fe",
+    "spatial-statistics.py": "416d6b806e7f50a684060e00f4861f52afa34fb0085952e7e230dbc00566206d"
+  },
+  "review_root_causes": [
+    {
+      "discrepancy": "meadow species, grass and patch composition",
+      "cause": "Independent weighted flower selection discarded coordinate-coherent, three-dimensional, world-seed-independent provider states. The tall/short grass states were absent; independent grass could overlap provider grass zones.",
+      "change": "Three smooth fields, fine selector, all eight ordered states; world seed only in patch attempts. Independent grass/tall retention and bounded patch occupancy."
+    },
+    {
+      "discrepancy": "cherry petals second seed",
+      "cause": "Square dense patches and independent column treatment failed on slopes and tiny biome boundaries; petal attempts also rejected replaceable grass/litter.",
+      "change": "Five seeded centers per source chunk, triangular X/Z and +/-1 Y attempts, bounded biome/soil checks and verified grass/litter replacement."
+    },
+    {
+      "discrepancy": "remaining ground cover",
+      "cause": "Per-biome attempt profiles did not match eligible soil rates after A3.",
+      "change": "Swamp grass retained independently; Beach and Windswept Forest grass/tall rates measured on valid soil, no sand support added."
+    }
+  ]
+}
