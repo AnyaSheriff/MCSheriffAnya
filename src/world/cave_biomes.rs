@@ -51,7 +51,7 @@
 
 use std::sync::OnceLock;
 
-use super::noise::Noise;
+use super::noise::{Noise, Random};
 use super::terrain::{self, Biome, Climate, Column, ReliefGrid, Terrain, SEA};
 use super::underground::{hash, scramble, unit};
 use super::{trees, Chunk, Generator, AIR, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
@@ -185,8 +185,19 @@ const SCULK_SHRIEKER: f64 = 0.006;
 /// пещеры. Корни ищут пещеру не глубже `ROOTS_REACH`, а не нашли — уходят
 /// в землю на несколько блоков.
 const AZALEA_TREE: f64 = 1.0 / 300.0;
+// Объёмных попыток в среднем одна на площадь чанка. Это частота своего
+// размещения, проверяемая по двум семенам, а не извлечённая настройка
+// оригинала [проверить точный набор модификаторов размещения].
+const AZALEA_VOLUME_ATTEMPT: f64 = 1.0 / (CHUNK_SIZE * CHUNK_SIZE) as f64;
 const ROOTS_REACH: i32 = 48;
 const ROOTS_SHORT: i32 = 4;
+// Вики, Root System: «If the initial position is not air», «moving upward».
+// https://minecraft.wiki/w/Root_System
+// Для 26.3 начало выбирается в объёме, а не сразу на поверхности.
+// Предел 100 взят из примера вики; точная конфигурация 26.3 [проверить].
+const PREVIEW_ROOTS_REACH: i32 = 100;
+const ROOT_RADIUS: u64 = 3;
+const ROOT_ATTEMPTS: usize = 20;
 
 /// Состояния блоков, нужные проходу: ищутся по имени один раз.
 struct Palette {
@@ -1203,8 +1214,92 @@ fn grassy(biome: Biome) -> bool {
 /// Где стоит дерево с азалией: место с редким числом, под ним пышные
 /// пещеры, наверху — суша с травой. Решается только по месту и миру, так что
 /// соседние чанки видят одно и то же дерево.
-fn azalea_at(terrain: &Terrain, key: u64, x: i32, z: i32) -> Option<Column> {
-    if roll(key, (x, 0, z), SALT_AZALEA) >= AZALEA_TREE {
+fn azalea_at(terrain: &Terrain, key: u64, x: i32, z: i32) -> Option<(Column, i32)> {
+    let column = azalea_surface_at(terrain, key, x, z)?;
+    if terrain.preview() {
+        let y = MIN_Y + (hash(key, x, 1, z, SALT_AZALEA) % WORLD_HEIGHT as u64) as i32;
+        if !root_reaches(y, column.height)
+            || biome_at(&column, y) != Some(Biome::LushCaves)
+        { return None; }
+        // Воздух проверяет снимок ниже: предварительный шум не видит
+        // вырезанные карверами пустоты и перекрывшие пещеру жеоды.
+        let origin_y = azalea_space(terrain, &column, x, y, z)?;
+        return Some((column, origin_y));
+    }
+    Some((column, column.height))
+}
+
+fn root_reaches(origin_y: i32, height: i32) -> bool {
+    origin_y < height && height - origin_y < PREVIEW_ROOTS_REACH
+}
+
+/// Вики, Root System: «required_vertical_space_for_tree». Предварительная
+/// поверхность не видит деревья и растительность, уже поставленные до
+/// корней. Чёрный ящик 26.3: трава/папоротник в первом блоке разрешены,
+/// бамбук и верх высокой травы — нет. Три блока над местом ствола взяты из
+/// примера вики [проверить точное требование к высоте кроны].
+/// https://minecraft.wiki/w/Root_System
+fn azalea_space(terrain: &Terrain, column: &Column, x: i32, origin_y: i32, z: i32) -> Option<i32> {
+    let generator = Generator::Normal(Terrain::new(terrain.seed(), terrain.style()).with_preview(true));
+    let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
+    let mut snapshot = (*super::underground::base_chunk(&generator, cx, cz)).clone();
+    // Проверяется сохранённая клетка 4×4×4 и воздух после геологии:
+    // шумовая оценка могла попасть в соседний биом или внутрь жеоды.
+    if snapshot.biome(x.rem_euclid(16), origin_y, z.rem_euclid(16)) != Biome::LushCaves.number() as u16
+        || snapshot.block(x.rem_euclid(16), origin_y, z.rem_euclid(16)) != AIR
+    { return None; }
+    // В 42 естественных кустах есть свисающие корни у начала столба;
+    // произвольный воздух посреди зала их не даёт (/place feature).
+    // Подводим естественную попытку под потолок; точный набор модификаторов
+    // размещения остаётся [проверить], сами корни ниже повторяют чёрный ящик.
+    let mut ceiling = origin_y;
+    while ceiling + 1 < column.height && snapshot.block(x.rem_euclid(16), ceiling + 1, z.rem_euclid(16)) == AIR {
+        ceiling += 1;
+    }
+    if snapshot.biome(x.rem_euclid(16), ceiling, z.rem_euclid(16)) != Biome::LushCaves.number() as u16 { return None; }
+    let (bx, bz) = (cx * 16, cz * 16);
+    let grid = terrain.relief_grid(bx - 1, bz - 1, bx + 16, bz + 16);
+    let mut columns = Vec::with_capacity(18 * 18);
+    for sx in bx - 1..=bx + 16 { for sz in bz - 1..=bz + 16 {
+        columns.push(terrain.column_in(sx, sz, Some(&grid)));
+    } }
+    generator.grow_trees(&mut snapshot, cx, cz, &columns);
+    super::vegetation::decorate(&generator, &mut snapshot, cx, cz, &columns);
+    azalea_clearance(&snapshot, x.rem_euclid(16), column.height, z.rem_euclid(16)).then_some(ceiling)
+}
+
+/// У естественной азалии своя опора, шире опоры обычных деревьев.
+/// Вики: «azalea_grows_on», «substrate_overworld»; чёрный ящик подтверждает
+/// песок, снег и терракоту и отвергает камень и глину.
+/// https://minecraft.wiki/w/Block_tag_(Java_Edition)#azalea_grows_on
+fn azalea_ground(state: i32) -> bool {
+    crate::blocks::block_at_state(state).is_some_and(|name| {
+        matches!(name, "grass_block" | "dirt" | "coarse_dirt" | "podzol" | "mycelium" | "rooted_dirt"
+            | "moss_block" | "pale_moss_block" | "mud" | "muddy_mangrove_roots"
+            | "sand" | "red_sand" | "snow_block" | "powder_snow" | "terracotta")
+            || (name.ends_with("_terracotta") && !name.ends_with("_glazed_terracotta"))
+    })
+}
+
+fn azalea_clearance(chunk: &Chunk, x: i32, height: i32, z: i32) -> bool {
+    if !azalea_ground(chunk.block(x, height, z)) { return false; }
+    let first = chunk.block(x, height + 1, z);
+    let name = crate::blocks::block_at_state(first).unwrap_or("");
+    if name == "lava" || !(crate::blocks::replaceable(first) || name.ends_with("_leaves")) { return false; }
+    let mut water = usize::from(first == palette().water);
+    for y in height + 2..=height + 4 {
+        let state = chunk.block(x, y, z);
+        if state != AIR && state != palette().water { return false; }
+        water += usize::from(state == palette().water);
+    }
+    water <= 2
+}
+
+/// Предварительная проверка поверхности; в старом профиле была всей
+/// проверкой дерева и не требовала настоящей пустоты под ним.
+fn azalea_surface_at(terrain: &Terrain, key: u64, x: i32, z: i32) -> Option<Column> {
+    let chance = if terrain.preview() { AZALEA_VOLUME_ATTEMPT } else { AZALEA_TREE };
+    if roll(key, (x, 0, z), SALT_AZALEA) >= chance {
         return None;
     }
 
@@ -1213,18 +1308,18 @@ fn azalea_at(terrain: &Terrain, key: u64, x: i32, z: i32) -> Option<Column> {
         return None;
     }
 
-    if column.height < SEA || !grassy(column.biome) {
+    if column.height < SEA || (!terrain.preview() && !grassy(column.biome)) {
         return None;
     }
 
     // Обычное дерево на этом месте важнее.
-    if terrain::tree_possible(terrain.seed(), x, z) && terrain.tree_at(&column, x, z).is_some() {
+    if !terrain.preview() && terrain::tree_possible(terrain.seed(), x, z) && terrain.tree_at(&column, x, z).is_some() {
         return None;
     }
 
     // Как и обычное дерево — только на земле, не на камне склона или
     // голой вершины.
-    if !terrain.tree_ground(&column, x, z) {
+    if !terrain.preview() && !terrain.tree_ground(&column, x, z) {
         return None;
     }
 
@@ -1242,7 +1337,7 @@ fn grow_azaleas(terrain: &Terrain, key: u64, chunk: &mut Chunk, chunk_x: i32, ch
         for local_z in -REACH..CHUNK_SIZE + REACH {
             let (x, z) = (chunk_x * CHUNK_SIZE + local_x, chunk_z * CHUNK_SIZE + local_z);
 
-            let Some(column) = azalea_at(terrain, key, x, z) else {
+            let Some((column, origin_y)) = azalea_at(terrain, key, x, z) else {
                 continue;
             };
 
@@ -1255,9 +1350,49 @@ fn grow_azaleas(terrain: &Terrain, key: u64, chunk: &mut Chunk, chunk_x: i32, ch
 
             super::draw_tree(chunk, &tree, local_x, local_z, column.height, x, z, ground);
 
-            if (0..CHUNK_SIZE).contains(&local_x) && (0..CHUNK_SIZE).contains(&local_z) {
+            if terrain.preview() {
+                grow_root_column(key, chunk, blocks, local_x, local_z, (x, origin_y, z, column.height));
+            } else if (0..CHUNK_SIZE).contains(&local_x) && (0..CHUNK_SIZE).contains(&local_z) {
                 grow_roots(key, chunk, blocks, local_x, local_z, (x, column.height, z));
             }
+        }
+    }
+}
+
+/// Вики: «root_radius», «root_placement_attempts». Регионные измерения 26.3:
+/// смещения −2…2, около 640 блоков на дерево; поверхность меняется только
+/// под стволом. Корни идут от начального воздуха до найденной поверхности,
+/// а не обрываются на первой полости под деревом.
+/// https://minecraft.wiki/w/Root_System
+fn root_offset(random: &mut Random, radius: u64) -> i32 {
+    (scramble(random.next()) % radius) as i32 - (scramble(random.next()) % radius) as i32
+}
+
+fn root_replaceable(blocks: &Palette, state: i32) -> bool {
+    blocks.rock(state) || azalea_ground(state) || state == blocks.clay
+}
+
+fn grow_root_column(key: u64, chunk: &mut Chunk, blocks: &Palette, local_x: i32, local_z: i32, (x, origin_y, z, height): (i32, i32, i32, i32)) {
+    if (0..CHUNK_SIZE).contains(&local_x) && (0..CHUNK_SIZE).contains(&local_z)
+        && azalea_ground(chunk.block(local_x, height, local_z))
+    { chunk.put_generated(local_x, height, local_z, blocks.rooted_dirt, true); }
+    for y in origin_y.max(MIN_Y)..height.min(TOP) {
+        let mut random = Random::new(hash(key, x, y, z, SALT_ROOTS) as i64);
+        for _ in 0..ROOT_ATTEMPTS {
+            let (lx, lz) = (local_x + root_offset(&mut random, ROOT_RADIUS), local_z + root_offset(&mut random, ROOT_RADIUS));
+            if !(0..CHUNK_SIZE).contains(&lx) || !(0..CHUNK_SIZE).contains(&lz) { continue; }
+            if root_replaceable(blocks, chunk.block(lx, y, lz)) {
+                chunk.put_generated(lx, y, lz, blocks.rooted_dirt, true);
+            }
+        }
+    }
+    let mut random = Random::new(hash(key, x, origin_y, z, SALT_ROOTS + 1) as i64);
+    for _ in 0..ROOT_ATTEMPTS {
+        let (lx, lz) = (local_x + root_offset(&mut random, ROOT_RADIUS), local_z + root_offset(&mut random, ROOT_RADIUS));
+        let y = origin_y + root_offset(&mut random, 2);
+        if !(0..CHUNK_SIZE).contains(&lx) || !(0..CHUNK_SIZE).contains(&lz) || !(MIN_Y..TOP - 1).contains(&y) { continue; }
+        if chunk.block(lx, y, lz) == AIR && crate::blocks::conductive(chunk.block(lx, y + 1, lz)) {
+            chunk.put_generated(lx, y, lz, blocks.hanging_roots[0], true);
         }
     }
 }
@@ -1307,6 +1442,160 @@ mod tests {
     use crate::world::terrain::Style;
 
     const SEED: i64 = 100_554_032_945_340;
+
+    /// Сцены повторяют команды /place feature на оригинале, а не условия
+    /// нашего алгоритма: первый заменяемый блок и воздух над ним различны.
+    #[test]
+    fn root_system_clearance_matches_official_controlled_probes() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-u3/root-system-reference.json"
+        )).unwrap();
+        for (name, row) in reference["probe"].as_object().unwrap() {
+            let height = row["ground_y"].as_i64().unwrap() as i32;
+            let ground = match name.as_str() {
+                "stone" => "stone", "clay" => "clay", "sand" => "sand",
+                "snow" => "snow_block", "terracotta" => "terracotta", _ => "grass_block",
+            };
+            let mut chunk = Chunk::new();
+            chunk.put_generated(8, height, 8, state(ground), true);
+            let decoration = match name.as_str() {
+                "short_grass" => Some("short_grass"), "fern" => Some("fern"),
+                "single_bamboo" | "bamboo" => Some("bamboo"),
+                "leaf" => Some("oak_leaves"), "tall_grass" => Some("tall_grass[half=lower]"), _ => None,
+            };
+            if let Some(name) = decoration { chunk.put_generated(8, height + 1, 8, state(name), true); }
+            if name == "bamboo" { for y in height + 2..=height + 5 { chunk.put_generated(8, y, 8, state("bamboo"), true); } }
+            if name == "tall_grass" { chunk.put_generated(8, height + 2, 8, state("tall_grass[half=upper]"), true); }
+            let accepted = root_reaches(row["origin_y"].as_i64().unwrap() as i32, height)
+                && azalea_clearance(&chunk, 8, height, 8);
+            assert_eq!(accepted, row["trees"].as_u64().unwrap() > 0, "{name}");
+        }
+    }
+
+    /// Корневая система должна иметь объём измеренного куста, а не
+    /// тонкого столбца, сохраняя руду и воду. Среда — как в чёрном ящике.
+    #[test]
+    fn root_system_volume_matches_official_controlled_probe() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-u3/root-system-reference.json"
+        )).unwrap();
+        let blocks = palette();
+        let mut sum = 0;
+        for key in 0..8 {
+            let mut chunk = Chunk::new();
+            for x in 0..16 { for z in 0..16 { for y in 0..80 {
+                let cavity = (3..=13).contains(&x) && (3..=13).contains(&z) && (17..=22).contains(&y);
+                if !cavity { chunk.put_generated(x,y,z,state("stone"),true); }
+            } chunk.put_generated(x,80,z,state("grass_block"),true); } }
+            let ground = ["grass_block", "sand", "snow_block", "terracotta"][key as usize % 4];
+            chunk.put_generated(8,80,8,state(ground),true);
+            chunk.put_generated(8,50,8,state("copper_ore"),true);
+            chunk.put_generated(9,50,8,blocks.water,true);
+            grow_root_column(key,&mut chunk,blocks,8,8,(8,20,8,80));
+            let mut surface = 0;
+            for x in 0..16 { for z in 0..16 { for y in 0..=80 {
+                if chunk.block(x,y,z) != blocks.rooted_dirt { continue; }
+                assert!((6..=10).contains(&x) && (6..=10).contains(&z));
+                assert!(y >= 23);
+                sum += 1;
+                surface += usize::from(y == 80);
+            } } }
+            assert_eq!(surface,1);
+            assert_eq!(chunk.block(8,50,8),state("copper_ore"));
+            assert_eq!(chunk.block(9,50,8),blocks.water);
+        }
+        let official = reference["probe"]["air"]["rooted_dirt"].as_array().unwrap();
+        let mean = official.iter().map(|n|n.as_f64().unwrap()).sum::<f64>() / official.len() as f64;
+        assert!((sum as f64 / 8.0 / mean - 1.0).abs() < 0.15, "корни: {} / {mean}",sum as f64 / 8.0);
+    }
+
+    /// Часть куста у соседа рисуется независимо от порядка чанков.
+    #[test]
+    fn root_system_is_shared_across_chunk_edges() {
+        let blocks = palette();
+        let make = |cx| {
+            let mut chunk = Chunk::new();
+            for x in 0..16 { for z in 0..16 { for y in 0..80 {
+                let cavity = (10..=20).contains(&(cx*16+x)) && (3..=13).contains(&z) && (17..=22).contains(&y);
+                if !cavity { chunk.put_generated(x,y,z,state("stone"),true); }
+            } } }
+            chunk
+        };
+        let mut west = make(0);
+        let mut east = make(1);
+        let mut again = make(1);
+        grow_root_column(42,&mut west,blocks,15,8,(15,20,8,80));
+        grow_root_column(42,&mut east,blocks,-1,8,(15,20,8,80));
+        grow_root_column(42,&mut again,blocks,-1,8,(15,20,8,80));
+        let mut roots = 0;
+        for x in 0..16 { for z in 0..16 { for y in 0..80 {
+            assert_eq!(east.block(x,y,z),again.block(x,y,z));
+            roots += usize::from(east.block(x,y,z) == blocks.rooted_dirt);
+        } } }
+        assert!(roots > 100, "сосед не получил корни: {roots}");
+        assert!((23..80).any(|y|west.block(15,y,8) == blocks.rooted_dirt));
+    }
+
+    /// Полный след двух переписей: один лишь влажный климат не должен
+    /// давать тысячи поверхностных азалий. Координаты пещер не сравниваем.
+    #[test]
+    fn preview_azaleas_start_in_real_lush_cave_air() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-u3/reference.json"
+        )).unwrap();
+        for sample in reference["samples"].as_array().unwrap() {
+            let generator = Generator::Normal(Terrain::new(sample["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true));
+            let Generator::Normal(terrain) = &generator else { unreachable!() };
+            let key = world_key(terrain);
+            let b: Vec<i32> = sample["bounds"].as_array().unwrap().iter().map(|n| n.as_i64().unwrap() as i32).collect();
+            let mut origins = Vec::new();
+            for x in b[0] * 16..(b[2] + 1) * 16 { for z in b[1] * 16..(b[3] + 1) * 16 {
+                if let Some((column, _)) = azalea_at(terrain, key, x, z) { origins.push((x, z, column)); }
+            } }
+            let official = sample["official_surface_azalea_estimate"].as_u64().unwrap() as usize;
+            // Редкая выборка: запас на независимые положения пещер и деревьев.
+            assert!(!origins.is_empty() && origins.len() <= official * 3 + 5,
+                "азалии {} / {official}", origins.len());
+            let (x, z, column) = &origins[0];
+            let chunk = Chunk::generated(&generator, x.div_euclid(16), z.div_euclid(16));
+            assert_eq!(chunk.block(x.rem_euclid(16), column.height, z.rem_euclid(16)), palette().rooted_dirt);
+            assert_eq!(crate::blocks::block_at_state(chunk.block(x.rem_euclid(16), column.height + 1, z.rem_euclid(16))), Some("oak_log"));
+        }
+    }
+
+    /// Диагностика условий корневой системы на полном следе переписи.
+    #[test]
+    #[ignore]
+    fn audit_azalea_origins() {
+        for (seed, bounds) in [(1792932773345722119, [-129, -90, 63, 102]), (SEED, [-67, -98, 125, 94])] {
+            let terrain = Terrain::new(seed, Style::Vanilla).with_preview(true);
+            let key = world_key(&terrain);
+            let mut counts = [0usize; 4];
+            let mut origins = Vec::new();
+            for x in bounds[0] * 16 - terrain::TREE_REACH..(bounds[2] + 1) * 16 + terrain::TREE_REACH {
+                for z in bounds[1] * 16 - terrain::TREE_REACH..(bounds[3] + 1) * 16 + terrain::TREE_REACH {
+                let Some(column) = azalea_surface_at(&terrain, key, x, z) else { continue; };
+                counts[0] += 1;
+                let y = MIN_Y + (hash(key, x, 1, z, SALT_AZALEA) % WORLD_HEIGHT as u64) as i32;
+                if !root_reaches(y, column.height) || biome_at(&column, y) != Some(Biome::LushCaves) { continue; }
+                counts[1] += 1;
+                let grid = terrain.relief_grid(x, z, x, z);
+                let caves = terrain.cave_grid(x, z, x, z, y);
+                let state = terrain.block_with(&column, &caves, x, y, z,
+                    terrain.solid_in(Some(&grid), &column, x, y, z), column.height);
+                counts[2] += usize::from(state == AIR);
+                let Some(origin_y) = azalea_space(&terrain, &column, x, y, z) else { continue; };
+                counts[3] += 1;
+                origins.push([x, origin_y, z]);
+            } }
+            println!("AZALEA {seed}: {counts:?}");
+            if let Ok(path) = std::env::var("GENAUDIT_AZALEA_ORIGINS") {
+                std::fs::write(format!("{path}-{seed}.json"), serde_json::to_vec_pretty(
+                    &serde_json::json!({"seed": seed, "bounds": bounds, "counts": counts, "origins": origins})
+                ).unwrap()).unwrap();
+            }
+        }
+    }
 
     fn climate(humidity: f64, continent: f64, erosion: f64) -> Climate {
         Climate {
@@ -1707,7 +1996,7 @@ mod tests {
 
         let (x, z, column) = (0..4096 * 64)
             .map(|i| ((i % 2048) * 16 + 15, i / 2048))
-            .find_map(|(x, z)| azalea_at(terrain, key, x, z).map(|column| (x, z, column)))
+            .find_map(|(x, z)| azalea_at(terrain, key, x, z).map(|(column, _)| (x, z, column)))
             .expect("дерево с азалией у края чанка");
 
         let (chunk_x, chunk_z) = (x >> 4, z >> 4);

@@ -1,8 +1,9 @@
-// Подземелье: то, что ложится в чанк после руды.
+// Подземелье: подготовка породы, вырезание полостей и крупные объекты.
 //
 // Порядок прохода:
 //   1. переход камня в глубинный сланец — постепенный, в Y 0…8;
-//      в 26.3 до обычной руды (`prepare_ore_hosts`), в старом профиле после;
+//      в 26.3 до обычной руды (`prepare_ore_hosts`), вместе с карверами;
+//      в старом профиле оба прохода остаются после обычной руды;
 //   2. большие рудные жилы — медная и железная;
 //   3. жеоды аметиста;
 //   4. данжи.
@@ -30,11 +31,18 @@ use super::{Chunk, Generator, AIR, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
 
 /// Сланец готовится до руды: иначе руда, заменившая гранит/диорит/андезит,
 /// теряет исходную породу и ошибочно становится глубинной.
+/// Карверы тоже идут здесь: рудный проход должен видеть открытые стенки.
 /// Вики: «take place of ores that generate in deepslate».
 /// https://minecraft.wiki/w/Ore_(feature)
 pub(super) fn prepare_ore_hosts(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
     if let Generator::Normal(terrain) = generator && terrain.preview() {
-        blend_deepslate(chunk, chunk_x, chunk_z, world_key(terrain), &Palette::new());
+        let key = world_key(terrain);
+        let palette = Palette::new();
+        blend_deepslate(chunk, chunk_x, chunk_z, key, &palette);
+        // Вики: «terrain» включает carvers, «underground_ores» — позже.
+        // Уголь должен видеть эти стенки при проверке открытого воздуха.
+        // https://minecraft.wiki/w/World_generation#Steps
+        carvers::carve(chunk, chunk_x, chunk_z, key, &palette);
     }
 }
 
@@ -49,7 +57,7 @@ pub(super) fn dig(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_
 
     if !terrain.preview() { blend_deepslate(chunk, chunk_x, chunk_z, key, &palette); }
     lay_veins(chunk, chunk_x, chunk_z, key, &palette, terrain.preview());
-    carvers::carve(chunk, chunk_x, chunk_z, key, &palette);
+    if !terrain.preview() { carvers::carve(chunk, chunk_x, chunk_z, key, &palette); }
 
     for geode in geodes_near(terrain, key, chunk_x, chunk_z) {
         carve_geode(chunk, chunk_x, chunk_z, &geode, &palette);
@@ -1048,6 +1056,30 @@ mod tests {
         assert!(count(false) > 0);
     }
 
+    /// Подготовка оставляет настоящие пустоты до рудного прохода: иначе
+    /// уголь не видит открытые стенки и проверка air_skip теряет смысл.
+    #[test]
+    fn preview_carvers_run_before_ordinary_ore_features() {
+        let generator = Generator::Normal(Terrain::new(SEED, terrain::Style::Vanilla).with_preview(true));
+        let stone = terrain::block_named("stone");
+        let mut found = false;
+        for cx in -4..4 {
+            let mut chunk = Chunk::new();
+            for y in 0..80 { for z in 0..16 { for x in 0..16 { chunk.put_generated(x,y,z,stone,true); } } }
+            prepare_ore_hosts(&generator, &mut chunk, cx, 0);
+            let mut air = Vec::new();
+            for y in 0..80 { for z in 0..16 { for x in 0..16 {
+                if chunk.block(x,y,z) == AIR { air.push((x,y,z)); }
+            } } }
+            if air.is_empty() { continue; }
+            generator.lay_ores(&mut chunk, cx, 0);
+            assert!(air.iter().all(|&(x,y,z)| chunk.block(x,y,z) == AIR));
+            found = true;
+            break;
+        }
+        assert!(found, "подготовка не вырезала ни одной пещеры");
+    }
+
     /// Крупная медная жила даёт обычную руду даже в сланце; железная —
     /// глубинную даже в камне. Проверяется результат шумового прохода.
     #[test]
@@ -1111,6 +1143,11 @@ mod tests {
         let generator = Generator::Normal(Terrain::new(seed, terrain::Style::Vanilla).with_preview(true));
         let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
         let source = std::env::var("GENAUDIT_U_SOURCE").ok().map(std::path::PathBuf::from);
+        // Чистый генератор не ищет спавн. Сохраняем метаданные исходного
+        // мира, чтобы условная заглушка (0,64,0) не стала новой регрессией.
+        if let Some(source) = &source {
+            std::fs::write(output.join("level.dat"), std::fs::read(source.join("level.dat")).unwrap()).unwrap();
+        }
         let mut spawners = [std::collections::BTreeMap::<String, usize>::new(), std::collections::BTreeMap::<String, usize>::new()];
         std::fs::create_dir_all(output.join("region")).unwrap();
         for window in plan["windows"]["overworld"].as_array().unwrap() {
