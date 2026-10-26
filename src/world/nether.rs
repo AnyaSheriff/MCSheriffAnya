@@ -631,6 +631,13 @@ impl Nether {
         self.relief(&mut piece, &biomes);
         self.surface(&mut piece, &biomes);
         self.blobs(&mut piece, chunk_x, chunk_z);
+        // Пустоты образца ископаемого очищают грунт до построек и объектов:
+        // рамки оригинала могут содержать поздние кирпичи и базальтовые столбы.
+        if structures {
+            super::nether_fossil::build(self, chunk_x, chunk_z, true, &mut |x, y, z, state| {
+                if let Some(at) = piece.at(x, y, z) { piece.blocks[at] = state; }
+            });
+        }
         // Крепость — до объектов и растений, как у оригинала: опоры доходят
         // до породы, а не до шляпы гриба или светокамня.
         self.fortresses(&mut piece, &fortresses, true);
@@ -642,6 +649,13 @@ impl Nether {
         // куски кладутся ещё раз, уже без опор.
         self.fortresses(&mut piece, &fortresses, false);
         self.bastions(&mut piece, &bastions);
+        // В трёх измеренных клетках оригинала кость перекрывает крепость.
+        // Возвращаем только кости: повторная очистка воздуха стёрла бы стены.
+        if structures {
+            super::nether_fossil::build(self, chunk_x, chunk_z, false, &mut |x, y, z, state| {
+                if let Some(at) = piece.at(x, y, z) { piece.blocks[at] = state; }
+            });
+        }
 
         piece
     }
@@ -880,6 +894,24 @@ impl Nether {
                     if floor {
                         let fy = f64::from(y);
                         let patch = self.patches.octaves3(fx / 9.0 + 0.5, fy / 5.0 + 0.1, fz / 9.0 + 0.3, 2);
+                        if biome == Biome::BasaltDeltas {
+                            // minecraft.wiki/w/Basalt_Deltas: «basalt and blackstone».
+                            // Под полом есть отдельная корка, а не продолжение
+                            // объёмного шума пород. Замер 26.3: чернокамень
+                            // сосредоточен в первых трёх слоях, незеррак редок
+                            // до пятого. Фаза пятен пока [проверить].
+                            let blackstone = patch > 0.13;
+                            for down in 1..=5 {
+                                if y - down < 1 { break; }
+                                let at = Piece::index(local_x, y - down, local_z);
+                                if !states.is_rock(piece.blocks[at]) { break; }
+                                if down <= 3 {
+                                    piece.blocks[at] = if blackstone { states.blackstone } else { states.basalt };
+                                } else if piece.blocks[at] == states.netherrack {
+                                    piece.blocks[at] = states.basalt;
+                                }
+                            }
+                        }
                         // Глубина слоя: 1–3 блока, свой для каждого места.
                         let depth = 1 + (self.hash(0xDE97, x, y, z) % 3) as i32;
 
@@ -1329,7 +1361,16 @@ impl Nether {
                 continue;
             }
 
-            if self.biome_at(x, z) == Biome::SoulSandValley && Dice(seed).unit() < 0.8 {
+            // minecraft.wiki/w/The_Nether: «in all biomes». Вероятность
+            // грозди различается: один общий поток давал избыток в долинах
+            // и лесах. Доли сверены на объём каждого биома двух миров 26.3;
+            // точный поток декора оригинала пока [проверить].
+            let skip = match self.biome_at(x, z) {
+                Biome::SoulSandValley => 0.9,
+                Biome::CrimsonForest => 0.51,
+                _ => 0.0,
+            };
+            if Dice(seed).unit() < skip {
                 continue;
             }
 
@@ -1388,7 +1429,11 @@ impl Nether {
             for _ in 0..3 + roll.below(5) {
                 let (cx, cz) = (x + roll.below(5) - 2, z + roll.below(5) - 2);
                 let height = if tall { 4 + roll.below(7) } else { 1 + roll.below(4) };
-                let Some(floor) = self.floor_below(cx, from, cz) else {
+                // minecraft.wiki/w/Basalt_Columns: «vertical clusters».
+                // Нижние колонны видны в сохранённых слоях 26.3 под лавой.
+                // Общий поиск пола обрезался на y 31 и терял их целиком.
+                if !self.open(cx, from, cz) { continue; }
+                let Some(floor) = (1..from).rev().find(|&y| self.rock_at(cx, y, cz)) else {
                     continue;
                 };
 
@@ -1397,7 +1442,11 @@ impl Nether {
                         break;
                     }
 
-                    piece.put_into_air(cx, y, cz, self.states.basalt);
+                    if let Some(at) = piece.at(cx, y, cz)
+                        && (is_air(piece.blocks[at]) || piece.blocks[at] == self.states.lava)
+                    {
+                        piece.blocks[at] = self.states.basalt;
+                    }
                 }
             }
         }
@@ -1563,14 +1612,14 @@ impl Nether {
                 (0.0026, states.crimson_roots),
             ]),
             Biome::NetherWastes if floor == states.netherrack => pick(&[
-                (0.0074, states.fire),
+                (0.0062, states.fire),
                 (0.0018, states.brown_mushroom),
                 (0.0012, states.red_mushroom),
             ]),
             Biome::SoulSandValley if floor == states.soul_soil || floor == states.soul_sand => {
-                pick(&[(0.0046, states.soul_fire), (0.0026, states.crimson_roots)])
+                pick(&[(0.0035, states.soul_fire), (0.0026, states.crimson_roots)])
             }
-            Biome::SoulSandValley if floor == states.netherrack => pick(&[(0.006, states.fire)]),
+            Biome::SoulSandValley if floor == states.netherrack => pick(&[(0.0035, states.fire)]),
             Biome::BasaltDeltas if floor == states.basalt || floor == states.blackstone => {
                 pick(&[(0.0008, states.brown_mushroom), (0.0008, states.red_mushroom)])
             }
@@ -1580,7 +1629,9 @@ impl Nether {
 
     /// Старт окаменелости ищется в базовой колонке до узких ходов и объектов.
     pub(super) fn fossil_floor_below(&self, x: i32, from: i32, z: i32) -> Option<i32> {
-        (32..from.min(CEILING)).rev().find(|&y| self.density(x,y,z) > 0.0 && self.density(x,y+1,z) <= 0.0)
+        // Все 119 сохранённых начал стоят не ниже 33; разрешённый пол 32
+        // давал ровно два лишних начала и 16 лишних костей второго семени.
+        (33..from.min(CEILING)).rev().find(|&y| self.density(x,y,z) > 0.0 && self.density(x,y+1,z) <= 0.0)
     }
 
     /// Сплошная ли порода в этом месте (для высоты разрушенных порталов).
@@ -1645,7 +1696,7 @@ const SPRING_TRIES: usize = 12;
 const FUNGUS_TRIES: usize = 32;
 
 /// Попыток грозди светокамня на чанк.
-const GLOWSTONE_TRIES: f64 = 0.5;
+const GLOWSTONE_TRIES: f64 = 0.55;
 
 /// Попыток кучки столбиков на чанк дельт.
 const DELTA_COLUMN_TRIES: usize = 4;
@@ -1751,6 +1802,10 @@ impl LegacyRandom {
     fn bits(&mut self, count: u32) -> u64 {
         self.0 = self.0.wrapping_mul(0x0005_DEEC_E66D).wrapping_add(11) & ((1u64 << 48) - 1);
         self.0 >> (48 - count)
+    }
+
+    pub(super) fn integer(&mut self) -> i32 {
+        self.bits(32) as i32
     }
 
     pub(super) fn below(&mut self, bound: i32) -> i32 {
@@ -1955,6 +2010,56 @@ fn scramble(mut value: u64) -> u64 {
 mod tests {
     use super::*;
 
+    /// Полная цепочка генерации сохраняет свежую выборку вне репозитория.
+    #[test]
+    #[ignore]
+    fn nether_audit_sample() {
+        let output = std::path::PathBuf::from(std::env::var("NETHER_AUDIT_OUTPUT").expect("NETHER_AUDIT_OUTPUT"));
+        assert!(output.is_absolute() && !output.starts_with(env!("CARGO_MANIFEST_DIR")));
+        for (label, seed) in [("owner", 1_792_932_773_345_722_119), ("second", 100_554_032_945_340)] {
+            let root = output.join(label);
+            assert!(!root.exists(), "нужен свежий каталог");
+            let region = root.join("dimensions/minecraft/the_nether/region");
+            std::fs::create_dir_all(&region).unwrap();
+            std::fs::write(root.join("level.dat"), format!("seed={seed}\nspawn=0 64 0\n")).unwrap();
+            let generator = crate::world::Generator::Nether(Nether::new(seed));
+            let crate::world::Generator::Nether(nether) = &generator else { unreachable!() };
+            let mut fortresses = Vec::new();
+            for rx in -1..=0 {
+                for rz in -1..=0 {
+                    if let Some((x, z)) = nether.fortress_start(rx, rz)
+                        && (-16..=16).contains(&x) && (-16..=16).contains(&z)
+                    {
+                        let boxes: Vec<_> = fortress::plan(seed, x, z).iter().map(|p| p.bounds).collect();
+                        fortresses.push(serde_json::json!({"chunk": [x, z], "boxes": boxes}));
+                    }
+                }
+            }
+            std::fs::write(root.join("fortresses.json"), serde_json::to_vec(&fortresses).unwrap()).unwrap();
+            let mut fossils = Vec::new();
+            for rx in -8..=8 {
+                for rz in -8..=8 {
+                    if let Some(f) = super::super::nether_fossil::start_in(nether, rx, rz)
+                        && (-16..=16).contains(&f.chunk.0) && (-16..=16).contains(&f.chunk.1)
+                    {
+                        let t = &super::super::nether_fossil::library()[f.template];
+                        let (w, l) = t.footprint(f.orient);
+                        let (x, y, z) = f.origin;
+                        fossils.push(serde_json::json!({"chunk": [f.chunk.0, f.chunk.1],
+                            "boxes": [[x, y, z, x+w-1, y+t.height-1, z+l-1]]}));
+                    }
+                }
+            }
+            std::fs::write(root.join("fossils.json"), serde_json::to_vec(&fossils).unwrap()).unwrap();
+            for x in -16..=16 {
+                for z in -16..=16 {
+                    let chunk = Chunk::generated(&generator, x, z);
+                    crate::world::region::write(&region, x, z, &chunk.to_bytes()).unwrap();
+                }
+            }
+        }
+    }
+
     /// Фикстура снята только с биомов сохранённых регионов оригинала 26.3.
     #[test]
     fn census_biomes_match_both_seeds() {
@@ -1989,6 +2094,113 @@ mod tests {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /// Разреженная выборка чанков: незеррак под полом дельт не должен
+    /// подменять базальтовую корку объёмным шумом породы.
+    #[test]
+    fn census_263_delta_floor_layers() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-pass3-surface.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let nether = Nether::new(case["seed"].as_i64().unwrap());
+            let s = &nether.states;
+            let ground = [s.netherrack, s.basalt, s.blackstone, s.bedrock, s.gravel,
+                s.soul_sand, s.soul_soil, s.quartz, s.gold, blocks::state_by_name("obsidian").unwrap()];
+            let mut counts = [0usize; 6];
+            let mut columns = 0;
+            for pair in case["chunks"].as_array().unwrap() {
+                let (cx, cz) = (pair[0].as_i64().unwrap() as i32, pair[1].as_i64().unwrap() as i32);
+                let chunk = nether.chunk(cx, cz);
+                for z in 0..16 { for x in 0..16 {
+                    if nether.biome_at(cx * 16 + x / 4 * 4 + 2, cz * 16 + z / 4 * 4 + 2) != Biome::BasaltDeltas { continue; }
+                    let top = (0..=64).rev().find(|&y| ground.contains(&chunk.block(x, y, z))).unwrap();
+                    columns += 1;
+                    for (depth, count) in counts.iter_mut().enumerate() {
+                        *count += usize::from(chunk.block(x, top - depth as i32, z) == s.netherrack);
+                    }
+                } }
+            }
+            for (depth, count) in counts.iter().enumerate() {
+                let actual = *count as f64 * 100.0 / columns as f64;
+                let expected = case["netherrack_percent"][depth].as_f64().unwrap();
+                assert!((actual - expected).abs() <= case["tolerance_percentage_points"].as_f64().unwrap(),
+                    "{} слой -{depth}: {actual} / {expected}", nether.seed);
+            }
+        }
+    }
+
+    /// В готовых чанках колонны заполняют часть лавового моря, а не только воздух.
+    #[test]
+    fn delta_columns_grow_below_the_lava_sea() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-pass3-surface.json"
+        )).unwrap();
+        let mut underwater = 0;
+        for case in fixture["cases"].as_array().unwrap() {
+            let n = Nether::new(case["seed"].as_i64().unwrap());
+            for pair in case["chunks"].as_array().unwrap().iter().take(16) {
+                let (cx, cz) = (pair[0].as_i64().unwrap() as i32, pair[1].as_i64().unwrap() as i32);
+                let chunk = n.chunk(cx,cz);
+                for y in 5..LAVA_SEA { for z in 0..16 { for x in 0..16 {
+                    underwater += usize::from(chunk.block(x,y,z) == n.states.basalt
+                        && n.biome_at(cx*16+x,cz*16+z) == Biome::BasaltDeltas
+                        && n.open(cx*16+x,y,cz*16+z));
+                } } }
+            }
+        }
+        assert!(underwater > 0);
+    }
+
+    /// Редкие грозди требуют целых окон: малая выборка может не содержать
+    /// ни одной грозди оригинала. Объединяем два семени по объёму биома.
+    #[test]
+    fn census_263_feature_densities_by_biome() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-pass3-features.json"
+        )).unwrap();
+        let mut ours = [[0usize; 4]; 5];
+        let mut reference = [[0usize; 4]; 5];
+        let names = ["glowstone", "fire", "soul_fire"];
+        for case in fixture["cases"].as_array().unwrap() {
+            let n = Nether::new(case["seed"].as_i64().unwrap());
+            let states = [n.states.glowstone, n.states.fire, n.states.soul_fire];
+            for (i, biome) in Biome::NETHER.iter().enumerate() {
+                reference[i][0] += case["volumes"][biome.name()].as_u64().unwrap_or(0) as usize;
+                for (j, name) in names.iter().enumerate() {
+                    reference[i][j+1] += case["counts"][biome.name()][name].as_u64().unwrap_or(0) as usize;
+                }
+            }
+            let bounds = case["window"].as_array().unwrap();
+            let b: Vec<_> = bounds.iter().map(|v| v.as_i64().unwrap() as i32).collect();
+            for cx in b[0]..=b[2] { for cz in b[1]..=b[3] {
+                let chunk = n.chunk(cx,cz);
+                for z in 0..16 { for x in 0..16 {
+                    let biome = n.biome_at(cx*16+x/4*4+2,cz*16+z/4*4+2);
+                    let i = Biome::NETHER.iter().position(|b| *b == biome).unwrap();
+                    ours[i][0] += 128;
+                    for y in 0..128 {
+                        let block = chunk.block(x,y,z);
+                        for (j, state) in states.iter().enumerate() { ours[i][j+1] += usize::from(block == *state); }
+                    }
+                } }
+            } }
+        }
+        for (i, biome) in Biome::NETHER.iter().enumerate() {
+            if reference[i][0] == 0 { continue; }
+            for (j, name) in names.iter().enumerate() {
+                let relevant = j == 0 || j == 1 && matches!(biome, Biome::NetherWastes | Biome::SoulSandValley)
+                    || j == 2 && *biome == Biome::SoulSandValley;
+                if !relevant { continue; }
+                let actual = ours[i][j+1] as f64 / ours[i][0] as f64;
+                let expected = reference[i][j+1] as f64 / reference[i][0] as f64;
+                // Фаза редких гроздей остаётся собственной; полный отдельный
+                // отчёт обоих семян сохраняет более строгий допуск переписи.
+                assert!((actual - expected).abs() <= expected * 0.30,
+                    "{} {name}: {} / {} на миллион", biome.name(), actual*1e6, expected*1e6);
             }
         }
     }

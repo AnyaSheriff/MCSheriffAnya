@@ -1,0 +1,79 @@
+{
+  "source": "Read-only original 26.3 census regions, 1089 chunks per seed; biome-block denominators Y=0..127.",
+  "cases": [
+    {
+      "seed": 1792932773345722119,
+      "window": [
+        -16,
+        -16,
+        16,
+        16
+      ],
+      "volumes": {
+        "basalt_deltas": 7122944,
+        "nether_wastes": 16620544,
+        "crimson_forest": 6992896,
+        "soul_sand_valley": 4947968
+      },
+      "counts": {
+        "basalt_deltas": {
+          "glowstone": 1122,
+          "fire": 10,
+          "soul_fire": 0
+        },
+        "nether_wastes": {
+          "glowstone": 2071,
+          "fire": 1291,
+          "soul_fire": 2
+        },
+        "crimson_forest": {
+          "glowstone": 339,
+          "fire": 150,
+          "soul_fire": 0
+        },
+        "soul_sand_valley": {
+          "glowstone": 56,
+          "fire": 58,
+          "soul_fire": 141
+        }
+      }
+    },
+    {
+      "seed": 100554032945340,
+      "window": [
+        -16,
+        -16,
+        16,
+        16
+      ],
+      "volumes": {
+        "crimson_forest": 5345280,
+        "soul_sand_valley": 23173120,
+        "nether_wastes": 6107136,
+        "basalt_deltas": 1058816
+      },
+      "counts": {
+        "crimson_forest": {
+          "glowstone": 419,
+          "fire": 37,
+          "soul_fire": 0
+        },
+        "soul_sand_valley": {
+          "glowstone": 310,
+          "fire": 216,
+          "soul_fire": 628
+        },
+        "nether_wastes": {
+          "glowstone": 805,
+          "fire": 404,
+          "soul_fire": 2
+        },
+        "basalt_deltas": {
+          "glowstone": 50,
+          "fire": 0,
+          "soul_fire": 0
+        }
+      }
+    }
+  ]
+}

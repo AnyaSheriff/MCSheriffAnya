@@ -719,7 +719,6 @@ impl Chunk {
         // У Незера пол и потолок — он складывается целиком своим путём.
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
-            nether_fossil::build(nether, &mut chunk, chunk_x, chunk_z);
 
             // Разрушенные порталы Незера (ruined_portal.rs).
             ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);

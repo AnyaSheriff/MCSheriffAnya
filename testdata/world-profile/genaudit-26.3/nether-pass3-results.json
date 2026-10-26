@@ -1,0 +1,1802 @@
+{
+  "schema": 1,
+  "batch": "N3 / pass 3",
+  "status": "partial; remaining outside rows are not claimed fixed",
+  "method": {
+    "seed_labels": {
+      "owner": 1792932773345722119,
+      "second": 100554032945340
+    },
+    "sample": "1089 fresh Chunk::generated chunks per seed, -16..16 in both axes; saved official census worlds read only",
+    "comparison": "per biome and per depth statistical comparison, same analyzer and unchanged tolerances; no coordinate terrain match criterion",
+    "analyzer_sha256": "3f59c5b1a7d5a17f8807ec1fea92cc4d33345575de0cb58ed59cec4beb76a4bb",
+    "tracked_reference": "testdata/world-profile/genaudit-26.3/discrepancies-pass2.json",
+    "exporter": "src/world/nether.rs::tests::nether_audit_sample",
+    "stage": "verified-v2"
+  },
+  "verification": {
+    "workspace-verified.log": {
+      "sha256": "ca31798b4414028d6b2a255fed583aa17ae17c7a6eeaa7f5c4b25bd9940fc6ab",
+      "tail": "d::spawn_search::tests::spawn_skips_mushroom_islands ... ok\ntest world::village::taiga_measurement_tests::taiga_plan_paints_the_same_across_negative_chunk_borders ... ok\ntest world::spawn_search::tests::owner_seed_spawn_is_on_dry_land_in_the_official_spawn_chunk ... ok\ntest world::terrain::distribution::tests::reference_common_shares_on_four_seeds ... ok\ntest world::terrain::census::ocean_distribution_and_land_relief ... ok\ntest world::terrain::distribution::tests::preview_keeps_all_ocean_temperature_bands_on_holdout_seeds ... ok\ntest world::seedmap::tests::structure_tiles_partition_without_loss_or_duplicates ... ok\n\ntest result: ok. 20 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 3.03s\n\n   Doc-tests mcsa_protocol\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests seedmap_core\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+    },
+    "clippy-verified.log": {
+      "sha256": "cbe396c3ec4d7a69af3f3c20fd48450150989c7f4a3d90094ff431aa4dd27107",
+      "tail": "    Checking seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-genN3/tools/seedmap)\n    Checking mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-genN3)\n    Finished `release` profile [optimized] target(s) in 30.53s\n"
+    },
+    "cargo_test": {
+      "passed": 3462,
+      "failed": 0,
+      "ignored": 113,
+      "nested_filtered_subprocess_not_double_counted": true
+    },
+    "clippy": "чисто"
+  },
+  "counts": {
+    "owner": {
+      "before_outside": 26,
+      "after_outside": 16,
+      "chunks": 1089,
+      "resolved_common": 10,
+      "new_failure_common": 0,
+      "added_outside": 0,
+      "missing_before_outside": []
+    },
+    "second": {
+      "before_outside": 33,
+      "after_outside": 18,
+      "chunks": 1089,
+      "resolved_common": 15,
+      "new_failure_common": 0,
+      "added_outside": 0,
+      "missing_before_outside": []
+    },
+    "total": {
+      "before_outside": 59,
+      "after_outside": 34,
+      "resolved_common": 25,
+      "new_failure_common": 0,
+      "added_outside": 0
+    }
+  },
+  "pass2_rows": [
+    {
+      "case": "owner",
+      "metric": "slope/p100",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 76.0,
+      "before": 76.0,
+      "after": 76.0,
+      "vanilla": 89.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "owner",
+      "metric": "cave_component_volume/p50",
+      "group": "terrain_shape_slope",
+      "unit": "blocks (chunk clipped)",
+      "pass2_ours": 197.5,
+      "before": 199.0,
+      "after": 190.0,
+      "vanilla": 67.0,
+      "tolerance": 16,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "slope/p95",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 6.0,
+      "before": 6.0,
+      "after": 6.0,
+      "vanilla": 9.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "owner",
+      "metric": "slope/p99",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 33.0,
+      "before": 33.0,
+      "after": 33.0,
+      "vanilla": 36.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "inside_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 1.542317,
+      "before": 1.542317,
+      "after": 1.527013,
+      "vanilla": 1.932392,
+      "tolerance": 0.25,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "owner",
+      "metric": "jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 1.530785,
+      "before": 1.530785,
+      "after": 1.516769,
+      "vanilla": 1.908315,
+      "tolerance": 0.25,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "owner",
+      "metric": "blocks/nether_bricks",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 117.370064,
+      "before": 117.370064,
+      "after": 54.599633,
+      "vanilla": 62.882461,
+      "tolerance": 12.576492194674014,
+      "after_verdict": "within",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "blocks/nether_brick_fence",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 2.38843,
+      "before": 2.38843,
+      "after": 1.227732,
+      "vanilla": 1.328742,
+      "tolerance": 0.2657483930211203,
+      "after_verdict": "within",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "depth/48/underground_air",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 28.033882,
+      "before": 28.037431,
+      "after": 28.101444,
+      "vanilla": 24.200223,
+      "tolerance": 2,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "structure_box_composition/nether_fossil/air",
+      "group": "fossil",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 71.025641,
+      "before": 71.025641,
+      "after": 85.213675,
+      "vanilla": 84.82906,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "better"
+    },
+    {
+      "case": "owner",
+      "metric": "structure_box_composition/fortress/netherrack",
+      "group": "fortress",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 18.111077,
+      "before": 18.111077,
+      "after": 29.22269,
+      "vanilla": 30.90501,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-1/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 13.11278,
+      "before": 13.11278,
+      "after": 7.080219,
+      "vanilla": 4.95795,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-2/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 12.580865,
+      "before": 12.580865,
+      "after": 7.261717,
+      "vanilla": 5.015454,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-1/basalt",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 69.641317,
+      "before": 69.641317,
+      "after": 71.292769,
+      "vanilla": 77.086328,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "depth/32/underground_air",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 37.002753,
+      "before": 37.009859,
+      "after": 36.997203,
+      "vanilla": 34.08699,
+      "tolerance": 2,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-2/soul_sand",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 26.909938,
+      "before": 26.909938,
+      "after": 26.645963,
+      "vanilla": 20.752276,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "structure_box_composition/fortress/nether_bricks",
+      "group": "fortress",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 40.423913,
+      "before": 40.423913,
+      "after": 31.334307,
+      "vanilla": 31.334307,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-4/blackstone",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 10.156699,
+      "before": 10.156699,
+      "after": 10.241159,
+      "vanilla": 15.707662,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-2/basalt",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 68.595457,
+      "before": 68.595457,
+      "after": 69.743746,
+      "vanilla": 73.991878,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-3/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 58.227226,
+      "before": 58.227226,
+      "after": 57.895963,
+      "vanilla": 63.589094,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-3/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 10.487349,
+      "before": 10.487349,
+      "after": 6.131397,
+      "vanilla": 5.178982,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "owner",
+      "metric": "top/soul_sand_valley/soul_sand",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 32.036749,
+      "before": 32.036749,
+      "after": 31.961698,
+      "vanilla": 26.852235,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "cave_shape_proxy/thin_like",
+      "group": "terrain_shape_slope",
+      "unit": "chunk-clipped components per chunk",
+      "pass2_ours": 0.591368,
+      "before": 0.589532,
+      "after": 0.598714,
+      "vanilla": 0.843893,
+      "tolerance": 0.16877869605142334,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "cave_shape_proxy/other",
+      "group": "terrain_shape_slope",
+      "unit": "chunk-clipped components per chunk",
+      "pass2_ours": 0.332415,
+      "before": 0.331497,
+      "after": 0.344353,
+      "vanilla": 0.4573,
+      "tolerance": 0.1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "owner",
+      "metric": "blocks/nether_brick_stairs",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 0.197429,
+      "before": 0.197429,
+      "after": 0.048669,
+      "vanilla": 0.087236,
+      "tolerance": 0.1,
+      "after_verdict": "within",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "owner",
+      "metric": "tree_base_estimates/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 0.230487,
+      "before": 0.230487,
+      "after": 0.232323,
+      "vanilla": 0.130395,
+      "tolerance": 0.1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "structure_candidate_coincident/ruined_portal",
+      "group": "portal_shared",
+      "unit": "percent of eligible starts at observed official chunks",
+      "pass2_ours": 0.0,
+      "before": 0.0,
+      "after": 0.0,
+      "vanilla": 100.0,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "stable"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/air",
+      "group": "portal_shared",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 78.442513,
+      "before": 78.442513,
+      "after": 78.442513,
+      "vanilla": 8.539095,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/netherrack",
+      "group": "portal_shared",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 14.80615,
+      "before": 14.80615,
+      "after": 14.80615,
+      "vanilla": 70.164609,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "slope/p95",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 5.0,
+      "before": 5.0,
+      "after": 5.0,
+      "vanilla": 9.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "slope/p99",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 38.0,
+      "before": 38.0,
+      "after": 37.0,
+      "vanilla": 41.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "border_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 1.654238,
+      "before": 1.654238,
+      "after": 1.648319,
+      "vanilla": 2.068537,
+      "tolerance": 0.25,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 1.700233,
+      "before": 1.700592,
+      "after": 1.688194,
+      "vanilla": 2.068778,
+      "tolerance": 0.25,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "inside_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 1.703206,
+      "before": 1.703589,
+      "after": 1.690771,
+      "vanilla": 2.068794,
+      "tolerance": 0.25,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "slope/p100",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 87.0,
+      "before": 87.0,
+      "after": 87.0,
+      "vanilla": 89.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "tree_base_estimates/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 0.460055,
+      "before": 0.460055,
+      "after": 0.443526,
+      "vanilla": 0.173554,
+      "tolerance": 0.1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-5/basalt",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 71.518375,
+      "before": 71.518375,
+      "after": 75.169246,
+      "vanilla": 80.488395,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-2/blackstone",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 11.351547,
+      "before": 11.351547,
+      "after": 13.708897,
+      "vanilla": 19.789652,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/nether_bricks",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 103.937557,
+      "before": 103.937557,
+      "after": 197.504132,
+      "vanilla": 197.302112,
+      "tolerance": 39.460422405876955,
+      "after_verdict": "within",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-1/blackstone",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 12.246132,
+      "before": 12.246132,
+      "after": 15.147485,
+      "vanilla": 20.103965,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/glowstone",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 2.136823,
+      "before": 2.136823,
+      "after": 1.64371,
+      "vanilla": 1.454545,
+      "tolerance": 0.29090909090909095,
+      "after_verdict": "within",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-2/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 12.983559,
+      "before": 12.983559,
+      "after": 8.837041,
+      "vanilla": 5.464217,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-1/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 12.826402,
+      "before": 12.826402,
+      "after": 8.788685,
+      "vanilla": 5.415861,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-3/blackstone",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 10.880077,
+      "before": 10.880077,
+      "after": 13.056093,
+      "vanilla": 17.577369,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/nether_brick_fence",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 1.767677,
+      "before": 1.767677,
+      "after": 2.870523,
+      "vanilla": 2.881543,
+      "tolerance": 0.5763085399449036,
+      "after_verdict": "within",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/lava",
+      "group": "portal_shared",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 0.233957,
+      "before": 0.233957,
+      "after": 0.233957,
+      "vanilla": 9.259259,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-3/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 11.690039,
+      "before": 11.690039,
+      "after": 7.7853,
+      "vanilla": 5.681818,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/fortress/air",
+      "group": "fortress",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 62.961625,
+      "before": 62.983306,
+      "after": 54.295017,
+      "vanilla": 54.171737,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-5/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 11.08559,
+      "before": 11.08559,
+      "after": 7.374275,
+      "vanilla": 5.826886,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "top/basalt_deltas/blackstone",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 15.062863,
+      "before": 15.062863,
+      "after": 15.884913,
+      "vanilla": 20.273211,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/fire",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 0.790634,
+      "before": 0.790634,
+      "after": 0.592287,
+      "vanilla": 0.603306,
+      "tolerance": 0.1206611570247934,
+      "after_verdict": "within",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/fortress/nether_bricks",
+      "group": "fortress",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 30.234155,
+      "before": 30.234155,
+      "after": 37.944714,
+      "vanilla": 37.930489,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/crimson_stem",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 8.796143,
+      "before": 8.796143,
+      "after": 8.665748,
+      "vanilla": 6.737374,
+      "tolerance": 1.3474747474747475,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "structure_candidate_offset_p95/ruined_portal",
+      "group": "portal_shared",
+      "unit": "blocks to nearest official start",
+      "pass2_ours": 48.0,
+      "before": 48.0,
+      "after": 48.0,
+      "vanilla": 0.0,
+      "tolerance": 32,
+      "after_verdict": "outside",
+      "pass2_change": "stable"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/nether_wart_block",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 45.282828,
+      "before": 45.282828,
+      "after": 44.130395,
+      "vanilla": 36.004591,
+      "tolerance": 7.200918273645546,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "cave_component_volume/p50",
+      "group": "terrain_shape_slope",
+      "unit": "blocks (chunk clipped)",
+      "pass2_ours": 82.0,
+      "before": 83.0,
+      "after": 82.0,
+      "vanilla": 105.5,
+      "tolerance": 21.1,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/nether_fossil/air",
+      "group": "fossil",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 77.790819,
+      "before": 77.790819,
+      "after": 84.191853,
+      "vanilla": 83.337714,
+      "tolerance": 5,
+      "after_verdict": "within",
+      "pass2_change": "new_metric"
+    },
+    {
+      "case": "second",
+      "metric": "blocks/soul_fire",
+      "group": "surface_ore_features",
+      "unit": "per chunk",
+      "pass2_ours": 0.69697,
+      "before": 0.697888,
+      "after": 0.556474,
+      "vanilla": 0.578512,
+      "tolerance": 0.11570247933884298,
+      "after_verdict": "within",
+      "pass2_change": "better"
+    },
+    {
+      "case": "second",
+      "metric": "feature_biome/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "unit": "per million biome blocks",
+      "pass2_ours": 896.024156,
+      "before": 896.024156,
+      "after": 882.741409,
+      "vanilla": 682.003562,
+      "tolerance": 136.40071240421457,
+      "after_verdict": "outside",
+      "pass2_change": "better"
+    }
+  ],
+  "remaining_outside": [
+    {
+      "case": "owner",
+      "metric": "slope/p100",
+      "group": "terrain_shape_slope",
+      "before": 76.0,
+      "after": 76.0,
+      "vanilla": 89.0,
+      "tolerance": 1
+    },
+    {
+      "case": "owner",
+      "metric": "cave_component_volume/p50",
+      "group": "terrain_shape_slope",
+      "before": 199.0,
+      "after": 190.0,
+      "vanilla": 67.0,
+      "tolerance": 16
+    },
+    {
+      "case": "owner",
+      "metric": "slope/p95",
+      "group": "terrain_shape_slope",
+      "before": 6.0,
+      "after": 6.0,
+      "vanilla": 9.0,
+      "tolerance": 1
+    },
+    {
+      "case": "owner",
+      "metric": "slope/p99",
+      "group": "terrain_shape_slope",
+      "before": 33.0,
+      "after": 33.0,
+      "vanilla": 36.0,
+      "tolerance": 1
+    },
+    {
+      "case": "owner",
+      "metric": "inside_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.542317,
+      "after": 1.527013,
+      "vanilla": 1.932392,
+      "tolerance": 0.25
+    },
+    {
+      "case": "owner",
+      "metric": "jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.530785,
+      "after": 1.516769,
+      "vanilla": 1.908315,
+      "tolerance": 0.25
+    },
+    {
+      "case": "owner",
+      "metric": "depth/48/underground_air",
+      "group": "terrain_shape_slope",
+      "before": 28.037431,
+      "after": 28.101444,
+      "vanilla": 24.200223,
+      "tolerance": 2
+    },
+    {
+      "case": "owner",
+      "metric": "depth/32/underground_air",
+      "group": "terrain_shape_slope",
+      "before": 37.009859,
+      "after": 36.997203,
+      "vanilla": 34.08699,
+      "tolerance": 2
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-2/soul_sand",
+      "group": "surface_ore_features",
+      "before": 26.909938,
+      "after": 26.645963,
+      "vanilla": 20.752276,
+      "tolerance": 5
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-1/basalt",
+      "group": "surface_ore_features",
+      "before": 69.641317,
+      "after": 71.292769,
+      "vanilla": 77.086328,
+      "tolerance": 5
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-3/netherrack",
+      "group": "surface_ore_features",
+      "before": 58.227226,
+      "after": 57.895963,
+      "vanilla": 63.589094,
+      "tolerance": 5
+    },
+    {
+      "case": "owner",
+      "metric": "layer/basalt_deltas/-4/blackstone",
+      "group": "surface_ore_features",
+      "before": 10.156699,
+      "after": 10.241159,
+      "vanilla": 15.707662,
+      "tolerance": 5
+    },
+    {
+      "case": "owner",
+      "metric": "top/soul_sand_valley/soul_sand",
+      "group": "surface_ore_features",
+      "before": 32.036749,
+      "after": 31.961698,
+      "vanilla": 26.852235,
+      "tolerance": 5
+    },
+    {
+      "case": "owner",
+      "metric": "cave_shape_proxy/thin_like",
+      "group": "terrain_shape_slope",
+      "before": 0.589532,
+      "after": 0.598714,
+      "vanilla": 0.843893,
+      "tolerance": 0.16877869605142334
+    },
+    {
+      "case": "owner",
+      "metric": "cave_shape_proxy/other",
+      "group": "terrain_shape_slope",
+      "before": 0.331497,
+      "after": 0.344353,
+      "vanilla": 0.4573,
+      "tolerance": 0.1
+    },
+    {
+      "case": "owner",
+      "metric": "tree_base_estimates/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "before": 0.230487,
+      "after": 0.232323,
+      "vanilla": 0.130395,
+      "tolerance": 0.1
+    },
+    {
+      "case": "second",
+      "metric": "structure_candidate_coincident/ruined_portal",
+      "group": "portal_shared",
+      "before": 0.0,
+      "after": 0.0,
+      "vanilla": 100.0,
+      "tolerance": 5
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/air",
+      "group": "portal_shared",
+      "before": 78.442513,
+      "after": 78.442513,
+      "vanilla": 8.539095,
+      "tolerance": 5
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/netherrack",
+      "group": "portal_shared",
+      "before": 14.80615,
+      "after": 14.80615,
+      "vanilla": 70.164609,
+      "tolerance": 5
+    },
+    {
+      "case": "second",
+      "metric": "slope/p95",
+      "group": "terrain_shape_slope",
+      "before": 5.0,
+      "after": 5.0,
+      "vanilla": 9.0,
+      "tolerance": 1
+    },
+    {
+      "case": "second",
+      "metric": "slope/p99",
+      "group": "terrain_shape_slope",
+      "before": 38.0,
+      "after": 37.0,
+      "vanilla": 41.0,
+      "tolerance": 1
+    },
+    {
+      "case": "second",
+      "metric": "border_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.654238,
+      "after": 1.648319,
+      "vanilla": 2.068537,
+      "tolerance": 0.25
+    },
+    {
+      "case": "second",
+      "metric": "jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.700592,
+      "after": 1.688194,
+      "vanilla": 2.068778,
+      "tolerance": 0.25
+    },
+    {
+      "case": "second",
+      "metric": "inside_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.703589,
+      "after": 1.690771,
+      "vanilla": 2.068794,
+      "tolerance": 0.25
+    },
+    {
+      "case": "second",
+      "metric": "slope/p100",
+      "group": "terrain_shape_slope",
+      "before": 87.0,
+      "after": 87.0,
+      "vanilla": 89.0,
+      "tolerance": 1
+    },
+    {
+      "case": "second",
+      "metric": "tree_base_estimates/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "before": 0.460055,
+      "after": 0.443526,
+      "vanilla": 0.173554,
+      "tolerance": 0.1
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-2/blackstone",
+      "group": "surface_ore_features",
+      "before": 11.351547,
+      "after": 13.708897,
+      "vanilla": 19.789652,
+      "tolerance": 5
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/lava",
+      "group": "portal_shared",
+      "before": 0.233957,
+      "after": 0.233957,
+      "vanilla": 9.259259,
+      "tolerance": 5
+    },
+    {
+      "case": "second",
+      "metric": "layer/basalt_deltas/-5/basalt",
+      "group": "surface_ore_features",
+      "before": 71.518375,
+      "after": 75.169246,
+      "vanilla": 80.488395,
+      "tolerance": 5
+    },
+    {
+      "case": "second",
+      "metric": "structure_candidate_offset_p95/ruined_portal",
+      "group": "portal_shared",
+      "before": 48.0,
+      "after": 48.0,
+      "vanilla": 0.0,
+      "tolerance": 32
+    },
+    {
+      "case": "second",
+      "metric": "blocks/crimson_stem",
+      "group": "surface_ore_features",
+      "before": 8.796143,
+      "after": 8.665748,
+      "vanilla": 6.737374,
+      "tolerance": 1.3474747474747475
+    },
+    {
+      "case": "second",
+      "metric": "blocks/nether_wart_block",
+      "group": "surface_ore_features",
+      "before": 45.282828,
+      "after": 44.130395,
+      "vanilla": 36.004591,
+      "tolerance": 7.200918273645546
+    },
+    {
+      "case": "second",
+      "metric": "cave_component_volume/p50",
+      "group": "terrain_shape_slope",
+      "before": 83.0,
+      "after": 82.0,
+      "vanilla": 105.5,
+      "tolerance": 21.1
+    },
+    {
+      "case": "second",
+      "metric": "feature_biome/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "before": 896.024156,
+      "after": 882.741409,
+      "vanilla": 682.003562,
+      "tolerance": 136.40071240421457
+    }
+  ],
+  "regressions_outside": [
+    {
+      "case": "owner",
+      "metric": "inside_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.542317,
+      "after": 1.527013,
+      "vanilla": 1.932392,
+      "tolerance": 0.25
+    },
+    {
+      "case": "owner",
+      "metric": "jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.530785,
+      "after": 1.516769,
+      "vanilla": 1.908315,
+      "tolerance": 0.25
+    },
+    {
+      "case": "owner",
+      "metric": "depth/48/underground_air",
+      "group": "terrain_shape_slope",
+      "before": 28.037431,
+      "after": 28.101444,
+      "vanilla": 24.200223,
+      "tolerance": 2
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-3/netherrack",
+      "group": "surface_ore_features",
+      "before": 58.227226,
+      "after": 57.895963,
+      "vanilla": 63.589094,
+      "tolerance": 5
+    },
+    {
+      "case": "owner",
+      "metric": "tree_base_estimates/crimson_forest/crimson_stem",
+      "group": "surface_ore_features",
+      "before": 0.230487,
+      "after": 0.232323,
+      "vanilla": 0.130395,
+      "tolerance": 0.1
+    },
+    {
+      "case": "second",
+      "metric": "slope/p99",
+      "group": "terrain_shape_slope",
+      "before": 38.0,
+      "after": 37.0,
+      "vanilla": 41.0,
+      "tolerance": 1
+    },
+    {
+      "case": "second",
+      "metric": "border_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.654238,
+      "after": 1.648319,
+      "vanilla": 2.068537,
+      "tolerance": 0.25
+    },
+    {
+      "case": "second",
+      "metric": "jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.700592,
+      "after": 1.688194,
+      "vanilla": 2.068778,
+      "tolerance": 0.25
+    },
+    {
+      "case": "second",
+      "metric": "inside_jump_ge16_share",
+      "group": "terrain_shape_slope",
+      "before": 1.703589,
+      "after": 1.690771,
+      "vanilla": 2.068794,
+      "tolerance": 0.25
+    },
+    {
+      "case": "second",
+      "metric": "cave_component_volume/p50",
+      "group": "terrain_shape_slope",
+      "before": 83.0,
+      "after": 82.0,
+      "vanilla": 105.5,
+      "tolerance": 21.1
+    }
+  ],
+  "new_outside": [],
+  "groups": {
+    "biome_placement": {
+      "pass2_outside": 0,
+      "pass2_rows_resolved": 0,
+      "final_outside": 0
+    },
+    "terrain_shape_slope": {
+      "pass2_outside": 17,
+      "pass2_rows_resolved": 0,
+      "final_outside": 17
+    },
+    "surface_ore_features": {
+      "pass2_outside": 26,
+      "pass2_rows_resolved": 14,
+      "final_outside": 12
+    },
+    "fortress": {
+      "pass2_outside": 9,
+      "pass2_rows_resolved": 9,
+      "final_outside": 0
+    },
+    "fossil": {
+      "pass2_outside": 2,
+      "pass2_rows_resolved": 2,
+      "final_outside": 0
+    },
+    "portal_shared": {
+      "pass2_outside": 5,
+      "pass2_rows_resolved": 0,
+      "final_outside": 5
+    }
+  },
+  "provenance": {
+    "owner": {
+      "ours": [
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/owner/dimensions/minecraft/the_nether/region/r.-1.-1.mcs",
+          "size": 769280,
+          "sha256": "84a277135be3c212416dc567236dc8c3cb8f3e3c349a21b29c859322c5ba261f"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/owner/dimensions/minecraft/the_nether/region/r.-1.0.mcs",
+          "size": 647424,
+          "sha256": "273db216830d1e47b52c96f02bc1738337cef9137ab5cec0a0d2bb92ff67f77d"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/owner/dimensions/minecraft/the_nether/region/r.0.-1.mcs",
+          "size": 761344,
+          "sha256": "c0d74fe819d01887b6243a64c41830c90e249049fc41f05db2517e32cadfe5fe"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/owner/dimensions/minecraft/the_nether/region/r.0.0.mcs",
+          "size": 699904,
+          "sha256": "d1cecd58a60e2e4e0c79bdb510b82fbf466ad95a603333c584f9aa27a2262872"
+        }
+      ],
+      "vanilla": [
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/owner-vanilla/world/dimensions/minecraft/the_nether/region/r.-1.-1.mca",
+          "size": 3936256,
+          "sha256": "34880a9a273581bb95cc1045bdb02f83a94e697049d3f080ca3dee74e0c2b2f2"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/owner-vanilla/world/dimensions/minecraft/the_nether/region/r.-1.0.mca",
+          "size": 3829760,
+          "sha256": "80ebe6ea1219136e1d225c68e4fbbb30b0c7b23f6006df445c96c639e8fc5de7"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/owner-vanilla/world/dimensions/minecraft/the_nether/region/r.0.-1.mca",
+          "size": 4419584,
+          "sha256": "1c7f5eef56c60b4c955c2850f39864258ea9f7a6fa26457215522c947d2036e9"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/owner-vanilla/world/dimensions/minecraft/the_nether/region/r.0.0.mca",
+          "size": 3923968,
+          "sha256": "836d269dd61a6f65a99fa546f37efca1ffa6de54d81343dba5015f0dd580f57e"
+        }
+      ]
+    },
+    "second": {
+      "ours": [
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/second/dimensions/minecraft/the_nether/region/r.-1.-1.mcs",
+          "size": 646144,
+          "sha256": "910cb18ad148d61a73f37610c03c55afdf5534b0b65dfcb327ae6c31d5989d76"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/second/dimensions/minecraft/the_nether/region/r.-1.0.mcs",
+          "size": 643584,
+          "sha256": "37f7984357aebc830c7b186f64f472be2b4de30ec51de9f1833139a97888d514"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/second/dimensions/minecraft/the_nether/region/r.0.-1.mcs",
+          "size": 783360,
+          "sha256": "991360729e760063a21901eacd418aada15df19d59e32851c4b00155dc50803d"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/genN3/verified-v2/second/dimensions/minecraft/the_nether/region/r.0.0.mcs",
+          "size": 803072,
+          "sha256": "1391b9b0ef85b27ab28cfbcd09d0efedc0025d744f011bbfa137a6be62931a38"
+        }
+      ],
+      "vanilla": [
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/second-vanilla/world/dimensions/minecraft/the_nether/region/r.-1.-1.mca",
+          "size": 3727360,
+          "sha256": "e53bdbcf9e62c7a97b38419bb7e54c467dbca82641b0a1d4d937968fb7576c66"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/second-vanilla/world/dimensions/minecraft/the_nether/region/r.-1.0.mca",
+          "size": 3702784,
+          "sha256": "2f93e4039883a25ed7cd4fcbe2ecafd565050502d86a581c8ac3f2125fdfc120"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/second-vanilla/world/dimensions/minecraft/the_nether/region/r.0.-1.mca",
+          "size": 3858432,
+          "sha256": "c72c4ddad030347da3e22dc57dbdcda932a856d242c863e9fa6f3726877a95a7"
+        },
+        {
+          "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/worlds/second-vanilla/world/dimensions/minecraft/the_nether/region/r.0.0.mca",
+          "size": 3801088,
+          "sha256": "78f2d094fda829dedc7bceda669700b706f828397a6202bd5d0df779691eaf72"
+        }
+      ]
+    }
+  },
+  "measurements": {
+    "owner": {
+      "blocks/nether_bricks": {
+        "before": 117.370064,
+        "after": 54.599633,
+        "vanilla": 62.882461,
+        "tolerance": 12.576492194674014,
+        "verdict": "within"
+      },
+      "blocks/nether_brick_fence": {
+        "before": 2.38843,
+        "after": 1.227732,
+        "vanilla": 1.328742,
+        "tolerance": 0.2657483930211203,
+        "verdict": "within"
+      },
+      "blocks/nether_brick_stairs": {
+        "before": 0.197429,
+        "after": 0.048669,
+        "vanilla": 0.087236,
+        "tolerance": 0.1,
+        "verdict": "within"
+      },
+      "structure_box_composition/fortress/nether_bricks": {
+        "before": 40.423913,
+        "after": 31.334307,
+        "vanilla": 31.334307,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "structure_box_composition/fortress/air": {
+        "before": 33.795598,
+        "after": 34.698947,
+        "vanilla": 33.567957,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "structure_candidate_count/nether_fossil": {
+        "before": 20.0,
+        "after": 20.0,
+        "vanilla": 20.0,
+        "tolerance": 5.0,
+        "verdict": "within"
+      },
+      "structure_candidate_coincident/nether_fossil": {
+        "before": 100.0,
+        "after": 100.0,
+        "vanilla": 100.0,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "blocks/bone_block": {
+        "before": 0.289256,
+        "after": 0.289256,
+        "vanilla": 0.289256,
+        "tolerance": 0.1,
+        "verdict": "within"
+      },
+      "structure_box_composition/nether_fossil/air": {
+        "before": 71.025641,
+        "after": 85.213675,
+        "vanilla": 84.82906,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "layer/basalt_deltas/-1/netherrack": {
+        "before": 13.11278,
+        "after": 7.080219,
+        "vanilla": 4.95795,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "layer/basalt_deltas/-2/netherrack": {
+        "before": 12.580865,
+        "after": 7.261717,
+        "vanilla": 5.015454,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "blocks/glowstone": {
+        "before": 3.063361,
+        "after": 3.049587,
+        "vanilla": 3.294766,
+        "tolerance": 0.6589531680440772,
+        "verdict": "within"
+      },
+      "blocks/fire": {
+        "before": 1.513315,
+        "after": 1.245179,
+        "vanilla": 1.385675,
+        "tolerance": 0.27713498622589533,
+        "verdict": "within"
+      },
+      "blocks/soul_fire": {
+        "before": 0.20202,
+        "after": 0.155188,
+        "vanilla": 0.131313,
+        "tolerance": 0.1,
+        "verdict": "within"
+      },
+      "slope/p100": {
+        "before": 76.0,
+        "after": 76.0,
+        "vanilla": 89.0,
+        "tolerance": 1,
+        "verdict": "outside"
+      },
+      "slope/p95": {
+        "before": 6.0,
+        "after": 6.0,
+        "vanilla": 9.0,
+        "tolerance": 1,
+        "verdict": "outside"
+      },
+      "cave_component_volume/p50": {
+        "before": 199.0,
+        "after": 190.0,
+        "vanilla": 67.0,
+        "tolerance": 16,
+        "verdict": "outside"
+      }
+    },
+    "second": {
+      "blocks/nether_bricks": {
+        "before": 103.937557,
+        "after": 197.504132,
+        "vanilla": 197.302112,
+        "tolerance": 39.460422405876955,
+        "verdict": "within"
+      },
+      "blocks/nether_brick_fence": {
+        "before": 1.767677,
+        "after": 2.870523,
+        "vanilla": 2.881543,
+        "tolerance": 0.5763085399449036,
+        "verdict": "within"
+      },
+      "blocks/nether_brick_stairs": {
+        "before": 0.135904,
+        "after": 0.233242,
+        "vanilla": 0.233242,
+        "tolerance": 0.1,
+        "verdict": "within"
+      },
+      "structure_box_composition/fortress/nether_bricks": {
+        "before": 30.234155,
+        "after": 37.944714,
+        "vanilla": 37.930489,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "structure_box_composition/fortress/air": {
+        "before": 62.983306,
+        "after": 54.295017,
+        "vanilla": 54.171737,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "structure_candidate_count/nether_fossil": {
+        "before": 101.0,
+        "after": 99.0,
+        "vanilla": 99.0,
+        "tolerance": 24.75,
+        "verdict": "within"
+      },
+      "structure_candidate_coincident/nether_fossil": {
+        "before": 98.019802,
+        "after": 100.0,
+        "vanilla": 100.0,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "blocks/bone_block": {
+        "before": 1.086318,
+        "after": 1.071625,
+        "vanilla": 1.071625,
+        "tolerance": 0.21432506887052344,
+        "verdict": "within"
+      },
+      "structure_box_composition/nether_fossil/air": {
+        "before": 77.790819,
+        "after": 84.191853,
+        "vanilla": 83.337714,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "layer/basalt_deltas/-1/netherrack": {
+        "before": 12.826402,
+        "after": 8.788685,
+        "vanilla": 5.415861,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "layer/basalt_deltas/-2/netherrack": {
+        "before": 12.983559,
+        "after": 8.837041,
+        "vanilla": 5.464217,
+        "tolerance": 5,
+        "verdict": "within"
+      },
+      "blocks/glowstone": {
+        "before": 2.136823,
+        "after": 1.64371,
+        "vanilla": 1.454545,
+        "tolerance": 0.29090909090909095,
+        "verdict": "within"
+      },
+      "blocks/fire": {
+        "before": 0.790634,
+        "after": 0.592287,
+        "vanilla": 0.603306,
+        "tolerance": 0.1206611570247934,
+        "verdict": "within"
+      },
+      "blocks/soul_fire": {
+        "before": 0.697888,
+        "after": 0.556474,
+        "vanilla": 0.578512,
+        "tolerance": 0.11570247933884298,
+        "verdict": "within"
+      },
+      "slope/p100": {
+        "before": 87.0,
+        "after": 87.0,
+        "vanilla": 89.0,
+        "tolerance": 1,
+        "verdict": "outside"
+      },
+      "slope/p95": {
+        "before": 5.0,
+        "after": 5.0,
+        "vanilla": 9.0,
+        "tolerance": 1,
+        "verdict": "outside"
+      },
+      "cave_component_volume/p50": {
+        "before": 83.0,
+        "after": 82.0,
+        "vanilla": 105.5,
+        "tolerance": 21.1,
+        "verdict": "outside"
+      }
+    }
+  },
+  "limitations": [
+    "Tunnel geometry, extreme slopes, cave components and some surface/feature distributions remain outside tolerance. No seed-specific override or matching a maximum by hand.",
+    "Portal placement remains in shared ruined_portal.rs: second seed current chunk [6,16], observed [9,16]; 48-block offset, 0% coincidence. Legacy template::attempt is used by decide(preview=false); template::grid_attempt gives [9,16]. Nether properties/height/composition still require separate R4 verification.",
+    "Intermediate full targeted 3x3 fortress unit sample, before the final late-bones repair, at owner chunk [2,-47]: 9155 nether_bricks vs 12814 official; final support totals outside the census window require remeasurement. Layout matches all 90 pieces; supports outside piece boxes remain terrain-dependent and unverified. Regression tests check body materials separately; original full totals remain in the fixture.",
+    "Per-seed conditional glowstone rates still vary: whole-biome two-seed regression uses 30%; full census per-seed tolerance remains unchanged. Exact decoration random stream unverified.",
+    "Bastion file and template unchanged; no out-of-tolerance bastion rows in pass 2. Biome placement unchanged and already within census tolerances."
+  ],
+  "pass2_regressions": [
+    {
+      "case": "owner",
+      "metric": "cave_component_volume/p50",
+      "group": "terrain_shape_slope",
+      "unit": "blocks (chunk clipped)",
+      "pass2_ours": 197.5,
+      "before": 199.0,
+      "after": 190.0,
+      "vanilla": 67.0,
+      "tolerance": 16,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 37.0,
+      "pass2_transition": "worse_outside"
+    },
+    {
+      "case": "owner",
+      "metric": "slope/p99",
+      "group": "terrain_shape_slope",
+      "unit": "blocks per block",
+      "pass2_ours": 33.0,
+      "before": 33.0,
+      "after": 33.0,
+      "vanilla": 36.0,
+      "tolerance": 1,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 37.0,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "depth/48/underground_air",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 28.033882,
+      "before": 28.037431,
+      "after": 28.101444,
+      "vanilla": 24.200223,
+      "tolerance": 2,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 23.187859,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "blocks/nether_bricks",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 117.370064,
+      "before": 117.370064,
+      "after": 54.599633,
+      "vanilla": 62.882461,
+      "tolerance": 12.576492194674014,
+      "after_verdict": "within",
+      "pass2_change": "worse",
+      "first_census_ours": 27.993572,
+      "pass2_transition": "worse_outside"
+    },
+    {
+      "case": "owner",
+      "metric": "depth/32/underground_air",
+      "group": "terrain_shape_slope",
+      "unit": "percentage points",
+      "pass2_ours": 37.002753,
+      "before": 37.009859,
+      "after": 36.997203,
+      "vanilla": 34.08699,
+      "tolerance": 2,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 33.205048,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "blocks/nether_brick_fence",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 2.38843,
+      "before": 2.38843,
+      "after": 1.227732,
+      "vanilla": 1.328742,
+      "tolerance": 0.2657483930211203,
+      "after_verdict": "within",
+      "pass2_change": "worse",
+      "first_census_ours": 0.669421,
+      "pass2_transition": "worse_outside"
+    },
+    {
+      "case": "owner",
+      "metric": "top/soul_sand_valley/soul_sand",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 32.036749,
+      "before": 32.036749,
+      "after": 31.961698,
+      "vanilla": 26.852235,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 28.070034,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "blocks/nether_brick_stairs",
+      "group": "fortress",
+      "unit": "per chunk",
+      "pass2_ours": 0.197429,
+      "before": 0.197429,
+      "after": 0.048669,
+      "vanilla": 0.087236,
+      "tolerance": 0.1,
+      "after_verdict": "within",
+      "pass2_change": "worse",
+      "first_census_ours": 0.087236,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-2/soul_sand",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 26.909938,
+      "before": 26.909938,
+      "after": 26.645963,
+      "vanilla": 20.752276,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 23.639711,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "layer/soul_sand_valley/-3/netherrack",
+      "group": "surface_ore_features",
+      "unit": "percentage points",
+      "pass2_ours": 58.227226,
+      "before": 58.227226,
+      "after": 57.895963,
+      "vanilla": 63.589094,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 61.381024,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "owner",
+      "metric": "cave_shape_proxy/thin_like",
+      "group": "terrain_shape_slope",
+      "unit": "chunk-clipped components per chunk",
+      "pass2_ours": 0.591368,
+      "before": 0.589532,
+      "after": 0.598714,
+      "vanilla": 0.843893,
+      "tolerance": 0.16877869605142334,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 0.748393,
+      "pass2_transition": "new_failure"
+    },
+    {
+      "case": "second",
+      "metric": "structure_box_composition/ruined_portal/lava",
+      "group": "portal_shared",
+      "unit": "percent of piece-box volume (includes terrain)",
+      "pass2_ours": 0.233957,
+      "before": 0.233957,
+      "after": 0.233957,
+      "vanilla": 9.259259,
+      "tolerance": 5,
+      "after_verdict": "outside",
+      "pass2_change": "worse",
+      "first_census_ours": 0.802139,
+      "pass2_transition": "worse_outside"
+    }
+  ],
+  "pass2_regression_summary": {
+    "total": 12,
+    "resolved": 3
+  },
+  "base_commit": "2dbc36a0f28ccdf852de17f47fc5bb782bcd60b8",
+  "binary_sha256": "c0c2e574d8f5174141aad1214b075f36429527e4ac101d3e91a859c760ce999a",
+  "source_sha256": {
+    "src/world/nether.rs": "22087dc5f08276874ee8b4106349a8a195f4f5314e055694d746854274e0071f",
+    "src/world/nether_fortress.rs": "26a13374a21190cdd08f9fef7b78a0eb91ce7ab67400945caa8fa0a2f22f31a4",
+    "src/world/nether_fossil.rs": "ea27995e3cf5de1078b0fa11dfa0cad3f4236dbb576ceaa3e156d562b0d5930f",
+    "src/world/mod.rs": "8b4eb1d2a8f3e5f29e6536390f1521efc749b4889188c267cc243993e13b775f"
+  }
+}

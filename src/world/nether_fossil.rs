@@ -41,29 +41,35 @@ pub fn start_in(nether: &Nether, rx: i32, rz: i32) -> Option<Fossil> {
     let (dx,dz) = match orient.turns {
         0 => (0,0), 1 => (t.length-1,0), 2 => (t.width-1,t.length-1), _ => (0,t.width-1),
     };
-    Some(Fossil { chunk:(cx,cz), origin:(x-dx,floor+1,z-dz), template, orient })
+    Some(Fossil { chunk:(cx,cz), origin:(x-dx,floor,z-dz), template, orient })
 }
 
 #[cfg(not(seedmap_core))]
 pub fn paint(fossil: &Fossil, cx: i32, cz: i32, put: &mut dyn FnMut(i32,i32,i32,i32)) {
     let t = &library()[fossil.template];
-    for (a,y,b,cell) in t.cells() {
-        let Cell::Block(i) = cell else { continue };
+    // minecraft.wiki/w/Nether_fossil: «bone blocks». В сохранённых рамках
+    // 26.3 прочие клетки — воздух; прежний образец сохранял там грунт.
+    for local_y in 0..t.height { for b in 0..t.length { for a in 0..t.width {
         let (dx,dz) = fossil.orient.offset(a,b,t.width,t.length);
-        let (x,y,z) = (fossil.origin.0+dx,fossil.origin.1+y,fossil.origin.2+dz);
+        let (x,y,z) = (fossil.origin.0+dx,fossil.origin.1+local_y,fossil.origin.2+dz);
         if x.div_euclid(16) == cx && z.div_euclid(16) == cz {
-            let text = template::orient_text(&t.texts[usize::from(i)],fossil.orient);
-            put(x,y,z,crate::blocks::state_from_text(&text).expect("измеренный блок кости"));
+            let state = if let Cell::Block(i) = t.cell(a, local_y, b) {
+                let text = template::orient_text(&t.texts[usize::from(i)],fossil.orient);
+                crate::blocks::state_from_text(&text).expect("измеренный блок кости")
+            } else { super::AIR };
+            put(x,y,z,state);
         }
-    }
+    } } }
 }
 
 #[cfg(not(seedmap_core))]
-pub(super) fn build(nether: &Nether, chunk: &mut super::Chunk, cx: i32, cz: i32) {
+pub(super) fn build(nether: &Nether, cx: i32, cz: i32, clear_air: bool, put: &mut dyn FnMut(i32,i32,i32,i32)) {
     for rx in (cx-1).div_euclid(SPACING)..=(cx+1).div_euclid(SPACING) {
         for rz in (cz-1).div_euclid(SPACING)..=(cz+1).div_euclid(SPACING) {
             if let Some(f) = start_in(nether,rx,rz) {
-                paint(&f,cx,cz,&mut |x,y,z,state| { chunk.put_generated(x-cx*16,y,z-cz*16,state,true); });
+                paint(&f,cx,cz,&mut |x,y,z,state| {
+                    if clear_air || state != super::AIR { put(x,y,z,state); }
+                });
             }
         }
     }
@@ -88,10 +94,11 @@ mod tests {
                 assert_eq!(library()[f.template].name,row[5].as_str().unwrap());
                 assert_eq!(f.orient.turns,row[6].as_u64().unwrap() as u8);
                 assert_eq!(f.origin.0,row[7][0].as_i64().unwrap() as i32);
+                assert_eq!(f.origin.1,row[7][1].as_i64().unwrap() as i32);
                 assert_eq!(f.origin.2,row[7][2].as_i64().unwrap() as i32);
                 matched+=1;
             }
-            assert!(matched * 10 >= case["starts"].as_array().unwrap().len() * 8);
+            assert_eq!(matched,case["starts"].as_array().unwrap().len());
         }
     }
 
@@ -102,15 +109,12 @@ mod tests {
             let n = Nether::new(seed);
             let fossils: Vec<_> = (-8..=8).flat_map(|rx| (-8..=8).map(move |rz| (rx,rz)))
                 .filter_map(|(rx,rz)| start_in(&n,rx,rz)).collect();
-            let tolerance = (expected as f64 * 0.25).max(1.0);
-            assert!((fossils.len() as f64 - f64::from(expected)).abs() <= tolerance,
-                "{seed}: {} / {expected}", fossils.len());
+            assert_eq!(fossils.len(),expected as usize,"{seed}");
             let first = fossils.first().unwrap();
             let mut bones = 0;
             for cx in first.chunk.0-1..=first.chunk.0+1 {
                 for cz in first.chunk.1-1..=first.chunk.1+1 {
-                    let mut chunk = n.chunk(cx,cz);
-                    build(&n,&mut chunk,cx,cz);
+                    let chunk = n.chunk(cx,cz);
                     for y in 33..=120 {
                         for x in 0..16 {
                             for z in 0..16 {
@@ -143,8 +147,63 @@ mod tests {
                 for cx in -2..=0 { for cz in -2..=0 {
                     paint(&f,cx,cz,&mut |x,y,z,s| { assert!(cells.insert((x,y,z),s).is_none()); });
                 }}
-                assert_eq!(cells.len(),library()[template].cells().count());
+                let t=&library()[template];
+                assert_eq!(cells.len(),(t.width*t.length*t.height) as usize);
+                assert_eq!(cells.values().filter(|&&state| state != super::super::AIR).count(),t.cells().count());
             }
+        }
+    }
+
+    /// В готовых чанках рамка стоит на измеренной высоте и очищает грунт;
+    /// последующие объекты не должны возвращать незеррак внутрь образца.
+    #[test]
+    fn census_263_fossil_air_frame_in_generated_chunks() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-fossils.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let n = Nether::new(case["seed"].as_i64().unwrap());
+            let row = &case["starts"][0];
+            let cx = row[0].as_i64().unwrap() as i32;
+            let cz = row[1].as_i64().unwrap() as i32;
+            let f = start_in(&n, cx.div_euclid(2), cz.div_euclid(2)).unwrap();
+            assert_eq!(f.origin.1, row[7][1].as_i64().unwrap() as i32);
+            let mut chunks = std::collections::HashMap::new();
+            let mut bones = 0;
+            let mut air = 0;
+            paint(&f, cx, cz, &mut |x,y,z,expected| {
+                let chunk = chunks.entry((x.div_euclid(16),z.div_euclid(16)))
+                    .or_insert_with(|| n.chunk(x.div_euclid(16),z.div_euclid(16)));
+                let actual = chunk.block(x.rem_euclid(16),y,z.rem_euclid(16));
+                if expected == super::super::AIR {
+                    air += usize::from(actual == super::super::AIR);
+                    assert_ne!(crate::blocks::block_at_state(actual), Some("netherrack"));
+                    assert_ne!(crate::blocks::block_at_state(actual), Some("soul_sand"));
+                    assert_ne!(crate::blocks::block_at_state(actual), Some("soul_soil"));
+                } else {
+                    bones += 1;
+                    assert_eq!(actual,expected);
+                }
+            });
+            assert!(bones > 0 && air > 0);
+        }
+    }
+
+    /// Три кости оригинала пересекают части крепости: поздний проход
+    /// возвращает только кости и не очищает кирпичи вокруг них.
+    #[test]
+    fn fossil_bones_survive_fortress_overlap() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-fossils.json"
+        )).unwrap();
+        let reference = &fixture["fortress_overlap_bones"];
+        let n = Nether::new(reference["seed"].as_i64().unwrap());
+        let mut chunks = std::collections::HashMap::new();
+        for p in reference["positions"].as_array().unwrap() {
+            let (x,y,z) = (p[0].as_i64().unwrap() as i32,p[1].as_i64().unwrap() as i32,p[2].as_i64().unwrap() as i32);
+            let chunk = chunks.entry((x.div_euclid(16),z.div_euclid(16)))
+                .or_insert_with(|| n.chunk(x.div_euclid(16),z.div_euclid(16)));
+            assert_eq!(crate::blocks::block_at_state(chunk.block(x.rem_euclid(16),y,z.rem_euclid(16))),Some("bone_block"));
         }
     }
     #[test]
@@ -164,8 +223,8 @@ mod tests {
                 }
                 assert_eq!(f.chunk,(rx*2,rz*2));
                 assert_eq!(n.biome_at(x,z),Biome::SoulSandValley);
-                assert!((33..=112).contains(&y));
-                assert_eq!(n.fossil_floor_below(x,y,z),Some(y-1));
+                assert!((33..=111).contains(&y));
+                assert_eq!(n.fossil_floor_below(x,y+1,z),Some(y));
             }
         }}
         assert!(count>0);

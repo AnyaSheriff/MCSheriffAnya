@@ -15,7 +15,7 @@
 // всего 62). У каждого куска свои выходы; к выходу пристраивается кусок
 // своей семьи (мост или замок) по весам, пока не кончились ограниченные
 // виды; кончились — ставится обрыв моста (nebef). Кусок не встаёт, если
-// задевает уже поставленный; выход дальше 112 блоков от середины старта
+// задевает уже поставленный; выход на границе 112 блоков от угла старта
 // остаётся пустым. Числа кусков у нас и у оригинала сходятся (см. тест
 // fortress_piece_counts).
 //
@@ -143,13 +143,13 @@ impl Kind {
     /// он смотрит. Замер: у каждого вида выходы всегда одни и те же.
     fn exits(self) -> &'static [(i32, i32, i32, Turn)] {
         match self {
-            Kind::Crossing => &[(-1, 0, 9, Turn::Minus), (9, 0, 19, Turn::Ahead), (19, 0, 9, Turn::Plus)],
+            Kind::Crossing => &[(9, 0, 19, Turn::Ahead), (-1, 0, 9, Turn::Minus), (19, 0, 9, Turn::Plus)],
             Kind::Bridge => &[(2, 0, 19, Turn::Ahead)],
-            Kind::RoomCrossing => &[(-1, -3, 3, Turn::Minus), (3, -3, 7, Turn::Ahead), (7, -3, 3, Turn::Plus)],
+            Kind::RoomCrossing => &[(3, -3, 7, Turn::Ahead), (-1, -3, 3, Turn::Minus), (7, -3, 3, Turn::Plus)],
             Kind::StairsRoom => &[(7, 3, 3, Turn::Plus)],
             Kind::Entrance => &[(6, 3, 13, Turn::Ahead)],
             Kind::Corridor => &[(2, 0, 5, Turn::Ahead)],
-            Kind::CorridorCrossing => &[(-1, 0, 2, Turn::Minus), (2, 0, 5, Turn::Ahead), (5, 0, 2, Turn::Plus)],
+            Kind::CorridorCrossing => &[(2, 0, 5, Turn::Ahead), (-1, 0, 2, Turn::Minus), (5, 0, 2, Turn::Plus)],
             Kind::TurnLeft => &[(-1, 0, 2, Turn::Minus)],
             Kind::TurnRight => &[(5, 0, 2, Turn::Plus)],
             Kind::Balcony => &[(-1, 0, 2, Turn::Minus), (9, 0, 2, Turn::Plus)],
@@ -204,8 +204,8 @@ const BRIDGE: [(Kind, u32, u32); 6] = [
 const CASTLE: [(Kind, u32, u32); 7] = [
     (Kind::Corridor, 25, 0),
     (Kind::CorridorCrossing, 15, 5),
-    (Kind::TurnLeft, 5, 10),
     (Kind::TurnRight, 5, 10),
+    (Kind::TurnLeft, 5, 10),
     (Kind::CorridorStairs, 10, 3),
     (Kind::Balcony, 7, 2),
     (Kind::StalkRoom, 5, 2),
@@ -297,29 +297,29 @@ pub fn regions_near(chunk_x: i32, chunk_z: i32) -> impl Iterator<Item = (i32, i3
 
 /// Раскладка крепости со стартом в этом чанке.
 pub fn plan(seed: i64, chunk_x: i32, chunk_z: i32) -> Vec<Placed> {
-    let mut dice = Dice::new(seed, 0x9_1A7, chunk_x, chunk_z);
+    let mut dice = super::nether::LegacyRandom::for_chunk(seed, chunk_x, chunk_z);
     let (center_x, center_z) = (chunk_x * 16 + 11, chunk_z * 16 + 11);
-    // Низ старта: 62 в 40 % крепостей, иначе поровну 48..69 (замер).
-    let low = if dice.unit() < 0.4 { 62 } else { 48 + dice.below(22) };
-    let facing = dice.below(4) as u8;
+    // Старт собирается на y 64; после дерева сдвигается вся рамка.
+    // minecraft.wiki/w/Nether_fortress: «starts with a plain four-way crossing».
+    // Поток и очередь проверены по 479 кускам шести сохранённых крепостей 26.3.
+    let low = 64;
+    let facing = [2, 3, 0, 1][dice.below(4) as usize];
     let (fx, fz) = FORWARD[facing as usize];
-    let mut start = Placed::new(Kind::Crossing, facing, (center_x - fx * 9, low, center_z - fz * 9), dice.next());
+    let mut start = Placed::new(Kind::Crossing, facing, (center_x - fx * 9, low, center_z - fz * 9), 0);
     start.depth = 0;
 
     let mut pieces = vec![start];
-    let mut pending = vec![0usize];
+    let mut pending = Vec::new();
+    let mut next_parent = Some(0usize);
     let mut counts = [0u32; KINDS.len()];
+    let mut last = None;
     counts[Kind::Crossing.at()] = 1;
 
-    while !pending.is_empty() {
-        let parent = pieces[pending.swap_remove(dice.below(pending.len() as u32) as usize)].clone();
+    while let Some(index) = next_parent {
+        let parent = pieces[index].clone();
 
         for &(a, y, b, turn) in parent.kind.exits() {
             let (x, level, z) = parent.world(a, y, b);
-
-            if (x - center_x).abs().max((z - center_z).abs()) > REACH {
-                continue;
-            }
 
             let (fx, fz) = FORWARD[parent.facing as usize];
             let (lx, lz) = SIDEWAYS[parent.facing as usize];
@@ -329,27 +329,34 @@ pub fn plan(seed: i64, chunk_x: i32, chunk_z: i32) -> Vec<Placed> {
                 Turn::Minus => (-lx, -lz),
             };
             let facing = facing_of(direction);
-            let table: &[(Kind, u32, u32)] = if parent.kind.castle() { &CASTLE } else { &BRIDGE };
+            if (x - (chunk_x * 16 + 2)).abs().max((z - (chunk_z * 16 + 2)).abs()) >= REACH {
+                let end = Placed::new(Kind::BridgeEnd, facing, (x, level, z), 0);
+                // Даже отвергнутый край расходует число, если рамка свободна.
+                if end.bounds[1] > 10 && !pieces.iter().any(|other| end.touches(&other.bounds)) { dice.integer(); }
+                continue;
+            }
+
+            let castle = if parent.kind == Kind::Balcony { dice.below(8) > 0 } else { parent.kind.castle() };
+            let table: &[(Kind, u32, u32)] = if castle { &CASTLE } else { &BRIDGE };
             let room = table.iter().any(|&(kind, _, cap)| cap > 0 && counts[kind.at()] < cap);
             let mut placed = None;
 
             if parent.depth < DEPTH && room {
-                for _ in 0..TRIES {
+                'attempt: for _ in 0..TRIES {
                     let free: Vec<_> = table.iter().filter(|&&(kind, _, cap)| cap == 0 || counts[kind.at()] < cap).collect();
                     let total: u32 = free.iter().map(|(_, weight, _)| weight).sum();
-                    let mut pick = dice.below(total) as u32;
-                    let Some(&&(kind, _, _)) = free.iter().find(|(_, weight, _)| {
-                        let hit = pick < *weight;
-                        pick = pick.saturating_sub(*weight);
-                        hit
-                    }) else {
-                        break;
-                    };
-                    let candidate = Placed::new(kind, facing, (x, level + kind.lift(), z), dice.next());
-
-                    if candidate.bounds[1] > 10 && !pieces.iter().any(|other| candidate.touches(&other.bounds)) {
-                        placed = Some(candidate);
-                        break;
+                    let mut pick = dice.below(total as i32);
+                    for &&(kind, weight, _) in &free {
+                        pick -= weight as i32;
+                        if pick >= 0 { continue; }
+                        if last == Some(kind) && !matches!(kind, Kind::Bridge | Kind::Corridor) { continue 'attempt; }
+                        let mut candidate = Placed::new(kind, facing, (x, level + kind.lift(), z), 0);
+                        if candidate.bounds[1] > 10 && !pieces.iter().any(|other| candidate.touches(&other.bounds)) {
+                            if matches!(kind, Kind::TurnLeft | Kind::TurnRight) { candidate.roll = if dice.below(3) == 0 { 0 } else { 1 }; }
+                            last = Some(kind);
+                            placed = Some(candidate);
+                            break 'attempt;
+                        }
                     }
                 }
             }
@@ -357,9 +364,10 @@ pub fn plan(seed: i64, chunk_x: i32, chunk_z: i32) -> Vec<Placed> {
             // Не встало ничего — обрыв моста; у замка он на 3 ниже пола.
             if placed.is_none() {
                 let lift = if parent.kind.castle() { -3 } else { 0 };
-                let end = Placed::new(Kind::BridgeEnd, facing, (x, level + lift, z), dice.next());
+                let mut end = Placed::new(Kind::BridgeEnd, facing, (x, level + lift, z), 0);
 
                 if !pieces.iter().any(|other| end.touches(&other.bounds)) {
+                    end.roll = dice.integer() as u32 as u64;
                     placed = Some(end);
                 }
             }
@@ -369,13 +377,20 @@ pub fn plan(seed: i64, chunk_x: i32, chunk_z: i32) -> Vec<Placed> {
                 counts[child.kind.at()] += 1;
                 pieces.push(child);
 
-                if pieces[pieces.len() - 1].kind != Kind::BridgeEnd {
-                    pending.push(pieces.len() - 1);
-                }
+                pending.push(pieces.len() - 1);
             }
         }
+        next_parent = if pending.is_empty() { None } else { Some(pending.remove(dice.below(pending.len() as i32) as usize)) };
     }
-
+    let min = pieces.iter().map(|p| p.bounds[1]).min().unwrap();
+    let max = pieces.iter().map(|p| p.bounds[4]).max().unwrap();
+    let room = 70 - 48 + 1 - (max - min + 1);
+    let bottom = 48 + if room > 1 { dice.below(room) } else { 0 };
+    for piece in &mut pieces {
+        piece.origin.1 += bottom - min;
+        piece.bounds[1] += bottom - min;
+        piece.bounds[4] += bottom - min;
+    }
     pieces
 }
 
@@ -578,6 +593,7 @@ pub fn paint(pieces: &[Placed], canvas: &mut Canvas) {
 
         let template = &templates.pieces[piece.kind.at()];
         let states = &template.states[piece.facing as usize];
+        let end = (piece.kind == Kind::BridgeEnd).then(|| end_lengths(piece.roll));
 
         for y in 0..template.height {
             for b in 0..template.length {
@@ -586,7 +602,7 @@ pub fn paint(pieces: &[Placed], canvas: &mut Canvas) {
                     let Some(at) = canvas.at(x, wy, z) else {
                         continue;
                     };
-                    let cell = if piece.kind == Kind::BridgeEnd { end_cell(piece, a, y, b) } else { template.cell(a, y, b) };
+                    let cell = if let Some(lengths) = &end { end_cell(lengths, a, y, b) } else { template.cell(a, y, b) };
 
                     match cell {
                         Cell::Keep => {}
@@ -646,22 +662,23 @@ pub fn paint(pieces: &[Placed], canvas: &mut Canvas) {
 /// Обрыв моста: в каждом ряду (a, y) кирпич идёт от входа на случайную
 /// длину. Замер: в двух нижних слоях 1–3 блока, в третьем 1–5, в четвёртом
 /// и пятом (и по краям шестого) 1–8; выше — рельеф.
-fn end_cell(piece: &Placed, a: i32, y: i32, b: i32) -> Cell {
-    let longest = match y {
-        0 | 1 => 3,
-        2 => 5,
-        3 | 4 => 8,
-        5 if a == 0 || a == 4 => 8,
-        _ => 0,
-    };
-
-    if longest == 0 {
-        return Cell::Keep;
+fn end_lengths(seed: u64) -> [[i32; 6]; 5] {
+    let mut random = super::nether::LegacyRandom::new(seed as i32 as i64);
+    let mut lengths = [[0; 6]; 5];
+    // Порядок рядов проверен по Seed и блокам 47 обрывов из регионов 26.3.
+    for column in &mut lengths {
+        for length in &mut column[3..=4] { *length = 1 + random.below(8); }
     }
+    for a in [0, 4] { lengths[a][5] = 1 + random.below(8); }
+    for column in &mut lengths { column[2] = 1 + random.below(5); }
+    for column in &mut lengths {
+        for length in &mut column[..=1] { *length = 1 + random.below(3); }
+    }
+    lengths
+}
 
-    let length = 1 + (scramble(piece.roll ^ ((a as u64) << 8 | y as u64)) % longest as u64) as i32;
-
-    if b < length { Cell::Block(0) } else { Cell::Keep }
+fn end_cell(lengths: &[[i32; 6]; 5], a: i32, y: i32, b: i32) -> Cell {
+    if y < 6 && b < lengths[a as usize][y as usize] { Cell::Block(0) } else { Cell::Keep }
 }
 
 /// Кости: поток чисел из семени и места.
@@ -702,6 +719,69 @@ pub(super) fn scramble(mut value: u64) -> u64 {
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    /// Отпечаток всех 479 рамок не позволяет заменить точную фазу средней частотой.
+    #[test]
+    fn census_263_fortress_layout_stream() {
+        use sha2::{Digest, Sha256};
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-pass3-fortresses.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let seed = case["seed"].as_i64().unwrap();
+            let x = case["chunk"][0].as_i64().unwrap() as i32;
+            let z = case["chunk"][1].as_i64().unwrap() as i32;
+            let pieces = plan(seed, x, z);
+            assert_eq!(pieces.len(), case["pieces"].as_u64().unwrap() as usize);
+            let mut hash = Sha256::new();
+            for piece in &pieces {
+                let bounds = piece.bounds.map(|v| v.to_string()).join(",");
+                hash.update(format!("{} {} {} {}\n", piece.kind.id(), piece.facing, bounds, piece.depth));
+            }
+            assert_eq!(format!("{:x}", hash.finalize()), case["layout_sha256"].as_str().unwrap(), "{seed} {x}/{z}");
+        }
+        for end in fixture["bridge_ends"].as_array().unwrap() {
+            let actual = end_lengths(end["seed"].as_i64().unwrap() as u64);
+            let expected: [[i32; 6]; 5] = serde_json::from_value(end["row_lengths"].clone()).unwrap();
+            assert_eq!(actual, expected);
+        }
+    }
+
+    /// Блоки настоящих чанков внутри рамок проверяют высоту, поворот и образцы.
+    /// Опоры вне рамок зависят также от пока неточных узких ходов рельефа.
+    #[test]
+    fn census_263_fortress_generated_materials() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/nether-pass3-fortresses.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let seed = case["seed"].as_i64().unwrap();
+            let start_x = case["chunk"][0].as_i64().unwrap() as i32;
+            let start_z = case["chunk"][1].as_i64().unwrap() as i32;
+            let pieces = plan(seed, start_x, start_z);
+            let generator = crate::world::Generator::Nether(super::super::nether::Nether::new(seed));
+            let names = ["nether_bricks", "nether_brick_fence", "nether_brick_stairs"];
+            let mut counts = [0usize; 3];
+            for pair in case["chunk_sample"].as_array().unwrap() {
+                let (cx, cz) = (pair[0].as_i64().unwrap() as i32, pair[1].as_i64().unwrap() as i32);
+                let chunk = crate::world::Chunk::generated(&generator, cx, cz);
+                for y in 0..128 { for z in 0..16 { for x in 0..16 {
+                    if !pieces.iter().any(|p| (p.bounds[0]..=p.bounds[3]).contains(&(cx*16+x))
+                        && (p.bounds[1]..=p.bounds[4]).contains(&y)
+                        && (p.bounds[2]..=p.bounds[5]).contains(&(cz*16+z))) { continue; }
+                    let name = blocks::block_at_state(chunk.block(x, y, z));
+                    for (i, expected) in names.iter().enumerate() {
+                        counts[i] += usize::from(name == Some(*expected));
+                    }
+                } } }
+            }
+            for (i, name) in names.iter().enumerate() {
+                let expected = case["sample_piece_box_blocks"][name].as_u64().unwrap_or(0) as usize;
+                assert!(counts[i].abs_diff(expected) <= (expected / 5).max(8),
+                    "{seed} {} {name}: {} / {expected}", case["chunk"], counts[i]);
+            }
+        }
+    }
 
     /// Все образцы разбираются и совпадают по размеру с замером.
     #[test]
