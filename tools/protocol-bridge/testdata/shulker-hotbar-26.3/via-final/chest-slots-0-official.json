@@ -1,0 +1,546 @@
+{
+ "scenario": "chest-slots",
+ "host": "127.0.0.1",
+ "port": 26171,
+ "lane": 1,
+ "window": {
+  "first": 4339,
+  "last": 4429
+ },
+ "events": [
+  {
+   "tick": 4339,
+   "ms": 147,
+   "kind": "do",
+   "what": "click 1,0,0",
+   "phase": 0
+  },
+  {
+   "tick": 4339,
+   "ms": 172,
+   "kind": "sound",
+   "at": [
+    1,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.chest.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9757810235023499
+  },
+  {
+   "tick": 4339,
+   "ms": 173,
+   "kind": "window",
+   "type": "5",
+   "title": "container.chestDouble"
+  },
+  {
+   "tick": 4339,
+   "ms": 173,
+   "kind": "slots",
+   "items": "0:dirt×2 26:stone×40 27:stone×1 32:stone×30"
+  },
+  {
+   "tick": 4339,
+   "ms": 173,
+   "kind": "block",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "chest[facing=north,type=right,waterlogged=false]"
+  },
+  {
+   "tick": 4339,
+   "ms": 174,
+   "kind": "block",
+   "at": [
+    1,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 4339,
+   "ms": 174,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4339,
+   "ms": 174,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4343,
+   "ms": 372,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4343,
+   "ms": 372,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4348,
+   "ms": 622,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4348,
+   "ms": 622,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4349,
+   "ms": 648,
+   "kind": "do",
+   "what": "window_click {\"slot\":0,\"button\":0,\"mode\":1}",
+   "phase": 0.02
+  },
+  {
+   "tick": 4349,
+   "ms": 672,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 0,
+   "item": "пусто"
+  },
+  {
+   "tick": 4349,
+   "ms": 672,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 89,
+   "item": "dirt×2"
+  },
+  {
+   "tick": 4353,
+   "ms": 872,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4353,
+   "ms": 872,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4358,
+   "ms": 1122,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4358,
+   "ms": 1122,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4359,
+   "ms": 1148,
+   "kind": "do",
+   "what": "window_click {\"slot\":27,\"button\":0,\"mode\":1}",
+   "phase": 0.02
+  },
+  {
+   "tick": 4359,
+   "ms": 1172,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 27,
+   "item": "пусто"
+  },
+  {
+   "tick": 4359,
+   "ms": 1172,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 88,
+   "item": "stone×1"
+  },
+  {
+   "tick": 4363,
+   "ms": 1372,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4363,
+   "ms": 1372,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4368,
+   "ms": 1622,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4368,
+   "ms": 1622,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4369,
+   "ms": 1647,
+   "kind": "do",
+   "what": "window_click {\"slot\":5,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4373,
+   "ms": 1872,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4373,
+   "ms": 1872,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4378,
+   "ms": 2122,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4378,
+   "ms": 2122,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4379,
+   "ms": 2148,
+   "kind": "do",
+   "what": "window_click {\"slot\":5,\"button\":0,\"mode\":6}",
+   "phase": 0.02
+  },
+  {
+   "tick": 4383,
+   "ms": 2372,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4383,
+   "ms": 2372,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4388,
+   "ms": 2622,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4388,
+   "ms": 2622,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4389,
+   "ms": 2647,
+   "kind": "do",
+   "what": "window_click {\"slot\":8,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4393,
+   "ms": 2872,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4393,
+   "ms": 2872,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4398,
+   "ms": 3122,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4398,
+   "ms": 3122,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4399,
+   "ms": 3148,
+   "kind": "do",
+   "what": "close",
+   "phase": 0.02
+  },
+  {
+   "tick": 4399,
+   "ms": 3172,
+   "kind": "sound",
+   "at": [
+    1,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.chest.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9162402749061584
+  },
+  {
+   "tick": 4399,
+   "ms": 3172,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 4399,
+   "ms": 3172,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 4403,
+   "ms": 3372,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 4403,
+   "ms": 3372,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  }
+ ]
+}

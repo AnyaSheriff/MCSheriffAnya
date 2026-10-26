@@ -5187,7 +5187,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
 }
 
 /// Игрок закрыл окно хранилища (или оно закрылось само): хранилище
-/// теряет смотрящего, курсор возвращается в инвентарь.
+/// теряет смотрящего, незавершённое перетаскивание сбрасывается.
 fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     player.crafting_drag = None;
     let Some(window) = player.window.take() else {
@@ -11040,7 +11040,7 @@ fn read_creative_slot_with_catalog(payload: &[u8], player: &mut PlayerState, cat
 /// щелчок выполняется на сервере, итог сравнивается с тем, что клиент
 /// предсказал сам (присланные изменённые ячейки и курсор), и досылаются
 /// только несовпавшие ячейки. Предсказание сверяется по предмету и числу:
-/// своих довесков у наших предметов нет.
+/// довески изменившихся стопок досылаются полностью.
 /// Кнопка в окне кафедры: листать (1 — назад, 2 — вперёд, 100 + N — на
 /// страницу N) или взять книгу (3). Страница сменилась — клиенту новое
 /// свойство окна; книгу взяли — она в инвентаре, окно закрывается.
@@ -11142,7 +11142,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
     let mut cursor = Cursor::new(payload);
 
-    let (Some(_window), Some(_state_id), Some(slot), Some(button), Some(mode)) =
+    let (Some(window_id), Some(state_id), Some(slot), Some(button), Some(mode)) =
         (cursor.varint(), cursor.varint(), cursor.u16(), cursor.u8(), cursor.varint())
     else {
         return;
@@ -11171,6 +11171,14 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     let Some(window) = player.window.as_ref() else {
         return;
     };
+
+    if window.id != window_id || player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR { return; }
+    // Устаревший state ID не отменяет действие: после него нужен полный
+    // авторитетный снимок (официальный777, probe_shulker_hotbar.py).
+    reaction.inventory |= state_id != player.state_id;
+    if mode != 5 { player.crafting_drag = None; }
+    let cursor_before = player.inventory.cursor();
+    let offhand_before = player.inventory.slot(inventory::OFFHAND);
 
     if window.merchant.is_some() {
         merchant::click(shared, player, (slot as i16 as i32, button as i8, mode), &predicted, predicted_cursor, readable, reaction);
@@ -11216,7 +11224,10 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         let before = snapshot(&slots, &player.inventory);
         let (slots_before, inventory_before) = (slots.clone(), player.inventory.clone());
         let llama=cart.is_some_and(|id| shared.items_in(player.dimension).lock().expect("мобы").mobs().iter().any(|m| m.entity_id==id && crate::mob::land::llama(m.kind)));
-        let mut click = if llama && mode==1 { land::quick_move(&mut slots,&mut player.inventory,slot as i16 as i32) }
+        let mut click = if mode == 5 {
+            window::Window { container: &mut slots, inventory: &mut player.inventory, kind, horse: horse_kind }
+                .drag(&mut player.crafting_drag, window_id, slot as i16 as i32, button as i8, player.game_mode == GAME_MODE_CREATIVE)
+        } else if llama && mode==1 { land::quick_move(&mut slots,&mut player.inventory,slot as i16 as i32) }
             else { window::Window { container: &mut slots, inventory: &mut player.inventory, kind, horse: horse_kind }.click(slot as i16 as i32, button as i8, mode) };
 
         // В выключенную ячейку крафтера ничего не кладётся (вики, Crafter:
@@ -11331,17 +11342,27 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             .find(|(place, _)| *place == index)
             .map_or(as_pair(before[index]), |(_, item)| *item);
 
-        // Мешок, у которого изменилось содержимое на месте, клиент предсказать не может (хэш довесков
-        // другой): ячейка уходит заново (чёрный ящик bundle-chest-select).
-        let bundle_changed = before[index] != *stack && stack.is_some_and(|s| crate::bundle::is_bundle(s.item)) && before[index].is_some_and(|b| b.item == stack.map_or(-1, |s| s.item));
+        // Хэш довесков здесь не сверяется: изменившуюся стопку с данными
+        // (включая содержимое шалкера) отправляем полностью, как мешок
+        // в чёрном ящике bundle-chest-select.
+        let components_changed = before[index] != *stack && stack.is_some_and(|s| s.data.is_some());
+        let bundle_changed = before[index] != *stack && stack.is_some_and(|s| crate::bundle::is_bundle(s.item))
+            && before[index].is_some_and(|b| b.item == stack.map_or(-1, |s| s.item));
 
-        if !readable || expected != as_pair(*stack) || bundle_changed {
+        if !readable || expected != as_pair(*stack) || components_changed || bundle_changed {
             reaction.window_slots.push((index, *stack));
         }
     }
 
-    if !readable || predicted_cursor != Some(as_pair(player.inventory.cursor())) {
+    if !readable || predicted_cursor != Some(as_pair(player.inventory.cursor()))
+        || (cursor_before != player.inventory.cursor() && player.inventory.cursor().is_some_and(|s| s.data.is_some()))
+    {
         reaction.cursor = Some(player.inventory.cursor());
+    }
+    // Вторая рука не входит в36ячеек снизу: её перемену нельзя потерять
+    // при синхронизации окна и последующем закрытии.
+    if offhand_before != player.inventory.slot(inventory::OFFHAND) {
+        reaction.slots.push(inventory::OFFHAND);
     }
 }
 
@@ -11761,6 +11782,7 @@ struct PlayerState {
     /// Номер последнего открытого окна — следующее получит номер на один
     /// больше.
     window_counter: i32,
+    /// Перетаскивание в инвентаре, верстаке или хранилище: окно, кнопка, ячейки.
     crafting_drag: Option<(i32, i8, Vec<i32>)>,
 
     /// Здоровье, еда, воздух, огонь (survival.rs).
@@ -13214,3 +13236,6 @@ mod abilities_tests;
 #[cfg(test)]
 #[path = "play/chunk_stream_tests.rs"]
 mod chunk_stream_tests;
+
+#[cfg(test)]
+mod shulker_hotbar_tests;

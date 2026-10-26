@@ -1,0 +1,121 @@
+{
+ "scenario": "craft-inventory-planks",
+ "host": "127.0.0.1",
+ "port": 26271,
+ "lane": 1,
+ "window": {
+  "first": 5222,
+  "last": 5282
+ },
+ "events": [
+  {
+   "tick": 5222,
+   "ms": 148,
+   "kind": "do",
+   "what": "window_click {\"slot\":36,\"button\":0,\"mode\":0,\"inventory\":true}",
+   "phase": 0
+  },
+  {
+   "tick": 5222,
+   "ms": 173,
+   "kind": "inv",
+   "slot": 36,
+   "item": "пусто"
+  },
+  {
+   "tick": 5222,
+   "ms": 174,
+   "kind": "cursor",
+   "item": "stripped_spruce_wood×2"
+  },
+  {
+   "tick": 5227,
+   "ms": 398,
+   "kind": "do",
+   "what": "window_click {\"slot\":4,\"button\":0,\"mode\":0,\"inventory\":true}",
+   "phase": 0
+  },
+  {
+   "tick": 5227,
+   "ms": 423,
+   "kind": "inv",
+   "slot": 0,
+   "item": "spruce_planks×4"
+  },
+  {
+   "tick": 5227,
+   "ms": 423,
+   "kind": "inv",
+   "slot": 4,
+   "item": "stripped_spruce_wood×2"
+  },
+  {
+   "tick": 5232,
+   "ms": 649,
+   "kind": "do",
+   "what": "window_click {\"slot\":0,\"button\":0,\"mode\":0,\"inventory\":true}",
+   "phase": 0.02
+  },
+  {
+   "tick": 5232,
+   "ms": 673,
+   "kind": "inv",
+   "slot": 0,
+   "item": "spruce_planks×4"
+  },
+  {
+   "tick": 5232,
+   "ms": 673,
+   "kind": "inv",
+   "slot": 4,
+   "item": "stripped_spruce_wood×1"
+  },
+  {
+   "tick": 5232,
+   "ms": 673,
+   "kind": "cursor",
+   "item": "spruce_planks×4"
+  },
+  {
+   "tick": 5247,
+   "ms": 1399,
+   "kind": "do",
+   "what": "close",
+   "phase": 0.02
+  },
+  {
+   "tick": 5247,
+   "ms": 1424,
+   "kind": "inv",
+   "slot": 0,
+   "item": "пусто"
+  },
+  {
+   "tick": 5247,
+   "ms": 1424,
+   "kind": "inv",
+   "slot": 4,
+   "item": "пусто"
+  },
+  {
+   "tick": 5247,
+   "ms": 1424,
+   "kind": "inv",
+   "slot": 36,
+   "item": "spruce_planks×4"
+  },
+  {
+   "tick": 5247,
+   "ms": 1424,
+   "kind": "inv",
+   "slot": 37,
+   "item": "stripped_spruce_wood×1"
+  },
+  {
+   "tick": 5247,
+   "ms": 1424,
+   "kind": "cursor",
+   "item": "пусто"
+  }
+ ]
+}

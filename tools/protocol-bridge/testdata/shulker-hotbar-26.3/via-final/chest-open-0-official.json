@@ -1,0 +1,344 @@
+{
+ "scenario": "chest-open",
+ "host": "127.0.0.1",
+ "port": 26171,
+ "lane": 1,
+ "window": {
+  "first": 3911,
+  "last": 3991
+ },
+ "events": [
+  {
+   "tick": 3911,
+   "ms": 148,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0
+  },
+  {
+   "tick": 3911,
+   "ms": 175,
+   "kind": "sound",
+   "at": [
+    1,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.chest.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9328570365905762
+  },
+  {
+   "tick": 3911,
+   "ms": 175,
+   "kind": "window",
+   "type": "5",
+   "title": "container.chestDouble"
+  },
+  {
+   "tick": 3911,
+   "ms": 175,
+   "kind": "slots",
+   "items": ""
+  },
+  {
+   "tick": 3911,
+   "ms": 176,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "chest[facing=north,type=left,waterlogged=false]"
+  },
+  {
+   "tick": 3911,
+   "ms": 176,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 3911,
+   "ms": 176,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3911,
+   "ms": 176,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3915,
+   "ms": 374,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3915,
+   "ms": 374,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3920,
+   "ms": 623,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3920,
+   "ms": 623,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3925,
+   "ms": 873,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3925,
+   "ms": 873,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 3926,
+   "ms": 898,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 3926,
+   "ms": 923,
+   "kind": "sound",
+   "at": [
+    1,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.chest.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9764584898948669
+  },
+  {
+   "tick": 3926,
+   "ms": 923,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 3926,
+   "ms": 923,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 3930,
+   "ms": 1123,
+   "kind": "action",
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 3930,
+   "ms": 1123,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 3941,
+   "ms": 1898,
+   "kind": "do",
+   "what": "click 0,0,3",
+   "phase": 0
+  },
+  {
+   "tick": 3946,
+   "ms": 1923,
+   "kind": "sound",
+   "at": [
+    0.5,
+    1,
+    3.5
+   ],
+   "sound": "minecraft:block.barrel.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9781031012535095
+  },
+  {
+   "tick": 3946,
+   "ms": 1923,
+   "kind": "window",
+   "type": "2",
+   "title": "container.barrel"
+  },
+  {
+   "tick": 3946,
+   "ms": 1923,
+   "kind": "slots",
+   "items": ""
+  },
+  {
+   "tick": 3946,
+   "ms": 1923,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    3
+   ],
+   "state": "barrel[facing=up,open=true]"
+  },
+  {
+   "tick": 3946,
+   "ms": 1923,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    3
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 3946,
+   "ms": 1924,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    3
+   ],
+   "state": "barrel[facing=up,open=true]"
+  },
+  {
+   "tick": 3956,
+   "ms": 2398,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 3956,
+   "ms": 2423,
+   "kind": "sound",
+   "at": [
+    0.5,
+    1,
+    3.5
+   ],
+   "sound": "minecraft:block.barrel.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.988851010799408
+  },
+  {
+   "tick": 3956,
+   "ms": 2423,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    3
+   ],
+   "state": "barrel[facing=up,open=false]"
+  }
+ ]
+}

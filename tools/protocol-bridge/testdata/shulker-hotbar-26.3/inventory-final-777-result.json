@@ -1,0 +1,1000 @@
+{
+  "protocol": 777,
+  "target": "core",
+  "jar_sha1": null,
+  "snapshots": [
+    {
+      "stage": "right-pickup",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 4
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 4
+      }
+    },
+    {
+      "stage": "shift",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "hotbar-swap",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "drop-one",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 7
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "drop-stack",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "creative-clone",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 64
+      }
+    },
+    {
+      "stage": "double-click",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "left-drag",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 4
+        },
+        {
+          "item": "bedrock",
+          "count": 4
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "right-drag",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 1
+        },
+        {
+          "item": "bedrock",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 6
+      }
+    },
+    {
+      "stage": "creative-drag",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "right-place",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 7
+      }
+    },
+    {
+      "stage": "double-collect",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 8
+      }
+    }
+  ],
+  "packets": [
+    {
+      "name": "window_items",
+      "payload": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00022e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0003002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0004002404570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "04570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "04570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0005002408570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "00062e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0007002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0008000908570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0009002400"
+    },
+    {
+      "name": "window_items",
+      "payload": "000a2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000b002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000c002400"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000d002508570000"
+    },
+    {
+      "name": "window_items",
+      "payload": "000e2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000f002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0010002407570000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00112e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0012002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0013002400"
+    },
+    {
+      "name": "window_items",
+      "payload": "00142e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0015002408570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "40570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "40570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0016002440570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0017002508570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "00182e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0019002408570000"
+    },
+    {
+      "name": "window_items",
+      "payload": "001a2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001b002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001c002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001d002504570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001e002604570000"
+    },
+    {
+      "name": "window_items",
+      "payload": "001f2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0020002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0021002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0022002501570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0023002601570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "06570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "06570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0024002507570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "00252e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0026002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0027002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0028002540570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0029002640570000"
+    },
+    {
+      "name": "window_items",
+      "payload": "002a2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "002b002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "002c002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "002d002501570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "07570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "07570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "002e002508570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "002f2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0030002408570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0031002404570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "04570000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0032002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "08570000"
+    }
+  ],
+  "exit_code": 0
+}

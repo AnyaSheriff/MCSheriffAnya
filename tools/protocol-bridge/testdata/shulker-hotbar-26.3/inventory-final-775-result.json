@@ -1,0 +1,1152 @@
+{
+  "protocol": 775,
+  "target": "core",
+  "jar_sha1": null,
+  "snapshots": [
+    {
+      "stage": "right-pickup",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 4
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 4
+      }
+    },
+    {
+      "stage": "shift",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "hotbar-swap",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "drop-one",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 7
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "drop-stack",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "creative-clone",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 64
+      }
+    },
+    {
+      "stage": "double-click",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "left-drag",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 4
+        },
+        {
+          "item": "bedrock",
+          "count": 4
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "right-drag",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 1
+        },
+        {
+          "item": "bedrock",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 6
+      }
+    },
+    {
+      "stage": "creative-drag",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "right-place",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 7
+      }
+    },
+    {
+      "stage": "double-collect",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": "bedrock",
+        "count": 8
+      }
+    }
+  ],
+  "packets": [
+    {
+      "name": "window_items",
+      "payload": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00022e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00030024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00042e000000000000000000000000000000000000000000000000000000000000000000000000043a0000000000000000000000043a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00050024043a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "043a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00062e000000000000000000000000000000000000000000000000000000000000000000000000043a0000000000000000000000043a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "043a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00070024083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "00082e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00090024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "000a2e000000000000000000083a000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000b0009083a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000c002400"
+    },
+    {
+      "name": "window_items",
+      "payload": "000d2e000000000000000000083a000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "000e2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "000f0024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00102e00000000000000000000000000000000000000000000000000000000000000000000000000083a0000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0011002400"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00120025083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00132e00000000000000000000000000000000000000000000000000000000000000000000000000083a0000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00142e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00150024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00162e000000000000000000000000000000000000000000000000000000000000000000000000073a000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00170024073a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00182e000000000000000000000000000000000000000000000000000000000000000000000000073a000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00192e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001a0024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "001b2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001c002400"
+    },
+    {
+      "name": "window_items",
+      "payload": "001d2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "001e2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "001f0024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00202e000000000000000000000000000000000000000000000000000000000000000000000000083a0000000000000000000000403a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "403a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00212e000000000000000000000000000000000000000000000000000000000000000000000000083a0000000000000000000000403a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "403a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00220024403a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00230025083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "00242e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00250024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00262e000000000000000000000000000000000000000000000000000000000000000000000000083a000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00272e000000000000000000000000000000000000000000000000000000000000000000000000083a000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00282e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00290024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "002a2e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "002b002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "002c2e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "002d2e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "002e2e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "002f2e00000000000000000000000000000000000000000000000000000000000000000000000000043a0000043a00000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00300025043a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00310026043a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00322e00000000000000000000000000000000000000000000000000000000000000000000000000043a0000043a00000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00332e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00340024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00352e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0036002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00372e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00382e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00392e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "003a2e00000000000000000000000000000000000000000000000000000000000000000000000000013a0000013a000000000000000000063a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "003b0025013a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "003c0026013a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "063a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "003d2e00000000000000000000000000000000000000000000000000000000000000000000000000013a0000013a000000000000000000063a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "063a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "003e0025073a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "003f2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00400024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00412e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0042002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00432e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00442e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00452e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00462e00000000000000000000000000000000000000000000000000000000000000000000000000403a0000403a00000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00470025403a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00480026403a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00492e00000000000000000000000000000000000000000000000000000000000000000000000000403a0000403a00000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "004a2e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "004b0024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "004c2e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "004d002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "004e2e00000000000000000000000000000000000000000000000000000000000000000000000000013a00000000000000000000073a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "004f0025013a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "073a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00502e00000000000000000000000000000000000000000000000000000000000000000000000000013a00000000000000000000073a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "073a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00510025083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "00"
+    },
+    {
+      "name": "window_items",
+      "payload": "00522e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00530024083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00542e000000000000000000000000000000000000000000000000000000000000000000000000043a0000000000000000000000043a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "00550024043a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "043a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00562e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0057002400"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00582e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000083a0000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "083a0000"
+    }
+  ],
+  "exit_code": 0
+}

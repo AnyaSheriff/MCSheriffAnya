@@ -1,0 +1,34 @@
+{
+  "head": "99103075dfcd943d74c5ab733cd9a6b1e27cca3f",
+  "test": {
+    "command": "CARGO_BUILD_JOBS=4 flock /home/lenox/.cache/mcsheriffanya/gen-audit-263/.cargo.lock cargo test --release --workspace",
+    "exit_code": 0,
+    "passed": 3411,
+    "ignored": 111,
+    "failed": 0,
+    "new_regressions": 13,
+    "log_sha256": "da8d30231e3fd21587345c30249a87f06593a99d91e2b8f49f3c21ceac695326"
+  },
+  "source_sha256": {
+    "src/network/play.rs": "d79ab1589bb5b7dde55ae4c660665714c2ea53fdf3756d03c241be634c63d1b2",
+    "src/window.rs": "c56e1c3e2f5649701bf703620e92518835ca794e98bfa176db2386c2a8287177",
+    "src/network/play/shulker_hotbar_tests.rs": "70bbe799243d03994ea32400bb53e091cc5fabe435edae60e293a77a190b3696"
+  },
+  "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+  "clippy": {
+    "command": "CARGO_BUILD_JOBS=4 flock /home/lenox/.cache/mcsheriffanya/gen-audit-263/.cargo.lock cargo clippy --release --all-targets --workspace -- -D warnings",
+    "exit_code": 0,
+    "log_sha256": "c433243c98b0b78cf4ca2e280a393254d3a4cf9ce52efcf947b42c05f4a41ec4"
+  },
+  "baseline": {
+    "head": "99103075dfcd943d74c5ab733cd9a6b1e27cca3f",
+    "binary_sha256": "c22304573fbe132f5359fecf340c5203360487da21c8d1d553f54bd56282ae0f",
+    "source_sha256": {
+      "src/network/play.rs": "9a51b285355077e724a2f1fffdada2c3550a14e13fa9066338f0b512a7544936",
+      "src/window.rs": "47443fd5956c7220145f4c5220b44c4d0cc551a85b0799840ebfb1b647349fb7"
+    },
+    "cargo_lock_sha256": "7d4ed14317f114de8174b54dfc4a448aa1adc11e481b32e93efd24c6bbebf444",
+    "cache_reuse_rejected": true,
+    "forced_rebuild_exit_code": 0
+  }
+}

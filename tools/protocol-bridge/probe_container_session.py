@@ -89,12 +89,15 @@ def main():
     source = p.add_mutually_exclusive_group(required=True)
     source.add_argument('--jar', type=Path)
     source.add_argument('--test-binary', type=Path)
+    source.add_argument('--binary', type=Path)
     p.add_argument('--data', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--port', type=int, required=True)
     a = p.parse_args()
     if a.test_binary:
         assert a.port == 26026
+    if a.binary:
+        assert 26200 <= a.port <= 26299
     sources = json.loads((a.data / 'sources.json').read_text())
     for entry in sources['files'] + sources['baseline_files']:
         assert hashlib.sha256((a.data / entry['file']).read_bytes()).hexdigest() == entry['sha256']
@@ -104,14 +107,14 @@ def main():
     commands = Path(__file__).parent / 'testdata/nested-item-commands.json'
     item = next(c['command'] for c in json.loads(commands.read_text()) if c['name'] == 'container_sparse')
     report = {'version': a.version, 'checks': [], 'snapshots': {}, 'commands_sha256': hashlib.sha256(commands.read_bytes()).hexdigest()}
-    report['gameplay_version'] = '26.1.2' if a.test_binary or a.version == 775 else '26.3'
+    report['gameplay_version'] = '26.3' if a.binary or not a.test_binary and a.version == 777 else '26.1.2'
     report['items_sha256'] = hashlib.sha256(item_table.read_bytes()).hexdigest()
     if a.jar:
         expected = {775: '97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51', 777: '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}[a.version]
         assert hashlib.sha1(a.jar.read_bytes()).hexdigest() == expected
         report['jar_sha1'] = expected
     else:
-        report['test_binary_sha256'] = hashlib.sha256(a.test_binary.read_bytes()).hexdigest()
+        report['test_binary_sha256'] = hashlib.sha256((a.test_binary or a.binary).read_bytes()).hexdigest()
     with socket.socket() as check:
         check.bind(('127.0.0.1', a.port))
     a.output.mkdir(parents=True, exist_ok=True)
@@ -125,10 +128,15 @@ def main():
         else:
             (root / 'mcsa-gameplay-probe.marker').touch()
             (root / 'config').mkdir()
-            (root / 'world/playerdata').mkdir(parents=True)
+            if a.test_binary:
+                (root / 'world/playerdata').mkdir(parents=True)
             (root / 'skins').mkdir()
-            argv = [str(a.test_binary.resolve()), '--ignored', '--exact', 'gameplay_probe::serve_java_26_3_probe', '--nocapture']
-            ready = 'MCSA gameplay probe ready'
+            argv = [str(a.test_binary.resolve()), '--ignored', '--exact', 'gameplay_probe::serve_java_26_3_probe', '--nocapture'] if a.test_binary else [str(a.binary.resolve())]
+            ready = 'MCSA gameplay probe ready' if a.test_binary else 'Сервер запущен на'
+            if a.binary:
+                (root / 'config/server.properties').write_text(f'server-port={a.port}\nonline-mode=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\n')
+                (root / 'config/mcsa.properties').write_text('java-version=26.3\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
+                (root / 'config/skins.toml').write_text('mojang=false\nely=false\n')
         log = root / 'server.log'
         with log.open('w') as output:
             server = subprocess.Popen(argv, cwd=root, stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT, text=True)

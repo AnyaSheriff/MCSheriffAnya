@@ -1,0 +1,440 @@
+{
+ "scenario": "shulker-ai",
+ "host": "127.0.0.1",
+ "port": 26271,
+ "lane": 1,
+ "window": {
+  "first": 3386,
+  "last": 3456
+ },
+ "events": [
+  {
+   "tick": 3386,
+   "ms": 148,
+   "kind": "do",
+   "what": "cmd summon shulker $(3.5,0,5.5) {Silent:1b}",
+   "phase": 0
+  },
+  {
+   "tick": 3386,
+   "ms": 176,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    0,
+    5.5
+   ],
+   "type": "shulker",
+   "data": 0,
+   "id": 53,
+   "velocity": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   "extra": "3.5,0,5.5 yaw=0 pitch=0 head=0"
+  },
+  {
+   "tick": 3386,
+   "ms": 176,
+   "kind": "meta",
+   "id": 53,
+   "fields": "4=true 9=30"
+  },
+  {
+   "tick": 3386,
+   "ms": 176,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "move",
+   "id": 53,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3386,
+   "ms": 176,
+   "kind": "meta",
+   "id": 53,
+   "fields": "4=true 9=30"
+  },
+  {
+   "tick": 3387,
+   "ms": 225,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_head_rotation {\"headYaw\":127}"
+  },
+  {
+   "tick": 3387,
+   "ms": 225,
+   "kind": "meta",
+   "id": 53,
+   "fields": "17=100"
+  },
+  {
+   "tick": 3387,
+   "ms": 225,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_update_attributes {\"properties\":[{\"key\":\"generic.armor\",\"value\":0,\"modifiers\":[]}]}"
+  },
+  {
+   "tick": 3389,
+   "ms": 325,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_update_attributes {\"properties\":[{\"key\":\"generic.scale\",\"value\":0.7,\"modifiers\":[]}]}"
+  },
+  {
+   "tick": 3405,
+   "ms": 1125,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    1,
+    5.5
+   ],
+   "type": "shulker_bullet",
+   "data": 8000766,
+   "id": 54,
+   "velocity": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   "extra": "3.5,0.99692,5.5 yaw=0 pitch=0 head=0"
+  },
+  {
+   "tick": 3406,
+   "ms": 1175,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3409,
+   "ms": 1325,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.077
+   ]
+  },
+  {
+   "tick": 3409,
+   "ms": 1325,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -672
+   ],
+   "yaw": 0,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3412,
+   "ms": 1475,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.123
+   ]
+  },
+  {
+   "tick": 3412,
+   "ms": 1475,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -1341
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3415,
+   "ms": 1625,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.152
+   ]
+  },
+  {
+   "tick": 3415,
+   "ms": 1625,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -1760
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3418,
+   "ms": 1775,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.174
+   ]
+  },
+  {
+   "tick": 3418,
+   "ms": 1775,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -2057
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3421,
+   "ms": 1925,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.193
+   ]
+  },
+  {
+   "tick": 3421,
+   "ms": 1925,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -2299
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3424,
+   "ms": 2075,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.211
+   ]
+  },
+  {
+   "tick": 3424,
+   "ms": 2075,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -2517
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3427,
+   "ms": 2225,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.228
+   ]
+  },
+  {
+   "tick": 3427,
+   "ms": 2225,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -2733
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3430,
+   "ms": 2375,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 54,
+   "v": [
+    0,
+    0,
+    -0.247
+   ]
+  },
+  {
+   "tick": 3430,
+   "ms": 2375,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 54,
+   "d": [
+    0,
+    0,
+    -2954
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3431,
+   "ms": 2425,
+   "kind": "destroy",
+   "ids": [
+    54
+   ]
+  },
+  {
+   "tick": 3431,
+   "ms": 2425,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "gone",
+   "id": 54
+  },
+  {
+   "tick": 3446,
+   "ms": 3175,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "move",
+   "id": 53,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3453,
+   "ms": 3525,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    1,
+    5.5
+   ],
+   "type": "shulker_bullet",
+   "data": 8000766,
+   "id": 55,
+   "velocity": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   "extra": "3.5,0.99692,5.5 yaw=0 pitch=0 head=0"
+  },
+  {
+   "tick": 3454,
+   "ms": 3575,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 55,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3457,
+   "ms": 3725,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 55,
+   "v": [
+    0,
+    0,
+    -0.077
+   ]
+  },
+  {
+   "tick": 3457,
+   "ms": 3726,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 55,
+   "d": [
+    0,
+    0,
+    -672
+   ],
+   "yaw": 0,
+   "pitch": -1,
+   "ground": false
+  }
+ ]
+}

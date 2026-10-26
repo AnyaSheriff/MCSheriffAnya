@@ -19,14 +19,16 @@ def main():
     target=p.add_mutually_exclusive_group(required=True)
     target.add_argument('--jar',type=Path)
     target.add_argument('--test-binary',type=Path)
+    target.add_argument('--binary',type=Path)
     p.add_argument('--version', type=int, choices=[775,777], required=True)
     p.add_argument('--data', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--port', type=int)
     a = p.parse_args()
     expected = {775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51',777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}[a.version]
-    a.port=a.port or (26026 if a.test_binary else 26024)
+    a.port=a.port or (26226 if a.binary else 26026 if a.test_binary else 26024)
     if a.test_binary: assert a.port==26026
+    elif a.binary: assert 26200<=a.port<=26299
     else: assert hashlib.sha1(a.jar.read_bytes()).hexdigest() == expected
     manifest = json.loads((a.data / 'sources.json').read_text())
     for entry in manifest['files'] + manifest['baseline_files']:
@@ -35,7 +37,7 @@ def main():
     items = a.data / 'items.json' if a.version == 777 else Path(__file__).resolve().parents[2] / 'tools/data/items.json'
     names = {v['id']:v['name'] for v in json.loads(items.read_text())}
     fixture = json.loads((Path(__file__).parent / 'testdata/legacy-inventory.json').read_text())
-    report = {'protocol':a.version,'target':'core' if a.test_binary else 'official','jar_sha1':expected if a.jar else None,'snapshots':[]}
+    report = {'protocol':a.version,'target':'core' if a.test_binary or a.binary else 'official','jar_sha1':expected if a.jar else None,'snapshots':[]}
     a.output.mkdir(parents=True,exist_ok=True)
     with socket.socket() as check: check.bind(('127.0.0.1',a.port))
     with tempfile.TemporaryDirectory(prefix='mcsa-inventory-modes-') as directory:
@@ -44,7 +46,13 @@ def main():
         (root/'server.properties').write_text(f'server-ip=127.0.0.1\nserver-port={a.port}\nonline-mode=false\nwhite-list=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=flat\nlevel-seed=1\nview-distance=2\n')
         log=a.output/'server.log'
         with log.open('w') as output:
-            if a.test_binary:
+            if a.binary:
+                (root/'config').mkdir()
+                (root/'config/server.properties').write_text((root/'server.properties').read_text())
+                (root/'config/mcsa.properties').write_text('java-version=26.3\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
+                (root/'config/skins.toml').write_text('mojang=false\nely=false\n')
+                argv=[str(a.binary.resolve())]
+            elif a.test_binary:
                 (root/'mcsa-gameplay-probe.marker').touch()
                 argv=[str(a.test_binary.resolve()),'--ignored','--exact','gameplay_probe::serve_java_26_3_probe','--nocapture']
             else: argv=['/usr/lib/jvm/java-25-openjdk/bin/java','-Xmx1G','-jar',str(a.jar.resolve()),'nogui']
@@ -53,7 +61,7 @@ def main():
             def command(value): server.stdin.write(value+'\n');server.stdin.flush()
             try:
                 deadline=time.monotonic()+120
-                ready='MCSA gameplay probe ready' if a.test_binary else 'Done ('
+                ready='Сервер запущен на' if a.binary else 'MCSA gameplay probe ready' if a.test_binary else 'Done ('
                 while ready not in log.read_text():
                     assert server.poll() is None and time.monotonic()<deadline
                     time.sleep(.1)
@@ -78,9 +86,9 @@ def main():
                     before=len(client.observed)
                     client.send('window_click',b'\0'+varint(-1)+struct.pack('>hb',5,0)+b'\0\0\0')
                     client.pump(.3)
-                    if not a.test_binary: assert any(r['name']=='window_items' for r in client.observed[before:]),stage
+                    if not (a.test_binary or a.binary): assert any(r['name']=='window_items' for r in client.observed[before:]),stage
                     current={'stage':stage,'slots':list(client.inventory['slots']),'cursor':client.inventory['cursor']}
-                    if a.test_binary:
+                    if a.test_binary or a.binary:
                         def plain(v): return None if v is None else {'item':'bedrock','count':v['count']}
                         assert current['slots']==[plain(v) for v in snapshot['slots']],(stage,'slots',current)
                         assert current['cursor']==plain(snapshot['cursor']),(stage,'cursor',current)

@@ -1,0 +1,109 @@
+{
+  "name": "shulker-hotbar-drag-right",
+  "about": "Перетаскивание из установленного шалкера в крайние ячейки панели; авторитетные ячейки и курсор, закрытие и повторное открытие.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:shulker_box[facing=up]{Items:[{Slot:0b,id:\"minecraft:stone\",count:12}]}"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(1.5,0,2.5)",
+    "!stopfly",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 20,
+      "window_click": {
+        "slot": -999,
+        "button": 4,
+        "mode": 5
+      }
+    },
+    {
+      "after": 30,
+      "window_click": {
+        "slot": 54,
+        "button": 5,
+        "mode": 5
+      }
+    },
+    {
+      "after": 40,
+      "window_click": {
+        "slot": 55,
+        "button": 5,
+        "mode": 5
+      }
+    },
+    {
+      "after": 50,
+      "window_click": {
+        "slot": 62,
+        "button": 5,
+        "mode": 5
+      }
+    },
+    {
+      "after": 60,
+      "window_click": {
+        "slot": -999,
+        "button": 6,
+        "mode": 5
+      }
+    },
+    {
+      "after": 65,
+      "window_click": {
+        "slot": 61,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 75,
+      "close": true
+    },
+    {
+      "after": 85,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 100,
+      "close": true
+    }
+  ],
+  "cleanup": [
+    "clear $(bot)",
+    "setblock $(0,0,0) minecraft:air",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 110
+}

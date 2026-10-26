@@ -1,0 +1,82 @@
+{
+  "name": "shulker-hotbar-quick-move",
+  "about": "Shift из установленного шалкера: слияние в занятую панель, крайняя ячейка26 после переоткрытия, повторная синхронизация.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:shulker_box[facing=up]{Items:[{Slot:0b,id:\"minecraft:stone\",count:12},{Slot:26b,id:\"minecraft:diamond\",count:3}]}"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "item replace entity $(bot) hotbar.8 with minecraft:stone 60",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(1.5,0,2.5)",
+    "!stopfly",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 2,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 1
+      }
+    },
+    {
+      "after": 12,
+      "close": true
+    },
+    {
+      "after": 20,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 22,
+      "window_click": {
+        "slot": 26,
+        "button": 1,
+        "mode": 1
+      }
+    },
+    {
+      "after": 35,
+      "close": true
+    },
+    {
+      "after": 45,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 60,
+      "close": true
+    }
+  ],
+  "cleanup": [
+    "clear $(bot)",
+    "setblock $(0,0,0) minecraft:air",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 70
+}

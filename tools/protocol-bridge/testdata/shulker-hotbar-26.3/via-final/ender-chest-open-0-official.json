@@ -1,0 +1,456 @@
+{
+ "scenario": "ender-chest-open",
+ "host": "127.0.0.1",
+ "port": 26171,
+ "lane": 1,
+ "window": {
+  "first": 5823,
+  "last": 5923
+ },
+ "events": [
+  {
+   "tick": 5823,
+   "ms": 135,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0
+  },
+  {
+   "tick": 5823,
+   "ms": 161,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.ender_chest.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.984541654586792
+  },
+  {
+   "tick": 5823,
+   "ms": 161,
+   "kind": "window",
+   "type": "2",
+   "title": "container.enderchest"
+  },
+  {
+   "tick": 5823,
+   "ms": 161,
+   "kind": "slots",
+   "items": "54:stone×20 55:dirt×5"
+  },
+  {
+   "tick": 5823,
+   "ms": 161,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "ender_chest[facing=north,waterlogged=false]"
+  },
+  {
+   "tick": 5823,
+   "ms": 162,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 5823,
+   "ms": 162,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5827,
+   "ms": 360,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5832,
+   "ms": 610,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5833,
+   "ms": 635,
+   "kind": "do",
+   "what": "window_click {\"slot\":54,\"button\":0,\"mode\":1}",
+   "phase": 0
+  },
+  {
+   "tick": 5833,
+   "ms": 660,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 0,
+   "item": "stone×20"
+  },
+  {
+   "tick": 5833,
+   "ms": 660,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 54,
+   "item": "пусто"
+  },
+  {
+   "tick": 5837,
+   "ms": 835,
+   "kind": "do",
+   "what": "window_click {\"slot\":55,\"button\":0,\"mode\":1}",
+   "phase": 0
+  },
+  {
+   "tick": 5837,
+   "ms": 860,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 1,
+   "item": "dirt×5"
+  },
+  {
+   "tick": 5837,
+   "ms": 860,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 55,
+   "item": "пусто"
+  },
+  {
+   "tick": 5837,
+   "ms": 860,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5842,
+   "ms": 1110,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5843,
+   "ms": 1135,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 5843,
+   "ms": 1160,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.ender_chest.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9475931525230408
+  },
+  {
+   "tick": 5843,
+   "ms": 1160,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5847,
+   "ms": 1360,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5853,
+   "ms": 1886,
+   "kind": "do",
+   "what": "click 6,0,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 5858,
+   "ms": 1910,
+   "kind": "block",
+   "at": [
+    6,
+    0,
+    0
+   ],
+   "state": "ender_chest[facing=north,waterlogged=false]"
+  },
+  {
+   "tick": 5858,
+   "ms": 1910,
+   "kind": "block",
+   "at": [
+    6,
+    1,
+    0
+   ],
+   "state": "stone"
+  },
+  {
+   "tick": 5863,
+   "ms": 2385,
+   "kind": "do",
+   "what": "click 3,0,0",
+   "phase": 0
+  },
+  {
+   "tick": 5868,
+   "ms": 2410,
+   "kind": "sound",
+   "at": [
+    3.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.ender_chest.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9220167398452759
+  },
+  {
+   "tick": 5868,
+   "ms": 2410,
+   "kind": "window",
+   "type": "2",
+   "title": "container.enderchest"
+  },
+  {
+   "tick": 5868,
+   "ms": 2410,
+   "kind": "slots",
+   "items": "0:stone×20 1:dirt×5"
+  },
+  {
+   "tick": 5868,
+   "ms": 2410,
+   "kind": "block",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "ender_chest[facing=north,waterlogged=false]"
+  },
+  {
+   "tick": 5868,
+   "ms": 2410,
+   "kind": "block",
+   "at": [
+    3,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 5868,
+   "ms": 2410,
+   "kind": "action",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5872,
+   "ms": 2610,
+   "kind": "action",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5873,
+   "ms": 2635,
+   "kind": "do",
+   "what": "window_click {\"slot\":0,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 5873,
+   "ms": 2660,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 0,
+   "item": "пусто"
+  },
+  {
+   "tick": 5873,
+   "ms": 2660,
+   "kind": "cursor",
+   "item": "stone×20"
+  },
+  {
+   "tick": 5877,
+   "ms": 2836,
+   "kind": "do",
+   "what": "window_click {\"slot\":3,\"button\":0,\"mode\":0}",
+   "phase": 0.02
+  },
+  {
+   "tick": 5877,
+   "ms": 2860,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 3,
+   "item": "stone×20"
+  },
+  {
+   "tick": 5877,
+   "ms": 2860,
+   "kind": "action",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5881,
+   "ms": 3036,
+   "kind": "do",
+   "what": "window_click {\"slot\":1,\"button\":0,\"mode\":1}",
+   "phase": 0.02
+  },
+  {
+   "tick": 5881,
+   "ms": 3060,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 1,
+   "item": "пусто"
+  },
+  {
+   "tick": 5881,
+   "ms": 3060,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 62,
+   "item": "dirt×5"
+  },
+  {
+   "tick": 5882,
+   "ms": 3110,
+   "kind": "action",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "ender_chest"
+  },
+  {
+   "tick": 5887,
+   "ms": 3335,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 5887,
+   "ms": 3360,
+   "kind": "sound",
+   "at": [
+    3.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.ender_chest.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9258936047554016
+  },
+  {
+   "tick": 5887,
+   "ms": 3360,
+   "kind": "action",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "ender_chest"
+  }
+ ]
+}

@@ -1,0 +1,932 @@
+{
+  "protocol": 777,
+  "target": "official",
+  "cases": [
+    {
+      "kind": "shulker_box",
+      "mode": "ground-pickup",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected_reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true,
+      "packets": [
+        {
+          "name": "set_slot",
+          "payload": "0002000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "01140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+        },
+        {
+          "name": "window_items",
+          "payload": "01013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "set_slot",
+          "payload": "01020036019f0501004d010101030000"
+        },
+        {
+          "name": "open_window",
+          "payload": "02140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+        },
+        {
+          "name": "window_items",
+          "payload": "02013f0c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d010101030000000000000000000000"
+        }
+      ],
+      "actions": [
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000001"
+        },
+        {
+          "name": "close_window",
+          "payload": "01"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000002"
+        }
+      ]
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "ground-pickup",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected_reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true,
+      "packets": [
+        {
+          "name": "set_slot",
+          "payload": "0003002400"
+        },
+        {
+          "name": "set_slot",
+          "payload": "0004000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "03140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+        },
+        {
+          "name": "window_items",
+          "payload": "03013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "04140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+        },
+        {
+          "name": "window_items",
+          "payload": "04013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "set_slot",
+          "payload": "04020036019f0501004d010101030000"
+        },
+        {
+          "name": "open_window",
+          "payload": "05140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+        },
+        {
+          "name": "window_items",
+          "payload": "05013f0c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d010101030000000000000000000000"
+        }
+      ],
+      "actions": [
+        {
+          "name": "close_window",
+          "payload": "02"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000003"
+        },
+        {
+          "name": "close_window",
+          "payload": "03"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000004"
+        },
+        {
+          "name": "close_window",
+          "payload": "04"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000005"
+        }
+      ]
+    },
+    {
+      "kind": "chest",
+      "mode": "ground-pickup",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected_reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true,
+      "packets": [
+        {
+          "name": "set_slot",
+          "payload": "0005002400"
+        },
+        {
+          "name": "set_slot",
+          "payload": "0006000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "06020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+        },
+        {
+          "name": "window_items",
+          "payload": "06013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "set_slot",
+          "payload": "06020036019f0501004d010101030000"
+        },
+        {
+          "name": "open_window",
+          "payload": "07020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+        },
+        {
+          "name": "window_items",
+          "payload": "07013f0c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d010101030000000000000000000000"
+        }
+      ],
+      "actions": [
+        {
+          "name": "close_window",
+          "payload": "05"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000006"
+        },
+        {
+          "name": "close_window",
+          "payload": "06"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000007"
+        }
+      ]
+    },
+    {
+      "kind": "chest",
+      "mode": "ground-pickup",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected_reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true,
+      "packets": [
+        {
+          "name": "set_slot",
+          "payload": "0007002400"
+        },
+        {
+          "name": "set_slot",
+          "payload": "0008000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "08020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+        },
+        {
+          "name": "window_items",
+          "payload": "08013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "09020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+        },
+        {
+          "name": "window_items",
+          "payload": "09013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "set_slot",
+          "payload": "09020036019f0501004d010101030000"
+        },
+        {
+          "name": "open_window",
+          "payload": "0a020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+        },
+        {
+          "name": "window_items",
+          "payload": "0a013f0c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d010101030000000000000000000000"
+        }
+      ],
+      "actions": [
+        {
+          "name": "close_window",
+          "payload": "07"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000008"
+        },
+        {
+          "name": "close_window",
+          "payload": "08"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f000000000009"
+        },
+        {
+          "name": "close_window",
+          "payload": "09"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f00000000000a"
+        }
+      ]
+    },
+    {
+      "kind": "barrel",
+      "mode": "ground-pickup",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected_reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true,
+      "packets": [
+        {
+          "name": "set_slot",
+          "payload": "0009002400"
+        },
+        {
+          "name": "set_slot",
+          "payload": "000a000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "0b020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+        },
+        {
+          "name": "window_items",
+          "payload": "0b013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "set_slot",
+          "payload": "0b020036019f0501004d010101030000"
+        },
+        {
+          "name": "open_window",
+          "payload": "0c020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+        },
+        {
+          "name": "window_items",
+          "payload": "0c013f0c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d010101030000000000000000000000"
+        }
+      ],
+      "actions": [
+        {
+          "name": "close_window",
+          "payload": "0a"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f00000000000b"
+        },
+        {
+          "name": "close_window",
+          "payload": "0b"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f00000000000c"
+        }
+      ]
+    },
+    {
+      "kind": "barrel",
+      "mode": "ground-pickup",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "expected_reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "stone",
+              "count": 12
+            },
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true,
+      "packets": [
+        {
+          "name": "set_slot",
+          "payload": "000b002400"
+        },
+        {
+          "name": "set_slot",
+          "payload": "000c000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "0d020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+        },
+        {
+          "name": "window_items",
+          "payload": "0d013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "open_window",
+          "payload": "0e020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+        },
+        {
+          "name": "window_items",
+          "payload": "0e013f0c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "set_slot",
+          "payload": "0e020036019f0501004d010101030000"
+        },
+        {
+          "name": "open_window",
+          "payload": "0f020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+        },
+        {
+          "name": "window_items",
+          "payload": "0f013f0c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d010101030000000000000000000000"
+        }
+      ],
+      "actions": [
+        {
+          "name": "close_window",
+          "payload": "0c"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f00000000000d"
+        },
+        {
+          "name": "close_window",
+          "payload": "0d"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f00000000000e"
+        },
+        {
+          "name": "close_window",
+          "payload": "0e"
+        },
+        {
+          "name": "block_place",
+          "payload": "000000008000000040013f0000003f0000003f00000000000f"
+        }
+      ]
+    }
+  ],
+  "binary_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+  "probe_sha256": "f46734d04c9f18ca47a0c6478ec51aef49150edfd8f5bee8238b6eb2a9d8e72d",
+  "data_sha256": {
+    "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+    "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+  },
+  "relogin": {
+    "slots": {
+      "size": 46,
+      "occupied": {
+        "36": {
+          "item": "red_shulker_box",
+          "count": 1,
+          "contents": [
+            {
+              "item": "stone",
+              "count": 3
+            }
+          ]
+        }
+      }
+    },
+    "cursor": null
+  },
+  "relogin_pass": true,
+  "packets": [
+    {
+      "name": "window_items",
+      "payload": "00012e000000000000000000000000000000000000000000000000000000000000000000000000019f0501004d01010103000000000000000000000000"
+    }
+  ],
+  "exit_code": 0,
+  "passed": 6,
+  "total": 6
+}

@@ -1,0 +1,596 @@
+{
+ "scenario": "shulker-stand",
+ "host": "127.0.0.1",
+ "port": 26271,
+ "lane": 1,
+ "window": {
+  "first": 2866,
+  "last": 3016
+ },
+ "events": [
+  {
+   "tick": 2866,
+   "ms": 148,
+   "kind": "do",
+   "what": "cmd summon shulker $(3.5,0,3.5) {NoAI:1b,Silent:1b,Color:3b}",
+   "phase": 0
+  },
+  {
+   "tick": 2866,
+   "ms": 174,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    0,
+    3.5
+   ],
+   "type": "shulker",
+   "data": 0,
+   "id": 40,
+   "velocity": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   "extra": "3.5,0,3.5 yaw=0 pitch=0 head=0"
+  },
+  {
+   "tick": 2866,
+   "ms": 174,
+   "kind": "meta",
+   "id": 40,
+   "fields": "4=true 9=30 15=1 18=3"
+  },
+  {
+   "tick": 2866,
+   "ms": 174,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "move",
+   "id": 40,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 2866,
+   "ms": 174,
+   "kind": "meta",
+   "id": 40,
+   "fields": "4=true 9=30 15=1 18=3"
+  },
+  {
+   "tick": 2869,
+   "ms": 324,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_update_attributes {\"properties\":[{\"key\":\"generic.scale\",\"value\":0.7,\"modifiers\":[]}]}"
+  },
+  {
+   "tick": 2886,
+   "ms": 1148,
+   "kind": "do",
+   "what": "attack",
+   "phase": 0
+  },
+  {
+   "tick": 2886,
+   "ms": 1174,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "damage_event {\"sourceTypeId\":34,\"sourceCauseId\":\"entity\",\"sourceDirectId\":\"entity\"}"
+  },
+  {
+   "tick": 2886,
+   "ms": 1174,
+   "kind": "sound",
+   "at": [
+    3.5,
+    0,
+    0.5
+   ],
+   "sound": "minecraft:entity.player.attack.sweep",
+   "category": "player",
+   "volume": 1,
+   "pitch": 1
+  },
+  {
+   "tick": 2886,
+   "ms": 1174,
+   "kind": "particle",
+   "at": [
+    3.5,
+    0.9,
+    -0.5
+   ],
+   "particle": "sweep_attack",
+   "count": 0,
+   "speed": 0,
+   "offset": "0,0,-1",
+   "long": false,
+   "always": false
+  },
+  {
+   "tick": 2886,
+   "ms": 1175,
+   "kind": "particle",
+   "at": [
+    3.5,
+    0.5,
+    3.5
+   ],
+   "particle": "damage_indicator",
+   "count": 3,
+   "speed": 0.2,
+   "offset": "0.1,0,0.1",
+   "long": false,
+   "always": false
+  },
+  {
+   "tick": 2886,
+   "ms": 1175,
+   "kind": "meta",
+   "id": 40,
+   "fields": "9=23"
+  },
+  {
+   "tick": 2886,
+   "ms": 1175,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "vel",
+   "id": 40,
+   "v": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "tick": 2911,
+   "ms": 2399,
+   "kind": "do",
+   "what": "attack",
+   "phase": 0.02
+  },
+  {
+   "tick": 2911,
+   "ms": 2424,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "damage_event {\"sourceTypeId\":34,\"sourceCauseId\":\"entity\",\"sourceDirectId\":\"entity\"}"
+  },
+  {
+   "tick": 2911,
+   "ms": 2424,
+   "kind": "sound",
+   "at": [
+    3.5,
+    0,
+    0.5
+   ],
+   "sound": "minecraft:entity.player.attack.sweep",
+   "category": "player",
+   "volume": 1,
+   "pitch": 1
+  },
+  {
+   "tick": 2911,
+   "ms": 2424,
+   "kind": "particle",
+   "at": [
+    3.5,
+    0.9,
+    -0.5
+   ],
+   "particle": "sweep_attack",
+   "count": 0,
+   "speed": 0,
+   "offset": "0,0,-1",
+   "long": false,
+   "always": false
+  },
+  {
+   "tick": 2911,
+   "ms": 2424,
+   "kind": "particle",
+   "at": [
+    3.5,
+    0.5,
+    3.5
+   ],
+   "particle": "damage_indicator",
+   "count": 3,
+   "speed": 0.2,
+   "offset": "0.1,0,0.1",
+   "long": false,
+   "always": false
+  },
+  {
+   "tick": 2911,
+   "ms": 2424,
+   "kind": "meta",
+   "id": 40,
+   "fields": "9=16"
+  },
+  {
+   "tick": 2911,
+   "ms": 2424,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "vel",
+   "id": 40,
+   "v": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "tick": 2926,
+   "ms": 3174,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "move",
+   "id": 40,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 2936,
+   "ms": 3648,
+   "kind": "do",
+   "what": "attack",
+   "phase": 0
+  },
+  {
+   "tick": 2936,
+   "ms": 3673,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "damage_event {\"sourceTypeId\":34,\"sourceCauseId\":\"entity\",\"sourceDirectId\":\"entity\"}"
+  },
+  {
+   "tick": 2936,
+   "ms": 3673,
+   "kind": "sound",
+   "at": [
+    3.5,
+    0,
+    0.5
+   ],
+   "sound": "minecraft:entity.player.attack.sweep",
+   "category": "player",
+   "volume": 1,
+   "pitch": 1
+  },
+  {
+   "tick": 2936,
+   "ms": 3674,
+   "kind": "particle",
+   "at": [
+    3.5,
+    0.9,
+    -0.5
+   ],
+   "particle": "sweep_attack",
+   "count": 0,
+   "speed": 0,
+   "offset": "0,0,-1",
+   "long": false,
+   "always": false
+  },
+  {
+   "tick": 2936,
+   "ms": 3674,
+   "kind": "particle",
+   "at": [
+    3.5,
+    0.5,
+    3.5
+   ],
+   "particle": "damage_indicator",
+   "count": 3,
+   "speed": 0.2,
+   "offset": "0.1,0,0.1",
+   "long": false,
+   "always": false
+  },
+  {
+   "tick": 2936,
+   "ms": 3674,
+   "kind": "meta",
+   "id": 40,
+   "fields": "9=9"
+  },
+  {
+   "tick": 2936,
+   "ms": 3674,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "vel",
+   "id": 40,
+   "v": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "tick": 2961,
+   "ms": 4898,
+   "kind": "do",
+   "what": "cmd kill @e[type=shulker,distance=..48]",
+   "phase": 0
+  },
+  {
+   "tick": 2961,
+   "ms": 4924,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "damage_event {\"sourceTypeId\":19,\"sourceCauseId\":0,\"sourceDirectId\":0}"
+  },
+  {
+   "tick": 2961,
+   "ms": 4924,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    0,
+    3.5
+   ],
+   "type": "item",
+   "data": 0,
+   "id": 45,
+   "velocity": {
+    "x": -0.08185314045046699,
+    "y": 0.2000244155527071,
+    "z": 0.049685649758896444
+   }
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "meta",
+   "id": 45,
+   "fields": "8={\"itemCount\":1,\"itemId\":1305,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]}"
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    0,
+    3.5
+   ],
+   "type": "experience_orb",
+   "data": 0,
+   "id": 46,
+   "velocity": {
+    "x": -0.040285661966672826,
+    "y": 0.16382835866446932,
+    "z": 0.18561923945553316
+   }
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "meta",
+   "id": 46,
+   "fields": "8=3"
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    0,
+    3.5
+   ],
+   "type": "experience_orb",
+   "data": 0,
+   "id": 47,
+   "velocity": {
+    "x": 0.16309589208325703,
+    "y": 0.26979185741317213,
+    "z": -0.06757004211682838
+   }
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "meta",
+   "id": 47,
+   "fields": "8=1"
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "status",
+   "id": 40,
+   "status": 3
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "meta",
+   "id": 40,
+   "fields": "6=7 9=0"
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "vel",
+   "id": 40,
+   "v": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "move",
+   "id": 46,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "meta",
+   "id": 46,
+   "fields": "8=3"
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "move",
+   "id": 47,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 2961,
+   "ms": 4925,
+   "kind": "meta",
+   "id": 47,
+   "fields": "8=1"
+  },
+  {
+   "tick": 2961,
+   "ms": 4927,
+   "kind": "meta",
+   "id": 45,
+   "fields": "8={\"itemCount\":1,\"itemId\":1305,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]}"
+  },
+  {
+   "tick": 2967,
+   "ms": 5225,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "text",
+   "text": "collect {\"pickupItemCount\":1}"
+  },
+  {
+   "tick": 2969,
+   "ms": 5324,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "text",
+   "text": "collect {\"pickupItemCount\":1}"
+  },
+  {
+   "tick": 2969,
+   "ms": 5324,
+   "kind": "destroy",
+   "ids": [
+    47
+   ]
+  },
+  {
+   "tick": 2969,
+   "ms": 5324,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "gone",
+   "id": 47
+  },
+  {
+   "tick": 2970,
+   "ms": 5374,
+   "kind": "destroy",
+   "ids": [
+    47
+   ]
+  },
+  {
+   "tick": 2977,
+   "ms": 5724,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "text",
+   "text": "collect {\"pickupItemCount\":1}"
+  },
+  {
+   "tick": 2977,
+   "ms": 5724,
+   "kind": "destroy",
+   "ids": [
+    46
+   ]
+  },
+  {
+   "tick": 2977,
+   "ms": 5724,
+   "kind": "cart",
+   "ent": "experience_orb",
+   "what": "gone",
+   "id": 46
+  },
+  {
+   "tick": 2978,
+   "ms": 5773,
+   "kind": "destroy",
+   "ids": [
+    46
+   ]
+  },
+  {
+   "tick": 2980,
+   "ms": 5874,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "status",
+   "id": 40,
+   "status": 60
+  },
+  {
+   "tick": 2980,
+   "ms": 5874,
+   "kind": "destroy",
+   "ids": [
+    40
+   ]
+  },
+  {
+   "tick": 2980,
+   "ms": 5874,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "gone",
+   "id": 40
+  }
+ ]
+}

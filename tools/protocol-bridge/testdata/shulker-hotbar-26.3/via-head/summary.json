@@ -1,0 +1,197 @@
+[
+  {
+    "scenario": "shulker-hotbar-quick-move",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "fb7e8e94ebc0a6db867b74572c312e65b77bf8ead24a429c3a944c1c24e43f3c",
+    "counts": [
+      29,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "shulker-hotbar-drag-left",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "9e039adac1c1efaff0c4bc753c0d9f0cafe7069b39a6859bd32cf6fc23a44eb0",
+    "counts": [
+      21,
+      0,
+      4,
+      3
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "shulker-hotbar-drag-right",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "bf747f0a0681fd05d837dea0fbb9960b2cf77b953f5f68605911c687c3d48aa9",
+    "counts": [
+      21,
+      0,
+      6,
+      3
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "shulker-open",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "1e6a9a5aa56301aa88b6d3cdb6f7e66600a4af5e658ab76767cc9b206005cdc4",
+    "counts": [
+      24,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "shulker-break",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "8b283bbcf4dd9b60a948ca59750b238e0ff7c76d5cb7d9c88701b0cd8ff282a2",
+    "counts": [
+      79,
+      0,
+      9,
+      3
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "shulker-stand",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "758b1007554fe8584f6bd6793ab193e07e1ccd4c551555cd6de2d9309301f1f1",
+    "counts": [
+      48,
+      0,
+      3,
+      0
+    ],
+    "warnings": [
+      "\u0412\u043d\u0438\u043c\u0430\u043d\u0438\u0435: \u0443 \u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u0430 \u00ab\u043f\u043e\u0434\u0431\u043e\u0440 \u043e\u043f\u044b\u0442\u0430 \u0440\u043e\u0431\u043e\u0442\u043e\u043c\u00bb: 0 \u0448\u0442., \u0432\u043d\u0435 [1, 9]",
+      "\u0412\u043d\u0438\u043c\u0430\u043d\u0438\u0435: \u0443 \u043d\u0430\u0441 \u00ab\u043f\u043e\u0434\u0431\u043e\u0440 \u043e\u043f\u044b\u0442\u0430 \u0440\u043e\u0431\u043e\u0442\u043e\u043c\u00bb: 0 \u0448\u0442., \u0432\u043d\u0435 [1, 9] \u2014 \u0431\u0435\u0437 \u0434\u043e\u043f\u0443\u0441\u043a\u0430"
+    ]
+  },
+  {
+    "scenario": "shulker-ai",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "0336b1bdfbbfcc6ff0399fb3b7f312c9c5456531fc7cfd5656777393723ee037",
+    "counts": [
+      16,
+      1,
+      28,
+      13
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "chest-open",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "d0ba4a15f4a72be091a88609cca4f5502bf6600b127945e46098c2eecff7beef",
+    "counts": [
+      26,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "chest-slots",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "3f4ac155940c803347ff972fcb53ff3bf3cc4183fc0f50182704ca5d2badafb6",
+    "counts": [
+      40,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "bundle-chest-select",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "official_sha256": "ddbe912db1a3f0aa7211257bd34b6adff0f4542ca67a0ee9436b0b121c8a0b76",
+    "counts": [
+      51,
+      0,
+      0,
+      1
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "craft-inventory-planks",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "048cb7c5f6dff9aa3a775aef5a9d1397501015cfc0db70322eb8417ce094c784",
+    "counts": [
+      12,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "ender-chest-open",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "29a2812f2b9052c1efe59778553e5fd939bcf93eefff448871df74a9a4e89359",
+    "counts": [
+      35,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  }
+]

@@ -1,0 +1,625 @@
+{
+ "scenario": "shulker-ai",
+ "host": "127.0.0.1",
+ "port": 26171,
+ "lane": 1,
+ "window": {
+  "first": 3467,
+  "last": 3537
+ },
+ "events": [
+  {
+   "tick": 3467,
+   "ms": 147,
+   "kind": "do",
+   "what": "cmd summon shulker $(3.5,0,5.5) {Silent:1b}",
+   "phase": 0
+  },
+  {
+   "tick": 3467,
+   "ms": 149,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    0,
+    5.5
+   ],
+   "type": "shulker",
+   "data": 0,
+   "id": 194,
+   "velocity": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   "extra": "3.5,0,5.5 yaw=0 pitch=0 head=0"
+  },
+  {
+   "tick": 3467,
+   "ms": 149,
+   "kind": "meta",
+   "id": 194,
+   "fields": "4=true 9=30"
+  },
+  {
+   "tick": 3467,
+   "ms": 173,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "move",
+   "id": 194,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3467,
+   "ms": 173,
+   "kind": "meta",
+   "id": 194,
+   "fields": "4=true 9=30"
+  },
+  {
+   "tick": 3470,
+   "ms": 322,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_update_attributes {\"properties\":[{\"key\":\"generic.scale\",\"value\":0.7,\"modifiers\":[]}]}"
+  },
+  {
+   "tick": 3473,
+   "ms": 473,
+   "kind": "meta",
+   "id": 194,
+   "fields": "17=100"
+  },
+  {
+   "tick": 3473,
+   "ms": 473,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_update_attributes {\"properties\":[{\"key\":\"generic.armor\",\"value\":0,\"modifiers\":[]}]}"
+  },
+  {
+   "tick": 3473,
+   "ms": 473,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "text",
+   "text": "entity_head_rotation {\"headYaw\":127}"
+  },
+  {
+   "tick": 3491,
+   "ms": 1372,
+   "kind": "spawn",
+   "at": [
+    3.5,
+    1,
+    5.5
+   ],
+   "type": "shulker_bullet",
+   "data": 8000766,
+   "id": 195,
+   "velocity": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   "extra": "3.5,0.99692,5.5 yaw=0 pitch=0 head=0"
+  },
+  {
+   "tick": 3492,
+   "ms": 1423,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3495,
+   "ms": 1572,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.077
+   ]
+  },
+  {
+   "tick": 3495,
+   "ms": 1572,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -672
+   ],
+   "yaw": 0,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3498,
+   "ms": 1722,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.123
+   ]
+  },
+  {
+   "tick": 3498,
+   "ms": 1722,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -1341
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3501,
+   "ms": 1872,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.152
+   ]
+  },
+  {
+   "tick": 3501,
+   "ms": 1872,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -1760
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3502,
+   "ms": 1922,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.16
+   ]
+  },
+  {
+   "tick": 3502,
+   "ms": 1922,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -657
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3504,
+   "ms": 2022,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.046
+   ]
+  },
+  {
+   "tick": 3504,
+   "ms": 2022,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -589
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3507,
+   "ms": 2172,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.057
+   ]
+  },
+  {
+   "tick": 3507,
+   "ms": 2172,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    335
+   ],
+   "yaw": -96,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3510,
+   "ms": 2322,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.117
+   ]
+  },
+  {
+   "tick": 3510,
+   "ms": 2322,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    1218
+   ],
+   "yaw": -124,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3512,
+   "ms": 2422,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.143
+   ]
+  },
+  {
+   "tick": 3512,
+   "ms": 2422,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    1122
+   ],
+   "yaw": -127,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3513,
+   "ms": 2472,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.084
+   ]
+  },
+  {
+   "tick": 3513,
+   "ms": 2472,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    343
+   ],
+   "yaw": -128,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3516,
+   "ms": 2622,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.036
+   ]
+  },
+  {
+   "tick": 3516,
+   "ms": 2622,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -20
+   ],
+   "yaw": -32,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3519,
+   "ms": 2772,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.104
+   ]
+  },
+  {
+   "tick": 3519,
+   "ms": 2772,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -1032
+   ],
+   "yaw": -4,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3522,
+   "ms": 2922,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    -0.145
+   ]
+  },
+  {
+   "tick": 3522,
+   "ms": 2922,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -1628
+   ],
+   "yaw": -1,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3525,
+   "ms": 3072,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.003
+   ]
+  },
+  {
+   "tick": 3525,
+   "ms": 3072,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    -487
+   ],
+   "yaw": -65,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3527,
+   "ms": 3172,
+   "kind": "cart",
+   "ent": "shulker",
+   "what": "move",
+   "id": 194,
+   "d": [
+    0,
+    0,
+    0
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3528,
+   "ms": 3222,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.085
+   ]
+  },
+  {
+   "tick": 3528,
+   "ms": 3222,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    748
+   ],
+   "yaw": -121,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3531,
+   "ms": 3372,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.133
+   ]
+  },
+  {
+   "tick": 3531,
+   "ms": 3372,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    1456
+   ],
+   "yaw": -128,
+   "pitch": -1,
+   "ground": false
+  },
+  {
+   "tick": 3534,
+   "ms": 3522,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.164
+   ]
+  },
+  {
+   "tick": 3534,
+   "ms": 3522,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    1902
+   ],
+   "ground": false
+  },
+  {
+   "tick": 3537,
+   "ms": 3672,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "vel",
+   "id": 195,
+   "v": [
+    0,
+    0,
+    0.188
+   ]
+  },
+  {
+   "tick": 3537,
+   "ms": 3672,
+   "kind": "cart",
+   "ent": "shulker_bullet",
+   "what": "move",
+   "id": 195,
+   "d": [
+    0,
+    0,
+    2219
+   ],
+   "ground": false
+  }
+ ]
+}
