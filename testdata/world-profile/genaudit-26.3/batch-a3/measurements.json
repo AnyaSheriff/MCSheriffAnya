@@ -1,0 +1,1679 @@
+{
+  "schema": 1,
+  "all_requested_items_closed": false,
+  "baseline_commit": "6a4ea946",
+  "pass2_worlds_commit": "0563edf661f7d2606b0f561d7372c31a974b4c4b",
+  "method": {
+    "native_sample": "Fresh complete chunks exported through the existing ignored Rust full-chunk generator test; same seeds and exact chunk coverage as a fresh unmodified HEAD baseline and read-only official measurements. HEAD baseline includes the R3 changes absent from the old pass 2 worlds. No official server was launched.",
+    "selection": "measurement-plan.json; broad same-biome/depth statistics, not coordinate equality. All known rare-biome footprints are included; beach statistics remain sampled.",
+    "tolerances": "Unchanged tools/measure/genaudit_263.py thresholds. Missing denominator rows are not successes.",
+    "artifact_directory": "~/.cache/mcsheriffanya/gen-audit-263/genA3",
+    "snapshot_isolation": "test-head and test-accepted were copied before later builds and verified by absence/presence of the A3 test. A later shared-target artifact collision affected a verification run only; current worktree was forcibly rebuilt for the final checks.",
+    "generator_test_binary_sha256": {
+      "test-head": "3e01ffbcfd20b185cd166af17e7803bddb792b9df2a4651199ec41da1168cb09",
+      "test-accepted": "5f602905ab3634183b94d667bee511c887c27518e5199b412d2038eb6734437a"
+    }
+  },
+  "samples": {
+    "owner": {
+      "pass2_metrics": [
+        {
+          "metric": "slope/p100",
+          "ours": 138.0,
+          "vanilla": 215.0,
+          "tolerance": 1,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/192/underground_air",
+          "ours": 100.0,
+          "vanilla": 1.062092,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/176/underground_air",
+          "ours": 99.862069,
+          "vanilla": 5.496054,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/160/underground_air",
+          "ours": 97.575959,
+          "vanilla": 7.623061,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/144/underground_air",
+          "ours": 88.468699,
+          "vanilla": 44.946754,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "top/meadow/grass_block",
+          "ours": 4.477612,
+          "vanilla": 98.456983,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "ours": 59.01234,
+          "vanilla": 22.311496,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/meadow/-1/dirt",
+          "ours": 5.3949,
+          "vanilla": 94.716334,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "top/meadow/stone",
+          "ours": 90.003109,
+          "vanilla": 1.496259,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/meadow/-2/dirt",
+          "ours": 5.534826,
+          "vanilla": 85.738778,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "height_biome/beach/p100",
+          "ours": 77.0,
+          "vanilla": 143.0,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-4/sandstone",
+          "ours": 0.972877,
+          "vanilla": 66.911591,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "feature_biome/windswept_hills/snow",
+          "ours": 777.126431,
+          "vanilla": 92.673328,
+          "tolerance": 18.53466556104848,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-4/stone",
+          "ours": 58.066038,
+          "vanilla": 18.720491,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-3/sand",
+          "ours": 70.881486,
+          "vanilla": 35.030099,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-5/sandstone",
+          "ours": 19.590212,
+          "vanilla": 52.608593,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/meadow/-3/dirt",
+          "ours": 5.581468,
+          "vanilla": 31.624065,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-5/stone",
+          "ours": 58.313679,
+          "vanilla": 34.811733,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/128/underground_air",
+          "ours": 75.126024,
+          "vanilla": 65.93327,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "ours": 65.929878,
+          "vanilla": 49.199695,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-2/sand",
+          "ours": 71.580189,
+          "vanilla": 71.199245,
+          "tolerance": 5,
+          "verdict": "within"
+        },
+        {
+          "metric": "blocks/red_terracotta",
+          "ours": 0.019853,
+          "vanilla": 0.022602,
+          "tolerance": 0.1,
+          "verdict": "within"
+        },
+        {
+          "metric": "spawn_offset",
+          "ours": 0.0,
+          "vanilla": 0.0,
+          "tolerance": 16,
+          "verdict": "within"
+        }
+      ],
+      "input_manifest_sha256": {
+        "head": "fb245f0c517e4b3546a40686dc3c7514014ea57b09ceffc83fcf78370b7a08e1",
+        "accepted": "bbb1acd4ec424bb6ec864914b079b713bdd663d45b34f4bcde4c613bf4bd4cee",
+        "vanilla": "a9f926bd13a434a3e2563d98fa6ee59ad2c38e155c74fdb82adc98c3d235871d"
+      },
+      "seed": 1792932773345722119,
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 3274,
+            "requested": 3274,
+            "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -116,
+              -90,
+              63,
+              102
+            ]
+          },
+          "vanilla": {
+            "chunks": 3274,
+            "requested": 3274,
+            "chunk_sha256": "9e3626dd2fc2c97492e9cb8164593447a2ba34af0ae9fe6bd4075f7f65872c29",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -116,
+              -90,
+              63,
+              102
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "spawn": {
+        "before": [
+          16,
+          -48
+        ],
+        "after": [
+          16,
+          -48
+        ],
+        "vanilla": [
+          16,
+          -48
+        ]
+      },
+      "metrics": [
+        {
+          "metric": "slope/p100",
+          "before": 138.0,
+          "after": 138.0,
+          "vanilla": 215.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "outside",
+          "score": 308.0
+        },
+        {
+          "metric": "depth/192/underground_air",
+          "before": 100.0,
+          "after": 100.0,
+          "vanilla": 1.062092,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 148.4069
+        },
+        {
+          "metric": "depth/176/underground_air",
+          "before": 99.862069,
+          "after": 99.862069,
+          "vanilla": 5.496054,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 141.549
+        },
+        {
+          "metric": "depth/160/underground_air",
+          "before": 97.575959,
+          "after": 97.575959,
+          "vanilla": 7.623061,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 134.9293
+        },
+        {
+          "metric": "depth/144/underground_air",
+          "before": 88.468699,
+          "after": 88.468699,
+          "vanilla": 44.946754,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 65.2829
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "before": 59.01234,
+          "after": 59.01234,
+          "vanilla": 22.311496,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 55.0513
+        },
+        {
+          "metric": "height_biome/beach/p100",
+          "before": 77.0,
+          "after": 77.0,
+          "vanilla": 143.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 39.6
+        },
+        {
+          "metric": "feature_biome/windswept_hills/snow",
+          "before": 777.126431,
+          "after": 777.126431,
+          "vanilla": 92.673328,
+          "unit": "per million biome blocks",
+          "tolerance": 18.53466556104848,
+          "verdict": "outside",
+          "score": 36.9283
+        },
+        {
+          "metric": "depth/128/underground_air",
+          "before": 75.126024,
+          "after": 75.126024,
+          "vanilla": 65.93327,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 13.7891
+        },
+        {
+          "metric": "layer/meadow/-3/dirt",
+          "before": 5.581468,
+          "after": 51.057214,
+          "vanilla": 31.624065,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 11.6599
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "before": 65.929878,
+          "after": 32.418699,
+          "vanilla": 49.199695,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 10.0686
+        },
+        {
+          "metric": "layer/beach/-4/sandstone",
+          "before": 0.972877,
+          "after": 62.349646,
+          "vanilla": 66.911591,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.7372
+        },
+        {
+          "metric": "layer/beach/-5/sandstone",
+          "before": 19.590212,
+          "after": 56.739387,
+          "vanilla": 52.608593,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.4785
+        },
+        {
+          "metric": "layer/beach/-3/sand",
+          "before": 70.913915,
+          "after": 38.70283,
+          "vanilla": 35.030099,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.2036
+        },
+        {
+          "metric": "layer/beach/-5/stone",
+          "before": 58.316627,
+          "after": 31.388561,
+          "vanilla": 34.811733,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.0539
+        },
+        {
+          "metric": "layer/beach/-4/stone",
+          "before": 58.042453,
+          "after": 22.087264,
+          "vanilla": 18.720491,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.0201
+        },
+        {
+          "metric": "layer/meadow/-1/dirt",
+          "before": 5.3949,
+          "after": 97.932214,
+          "vanilla": 94.716334,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 1.9295
+        },
+        {
+          "metric": "layer/beach/-2/sand",
+          "before": 71.606722,
+          "after": 69.310142,
+          "vanilla": 71.199245,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 1.1335
+        },
+        {
+          "metric": "top/meadow/grass_block",
+          "before": 4.477612,
+          "after": 97.870025,
+          "vanilla": 98.456983,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.3522
+        },
+        {
+          "metric": "layer/meadow/-2/dirt",
+          "before": 5.534826,
+          "after": 86.271766,
+          "vanilla": 85.738778,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.3198
+        },
+        {
+          "metric": "top/meadow/stone",
+          "before": 90.003109,
+          "after": 2.005597,
+          "vanilla": 1.496259,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.3056
+        },
+        {
+          "metric": "blocks/red_terracotta",
+          "before": 0.019853,
+          "after": 0.019853,
+          "vanilla": 0.022602,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "within",
+          "score": 0.055
+        },
+        {
+          "metric": "spawn_offset",
+          "before": 0.0,
+          "after": 0.0,
+          "vanilla": 0.0,
+          "unit": "blocks from official spawn",
+          "tolerance": 16,
+          "verdict": "within",
+          "score": 0.0
+        }
+      ],
+      "worsened_outside_A": [
+        {
+          "metric": "layer/birch_forest/-3/dirt",
+          "before": 96.022149,
+          "after": 96.098523,
+          "vanilla": 34.991108,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 36.6644
+        },
+        {
+          "metric": "layer/birch_forest/-3/stone",
+          "before": 3.6278,
+          "after": 3.551426,
+          "vanilla": 59.165396,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 33.3684
+        },
+        {
+          "metric": "layer/windswept_savanna/-3/stone",
+          "before": 9.867703,
+          "after": 9.819967,
+          "vanilla": 63.478587,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 32.1952
+        },
+        {
+          "metric": "layer/bamboo_jungle/-3/stone",
+          "before": 5.729167,
+          "after": 5.654762,
+          "vanilla": 39.806548,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 20.4911
+        },
+        {
+          "metric": "layer/jungle/-3/stone",
+          "before": 1.130566,
+          "after": 1.113173,
+          "vanilla": 33.813953,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 19.6205
+        },
+        {
+          "metric": "layer/savanna/-3/stone",
+          "before": 8.419615,
+          "after": 8.408829,
+          "vanilla": 41.042328,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 19.5801
+        },
+        {
+          "metric": "layer/windswept_savanna/-2/stone",
+          "before": 10.208674,
+          "after": 10.164348,
+          "vanilla": 35.716721,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 15.3314
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "before": 65.929878,
+          "after": 32.418699,
+          "vanilla": 49.199695,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 10.0686
+        },
+        {
+          "metric": "layer/windswept_savanna/-1/stone",
+          "before": 10.703082,
+          "after": 10.658756,
+          "vanilla": 24.976132,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 8.5904
+        },
+        {
+          "metric": "layer/plains/-2/dirt",
+          "before": 92.021763,
+          "after": 92.09644,
+          "vanilla": 77.855117,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 8.5448
+        },
+        {
+          "metric": "top/windswept_savanna/gravel",
+          "before": 5.888571,
+          "after": 5.837425,
+          "vanilla": 19.837698,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 8.4002
+        },
+        {
+          "metric": "layer/ocean/-1/stone",
+          "before": 55.067396,
+          "after": 55.041963,
+          "vanilla": 68.864446,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 8.2935
+        },
+        {
+          "metric": "layer/river/-4/dirt",
+          "before": 1.993208,
+          "after": 1.976721,
+          "vanilla": 14.852399,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 7.7254
+        },
+        {
+          "metric": "layer/cherry_grove/-4/dirt",
+          "before": 1.803862,
+          "after": 1.791159,
+          "vanilla": 14.113313,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 7.3933
+        },
+        {
+          "metric": "layer/ocean/-2/stone",
+          "before": 56.192777,
+          "after": 56.173703,
+          "vanilla": 68.171414,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 7.1986
+        },
+        {
+          "metric": "layer/birch_forest/-2/dirt",
+          "before": 95.894857,
+          "after": 96.193992,
+          "vanilla": 84.5719,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 6.9733
+        },
+        {
+          "metric": "top/ocean/gravel",
+          "before": 78.414293,
+          "after": 78.388861,
+          "vanilla": 88.879705,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 6.2945
+        },
+        {
+          "metric": "layer/river/-3/stone",
+          "before": 24.515299,
+          "after": 24.457597,
+          "vanilla": 34.803308,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 6.2074
+        },
+        {
+          "metric": "layer/jungle/-2/stone",
+          "before": 0.968228,
+          "after": 0.950835,
+          "vanilla": 11.27907,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 6.1969
+        },
+        {
+          "metric": "layer/ocean/-3/stone",
+          "before": 57.426246,
+          "after": 57.407172,
+          "vanilla": 67.230417,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.8939
+        },
+        {
+          "metric": "layer/forest/-2/dirt",
+          "before": 93.114928,
+          "after": 93.163845,
+          "vanilla": 83.808924,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.613
+        },
+        {
+          "metric": "layer/plains/-2/stone",
+          "before": 4.457754,
+          "after": 4.386125,
+          "vanilla": 13.431966,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.4275
+        },
+        {
+          "metric": "top/lukewarm_ocean/sand",
+          "before": 87.588824,
+          "after": 87.645349,
+          "vanilla": 78.625646,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.4118
+        },
+        {
+          "metric": "layer/cherry_grove/-4/stone",
+          "before": 88.935467,
+          "after": 88.948171,
+          "vanilla": 80.068598,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.3277
+        },
+        {
+          "metric": "top/ocean/sand",
+          "before": 10.73881,
+          "after": 10.764242,
+          "vanilla": 2.123601,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.1844
+        },
+        {
+          "metric": "layer/birch_forest/-2/stone",
+          "before": 3.379582,
+          "after": 3.074084,
+          "vanilla": 11.655234,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.1487
+        },
+        {
+          "metric": "layer/ocean/-1/sand",
+          "before": 10.573499,
+          "after": 10.598932,
+          "vanilla": 2.155392,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.0661
+        },
+        {
+          "metric": "layer/savanna/-4/dirt",
+          "before": 4.598073,
+          "after": 4.581895,
+          "vanilla": 12.231396,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 4.5897
+        },
+        {
+          "metric": "layer/forest/-2/stone",
+          "before": 4.475455,
+          "after": 4.42835,
+          "vanilla": 11.40739,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 4.1874
+        },
+        {
+          "metric": "layer/savanna/-2/stone",
+          "before": 7.58017,
+          "after": 7.569385,
+          "vanilla": 13.980026,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.8464
+        },
+        {
+          "metric": "layer/plains/-1/dirt",
+          "before": 89.493416,
+          "after": 89.572665,
+          "vanilla": 83.661173,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.5469
+        },
+        {
+          "metric": "layer/windswept_savanna/-5/stone",
+          "before": 73.390616,
+          "after": 73.145117,
+          "vanilla": 78.515412,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.2222
+        },
+        {
+          "metric": "covered_grass_by/leaf_litter",
+          "before": 15.965923,
+          "after": 15.728963,
+          "vanilla": 18.922482,
+          "unit": "per 100 grass blocks",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 3.1935
+        },
+        {
+          "metric": "layer/river/-1/gravel",
+          "before": 0.535808,
+          "after": 0.532511,
+          "vanilla": 5.854639,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.1933
+        },
+        {
+          "metric": "blocks/dirt",
+          "before": 929.898595,
+          "after": 934.587966,
+          "vanilla": 769.07025,
+          "unit": "per chunk",
+          "tolerance": 153.81405009163106,
+          "verdict": "outside",
+          "score": 2.1522
+        }
+      ],
+      "new_outside_A": [],
+      "new_outside_all_categories": [
+        {
+          "metric": "feature_biome/meadow/poppy",
+          "before": 1.369493,
+          "after": 39.715292,
+          "vanilla": 0.0,
+          "unit": "per million biome blocks",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 7.9431,
+          "batch": "F"
+        },
+        {
+          "metric": "horizontal_log_blocks/cherry_log",
+          "before": 0.147221,
+          "after": 0.207392,
+          "vanilla": 0.058338,
+          "unit": "per chunk",
+          "tolerance": 0.1,
+          "verdict": "outside",
+          "score": 2.9811,
+          "batch": "F-tree"
+        },
+        {
+          "metric": "blocks/pink_petals",
+          "before": 0.758705,
+          "after": 1.09774,
+          "vanilla": 0.852169,
+          "unit": "per chunk",
+          "tolerance": 0.1704337202199145,
+          "verdict": "outside",
+          "score": 2.8817,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/pink_petals",
+          "before": 879.5436,
+          "after": 1272.576369,
+          "vanilla": 880.774807,
+          "unit": "per million biome blocks",
+          "tolerance": 176.1549614463654,
+          "verdict": "outside",
+          "score": 2.2242,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/meadow/oxeye_daisy",
+          "before": 0.912995,
+          "after": 8.216957,
+          "vanilla": 0.0,
+          "unit": "per million biome blocks",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 1.6434,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/meadow/allium",
+          "before": 0.456498,
+          "after": 7.760459,
+          "vanilla": 0.0,
+          "unit": "per million biome blocks",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 1.5521,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/cherry_grove/short_grass",
+          "before": 330.359976,
+          "after": 492.530253,
+          "vanilla": 381.691966,
+          "unit": "per million biome blocks",
+          "tolerance": 76.33839326904067,
+          "verdict": "outside",
+          "score": 1.4519,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/forest/cherry_leaves",
+          "before": 10.68276,
+          "after": 13.572359,
+          "vanilla": 6.485134,
+          "unit": "per million biome blocks",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 1.4174,
+          "batch": "F-tree"
+        }
+      ],
+      "novel_outside_all_categories": [],
+      "A_outside_before": 303,
+      "A_outside_after": 279,
+      "all_categories_outside_before": 641,
+      "all_categories_outside_after": 622,
+      "red_terracotta_blocks": 65
+    },
+    "second": {
+      "pass2_metrics": [
+        {
+          "metric": "slope/p100",
+          "ours": 93.0,
+          "vanilla": 171.0,
+          "tolerance": 1,
+          "verdict": "outside"
+        },
+        {
+          "metric": "blocks/red_terracotta",
+          "ours": 150.191518,
+          "vanilla": 9.652248,
+          "tolerance": 1.9304495335029686,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/160/underground_air",
+          "ours": 100.0,
+          "vanilla": 11.981567,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "spawn_offset",
+          "ours": 214.662526,
+          "vanilla": 0.0,
+          "tolerance": 16,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/144/underground_air",
+          "ours": 38.936687,
+          "vanilla": 4.458634,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "ours": 96.126761,
+          "vanilla": 35.036496,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-4/sandstone",
+          "ours": 0.0,
+          "vanilla": 53.426396,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/128/underground_air",
+          "ours": 24.175178,
+          "vanilla": 3.345908,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "top/meadow/grass_block",
+          "ours": 50.221699,
+          "vanilla": 98.362547,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-4/stone",
+          "ours": 64.911168,
+          "vanilla": 18.05203,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/meadow/-1/dirt",
+          "ours": 51.523024,
+          "vanilla": 97.089879,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-5/sandstone",
+          "ours": 14.641497,
+          "vanilla": 59.961929,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "top/meadow/stone",
+          "ours": 45.938987,
+          "vanilla": 1.443989,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-5/stone",
+          "ours": 64.704949,
+          "vanilla": 26.570431,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/meadow/-2/dirt",
+          "ours": 51.50224,
+          "vanilla": 82.912219,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "ours": 13.563333,
+          "vanilla": 2.149357,
+          "tolerance": 2,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-3/sand",
+          "ours": 67.227157,
+          "vanilla": 41.70368,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/meadow/-3/dirt",
+          "ours": 51.496467,
+          "vanilla": 44.833574,
+          "tolerance": 5,
+          "verdict": "outside"
+        },
+        {
+          "metric": "layer/beach/-2/sand",
+          "ours": 67.417513,
+          "vanilla": 66.989213,
+          "tolerance": 5,
+          "verdict": "within"
+        },
+        {
+          "metric": "height_biome/beach/p100",
+          "ours": 69.0,
+          "vanilla": 69.0,
+          "tolerance": 5,
+          "verdict": "within"
+        }
+      ],
+      "input_manifest_sha256": {
+        "head": "dae0fad9b324905aa5c89cb48ebac6392a176ac9f5785b1cd26a49f5047df340",
+        "accepted": "19bcdce1a9185c27f9490b38ab264c4204eec69accbec2908604ceef92cdf24d",
+        "vanilla": "8d88eea6a1bfcd83cc2ceead6411a213c3cd9ba58b779b32d57b1ef2741a38ac"
+      },
+      "seed": 100554032945340,
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 5895,
+            "requested": 5895,
+            "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -67,
+              -98,
+              97,
+              94
+            ]
+          },
+          "vanilla": {
+            "chunks": 5895,
+            "requested": 5895,
+            "chunk_sha256": "d6d6af522e63977b52cce776d4fd5974d2e9a93bc47c25400ec4f81b013cb44b",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -67,
+              -98,
+              97,
+              94
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "spawn": {
+        "before": [
+          -48,
+          112
+        ],
+        "after": [
+          -48,
+          112
+        ],
+        "vanilla": [
+          -240,
+          16
+        ]
+      },
+      "metrics": [
+        {
+          "metric": "slope/p100",
+          "before": 93.0,
+          "after": 93.0,
+          "vanilla": 171.0,
+          "unit": "blocks per block",
+          "tolerance": 1,
+          "verdict": "outside",
+          "score": 312.0
+        },
+        {
+          "metric": "blocks/red_terracotta",
+          "before": 150.114673,
+          "after": 150.114673,
+          "vanilla": 9.652248,
+          "unit": "per chunk",
+          "tolerance": 1.9304495335029686,
+          "verdict": "outside",
+          "score": 145.523
+        },
+        {
+          "metric": "depth/160/underground_air",
+          "before": 100.0,
+          "after": 100.0,
+          "vanilla": 11.981567,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 132.0276
+        },
+        {
+          "metric": "spawn_offset",
+          "before": 214.662526,
+          "after": 214.662526,
+          "vanilla": 0.0,
+          "unit": "blocks from official spawn",
+          "tolerance": 16,
+          "verdict": "outside",
+          "score": 107.3313
+        },
+        {
+          "metric": "depth/144/underground_air",
+          "before": 38.936687,
+          "after": 38.936687,
+          "vanilla": 4.458634,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 51.7171
+        },
+        {
+          "metric": "depth/128/underground_air",
+          "before": 24.225194,
+          "after": 24.225194,
+          "vanilla": 3.345908,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 31.3189
+        },
+        {
+          "metric": "depth/112/underground_air",
+          "before": 13.565178,
+          "after": 13.565178,
+          "vanilla": 2.149357,
+          "unit": "percentage points",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 17.1237
+        },
+        {
+          "metric": "layer/beach/-4/stone",
+          "before": 64.911168,
+          "after": 23.064721,
+          "vanilla": 18.05203,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.0076
+        },
+        {
+          "metric": "layer/beach/-5/stone",
+          "before": 64.704949,
+          "after": 31.503807,
+          "vanilla": 26.570431,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.96
+        },
+        {
+          "metric": "layer/beach/-4/sandstone",
+          "before": 0.0,
+          "after": 57.154188,
+          "vanilla": 53.426396,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 2.2367
+        },
+        {
+          "metric": "layer/meadow/-1/dirt",
+          "before": 51.523024,
+          "after": 99.18364,
+          "vanilla": 97.089879,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 1.2563
+        },
+        {
+          "metric": "layer/beach/-5/sandstone",
+          "before": 14.641497,
+          "after": 57.963198,
+          "vanilla": 59.961929,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 1.1992
+        },
+        {
+          "metric": "layer/beach/-3/sand",
+          "before": 67.227157,
+          "after": 39.958756,
+          "vanilla": 41.70368,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 1.047
+        },
+        {
+          "metric": "layer/meadow/-3/dirt",
+          "before": 51.496467,
+          "after": 45.734608,
+          "vanilla": 44.833574,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.5406
+        },
+        {
+          "metric": "top/meadow/stone",
+          "before": 45.941296,
+          "after": 0.675488,
+          "vanilla": 1.443989,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.4611
+        },
+        {
+          "metric": "top/meadow/grass_block",
+          "before": 50.221699,
+          "after": 99.013902,
+          "vanilla": 98.362547,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.3908
+        },
+        {
+          "metric": "layer/cherry_grove/-3/dirt",
+          "before": 96.126761,
+          "after": 35.475352,
+          "vanilla": 35.036496,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.2633
+        },
+        {
+          "metric": "layer/beach/-2/sand",
+          "before": 67.417513,
+          "after": 67.385787,
+          "vanilla": 66.989213,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.2379
+        },
+        {
+          "metric": "layer/meadow/-2/dirt",
+          "before": 51.50224,
+          "after": 83.260588,
+          "vanilla": 82.912219,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.209
+        },
+        {
+          "metric": "height_biome/beach/p100",
+          "before": 69.0,
+          "after": 69.0,
+          "vanilla": 69.0,
+          "unit": "Y blocks",
+          "tolerance": 5,
+          "verdict": "within",
+          "score": 0.0
+        }
+      ],
+      "worsened_outside_A": [
+        {
+          "metric": "layer/savanna/-3/stone",
+          "before": 5.92258,
+          "after": 5.910146,
+          "vanilla": 35.473422,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 17.738
+        },
+        {
+          "metric": "layer/plains/-3/dirt",
+          "before": 79.168428,
+          "after": 79.279374,
+          "vanilla": 50.89814,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 17.0287
+        },
+        {
+          "metric": "layer/plains/-3/stone",
+          "before": 18.374894,
+          "after": 18.263948,
+          "vanilla": 43.676036,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 15.2473
+        },
+        {
+          "metric": "top/ocean/gravel",
+          "before": 77.421555,
+          "after": 77.336289,
+          "vanilla": 98.492547,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 12.6938
+        },
+        {
+          "metric": "layer/ocean/-2/stone",
+          "before": 53.819918,
+          "after": 53.768759,
+          "vanilla": 71.417683,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 10.5894
+        },
+        {
+          "metric": "layer/ocean/-1/stone",
+          "before": 53.777285,
+          "after": 53.726126,
+          "vanilla": 71.239837,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 10.5082
+        },
+        {
+          "metric": "layer/ocean/-3/stone",
+          "before": 54.220668,
+          "after": 54.160982,
+          "vanilla": 71.172087,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 10.2067
+        },
+        {
+          "metric": "layer/cherry_grove/-1/dirt",
+          "before": 96.742958,
+          "after": 98.679577,
+          "vanilla": 82.481752,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 9.7187
+        },
+        {
+          "metric": "top/cherry_grove/grass_block",
+          "before": 95.510563,
+          "after": 98.239437,
+          "vanilla": 82.572993,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 9.3999
+        },
+        {
+          "metric": "layer/cherry_grove/-1/stone",
+          "before": 1.93662,
+          "after": 0.0,
+          "vanilla": 14.142336,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 8.4854
+        },
+        {
+          "metric": "top/cherry_grove/stone",
+          "before": 2.728873,
+          "after": 0.0,
+          "vanilla": 13.959854,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 8.3759
+        },
+        {
+          "metric": "top/savanna/gravel",
+          "before": 1.027851,
+          "after": 1.002984,
+          "vanilla": 14.181894,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 7.9073
+        },
+        {
+          "metric": "top/ocean/sand",
+          "before": 11.383015,
+          "after": 11.468281,
+          "vanilla": 0.533537,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 6.5608
+        },
+        {
+          "metric": "layer/savanna/-2/stone",
+          "before": 5.740219,
+          "after": 5.727785,
+          "vanilla": 16.0299,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 6.1813
+        },
+        {
+          "metric": "layer/ocean/-1/sand",
+          "before": 10.419509,
+          "after": 10.504775,
+          "vanilla": 1.117886,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.6321
+        },
+        {
+          "metric": "layer/beach/-4/sand",
+          "before": 14.641497,
+          "after": 11.230964,
+          "vanilla": 20.130076,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 5.3395
+        },
+        {
+          "metric": "layer/dark_forest/-4/stone",
+          "before": 83.875938,
+          "after": 83.949625,
+          "vanilla": 76.030514,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 4.7515
+        },
+        {
+          "metric": "layer/birch_forest/-1/stone",
+          "before": 1.916667,
+          "after": 1.666667,
+          "vanilla": 7.401316,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.4408
+        },
+        {
+          "metric": "layer/pale_garden/-3/stone",
+          "before": 61.694915,
+          "after": 61.737288,
+          "vanilla": 56.574271,
+          "unit": "percentage points",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 3.0978
+        },
+        {
+          "metric": "covered_grass_by/short_grass",
+          "before": 11.884969,
+          "after": 12.379333,
+          "vanilla": 9.55365,
+          "unit": "per 100 grass blocks",
+          "tolerance": 2,
+          "verdict": "outside",
+          "score": 2.8257
+        }
+      ],
+      "new_outside_A": [],
+      "new_outside_all_categories": [
+        {
+          "metric": "blocks/wildflowers",
+          "before": 0.765394,
+          "after": 1.459542,
+          "vanilla": 0.717727,
+          "unit": "per chunk",
+          "tolerance": 0.14354537743850723,
+          "verdict": "outside",
+          "score": 10.3356,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/meadow/wildflowers",
+          "before": 161.747707,
+          "after": 313.355895,
+          "vanilla": 151.363761,
+          "unit": "per million biome blocks",
+          "tolerance": 30.272752144072133,
+          "verdict": "outside",
+          "score": 5.3511,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/meadow/short_grass",
+          "before": 271.679486,
+          "after": 519.613112,
+          "vanilla": 272.990044,
+          "unit": "per million biome blocks",
+          "tolerance": 54.598008778503385,
+          "verdict": "outside",
+          "score": 4.5171,
+          "batch": "F"
+        },
+        {
+          "metric": "feature_biome/meadow/oxeye_daisy",
+          "before": 5.21887,
+          "after": 11.183294,
+          "vanilla": 0.446062,
+          "unit": "per million biome blocks",
+          "tolerance": 5,
+          "verdict": "outside",
+          "score": 2.1474,
+          "batch": "F"
+        }
+      ],
+      "novel_outside_all_categories": [],
+      "A_outside_before": 486,
+      "A_outside_after": 466,
+      "all_categories_outside_before": 881,
+      "all_categories_outside_after": 859,
+      "red_terracotta_blocks": 884926
+    }
+  },
+  "rejected_experiments": {
+    "terrain": {
+      "shipped": false,
+      "reason": "Four existing workspace regressions failed. Second-seed density-grid terrain maximum reached 237, while the saved official natural-substrate maximum is 168; the height definitions differ.",
+      "owner_pilot_y160_air_percent": {
+        "before": 97.396022,
+        "trial": 31.598326,
+        "vanilla": 7.623061
+      }
+    },
+    "red_palette": {
+      "shipped": false,
+      "reason": "Independent red stream shifted the excess into lower layers; a new badlands Y64 regression appeared. Original palette restored.",
+      "second_biased_sample_blocks_per_chunk": {
+        "before": 150.191518,
+        "trial": 83.89788,
+        "vanilla": 9.652248
+      },
+      "second_badlands_red_y64_per_sampled_chunk": {
+        "before": 0.00475,
+        "trial": 5.498558,
+        "vanilla": 0.0
+      }
+    }
+  },
+  "remaining": [
+    "Red terracotta palette and second-seed excess remain unchanged.",
+    "High-elevation air is mainly empty terrain below thin highest terrain layers; see air-attribution-before.json. It is not all ordinary carved cave volume.",
+    "Windswept snow excess, beach height tail, and steepest slopes remain unresolved.",
+    "Second-seed spawn offset remains unresolved; rounding variants regress controls, and finite-phase sampling variants lack independent validation.",
+    "Soil/layer rows still outside the unchanged tolerance, and all newly outside metrics below, remain unverified.",
+    "Third-seed soil profiles and broader beach coverage remain unverified.",
+    "Twelve newly outside F/F-tree metrics require integration with F3/T3 owners before the full batch can be considered complete."
+  ],
+  "dependent_owners": "Restoring grass changes eligible plant/tree placement; 8 owner and 4 second common F/F-tree metrics newly fail. F3/T3 files are outside this batch ownership and were not edited. This is an incomplete integration result, not an overall regression-free claim.",
+  "source_sha256": {
+    "src/world/terrain.rs": "2c873377361d708daba2263f052e63a33b00fbd4cf51d28eaedf47fd9f67aa30",
+    "tools/measure/genaudit_263.py": "3f59c5b1a7d5a17f8807ec1fea92cc4d33345575de0cb58ed59cec4beb76a4bb",
+    "tools/measure/genaudit_263_io.py": "a3b1c3ea47e17bd80ab9cf07c58246f01c47a8fed9ddf25e55c4f6e58bbbb3e8",
+    "testdata/world-profile/genaudit-26.3/batch-a3/regression-plan.json": "2e2f286e587030550f087f00132dc42140c901e011bfcd3de987ce3515b3f935"
+  },
+  "verification": {
+    "cargo_test_release_workspace": {
+      "passed": 3452,
+      "failed": 0,
+      "ignored": 112,
+      "nested_filtered_subprocess_excluded": true
+    },
+    "cargo_clippy_release_all_targets_workspace_D_warnings": "clean",
+    "cargo_build_jobs": 4,
+    "all_cargo_under_shared_lock": true,
+    "cargo_fmt_run": false,
+    "commits_created": false,
+    "handoff_journal_modified": false
+  }
+}

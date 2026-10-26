@@ -3049,6 +3049,10 @@ impl Terrain {
         let height = column.height;
         let under_water = height < SEA;
         let patch = || self.detail.octaves(x as f64 / 9.0 + 131.0, z as f64 / 9.0 - 77.0, 2);
+        // Материал и толщина покрова — разные поля: отбор песчаных пятен
+        // не должен одновременно отбирать только толстые слои песка.
+        let beach_depth = || patch_share(self.detail.octaves(
+            x as f64 / 16.0 + 731.0, z as f64 / 16.0 - 419.0, 2));
 
         // Под водой трава не растёт. Доли и толщина слоёв дна — по переписи
         // мира оригинала (`tools/measure/seabed_census.py`): у моря гравий
@@ -3058,8 +3062,9 @@ impl Terrain {
         // шум у всех биомов, поэтому на стыке реки с морем пятна не
         // обрываются, а меняется лишь их доля.
         if under_water {
-            // Глубже четырёх блоков дна — всегда камень: шум незачем считать.
-            if depth > 3 {
+            // У обычного дна глубже четырёх блоков уже камень. У пляжа
+            // песчаник продолжается ниже: ранний выход не должен его стирать.
+            if depth > 3 && !(self.preview && matches!(biome, Biome::Beach | Biome::SnowyBeach) && depth <= 8) {
                 return None;
             }
 
@@ -3080,6 +3085,7 @@ impl Terrain {
                 Biome::LukewarmOcean | Biome::DeepLukewarmOcean | Biome::WarmOcean => (0.02, 0.02, 0.01, 0.90, 1),
                 Biome::River | Biome::FrozenRiver => (0.02, 0.39, 0.02, 0.26, 2),
                 Biome::Swamp => (0.04, 0.13, 0.05, 0.01, 2),
+                Biome::Beach | Biome::SnowyBeach if self.preview => (0.03, 0.20, 0.0, 0.77, 4),
                 Biome::Beach | Biome::SnowyBeach | Biome::Desert => (0.03, 0.28, 0.0, 0.69, 4),
                 _ => (0.10, 0.18, 0.02, 0.28, 2),
             };
@@ -3098,7 +3104,16 @@ impl Terrain {
                     // В трети пятен песок на слой толще; у морей он всюду
                     // в один слой.
                     let thicker = sand_depth > 1 && (spot - bare - gravel - clay) / sand < 0.33;
-                    let thick = sand_depth + thicker as i32;
+                    // https://minecraft.wiki/w/Beach: «sandstone».
+                    // Песок не обязан занимать пять слоёв: подводная часть
+                    // того же пляжа также переходит в песчаник, не в камень.
+                    let (thick, bottom) = if self.preview && matches!(biome, Biome::Beach | Biome::SnowyBeach) {
+                        let quantile = beach_depth();
+                        (beach_sand_depth(quantile), beach_base_depth(quantile))
+                    } else { (sand_depth + thicker as i32, i32::MAX) };
+                    if depth >= bottom {
+                        return None;
+                    }
 
                     match depth {
                         _ if depth < thick => Some("sand"),
@@ -3107,13 +3122,14 @@ impl Terrain {
                         _ => Some("dirt"),
                     }
                 }
-                _ => Some("dirt"),
+                _ => (depth <= 3).then_some("dirt"),
             };
         }
 
         // Крутой склон в горах оголён до камня — так у оригинала горы каменные
         // по склонам и зелёные или снежные на полках.
-        if column.steep && biome.bares_steep_slopes() {
+        if column.steep && biome.bares_steep_slopes()
+            && !(self.preview && matches!(biome, Biome::Meadow | Biome::CherryGrove)) {
             return None;
         }
 
@@ -3123,6 +3139,32 @@ impl Terrain {
         let grass = if depth == 0 && snowy() { "grass_block[snowy=true]" } else { "grass_block" };
 
         match biome {
+            // https://minecraft.wiki/w/Meadow: «elevated grassy biome».
+            // Высота сама по себе не снимает дёрн. Толщина почвы меняется
+            // плавно: постоянные три слоя давали 96% земли на глубине −3.
+            // Масштаб своего шума, точную форму пятен [проверить].
+            Biome::Meadow | Biome::CherryGrove if self.preview => {
+                let (mean, amplitude, scale, deepest) = if biome == Biome::Meadow {
+                    (2.9, 4.5, 16.0, 3.0)
+                } else { (2.75, 2.5, 16.0, 4.0) };
+                let soil = (mean + self.detail.octaves(
+                    x as f64 / scale + 731.0, z as f64 / scale - 419.0, 2) * amplitude)
+                    .floor().clamp(1.0, deepest) as i32;
+                match depth {
+                    0 => Some(grass),
+                    _ if depth <= soil => Some("dirt"),
+                    _ => None,
+                }
+            }
+            Biome::Beach | Biome::SnowyBeach if self.preview => {
+                let quantile = beach_depth();
+                let sand = beach_sand_depth(quantile);
+                match depth {
+                    _ if depth < sand => Some("sand"),
+                    _ if depth < beach_base_depth(quantile) => Some("sandstone"),
+                    _ => None,
+                }
+            }
             Biome::Desert | Biome::Beach => match depth {
                 0..=4 => Some("sand"),
                 5..=8 => Some("sandstone"),
@@ -3232,6 +3274,18 @@ impl Terrain {
             },
         }
     }
+}
+
+// Глубина песчаного покрова: квантиль пятна общий для всего столбца.
+// Частоты — измерение сохранённых пляжей 26.3, не параметры оригинала.
+fn beach_sand_depth(quantile: f64) -> i32 {
+    if quantile < 0.1 { 2 } else if quantile < 0.5 { 3 } else if quantile < 0.9 { 4 } else { 5 }
+}
+
+// Тонкая часть покрова заканчивается раньше: постоянные четыре слоя
+// песчаника под песком завышали его долю на глубине −5.
+fn beach_base_depth(quantile: f64) -> i32 {
+    if quantile < 0.08 { 4 } else if quantile < 0.25 { 5 } else { beach_sand_depth(quantile) + 3 }
 }
 
 /// Раскладка полос терракоты для мира: 192 слоя обычной терракоты, по
@@ -3441,6 +3495,41 @@ fn named(name: &str) -> i32 {
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    /// Регрессии переписи: считаем готовые блоки в своём биоме, а не
+    /// совпадение координат с оригиналом. Малые окна имеют широкий допуск;
+    /// строгие пять процентных пунктов проверяются полной переписью.
+    #[test]
+    fn preview_a3_surface_regressions_in_generated_chunks() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a3/regression-plan.json")).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let terrain = Terrain::new(case["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true);
+            let biome = Biome::by_name(case["biome"].as_str().unwrap(), true).unwrap();
+            let depth = case["depth"].as_i64().unwrap() as i32;
+            let (cx, cz) = (case["centre_chunk"][0].as_i64().unwrap() as i32,
+                case["centre_chunk"][1].as_i64().unwrap() as i32);
+            let radius = case["radius"].as_i64().unwrap() as i32;
+            let generator = crate::world::Generator::Normal(terrain);
+            let crate::world::Generator::Normal(terrain) = &generator else { unreachable!() };
+            let (mut matching, mut total) = (0, 0);
+            for cx in cx-radius..=cx+radius { for cz in cz-radius..=cz+radius {
+                let grid = terrain.relief_grid(cx*16-1, cz*16-1, cx*16+16, cz*16+16);
+                let chunk = crate::world::Chunk::generated(&generator, cx, cz);
+                for x in 0..16 { for z in 0..16 {
+                    let column = terrain.column_in(cx*16+x, cz*16+z, Some(&grid));
+                    if chunk.biome(x, column.height, z) != biome.number() as u16 { continue; }
+                    total += 1;
+                    matching += usize::from(crate::blocks::block_at_state(
+                        chunk.block(x, column.height-depth, z)) == case["block"].as_str());
+                } }
+            } }
+            assert!(total >= 64, "{}: недостаточная выборка {total}", biome.name());
+            let percent = matching as f64 * 100.0 / total as f64;
+            assert!((case["minimum_percent"].as_f64().unwrap()..=case["maximum_percent"].as_f64().unwrap()).contains(&percent),
+                "{} -{depth}: {matching}/{total} = {percent}%", biome.name());
+        }
+    }
 
     /// Сохранённые чанки трёх семян: до исправления потоков состав этих
     /// клеток не совпадал. Допуск — одна клетка на границе, а не блоки мира.

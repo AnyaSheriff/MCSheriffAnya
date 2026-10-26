@@ -1,0 +1,81 @@
+{
+  "method": "Classify each saved native air cell below the analyzer surface-5 using the unchanged canonical 4x8x4 terrain density grid. Coordinate classification within our world only; not official-coordinate matching. Surface definition and denominators are unchanged.",
+  "samples": {
+    "owner": {
+      "112": {
+        "below_surface_cells": 390681,
+        "native_air": 230550,
+        "terrain_air": 211768,
+        "air_where_density_solid": 18782
+      },
+      "128": {
+        "below_surface_cells": 118827,
+        "native_air": 89270,
+        "terrain_air": 87241,
+        "air_where_density_solid": 2029
+      },
+      "144": {
+        "below_surface_cells": 32763,
+        "native_air": 28985,
+        "terrain_air": 28935,
+        "air_where_density_solid": 50
+      },
+      "160": {
+        "below_surface_cells": 6023,
+        "native_air": 5877,
+        "terrain_air": 5877,
+        "air_where_density_solid": 0
+      },
+      "176": {
+        "below_surface_cells": 725,
+        "native_air": 724,
+        "terrain_air": 724,
+        "air_where_density_solid": 0
+      },
+      "192": {
+        "below_surface_cells": 145,
+        "native_air": 145,
+        "terrain_air": 145,
+        "air_where_density_solid": 0
+      }
+    },
+    "second": {
+      "112": {
+        "below_surface_cells": 760145,
+        "native_air": 103101,
+        "terrain_air": 22881,
+        "air_where_density_solid": 80220
+      },
+      "128": {
+        "below_surface_cells": 100264,
+        "native_air": 24239,
+        "terrain_air": 5249,
+        "air_where_density_solid": 18990
+      },
+      "144": {
+        "below_surface_cells": 4533,
+        "native_air": 1765,
+        "terrain_air": 1109,
+        "air_where_density_solid": 656
+      },
+      "160": {
+        "below_surface_cells": 9,
+        "native_air": 9,
+        "terrain_air": 9,
+        "air_where_density_solid": 0
+      },
+      "176": {
+        "below_surface_cells": 0,
+        "native_air": 0,
+        "terrain_air": 0,
+        "air_where_density_solid": 0
+      },
+      "192": {
+        "below_surface_cells": 0,
+        "native_air": 0,
+        "terrain_air": 0,
+        "air_where_density_solid": 0
+      }
+    }
+  }
+}
