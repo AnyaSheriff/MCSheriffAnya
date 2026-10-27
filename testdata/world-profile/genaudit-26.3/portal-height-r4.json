@@ -1,0 +1,284 @@
+{
+  "method": "Official 26.3 saved natural start TPY; central top measured read-only in terrain-only region files, ignoring vegetation and including water. Thirteen main-square controls and three held-out controls. No official implementation or archive read.",
+  "rows": [
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -65,
+        -25
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_10",
+      "vertical": "underground",
+      "height": 8,
+      "top": 74,
+      "y": 38,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": -22,
+      "old_lowest_corner_top": 73,
+      "old_full_rule_y": 40
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -69,
+        -65
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_1",
+      "vertical": "underground",
+      "height": 10,
+      "top": 62,
+      "y": -28,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 7,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": 7
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -104,
+        -57
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_7",
+      "vertical": "underground",
+      "height": 7,
+      "top": 69,
+      "y": 27,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 22,
+      "old_lowest_corner_top": 67,
+      "old_full_rule_y": 28
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        21,
+        -71
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_3",
+      "vertical": "underground",
+      "height": 9,
+      "top": 57,
+      "y": -38,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": -12,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": 33
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -29,
+        -63
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_2",
+      "vertical": "underground",
+      "height": 12,
+      "top": 112,
+      "y": 39,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 31,
+      "old_lowest_corner_top": 110,
+      "old_full_rule_y": 57
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -59,
+        23
+      ],
+      "variant": "ruined_portal_desert",
+      "template": "minecraft:ruined_portal/portal_5",
+      "vertical": "partly_buried",
+      "height": 10,
+      "top": 67,
+      "y": 64,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 62,
+      "old_lowest_corner_top": 66,
+      "old_full_rule_y": 61
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -61,
+        89
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_3",
+      "vertical": "underground",
+      "height": 9,
+      "top": 62,
+      "y": -28,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 50,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": 50
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        21,
+        -21
+      ],
+      "variant": "ruined_portal_desert",
+      "template": "minecraft:ruined_portal/portal_10",
+      "vertical": "partly_buried",
+      "height": 8,
+      "top": 62,
+      "y": 61,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 61,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": 61
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        9,
+        16
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_2",
+      "vertical": "underground",
+      "height": 12,
+      "top": 62,
+      "y": -17,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": -1,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": -1
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        53,
+        17
+      ],
+      "variant": "ruined_portal_desert",
+      "template": "minecraft:ruined_portal/portal_4",
+      "vertical": "partly_buried",
+      "height": 9,
+      "top": 67,
+      "y": 61,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 65,
+      "old_lowest_corner_top": 66,
+      "old_full_rule_y": 64
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        53,
+        84
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "minecraft:ruined_portal/portal_7",
+      "vertical": "in_mountain",
+      "height": 7,
+      "top": 63,
+      "y": 56,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 56,
+      "old_lowest_corner_top": 63,
+      "old_full_rule_y": 70
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        87,
+        -76
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_8",
+      "vertical": "underground",
+      "height": 9,
+      "top": 62,
+      "y": 49,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": 21,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": 21
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        120,
+        52
+      ],
+      "variant": "ruined_portal",
+      "template": "minecraft:ruined_portal/portal_3",
+      "vertical": "underground",
+      "height": 9,
+      "top": 76,
+      "y": 55,
+      "cohort": "main_square",
+      "old_hash_on_measured_center": -10,
+      "old_lowest_corner_top": 73,
+      "old_full_rule_y": -31
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -96,
+        120
+      ],
+      "variant": "ruined_portal_mountain",
+      "template": "ruined_portal/portal_4",
+      "vertical": "in_mountain",
+      "height": 9,
+      "top": 62,
+      "y": 53,
+      "cohort": "held_out",
+      "old_hash_on_measured_center": 53,
+      "old_lowest_corner_top": 62,
+      "old_full_rule_y": 70
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -216,
+        95
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_10",
+      "vertical": "underground",
+      "height": 8,
+      "top": 70,
+      "y": 22,
+      "cohort": "held_out",
+      "old_hash_on_measured_center": 51,
+      "old_lowest_corner_top": 69,
+      "old_full_rule_y": 28
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        172,
+        -151
+      ],
+      "variant": "ruined_portal",
+      "template": "ruined_portal/portal_3",
+      "vertical": "underground",
+      "height": 9,
+      "top": 70,
+      "y": 24,
+      "cohort": "held_out",
+      "old_hash_on_measured_center": -34,
+      "old_lowest_corner_top": 68,
+      "old_full_rule_y": 5
+    }
+  ],
+  "reference_replay": {
+    "old_full_rule_exact": 1,
+    "old_hash_with_corrected_center_exact": 3,
+    "new_rule_exact": 16,
+    "observed": 16,
+    "held_out": 3
+  }
+}

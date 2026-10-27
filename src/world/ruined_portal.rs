@@ -14,7 +14,7 @@
 //   болото      на дне                         0,5   —          —        да
 //   горы        в горе 50 % / на земле         0,2   да / 50 %  —        —
 //   океан       на дне                         0,8   —          —        —
-//   Незер       в Незере                       0     50 %       —        —
+//   Незер       в Незере                       0     нет в 26.3 —        —
 //
 // Это совпало с записями о строении в мире оригинала (tools/measure/
 // template_structs.py records: поля VerticalPlacement и Properties у 113
@@ -198,15 +198,16 @@ fn pick_template(dice: u64) -> usize {
 
 /// minecraft.wiki/w/Ruined_Portal: «5% chance» гигантского образца.
 /// Поток, порядок выбора и флаги подтверждены 66 сохранёнными началами.
-fn selection_263(seed: i64, x: i32, z: i32, variant: Variant) -> (usize, Orient, Vertical, bool) {
-    let mut random = template::StructureRandom::for_chunk(seed, x, z);
+fn selection_263(random: &mut template::StructureRandom, variant: Variant) -> (usize, Orient, Vertical, bool) {
     let vertical = match variant {
         Variant::Standard => if random.float() < 0.5 { Vertical::Underground } else { Vertical::OnLandSurface },
         Variant::Mountain => if random.float() < 0.5 { Vertical::InMountain } else { Vertical::OnLandSurface },
         Variant::Desert => Vertical::PartlyBuried,
         Variant::Ocean | Variant::Swamp => Vertical::OnOceanFloor,
         Variant::Jungle => Vertical::OnLandSurface,
-        Variant::Nether => unreachable!("поток Незера сохранён отдельно"),
+        // В 32 отложенных началах Незера 26.3 air_pocket = 0; перед
+        // выбором образца нет броска размещения (в отличие от обычного вида).
+        Variant::Nether => Vertical::InNether,
     };
     let giant = random.float() < 0.05;
     let number = 1 + random.below(if giant { 3 } else { 10 });
@@ -250,6 +251,22 @@ fn height_for(vertical: Vertical, top: i32, height: i32, dice: u64) -> i32 {
     }
 }
 
+/// minecraft.wiki/w/Ruined_Portal: «plus a random integer from 2 to 8».
+/// У заглублённых порталов поток продолжается после выбора рамки, верх
+/// берётся в её середине. Проверено 16 естественными началами, из них три
+/// отложены до выбора правила; поверхность и опора углов ещё [проверить].
+fn buried_height_263(vertical: Vertical, top: i32, height: i32, random: &mut template::StructureRandom) -> i32 {
+    let high = top - height;
+    match vertical {
+        Vertical::PartlyBuried => high + 2 + random.below(7),
+        Vertical::Underground | Vertical::InMountain => {
+            let low = if vertical == Vertical::InMountain { 70 } else { super::MIN_Y + 15 };
+            if high <= low { high } else { low + random.below(high - low + 1) }
+        }
+        _ => unreachable!("только заглублённые порталы"),
+    }
+}
+
 type Starts = Mutex<HashMap<(i64, i32, i32, bool, u8), Option<Portal>>>;
 
 fn cache() -> &'static Starts {
@@ -268,7 +285,10 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         return *found;
     }
 
-    let found = decide(terrain.seed(), region_x, region_z, terrain.generation_profile() & 2 != 0, &|x, z| terrain.column_in(x, z, None).biome, &|x, z, floor| {
+    let preview = terrain.generation_profile() & 2 != 0;
+    let at = if preview { attempt(terrain.seed(), region_x, region_z) }
+        else { template::attempt(terrain.seed(), region_x, region_z, SPACING, SEPARATION, SALT) };
+    let found = decide(terrain.seed(), at, preview, &|x, z| terrain.column_in(x, z, None).biome, &|x, z, floor| {
         let height = terrain.column_at(x, z).height;
 
         if floor { height } else { height.max(super::terrain::SEA) }
@@ -289,7 +309,11 @@ pub fn start_in_nether(nether: &super::nether::Nether, region_x: i32, region_z: 
         return *found;
     }
 
-    let found = decide(nether.seed(), region_x, region_z, false, &|x, z| nether.biome_at(x, z), &|_, _, _| 0).map(|mut portal| {
+    // minecraft.wiki/w/Ruined_Portal: «25 chunks ... 15 chunks ... buffer».
+    // Начало Незера (9, 16) второго семени подтверждает общую сетку;
+    // образец, поворот и отсутствие пустоты проверены ещё 32 началами.
+    let at = attempt(nether.seed(), region_x, region_z);
+    let found = decide(nether.seed(), at, true, &|x, z| nether.biome_at(x, z), &|_, _, _| 0).map(|mut portal| {
         portal.origin.1 = nether_height(nether, &portal);
         portal
     });
@@ -299,20 +323,20 @@ pub fn start_in_nether(nether: &super::nether::Nether, region_x: i32, region_z: 
     found
 }
 
-/// Высота портала Незера (вики): с пустотой — от 32 до 100, без неё —
-/// поровну 27…29 или 29…100; оттуда — вниз по пустоте до первой породы
-/// или моря лавы под серединой рамки (замер 50 порталов Незера: без пустоты
-/// TPY 27…31 у половины, с пустотой — 31…98, 31 — верх моря лавы).
+/// minecraft.wiki/w/Ruined_Portal: «27 to 29». Начальный бросок продолжает
+/// выбор рамки: подтверждён 16 низкими началами, где спуск не меняет Y.
+fn nether_initial_height_263(random: &mut template::StructureRandom) -> i32 {
+    if random.float() < 0.5 { 27 + random.below(3) } else { 29 + random.below(72) }
+}
+
+/// Поиск опоры Незера остаётся прежним приближением [проверить].
+/// Без пустоты — поровну 27…29 или 29…100; оттуда — вниз по пустоте до
+/// первой породы или моря лавы под серединой рамки. У всех 34 начал 26.3
+/// пустота выключена. Опора высоких рамок ещё [проверить].
 fn nether_height(nether: &super::nether::Nether, portal: &Portal) -> i32 {
-    let dice = template::roll(nether.seed(), portal.chunk.0, portal.chunk.1, SALT ^ 0x4E7E);
-    let pick = |low: i32, high: i32, shift: u32| low + ((dice >> shift) % (high - low + 1) as u64) as i32;
-    let start = if portal.air_pocket {
-        pick(32, 100, 8)
-    } else if dice & 1 == 0 {
-        pick(27, 29, 8)
-    } else {
-        pick(29, 100, 8)
-    };
+    let mut random = template::StructureRandom::for_chunk(nether.seed(), portal.chunk.0, portal.chunk.1);
+    selection_263(&mut random, Variant::Nether);
+    let start = nether_initial_height_263(&mut random);
     let (sx, sz) = portal.footprint();
     let (x, z) = (portal.origin.0 + sx / 2, portal.origin.2 + sz / 2);
     let mut y = start;
@@ -325,9 +349,7 @@ fn nether_height(nether: &super::nether::Nether, portal: &Portal) -> i32 {
 }
 
 /// Решение области: вид по биому, образец, положение, поля и высота.
-fn decide(seed: i64, region_x: i32, region_z: i32, preview: bool, biome: &dyn Fn(i32, i32) -> super::terrain::Biome, top: &dyn Fn(i32, i32, bool) -> i32) -> Option<Portal> {
-    let (chunk_x, chunk_z) = if preview { attempt(seed, region_x, region_z) }
-        else { template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT) };
+fn decide(seed: i64, (chunk_x, chunk_z): (i32, i32), preview: bool, biome: &dyn Fn(i32, i32) -> super::terrain::Biome, top: &dyn Fn(i32, i32, bool) -> i32) -> Option<Portal> {
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let here = biome(x + 8, z + 8);
     let variant = Variant::of_biome(here)?;
@@ -335,15 +357,20 @@ fn decide(seed: i64, region_x: i32, region_z: i32, preview: bool, biome: &dyn Fn
     let (vertical, air_pocket, mossiness, overgrown, vines) = properties(variant, dice);
     let template = pick_template(dice >> 16);
     let orient = Orient::from_roll(dice >> 48);
+    let mut random = template::StructureRandom::for_chunk(seed, chunk_x, chunk_z);
     let (template, orient, vertical, air_pocket) = if preview {
-        selection_263(seed, chunk_x, chunk_z, variant)
+        selection_263(&mut random, variant)
     } else { (template, orient, vertical, air_pocket) };
     let (x, z) = if preview { frame_corner(x, z, &library()[template], orient) } else { (x, z) };
     let (sx, sz) = library()[template].footprint(orient);
     let floor = vertical == Vertical::OnOceanFloor;
     let corners = [(x, z), (x + sx - 1, z), (x, z + sz - 1), (x + sx - 1, z + sz - 1)];
     let lowest = corners.iter().map(|&(cx, cz)| top(cx, cz, floor)).min().unwrap_or(super::terrain::SEA);
-    let y = height_for(vertical, lowest, library()[template].height, template::roll(seed, chunk_x, chunk_z, SALT ^ 0x51DE));
+    let y = if preview && matches!(vertical, Vertical::Underground | Vertical::InMountain | Vertical::PartlyBuried) {
+        buried_height_263(vertical, top(x + sx / 2, z + sz / 2, false), library()[template].height, &mut random)
+    } else {
+        height_for(vertical, lowest, library()[template].height, template::roll(seed, chunk_x, chunk_z, SALT ^ 0x51DE))
+    };
 
     Some(Portal {
         template,
@@ -976,7 +1003,8 @@ fn measured_portal_variants_flags_and_frames() {
         let seed=row["seed"].as_i64().unwrap();
         let (x,z)=(row["chunk"][0].as_i64().unwrap() as i32,row["chunk"][1].as_i64().unwrap() as i32);
         let variant=Variant::by_name(row["variant"].as_str().unwrap()).unwrap();
-        let (index,orient,vertical,air)=selection_263(seed,x,z,variant);
+        let mut random = template::StructureRandom::for_chunk(seed, x, z);
+        let (index,orient,vertical,air)=selection_263(&mut random,variant);
         let t=&library()[index];
         assert_eq!(t.name,row["template"].as_str().unwrap(),"{seed} {x}/{z}");
         assert_eq!(i64::from(orient.turns),row["turns"].as_i64().unwrap());
@@ -991,4 +1019,122 @@ fn measured_portal_variants_flags_and_frames() {
         assert_eq!(frame_corner(x*16,z*16,t,orient),
             (row["box"][0].as_i64().unwrap() as i32,row["box"][2].as_i64().unwrap() as i32));
     }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn buried_portal_heights_follow_measured_selection_stream() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/portal-height-r4.json")).unwrap();
+    let rows = fixture["rows"].as_array().unwrap();
+    assert_eq!(rows.len(), 16);
+    for row in rows {
+        let seed = row["seed"].as_i64().unwrap();
+        let (x, z) = (row["chunk"][0].as_i64().unwrap() as i32, row["chunk"][1].as_i64().unwrap() as i32);
+        let variant = Variant::by_name(row["variant"].as_str().unwrap()).unwrap();
+        let mut random = template::StructureRandom::for_chunk(seed, x, z);
+        let (index, _, vertical, _) = selection_263(&mut random, variant);
+        let t = &library()[index];
+        assert_eq!(t.name, row["template"].as_str().unwrap().trim_start_matches("minecraft:"));
+        assert_eq!(i64::from(t.height), row["height"].as_i64().unwrap());
+        let y = buried_height_263(vertical, row["top"].as_i64().unwrap() as i32, t.height, &mut random);
+        assert_eq!(i64::from(y), row["y"].as_i64().unwrap(), "{seed} {x}/{z}");
+    }
+}
+
+/// minecraft.wiki/w/Ruined_Portal: «both the Nether and the Overworld».
+/// Проверяется блок в свежем чанке на месте сохранённого начала оригинала,
+/// а не только общий помощник сетки. Высота Незера ещё [проверить].
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn nether_portal_is_generated_at_the_saved_second_seed_start() {
+    let nether = super::nether::Nether::new(100_554_032_945_340);
+    let portal = start_in_nether(&nether, 0, 0).unwrap();
+    assert_eq!(portal.chunk, (9, 16));
+    assert_eq!(portal.variant, Variant::Nether);
+    assert_eq!(portal.vertical, Vertical::InNether);
+    assert!(portal.blackstone);
+    assert!(!portal.air_pocket);
+    assert!((27..=100).contains(&portal.origin.1));
+    assert_portal_blocks_generated(super::Generator::Nether(nether), portal);
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn buried_portal_frame_is_present_in_generated_chunks() {
+    let terrain = super::terrain::Terrain::new(1_792_932_773_345_722_119, super::terrain::Style::Vanilla).with_preview(true);
+    let portal = start_in(&terrain, -2, -1).unwrap();
+    assert_eq!(portal.chunk, (-65, -25));
+    assert_eq!(portal.vertical, Vertical::Underground);
+    assert_portal_blocks_generated(super::Generator::Normal(terrain), portal);
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+fn assert_portal_blocks_generated(generator: super::Generator, portal: Portal) {
+    let (sx, sz) = portal.footprint();
+    let mut obsidian = 0;
+    for cx in portal.origin.0.div_euclid(16)..=(portal.origin.0 + sx - 1).div_euclid(16) {
+        for cz in portal.origin.2.div_euclid(16)..=(portal.origin.2 + sz - 1).div_euclid(16) {
+            let chunk = super::Chunk::generated(&generator, cx, cz);
+            for (a, y, b, cell) in library()[portal.template].cells() {
+                if !matches!(cell, Cell::Block(_)) { continue; }
+                let (dx, dz) = portal.orient.offset(a, b, library()[portal.template].width, library()[portal.template].length);
+                let (x, wy, z) = (portal.origin.0 + dx, portal.origin.1 + y, portal.origin.2 + dz);
+                if x.div_euclid(16) == cx && z.div_euclid(16) == cz {
+                    obsidian += usize::from(matches!(blocks::block_at_state(chunk.block(x.rem_euclid(16), wy, z.rem_euclid(16))), Some("obsidian" | "crying_obsidian")));
+                }
+            }
+        }
+    }
+    assert!(obsidian >= 8, "{portal:?}: {obsidian}");
+}
+
+/// Независимые начала Незера: сетка, образец, отражение, поворот и
+/// горизонтальная рамка сняты с регионов оригинала, не с нашей функции.
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn nether_portal_selection_matches_34_saved_natural_frames() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/portal-nether-r4.json")).unwrap();
+    let rows = fixture["rows"].as_array().unwrap();
+    assert_eq!(rows.len(), 34);
+    let mut low_starts = 0;
+    for row in rows {
+        let seed = row["seed"].as_i64().unwrap();
+        let (x, z) = (row["chunk"][0].as_i64().unwrap() as i32, row["chunk"][1].as_i64().unwrap() as i32);
+        assert_eq!(attempt(seed, x.div_euclid(SPACING), z.div_euclid(SPACING)), (x, z));
+        let p = &row["part"];
+        let mut random = template::StructureRandom::for_chunk(seed, x, z);
+        let (index, orient, vertical, air) = selection_263(&mut random, Variant::Nether);
+        let t = &library()[index];
+        assert_eq!(t.name, p["Template"].as_str().unwrap().trim_start_matches("minecraft:"), "{seed} {x}/{z}");
+        assert_eq!(vertical, Vertical::InNether);
+        assert!(!air);
+        assert_eq!(p["Properties"]["air_pocket"], 0);
+        assert_eq!(orient.mirror, p["Mirror"].as_str().unwrap() == "FRONT_BACK");
+        assert_eq!(["NONE", "CLOCKWISE_90", "CLOCKWISE_180", "COUNTERCLOCKWISE_90"][usize::from(orient.turns)], p["Rotation"].as_str().unwrap());
+        let bb: Vec<i32> = p["BB"].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+        assert_eq!(frame_corner(x * 16, z * 16, t, orient), (bb[0], bb[2]));
+        assert_eq!(t.footprint(orient), (bb[3] - bb[0] + 1, bb[5] - bb[2] + 1));
+        assert_eq!(t.height, bb[4] - bb[1] + 1);
+        let initial_y = nether_initial_height_263(&mut random);
+        if bb[1] < super::nether::LAVA_SEA {
+            low_starts += 1;
+            assert_eq!(initial_y, bb[1], "низкий портал {seed} {x}/{z}");
+        } else {
+            assert!(initial_y >= bb[1], "спуск не может поднять портал {seed} {x}/{z}");
+        }
+    }
+    assert_eq!(low_starts, 16);
+}
+
+/// Низкий портал не спускается: сохранённый Y однозначно проверяет
+/// продолжение потока, даже когда исходный рельеф двух реализаций различен.
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn nether_low_portal_uses_the_measured_initial_height_in_generated_chunks() {
+    let nether = super::nether::Nether::new(1_792_932_773_345_722_119);
+    let portal = start_in_nether(&nether, 2, -3).unwrap();
+    assert_eq!(portal.chunk, (95, -102));
+    assert_eq!(portal.origin.1, 27);
+    assert!(!portal.air_pocket);
+    assert_portal_blocks_generated(super::Generator::Nether(nether), portal);
 }
