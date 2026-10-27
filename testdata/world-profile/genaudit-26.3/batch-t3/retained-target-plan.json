@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "purpose": "Fixed target windows of the existing complete census, fresh retained source; compare old baseline, rejected experiment, retained and recorded official with unchanged counts/denominators; no new full census claim",
+  "samples": [
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "cases": {
+        "bamboo": [
+          -96,
+          -36,
+          -81,
+          -21
+        ],
+        "jungle": [
+          -123,
+          52,
+          -108,
+          67
+        ],
+        "mangrove": [
+          16,
+          -34,
+          31,
+          -19
+        ]
+      }
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "cases": {
+        "bamboo": [
+          110,
+          -18,
+          125,
+          -3
+        ],
+        "jungle": [
+          39,
+          -36,
+          54,
+          -21
+        ],
+        "mangrove": [
+          -62,
+          35,
+          -47,
+          50
+        ]
+      }
+    }
+  ],
+  "target_selection_note": "Second bamboo window corrected before retained export: first selected tiny boundary patch was below the original65536biome-block threshold; preserved under excluded-insufficient-second-bamboo. Replacement chosen by largest saved own bamboo biome chunk counts, not outcomes."
+}

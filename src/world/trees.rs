@@ -270,6 +270,13 @@ impl Tree {
     /// оригинала [проверить]. Геометрия прежнего профиля не меняется.
     pub(super) fn blocks_in_preview(&self, seed: i64, x: i32, z: i32) -> Vec<TreeBlock> {
         let mut blocks = self.blocks_in(seed, x, z);
+        // minecraft.wiki/w/Jungle_tree: «branches». Измеренные оси
+        // ветвей джунглей вертикальны; редкие варианты [проверить].
+        if matches!(self.shape, Shape::Jungle | Shape::MegaJungle) {
+            for block in &mut blocks {
+                if matches!(block.3, Part::Log(_)) { block.3 = Part::Log(Axis::Y); }
+            }
+        }
         if !matches!(self.shape, Shape::Mangrove | Shape::TallMangrove) { return blocks; }
         let roots: Vec<_> = blocks.iter().filter(|b| b.3 == Part::Block("mangrove_roots"))
             .map(|b| (b.0,b.1,b.2)).collect();
@@ -1472,13 +1479,18 @@ impl Terrain {
 
         // minecraft.wiki/w/Plains: «5% of chunks». Редкость относится к
         // чанку, а не к каждому столбцу; дешёвый фильтр знает эту же точку.
-        let lone = self.preview() && matches!(column.biome, Biome::Plains | Biome::SunflowerPlains);
+        // minecraft.wiki/w/Meadow: «a lone oak or birch tree». На втором
+        // семени 13 оснований на 335 биомных чанков, а не прежние 81.
+        // Общая редкая попытка на чанк; точную соль лугов [проверить].
+        let cherry = self.preview() && column.biome == Biome::CherryGrove;
+        let lone = cherry || self.preview() && matches!(column.biome, Biome::Plains | Biome::SunflowerPlains | Biome::Meadow);
         if self.preview() {
             // Частоты принятых деревьев по биомной переписи 26.3;
             // точные соли украшения оригинала ещё [проверить].
             match column.biome {
                 Biome::Forest => density = 0.0285,
-                Biome::BirchForest => density = 0.040,
+                Biome::BirchForest => density = 0.026,
+                Biome::OldGrowthBirchForest => density = 0.030,
                 Biome::FlowerForest => { density = 0.035; mix = &[(0.1, FANCY_OAK), (0.15, BIRCH), (0.75, OAK)]; }
                 Biome::DarkForest => density = 0.035,
                 // После устранения лишних старых хвойных деревьев их
@@ -1497,13 +1509,32 @@ impl Terrain {
                 Biome::BambooJungle => { density = 0.025; mix = &[(0.16, FANCY_OAK), (0.5, JUNGLE_BUSH), (0.10, MEGA_JUNGLE), (0.24, JUNGLE)]; }
                 Biome::Jungle => mix = &[(0.18, FANCY_OAK), (0.5, JUNGLE_BUSH), (0.09, MEGA_JUNGLE), (0.23, JUNGLE)],
                 Biome::WindsweptSavanna => density = 0.0024,
+                Biome::Savanna => density = 0.0030,
+                Biome::Swamp => density = 0.0077,
                 _ => {}
             }
         }
 
-        if if lone { !plains_tree(self.seed(), x, z) } else { !chance(self.seed(), x, z, 1_301, density) } {
+        if if cherry { !cherry_tree(self.seed(),x,z) }
+            else if lone { !plains_tree(self.seed(), x, z) }
+            else { !chance(self.seed(), x, z, 1_301, density) } {
             return None;
         }
+
+        // Порода и высота ствола свои у каждого дерева.
+        let mut random = Random::new(
+            ((x as i64).wrapping_mul(132_897_987_541).wrapping_add((z as i64).wrapping_mul(341_873_128_712)) + 97)
+                ^ self.seed().wrapping_mul(6_364_136_223_846_793_005),
+        );
+        let mut pick = fraction(&mut random);
+        let species = mix
+            .iter()
+            .find(|(share, _)| {
+                pick -= share;
+                pick < 0.0
+            })
+            .or(mix.last())
+            .map(|(_, species)| *species)?;
 
         // Уступаем соседу, который ближе к началу отсчёта: так из двух
         // стволов рядом остаётся один, и оба чанка решают одинаково.
@@ -1525,27 +1556,15 @@ impl Terrain {
             }
         }
 
-        // Порода и высота ствола свои у каждого дерева.
-        let mut random = Random::new(
-            ((x as i64).wrapping_mul(132_897_987_541).wrapping_add((z as i64).wrapping_mul(341_873_128_712)) + 97)
-                ^ self.seed().wrapping_mul(6_364_136_223_846_793_005),
-        );
-        let mut pick = fraction(&mut random);
-        let species = mix
-            .iter()
-            .find(|(share, _)| {
-                pick -= share;
-                pick < 0.0
-            })
-            .or(mix.last())
-            .map(|(_, species)| *species)?;
-
         // Редкость отдельной породы: изменение общей густоты сдвигало
         // также уже верные дубы и редкие ели пятнистого леса.
         if self.preview() {
             let share = match column.biome {
                 Biome::WindsweptHills | Biome::WindsweptGravellyHills if species.tree.log == "spruce_log" => 0.15,
                 Biome::DarkForest if species.tree.log == "birch_log" => 0.6,
+                // Берёзы цветочного леса уже в допуске: исправляется
+                // только частота целых дубов, без прореживания крон.
+                Biome::FlowerForest if species.tree.log == "oak_log" => 0.75,
                 Biome::DappledForest if species.tree.shape == Shape::Poplar => 0.90,
                 _ => 1.0,
             };
@@ -1656,7 +1675,18 @@ pub fn from_sapling(name: &str, wide: bool, seed: i64) -> Option<Tree> {
 /// Дешёвая проверка перед дорогой: самая густая чаща у нас реже одного ствола
 /// на шестнадцать мест, поэтому почти для всех мест столбец считать незачем.
 pub fn tree_possible(seed: i64, x: i32, z: i32) -> bool {
-    chance(seed, x, z, 1_301, DENSEST_FOREST) || plains_tree(seed, x, z)
+    chance(seed, x, z, 1_301, DENSEST_FOREST) || plains_tree(seed, x, z) || cherry_tree(seed,x,z)
+}
+
+/// minecraft.wiki/w/Cherry: «closed canopy». В двух природных пятнах
+/// около одного дерева на биомный чанк; независимый отбор столбцов давал
+/// то пятикратный избыток, то большие пустоты. Одна разнесённая попытка
+/// на чанк сохраняет целое дерево; соль и точный селектор [проверить].
+fn cherry_tree(seed: i64, x: i32, z: i32) -> bool {
+    let (cx,cz)=(x.div_euclid(16),z.div_euclid(16));
+    let mut random=Random::new(seed ^ i64::from(cx).wrapping_mul(341_873_128_712)
+        ^ i64::from(cz).wrapping_mul(132_897_987_541) ^ 1_317);
+    (x.rem_euclid(16),z.rem_euclid(16))==(roll(&mut random,16),roll(&mut random,16))
 }
 
 /// Одна попытка в редком чанке; отрицательные координаты делятся вниз.
@@ -1677,6 +1707,29 @@ const DENSEST_FOREST: f64 = 0.06;
 mod tests {
     use super::*;
 
+    /// В сохранённой переписи обоих семян медиана ствола джунглей в
+    /// бамбуковом биоме — один блок. Прореживание кустов вместе с дубами
+    /// меняло её на 5–6: короткие стволы должны оставаться большинством.
+    #[test]
+    fn preview_bamboo_jungle_keeps_short_stem_majority() {
+        for seed in [1_792_932_773_345_722_119,100_554_032_945_340] {
+            let terrain=Terrain::new(seed,super::super::terrain::Style::Vanilla).with_preview(true);
+            let column=Column {biome:Biome::BambooJungle,..Column::flat(70)};
+            let (mut short,mut tall)=(0,0);
+            for x in -256..256 {for z in -256..256 {
+                if !tree_possible(seed,x,z) {continue;}
+                let Some(tree)=terrain.tree_at(&column,x,z) else {continue};
+                match tree.shape {
+                    Shape::Bush => short+=1,
+                    Shape::Jungle | Shape::MegaJungle => tall+=1,
+                    _ => {}
+                }
+            }}
+            assert!(short+tall>1000,"пустая выборка: {short}/{tall}");
+            assert!(short*100 >= (short+tall)*55,"{seed}: кусты потеряли большинство {short}/{tall}");
+        }
+    }
+
     #[test]
     fn preview_plains_tree_rarity_is_per_chunk_and_survives_fast_filter() {
         let terrain = Terrain::new(1792932773345722119, super::super::terrain::Style::Vanilla).with_preview(true);
@@ -1695,6 +1748,48 @@ mod tests {
             occupied += trees;
         }}
         assert!((164..=246).contains(&occupied), "{occupied}/4096 чанков вместо 5%");
+    }
+
+    /// В двух официальных окнах 17 оснований примерно на 360 чанков
+    /// луга. Несколько попыток в одном чанке снова дали бы пятикратный избыток.
+    #[test]
+    fn preview_meadow_has_rare_single_tree_attempts() {
+        let terrain=Terrain::new(100_554_032_945_340,super::super::terrain::Style::Vanilla).with_preview(true);
+        let column=Column {biome:Biome::Meadow,..Column::flat(90)};
+        let mut total=0;
+        for cx in -16..16 {for cz in -16..16 {
+            let mut count=0;
+            for x in cx*16..cx*16+16 {for z in cz*16..cz*16+16 {
+                if terrain.tree_at(&column,x,z).is_some() {
+                    assert!(tree_possible(terrain.seed(),x,z));
+                    count+=1;
+                }
+            }}
+            assert!(count<=1,"несколько деревьев луга: {cx}/{cz}");
+            total+=count;
+        }}
+        assert!((25..=80).contains(&total),"{total}/1024, официальный замер около 5%");
+    }
+
+    /// Стратификация не теряет попытку на отрицательной границе чанка;
+    /// дешёвый отсекатель должен пропускать выбранный ствол.
+    #[test]
+    fn preview_cherry_keeps_one_attempt_per_eligible_chunk() {
+        let terrain=Terrain::new(1_792_932_773_345_722_119,super::super::terrain::Style::Vanilla).with_preview(true);
+        let column=Column {biome:Biome::CherryGrove,..Column::flat(90)};
+        let mut total=0;
+        for cx in -8..8 {for cz in -8..8 {
+            let mut count=0;
+            for x in cx*16..cx*16+16 {for z in cz*16..cz*16+16 {
+                if terrain.tree_at(&column,x,z).is_some() {
+                    assert!(tree_possible(terrain.seed(),x,z));
+                    count+=1;
+                }
+            }}
+            assert!(count<=1,"скопление попыток: {cx}/{cz}");
+            total+=count;
+        }}
+        assert_eq!(total,256,"потеряна разнесённая попытка вишни");
     }
 
     #[test]
@@ -2290,6 +2385,46 @@ mod crown_tests;
 mod generated_support_tests {
     use super::*;
 
+    /// Независимые 32 площадки вишни сравниваются с блоками,
+    /// поставленными через четыре чанка; считаем и брёвна, и листву.
+    #[test]
+    fn preview_cherry_keeps_measured_crown_volumes() {
+        use crate::world::{Chunk,TreeGround};
+        use std::io::Read;
+        let mut text=String::new();
+        flate2::read::GzDecoder::new(&include_bytes!(
+            "../../testdata/world-profile/genaudit-26.3/batch-t3/observed-crowns.json.gz")[..])
+            .read_to_string(&mut text).unwrap();
+        let observed: serde_json::Value=serde_json::from_str(&text).unwrap();
+        let (name,species)=("cherry",CHERRY);
+        let samples=observed[name].as_array().unwrap();
+        let means=["logs","leaves"].map(|part| samples.iter()
+            .map(|s|s[part].as_array().unwrap().len() as f64).sum::<f64>()/samples.len() as f64);
+        let mut counts=[0,0];
+        for seed in 0..256 {
+            let terrain=Terrain::new(seed,super::super::terrain::Style::Vanilla).with_preview(true);
+            let tree=species.tree.in_preview(seed);
+            let ground=TreeGround {seed,terrain:Some(&terrain),..TreeGround::new()};
+            for cx in 0..2 {for cz in 0..2 {
+                let mut chunk=Chunk::new();
+                for x in 0..16 {for z in 0..16 {
+                    chunk.put_generated(x,239,z,super::super::terrain::block_named("grass_block"),true);
+                }}
+                super::super::draw_tree(&mut chunk,&tree,15-cx*16,15-cz*16,239,15,15,&ground);
+                for section in chunk.sections.iter().flatten() {for &state in section.iter() {
+                    let block=crate::blocks::block_at_state(i32::from(state));
+                    counts[0]+=usize::from(block==Some(tree.log));
+                    counts[1]+=usize::from(block==Some(tree.leaves));
+                }}
+            }}
+        }
+        for part in 0..2 {
+            let mean=counts[part] as f64/256.0;
+            assert!((mean-means[part]).abs()<=means[part]*0.15,
+                "{name} {part}: {mean}, независимый замер {}",means[part]);
+        }
+    }
+
     /// Пустые группы и несколько грибов, оба возраста и опора на бревно
     /// проверяются после рисования через границы четырёх чанков.
     #[test]
@@ -2392,5 +2527,122 @@ mod generated_support_tests {
             checked+=super::super::decoration_tests::leaf_audit(&chunks,|_,_|true).0;
         }}
         assert!(checked>10000,"пустая выборка {checked}");
+    }
+}
+
+#[cfg(test)]
+mod census_export_tests {
+    use super::*;
+
+    /// UUID жильцов гнезда случайны даже при одинаковой генерации.
+    /// Перепись сравнивает блоки и биомы, а не сериализацию сущностей;
+    /// оба чанка всё равно полностью разбираются с каталогом 26.3.
+    fn same_generated_blocks(left: &[u8], right: &[u8]) -> bool {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        use crate::world::{Chunk,MIN_Y,WORLD_HEIGHT};
+        let catalog=Catalog::new(Profile::Preview26_3);
+        let left=Chunk::decode_for_load_with_catalog(left,catalog).expect("сохранённый чанк");
+        let right=Chunk::decode_for_load_with_catalog(right,catalog).expect("новый чанк");
+        left.biomes==right.biomes && (MIN_Y..MIN_Y+WORLD_HEIGHT).all(|y|
+            (0..16).all(|z|(0..16).all(|x|left.block(x,y,z)==right.block(x,y,z))))
+    }
+
+    #[test]
+    fn census_comparison_keeps_states_and_biomes_but_ignores_hive_ids() {
+        use crate::world::Chunk;
+        let mut chunks=[Chunk::new(),Chunk::new()];
+        for (i,chunk) in chunks.iter_mut().enumerate() {
+            chunk.put_generated(0,70,0,super::super::terrain::block_named("bee_nest"),true);
+            let mut bee=crate::mob::Mob::new(0,crate::mob::Kind::Bee,(0.0,0.0,0.0));
+            bee.uuid=[i as u8+1;16];
+            let mut hive=crate::hive::Data::default();
+            assert!(hive.enter(&bee));
+            chunk.hives.insert((0,70,0),hive);
+        }
+        let first=chunks[0].to_bytes();
+        assert_ne!(first,chunks[1].to_bytes());
+        assert!(same_generated_blocks(&first,&chunks[1].to_bytes()));
+        chunks[1].put_generated(1,70,0,super::super::terrain::block_named("stone"),true);
+        assert!(!same_generated_blocks(&first,&chunks[1].to_bytes()));
+        chunks[1].put_generated(1,70,0,super::super::AIR,true);
+        chunks[1].biomes[0]=Biome::Meadow.number() as u16;
+        assert!(!same_generated_blocks(&first,&chunks[1].to_bytes()));
+    }
+
+    /// Один и тот же генератор до/после: два рабочих потока, запись по 64 чанка.
+    /// Повторный запуск продолжает только собственный мир с тем же семенем;
+    /// первые сохранённые записи региона сверяются с новой генерацией.
+    #[test]
+    #[ignore]
+    fn export_batch_t3_chunks() {
+        use crate::world::{Chunk,Generator,region};
+        let plan: serde_json::Value=serde_json::from_str(&std::fs::read_to_string(
+            std::env::var("BATCH_T3_PLAN").expect("BATCH_T3_PLAN")).unwrap()).unwrap();
+        for sample in plan["samples"].as_array().unwrap() {
+            let seed=sample["seed"].as_i64().unwrap();
+            let root=std::path::Path::new(sample["output"].as_str().unwrap());
+            assert!(root.is_absolute() && !root.starts_with(env!("CARGO_MANIFEST_DIR")),"мир должен быть вне исходников");
+            let directory=root.join("region");
+            std::fs::create_dir_all(&directory).unwrap();
+            let terrain=Terrain::new(seed,super::super::terrain::Style::Vanilla).with_preview(true);
+            let level=root.join("level.dat");
+            if level.exists() {
+                assert!(std::fs::read_to_string(&level).unwrap().lines().any(|l|l==format!("seed={seed}")),"другое семя мира");
+            } else {
+                let spawn=crate::world::spawn_search::find_preview(|x,z|terrain.column_at(x,z));
+                std::fs::write(&level,format!("seed={seed}\nspawn={} {} {}\n",spawn.0,spawn.1,spawn.2)).unwrap();
+            }
+            let generator=Generator::Normal(terrain);
+            let mut groups=std::collections::BTreeMap::<_,Vec<_>>::new();
+            for pair in sample["chunks"].as_array().unwrap() {
+                let (x,z)=(pair[0].as_i64().unwrap() as i32,pair[1].as_i64().unwrap() as i32);
+                groups.entry((x.div_euclid(32),z.div_euclid(32))).or_default().push((x,z));
+            }
+            for (position,points) in groups {
+                let mut pending=Vec::<(i32,i32,Vec<u8>)>::new();
+                let flush=|pending: &mut Vec<(i32,i32,Vec<u8>)>| {
+                    let refs: Vec<_>=pending.iter().map(|(x,z,b)|(*x,*z,b.as_slice())).collect();
+                    region::write_many(&directory,&refs).unwrap();
+                    drop(refs);
+                    pending.clear();
+                };
+                let (mut reused,mut written)=(0,0);
+                let mut todo=Vec::new();
+                for (x,z) in points {
+                    if let Some(bytes)=region::read(&directory,x,z).unwrap() {
+                        if reused==0 {
+                            assert!(same_generated_blocks(&bytes,&Chunk::generated(&generator,x,z).to_bytes()),"генератор изменился в {x}/{z}");
+                        }
+                        reused+=1;
+                        continue;
+                    }
+                    todo.push((x,z));
+                }
+                std::thread::scope(|scope| {
+                    let (sender,receiver)=std::sync::mpsc::sync_channel(8);
+                    for worker in 0..2 {
+                        let sender=sender.clone();
+                        let points=&todo;
+                        scope.spawn(move || {
+                            let generator=Generator::Normal(Terrain::new(seed,super::super::terrain::Style::Vanilla).with_preview(true));
+                            for &(x,z) in points.iter().skip(worker).step_by(2) {
+                                sender.send((x,z,Chunk::generated(&generator,x,z).to_bytes())).unwrap();
+                            }
+                        });
+                    }
+                    drop(sender);
+                    for (x,z,bytes) in receiver {
+                        if written==0 {
+                            assert!(same_generated_blocks(&bytes,&Chunk::generated(&generator,x,z).to_bytes()),"разные блоки или биомы рабочих потоков в {x}/{z}");
+                        }
+                        pending.push((x,z,bytes));
+                        written+=1;
+                        if pending.len()==64 {flush(&mut pending);}
+                    }
+                    if !pending.is_empty() {flush(&mut pending);}
+                });
+                println!("{seed} {position:?}: записано {written}, проверено/сохранено {reused}");
+            }
+        }
     }
 }

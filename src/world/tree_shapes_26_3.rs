@@ -22,6 +22,10 @@ fn models() -> &'static [Model] {
         // четыре столбца и крону целиком: 32 изолированные площадки 26.3.
         models.extend(serde_json::from_str::<Vec<Model>>(include_str!(
             "../../testdata/world-profile/genaudit-26.3/dark-oak-models-v2.json")).expect("замеры тёмного дуба 26.3"));
+        // minecraft.wiki/w/Cherry: «curved branches». Целые формы, включая
+        // оси ветвей; 32 отдельные площадки вишни 26.3.
+        models.extend(serde_json::from_str::<Vec<Model>>(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-t3/crown-models.json")).expect("замеры крон T3"));
         models
     })
 }
@@ -36,6 +40,7 @@ pub(super) fn select(shape: Shape, random: &mut Random) -> Option<usize> {
         Shape::Spruce => "spruce",
         Shape::Poplar => "natural_poplar",
         Shape::DarkOak => "dark_oak",
+        Shape::Cherry => "cherry",
         _ => return None,
     };
     select_named(species, random)

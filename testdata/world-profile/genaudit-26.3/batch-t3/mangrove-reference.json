@@ -1,0 +1,220 @@
+{
+  "method": "Independent log runs immediately above mangrove roots in saved official regions; run length 1 omitted for mixture fit because it includes obstructed stems; fit is diagnostic, not identification of decoration RNG",
+  "isolated": {
+    "mangrove": {
+      "n": 32,
+      "trunk_histogram": {
+        "2": 2,
+        "3": 6,
+        "4": 7,
+        "5": 6,
+        "6": 9,
+        "7": 2
+      },
+      "logs": 239,
+      "horizontal_logs": 0,
+      "leaves": 4378
+    },
+    "tall_mangrove": {
+      "n": 24,
+      "trunk_histogram": {
+        "5": 2,
+        "6": 1,
+        "8": 2,
+        "9": 3,
+        "10": 3,
+        "11": 4,
+        "12": 3,
+        "13": 2,
+        "14": 4
+      },
+      "logs": 474,
+      "horizontal_logs": 0,
+      "leaves": 7681
+    }
+  },
+  "natural": {
+    "owner": {
+      "trunk_lengths_above_roots": {
+        "1": 651,
+        "2": 92,
+        "3": 91,
+        "4": 142,
+        "5": 203,
+        "6": 210,
+        "7": 184,
+        "8": 108,
+        "9": 104,
+        "10": 117,
+        "11": 128,
+        "12": 124,
+        "13": 131,
+        "14": 64
+      },
+      "chunks": 6917,
+      "trees": 2349,
+      "mean": 5.83397190293742
+    },
+    "second": {
+      "trunk_lengths_above_roots": {
+        "1": 69,
+        "2": 15,
+        "3": 13,
+        "4": 17,
+        "5": 19,
+        "6": 29,
+        "7": 22,
+        "8": 16,
+        "9": 18,
+        "10": 16,
+        "11": 11,
+        "12": 13,
+        "13": 11,
+        "14": 5
+      },
+      "chunks": 9116,
+      "trees": 274,
+      "mean": 5.726277372262774
+    }
+  },
+  "fitted_tall_share": {
+    "owner": 0.51,
+    "second": 0.48
+  },
+  "root_rise_histograms": {
+    "mangrove": {
+      "1": 11,
+      "2": 12,
+      "3": 9
+    },
+    "tall_mangrove": {
+      "3": 9,
+      "4": 5,
+      "5": 7,
+      "6": 1,
+      "7": 2
+    }
+  },
+  "natural_root_distributions": {
+    "owner": {
+      "root_rise_above_ground": {
+        "1": 177,
+        "2": 129,
+        "3": 574,
+        "4": 317,
+        "5": 242,
+        "6": 147,
+        "7": 91,
+        "8": 3
+      },
+      "trunk_lengths": {
+        "2": 92,
+        "3": 91,
+        "4": 142,
+        "5": 198,
+        "6": 208,
+        "7": 180,
+        "8": 107,
+        "9": 102,
+        "10": 116,
+        "11": 126,
+        "12": 123,
+        "13": 131,
+        "14": 64
+      },
+      "count": 1680,
+      "root_rise_mean": 3.677380952380952,
+      "method": "Log runs >=2 directly over roots in own mangrove_swamp surface biome; ground includes muddy roots; not guaranteed identified tree origins"
+    },
+    "second": {
+      "root_rise_above_ground": {
+        "1": 15,
+        "2": 21,
+        "3": 65,
+        "4": 40,
+        "5": 30,
+        "6": 16,
+        "7": 13,
+        "8": 1
+      },
+      "trunk_lengths": {
+        "2": 15,
+        "3": 13,
+        "4": 17,
+        "5": 18,
+        "6": 28,
+        "7": 22,
+        "8": 16,
+        "9": 17,
+        "10": 16,
+        "11": 10,
+        "12": 13,
+        "13": 11,
+        "14": 5
+      },
+      "count": 201,
+      "root_rise_mean": 3.7661691542288556,
+      "method": "Log runs >=2 directly over roots in own mangrove_swamp surface biome; ground includes muddy roots; not guaranteed identified tree origins"
+    }
+  },
+  "before_root_distributions": {
+    "owner": {
+      "root_rise_above_ground": {
+        "1": 826,
+        "2": 965,
+        "3": 207,
+        "4": 34,
+        "5": 11,
+        "6": 4,
+        "7": 2
+      },
+      "trunk_lengths": {
+        "2": 81,
+        "3": 346,
+        "4": 328,
+        "5": 363,
+        "6": 344,
+        "7": 327,
+        "8": 31,
+        "9": 46,
+        "10": 61,
+        "11": 43,
+        "12": 32,
+        "13": 24,
+        "14": 14,
+        "15": 9
+      },
+      "count": 2049,
+      "root_rise_mean": 1.759882869692533,
+      "method": "Log runs >=2 directly over roots in own mangrove_swamp surface biome; ground includes muddy roots; not guaranteed identified tree origins"
+    },
+    "second": {
+      "root_rise_above_ground": {
+        "1": 92,
+        "2": 91,
+        "3": 22,
+        "4": 8,
+        "5": 1
+      },
+      "trunk_lengths": {
+        "2": 7,
+        "3": 41,
+        "4": 35,
+        "5": 34,
+        "6": 38,
+        "7": 30,
+        "8": 6,
+        "9": 7,
+        "10": 2,
+        "11": 5,
+        "12": 3,
+        "13": 5,
+        "14": 1
+      },
+      "count": 214,
+      "root_rise_mean": 1.7616822429906542,
+      "method": "Log runs >=2 directly over roots in own mangrove_swamp surface biome; ground includes muddy roots; not guaranteed identified tree origins"
+    }
+  },
+  "mixture_fit_limit": "Fit is a diagnostic on visible runs, not identification of the configured selector; natural runs can be truncated by neighboring trees or terrain."
+}
