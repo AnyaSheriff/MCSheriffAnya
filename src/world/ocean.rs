@@ -214,6 +214,8 @@ struct Palette {
     /// Стебель и верхушки ламинарии: числа от и до.
     kelp: (i32, i32),
     kelp_plant: i32,
+    kelp_tops: [i32; 25],
+    seabed: [i32; 8],
 
     /// Коралловые блоки, кораллы, веера и настенные веера (по `SIDES`) — по
     /// `KINDS`. Всё, у чего есть такое свойство, — в воде.
@@ -271,6 +273,8 @@ fn palette() -> &'static Palette {
             tall_seagrass: [state("tall_seagrass[half=lower]"), state("tall_seagrass[half=upper]")],
             kelp: crate::blocks::states_of("kelp").expect("ламинарии нет в таблице"),
             kelp_plant: state("kelp_plant"),
+            kelp_tops: std::array::from_fn(|age| state(&format!("kelp[age={age}]"))),
+            seabed: ["sand", "red_sand", "gravel", "dirt", "clay", "stone", "mud", "grass_block"].map(state),
 
             coral_blocks: KINDS.map(|kind| state(&format!("{}_coral_block", kind))),
             corals: KINDS.map(|kind| wet(&format!("{}_coral", kind))),
@@ -296,6 +300,118 @@ fn palette() -> &'static Palette {
 /// Состояние по записи; блока нет в таблице — это ошибка в коде, а не мира.
 fn state(text: &str) -> i32 {
     crate::blocks::state_from_text(text).unwrap_or_else(|| panic!("блока {} нет в таблице", text))
+}
+
+// ---------------------------------------------------------------------------
+// Ламинария и морская трава профиля 26.3
+// ---------------------------------------------------------------------------
+
+const SALT_SEAGRASS: u64 = 71_081;
+const SALT_KELP: u64 = 71_087;
+const SALT_KELP_ZONE: u64 = 71_089;
+
+/// Водные растения перед рифами: сохраняем ключ и соли прежнего прохода,
+/// чтобы правка одного биома не переставляла растения остальных биомов.
+/// Кувшинки остаются в проходе растительности; старый профиль тоже там.
+pub(super) fn plants(chunk: &mut Chunk, column: &Column, world: (i32, i32), local: (i32, i32), key: u64) {
+    let blocks = palette();
+    let (x, z) = world;
+    let (local_x, local_z) = local;
+    let bottom = column.height + 1;
+    let depth = SEA - column.height;
+
+    if block_in(chunk, local_x, bottom, local_z) != Some(blocks.water) {
+        return;
+    }
+    let support = chunk.block(local_x, column.height, local_z);
+
+    let kelp = match column.biome {
+        // Нормировка на объём deep_ocean в двух семенах: прежние 0,16
+        // давали у владельца 796,44 стебля/млн против 598,95 у оригинала.
+        Biome::DeepOcean => 0.14,
+        Biome::DeepColdOcean => 0.42,
+        Biome::ColdOcean => 0.19,
+        Biome::Ocean => 0.18,
+        Biome::LukewarmOcean => 0.126,
+        Biome::DeepLukewarmOcean => 0.12,
+        // В сохранённых регионах ламинария попадает и в прибрежные биомы.
+        // Нулевой шанс терял весь этот хвост распределения. Точный перенос
+        // попыток через границу биомов оригинала остаётся [проверить].
+        Biome::Beach | Biome::StonyShore => 0.007,
+        _ => 0.0,
+    };
+    let put_water = |chunk: &mut Chunk, y: i32, state: i32| {
+        if block_in(chunk, local_x, y, local_z) != Some(blocks.water) { return false; }
+        chunk.put_generated(local_x, y, local_z, state, true);
+        true
+    };
+
+    if depth >= 3 && blocks.seabed.contains(&support)
+        && roll(key, x >> 3, z >> 3, SALT_KELP_ZONE, 0.35) && roll(key, x, z, SALT_KELP, kelp)
+    {
+        let mut dice = Dice::new(key, x, z, SALT_KELP + 1);
+        // minecraft.wiki/w/Kelp: «age ... from 0 to 24» — возраст верхушки,
+        // не длина. Замер сохранённых чанков 26.3 даёт исходную длину 1–10.
+        let length = (1 + dice.below(10)).min(depth - 1);
+        for dy in 0..length - 1 {
+            if !put_water(chunk, bottom + dy, blocks.kelp_plant) { return; }
+        }
+        put_water(chunk, bottom + length - 1, blocks.kelp_tops[dice.below(25) as usize]);
+        return;
+    }
+
+    // minecraft.wiki/w/Seagrass: «only on opaque blocks». В сохранённых
+    // регионах 26.3 есть трава на граните, рудах и обоих видах корней
+    // мангра; прежние восемь грунтов ошибочно запрещали эти опоры.
+    if !crate::blocks::full_cube(support)
+        && !matches!(crate::blocks::block_at_state(support), Some("mangrove_roots" | "muddy_mangrove_roots"))
+    {
+        return;
+    }
+
+    let (density, tall_share) = match column.biome {
+        Biome::DeepOcean => (0.17, 0.80),
+        Biome::DeepLukewarmOcean => (0.22, 0.77),
+        Biome::DeepColdOcean => (0.15, 0.8),
+        Biome::LukewarmOcean => (0.25, 0.3),
+        Biome::WarmOcean => (0.23, 0.3),
+        Biome::Ocean => (0.166, 0.31),
+        Biome::ColdOcean => (0.12, 0.33),
+        Biome::River => (0.15, 0.43),
+        Biome::Swamp => (0.11, 0.39),
+        Biome::MangroveSwamp => (0.095, 0.64),
+        // minecraft.wiki/w/Seagrass: «rivers, non-frozen oceans ... swamps».
+        // Морская частота на каждом затопленном столбце берега завышала
+        // траву в 4–5 раз; здесь остаются редкие прибрежные растения.
+        Biome::Beach | Biome::StonyShore => (0.005, 0.4),
+        biome if !biome.is_freezing() && !biome.is_ocean() => (0.005, 0.4),
+        _ => return,
+    };
+    if !roll(key, x, z, SALT_SEAGRASS, density) { return; }
+
+    let tall = unit(key, x, z, SALT_SEAGRASS + 1) < tall_share;
+    put_seagrass(chunk, blocks, (local_x, bottom, local_z), tall);
+}
+
+/// Выбор высоты предшествует проверке места. Замер мангра оригинала:
+/// 2,96% короткой травы в воде глубиной один блок и 3,67% в более глубокой;
+/// подмена неудачной высокой травы короткой давала у нас 8,21% и 1,67%.
+/// minecraft.wiki/w/Seagrass: «two-block high variety»; обе клетки проверяем
+/// до первой записи, без подмены вида и без половины растения.
+fn put_seagrass(chunk: &mut Chunk, blocks: &Palette, local: (i32, i32, i32), tall: bool) -> bool {
+    let (x, y, z) = local;
+    if block_in(chunk, x, y, z) != Some(blocks.water)
+        || (tall && (y >= SEA || block_in(chunk, x, y+1, z) != Some(blocks.water)))
+    {
+        return false;
+    }
+    if tall {
+        chunk.put_generated(x, y, z, blocks.tall_seagrass[0], true);
+        chunk.put_generated(x, y+1, z, blocks.tall_seagrass[1], true);
+    } else {
+        chunk.put_generated(x, y, z, blocks.seagrass, true);
+    }
+    true
 }
 
 // ---------------------------------------------------------------------------
@@ -1127,6 +1243,129 @@ fn sea_pickles(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview_failed_tall_seagrass_does_not_become_short() {
+        let blocks = palette();
+        let mut chunk = Chunk::generated(&Generator::Flat, 0, 0);
+        for (y, obstruction) in [(SEA, AIR), (40, state("mangrove_roots"))] {
+            chunk.put_generated(8, y-1, 8, blocks.sand, true);
+            chunk.put_generated(8, y, 8, blocks.water, true);
+            chunk.put_generated(8, y+1, 8, obstruction, true);
+            assert!(!put_seagrass(&mut chunk, blocks, (8, y, 8), true));
+            assert_eq!(chunk.block(8, y, 8), blocks.water);
+            assert_eq!(chunk.block(8, y+1, 8), obstruction);
+        }
+        chunk.put_generated(8, 41, 8, blocks.water, true);
+        assert!(put_seagrass(&mut chunk, blocks, (8, 40, 8), true));
+        assert_eq!(chunk.block(8, 40, 8), blocks.tall_seagrass[0]);
+        assert_eq!(chunk.block(8, 41, 8), blocks.tall_seagrass[1]);
+    }
+
+    /// Эти опоры найдены под растениями в сохранённых регионах оригинала;
+    /// проверяем результат постановки, не внутренний предикат опоры.
+    #[test]
+    fn preview_seagrass_uses_measured_rock_and_root_supports() {
+        let blocks = palette();
+        for name in ["granite", "diorite", "andesite", "deepslate", "coal_ore", "netherrack", "mangrove_roots", "muddy_mangrove_roots"] {
+            let mut chunk = Chunk::generated(&Generator::Flat, 0, 0);
+            let support = state(name);
+            let column = Column { biome: Biome::WarmOcean, ..Column::flat(40) };
+            for x in 0..CHUNK_SIZE { for z in 0..CHUNK_SIZE {
+                chunk.put_generated(x, 40, z, support, true);
+                for y in 41..=SEA { chunk.put_generated(x, y, z, blocks.water, true); }
+                plants(&mut chunk, &column, (x, z), (x, z), 42);
+            } }
+            let mut grass = 0;
+            for x in 0..CHUNK_SIZE { for z in 0..CHUNK_SIZE {
+                grass += usize::from(chunk.block(x, 41, z) == blocks.seagrass || chunk.block(x, 41, z) == blocks.tall_seagrass[0]);
+                assert_eq!(chunk.block(x, 40, z), support);
+            } }
+            assert!(grass > 25, "не растёт на {name}: {grass}");
+        }
+    }
+
+    /// Независимая перепись готовых чанков: диапазоны из сохранённой
+    /// малой выборки, а не повторение вероятностей генератора в тесте.
+    #[test]
+    fn preview_generated_ocean_population_matches_fixture() {
+        use crate::world::terrain::Style;
+
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/ocean-pass3-regression.json")).unwrap();
+        let generator = Generator::Normal(Terrain::new(fixture["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true));
+        let mut chunks = std::collections::HashMap::new();
+        let blocks = palette();
+        for (biome, sample) in fixture["biomes"].as_object().unwrap() {
+            let mut counts = std::collections::HashMap::<&str, u64>::new();
+            for pair in sample["chunks"].as_array().unwrap() {
+                let (cx, cz) = (pair[0].as_i64().unwrap() as i32, pair[1].as_i64().unwrap() as i32);
+                let chunk = chunks.entry((cx, cz)).or_insert_with(|| Chunk::generated(&generator, cx, cz));
+                for x in 0..CHUNK_SIZE { for z in 0..CHUNK_SIZE { for y in MIN_Y..=SEA {
+                    let here = chunk.block(x, y, z);
+                    if here == blocks.tall_seagrass[0] {
+                        assert_eq!(chunk.block(x, y+1, z), blocks.tall_seagrass[1], "половина травы без верха");
+                    }
+                    if here == blocks.tall_seagrass[1] {
+                        assert_eq!(chunk.block(x, y-1, z), blocks.tall_seagrass[0], "половина травы без низа");
+                    }
+                    if (blocks.kelp.0..=blocks.kelp.1).contains(&here) {
+                        assert!(blocks.kelp_tops.contains(&here), "исходный возраст должен быть 0–24");
+                        let mut length = 1;
+                        while y-length >= MIN_Y && chunk.block(x, y-length, z) == blocks.kelp_plant { length += 1; }
+                        assert!(length <= 10, "исходная ламинария высотой {length}");
+                    }
+                    let Some(actual) = Biome::by_number(usize::from(chunk.biome(x, y, z))) else { continue };
+                    if actual.name() != biome { continue; }
+                    if let Some(name) = crate::blocks::block_at_state(here)
+                        && sample["count_bounds"].get(name).is_some()
+                    {
+                        *counts.entry(name).or_default() += 1;
+                    }
+                } } }
+            }
+            for (name, bounds) in sample["count_bounds"].as_object().unwrap() {
+                let count = counts.get(name.as_str()).copied().unwrap_or(0);
+                let (low, high) = (bounds[0].as_u64().unwrap(), bounds[1].as_u64().unwrap());
+                assert!((low..=high).contains(&count), "{biome}/{name}: {count}, допуск {low}…{high}");
+            }
+        }
+    }
+
+    /// Готовые чанки 26.3: украшение у шва должно держаться за настоящий
+    /// коралловый блок соседнего чанка, а не за неудачную попытку на склоне.
+    #[test]
+    fn preview_reef_decorations_have_support_across_chunks() {
+        use crate::world::terrain::Style;
+
+        let generator = Generator::Normal(Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true));
+        let (cx, cz) = (-113, 94);
+        let mut chunks = std::collections::HashMap::new();
+        for dx in -1..=1 { for dz in -1..=1 {
+            chunks.insert((dx, dz), Chunk::generated(&generator, cx + dx, cz + dz));
+        } }
+        let at = |x: i32, y: i32, z: i32| {
+            chunks[&(x.div_euclid(CHUNK_SIZE), z.div_euclid(CHUNK_SIZE))]
+                .block(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))
+        };
+        let blocks = palette();
+        let mut fans = 0;
+        let mut corals = 0;
+        for x in 0..CHUNK_SIZE { for z in 0..CHUNK_SIZE { for y in MIN_Y+1..SEA {
+            let here = at(x, y, z);
+            corals += usize::from(blocks.coral_block(here));
+            if blocks.fans.contains(&here) || blocks.corals.contains(&here) {
+                assert!(blocks.coral_block(at(x, y-1, z)), "нет опоры сверху в ({x},{y},{z})");
+            }
+            for (side, &(dx, dz, _)) in SIDES.iter().enumerate() {
+                if blocks.wall_fans.iter().any(|kind| kind[side] == here) {
+                    fans += 1;
+                    assert!(blocks.coral_block(at(x-dx, y, z-dz)), "нет опоры сбоку в ({x},{y},{z})");
+                }
+            }
+        } } }
+        assert!(corals > 50 && fans > 10, "пустое окно: {corals} блоков, {fans} вееров");
+    }
 
     #[test]
     fn preview_coral_does_not_decorate_failed_reef_blocks() {

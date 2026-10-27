@@ -2139,6 +2139,11 @@ fn underwater(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column,
         put_in_air(chunk, local_x, SEA + 1, local_z, blocks.lily_pad);
     }
 
+    if area.terrain.preview() {
+        super::ocean::plants(chunk, column, (x, z), (local_x, local_z), key);
+        return;
+    }
+
     if chunk.block(local_x, bottom, local_z) != blocks.water || !blocks.ground.seabed(chunk.block(local_x, column.height, local_z)) {
         return;
     }
