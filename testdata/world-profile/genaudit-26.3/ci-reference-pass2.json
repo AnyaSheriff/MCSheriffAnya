@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "purpose": "Frozen pass2 reference statistics and baseline rows for the identical planned 82282-pair census in GitHub Actions. No game archives or raw worlds.",
+  "source_commit": "0563edf661f7d2606b0f561d7372c31a974b4c4b",
+  "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+  "fixture": "ci-reference-pass2.json.gz",
+  "fixture_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+  "bytes": 1420293,
+  "canonical_json": "UTF-8, ensure_ascii=False, sort_keys=True, separators=(comma,colon), no newline",
+  "cases": {
+    "owner": {
+      "seed": 1792932773345722119,
+      "plan_sha256_original_file": "3b5ac24bee0153deb8e15976047ecf99de5d2d0428f0a94357ae1a1fc4c8bc6e",
+      "report_sha256_original_file": "d1ea672fbbe7bbd2278a9d27f05e587dc3994983a2614728365421b3f60ef40a",
+      "plan_sha256_canonical": "a4ca20f7271d61613cb2440d6dc141061b04c768ee7606e370da6f6ec177cb63",
+      "report_sha256_canonical": "1854568b4124862f247404db57853531a39a6bd9afdc42b579c5e0bba52e0719"
+    },
+    "second": {
+      "seed": 100554032945340,
+      "plan_sha256_original_file": "993a268382c8ebbd749fc6b6155482fb9047ae3d18b081706418674fc87c28e7",
+      "report_sha256_original_file": "cf7169f689bf08136e0c1f25e96e4e7e823b4cf8702e47960c919811519fa570",
+      "plan_sha256_canonical": "cc1f3bf0eff55d629a01c130495f23a4d5bf6a3e11c5c65ec5a88abd3695d79c",
+      "report_sha256_canonical": "2e452f1e304dbe4d0e158abc3d2f4aa7f2c9c756d55d02b2bba059f6ecdd09c7"
+    }
+  },
+  "reference_manifests_verified_against_saved_worlds": true
+}
