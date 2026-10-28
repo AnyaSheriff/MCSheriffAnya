@@ -1,0 +1,55 @@
+{
+  "official_jar": {
+    "url": "https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar",
+    "sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "bytes": 62294556
+  },
+  "json_files": [
+    {
+      "file": "protocol.json",
+      "bytes": 347504,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/protocol.json",
+      "sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727"
+    },
+    {
+      "file": "blocks.json",
+      "bytes": 976252,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/blocks.json",
+      "sha256": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873"
+    },
+    {
+      "file": "items.json",
+      "bytes": 207286,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/items.json",
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+    },
+    {
+      "file": "entities.json",
+      "bytes": 90138,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/entities.json",
+      "sha256": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+    },
+    {
+      "file": "protocol-26.1.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/23303d2350177f2084f94cd38e5d7c8e54dfc8d3/data/pc/26.1/protocol.json",
+      "bytes": 337869,
+      "sha256": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3"
+    }
+  ],
+  "scenarios": [
+    "pvp-fist",
+    "pvp-sword-charged",
+    "pvp-sword-spam",
+    "pvp-crit",
+    "cow-crit",
+    "cow-crit-fist",
+    "cow-crit-fist-creative",
+    "pvp-sweep",
+    "sword-sweep-neighbours",
+    "sword-sweep-secondary-motion",
+    "pvp-knockback",
+    "pvp-sprint-knockback",
+    "itemaudit4-knockback-fixedyaw"
+  ]
+}

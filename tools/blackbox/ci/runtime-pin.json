@@ -1,0 +1,6 @@
+{
+  "build_run_id": "40693373598",
+  "head": "0920966b61a654150ee74a701034f3c9b0a53490",
+  "runtime_sha256": "930d36b3987d6cc5d8a2a35279eaed3f1f306abacb9e4828dd4dc3f3d781f335",
+  "note": "Verified full CI, all receipt hashes, and eight live pot wire comparisons before selecting this runtime."
+}
