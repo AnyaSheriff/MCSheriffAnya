@@ -1,0 +1,18 @@
+{
+  "cases": {
+    "owner": {
+      "case_sha256_canonical": "36fa0037c580b5e0cddc910fe05d3e19c65eaa5fb59a65a7385c732d5ace8f68",
+      "source_report_sha256": "d3f9d76914dcd721eaeee3b4a5dc4e4a9600494fe91eeef07746ef2eb4959219",
+      "end_rows": 229
+    },
+    "second": {
+      "case_sha256_canonical": "533a03ae60a0dca40cebb8a278070d7a96d4d0a69a6e0a142133c4f82f29c6ab",
+      "source_report_sha256": "e4e69496e98858838c7bfaaa56aa3771938bf0449b052572b15d3efa427ecf22",
+      "end_rows": 239
+    }
+  },
+  "method": "Only End statistics/rows from independently verified pass3; no game archives or raw world files.",
+  "fixture_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+  "bytes": 48723,
+  "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8"
+}
