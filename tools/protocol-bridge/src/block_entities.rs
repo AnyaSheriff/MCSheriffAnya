@@ -13,6 +13,18 @@ pub fn translate(from: JavaVersion, to: JavaVersion, kind: u32, data: &[u8]) -> 
 }
 
 pub(crate) fn translate_with_content(from:JavaVersion,to:JavaVersion,kind:u32,data:&[u8],content:crate::content::ContentCodec)->Result<Option<(u32,Vec<u8>)>,Error>{
+    // Горшок меняет не только ID, но и схему NBT. Внутренний builder775
+    // primaryPreview использует карту777; legacy profile остаётся списком775.
+    let pot_id=|version|match version {
+        JavaVersion::V1_21_4|JavaVersion::V1_21_5|JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V26_2|JavaVersion::V26_3=>Some(41),
+        JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_1_2=>Some(42),
+        _=>None,
+    };
+    if pot_id(from)==Some(kind) {
+        let target=pot_id(to).ok_or(Error::UnsupportedVersion)?;
+        if registry::nbt_length(data).map_err(Error::Nbt)?!=data.len(){return Err(Error::Invalid);}
+        return Ok(Some((target,item_data::pot(data,from,to,content)?)));
+    }
     if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) || matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) {
         if [from,to].iter().any(|v|matches!(v,JavaVersion::V1_12_2)){return Err(Error::UnsupportedVersion);}
         let canonical=if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5|JavaVersion::V1_21_6) && kind>=40 {kind+1}else{kind};
@@ -221,3 +233,7 @@ mod tests {
         assert_eq!(translate(OLD, NEW, 7, &duplicate), Err(Error::Invalid));
     }
 }
+
+#[cfg(test)]
+#[path="block_entity_pot_tests.rs"]
+mod pot_tests;

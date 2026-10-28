@@ -106,3 +106,95 @@ pub(super) fn rewrite(kind:u32,data:&[u8],from:JavaVersion,to:JavaVersion,conten
         }else{Ok(field.bytes.to_vec())}
     })?);Ok(out)
 }
+
+// Наблюдение pottery-wire-263-20261028: 777 передаёт named stack templates,
+// а не список имён775. Это только NBT блок-сущности, не item component codec.
+const POT_SIDES: [&str;4] = ["back","left","right","front"];
+fn pot_name(name:&str)->Result<(),Error>{
+    let bare=name.strip_prefix("minecraft:").ok_or(Error::UnsupportedData)?;
+    if bare!="brick" && !bare.ends_with("_pottery_sherd"){return Err(Error::UnsupportedData);}
+    if !names::ITEM_NAMES_775.contains(&bare){return Err(Error::UnsupportedData);}Ok(())
+}
+fn pot_components(field:Field<'_>)->Result<(),Error>{
+    if field.kind!=10{return Err(Error::UnsupportedData);}
+    for (key,value) in compound(field.bytes)? {
+        // Оба значения сохранены на wire в живом опыте. Rich text и остальные
+        // компоненты требуют своего наблюдения/перевода и здесь не разрешены.
+        match key {
+            "minecraft:custom_name" if value.kind==8=>{string(value)?;}
+            "minecraft:custom_data" if value.kind==10=>{compound(value.bytes)?;}
+            _=>return Err(Error::UnsupportedData),
+        }
+    }Ok(())
+}
+fn pot_field(out:&mut Vec<u8>,kind:u8,key:&str,bytes:&[u8]){
+    out.push(kind);out.extend((key.len() as u16).to_be_bytes());out.extend(key.as_bytes());out.extend(bytes);
+}
+fn pot_string(name:&str)->Vec<u8>{let mut bytes=(name.len() as u16).to_be_bytes().to_vec();bytes.extend(name.as_bytes());bytes}
+
+pub(super) fn pot(data:&[u8],from:JavaVersion,to:JavaVersion,content:ContentCodec)->Result<Vec<u8>,Error>{
+    if matches!(data,[0]|[10,0]){return Ok(data.to_vec());}
+    if data.first()!=Some(&10){return Err(Error::UnsupportedData);}
+    let fields=compound(&data[1..])?;
+    if fields.len()!=1{return Err(Error::UnsupportedData);}
+    let field=*fields.get("sherds").ok_or(Error::UnsupportedData)?;
+    // Свежий pottery-wire-262-20261028 подтвердил список4 у776.
+    let source_map=from==JavaVersion::V26_3 || (from==JavaVersion::V26_1_2 && content.is_preview() && field.kind==10);
+    let mut sides:[Option<(&str,Option<&[u8]>)>;4]=[None;4];
+    if source_map {
+        if field.kind!=10{return Err(Error::UnsupportedData);}
+        for (side,stack) in compound(field.bytes)? {
+            let index=POT_SIDES.iter().position(|name|*name==side).ok_or(Error::UnsupportedData)?;
+            if stack.kind!=10{return Err(Error::UnsupportedData);}
+            let fields=compound(stack.bytes)?;
+            if fields.keys().any(|key|!matches!(*key,"id"|"components")){return Err(Error::UnsupportedData);}
+            let name=string(*fields.get("id").ok_or(Error::UnsupportedData)?)?;
+            // Живой777 сохраняет и stone: stack template допускает любой
+            // известный предмет, не только brick/шёрды. Имена проверяем реестром.
+            let bare=name.strip_prefix("minecraft:").ok_or(Error::UnsupportedData)?;
+            let known=table(from)?.contains(&bare) || (from==JavaVersion::V26_1_2 && content.is_preview()
+                && crate::content::entries().any(|row|row.has_item() && row.name==bare));
+            if !known{return Err(Error::UnsupportedData);}
+            let components=fields.get("components").map(|v|{pot_components(*v)?;Ok::<_,Error>(v.bytes)}).transpose()?;
+            sides[index]=Some((name,components));
+        }
+    }else{
+        let rows=list(field,8,4)?;if rows.len()!=4{return Err(Error::UnsupportedData);}
+        for (index,row) in rows.iter().enumerate(){let name=string(Field{kind:8,bytes:row})?;pot_name(name)?;sides[index]=Some((name,None));}
+    }
+    let target_map=to==JavaVersion::V26_3 || (to==JavaVersion::V26_1_2 && content.is_preview() && !content.is_native_view());
+    let mut out=vec![10];
+    if target_map {
+        let mut map=Vec::new();
+        // Порядок полей сохранённого живого777 fixture; семантика задаётся именем.
+        for index in [1,0,2,3] {
+            if let Some((name,components))=sides[index] {
+                if !source_map && name=="minecraft:brick" && components.is_none_or(|v|v==[0]){continue;}
+                let mut stack=Vec::new();
+                if let Some(bytes)=components.filter(|v|*v!=[0]){pot_field(&mut stack,10,"components",bytes);}
+                pot_field(&mut stack,8,"id",&named(name,from,to,content)?);stack.push(0);pot_field(&mut map,10,POT_SIDES[index],&stack);
+            }
+        }
+        map.push(0);
+        if map!=[0]{pot_field(&mut out,10,"sherds",&map);}
+    }else{
+        let mut rows=vec![8,0,0,0,4];
+        for side in sides {
+            let (name,components)=side.unwrap_or(("minecraft:brick",None));
+            // Список775 не может сохранить компоненты; обычный wire→wire
+            // перевод отклоняется явно. PrimaryPreview явно разрешает только
+            // визуальную проекцию: authoritative components остаются в world/save.
+            // Эта функция возвращает новые байты и не изменяет исходный NBT.
+            if components.is_some_and(|v|v!=[0]) && !content.is_preview(){return Err(Error::UnsupportedData);}
+            let visual=if pot_name(name).is_ok(){name}else{
+                // Непредставимый template даёт обычную сторону кирпича только
+                // при явно выбранном primaryPreview render projection.
+                if !content.is_preview(){return Err(Error::UnsupportedData);}
+                "minecraft:brick"
+            };
+            rows.extend(pot_string(visual));
+        }
+        pot_field(&mut out,9,"sherds",&rows);
+    }
+    out.push(0);Ok(out)
+}

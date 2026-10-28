@@ -461,3 +461,85 @@ async fn unknown_biome_is_rejected_before_any_chunk_bytes_are_queued() {
     assert!(send_chunk(&mut outgoing, &Mutex::new(world), 0,0,&ChunkLight::open_sky()).await.is_err());
     assert!(outgoing.queued().is_empty());
 }
+
+#[tokio::test]
+async fn preview_pot_chunk_and_update_use_observed_wire_without_erasing_saved_side() {
+    use mcsa_protocol::{content::ContentCodec, ids::RegistryKind};
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../tools/protocol-bridge/testdata/decorated-pot-wire-stone-777.json")).unwrap();
+    let hex = |text: &str| text.as_bytes().chunks_exact(2).map(|pair|
+        u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect::<Vec<_>>();
+    // Независимая ожидаемая проекция: список775 имеет четыре обычные стороны.
+    let mut old_view = vec![10, 9, 0, 6];
+    old_view.extend_from_slice(b"sherds");
+    old_view.extend_from_slice(&[8, 0, 0, 0, 4]);
+    for _ in 0..4 {
+        old_view.extend_from_slice(&15u16.to_be_bytes());
+        old_view.extend_from_slice(b"minecraft:brick");
+    }
+    old_view.push(0);
+    for (case, item, name, input) in [
+        ("named_front_brick", "brick", Some("wire-side"),
+            r#"{sherds:{front:{id:"minecraft:brick",components:{"minecraft:custom_name":"wire-side"}}}}"#),
+        ("front_stone", "stone", None, r#"{sherds:{front:{id:"minecraft:stone"}}}"#),
+    ] {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        let at = (-15, 65, -16);
+        let state = blocks::state_by_name("decorated_pot").unwrap();
+        world.set_block(at.0, at.1 - 1, at.2, blocks::state_by_name("stone").unwrap());
+        world.set_block(at.0, at.1, at.2, state);
+        crate::pottery::apply_snbt(&mut world, at, input);
+        assert_eq!(world.pot(at), Some([0, 0, 0, blocks::item_named(item).unwrap()]));
+        let authoritative = world.pot_details(at);
+        let pots = world.chunk_pots(-1, -1);
+        assert_eq!(pots.len(), 1);
+        assert_eq!(pots[0].0, (1, 65, 0));
+        let nbt = pots[0].1.clone();
+        let kind = redstone::block_entity_type(state).unwrap();
+        assert_eq!(kind, 42);
+        let world = Mutex::new(world);
+        for version in [JavaVersion::V26_3, JavaVersion::V26_1_2] {
+            let mut outgoing = Outgoing::capture_content(version, ContentCodec::white_slab_preview());
+            send_chunk(&mut outgoing, &world, -1, -1, &ChunkLight::open_sky()).await.unwrap();
+            send_block_entity(&mut outgoing, at, kind, &nbt).await.unwrap();
+            let mut bytes = outgoing.queued();
+            for packet_name in ["map_chunk", "tile_entity_data"] {
+                let packet = read_packet(&mut bytes).await.unwrap();
+                let canonical_id = if packet_name == "map_chunk" { CHUNK_DATA } else { BLOCK_ENTITY_DATA };
+                let expected_id = mcsa_protocol::ids::translate(RegistryKind::PlayClientbound,
+                    wire::INTERNAL, version, canonical_id as u32).unwrap();
+                assert_eq!(packet.id as u32, expected_id);
+                let observed = fixture["observations"].as_array().unwrap().iter().find(|row|
+                    row["case"] == case && row["packet"] == packet_name).unwrap();
+                let expected = if version == JavaVersion::V26_3 {
+                    hex(observed["nbt_hex"].as_str().unwrap())
+                } else { old_view.clone() };
+                let expected_kind = if version == JavaVersion::V26_3 { 41 } else { 42 };
+                let mut cursor = Cursor::new(packet.payload());
+                if packet_name == "map_chunk" {
+                    assert_eq!(cursor.bytes(8).unwrap(), [(-1i32).to_be_bytes(), (-1i32).to_be_bytes()].concat());
+                    assert_eq!(cursor.varint(), Some(0)); // Высотные карты builder не добавляет.
+                    let sections = cursor.varint().unwrap() as usize;
+                    cursor.bytes(sections).unwrap();
+                    assert_eq!(cursor.varint(), Some(1));
+                    assert_eq!(cursor.u8(), Some(0x10));
+                    assert_eq!(cursor.u16(), Some(65));
+                } else {
+                    assert_eq!(cursor.position(), Some(at));
+                }
+                assert_eq!(cursor.varint(), Some(expected_kind));
+                assert_eq!(cursor.bytes(expected.len()).unwrap(), expected, "{version:?}/{case}/{packet_name}");
+                if packet_name == "tile_entity_data" { assert_eq!(cursor.offset, packet.payload().len()); }
+            }
+            assert!(bytes.is_empty());
+            // Проекция775 не переписывает исходный мир или компоненты предмета.
+            let world = world.lock().unwrap();
+            assert_eq!(world.pot_details(at), authoritative);
+            assert_eq!(world.chunk_pots(-1, -1)[0].1, nbt);
+            let details = world.pot_details(at);
+            let side = &details.pot_sides[0];
+            assert_eq!(side.data.map(crate::stackdata::get).unwrap_or_default().name.as_deref(), name);
+        }
+    }
+}

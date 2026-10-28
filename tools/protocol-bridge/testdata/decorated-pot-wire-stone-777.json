@@ -1,0 +1,154 @@
+{
+  "scope": "Own official777 explicit pots: front stone and front custom_name brick (no custom_data); chunk and incremental NBT. No provides_pottery_pattern, visual or gameplay claim.",
+  "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+  "protocol_sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+  "port": 26382,
+  "elapsed_seconds": 11.768,
+  "exit_code": 0,
+  "commands": [
+    {
+      "command": "gamerule minecraft:random_tick_speed 0",
+      "reply": "[15:04:01] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld\n[15:04:01] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_nether\n[15:04:01] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_end\n[15:04:01] [Server thread/INFO]: System chat: Game rule random_tick_speed is now set to 0\n[15:04:01] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_1_DONE\n"
+    },
+    {
+      "command": "gamerule minecraft:spawn_mobs false",
+      "reply": "[15:04:01] [Server thread/INFO]: System chat: Game rule spawn_mobs is now set to false\n[15:04:01] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_2_DONE\n"
+    },
+    {
+      "command": "forceload add -16 -16 -1 -1",
+      "reply": "[15:04:02] [Server thread/INFO]: System chat: Marked chunk [-1, -1] in minecraft:overworld to be force loaded\n[15:04:02] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_3_DONE\n"
+    },
+    {
+      "command": "setworldspawn -8 66 -8",
+      "reply": "[15:04:02] [Server thread/INFO]: System chat: Set the world spawn point to -8, 66, -8 [0.0, 0.0] in minecraft:overworld\n[15:04:02] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_4_DONE\n"
+    },
+    {
+      "command": "fill -16 64 -16 -1 64 -1 minecraft:stone",
+      "reply": "[15:04:03] [Server thread/INFO]: System chat: Successfully filled 256 block(s)\n[15:04:03] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_5_DONE\n"
+    },
+    {
+      "command": "setblock -16 65 -16 minecraft:decorated_pot{sherds:{front:{id:\"minecraft:stone\"}}}",
+      "reply": "[15:04:03] [Server thread/INFO]: System chat: Changed the block at -16, 65, -16\n[15:04:03] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_6_DONE\n"
+    },
+    {
+      "command": "data get block -16 65 -16",
+      "reply": "[15:04:03] [Server thread/INFO]: System chat: -16, 65, -16 has the following block data: {components: {}, sherds: {front: {id: \"minecraft:stone\"}}, x: -16, y: 65, z: -16, id: \"minecraft:decorated_pot\"}\n[15:04:03] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_7_DONE\n"
+    },
+    {
+      "command": "setblock -15 65 -16 minecraft:decorated_pot{sherds:{front:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"wire-side\"}}}}",
+      "reply": "[15:04:03] [Server thread/INFO]: System chat: Changed the block at -15, 65, -16\n[15:04:03] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_8_DONE\n"
+    },
+    {
+      "command": "data get block -15 65 -16",
+      "reply": "[15:04:03] [Server thread/INFO]: System chat: -15, 65, -16 has the following block data: {components: {}, sherds: {front: {components: {\"minecraft:custom_name\": \"wire-side\"}, id: \"minecraft:brick\"}}, x: -15, y: 65, z: -16, id: \"minecraft:decorated_pot\"}\n[15:04:03] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_9_DONE\n"
+    },
+    {
+      "command": "setblock -16 65 -16 minecraft:air",
+      "reply": "[15:04:03] [Server thread/INFO]: McsaProbe[/127.0.0.1:58280] logged in with entity id 1 at (-10.5, 65.0, -2.5)\n[15:04:03] [Server thread/INFO]: System chat: McsaProbe joined the game\n[15:04:03] [Server thread/INFO]: System chat: Changed the block at -16, 65, -16\n[15:04:03] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_10_DONE\n"
+    },
+    {
+      "command": "setblock -16 65 -16 minecraft:decorated_pot{sherds:{front:{id:\"minecraft:stone\"}}}",
+      "reply": "[15:04:04] [Server thread/INFO]: System chat: Changed the block at -16, 65, -16\n[15:04:04] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_11_DONE\n"
+    },
+    {
+      "command": "setblock -15 65 -16 minecraft:air",
+      "reply": "[15:04:05] [Server thread/INFO]: System chat: Changed the block at -15, 65, -16\n[15:04:05] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_12_DONE\n"
+    },
+    {
+      "command": "setblock -15 65 -16 minecraft:decorated_pot{sherds:{front:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"wire-side\"}}}}",
+      "reply": "[15:04:05] [Server thread/INFO]: System chat: Changed the block at -15, 65, -16\n[15:04:05] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_13_DONE\n"
+    }
+  ],
+  "observations": [
+    {
+      "packet": "map_chunk",
+      "packet_id": 46,
+      "case": "front_stone",
+      "position": [
+        -16,
+        65,
+        -16
+      ],
+      "kind": 41,
+      "nbt": {
+        "sherds": {
+          "front": {
+            "id": "minecraft:stone"
+          }
+        }
+      },
+      "nbt_hex": "0a0a00067368657264730a000566726f6e740800026964000f6d696e6563726166743a73746f6e65000000",
+      "nbt_payload_offset": 3155,
+      "packet_payload_sha256": "8039c38db9c26401157dcc2e03f95d30c15623debd2ac2374de142e47524f53d",
+      "packet_payload_bytes": 9454
+    },
+    {
+      "packet": "map_chunk",
+      "packet_id": 46,
+      "case": "named_front_brick",
+      "position": [
+        -15,
+        65,
+        -16
+      ],
+      "kind": 41,
+      "nbt": {
+        "sherds": {
+          "front": {
+            "components": {
+              "minecraft:custom_name": "wire-side"
+            },
+            "id": "minecraft:brick"
+          }
+        }
+      },
+      "nbt_hex": "0a0a00067368657264730a000566726f6e740a000a636f6d706f6e656e74730800156d696e6563726166743a637573746f6d5f6e616d650009776972652d73696465000800026964000f6d696e6563726166743a627269636b000000",
+      "nbt_payload_offset": 3202,
+      "packet_payload_sha256": "8039c38db9c26401157dcc2e03f95d30c15623debd2ac2374de142e47524f53d",
+      "packet_payload_bytes": 9454
+    },
+    {
+      "packet": "tile_entity_data",
+      "packet_id": 6,
+      "case": "front_stone",
+      "position": [
+        -16,
+        65,
+        -16
+      ],
+      "kind": 41,
+      "nbt": {
+        "sherds": {
+          "front": {
+            "id": "minecraft:stone"
+          }
+        }
+      },
+      "nbt_hex": "0a0a00067368657264730a000566726f6e740800026964000f6d696e6563726166743a73746f6e65000000",
+      "packet_payload_hex": "fffffc3fffff0041290a0a00067368657264730a000566726f6e740800026964000f6d696e6563726166743a73746f6e65000000"
+    },
+    {
+      "packet": "tile_entity_data",
+      "packet_id": 6,
+      "case": "named_front_brick",
+      "position": [
+        -15,
+        65,
+        -16
+      ],
+      "kind": 41,
+      "nbt": {
+        "sherds": {
+          "front": {
+            "components": {
+              "minecraft:custom_name": "wire-side"
+            },
+            "id": "minecraft:brick"
+          }
+        }
+      },
+      "nbt_hex": "0a0a00067368657264730a000566726f6e740a000a636f6d706f6e656e74730800156d696e6563726166743a637573746f6d5f6e616d650009776972652d73696465000800026964000f6d696e6563726166743a627269636b000000",
+      "packet_payload_hex": "fffffc7fffff0041290a0a00067368657264730a000566726f6e740a000a636f6d706f6e656e74730800156d696e6563726166743a637573746f6d5f6e616d650009776972652d73696465000800026964000f6d696e6563726166743a627269636b000000"
+    }
+  ]
+}

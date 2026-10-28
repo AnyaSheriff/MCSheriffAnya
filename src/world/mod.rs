@@ -2350,12 +2350,7 @@ impl World {
             .copied().unwrap_or([if self.catalog.changed_rules() { 0 } else { crate::blocks::item_named("brick")? };4]))
     }
     pub fn set_pot(&mut self, at: (i32,i32,i32), sides: [i32;4]) {
-        if self.pot(at).is_none() { return; }
-        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().pots.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)),sides);
-        self.dirty.insert(chunk_key(at.0,at.2));
-        if let Some(kind) = crate::redstone::block_entity_type(self.get_block(at.0,at.1,at.2)) {
-            self.note_block_entity(at.0,at.1,at.2,kind,crate::pottery::nbt(sides));
-        }
+        self.set_pot_with_details(at, sides, Default::default());
     }
     pub fn set_gateway(&mut self, at: (i32,i32,i32), exit: (i32,i32,i32,bool)) {
         if crate::blocks::block_at_state(self.get_block(at.0,at.1,at.2)) != Some("end_gateway") { return; }
@@ -2381,13 +2376,29 @@ impl World {
     pub fn pot_details(&self, at: (i32,i32,i32)) -> crate::stackdata::Data {
         self.chunks.get(&chunk_key(at.0,at.2)).and_then(|c| c.pot_details.get(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))).cloned().unwrap_or_default()
     }
-    pub fn set_pot_details(&mut self, at: (i32,i32,i32), data: crate::stackdata::Data) {
+    /// Стороны и довески меняются вместе: клиент получает одно актуальное обновление.
+    pub fn set_pot_with_details(&mut self, at: (i32,i32,i32), sides: [i32;4], data: crate::stackdata::Data) {
         if self.pot(at).is_none() { return; }
-        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().pot_details.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)), data);
+        let nbt = if self.catalog.changed_rules() { crate::pottery::preview_nbt(sides, &data) }
+            else { crate::pottery::nbt(sides) };
+        let local = (at.0.rem_euclid(16),at.1,at.2.rem_euclid(16));
+        let chunk = self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap();
+        chunk.pots.insert(local, sides);
+        chunk.pot_details.insert(local, data);
         self.dirty.insert(chunk_key(at.0,at.2));
+        if let Some(kind) = crate::redstone::block_entity_type(self.get_block(at.0,at.1,at.2)) {
+            self.note_block_entity(at.0,at.1,at.2,kind,nbt);
+        }
     }
     pub fn chunk_pots(&self, cx: i32, cz: i32) -> Vec<((i32,i32,i32),Vec<u8>)> {
-        self.chunks.get(&(cx,cz)).map(|c| c.pots.iter().map(|(at,sides)| (*at,crate::pottery::nbt(*sides))).collect()).unwrap_or_default()
+        self.chunks.get(&(cx,cz)).map(|c| c.pots.iter().map(|(at,sides)| {
+            let nbt = if self.catalog.changed_rules() {
+                let data = c.pot_details.get(at).cloned().unwrap_or_default();
+                let encoded = crate::pottery::preview_nbt(*sides, &data);
+                if encoded == [10,0] { vec![0] } else { encoded }
+            } else { crate::pottery::nbt(*sides) };
+            (*at,nbt)
+        }).collect()).unwrap_or_default()
     }
 
     pub fn hive(&self, x: i32, y: i32, z: i32) -> Option<&crate::hive::Data> {
