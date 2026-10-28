@@ -1,0 +1,123 @@
+{
+  "totals": {
+    "candidates": 78,
+    "exact_model_matches": 31,
+    "property_matches": 71
+  },
+  "distinct_property_shapes": 43,
+  "rates": [
+    {
+      "seed": "owner",
+      "bounds": [
+        112,
+        112,
+        144,
+        144
+      ],
+      "small_end_islands": {
+        "center_chunk_center_biome_y64": "small_end_islands",
+        "chunk_denominator": 302,
+        "isolated_candidate_count": 10,
+        "shape_property_candidate_count": 10,
+        "distinct_center_chunks_with_property_candidate": 10,
+        "property_candidates_per_chunk": 0.033112582781456956
+      },
+      "radius_histogram": {
+        "5": 4,
+        "6": 5,
+        "4": 1
+      }
+    },
+    {
+      "seed": "owner",
+      "bounds": [
+        -144,
+        112,
+        -112,
+        144
+      ],
+      "small_end_islands": {
+        "center_chunk_center_biome_y64": "small_end_islands",
+        "chunk_denominator": 473,
+        "isolated_candidate_count": 21,
+        "shape_property_candidate_count": 21,
+        "distinct_center_chunks_with_property_candidate": 21,
+        "property_candidates_per_chunk": 0.04439746300211417
+      },
+      "radius_histogram": {
+        "6": 10,
+        "5": 6,
+        "4": 5
+      }
+    },
+    {
+      "seed": "second",
+      "bounds": [
+        112,
+        112,
+        144,
+        144
+      ],
+      "small_end_islands": {
+        "center_chunk_center_biome_y64": "small_end_islands",
+        "chunk_denominator": 371,
+        "isolated_candidate_count": 19,
+        "shape_property_candidate_count": 18,
+        "distinct_center_chunks_with_property_candidate": 18,
+        "property_candidates_per_chunk": 0.04851752021563342
+      },
+      "radius_histogram": {
+        "4": 4,
+        "5": 5,
+        "6": 9
+      }
+    },
+    {
+      "seed": "second",
+      "bounds": [
+        -144,
+        112,
+        -112,
+        144
+      ],
+      "small_end_islands": {
+        "center_chunk_center_biome_y64": "small_end_islands",
+        "chunk_denominator": 359,
+        "isolated_candidate_count": 16,
+        "shape_property_candidate_count": 14,
+        "distinct_center_chunks_with_property_candidate": 12,
+        "property_candidates_per_chunk": 0.03899721448467967
+      },
+      "radius_histogram": {
+        "4": 7,
+        "5": 4,
+        "6": 3
+      }
+    }
+  ],
+  "report_sha256": "85b68d31daa831cc6a85c041275550fec90721da36f514e71d19b006de7dc902",
+  "placed_bank": {
+    "path": "testdata/world-profile/genaudit-26.3/end-island-shapes-observations-26.3.json",
+    "sha256": "4998e4db2d846c4509d1a59b880d4ad7cde3bab0827463929eb71699675af2de",
+    "observations": 32,
+    "distinct_forms": 26
+  },
+  "verification": {
+    "pass": true,
+    "counts": {
+      "chunks": 4356,
+      "candidates": 78,
+      "property_matches": 71,
+      "exact_model_matches": 31
+    },
+    "distinct_natural_shapes": 43,
+    "distinct_placed_shapes": 26,
+    "region_sha_verified": 16,
+    "scope": "Independent saved-cell classification and source-region hashes; not independent re-extraction of every block."
+  },
+  "limitations": [
+    "Изолированная компонента не доказывает отдельную feature: возможен фрагмент рельефа.",
+    "Перекрытые, соединённые и обрезанные объекты исключены; частоты классов и появления не установлены.",
+    "Биом центра чанка на Y64 — только одинаковый критерий числителя и знаменателя, не доказанное правило генерации."
+  ]
+}
