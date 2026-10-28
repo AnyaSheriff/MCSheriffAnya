@@ -4198,6 +4198,38 @@ mod tests {
             .contains("Слишком много"));
     }
 
+    #[test]
+    fn preview_setblock_pot_imports_named_sides_and_ignores_legacy_lists() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let shared = server_with_catalog(catalog);
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        // Официальная проба 26.3: отдельные пустые клетки, не повтор setblock
+        // того же состояния; неверная соседняя сторона не убирает верную.
+        for x in [1, 3, 5] {
+            run(&format!("setblock {x} 69 1 stone"), &Source::Console, &shared);
+            run(&format!("setblock {x} 70 1 air"), &Source::Console, &shared);
+        }
+        for command in [
+            r#"setblock 1 70 1 decorated_pot{sherds:{front:{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}}}"#,
+            r#"setblock 3 70 1 decorated_pot{sherds:[{id:"minecraft:brick",components:{"minecraft:custom_name":"legacy"}}]}"#,
+            r#"setblock 5 70 1 decorated_pot{sherds:{back:{id:"minecraft:no_such_item"},front:{id:"minecraft:angler_pottery_sherd",components:{"minecraft:custom_name":"valid-front"}}}}"#,
+        ] {
+            let reply = run(command, &Source::Console, &shared).reply;
+            assert!(reply.contains("Changed the block"), "{reply}");
+        }
+        let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        for (x, item, name) in [(1, "brick", "side"), (5, "angler_pottery_sherd", "valid-front")] {
+            assert_eq!(world.pot((x, 70, 1)), Some([0, 0, 0, blocks::item_named(item).unwrap()]));
+            let data = world.pot_details((x, 70, 1));
+            assert_eq!(data.pot_sides.len(), 1);
+            assert_eq!(data.pot_sides[0].slot, 3);
+            let side = data.pot_sides[0].data.map(crate::stackdata::get).unwrap_or_default();
+            assert_eq!(side.name.as_deref(), Some(name));
+        }
+        assert_eq!(world.pot((3, 70, 1)), Some([0; 4]));
+        assert!(world.pot_details((3, 70, 1)).pot_sides.is_empty());
+    }
+
     /// cmdblock-chain.md:33–34: отказ остаётся нулём, но теперь он красный
     /// перевод, а не строка «Там уже такой блок».
     #[test]

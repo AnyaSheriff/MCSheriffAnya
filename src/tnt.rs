@@ -1357,7 +1357,7 @@ mod tests {
         let mut items = Items::with_catalog(catalog);
         for x in [0,1] {
             world.set_block(x,70,0,state("decorated_pot"));
-            crate::pottery::apply_snbt(&mut world,(x,70,0),if x==0 { r#"{sherds:[{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}]}"# } else { r#"{sherds:["minecraft:brick"]}"# });
+            crate::pottery::apply_snbt(&mut world,(x,70,0),if x==0 { r#"{sherds:{back:{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}}}"# } else { r#"{sherds:{back:"minecraft:brick"}}"# });
         }
         destroy_blocks(&mut world,&mut items,&[(0,70,0),(1,70,0)],&mut ids());
         assert_eq!(items.items().len(),2);

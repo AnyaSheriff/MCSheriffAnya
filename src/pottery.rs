@@ -40,10 +40,14 @@ pub fn drops_with_data(sides: [i32;4], data: crate::stackdata::Data, tool: Optio
 pub fn apply_snbt(world: &mut World, at: (i32,i32,i32), text: &str) {
     if !world.catalog().changed_rules() { return; }
     let Some(root) = crate::snbt::parse(text) else { return; };
-    let Some(crate::snbt::Value::List(sides)) = root.get("sherds") else { return; };
+    // Чёрный ящик 26.3: sherds — именованные стороны, не прежний список.
+    // Ошибка одной стороны не убирает остальные; неизвестные ключи игнорируются.
+    // testdata/pottery-26.3-observations.json: "Not a map" для старого списка.
+    let Some(crate::snbt::Value::Map(sides)) = root.get("sherds") else { return; };
     let mut ids = [0;4];
     let mut data = crate::stackdata::Data::default();
-    for (i, side) in sides.iter().take(4).enumerate() {
+    for (i, name) in ["back", "left", "right", "front"].iter().enumerate() {
+        let Some((_, side)) = sides.iter().find(|(key, _)| key.as_str() == *name) else { continue; };
         let stack = side.as_str().and_then(|n|blocks::item_named(n.trim_start_matches("minecraft:"))).map(|id|Stack::new(id,1)).or_else(||crate::stackdata::stack_from_value(side).ok());
         if let Some(stack) = stack {
             ids[i] = stack.item;
@@ -65,6 +69,63 @@ pub fn nbt(sides: [i32;4]) -> Vec<u8> {
 mod tests {
     use super::*;
     #[test]
+    fn preview_import_and_drops_match_fifteen_official_observations() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/pottery-26.3-observations.json")).unwrap();
+        let cases = fixture["cases"].as_array().unwrap();
+        assert_eq!(cases.len(), 15);
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let state = blocks::state_by_name("decorated_pot").unwrap();
+        let tool = Some(Stack::new(blocks::item_named("diamond_pickaxe").unwrap(), 1));
+        for case in cases {
+            let mut world = World::in_memory_with_catalog(catalog);
+            let at = (1, 70, 1);
+            world.set_block(at.0, at.1, at.2, state);
+            apply_snbt(&mut world, at, case["input_snbt"].as_str().unwrap());
+            let expected = case["expected_sides"].as_array().unwrap();
+            let ids: [i32; 4] = std::array::from_fn(|i| expected[i]["id"].as_str()
+                .map(|name| blocks::item_named(name.trim_start_matches("minecraft:")).unwrap()).unwrap_or(0));
+            let sides = world.pot(at).unwrap();
+            assert_eq!(sides, ids, "{}", case["id"]);
+            let data = world.pot_details(at);
+            for (i, side) in expected.iter().enumerate() {
+                let actual = data.pot_sides.iter().find(|c| c.slot as usize == i);
+                assert_eq!(actual.is_some(), !side.is_null(), "{} side {i}", case["id"]);
+                if let Some(actual) = actual {
+                    let item = Stack::from_stored(actual.item, 1);
+                    assert_eq!(item.item, ids[i]);
+                    let extra = actual.data.map(crate::stackdata::get).unwrap_or_default();
+                    assert_eq!(extra.name.as_deref(), side["name"].as_str(), "{} side {i}", case["id"]);
+                }
+            }
+            let restored = crate::stackdata::from_bytes(&crate::stackdata::to_bytes(&data)).unwrap();
+            assert_eq!(restored, data, "{} saved details", case["id"]);
+            let pot = drops_with_data(sides, restored, None)[0];
+            assert_eq!(pot.extras().pot_decorations, Some(ids));
+            assert_eq!(pot.extras().pot_sides, data.pot_sides);
+            let moved = (-17, 70, -1);
+            world.set_block(moved.0, moved.1, moved.2, state);
+            place(&mut world, moved, pot);
+            assert_eq!(world.pot(moved), Some(ids));
+            assert_eq!(world.pot_details(moved).pot_sides, data.pot_sides);
+            let shattered = drops_with_data(ids, world.pot_details(moved), tool);
+            assert_eq!(shattered.iter().map(|s| s.item).collect::<Vec<_>>(), ids.into_iter().filter(|id| *id != 0).collect::<Vec<_>>());
+            let names: Vec<_> = shattered.iter().map(|s| s.extras().name).collect();
+            assert_eq!(names, expected.iter().filter(|s| !s.is_null()).map(|s| s["name"].as_str().map(str::to_owned)).collect::<Vec<_>>());
+        }
+    }
+
+    #[test]
+    fn new_command_format_does_not_change_the_legacy_primary_profile() {
+        let mut world = World::in_memory();
+        let at = (0, 70, 0);
+        world.set_block(at.0, at.1, at.2, blocks::state_by_name("decorated_pot").unwrap());
+        let before = world.pot(at);
+        apply_snbt(&mut world, at, r#"{sherds:{front:"minecraft:archer_pottery_sherd"}}"#);
+        assert_eq!(world.pot(at), before);
+        assert!(world.pot_details(at).pot_sides.is_empty());
+    }
+
+    #[test]
     fn placed_pot_preserves_materials_and_silk_touch() {
         let sides = ["archer_pottery_sherd","brick","arms_up_pottery_sherd","prize_pottery_sherd"].map(|n| blocks::item_named(n).unwrap());
         let stack = drops(sides,None)[0]; let mut world = World::in_memory();
@@ -82,7 +143,7 @@ mod tests {
         let mut world = World::in_memory_with_catalog(catalog);
         let at = (1,70,1);
         world.set_block(at.0,at.1,at.2,blocks::state_by_name("decorated_pot").unwrap());
-        apply_snbt(&mut world,at,r#"{sherds:[{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}]}"#);
+        apply_snbt(&mut world,at,r#"{sherds:{back:{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}}}"#);
         let sides = world.pot(at).unwrap();
         assert_eq!(sides[1..],[0;3]);
         let data = world.pot_details(at);
