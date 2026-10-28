@@ -340,12 +340,6 @@ pub(super) fn plants(chunk: &mut Chunk, column: &Column, world: (i32, i32), loca
         Biome::Beach | Biome::StonyShore => 0.007,
         _ => 0.0,
     };
-    let put_water = |chunk: &mut Chunk, y: i32, state: i32| {
-        if block_in(chunk, local_x, y, local_z) != Some(blocks.water) { return false; }
-        chunk.put_generated(local_x, y, local_z, state, true);
-        true
-    };
-
     if depth >= 3 && blocks.seabed.contains(&support)
         && roll(key, x >> 3, z >> 3, SALT_KELP_ZONE, 0.35) && roll(key, x, z, SALT_KELP, kelp)
     {
@@ -353,10 +347,16 @@ pub(super) fn plants(chunk: &mut Chunk, column: &Column, world: (i32, i32), loca
         // minecraft.wiki/w/Kelp: «age ... from 0 to 24» — возраст верхушки,
         // не длина. Замер сохранённых чанков 26.3 даёт исходную длину 1–10.
         let length = (1 + dice.below(10)).min(depth - 1);
-        for dy in 0..length - 1 {
-            if !put_water(chunk, bottom + dy, blocks.kelp_plant) { return; }
+        // Проверяем весь столбец до первой записи, включая верхушку.
+        // Иначе отказ на препятствии оставляет kelp_plant без kelp.
+        // Точное усечение попыток оригинала на всех видах преград [проверить].
+        if (0..length).any(|dy| block_in(chunk, local_x, bottom + dy, local_z) != Some(blocks.water)) {
+            return;
         }
-        put_water(chunk, bottom + length - 1, blocks.kelp_tops[dice.below(25) as usize]);
+        for dy in 0..length - 1 {
+            chunk.put_generated(local_x, bottom + dy, local_z, blocks.kelp_plant, true);
+        }
+        chunk.put_generated(local_x, bottom + length - 1, local_z, blocks.kelp_tops[dice.below(25) as usize], true);
         return;
     }
 
@@ -1243,6 +1243,44 @@ fn sea_pickles(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview_obstructed_kelp_never_leaves_a_headless_stem() {
+        let blocks = palette();
+        let column = Column { biome: Biome::Ocean, ..Column::flat(40) };
+        // Этот ключ выбирает ламинарию длиной 4: проверяем препятствие
+        // внутри стебля и в клетке запланированной верхушки.
+        for blocked_y in [42, 43, 44] {
+            for obstruction in [AIR, state("stone")] {
+                let mut chunk = Chunk::new();
+                chunk.put_generated(8, 40, 8, blocks.sand, true);
+                for y in 41..=SEA { chunk.put_generated(8, y, 8, blocks.water, true); }
+                chunk.put_generated(8, blocked_y, 8, obstruction, true);
+                plants(&mut chunk, &column, (8, 8), (8, 8), 24);
+                for y in 41..=SEA {
+                    let expected = if y == blocked_y { obstruction } else { blocks.water };
+                    assert_eq!(chunk.block(8, y, 8), expected,
+                        "неудачная попытка изменила Y{y}, препятствие на Y{blocked_y}");
+                }
+                assert_eq!(chunk.block(8, blocked_y, 8), obstruction);
+                assert_eq!(chunk.block(8, 40, 8), blocks.sand);
+            }
+        }
+    }
+
+    #[test]
+    fn preview_clear_kelp_preserves_the_selected_length_and_tip() {
+        let blocks = palette();
+        let column = Column { biome: Biome::Ocean, ..Column::flat(40) };
+        let mut chunk = Chunk::new();
+        chunk.put_generated(8, 40, 8, blocks.sand, true);
+        for y in 41..=SEA { chunk.put_generated(8, y, 8, blocks.water, true); }
+        plants(&mut chunk, &column, (8, 8), (8, 8), 24);
+        for y in 41..44 { assert_eq!(chunk.block(8, y, 8), blocks.kelp_plant); }
+        assert_eq!(chunk.block(8, 44, 8), blocks.kelp_tops[16]);
+        for y in 45..=SEA { assert_eq!(chunk.block(8, y, 8), blocks.water); }
+        assert_eq!(chunk.block(8, 40, 8), blocks.sand);
+    }
 
     #[test]
     fn preview_failed_tall_seagrass_does_not_become_short() {
