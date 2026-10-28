@@ -32,7 +32,6 @@ jobs:
         variant: [A, B, C, D]
     env:
       VARIANT: ${{ matrix.variant }}
-      CARGO_TARGET_DIR: ${{ runner.temp }}/end-target
     defaults:
       run:
         shell: bash
@@ -51,6 +50,8 @@ jobs:
           python -m unittest discover -s tools/measure -p test_genaudit_263_end_ci.py -v 2>&1 | tee "$RUNNER_TEMP/end-build/tests.log"
           python -m unittest discover -s tools/measure -p test_genaudit_263_end_edges.py -v 2>&1 | tee "$RUNNER_TEMP/end-build/edges-tests.log"
       - name: Build experimental runtime and matching helper
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/end-target
         run: |
           python tools/measure/genaudit_263_end_ci.py --prepare-variant "$VARIANT"
           git diff -- src/world/the_end.rs > "$RUNNER_TEMP/end-build/source.patch"
