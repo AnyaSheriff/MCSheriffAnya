@@ -129,7 +129,7 @@ pub(crate) fn translate_inner(
     } else { standard_id.ok_or(Error::Invalid)? };
     if !native_view { debug_assert_eq!(info.target_id, Some(mapped)); }
     let (name, equal) = (info.name, info.schema_equal);
-    if native_view && !matches!(name, "trade_list" | "declare_recipes" | "recipe_book_add" | "craft_recipe_response" | "advancements" | "world_particles" | "spawn_entity" | "entity_metadata" | "set_slot" | "window_items" | "set_cursor_item" | "set_player_inventory" | "entity_equipment" | "map_chunk" | "block_change" | "block_action" | "multi_block_change" | "world_event") { return Ok(Cow::Borrowed(body)); }
+    if native_view && !matches!(name, "trade_list" | "declare_recipes" | "recipe_book_add" | "craft_recipe_response" | "advancements" | "world_particles" | "spawn_entity" | "entity_metadata" | "set_slot" | "window_items" | "set_cursor_item" | "set_player_inventory" | "entity_equipment" | "map_chunk" | "tile_entity_data" | "block_change" | "block_action" | "multi_block_change" | "world_event") { return Ok(Cow::Borrowed(body)); }
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
@@ -360,6 +360,9 @@ pub(crate) fn translate_inner(
         (State::Play, Direction::Clientbound, "tile_entity_data") => {
             let position=cursor.take(8)?;out.extend(position);
             let kind = cursor.uint()?;
+            // В родном775 только горшок Preview несёт новую карту сторон.
+            // Остальные блоки сохраняют прежний прямой путь без новых ограничений NBT.
+            if native_view && kind != 42 { return Ok(Cow::Borrowed(body)); }
             let translated = crate::block_entities::translate_with_content(from, to, kind, cursor.take(cursor.remaining())?, context.items.content).map_err(Error::BlockEntity)?;
             if translated.is_none() && matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) {
                 // У визуального bookshelf/медного блока нет block entity.
@@ -826,6 +829,21 @@ mod tests {
     fn cb(body: &[u8], from: JavaVersion, to: JavaVersion) -> Result<Vec<u8>, Error> {
         translate(State::Play, Direction::Clientbound, from, to, body).map(Cow::into_owned)
     }
+    #[test]
+    fn native_preview_non_pot_block_updates_keep_their_direct_path() {
+        let mut context = Context::default();
+        context.items.content = crate::content::ContentCodec::white_slab_preview().native_view();
+        // Непрозрачные данные другого блока не должны попасть в кодек горшка.
+        let mut body = vec![0x06];
+        body.extend([0; 8]);
+        uint(&mut body, 1);
+        body.extend([10, 12, 0, 1, b'x', 0, 0, 0, 1]);
+        body.extend(7i64.to_be_bytes());
+        body.push(0);
+        assert!(matches!(translate_with_context(State::Play, Direction::Clientbound,
+            OLD, OLD, &body, context).unwrap(), Cow::Borrowed(_)));
+    }
+
     #[test]
     fn observed_double_chest_and_lectern_menus_roundtrip() {
         let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/blackbox-menus-777.json")).unwrap();
