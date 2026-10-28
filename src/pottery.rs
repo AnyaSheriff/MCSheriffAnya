@@ -38,13 +38,13 @@ pub fn drops_with_data(sides: [i32;4], data: crate::stackdata::Data, tool: Optio
     result
 }
 
-pub fn apply_snbt(world: &mut World, at: (i32,i32,i32), text: &str) {
-    if !world.catalog().changed_rules() { return; }
-    let Some(root) = crate::snbt::parse(text) else { return; };
+pub fn apply_snbt(world: &mut World, at: (i32,i32,i32), text: &str) -> bool {
+    if !world.catalog().changed_rules() { return false; }
+    let Some(root) = crate::snbt::parse(text) else { return false; };
     // Чёрный ящик 26.3: sherds — именованные стороны, не прежний список.
     // Ошибка одной стороны не убирает остальные; неизвестные ключи игнорируются.
     // testdata/pottery-26.3-observations.json: "Not a map" для старого списка.
-    let Some(crate::snbt::Value::Map(sides)) = root.get("sherds") else { return; };
+    let Some(crate::snbt::Value::Map(sides)) = root.get("sherds") else { return false; };
     let mut ids = [0;4];
     let mut data = crate::stackdata::Data::default();
     for (i, name) in ["back", "left", "right", "front"].iter().enumerate() {
@@ -56,6 +56,7 @@ pub fn apply_snbt(world: &mut World, at: (i32,i32,i32), text: &str) {
         }
     }
     world.set_pot_with_details(at,ids,data);
+    true
 }
 
 /// Сетевые наблюдения 777: стороны — именованные шаблоны предметов.

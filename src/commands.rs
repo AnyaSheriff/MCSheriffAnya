@@ -2545,8 +2545,13 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                     placed.push((x, y, z));
                 }
 
-                if blocks::block_at_state(state) == Some("decorated_pot") && let Some(text) = data {
-                    crate::pottery::apply_snbt(&mut world,(x,y,z),text);
+                if blocks::block_at_state(state) == Some("decorated_pot") {
+                    let applied = data.is_some_and(|text| crate::pottery::apply_snbt(&mut world,(x,y,z),text));
+                    // Наблюдение777: новый пустой горшок тоже отправляет обновление.
+                    // При карте сторон импорт уже отправил одно окончательное событие.
+                    if updated && world.catalog().changed_rules() && !applied {
+                        world.set_pot_with_details((x,y,z), [0;4], Default::default());
+                    }
                 }
                 if shared.catalog().changed_rules() && blocks::block_at_state(state) == Some("end_gateway")
                     && let Some(root) = data.and_then(crate::snbt::parse)
@@ -4228,6 +4233,31 @@ mod tests {
         }
         assert_eq!(world.pot((3, 70, 1)), Some([0; 4]));
         assert!(world.pot_details((3, 70, 1)).pot_sides.is_empty());
+    }
+
+    #[test]
+    fn preview_plain_command_pot_sends_one_observed_empty_update() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let shared = server_with_catalog(catalog);
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        // Официальный wire-опыт777: plain setblock после воздуха даёт 0a00,
+        // а пустой горшок в начальном чанке имеет TAG_End (00).
+        for (x, suffix) in [(1, ""), (3, "{}"), (5, "{sherds:[]}")] {
+            run(&format!("setblock {x} 69 1 stone"), &Source::Console, &shared);
+            run(&format!("setblock {x} 70 1 air"), &Source::Console, &shared);
+            let (_, start) = shared.world_in(Dimension::Overworld).lock().unwrap().events_since(0, 0);
+            let reply = run(&format!("setblock {x} 70 1 decorated_pot{suffix}"), &Source::Console, &shared).reply;
+            assert!(reply.contains("Changed the block"), "{reply}");
+            let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            let (events, _) = world.events_since(start, 0);
+            let updates: Vec<_> = events.iter().filter_map(|e| match e {
+                crate::world::WorldEvent::BlockEntity { x, y, z, kind, nbt } => Some(((*x,*y,*z),*kind,nbt.to_vec())),
+                _ => None,
+            }).collect();
+            assert_eq!(updates, vec![((x,70,1),42,vec![10,0])]);
+            assert!(world.chunk_pots(0, 0).contains(&((x,70,1),vec![0])));
+            assert!(world.pot_details((x,70,1)).pot_sides.is_empty());
+        }
     }
 
     /// cmdblock-chain.md:33–34: отказ остаётся нулём, но теперь он красный
