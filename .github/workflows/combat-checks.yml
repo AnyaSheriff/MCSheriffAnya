@@ -2,7 +2,7 @@ name: Existing combat cases 26.3
 
 on:
   push:
-    branches: ['wip/validate-combat-*']
+    branches: ['wip/combat-validate-*']
   workflow_dispatch:
     inputs:
       build_run_id:

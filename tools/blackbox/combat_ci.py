@@ -235,14 +235,21 @@ def audit_results(results, scenarios, expected_binary):
                 raw = json.loads(path.read_text())
                 if raw.get('scenario') != name or raw.get('protocol') != 777 or raw.get('recorder_sha256') != manifest['recorder_sha256']:
                     errors.append(f'{name}/{side}: raw identity mismatch')
-                if not raw.get('clients') or any(c.get('failure') for c in raw['clients']):
-                    errors.append(f'{name}/{side}: missing clients or client failure')
-                checked_file(results / f'{name}-{side}-events.json')
+                clients = raw.get('clients')
+                if not isinstance(clients, list) or not clients or any(
+                        not isinstance(c, dict) or c.get('failure')
+                        or not isinstance(c.get('events'), list) or not c['events'] for c in clients):
+                    errors.append(f'{name}/{side}: missing/empty client events or client failure')
+                projected = json.loads(checked_file(results / f'{name}-{side}-events.json').read_text())
+                if not isinstance(projected, dict) or not isinstance(projected.get('events'), list) or not projected['events']:
+                    errors.append(f'{name}/{side}: missing/empty projected events')
             checked_file(results / f'{name}-comparison.txt')
             counts = row.get('comparison_counts')
             gaps = row.get('decode_errors')
             if not isinstance(counts, list) or len(counts) != 4 or any(type(n) is not int or n < 0 for n in counts):
                 errors.append(f'{name}: comparison counts missing/invalid')
+            elif not any(counts):
+                errors.append(f'{name}: all-zero comparison for nonempty combat scenario')
             if not isinstance(gaps, list) or len(gaps) != 2 or any(gaps):
                 errors.append(f'{name}: decoder errors/missing decoder status')
             expected = 'mismatch-open' if (counts and any(counts[1:])) or row.get('warnings') else 'match'

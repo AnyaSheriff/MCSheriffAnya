@@ -1,5 +1,7 @@
 """Оркестратор: отрицательные проверки без Minecraft, Cargo, npm и сети."""
 import json
+import fnmatch
+import re
 import ctypes
 import os
 import sys
@@ -175,8 +177,8 @@ class ResultTests(unittest.TestCase):
                       'scenario_names': [name], 'isolate_vitals': True, 'recorder_sha256': recorder_sha})
         for side in ('official', 'ours'):
             ci.write_json(root / f'{name}-{side}.json', {'scenario': name, 'protocol': 777,
-                          'recorder_sha256': recorder_sha, 'clients': [{'events': [{'hex': '00'}], 'failure': None}]})
-            ci.write_json(root / f'{name}-{side}-events.json', {'events': []})
+                          'recorder_sha256': recorder_sha, 'clients': [{'events': [{'at': 0.0, 'name': 'damage_event', 'hex': '00'}], 'failure': None}]})
+            ci.write_json(root / f'{name}-{side}-events.json', {'events': [{'kind': 'sv', 'tick': 0, 'text': 'Damage Event type=34'}]})
         (root / f'{name}-comparison.txt').write_text('saved actual comparator stdout fixture')
         row = {'scenario': name, 'comparison_counts': [6, 0, 0, 0], 'decode_errors': [[], []],
                'warnings': [], 'status': 'match', 'record_status': 'complete'}
@@ -209,6 +211,43 @@ class ResultTests(unittest.TestCase):
                     else:row['decode_errors'] = [['unknown packet'], []]
                     ci.write_json(root / 'comparison-summary.json', [row])
                 self.assertEqual(ci.audit_results(root, [name], 'b' * 64)['status'], 'infrastructure-failed')
+
+    def test_nonempty_fixture_rejects_empty_raw_projection_and_zero_counts(self):
+        for side in ('official', 'ours'):
+            for failure in ('empty-client-list', 'empty-client-events', 'missing-client-events', 'empty-projection', 'zero-counts'):
+                with self.subTest(side=side, failure=failure), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    name, row, _ = self.populated(root)
+                    self.assertEqual(ci.audit_results(root, [name], 'b' * 64)['status'], 'match')
+                    path = root / f'{name}-{side}.json'
+                    raw = json.loads(path.read_text())
+                    if failure == 'empty-client-list':
+                        raw['clients'] = []
+                    elif failure == 'empty-client-events':
+                        # Даже один пустой наблюдатель рядом с непустым запрещён.
+                        raw['clients'].append({'events': [], 'failure': None})
+                    elif failure == 'missing-client-events':
+                        raw['clients'][0].pop('events')
+                    elif failure == 'empty-projection':
+                        ci.write_json(root / f'{name}-{side}-events.json', {'events': []})
+                    else:
+                        row['comparison_counts'] = [0, 0, 0, 0]
+                        ci.write_json(root / 'comparison-summary.json', [row])
+                    ci.write_json(path, raw)
+                    result = ci.audit_results(root, [name], 'b' * 64)
+                    self.assertEqual(result['status'], 'infrastructure-failed')
+                    self.assertTrue(any('empty' in error or 'all-zero' in error for error in result['errors']))
+
+    def test_nonzero_missing_event_remains_legitimate_mismatch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            name, row, _ = self.populated(root)
+            row.update(status='mismatch-open', comparison_counts=[0, 0, 1, 0])
+            ci.write_json(root / 'comparison-summary.json', [row])
+            result = ci.audit_results(root, [name], 'b' * 64)
+            self.assertEqual(result['status'], 'mismatch-open')
+            self.assertEqual(result['errors'], [])
+            self.assertEqual(result['comparisons'][0]['counts'], [0, 0, 1, 0])
 
     def test_known_mismatch_is_retained_and_not_passed(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -304,6 +343,16 @@ class CommandWindowTests(unittest.TestCase):
                 ci.run_tool(['own-recorder'],Path(folder)/'log.txt',1)
         proc.send_signal.assert_called_once_with(signal.SIGTERM)
         proc.wait.assert_called_once_with(timeout=35)
+
+
+class WorkflowBranchTests(unittest.TestCase):
+    def test_combat_push_branch_does_not_trigger_migration_build(self):
+        workflow = (ci.ROOT / '.github/workflows/combat-checks.yml').read_text()
+        pattern = re.search(r"branches: \[\'([^\']+)\'\]", workflow).group(1)
+        self.assertEqual(pattern, 'wip/combat-validate-*')
+        self.assertTrue(fnmatch.fnmatchcase('wip/combat-validate-20261028', pattern))
+        self.assertFalse(fnmatch.fnmatchcase('wip/combat-validate-20261028', 'wip/validate-*'))
+        self.assertFalse(fnmatch.fnmatchcase('wip/prepare-combat-ci-20261028', pattern))
 
 
 if __name__ == '__main__':
