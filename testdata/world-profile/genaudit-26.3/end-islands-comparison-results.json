@@ -1,0 +1,714 @@
+{
+  "schema": 1,
+  "status": "bounded experiment complete; E rejected for production",
+  "run_id": 40668070105,
+  "source_head": "1aa2c515e17366a45831827bba34e27fbf2e7b9f",
+  "verified_pairs": 11212,
+  "island_chunks_per_seed_variant": 2178,
+  "official_island_chunks": 4356,
+  "verified_source_hashes": {
+    "source_sha256": "5049a335f5a5603fbef619daad7be14c0270889b71efedc8540bd4b4f63b41eb",
+    "observed_bank_sha256": "4998e4db2d846c4509d1a59b880d4ad7cde3bab0827463929eb71699675af2de",
+    "official_reference_sha256": "4f9725518b12ab3f89d8014b2c5ca021e616642243550bd55c683a38d743c450"
+  },
+  "verification_json_sha256": "6415dc94a725026216cc6b2cb1a8fc2acadca99326c1850a7b4d2f2bd580d1af",
+  "summary": {
+    "A": {
+      "candidates": 83,
+      "property_matches": 0,
+      "exact_model_matches": 0,
+      "distinct_property_shapes": 0,
+      "property_radius_histogram": {},
+      "censored_components": {
+        "edge_clipped": 37,
+        "large_or_connected": 19,
+        "top_outside55_70": 1
+      },
+      "halo_eligible_by_chunk_center_y64": {
+        "small_end_islands": 1644,
+        "end_barrens": 372,
+        "end_midlands": 1069,
+        "end_highlands": 759
+      }
+    },
+    "E": {
+      "candidates": 75,
+      "property_matches": 71,
+      "exact_model_matches": 71,
+      "distinct_property_shapes": 22,
+      "property_radius_histogram": {
+        "4": 28,
+        "6": 21,
+        "5": 22
+      },
+      "censored_components": {
+        "edge_clipped": 37,
+        "large_or_connected": 21,
+        "top_outside55_70": 1
+      },
+      "halo_eligible_by_chunk_center_y64": {
+        "small_end_islands": 1644,
+        "end_barrens": 372,
+        "end_midlands": 1069,
+        "end_highlands": 759
+      }
+    },
+    "official": {
+      "candidates": 78,
+      "property_matches": 71,
+      "exact_model_matches": 31,
+      "distinct_property_shapes": 43,
+      "property_radius_histogram": {
+        "5": 20,
+        "6": 32,
+        "4": 19
+      },
+      "censored_components": {
+        "edge_clipped": 28,
+        "large_or_connected": 28,
+        "top_outside55_70": 10
+      },
+      "halo_eligible_by_chunk_center_y64": {
+        "end_midlands": 1076,
+        "end_highlands": 821,
+        "end_barrens": 442,
+        "small_end_islands": 1505
+      }
+    }
+  },
+  "E_vs_A_end_metrics": {
+    "owner": {
+      "outside": 16,
+      "resolved": 0,
+      "new_failure": 0,
+      "worsened": 39,
+      "new_rows": 0,
+      "new_outside": 0,
+      "removed_rows": 0
+    },
+    "second": {
+      "outside": 36,
+      "resolved": 0,
+      "new_failure": 0,
+      "worsened": 30,
+      "new_rows": 0,
+      "new_outside": 0,
+      "removed_rows": 0
+    }
+  },
+  "central_height_hashes": {
+    "A": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    },
+    "E": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    }
+  },
+  "fingerprints": {
+    "E_new_in_this_official_sample": [
+      "006660b965f1b20fb56fcbcb019ced52178dc19f4d81c55636f429a09fbe9199",
+      "085c2e49fc23b8cc1ef8ca833fc8978cd477f9250563d4b8ac7d4ea7cf6f262f",
+      "37e4e016ffdf6b113891232c29d24a3dd4832ce6880b3f17446c5f88331dc5a0",
+      "4b11eb9d5dc31a54f5eb1923be974fcf19fb8c2fbdd14700ef611dd93fd07d55",
+      "6eee1f6ebd7b509d47c58e8e6c43705c2270d0d1bb976db08e1bd53c02332578",
+      "a8dd059568d249a0d90718ec72ca3b1db53cb6991daccf32f872aaf8c7ebd5c3",
+      "c7309293ab57d2db12031a0204523fdf1adb52ad3f9ee4c92b9ff49d8005580a"
+    ],
+    "official_sample_missing_from_E": [
+      "0b3a4b11cb8825a73ea5fa78d8317e3a875a9559a54ce6a6102815e8d3a01d15",
+      "0d995a6967205b46bddb706aefde2fc77aacf5b2cdff29863473abf9f5a822d2",
+      "0fe08ddc258ca40e17fec007f8f3df260a9b1229796b724dcb43fe32ddcd0be9",
+      "101f5036044c912a9ec7c60e4a7243f16a1b83ba2797ee5aee12007025a2a06c",
+      "17998cf20f5533046f6dcf4d925b3acd066c37d4b3844e74e29ce5ef1b1e0f9f",
+      "1e8d6afc916791b49e549746f98aef183f7ae1e2da5583074ae920fd7bf48186",
+      "1ebec33be0a24fdd89d6b990f1c80656f30b5ee769fe128d41c392f7261aaccc",
+      "25e32886a9490e81523e1a587a8e43afc1dd4cb1bef18d9052937c4251cf42de",
+      "30350bef29ff10e43dcd78552d7c4b0ebafc421013eaf41bce170a5666e26ab9",
+      "4a0624dbd4e53a0c16c504dddd926529219e216640a7e93dda78f44ac66af607",
+      "4e5d2b9af029fe872ac912581bf87bc8784e6aeb300cc214871d8c535cfd2eaa",
+      "5192ee2714726c29bf07731d08b12e29961304749895199da212afd3636addda",
+      "56104fb864cecb062508d746c86e72a6014b06a6059279c24045522d407ffa49",
+      "609ef894639b118ce22d3cb9412476a5ce6a1ee44c0f8188652a271ff98fcdc1",
+      "6b4e2bdc5f5f4c71a01da670f05f244afdd3bcca2f327a46a2951966ed82845e",
+      "7b0b41ac118078207501ed17a12e670d427523c333364450de880bc80d163e17",
+      "894f13c54e9f69915ad68e8ea9f01805bb67a7233bf17860f4f571e79bbb1bf1",
+      "97d8e98df649177771d45d43da4d4df186cb5e445a6c56c8ec32a00ff43c2cf2",
+      "a5d9374df3e7214124f56d9b2e30eee98819a8aac84b095adc4ecb6cd943adaa",
+      "a9482393e5335895102f20bf2aefb32546335593f2a8742f39300e25182f2c96",
+      "b0422f8d105137c27c07f430dadbd32285e8c6726f5f02373dae781acf443129",
+      "b4ba5f694fa8721ea151e1cee3f7bc50f72ce6a73c2e3f5b33fb31d920ec61c2",
+      "bcd213062cd214db6d16cd7e4aad073b929b28c60c4c04d656b8e3bd6ac4f095",
+      "beff3360354955ef6bdda7f9d82a703a83385c9ddd23df3a0788c72ac76645c9",
+      "cfa4da65895e3378feceb202ffddbda1fa26dcbffcd9cfe5fa10be757a72c461",
+      "ec19d14cb465954de32e091ef73039d1a22c391f8fffb4c4edfc83e2df384fb9",
+      "f1fb8318965a97f3db3ed6c8c676ae9c992b6d4553558918cd4424658141d4e7",
+      "f5be6fbecfae42565c9bbeb82cbec137997c602229b687d16d08fca652fbe713"
+    ],
+    "E_outside_observed_bank": []
+  },
+  "windows_by_seed": {
+    "owner": [
+      {
+        "bounds": [
+          112,
+          112,
+          144,
+          144
+        ],
+        "ours_summary": {
+          "candidates": 13,
+          "exact_model_matches": 13,
+          "property_matches": 13,
+          "distinct_property_shapes": 11,
+          "radius_histogram": {
+            "4": 6,
+            "6": 3,
+            "5": 4
+          },
+          "property_radius_histogram": {
+            "4": 6,
+            "6": 3,
+            "5": 4
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 13
+          }
+        },
+        "official_summary": {
+          "candidates": 12,
+          "exact_model_matches": 5,
+          "property_matches": 12,
+          "distinct_property_shapes": 12,
+          "radius_histogram": {
+            "5": 4,
+            "6": 6,
+            "4": 2
+          },
+          "property_radius_histogram": {
+            "5": 4,
+            "6": 6,
+            "4": 2
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 12
+          }
+        },
+        "ours_eligible": {
+          "small_end_islands": 421,
+          "end_barrens": 69,
+          "end_midlands": 235,
+          "end_highlands": 236
+        },
+        "official_eligible": {
+          "end_midlands": 290,
+          "end_highlands": 265,
+          "end_barrens": 104,
+          "small_end_islands": 302
+        },
+        "ours_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 69,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 236,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 235,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 421,
+            "isolated_candidate_count": 11,
+            "shape_property_candidate_count": 11,
+            "distinct_center_chunks_with_property_candidate": 11,
+            "property_candidates_per_chunk": 0.026128266033254157
+          }
+        ],
+        "official_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 104,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 265,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 290,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 302,
+            "isolated_candidate_count": 10,
+            "shape_property_candidate_count": 10,
+            "distinct_center_chunks_with_property_candidate": 10,
+            "property_candidates_per_chunk": 0.033112582781456956
+          }
+        ],
+        "ours_excluded": {
+          "edge_clipped": 8,
+          "large_or_connected": 7
+        },
+        "official_excluded": {
+          "edge_clipped": 8,
+          "large_or_connected": 9,
+          "top_outside55_70": 5
+        }
+      },
+      {
+        "bounds": [
+          -144,
+          112,
+          -112,
+          144
+        ],
+        "ours_summary": {
+          "candidates": 25,
+          "exact_model_matches": 23,
+          "property_matches": 23,
+          "distinct_property_shapes": 15,
+          "radius_histogram": {
+            "6": 8,
+            "4": 9,
+            "5": 8
+          },
+          "property_radius_histogram": {
+            "6": 6,
+            "4": 9,
+            "5": 8
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 25
+          }
+        },
+        "official_summary": {
+          "candidates": 25,
+          "exact_model_matches": 7,
+          "property_matches": 23,
+          "distinct_property_shapes": 19,
+          "radius_histogram": {
+            "6": 12,
+            "5": 7,
+            "4": 6
+          },
+          "property_radius_histogram": {
+            "6": 11,
+            "5": 6,
+            "4": 6
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 24,
+            "end_barrens": 1
+          }
+        },
+        "ours_eligible": {
+          "end_highlands": 218,
+          "end_midlands": 244,
+          "end_barrens": 107,
+          "small_end_islands": 392
+        },
+        "official_eligible": {
+          "small_end_islands": 473,
+          "end_barrens": 105,
+          "end_midlands": 225,
+          "end_highlands": 158
+        },
+        "ours_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 107,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 218,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 244,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 392,
+            "isolated_candidate_count": 24,
+            "shape_property_candidate_count": 22,
+            "distinct_center_chunks_with_property_candidate": 20,
+            "property_candidates_per_chunk": 0.05612244897959184
+          }
+        ],
+        "official_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 105,
+            "isolated_candidate_count": 1,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 158,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 225,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 473,
+            "isolated_candidate_count": 21,
+            "shape_property_candidate_count": 21,
+            "distinct_center_chunks_with_property_candidate": 21,
+            "property_candidates_per_chunk": 0.04439746300211417
+          }
+        ],
+        "ours_excluded": {
+          "edge_clipped": 13,
+          "large_or_connected": 3
+        },
+        "official_excluded": {
+          "edge_clipped": 8,
+          "large_or_connected": 8,
+          "top_outside55_70": 1
+        }
+      }
+    ],
+    "second": [
+      {
+        "bounds": [
+          112,
+          112,
+          144,
+          144
+        ],
+        "ours_summary": {
+          "candidates": 11,
+          "exact_model_matches": 10,
+          "property_matches": 10,
+          "distinct_property_shapes": 9,
+          "radius_histogram": {
+            "4": 4,
+            "6": 6,
+            "5": 1
+          },
+          "property_radius_histogram": {
+            "4": 4,
+            "6": 5,
+            "5": 1
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 11
+          }
+        },
+        "official_summary": {
+          "candidates": 20,
+          "exact_model_matches": 10,
+          "property_matches": 19,
+          "distinct_property_shapes": 18,
+          "radius_histogram": {
+            "6": 11,
+            "4": 4,
+            "5": 5
+          },
+          "property_radius_histogram": {
+            "6": 10,
+            "4": 4,
+            "5": 5
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 20
+          }
+        },
+        "ours_eligible": {
+          "end_midlands": 290,
+          "end_highlands": 194,
+          "end_barrens": 100,
+          "small_end_islands": 377
+        },
+        "official_eligible": {
+          "small_end_islands": 371,
+          "end_midlands": 284,
+          "end_highlands": 178,
+          "end_barrens": 128
+        },
+        "ours_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 100,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 194,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 290,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 377,
+            "isolated_candidate_count": 10,
+            "shape_property_candidate_count": 9,
+            "distinct_center_chunks_with_property_candidate": 9,
+            "property_candidates_per_chunk": 0.023872679045092837
+          }
+        ],
+        "official_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 128,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 178,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 284,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 371,
+            "isolated_candidate_count": 19,
+            "shape_property_candidate_count": 18,
+            "distinct_center_chunks_with_property_candidate": 18,
+            "property_candidates_per_chunk": 0.04851752021563342
+          }
+        ],
+        "ours_excluded": {
+          "edge_clipped": 9,
+          "large_or_connected": 5
+        },
+        "official_excluded": {
+          "edge_clipped": 6,
+          "large_or_connected": 5
+        }
+      },
+      {
+        "bounds": [
+          -144,
+          112,
+          -112,
+          144
+        ],
+        "ours_summary": {
+          "candidates": 26,
+          "exact_model_matches": 25,
+          "property_matches": 25,
+          "distinct_property_shapes": 15,
+          "radius_histogram": {
+            "5": 9,
+            "6": 8,
+            "4": 9
+          },
+          "property_radius_histogram": {
+            "5": 9,
+            "6": 7,
+            "4": 9
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 26
+          }
+        },
+        "official_summary": {
+          "candidates": 21,
+          "exact_model_matches": 9,
+          "property_matches": 17,
+          "distinct_property_shapes": 14,
+          "radius_histogram": {
+            "5": 7,
+            "6": 6,
+            "2": 1,
+            "4": 7
+          },
+          "property_radius_histogram": {
+            "5": 5,
+            "6": 5,
+            "4": 7
+          },
+          "candidate_center_biomes_y64": {
+            "small_end_islands": 20,
+            "end_barrens": 1
+          }
+        },
+        "ours_eligible": {
+          "end_midlands": 300,
+          "end_highlands": 111,
+          "end_barrens": 96,
+          "small_end_islands": 454
+        },
+        "official_eligible": {
+          "small_end_islands": 359,
+          "end_barrens": 105,
+          "end_midlands": 277,
+          "end_highlands": 220
+        },
+        "ours_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 96,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 111,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 300,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 454,
+            "isolated_candidate_count": 25,
+            "shape_property_candidate_count": 24,
+            "distinct_center_chunks_with_property_candidate": 22,
+            "property_candidates_per_chunk": 0.05286343612334802
+          }
+        ],
+        "official_rates": [
+          {
+            "center_chunk_center_biome_y64": "end_barrens",
+            "chunk_denominator": 105,
+            "isolated_candidate_count": 1,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_highlands",
+            "chunk_denominator": 220,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "end_midlands",
+            "chunk_denominator": 277,
+            "isolated_candidate_count": 0,
+            "shape_property_candidate_count": 0,
+            "distinct_center_chunks_with_property_candidate": 0,
+            "property_candidates_per_chunk": 0.0
+          },
+          {
+            "center_chunk_center_biome_y64": "small_end_islands",
+            "chunk_denominator": 359,
+            "isolated_candidate_count": 16,
+            "shape_property_candidate_count": 14,
+            "distinct_center_chunks_with_property_candidate": 12,
+            "property_candidates_per_chunk": 0.03899721448467967
+          }
+        ],
+        "ours_excluded": {
+          "edge_clipped": 7,
+          "top_outside55_70": 1,
+          "large_or_connected": 6
+        },
+        "official_excluded": {
+          "edge_clipped": 6,
+          "large_or_connected": 6,
+          "top_outside55_70": 4
+        }
+      }
+    ]
+  },
+  "limits": [
+    "Компонента не гарантирует feature; мелкий фрагмент рельефа может пройти фильтр.",
+    "Изоляция исключает соединённые, наложенные поXY и обрезанные формы; частота появления и веса форм не оценены.",
+    "Правило знаменателя одинаково: центр чанкаY64 и полный одночанковый ореол; биомные охваты различаются1644уA/E и1505уофициальныхмиров.",
+    "71подходящаяформауEиоригинала не означает паритета геометрии, координат или распределения.",
+    "7Eформ, не встретившихся в данном официальном охвате, не объявляются невозможными;28отсутствующих форм относятся только к этим выборкам.",
+    "GitHubrawмиры не скачивались; признаки/центральныеSHA проверены по компактным сохранённым результатам, без повторной локальной генерации.",
+    "БанкEнеполон:32постановки содержат26уникальныхформ; естественная выборка содержит43формы."
+  ],
+  "decision": {
+    "E_accepted": false,
+    "bounded_batch_closed": true,
+    "next": "Обосновать процедурную послойную геометрию собственными наблюдениями и проверить отдельно; не расширять банк под два семени и не подбирать коэффициенты частоты/классов."
+  }
+}
