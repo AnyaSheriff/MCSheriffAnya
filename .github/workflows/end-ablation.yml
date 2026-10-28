@@ -7,6 +7,8 @@ on:
       - .github/workflows/end-ablation.yml
       - tools/measure/genaudit_263_end_ci.py
       - tools/measure/test_genaudit_263_end_ci.py
+      - tools/measure/genaudit_263_end_islands.py
+      - tools/measure/test_genaudit_263_end_islands.py
       - testdata/world-profile/genaudit-26.3/end-control-pass3.json*
       - src/world/end_island_shapes_26_3.rs
       - testdata/world-profile/genaudit-26.3/end-island-shapes*.json
@@ -51,6 +53,7 @@ jobs:
           python -m pip install -r tools/measure/genaudit_263_requirements.txt
           python -m unittest discover -s tools/measure -p test_genaudit_263_end_ci.py -v 2>&1 | tee "$RUNNER_TEMP/end-build/tests.log"
           python -m unittest discover -s tools/measure -p test_genaudit_263_end_edges.py -v 2>&1 | tee "$RUNNER_TEMP/end-build/edges-tests.log"
+          python -m unittest discover -s tools/measure -p test_genaudit_263_end_islands.py -v 2>&1 | tee "$RUNNER_TEMP/end-build/islands-detector-tests.log"
       - name: Build experimental runtime and matching helper
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/end-target

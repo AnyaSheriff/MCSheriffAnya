@@ -241,6 +241,44 @@ def central_height(world):
     return central_digest(chunks)
 
 
+def island_windows(plan):
+    """Два внешних окна того же плана; центральный остров не входит в выборку."""
+    expected = [[-12, -12, 12, 12], [112, 112, 144, 144], [-144, 112, -112, 144]]
+    actual = plan['windows']['the_end']
+    require(sorted(actual) == sorted(expected), 'Изменились окна выборки малых островков')
+    return expected[1:]
+
+
+def measure_islands(world, plan, output):
+    from genaudit_263_end_islands import analyze_world
+    source = REPO / 'tools/measure/genaudit_263_end_islands.py'
+    bank = REPO / MODEL_INPUTS[2]
+    reference_path = REPO/'testdata/world-profile/genaudit-26.3/end-islands-official-reference.json'
+    reference = json.loads(reference_path.read_text())
+    require(reference['detector_source_sha256'] == ci.sha(source)
+            and reference['bank_sha256'] == ci.sha(bank), 'Эталон островков измерен другим детектором/банком')
+    windows = island_windows(plan)
+    report = analyze_world(world, windows, observed_bank=bank)
+    ci.write(output/'islands.json', report)
+    require(report['requested_chunks'] == report['chunks'] == 2178
+            and report['coverage'] == {'expected': 2178, 'actual': 2178, 'complete': True},
+            'Неполная выборка изолированных островков')
+    require(report['level']['seed'] == plan['seed'], 'Другое семя диагностики островков')
+    # Это отдельная диагностика: старый анализатор и его допуски не меняются.
+    path = output/'provenance.json'
+    provenance = json.loads(path.read_text())
+    provenance['island_diagnostic'] = {
+        'source_sha256': ci.sha(source),
+        'reader_source_sha256': ci.sha(REPO/'tools/measure/genaudit_263_io.py'),
+        'observed_bank_sha256': ci.sha(bank),
+        'official_reference_sha256': ci.sha(reference_path),
+        'report_sha256': ci.sha(output/'islands.json'),
+        'windows': windows,
+        'requested_chunks': 2178,
+    }
+    ci.write(path, provenance)
+
+
 def execute(label, variant, build, output, scratch):
     from genaudit_263_io import level, manifest
     from genaudit_263_end_edges import load_world
@@ -301,6 +339,7 @@ def execute(label, variant, build, output, scratch):
              'original_plan_sha256': case['plan_sha256'], 'derived_plan_sha256': ci.canonical_sha(plan),
              'manifest': ours['manifest'], 'coverage': report['coverage'], 'central_height_sha256':center_hash},
             expected, variant)
+    measure_islands(world, plan, output)
 
 
 def main():

@@ -1,0 +1,4242 @@
+{
+  "schema": 1,
+  "detector_source_sha256": "5049a335f5a5603fbef619daad7be14c0270889b71efedc8540bd4b4f63b41eb",
+  "bank_sha256": "4998e4db2d846c4509d1a59b880d4ad7cde3bab0827463929eb71699675af2de",
+  "cases": {
+    "owner": {
+      "schema": 1,
+      "world": "official-saved-world:owner",
+      "level": {
+        "seed": 1792932773345722119,
+        "spawn": [
+          16,
+          -48
+        ],
+        "version": {
+          "Snapshot": 0,
+          "Series": "main",
+          "Id": 5023,
+          "Name": "26.3"
+        },
+        "data_version": 5023
+      },
+      "method": "4-связные 2Dкомпоненты Endstoneколонок; bbox<=13×13; верхY55..70; полные3Dклетки только кандидатов",
+      "requested_chunks": 2178,
+      "chunks": 2178,
+      "coverage": {
+        "expected": 2178,
+        "actual": 2178,
+        "complete": true
+      },
+      "limitations": [
+        "Компонента не гарантирует feature: мелкий фрагмент шумового рельефа может пройти фильтр.",
+        "Соединённые с большими островами, наложенные поXY и обрезанные формы исключены; это не частота всех feature.",
+        "Биом центра чанка наY64 — proxy eligibility; правило оригинала не доказано.",
+        "Числитель и знаменатель rates используют один chunkcenterbiomeY64; нужны целый чанк и одночанковый ореол внутри окна.",
+        "Связность4соседа: диагональные контакты рассматриваются отдельно.",
+        "Точное совпадение с ограниченным банком наблюдений не доказывает полноту банка или естественное распределение."
+      ],
+      "bank": {
+        "models": 32,
+        "distinct_forms": 26,
+        "canonical_data_sha256": "0995a6a33a976cb16816646cb2e9e275b57f128f0ba9d3628b2f7232be498dd5",
+        "path": "testdata/world-profile/genaudit-26.3/end-island-shapes-observations-26.3.json",
+        "sha256": "4998e4db2d846c4509d1a59b880d4ad7cde3bab0827463929eb71699675af2de"
+      },
+      "raw_cells_included": false,
+      "windows": [
+        {
+          "bounds_chunks": [
+            112,
+            112,
+            144,
+            144
+          ],
+          "chunks": 1089,
+          "requested_chunks": 1089,
+          "missing_chunks": [],
+          "chunk_sha256": "79f5039888368f91677ccbff8931d86a171fc0fcc8bc58829f270229b18eb5fb",
+          "sources": [
+            {
+              "path": "r.3.3.mca",
+              "bytes": 3457024,
+              "sha256": "ca6e74f1f68bdb59a8b1084dfa257e1e8279e8d750d5578f6e7a7f3589a422ee"
+            },
+            {
+              "path": "r.3.4.mca",
+              "bytes": 3457024,
+              "sha256": "bb00b6acd75ab8ac67d08333697c78777d16494d061a05557eb07d4ec6635285"
+            },
+            {
+              "path": "r.4.3.mca",
+              "bytes": 3457024,
+              "sha256": "4307373b55abc178b3243617990283e3c5bbd0cbd13e637fa41d1f052b626df8"
+            },
+            {
+              "path": "r.4.4.mca",
+              "bytes": 3452928,
+              "sha256": "873e3b00804eea2a23c22d46238af1cb361a104ab23d1056645405c8f3fa23e7"
+            }
+          ],
+          "second_read_candidate_chunks": 33,
+          "components": 34,
+          "candidates": [
+            {
+              "component_id": 4,
+              "bounds": [
+                2216,
+                1834,
+                2226,
+                1844
+              ],
+              "center_proxy": [
+                2221,
+                69,
+                1839
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                65,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 269,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 69,
+                "-2": 45,
+                "-3": 37,
+                "-4": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "a9482393e5335895102f20bf2aefb32546335593f2a8742f39300e25182f2c96"
+            },
+            {
+              "component_id": 6,
+              "bounds": [
+                2289,
+                1879,
+                2301,
+                1891
+              ],
+              "center_proxy": [
+                2295,
+                68,
+                1885
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                62,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 579,
+              "relative_layer_counts": {
+                "0": 145,
+                "-5": 37,
+                "-2": 109,
+                "-1": 137,
+                "-4": 45,
+                "-3": 97,
+                "-6": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "0d995a6967205b46bddb706aefde2fc77aacf5b2cdff29863473abf9f5a822d2"
+            },
+            {
+              "component_id": 10,
+              "bounds": [
+                2235,
+                1948,
+                2245,
+                1958
+              ],
+              "center_proxy": [
+                2240,
+                62,
+                1953
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                62,
+                62
+              ],
+              "bottom_range": [
+                59,
+                62
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 272,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 45,
+                "-1": 97,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "beff3360354955ef6bdda7f9d82a703a83385c9ddd23df3a0788c72ac76645c9"
+            },
+            {
+              "component_id": 12,
+              "bounds": [
+                2310,
+                1956,
+                2318,
+                1964
+              ],
+              "center_proxy": [
+                2314,
+                60,
+                1960
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                58,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 123,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 37,
+                "-2": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                9,
+                16,
+                17
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "679f1340f9172e2614352a73f23bed86bc1710db3843cc4b9b81e0611a627312"
+            },
+            {
+              "component_id": 15,
+              "bounds": [
+                1949,
+                2014,
+                1961,
+                2026
+              ],
+              "center_proxy": [
+                1955,
+                68,
+                2020
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                64,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 421,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 137,
+                "-2": 77,
+                "-4": 25,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "17998cf20f5533046f6dcf4d925b3acd066c37d4b3844e74e29ce5ef1b1e0f9f"
+            },
+            {
+              "component_id": 16,
+              "bounds": [
+                2002,
+                2017,
+                2014,
+                2029
+              ],
+              "center_proxy": [
+                2008,
+                59,
+                2023
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                59,
+                59
+              ],
+              "bottom_range": [
+                55,
+                59
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 405,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 137,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                3
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "ee2aec8792b4a7692dca7907bfda0cbbdaa5e1fb15c6777477f76e14000e0792"
+            },
+            {
+              "component_id": 21,
+              "bounds": [
+                2278,
+                2124,
+                2288,
+                2134
+              ],
+              "center_proxy": [
+                2283,
+                61,
+                2129
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                61,
+                61
+              ],
+              "bottom_range": [
+                56,
+                61
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 398,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 77,
+                "-1": 97,
+                "-4": 25,
+                "-5": 21,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                6
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "7dc2f17e7492a5a97b05e9c92435540e1f50702c10edde7df2d948e3247585bb"
+            },
+            {
+              "component_id": 23,
+              "bounds": [
+                1793,
+                2165,
+                1805,
+                2177
+              ],
+              "center_proxy": [
+                1799,
+                64,
+                2171
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                64,
+                64
+              ],
+              "bottom_range": [
+                59,
+                64
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 506,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 109,
+                "-1": 137,
+                "-4": 25,
+                "-5": 21,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                27
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "c3198dccb8c8be2e4f0bd1fe5a89b3d5360a589921dfa1530b21a26beca49334"
+            },
+            {
+              "component_id": 25,
+              "bounds": [
+                1825,
+                2206,
+                1835,
+                2216
+              ],
+              "center_proxy": [
+                1830,
+                60,
+                2211
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                56,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 281,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 45,
+                "-1": 97,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "6b4e2bdc5f5f4c71a01da670f05f244afdd3bcca2f327a46a2951966ed82845e"
+            },
+            {
+              "component_id": 27,
+              "bounds": [
+                1832,
+                2219,
+                1844,
+                2231
+              ],
+              "center_proxy": [
+                1838,
+                70,
+                2225
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                70,
+                70
+              ],
+              "bottom_range": [
+                65,
+                70
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 526,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 109,
+                "-1": 137,
+                "-4": 45,
+                "-5": 21,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "1e8d6afc916791b49e549746f98aef183f7ae1e2da5583074ae920fd7bf48186"
+            },
+            {
+              "component_id": 28,
+              "bounds": [
+                2127,
+                2248,
+                2139,
+                2260
+              ],
+              "center_proxy": [
+                2133,
+                67,
+                2254
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                67,
+                67
+              ],
+              "bottom_range": [
+                64,
+                67
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 308,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                18
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "c64f57ba4514c263c57f98e8952bac271f8bb382ae2d44e3c037f0d53bf08d6c"
+            },
+            {
+              "component_id": 29,
+              "bounds": [
+                1845,
+                2250,
+                1853,
+                2258
+              ],
+              "center_proxy": [
+                1849,
+                57,
+                2254
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                57,
+                57
+              ],
+              "bottom_range": [
+                53,
+                57
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 237,
+              "relative_layer_counts": {
+                "0": 77,
+                "-2": 45,
+                "-1": 69,
+                "-3": 37,
+                "-4": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "4e5d2b9af029fe872ac912581bf87bc8784e6aeb300cc214871d8c535cfd2eaa"
+            }
+          ],
+          "excluded_components": {
+            "edge_clipped": 8,
+            "large_or_connected": 9,
+            "top_outside55_70": 5
+          },
+          "eligible_proxy_halo_chunks_by_center_biome_y64": {
+            "end_midlands": 290,
+            "end_highlands": 265,
+            "end_barrens": 104,
+            "small_end_islands": 302
+          },
+          "summary": {
+            "candidates": 12,
+            "exact_model_matches": 5,
+            "property_matches": 12,
+            "distinct_property_shapes": 12,
+            "radius_histogram": {
+              "5": 4,
+              "6": 6,
+              "4": 2
+            },
+            "property_radius_histogram": {
+              "5": 4,
+              "6": 6,
+              "4": 2
+            },
+            "candidate_center_biomes_y64": {
+              "small_end_islands": 12
+            }
+          },
+          "censored_proxy_rates": [
+            {
+              "center_chunk_center_biome_y64": "end_barrens",
+              "chunk_denominator": 104,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_highlands",
+              "chunk_denominator": 265,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_midlands",
+              "chunk_denominator": 290,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "chunk_denominator": 302,
+              "isolated_candidate_count": 10,
+              "shape_property_candidate_count": 10,
+              "distinct_center_chunks_with_property_candidate": 10,
+              "property_candidates_per_chunk": 0.033112582781456956
+            }
+          ]
+        },
+        {
+          "bounds_chunks": [
+            -144,
+            112,
+            -112,
+            144
+          ],
+          "chunks": 1089,
+          "requested_chunks": 1089,
+          "missing_chunks": [],
+          "chunk_sha256": "25a6c1aa2676344ec0f80be4013dafa269c047008ed1de0521d4e9dab96ac1d2",
+          "sources": [
+            {
+              "path": "r.-5.3.mca",
+              "bytes": 3457024,
+              "sha256": "f28bd189fe6f798950d888470e55e1158beb5821b31f2d682b4161d5ffb8cd47"
+            },
+            {
+              "path": "r.-5.4.mca",
+              "bytes": 3457024,
+              "sha256": "240be75f8c1161f42515b776995d79208b386002a79279f197ddd8dd7d776cee"
+            },
+            {
+              "path": "r.-4.3.mca",
+              "bytes": 3457024,
+              "sha256": "2b81ea9235b99fec5db4b5b7b061fe05921e53b940a1d566a32905b1f288a979"
+            },
+            {
+              "path": "r.-4.4.mca",
+              "bytes": 3452928,
+              "sha256": "a20c39c9e9037772212367514cca7de284eb154313d77fdfc7876f0726e68ed7"
+            }
+          ],
+          "second_read_candidate_chunks": 62,
+          "components": 42,
+          "candidates": [
+            {
+              "component_id": 2,
+              "bounds": [
+                -2296,
+                1793,
+                -2285,
+                1804
+              ],
+              "center_proxy": [
+                -2291,
+                68,
+                1798
+              ],
+              "bbox_size": [
+                12,
+                12
+              ],
+              "columns": 126,
+              "top_range": [
+                56,
+                68
+              ],
+              "bottom_range": [
+                52,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 470,
+              "relative_layer_counts": {
+                "0": 109,
+                "-12": 77,
+                "-1": 69,
+                "-4": 9,
+                "-15": 21,
+                "-16": 9,
+                "-13": 69,
+                "-2": 45,
+                "-14": 25,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": false,
+              "flat_top": false,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": false,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "5b936a0fc85ce19bc183d98d85bd3ea2c05b79a19c0aa79613761b06501dc7ce"
+            },
+            {
+              "component_id": 3,
+              "bounds": [
+                -2282,
+                1842,
+                -2270,
+                1854
+              ],
+              "center_proxy": [
+                -2276,
+                63,
+                1848
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                63,
+                63
+              ],
+              "bottom_range": [
+                59,
+                63
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 317,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-4": 9,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                7
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "f0cb11ef0cb8b6e1c3eeb5170a107f2ac17eef8ee24688bc25c60c866dadf58f"
+            },
+            {
+              "component_id": 4,
+              "bounds": [
+                -2211,
+                1871,
+                -2201,
+                1881
+              ],
+              "center_proxy": [
+                -2206,
+                61,
+                1876
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                61,
+                61
+              ],
+              "bottom_range": [
+                59,
+                61
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 203,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 69,
+                "-2": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "30350bef29ff10e43dcd78552d7c4b0ebafc421013eaf41bce170a5666e26ab9"
+            },
+            {
+              "component_id": 7,
+              "bounds": [
+                -2285,
+                1931,
+                -2275,
+                1941
+              ],
+              "center_proxy": [
+                -2280,
+                67,
+                1936
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                67,
+                67
+              ],
+              "bottom_range": [
+                65,
+                67
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 203,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 69,
+                "-2": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "30350bef29ff10e43dcd78552d7c4b0ebafc421013eaf41bce170a5666e26ab9"
+            },
+            {
+              "component_id": 12,
+              "bounds": [
+                -2025,
+                1944,
+                -2016,
+                1948
+              ],
+              "center_proxy": [
+                -2021,
+                56,
+                1946
+              ],
+              "bbox_size": [
+                10,
+                5
+              ],
+              "columns": 37,
+              "top_range": [
+                56,
+                56
+              ],
+              "bottom_range": [
+                48,
+                56
+              ],
+              "center_biome_y64": "end_barrens",
+              "center_chunk_center_biome_y64": "end_barrens",
+              "center_chunk_has_full_halo": true,
+              "volume": 103,
+              "relative_layer_counts": {
+                "-4": 8,
+                "-5": 6,
+                "0": 37,
+                "-3": 9,
+                "-2": 12,
+                "-1": 22,
+                "-6": 3,
+                "-7": 3,
+                "-8": 3
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": false,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "ea11b51535ccaf98078239cdab7694ace0994e1354bed1eb4464d86c1a96e99e"
+            },
+            {
+              "component_id": 13,
+              "bounds": [
+                -2150,
+                1946,
+                -2140,
+                1956
+              ],
+              "center_proxy": [
+                -2145,
+                63,
+                1951
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                63,
+                63
+              ],
+              "bottom_range": [
+                59,
+                63
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 269,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 45,
+                "-1": 69,
+                "-3": 37,
+                "-4": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "a9482393e5335895102f20bf2aefb32546335593f2a8742f39300e25182f2c96"
+            },
+            {
+              "component_id": 16,
+              "bounds": [
+                -2139,
+                1962,
+                -2127,
+                1974
+              ],
+              "center_proxy": [
+                -2133,
+                55,
+                1968
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                55,
+                55
+              ],
+              "bottom_range": [
+                51,
+                55
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 365,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-2": 77,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "0fe08ddc258ca40e17fec007f8f3df260a9b1229796b724dcb43fe32ddcd0be9"
+            },
+            {
+              "component_id": 18,
+              "bounds": [
+                -2188,
+                1971,
+                -2178,
+                1981
+              ],
+              "center_proxy": [
+                -2183,
+                62,
+                1976
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                62,
+                62
+              ],
+              "bottom_range": [
+                58,
+                62
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 281,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 97,
+                "-2": 45,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "6b4e2bdc5f5f4c71a01da670f05f244afdd3bcca2f327a46a2951966ed82845e"
+            },
+            {
+              "component_id": 19,
+              "bounds": [
+                -1831,
+                1973,
+                -1819,
+                1985
+              ],
+              "center_proxy": [
+                -1825,
+                61,
+                1979
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                61,
+                61
+              ],
+              "bottom_range": [
+                57,
+                61
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 317,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-4": 9,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                7
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "f0cb11ef0cb8b6e1c3eeb5170a107f2ac17eef8ee24688bc25c60c866dadf58f"
+            },
+            {
+              "component_id": 20,
+              "bounds": [
+                -2165,
+                2023,
+                -2153,
+                2035
+              ],
+              "center_proxy": [
+                -2159,
+                62,
+                2029
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                62,
+                62
+              ],
+              "bottom_range": [
+                56,
+                62
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 535,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 137,
+                "-2": 109,
+                "-4": 45,
+                "-5": 21,
+                "-3": 69,
+                "-6": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "4a0624dbd4e53a0c16c504dddd926529219e216640a7e93dda78f44ac66af607"
+            },
+            {
+              "component_id": 21,
+              "bounds": [
+                -1867,
+                2039,
+                -1855,
+                2051
+              ],
+              "center_proxy": [
+                -1861,
+                57,
+                2045
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                57,
+                57
+              ],
+              "bottom_range": [
+                51,
+                57
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 379,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-4": 25,
+                "-5": 21,
+                "-2": 45,
+                "-6": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                30
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "f1fb8318965a97f3db3ed6c8c676ae9c992b6d4553558918cd4424658141d4e7"
+            },
+            {
+              "component_id": 22,
+              "bounds": [
+                -1879,
+                2064,
+                -1867,
+                2076
+              ],
+              "center_proxy": [
+                -1873,
+                64,
+                2070
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                64,
+                64
+              ],
+              "bottom_range": [
+                60,
+                64
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 453,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 137,
+                "-2": 77,
+                "-4": 25,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "b4ba5f694fa8721ea151e1cee3f7bc50f72ce6a73c2e3f5b33fb31d920ec61c2"
+            },
+            {
+              "component_id": 24,
+              "bounds": [
+                -1986,
+                2087,
+                -1974,
+                2099
+              ],
+              "center_proxy": [
+                -1980,
+                56,
+                2093
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                56,
+                56
+              ],
+              "bottom_range": [
+                52,
+                56
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 413,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-2": 77,
+                "-4": 25,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "7b0b41ac118078207501ed17a12e670d427523c333364450de880bc80d163e17"
+            },
+            {
+              "component_id": 25,
+              "bounds": [
+                -1860,
+                2096,
+                -1850,
+                2106
+              ],
+              "center_proxy": [
+                -1855,
+                68,
+                2101
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                64,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 329,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 77,
+                "-1": 97,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                2,
+                24
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "369cca25854e5c46b5d87bad7e3e92d5ba9f0d391728f5cc1141b2f6bbc8ef1e"
+            },
+            {
+              "component_id": 26,
+              "bounds": [
+                -1878,
+                2112,
+                -1870,
+                2120
+              ],
+              "center_proxy": [
+                -1874,
+                60,
+                2116
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                55,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 274,
+              "relative_layer_counts": {
+                "0": 77,
+                "-2": 45,
+                "-1": 69,
+                "-3": 37,
+                "-4": 25,
+                "-5": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "1ebec33be0a24fdd89d6b990f1c80656f30b5ee769fe128d41c392f7261aaccc"
+            },
+            {
+              "component_id": 30,
+              "bounds": [
+                -1842,
+                2134,
+                -1834,
+                2142
+              ],
+              "center_proxy": [
+                -1838,
+                65,
+                2138
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                65,
+                65
+              ],
+              "bottom_range": [
+                63,
+                65
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 123,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 37,
+                "-2": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                9,
+                16,
+                17
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "679f1340f9172e2614352a73f23bed86bc1710db3843cc4b9b81e0611a627312"
+            },
+            {
+              "component_id": 31,
+              "bounds": [
+                -1791,
+                2156,
+                -1779,
+                2168
+              ],
+              "center_proxy": [
+                -1785,
+                59,
+                2162
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                59,
+                59
+              ],
+              "bottom_range": [
+                55,
+                59
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 365,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 97,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "0fe08ddc258ca40e17fec007f8f3df260a9b1229796b724dcb43fe32ddcd0be9"
+            },
+            {
+              "component_id": 32,
+              "bounds": [
+                -2035,
+                2159,
+                -2023,
+                2171
+              ],
+              "center_proxy": [
+                -2029,
+                60,
+                2165
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                54,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 463,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 97,
+                "-4": 45,
+                "-5": 21,
+                "-3": 69,
+                "-6": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "0b3a4b11cb8825a73ea5fa78d8317e3a875a9559a54ce6a6102815e8d3a01d15"
+            },
+            {
+              "component_id": 33,
+              "bounds": [
+                -2015,
+                2162,
+                -2003,
+                2174
+              ],
+              "center_proxy": [
+                -2009,
+                60,
+                2168
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                56,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 421,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 137,
+                "-2": 77,
+                "-4": 25,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "17998cf20f5533046f6dcf4d925b3acd066c37d4b3844e74e29ce5ef1b1e0f9f"
+            },
+            {
+              "component_id": 35,
+              "bounds": [
+                -2044,
+                2219,
+                -2036,
+                2227
+              ],
+              "center_proxy": [
+                -2040,
+                60,
+                2223
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                56,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 169,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 37,
+                "-2": 25,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "97d8e98df649177771d45d43da4d4df186cb5e445a6c56c8ec32a00ff43c2cf2"
+            },
+            {
+              "component_id": 37,
+              "bounds": [
+                -2142,
+                2236,
+                -2132,
+                2246
+              ],
+              "center_proxy": [
+                -2137,
+                55,
+                2241
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                55,
+                55
+              ],
+              "bottom_range": [
+                52,
+                55
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 272,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 97,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "beff3360354955ef6bdda7f9d82a703a83385c9ddd23df3a0788c72ac76645c9"
+            },
+            {
+              "component_id": 39,
+              "bounds": [
+                -1883,
+                2250,
+                -1875,
+                2258
+              ],
+              "center_proxy": [
+                -1879,
+                56,
+                2254
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                56,
+                56
+              ],
+              "bottom_range": [
+                52,
+                56
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 201,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "609ef894639b118ce22d3cb9412476a5ce6a1ee44c0f8188652a271ff98fcdc1"
+            },
+            {
+              "component_id": 40,
+              "bounds": [
+                -2019,
+                2256,
+                -2007,
+                2268
+              ],
+              "center_proxy": [
+                -2013,
+                68,
+                2262
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                64,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 405,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 137,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                3
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "ee2aec8792b4a7692dca7907bfda0cbbdaa5e1fb15c6777477f76e14000e0792"
+            },
+            {
+              "component_id": 41,
+              "bounds": [
+                -2083,
+                2275,
+                -2075,
+                2283
+              ],
+              "center_proxy": [
+                -2079,
+                57,
+                2279
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                57,
+                57
+              ],
+              "bottom_range": [
+                53,
+                57
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 201,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "609ef894639b118ce22d3cb9412476a5ce6a1ee44c0f8188652a271ff98fcdc1"
+            },
+            {
+              "component_id": 42,
+              "bounds": [
+                -2057,
+                2309,
+                -2049,
+                2317
+              ],
+              "center_proxy": [
+                -2053,
+                57,
+                2313
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                57,
+                57
+              ],
+              "bottom_range": [
+                55,
+                57
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 139,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 37,
+                "-2": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                23
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "d3611608ebf6dc6f700701b6285875dddec9d43440948d1e851a8f33c1f81956"
+            }
+          ],
+          "excluded_components": {
+            "edge_clipped": 8,
+            "large_or_connected": 8,
+            "top_outside55_70": 1
+          },
+          "eligible_proxy_halo_chunks_by_center_biome_y64": {
+            "small_end_islands": 473,
+            "end_barrens": 105,
+            "end_midlands": 225,
+            "end_highlands": 158
+          },
+          "summary": {
+            "candidates": 25,
+            "exact_model_matches": 7,
+            "property_matches": 23,
+            "distinct_property_shapes": 19,
+            "radius_histogram": {
+              "6": 12,
+              "5": 7,
+              "4": 6
+            },
+            "property_radius_histogram": {
+              "6": 11,
+              "5": 6,
+              "4": 6
+            },
+            "candidate_center_biomes_y64": {
+              "small_end_islands": 24,
+              "end_barrens": 1
+            }
+          },
+          "censored_proxy_rates": [
+            {
+              "center_chunk_center_biome_y64": "end_barrens",
+              "chunk_denominator": 105,
+              "isolated_candidate_count": 1,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_highlands",
+              "chunk_denominator": 158,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_midlands",
+              "chunk_denominator": 225,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "chunk_denominator": 473,
+              "isolated_candidate_count": 21,
+              "shape_property_candidate_count": 21,
+              "distinct_center_chunks_with_property_candidate": 21,
+              "property_candidates_per_chunk": 0.04439746300211417
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "chunks": 2178,
+        "candidates": 37,
+        "exact_model_matches": 12,
+        "property_matches": 35,
+        "distinct_property_shapes": 25,
+        "radius_histogram": {
+          "5": 11,
+          "6": 18,
+          "4": 8
+        },
+        "property_radius_histogram": {
+          "5": 10,
+          "6": 17,
+          "4": 8
+        },
+        "candidate_center_biomes_y64": {
+          "small_end_islands": 36,
+          "end_barrens": 1
+        }
+      },
+      "cpu_seconds": 2.547,
+      "detector_sha256": "5049a335f5a5603fbef619daad7be14c0270889b71efedc8540bd4b4f63b41eb"
+    },
+    "second": {
+      "schema": 1,
+      "world": "official-saved-world:second",
+      "level": {
+        "seed": 100554032945340,
+        "spawn": [
+          -240,
+          16
+        ],
+        "version": {
+          "Snapshot": 0,
+          "Series": "main",
+          "Id": 5023,
+          "Name": "26.3"
+        },
+        "data_version": 5023
+      },
+      "method": "4-связные 2Dкомпоненты Endstoneколонок; bbox<=13×13; верхY55..70; полные3Dклетки только кандидатов",
+      "requested_chunks": 2178,
+      "chunks": 2178,
+      "coverage": {
+        "expected": 2178,
+        "actual": 2178,
+        "complete": true
+      },
+      "limitations": [
+        "Компонента не гарантирует feature: мелкий фрагмент шумового рельефа может пройти фильтр.",
+        "Соединённые с большими островами, наложенные поXY и обрезанные формы исключены; это не частота всех feature.",
+        "Биом центра чанка наY64 — proxy eligibility; правило оригинала не доказано.",
+        "Числитель и знаменатель rates используют один chunkcenterbiomeY64; нужны целый чанк и одночанковый ореол внутри окна.",
+        "Связность4соседа: диагональные контакты рассматриваются отдельно.",
+        "Точное совпадение с ограниченным банком наблюдений не доказывает полноту банка или естественное распределение."
+      ],
+      "bank": {
+        "models": 32,
+        "distinct_forms": 26,
+        "canonical_data_sha256": "0995a6a33a976cb16816646cb2e9e275b57f128f0ba9d3628b2f7232be498dd5",
+        "path": "testdata/world-profile/genaudit-26.3/end-island-shapes-observations-26.3.json",
+        "sha256": "4998e4db2d846c4509d1a59b880d4ad7cde3bab0827463929eb71699675af2de"
+      },
+      "raw_cells_included": false,
+      "windows": [
+        {
+          "bounds_chunks": [
+            112,
+            112,
+            144,
+            144
+          ],
+          "chunks": 1089,
+          "requested_chunks": 1089,
+          "missing_chunks": [],
+          "chunk_sha256": "79f5039888368f91677ccbff8931d86a171fc0fcc8bc58829f270229b18eb5fb",
+          "sources": [
+            {
+              "path": "r.3.3.mca",
+              "bytes": 3457024,
+              "sha256": "096b5560fcce4310829bda21d317e624c1a99ace491e453963e7ce22c9247672"
+            },
+            {
+              "path": "r.3.4.mca",
+              "bytes": 3457024,
+              "sha256": "a8f496554738432f1d11ddba8d61dc274639cfca459b61ea8dd78aa313ceeec7"
+            },
+            {
+              "path": "r.4.3.mca",
+              "bytes": 3457024,
+              "sha256": "dc51d767e97debbcff17e015ae02ca1fc5bd6b9273dc9e08c71f33e2c2ad95d7"
+            },
+            {
+              "path": "r.4.4.mca",
+              "bytes": 3485696,
+              "sha256": "dc53c6996747c5c145c5c50975ff4d60064f1065091c944d139918a30635339c"
+            }
+          ],
+          "second_read_candidate_chunks": 52,
+          "components": 31,
+          "candidates": [
+            {
+              "component_id": 3,
+              "bounds": [
+                1841,
+                1794,
+                1853,
+                1806
+              ],
+              "center_proxy": [
+                1847,
+                55,
+                1800
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                55,
+                55
+              ],
+              "bottom_range": [
+                52,
+                55
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 308,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                18
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "c64f57ba4514c263c57f98e8952bac271f8bb382ae2d44e3c037f0d53bf08d6c"
+            },
+            {
+              "component_id": 5,
+              "bounds": [
+                1862,
+                1805,
+                1870,
+                1813
+              ],
+              "center_proxy": [
+                1866,
+                66,
+                1809
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                66,
+                66
+              ],
+              "bottom_range": [
+                63,
+                66
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 212,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                25
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "7520533ea0a6f077e47ed2762c0c9cbe5b46ffe71d20fb04b7d27f653ec9beca"
+            },
+            {
+              "component_id": 8,
+              "bounds": [
+                2178,
+                1816,
+                2188,
+                1827
+              ],
+              "center_proxy": [
+                2183,
+                69,
+                1821
+              ],
+              "bbox_size": [
+                11,
+                12
+              ],
+              "columns": 120,
+              "top_range": [
+                60,
+                69
+              ],
+              "bottom_range": [
+                56,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 525,
+              "relative_layer_counts": {
+                "0": 109,
+                "-12": 21,
+                "-9": 109,
+                "-1": 97,
+                "-11": 45,
+                "-2": 45,
+                "-10": 69,
+                "-13": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": false,
+              "flat_top": false,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": false,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "0b54a353313cbffe9c3444c26d01f0b4b113e4861f5e68a2841ae38a485fce1d"
+            },
+            {
+              "component_id": 9,
+              "bounds": [
+                1871,
+                1833,
+                1881,
+                1843
+              ],
+              "center_proxy": [
+                1876,
+                60,
+                1838
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                56,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 313,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 97,
+                "-4": 25,
+                "-2": 45,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "894f13c54e9f69915ad68e8ea9f01805bb67a7233bf17860f4f571e79bbb1bf1"
+            },
+            {
+              "component_id": 10,
+              "bounds": [
+                1836,
+                1837,
+                1844,
+                1845
+              ],
+              "center_proxy": [
+                1840,
+                69,
+                1841
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                67,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 139,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 37,
+                "-2": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                23
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "d3611608ebf6dc6f700701b6285875dddec9d43440948d1e851a8f33c1f81956"
+            },
+            {
+              "component_id": 11,
+              "bounds": [
+                2211,
+                1837,
+                2219,
+                1845
+              ],
+              "center_proxy": [
+                2215,
+                70,
+                1841
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                70,
+                70
+              ],
+              "bottom_range": [
+                67,
+                70
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 212,
+              "relative_layer_counts": {
+                "0": 77,
+                "-2": 45,
+                "-1": 69,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                25
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "7520533ea0a6f077e47ed2762c0c9cbe5b46ffe71d20fb04b7d27f653ec9beca"
+            },
+            {
+              "component_id": 12,
+              "bounds": [
+                1906,
+                1840,
+                1918,
+                1852
+              ],
+              "center_proxy": [
+                1912,
+                58,
+                1846
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                58,
+                58
+              ],
+              "bottom_range": [
+                52,
+                58
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 579,
+              "relative_layer_counts": {
+                "0": 145,
+                "-5": 37,
+                "-2": 109,
+                "-1": 137,
+                "-4": 45,
+                "-3": 97,
+                "-6": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "0d995a6967205b46bddb706aefde2fc77aacf5b2cdff29863473abf9f5a822d2"
+            },
+            {
+              "component_id": 13,
+              "bounds": [
+                2289,
+                1857,
+                2301,
+                1869
+              ],
+              "center_proxy": [
+                2295,
+                62,
+                1863
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                62,
+                62
+              ],
+              "bottom_range": [
+                54,
+                62
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 657,
+              "relative_layer_counts": {
+                "0": 145,
+                "-4": 77,
+                "-5": 37,
+                "-1": 137,
+                "-2": 109,
+                "-3": 97,
+                "-8": 9,
+                "-6": 25,
+                "-7": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "ec19d14cb465954de32e091ef73039d1a22c391f8fffb4c4edfc83e2df384fb9"
+            },
+            {
+              "component_id": 14,
+              "bounds": [
+                2163,
+                1859,
+                2175,
+                1871
+              ],
+              "center_proxy": [
+                2169,
+                64,
+                1865
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                64,
+                64
+              ],
+              "bottom_range": [
+                60,
+                64
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 453,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 137,
+                "-2": 77,
+                "-4": 25,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "b4ba5f694fa8721ea151e1cee3f7bc50f72ce6a73c2e3f5b33fb31d920ec61c2"
+            },
+            {
+              "component_id": 15,
+              "bounds": [
+                1821,
+                1881,
+                1833,
+                1893
+              ],
+              "center_proxy": [
+                1827,
+                69,
+                1887
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                63,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 451,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 137,
+                "-4": 25,
+                "-5": 21,
+                "-6": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "bcd213062cd214db6d16cd7e4aad073b929b28c60c4c04d656b8e3bd6ac4f095"
+            },
+            {
+              "component_id": 17,
+              "bounds": [
+                2111,
+                1925,
+                2121,
+                1935
+              ],
+              "center_proxy": [
+                2116,
+                70,
+                1930
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                70,
+                70
+              ],
+              "bottom_range": [
+                66,
+                70
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 297,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 97,
+                "-3": 37,
+                "-2": 45,
+                "-4": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                28
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "49af7457f546ef3ba336eb540c3dc725db5664f1cff117024119b3515b0de62c"
+            },
+            {
+              "component_id": 20,
+              "bounds": [
+                2186,
+                1970,
+                2196,
+                1980
+              ],
+              "center_proxy": [
+                2191,
+                67,
+                1975
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                67,
+                67
+              ],
+              "bottom_range": [
+                62,
+                67
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 366,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 77,
+                "-1": 97,
+                "-4": 25,
+                "-5": 21,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "5192ee2714726c29bf07731d08b12e29961304749895199da212afd3636addda"
+            },
+            {
+              "component_id": 21,
+              "bounds": [
+                2187,
+                1997,
+                2199,
+                2009
+              ],
+              "center_proxy": [
+                2193,
+                57,
+                2003
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                57,
+                57
+              ],
+              "bottom_range": [
+                53,
+                57
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 405,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 137,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                3
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "ee2aec8792b4a7692dca7907bfda0cbbdaa5e1fb15c6777477f76e14000e0792"
+            },
+            {
+              "component_id": 22,
+              "bounds": [
+                2198,
+                2042,
+                2210,
+                2054
+              ],
+              "center_proxy": [
+                2204,
+                69,
+                2048
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                63,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 519,
+              "relative_layer_counts": {
+                "0": 145,
+                "-5": 37,
+                "-2": 77,
+                "-1": 137,
+                "-4": 45,
+                "-3": 69,
+                "-6": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "101f5036044c912a9ec7c60e4a7243f16a1b83ba2797ee5aee12007025a2a06c"
+            },
+            {
+              "component_id": 23,
+              "bounds": [
+                1880,
+                2093,
+                1892,
+                2105
+              ],
+              "center_proxy": [
+                1886,
+                55,
+                2099
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                55,
+                55
+              ],
+              "bottom_range": [
+                51,
+                55
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 317,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-4": 9,
+                "-2": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                7
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "f0cb11ef0cb8b6e1c3eeb5170a107f2ac17eef8ee24688bc25c60c866dadf58f"
+            },
+            {
+              "component_id": 25,
+              "bounds": [
+                1807,
+                2103,
+                1817,
+                2113
+              ],
+              "center_proxy": [
+                1812,
+                62,
+                2108
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                62,
+                62
+              ],
+              "bottom_range": [
+                59,
+                62
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 244,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 45,
+                "-1": 69,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                0,
+                13
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "80ec153a2e943bcd42456eb08b554d97c9af0a0cc9175e54fc62605e2be58961"
+            },
+            {
+              "component_id": 28,
+              "bounds": [
+                1956,
+                2153,
+                1968,
+                2165
+              ],
+              "center_proxy": [
+                1962,
+                68,
+                2159
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                63,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 370,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-4": 25,
+                "-5": 21,
+                "-2": 45,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "f5be6fbecfae42565c9bbeb82cbec137997c602229b687d16d08fca652fbe713"
+            },
+            {
+              "component_id": 29,
+              "bounds": [
+                1872,
+                2158,
+                1884,
+                2170
+              ],
+              "center_proxy": [
+                1878,
+                60,
+                2164
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                53,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 588,
+              "relative_layer_counts": {
+                "0": 145,
+                "-5": 37,
+                "-2": 109,
+                "-1": 137,
+                "-4": 45,
+                "-3": 69,
+                "-6": 25,
+                "-7": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "25e32886a9490e81523e1a587a8e43afc1dd4cb1bef18d9052937c4251cf42de"
+            },
+            {
+              "component_id": 30,
+              "bounds": [
+                1830,
+                2172,
+                1838,
+                2180
+              ],
+              "center_proxy": [
+                1834,
+                68,
+                2176
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                64,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 253,
+              "relative_layer_counts": {
+                "0": 77,
+                "-2": 45,
+                "-1": 69,
+                "-3": 37,
+                "-4": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                4
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "386e98d5e81bf018ea4ed5ade91d2dc344ab6797720798f1e3509d4104ef61da"
+            },
+            {
+              "component_id": 31,
+              "bounds": [
+                1812,
+                2202,
+                1822,
+                2212
+              ],
+              "center_proxy": [
+                1817,
+                63,
+                2207
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                63,
+                63
+              ],
+              "bottom_range": [
+                59,
+                63
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 253,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 69,
+                "-2": 45,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                19
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "a5d9374df3e7214124f56d9b2e30eee98819a8aac84b095adc4ecb6cd943adaa"
+            }
+          ],
+          "excluded_components": {
+            "edge_clipped": 6,
+            "large_or_connected": 5
+          },
+          "eligible_proxy_halo_chunks_by_center_biome_y64": {
+            "small_end_islands": 371,
+            "end_midlands": 284,
+            "end_highlands": 178,
+            "end_barrens": 128
+          },
+          "summary": {
+            "candidates": 20,
+            "exact_model_matches": 10,
+            "property_matches": 19,
+            "distinct_property_shapes": 18,
+            "radius_histogram": {
+              "6": 11,
+              "4": 4,
+              "5": 5
+            },
+            "property_radius_histogram": {
+              "6": 10,
+              "4": 4,
+              "5": 5
+            },
+            "candidate_center_biomes_y64": {
+              "small_end_islands": 20
+            }
+          },
+          "censored_proxy_rates": [
+            {
+              "center_chunk_center_biome_y64": "end_barrens",
+              "chunk_denominator": 128,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_highlands",
+              "chunk_denominator": 178,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_midlands",
+              "chunk_denominator": 284,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "chunk_denominator": 371,
+              "isolated_candidate_count": 19,
+              "shape_property_candidate_count": 18,
+              "distinct_center_chunks_with_property_candidate": 18,
+              "property_candidates_per_chunk": 0.04851752021563342
+            }
+          ]
+        },
+        {
+          "bounds_chunks": [
+            -144,
+            112,
+            -112,
+            144
+          ],
+          "chunks": 1089,
+          "requested_chunks": 1089,
+          "missing_chunks": [],
+          "chunk_sha256": "25a6c1aa2676344ec0f80be4013dafa269c047008ed1de0521d4e9dab96ac1d2",
+          "sources": [
+            {
+              "path": "r.-5.3.mca",
+              "bytes": 3457024,
+              "sha256": "679c6911ee0575a56d1bd92bcb8e3e5e224c9ed76ce3c3950d90133f57742d2f"
+            },
+            {
+              "path": "r.-5.4.mca",
+              "bytes": 3457024,
+              "sha256": "7bcbaf93bfc5229e52937943ffc41737e8edf3fe2ea3f472d03ed75f41dc9ed6"
+            },
+            {
+              "path": "r.-4.3.mca",
+              "bytes": 3457024,
+              "sha256": "0162cf6025261d6afba5169241cab866f30d5988130a9da2e4268b852a928a17"
+            },
+            {
+              "path": "r.-4.4.mca",
+              "bytes": 3452928,
+              "sha256": "9d498585705abd59a123e0cdacc4f3b9d31bd6c791c8b3b5bc0ad68ab06bf708"
+            }
+          ],
+          "second_read_candidate_chunks": 56,
+          "components": 37,
+          "candidates": [
+            {
+              "component_id": 4,
+              "bounds": [
+                -2281,
+                1794,
+                -2271,
+                1804
+              ],
+              "center_proxy": [
+                -2276,
+                62,
+                1799
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                62,
+                62
+              ],
+              "bottom_range": [
+                57,
+                62
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 398,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 97,
+                "-2": 77,
+                "-4": 25,
+                "-5": 21,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                6
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "7dc2f17e7492a5a97b05e9c92435540e1f50702c10edde7df2d948e3247585bb"
+            },
+            {
+              "component_id": 5,
+              "bounds": [
+                -1985,
+                1801,
+                -1973,
+                1813
+              ],
+              "center_proxy": [
+                -1979,
+                66,
+                1807
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                66,
+                66
+              ],
+              "bottom_range": [
+                62,
+                66
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 405,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 77,
+                "-1": 137,
+                "-4": 9,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                3
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "ee2aec8792b4a7692dca7907bfda0cbbdaa5e1fb15c6777477f76e14000e0792"
+            },
+            {
+              "component_id": 6,
+              "bounds": [
+                -2192,
+                1823,
+                -2192,
+                1826
+              ],
+              "center_proxy": [
+                -2192,
+                56,
+                1824
+              ],
+              "bbox_size": [
+                1,
+                4
+              ],
+              "columns": 4,
+              "top_range": [
+                56,
+                56
+              ],
+              "bottom_range": [
+                56,
+                56
+              ],
+              "center_biome_y64": "end_barrens",
+              "center_chunk_center_biome_y64": "end_barrens",
+              "center_chunk_has_full_halo": true,
+              "volume": 4,
+              "relative_layer_counts": {
+                "0": 4
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 2,
+              "top_mask_matches_placed_class": false,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "22f861ab732328973b196cf3868b44fc50ffee3bef9ddbd9fc03a47c127fd8de"
+            },
+            {
+              "component_id": 7,
+              "bounds": [
+                -2043,
+                1826,
+                -2031,
+                1838
+              ],
+              "center_proxy": [
+                -2037,
+                69,
+                1832
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                59,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 504,
+              "relative_layer_counts": {
+                "0": 145,
+                "-8": 77,
+                "-1": 97,
+                "-4": 9,
+                "-9": 69,
+                "-2": 45,
+                "-10": 25,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": false,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "17c8423fd2daa6bb426dbfa79baf4c0fe71a29d5ff6ece98cb6faec697e390ca"
+            },
+            {
+              "component_id": 8,
+              "bounds": [
+                -1975,
+                1851,
+                -1967,
+                1859
+              ],
+              "center_proxy": [
+                -1971,
+                68,
+                1855
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                65,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 192,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "cfa4da65895e3378feceb202ffddbda1fa26dcbffcd9cfe5fa10be757a72c461"
+            },
+            {
+              "component_id": 9,
+              "bounds": [
+                -1975,
+                1883,
+                -1965,
+                1893
+              ],
+              "center_proxy": [
+                -1970,
+                69,
+                1888
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                65,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 297,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 97,
+                "-3": 37,
+                "-2": 45,
+                "-4": 9
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                28
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "49af7457f546ef3ba336eb540c3dc725db5664f1cff117024119b3515b0de62c"
+            },
+            {
+              "component_id": 11,
+              "bounds": [
+                -2108,
+                1898,
+                -2100,
+                1906
+              ],
+              "center_proxy": [
+                -2104,
+                60,
+                1902
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                57,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 192,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "cfa4da65895e3378feceb202ffddbda1fa26dcbffcd9cfe5fa10be757a72c461"
+            },
+            {
+              "component_id": 12,
+              "bounds": [
+                -2166,
+                1908,
+                -2154,
+                1920
+              ],
+              "center_proxy": [
+                -2160,
+                60,
+                1914
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                55,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 506,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 109,
+                "-1": 137,
+                "-4": 25,
+                "-5": 21,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                27
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "c3198dccb8c8be2e4f0bd1fe5a89b3d5360a589921dfa1530b21a26beca49334"
+            },
+            {
+              "component_id": 14,
+              "bounds": [
+                -2128,
+                1949,
+                -2118,
+                1959
+              ],
+              "center_proxy": [
+                -2123,
+                69,
+                1954
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                69,
+                69
+              ],
+              "bottom_range": [
+                65,
+                69
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 377,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 77,
+                "-1": 97,
+                "-4": 25,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "56104fb864cecb062508d746c86e72a6014b06a6059279c24045522d407ffa49"
+            },
+            {
+              "component_id": 19,
+              "bounds": [
+                -2281,
+                2155,
+                -2273,
+                2163
+              ],
+              "center_proxy": [
+                -2277,
+                61,
+                2159
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                61,
+                61
+              ],
+              "bottom_range": [
+                57,
+                61
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 253,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-3": 37,
+                "-2": 45,
+                "-4": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                4
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "386e98d5e81bf018ea4ed5ade91d2dc344ab6797720798f1e3509d4104ef61da"
+            },
+            {
+              "component_id": 20,
+              "bounds": [
+                -2272,
+                2162,
+                -2264,
+                2170
+              ],
+              "center_proxy": [
+                -2268,
+                67,
+                2166
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                67,
+                67
+              ],
+              "bottom_range": [
+                64,
+                67
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 192,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "cfa4da65895e3378feceb202ffddbda1fa26dcbffcd9cfe5fa10be757a72c461"
+            },
+            {
+              "component_id": 21,
+              "bounds": [
+                -2163,
+                2183,
+                -2151,
+                2195
+              ],
+              "center_proxy": [
+                -2157,
+                60,
+                2189
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                60,
+                60
+              ],
+              "bottom_range": [
+                52,
+                60
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 725,
+              "relative_layer_counts": {
+                "0": 145,
+                "-4": 77,
+                "-5": 69,
+                "-2": 109,
+                "-1": 137,
+                "-3": 97,
+                "-8": 9,
+                "-6": 45,
+                "-7": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "b0422f8d105137c27c07f430dadbd32285e8c6726f5f02373dae781acf443129"
+            },
+            {
+              "component_id": 22,
+              "bounds": [
+                -2149,
+                2186,
+                -2141,
+                2194
+              ],
+              "center_proxy": [
+                -2145,
+                68,
+                2190
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                68,
+                68
+              ],
+              "bottom_range": [
+                66,
+                68
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 171,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                1
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "cd1e6a0b28858a72ab60e92e1e0048ee05ac140de5f45a441cadf2b69196595f"
+            },
+            {
+              "component_id": 23,
+              "bounds": [
+                -2186,
+                2188,
+                -2178,
+                2196
+              ],
+              "center_proxy": [
+                -2182,
+                65,
+                2192
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                65,
+                65
+              ],
+              "bottom_range": [
+                63,
+                65
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 139,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 37,
+                "-2": 25
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                23
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "d3611608ebf6dc6f700701b6285875dddec9d43440948d1e851a8f33c1f81956"
+            },
+            {
+              "component_id": 27,
+              "bounds": [
+                -1983,
+                2237,
+                -1975,
+                2245
+              ],
+              "center_proxy": [
+                -1979,
+                66,
+                2241
+              ],
+              "bbox_size": [
+                9,
+                9
+              ],
+              "columns": 77,
+              "top_range": [
+                66,
+                66
+              ],
+              "bottom_range": [
+                62,
+                66
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 201,
+              "relative_layer_counts": {
+                "0": 77,
+                "-1": 69,
+                "-2": 25,
+                "-4": 9,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 4,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "609ef894639b118ce22d3cb9412476a5ce6a1ee44c0f8188652a271ff98fcdc1"
+            },
+            {
+              "component_id": 29,
+              "bounds": [
+                -1986,
+                2248,
+                -1976,
+                2258
+              ],
+              "center_proxy": [
+                -1981,
+                64,
+                2253
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                64,
+                64
+              ],
+              "bottom_range": [
+                60,
+                64
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 377,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 77,
+                "-1": 97,
+                "-4": 25,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "56104fb864cecb062508d746c86e72a6014b06a6059279c24045522d407ffa49"
+            },
+            {
+              "component_id": 31,
+              "bounds": [
+                -2029,
+                2285,
+                -2019,
+                2295
+              ],
+              "center_proxy": [
+                -2024,
+                59,
+                2290
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                59,
+                59
+              ],
+              "bottom_range": [
+                56,
+                59
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 224,
+              "relative_layer_counts": {
+                "0": 109,
+                "-1": 69,
+                "-2": 25,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                10
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "1fd839f1778f8b5b3605fc51693c3249ef4ac7d2059040e47527256d76ec0b9d"
+            },
+            {
+              "component_id": 32,
+              "bounds": [
+                -2060,
+                2295,
+                -2048,
+                2307
+              ],
+              "center_proxy": [
+                -2054,
+                55,
+                2301
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                55,
+                55
+              ],
+              "bottom_range": [
+                50,
+                55
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 526,
+              "relative_layer_counts": {
+                "0": 145,
+                "-2": 109,
+                "-1": 137,
+                "-4": 45,
+                "-5": 21,
+                "-3": 69
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "1e8d6afc916791b49e549746f98aef183f7ae1e2da5583074ae920fd7bf48186"
+            },
+            {
+              "component_id": 33,
+              "bounds": [
+                -1861,
+                2295,
+                -1851,
+                2305
+              ],
+              "center_proxy": [
+                -1856,
+                67,
+                2300
+              ],
+              "bbox_size": [
+                11,
+                11
+              ],
+              "columns": 109,
+              "top_range": [
+                67,
+                67
+              ],
+              "bottom_range": [
+                62,
+                65
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": true,
+              "volume": 450,
+              "relative_layer_counts": {
+                "0": 109,
+                "-2": 109,
+                "-1": 69,
+                "-4": 45,
+                "-5": 21,
+                "-3": 97
+              },
+              "all_columns_contiguous_to_top": false,
+              "flat_top": true,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "eee2a0a659fb8c3936be7ee99ffe9e4a4b8b8bbd0f0bd9ae428627fb61919c92"
+            },
+            {
+              "component_id": 34,
+              "bounds": [
+                -2015,
+                2302,
+                -2005,
+                2311
+              ],
+              "center_proxy": [
+                -2010,
+                70,
+                2306
+              ],
+              "bbox_size": [
+                11,
+                10
+              ],
+              "columns": 100,
+              "top_range": [
+                58,
+                70
+              ],
+              "bottom_range": [
+                54,
+                70
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 458,
+              "relative_layer_counts": {
+                "-12": 77,
+                "-1": 69,
+                "-2": 45,
+                "0": 77,
+                "-4": 9,
+                "-15": 37,
+                "-13": 69,
+                "-16": 9,
+                "-14": 45,
+                "-3": 21
+              },
+              "all_columns_contiguous_to_top": false,
+              "flat_top": false,
+              "radius_proxy": 5,
+              "top_mask_matches_placed_class": false,
+              "matches_observed_shape_properties": false,
+              "exact_placed_model_plots": [],
+              "exact_placed_model_match": false,
+              "relative_cells_sha256": "924e7762aa4495cd7914f18601da1376fb3a622372a884ec5ebc88e4ff3e6a08"
+            },
+            {
+              "component_id": 35,
+              "bounds": [
+                -1828,
+                2304,
+                -1816,
+                2316
+              ],
+              "center_proxy": [
+                -1822,
+                59,
+                2310
+              ],
+              "bbox_size": [
+                13,
+                13
+              ],
+              "columns": 145,
+              "top_range": [
+                59,
+                59
+              ],
+              "bottom_range": [
+                55,
+                59
+              ],
+              "center_biome_y64": "small_end_islands",
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "center_chunk_has_full_halo": false,
+              "volume": 349,
+              "relative_layer_counts": {
+                "0": 145,
+                "-1": 97,
+                "-4": 25,
+                "-2": 45,
+                "-3": 37
+              },
+              "all_columns_contiguous_to_top": true,
+              "flat_top": true,
+              "radius_proxy": 6,
+              "top_mask_matches_placed_class": true,
+              "matches_observed_shape_properties": true,
+              "exact_placed_model_plots": [
+                20
+              ],
+              "exact_placed_model_match": true,
+              "relative_cells_sha256": "b4b262dafeacefe60adfa2c502d153e706fb5386aef5638aed3e71a122143b68"
+            }
+          ],
+          "excluded_components": {
+            "edge_clipped": 6,
+            "large_or_connected": 6,
+            "top_outside55_70": 4
+          },
+          "eligible_proxy_halo_chunks_by_center_biome_y64": {
+            "small_end_islands": 359,
+            "end_barrens": 105,
+            "end_midlands": 277,
+            "end_highlands": 220
+          },
+          "summary": {
+            "candidates": 21,
+            "exact_model_matches": 9,
+            "property_matches": 17,
+            "distinct_property_shapes": 14,
+            "radius_histogram": {
+              "5": 7,
+              "6": 6,
+              "2": 1,
+              "4": 7
+            },
+            "property_radius_histogram": {
+              "5": 5,
+              "6": 5,
+              "4": 7
+            },
+            "candidate_center_biomes_y64": {
+              "small_end_islands": 20,
+              "end_barrens": 1
+            }
+          },
+          "censored_proxy_rates": [
+            {
+              "center_chunk_center_biome_y64": "end_barrens",
+              "chunk_denominator": 105,
+              "isolated_candidate_count": 1,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_highlands",
+              "chunk_denominator": 220,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "end_midlands",
+              "chunk_denominator": 277,
+              "isolated_candidate_count": 0,
+              "shape_property_candidate_count": 0,
+              "distinct_center_chunks_with_property_candidate": 0,
+              "property_candidates_per_chunk": 0.0
+            },
+            {
+              "center_chunk_center_biome_y64": "small_end_islands",
+              "chunk_denominator": 359,
+              "isolated_candidate_count": 16,
+              "shape_property_candidate_count": 14,
+              "distinct_center_chunks_with_property_candidate": 12,
+              "property_candidates_per_chunk": 0.03899721448467967
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "chunks": 2178,
+        "candidates": 41,
+        "exact_model_matches": 19,
+        "property_matches": 36,
+        "distinct_property_shapes": 28,
+        "radius_histogram": {
+          "6": 17,
+          "4": 11,
+          "5": 12,
+          "2": 1
+        },
+        "property_radius_histogram": {
+          "6": 15,
+          "4": 11,
+          "5": 10
+        },
+        "candidate_center_biomes_y64": {
+          "small_end_islands": 40,
+          "end_barrens": 1
+        }
+      },
+      "cpu_seconds": 2.507,
+      "detector_sha256": "5049a335f5a5603fbef619daad7be14c0270889b71efedc8540bd4b4f63b41eb"
+    }
+  },
+  "totals": {
+    "chunks": 4356,
+    "candidates": 78,
+    "property_matches": 71,
+    "exact_model_matches": 31,
+    "distinct_property_shapes": 43
+  },
+  "verification": "Точные4356/78/71/43/31 и все прежние rates воспроизведены; rawcells отсутствуют",
+  "cpu_seconds": 5.087
+}

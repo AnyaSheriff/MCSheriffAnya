@@ -90,12 +90,48 @@ class EndCiTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             e.end_plan({'windows':{'overworld':[],'the_nether':[],'the_end':[[0,0,0,0]]}})
 
+    def test_island_windows_keep_exact_outer_coverage(self):
+        for case in e.ci.reference()['cases'].values():
+            plan = e.end_plan(case['plan'])
+            windows = e.island_windows(plan)
+            coords = {(x, z) for x0, z0, x1, z1 in windows
+                      for x in range(x0, x1 + 1) for z in range(z0, z1 + 1)}
+            self.assertEqual(len(coords), 2178)
+            self.assertTrue(all(abs(x) >= 112 and z >= 112 for x, z in coords))
+            plan['windows']['the_end'].append(plan['windows']['the_end'][-1])
+            with self.assertRaises(ValueError): e.island_windows(plan)
+            plan['windows']['the_end'] = [[-12, -12, 12, 12], [113, 112, 145, 144], [-144, 112, -112, 144]]
+            with self.assertRaises(ValueError): e.island_windows(plan)
+
     def report(self):
         item={'chunks':2803,'requested':2803,'chunk_sha256':'fixed','missing_first20':[]}
         return {'coverage':[{'dimension':'the_end','ours':copy.deepcopy(item),'vanilla':copy.deepcopy(item),
                              'complete':True,'same_chunks':True}],
                 'rows':[{'dimension':'the_end','metric':'height','unit':'blocks','ours':1,
                          'vanilla':2,'tolerance':1,'verdict':'within'}]}
+
+    def test_island_evidence_is_bound_to_provenance_and_incomplete_is_rejected(self):
+        report = {'requested_chunks': 2178, 'chunks': 2178,
+                  'coverage': {'expected': 2178, 'actual': 2178, 'complete': True}}
+        plan = e.end_plan(e.ci.reference()['cases']['owner']['plan'])
+        report['level'] = {'seed': plan['seed']}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            e.ci.write(out/'provenance.json', {'seed': 123, 'report_sha256': 'original'})
+            with patch('genaudit_263_end_islands.analyze_world', return_value=report) as analyze:
+                e.measure_islands(Path('/unused-world'), plan, out)
+                self.assertEqual(analyze.call_args.args[1], e.island_windows(plan))
+                actual = json.loads((out/'provenance.json').read_text())
+                self.assertEqual(actual['seed'], 123)
+                self.assertEqual(actual['report_sha256'], 'original')
+                self.assertEqual(actual['island_diagnostic']['report_sha256'], e.ci.sha(out/'islands.json'))
+                self.assertEqual(actual['island_diagnostic']['observed_bank_sha256'], e.ci.sha(e.REPO/e.MODEL_INPUTS[2]))
+                saved = (out/'provenance.json').read_bytes()
+                report['chunks'] = 2177
+                with self.assertRaisesRegex(ValueError, 'Неполная выборка'):
+                    e.measure_islands(Path('/unused-world'), plan, out)
+                self.assertEqual((out/'provenance.json').read_bytes(), saved)
+                self.assertEqual(json.loads((out/'islands.json').read_text())['chunks'], 2177)
 
     def test_incomplete_wrong_dimension_empty_coverage_rejected(self):
         e.coverage(self.report())
