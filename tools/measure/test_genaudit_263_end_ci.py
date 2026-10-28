@@ -74,7 +74,7 @@ class EndCiTests(unittest.TestCase):
             build=root/'build';build.mkdir()
             for name in ['mcsheriffanya','genaudit-starts','Cargo.lock']:(build/name).write_text(name)
             control=root/'control.gz';control.write_bytes(b'fixture')
-            with patch.object(e,'REPO',root),patch.object(e,'CONTROL',control),patch.object(e,'baseline',return_value=original),patch.object(e.subprocess,'check_output',return_value=''):
+            with patch.object(e,'REPO',root),patch.object(e,'CONTROL',control),patch.object(e,'baseline',return_value=original),patch.object(e.subprocess,'check_output',return_value=''),patch.object(e.ci,'head',return_value='fixture-head'):
                 e.bundle(build,'A');e.verify_bundle(build,'A')
                 with self.assertRaises(ValueError):e.verify_bundle(build,'B')
                 receipt=build/'end-build.json';saved=receipt.read_text()
@@ -85,6 +85,21 @@ class EndCiTests(unittest.TestCase):
                 with self.assertRaises(ValueError):e.verify_bundle(build,'A')
                 (root/e.SOURCE).write_bytes(original+b'\n')
                 with self.assertRaises(ValueError):e.bundle(build,'A')
+
+    def test_control_mismatch_evidence_saved_before_failure(self):
+        expected=self.report();actual=copy.deepcopy(expected)
+        actual['rows'][0]['ours']=99
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)
+            with self.assertRaisesRegex(ValueError,'не воспроизвёл'):
+                e.save_measurement(out,actual,{'diagnostic':'retained'},{},{'seed':123},expected,'A')
+            self.assertEqual(json.loads((out/'report.json').read_text()),actual)
+            self.assertEqual(json.loads((out/'edges.json').read_text()),{'diagnostic':'retained'})
+            for name in ['summary.json','provenance.json']:
+                data=json.loads((out/name).read_text())
+                self.assertFalse(data['control_validation']['passed'])
+            e.save_measurement(out,expected,{}, {}, {},expected,'A')
+            self.assertTrue(json.loads((out/'summary.json').read_text())['control_validation']['passed'])
 
     def test_central_projection_exact_coords_and_height_sensitive(self):
         chunks={(x,z):np.zeros((16,16),dtype=np.int16) for x in range(-12,13) for z in range(-12,13)}

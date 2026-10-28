@@ -153,6 +153,33 @@ def compare_rows(before, after):
                         if abs(b[k]['ours']-b[k]['vanilla']) > abs(a[k]['ours']-a[k]['vanilla']) + 1e-6]}
 
 
+def control_validation(expected, report, variant):
+    """Отказ контроля A — результат измерения, который надо сохранить."""
+    if variant != 'A':
+        return {'required':False,'passed':None,'reason':'Факторный вариант; точное совпадение A не требуется'}
+    key = lambda r: (r['dimension'],r['metric'],r['unit'])
+    old = {key(r):r for r in expected['rows']}
+    new = {key(r):r for r in report['rows']}
+    if old.keys() != new.keys() or len(old) != len(expected['rows']) or len(new) != len(report['rows']):
+        return {'required':True,'passed':False,'reason':'A изменил набор метрик'}
+    fields = ('ours','vanilla','tolerance','verdict')
+    matches = all(all(old[k][f] == new[k][f] for f in fields) for k in old)
+    return {'required':True,'passed':matches,'reason':'A воспроизвёл контроль' if matches else 'A не воспроизвёл контроль'}
+
+
+def save_measurement(output, report, edges, summary, provenance, expected, variant):
+    validation = control_validation(expected,report,variant)
+    summary = dict(summary,control_validation=validation)
+    provenance = dict(provenance,control_validation=validation)
+    ci.write(output/'report.json',report)
+    ci.write(output/'edges.json',edges)
+    ci.write(output/'summary.json',summary)
+    provenance.update(report_sha256=ci.sha(output/'report.json'),edges_sha256=ci.sha(output/'edges.json'))
+    ci.write(output/'provenance.json',provenance)
+    # Никогда не выдаём несовпавший A за успех, но доказательства уже на диске.
+    require(not validation['required'] or validation['passed'],validation['reason'])
+
+
 def central_digest(chunks):
     """Проекция625чанков: signedLE32(cx,cz), затем signedLE16Y[z,x]."""
     wanted = {(x,z) for x in range(-12,13) for z in range(-12,13)}
@@ -236,21 +263,14 @@ def execute(label, variant, build, output, scratch):
     require(expected['seed'] == case['seed'], 'Другое семя контроля')
     require(expected['statistics']['vanilla']['dimensions']['the_end'] == official['dimensions']['the_end'], 'Контроль и frozen official различаются')
     summary = compare_rows(expected['rows'], report['rows'])
-    if variant == 'A':
-        require(not summary['new_rows'] and not summary['removed_rows'], 'A изменил набор метрик')
-        fields = ('ours', 'vanilla', 'tolerance', 'verdict')
-        old = {r['metric']: r for r in expected['rows']}
-        require(all(all(r[f] == old[r['metric']][f] for f in fields) for r in report['rows']), 'A не воспроизвёл контроль')
     center_hash = central_height(world)
     ci.write(output/'central-height.json', {'chunks':625,'central_height_sha256':center_hash,
              'definition':'sorted(cx,cz); signedLE32 coordinates + C-order[z,x] signedLE16 naturalY; void=-1'})
-    ci.write(output/'report.json', report)
-    ci.write(output/'edges.json', load_world(world, plan))
-    ci.write(output/'summary.json', summary)
-    ci.write(output/'provenance.json', {'label': label, 'variant': variant, 'seed': case['seed'], 'build': receipt,
+    save_measurement(output, report, load_world(world, plan), summary,
+            {'label': label, 'variant': variant, 'seed': case['seed'], 'build': receipt,
              'original_plan_sha256': case['plan_sha256'], 'derived_plan_sha256': ci.canonical_sha(plan),
-             'report_sha256': ci.sha(output/'report.json'), 'edges_sha256': ci.sha(output/'edges.json'),
-             'manifest': ours['manifest'], 'coverage': report['coverage'], 'central_height_sha256':center_hash})
+             'manifest': ours['manifest'], 'coverage': report['coverage'], 'central_height_sha256':center_hash},
+            expected, variant)
 
 
 def main():
