@@ -4248,7 +4248,7 @@ mod tests {
             let (_, start) = shared.world_in(Dimension::Overworld).lock().unwrap().events_since(0, 0);
             let reply = run(&format!("setblock {x} 70 1 decorated_pot{suffix}"), &Source::Console, &shared).reply;
             assert!(reply.contains("Changed the block"), "{reply}");
-            let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
             let (events, _) = world.events_since(start, 0);
             let updates: Vec<_> = events.iter().filter_map(|e| match e {
                 crate::world::WorldEvent::BlockEntity { x, y, z, kind, nbt } => Some(((*x,*y,*z),*kind,nbt.to_vec())),
