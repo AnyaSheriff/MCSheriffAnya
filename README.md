@@ -18,6 +18,8 @@ A Minecraft-compatible game server written from scratch in Rust.
 [![English](https://img.shields.io/badge/English-selected-0969DA?style=flat-square)](README.md)
 [![Русский](https://img.shields.io/badge/Русский-читать-555555?style=flat-square)](README_ru.md)
 
+[Support the project](#support-the-project)
+
 </div>
 
 MCSheriffAnya is an independent implementation of the Java Edition server protocol.
@@ -294,6 +296,23 @@ run against the current binary. Where vanilla itself is random
 (blast spread, fuse from an explosion, particle colours), the scenario says so
 in a `random` rule backed by a wiki quote or vanilla-against-vanilla
 recordings, and everything else is still compared exactly. See `tools/blackbox/README.md`.
+
+## Support the project
+
+You can support the development of MCSheriffAnya with a voluntary donation of any amount.
+Thank you for helping the project grow!
+
+| Network | Receiving address |
+| --- | --- |
+| TON | `UQDYxQebODnPgGNQmJkrDooSZTdxWTfIduJEXTQObzD5rxAF` |
+| Bitcoin (BTC) | `bc1q0nqd504jz2l57q0qprp9qrn83z2spt00jerkyf` |
+| Polygon (POL), Ethereum, BNB Smart Chain (BSC), Arbitrum, Robinhood Chain, Base, Avalanche C-Chain | `0x780e7b0813AE03FdBBe23fb50C7310EC32a67BEb` |
+
+[Donate on TON with Keeper / Tonkeeper](https://app.keeperwallet.com/transfer/UQDYxQebODnPgGNQmJkrDooSZTdxWTfIduJEXTQObzD5rxAF)
+— choose the amount in your wallet.
+
+When sending, select the intended network from the list above. The shared `0x…`
+address does not move funds between networks. For Avalanche, use **C-Chain**.
 
 ## Contributing
 

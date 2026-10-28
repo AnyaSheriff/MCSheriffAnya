@@ -18,6 +18,8 @@
 [![English](https://img.shields.io/badge/English-read-555555?style=flat-square)](README.md)
 [![Русский](https://img.shields.io/badge/Русский-выбран-0969DA?style=flat-square)](README_ru.md)
 
+[Поддержать проект](#поддержать-проект)
+
 </div>
 
 MCSheriffAnya — независимая реализация серверного протокола Java Edition. Это не
@@ -295,6 +297,23 @@ UID/GID `10001:10001` право записи. Настройки Java меня�
 частиц), сценарий говорит это правилом `random` со ссылкой на вики или на
 записи «оригинал против оригинала», а всё прочее сверяется точно.
 Подробнее — `tools/blackbox/README.md`.
+
+## Поддержать проект
+
+Вы можете поддержать разработку MCSheriffAnya добровольным донатом на любую сумму.
+Спасибо, что помогаете проекту развиваться!
+
+| Сеть | Адрес для получения |
+| --- | --- |
+| TON | `UQDYxQebODnPgGNQmJkrDooSZTdxWTfIduJEXTQObzD5rxAF` |
+| Bitcoin (BTC) | `bc1q0nqd504jz2l57q0qprp9qrn83z2spt00jerkyf` |
+| Polygon (POL), Ethereum, BNB Smart Chain (BSC), Arbitrum, Robinhood Chain, Base, Avalanche C-Chain | `0x780e7b0813AE03FdBBe23fb50C7310EC32a67BEb` |
+
+[Поддержать через TON в Keeper / Tonkeeper](https://app.keeperwallet.com/transfer/UQDYxQebODnPgGNQmJkrDooSZTdxWTfIduJEXTQObzD5rxAF)
+— сумму можно выбрать в кошельке.
+
+При переводе выберите нужную сеть из списка выше. Общий адрес `0x…` не переносит
+средства между сетями. Для Avalanche используйте **C-Chain**.
 
 ## Участие
 
