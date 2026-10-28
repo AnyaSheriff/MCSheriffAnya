@@ -14,6 +14,8 @@ import math
 from pathlib import Path
 import re
 import select
+import signal
+import os
 import shutil
 import socket
 import struct
@@ -29,6 +31,15 @@ sys.path.insert(0, str(ROOT / 'tools/measure'))
 from probe_gameplay import Client, connect
 from probe_white_concrete_slab import pack_position, inputs, JAR_SHA1
 from smoke import read_varint, varint
+from combat_process import stop_process, ports_free, process_identity, owned_members
+class RunInterrupted(BaseException):
+    """Отмена должна пройти мимо per-scenario except Exception."""
+
+
+def interrupt_run(sig,frame):
+    raise RunInterrupted(f'recorder interrupted: {sig}')
+
+
 class Rcon:
     def __init__(self, port, password):
         self.sock=socket.create_connection(('127.0.0.1',port),timeout=10)
@@ -601,11 +612,39 @@ class Console:
     def close(self): self.stream.close()
 
 
+def cleanup_servers(servers,lifecycle,save_lifecycle,all_ports):
+    # Ошибка регистрации/журнала одного процесса не мешает остановить остальные.
+    for proc,log,rcon,_ in reversed(servers):
+        try:
+            row=next((row for row in lifecycle['servers'] if row['pid']==proc.pid),None)
+            identity=row.get('identity') if row is not None else None
+            if row is not None:
+                row['members']=owned_members(proc.pid,identity)
+                try:save_lifecycle()
+                except Exception as error:lifecycle['cleanup_errors'].append(repr(error))
+            lifecycle['cleanup'].append(stop_process(proc,rcon,identity))
+        except Exception as error:
+            lifecycle['cleanup'].append({'pid':proc.pid,'error':repr(error)})
+        finally:
+            if rcon:
+                try:rcon.sock.close()
+                except Exception as error:lifecycle['cleanup_errors'].append(repr(error))
+            try:log.close()
+            except Exception as error:lifecycle['cleanup_errors'].append(repr(error))
+            try:save_lifecycle()
+            except Exception as error:lifecycle['cleanup_errors'].append(repr(error))
+    lifecycle['ports_free']=ports_free(all_ports)
+    try:save_lifecycle()
+    except Exception as error:lifecycle['cleanup_errors'].append(repr(error))
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--data',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--binary',type=Path,required=True);p.add_argument('--jar',type=Path,required=True)
     p.add_argument('--version',type=int,choices=(775,777),default=777)
+    p.add_argument('--java',default='/usr/lib/jvm/java-25-openjdk/bin/java')
+    p.add_argument('--max-seconds',type=int,default=0,help='bounded whole run; zero preserves the explicit local caller limit')
     p.add_argument('--parallel',action='store_true')
     p.add_argument('--official-port',type=int,default=26140)
     p.add_argument('--core-port',type=int,default=26142)
@@ -615,7 +654,8 @@ def main():
     p.add_argument('--isolate-vitals',action='store_true')
     p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
-    a=p.parse_args();assert a.binary.is_file(), 'build binary first'
+    a=p.parse_args();assert a.binary.is_file(), 'verified binary required'
+    if a.max_seconds<0:raise ValueError('negative run limit')
     speed_attribute=None
     if a.version==777:
         assert hashlib.sha1(a.jar.read_bytes()).hexdigest()==JAR_SHA1, 'pinned official JAR hash mismatch'
@@ -636,10 +676,16 @@ def main():
         tables={'protocol.json':json.loads(raw)}
     a.output.mkdir(parents=True,exist_ok=a.resume)
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
-    manifest={'isolate_vitals':a.isolate_vitals,'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
+    manifest={'isolate_vitals':a.isolate_vitals,'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'java':a.java,'max_seconds':a.max_seconds,'scenario_sha256':{name:hashlib.sha256((ROOT/'tools/blackbox/scenarios'/f'{name}.json').read_bytes()).hexdigest() for name in selected},'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
     manifest['comparison_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ('bot.js','compare.js','analyze777.py','replay777.js')}
     (a.output/f'run-{time.time_ns()}.json').write_text(json.dumps(manifest,indent=2)+'\n')
     servers=[]
+    lifecycle={'servers':[],'cleanup':[],'ports_free':{},'cleanup_errors':[]}
+    def save_lifecycle():
+        temporary=a.output/'lifecycle.json.tmp'
+        temporary.write_text(json.dumps(lifecycle,indent=2)+'\n');temporary.replace(a.output/'lifecycle.json')
+    previous={sig:signal.signal(sig,interrupt_run) for sig in (signal.SIGTERM,signal.SIGINT,signal.SIGALRM)}
+    if a.max_seconds:signal.alarm(a.max_seconds)
     summary=json.loads((a.output/'summary.json').read_text()) if a.resume and (a.output/'summary.json').exists() else []
     try:
         assert 26100<=a.core_port<=26198 and 26100<=a.official_port<=26198
@@ -653,7 +699,7 @@ def main():
             folder=a.output/label;folder.mkdir(exist_ok=a.resume);(folder/'config').mkdir(exist_ok=a.resume)
             if label=='official':shutil.copyfile(a.jar,folder/'server.jar')
             else:
-                (folder/'config/mcsa.properties').write_text(('java-version=26.3' if a.version==777 else 'java-version=26.1.2')+'\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
+                (folder/'config/mcsa.properties').write_text(('java-version=26.3' if a.version==777 else 'java-version=26.1.2')+'\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\noffline-license-mode=disabled\nbedrock-port=0\nprefetch-chunks=0\n')
                 if a.core_debug:
                     with (folder/'config/mcsa.properties').open('a') as config:config.write('debug=true\n')
                 (folder/'config/skins.toml').write_text('mojang=false\nely=false\n')
@@ -665,10 +711,12 @@ def main():
                 ops.append({'uuid':str(uuid.UUID(bytes=bytes(value))),'name':name,'level':4})
             (folder/'ops.json').write_text(json.dumps(ops))
             log=(folder/'server.log').open('a' if a.resume else 'w')
-            argv=['/usr/lib/jvm/java-25-openjdk/bin/java','-Xmx1G','-jar','server.jar','nogui'] if label=='official' else [str(a.binary.resolve())]
-            proc=subprocess.Popen(argv,cwd=folder,stdin=subprocess.DEVNULL if label=='official' else subprocess.PIPE,text=True,stdout=log,stderr=subprocess.STDOUT)
-            (folder/'pid').write_text(str(proc.pid))
+            argv=[a.java,'-Xmx1G','-XX:ActiveProcessorCount=2','-jar','server.jar','nogui'] if label=='official' else [str(a.binary.resolve())]
+            proc=subprocess.Popen(argv,cwd=folder,stdin=subprocess.DEVNULL if label=='official' else subprocess.PIPE,text=True,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
             servers.append((proc,log,None,port))
+            lifecycle['servers'].append({'pid':proc.pid,'pgid':proc.pid,'label':label,'port':port,'argv':argv,'identity':process_identity(proc.pid)})
+            save_lifecycle()
+            (folder/'pid').write_text(str(proc.pid))
             deadline=time.monotonic()+120
             while True:
                 if proc.poll() is not None:raise RuntimeError(label+' exited: '+(folder/'server.log').read_text()[-2000:])
@@ -683,7 +731,7 @@ def main():
                     time.sleep(.2)
             servers[-1]=(proc,log,rcon,port)
         for name in selected:
-            row={'scenario':name,'status':'mismatch-open'}
+            row={'scenario':name,'status':'mismatch-open','record_status':'pending'}
             existing=next((i for i,value in enumerate(summary) if value['scenario']==name),None)
             if existing is None:summary.append(row)
             else:summary[existing]=row
@@ -703,17 +751,19 @@ def main():
                 else:
                     for (label,_),(_,_,rcon,port) in zip(labels,servers):run_side(label,rcon,port)
                 row['reason']='recorded; original comparison projection pending'
-            except Exception as error:row['reason']=repr(error)
+                row['record_status']='complete'
+            except Exception as error:
+                row['reason']=repr(error);row['record_status']='failed';row['record_error']=repr(error)
             (a.output/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
             print(row,flush=True)
     finally:
-        for proc,log,rcon,_ in reversed(servers):
-            if rcon:rcon.sock.close()
-            if proc.poll() is None:
-                proc.terminate()
-                try:proc.wait(30)
-                except subprocess.TimeoutExpired:proc.kill();proc.wait(10)
-            log.close()
+        signal.alarm(0)
+        for sig in (signal.SIGTERM,signal.SIGINT):signal.signal(sig,signal.SIG_IGN)
+        try:
+            cleanup_servers(servers,lifecycle,save_lifecycle,
+                [a.official_port,a.official_port+1,a.core_port,a.core_port+1])
+        finally:
+            for sig,handler in previous.items():signal.signal(sig,handler)
 
 
 if __name__=='__main__':main()
