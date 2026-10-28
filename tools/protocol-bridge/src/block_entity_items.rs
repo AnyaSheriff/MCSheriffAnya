@@ -140,7 +140,8 @@ pub(super) fn pot(data:&[u8],from:JavaVersion,to:JavaVersion,content:ContentCode
     let field=*fields.get("sherds").ok_or(Error::UnsupportedData)?;
     // Свежий pottery-wire-262-20261028 подтвердил список4 у776.
     let source_map=from==JavaVersion::V26_3 || (from==JavaVersion::V26_1_2 && content.is_preview() && field.kind==10);
-    let mut sides:[Option<(&str,Option<&[u8]>)>;4]=[None;4];
+    type PotSide<'a> = (&'a str, Option<&'a [u8]>);
+    let mut sides:[Option<PotSide<'_>>;4]=[None;4];
     if source_map {
         if field.kind!=10{return Err(Error::UnsupportedData);}
         for (side,stack) in compound(field.bytes)? {

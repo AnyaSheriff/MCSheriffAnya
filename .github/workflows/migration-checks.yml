@@ -46,12 +46,12 @@ jobs:
       - name: Build plugin examples for workspace tests
         working-directory: plugins-examples
         run: cargo build --release --target wasm32-wasip2 2>&1 | tee "$RUNNER_TEMP/migration-checks/plugin-examples.log"
+      - name: Check clippy without warnings
+        run: cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee "$RUNNER_TEMP/migration-checks/clippy.log"
       - name: Test workspace
         run: cargo test --release --workspace 2>&1 | tee "$RUNNER_TEMP/migration-checks/workspace-tests.log"
       - name: Test without default features
         run: cargo test --release --no-default-features 2>&1 | tee "$RUNNER_TEMP/migration-checks/no-default-tests.log"
-      - name: Check clippy without warnings
-        run: cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee "$RUNNER_TEMP/migration-checks/clippy.log"
       - name: Build runtime
         run: cargo build --release 2>&1 | tee "$RUNNER_TEMP/migration-checks/build.log"
       - name: Record commit and artifact hashes

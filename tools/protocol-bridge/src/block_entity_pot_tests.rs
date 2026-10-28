@@ -2,7 +2,7 @@ use super::*;
 use crate::content::ContentCodec;
 use JavaVersion::{V26_1_2 as OLD,V26_3 as NEW};
 fn preview()->ContentCodec{ContentCodec::white_slab_preview()}
-fn hex(s:&str)->Vec<u8>{s.as_bytes().chunks_exact(2).map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect()}
+fn hex(s:&str)->Vec<u8>{s.as_bytes().as_chunks::<2>().0.iter().map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect()}
 fn fixture()->serde_json::Value{serde_json::from_str(include_str!("../testdata/decorated-pot-wire-777.json")).unwrap()}
 fn observed(case:&str,packet:&str)->Vec<u8>{let f=fixture();hex(f["observations"].as_array().unwrap().iter().find(|r|r["case"]==case && r["packet"]==packet).unwrap()["nbt_hex"].as_str().unwrap())}
 fn text(s:&str)->Vec<u8>{let mut b=(s.len() as u16).to_be_bytes().to_vec();b.extend(s.as_bytes());b}

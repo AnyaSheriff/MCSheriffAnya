@@ -95,7 +95,7 @@ mod tests {
         let data: serde_json::Value = serde_json::from_str(fixture).unwrap();
         let hex = data["observations"].as_array().unwrap().iter()
             .find(|r| r["case"] == case && r["packet"] == packet).unwrap()["nbt_hex"].as_str().unwrap();
-        hex.as_bytes().chunks_exact(2).map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect()
+        hex.as_bytes().as_chunks::<2>().0.iter().map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect()
     }
 
     #[test]

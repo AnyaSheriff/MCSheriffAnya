@@ -467,7 +467,7 @@ async fn preview_pot_chunk_and_update_use_observed_wire_without_erasing_saved_si
     use mcsa_protocol::{content::ContentCodec, ids::RegistryKind};
     let fixture: serde_json::Value = serde_json::from_str(include_str!(
         "../../../tools/protocol-bridge/testdata/decorated-pot-wire-stone-777.json")).unwrap();
-    let hex = |text: &str| text.as_bytes().chunks_exact(2).map(|pair|
+    let hex = |text: &str| text.as_bytes().as_chunks::<2>().0.iter().map(|pair|
         u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect::<Vec<_>>();
     // Независимая ожидаемая проекция: список775 имеет четыре обычные стороны.
     let mut old_view = vec![10, 9, 0, 6];
