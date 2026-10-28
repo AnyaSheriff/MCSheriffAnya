@@ -1,4 +1,4 @@
-"""Ограниченный опыт Энда 2×2 в CI; официальный эталон и анализатор неизменны."""
+"""Опыты Энда 2×2 и измеренной формы в CI; эталон и анализатор неизменны."""
 import argparse
 import copy
 import ctypes
@@ -19,7 +19,10 @@ import genaudit_263_ci as ci
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = Path('src/world/the_end.rs')
 CONTROL = REPO / 'testdata/world-profile/genaudit-26.3/end-control-pass3.json.gz'
-VARIANTS = ('A', 'B', 'C', 'D')
+VARIANTS = ('A', 'B', 'C', 'D', 'E')
+MODEL_INPUTS = (Path('src/world/end_island_shapes_26_3.rs'),
+                Path('testdata/world-profile/genaudit-26.3/end-island-shapes-26.3.json'),
+                Path('testdata/world-profile/genaudit-26.3/end-island-shapes-observations-26.3.json'))
 
 
 def require(condition, message):
@@ -53,14 +56,40 @@ def variant_source(original, variant):
         before, tail = text.split(start)
         _, after = tail.split(end)
         text = before + '    fn small_island_columns(&self, _x: i32, _z: i32) -> Vec<(i32, i32)> {\n        Vec::new()\n    }\n' + end + after
+    if variant == 'E':
+        old = '''                    let d2 = (x - ix).pow(2) + (z - iz).pow(2);
+                    if d2 > radius * radius {
+                        continue;
+                    }
+                    let mut bottom = top;
+                    for layer in 1..radius {
+                        if d2 <= (radius - layer).pow(2) {
+                            bottom = top - layer;
+                        }
+                    }
+                    result.push((bottom, top));'''
+        new = '''                    // Отдельный поток формы не сдвигает размещение второго островка.
+                    let model = self.dice(ix, iz).below(observed_islands::model_count(radius) as i32) as u32;
+                    if let Some((bottom, observed_top)) = observed_islands::column(radius, model, x - ix, z - iz) {
+                        result.push((top + bottom, top + observed_top));
+                    }'''
+        require(text.count(old) == 1, 'Изменилась исходная геометрия островков')
+        text = '#[path = "end_island_shapes_26_3.rs"]\nmod observed_islands;\n\n' + text.replace(old, new)
     return text.encode()
 
 
 def source_provenance(variant):
     original = baseline()
     patched = variant_source(original, variant)
+    inputs = {}
+    if variant == 'E':
+        for path in MODEL_INPUTS:
+            committed = subprocess.check_output(['git', 'show', 'HEAD:' + str(path)], cwd=REPO)
+            require((REPO/path).read_bytes() == committed, 'Изменён или не добавлен в commit вход модели: ' + str(path))
+            inputs[str(path)] = digest(committed)
     return {'base_head': ci.head(), 'variant': variant, 'base_source_sha256': digest(original),
             'source_sha256': digest(patched),
+            'model_inputs_sha256': inputs,
             # Канонический патч описывает точную замену одного файла, включая A.
             'patch_sha256': ci.canonical_sha({'path': str(SOURCE), 'before': digest(original), 'after': digest(patched)})}
 
@@ -68,6 +97,7 @@ def source_provenance(variant):
 def prepare(variant):
     original = baseline()
     require((REPO / SOURCE).read_bytes() == original, 'Рабочий End уже изменён')
+    source_provenance(variant)  # Модель E должна быть committed и неизменной ещё до Cargo.
     (REPO / SOURCE).write_bytes(variant_source(original, variant))
 
 

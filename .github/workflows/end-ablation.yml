@@ -8,6 +8,8 @@ on:
       - tools/measure/genaudit_263_end_ci.py
       - tools/measure/test_genaudit_263_end_ci.py
       - testdata/world-profile/genaudit-26.3/end-control-pass3.json*
+      - src/world/end_island_shapes_26_3.rs
+      - testdata/world-profile/genaudit-26.3/end-island-shapes*.json
   workflow_dispatch:
 
 permissions:
@@ -29,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [A, B, C, D]
+        variant: [A, E]
     env:
       VARIANT: ${{ matrix.variant }}
     defaults:
@@ -61,6 +63,20 @@ jobs:
           cp Cargo.lock "$RUNNER_TEMP/end-build/"
           python tools/measure/genaudit_263_build_starts.py --release-deps "$CARGO_TARGET_DIR/release/deps" --output "$RUNNER_TEMP/end-build/genaudit-starts" > "$RUNNER_TEMP/end-build/helper-build.log" 2>&1
           python tools/measure/genaudit_263_end_ci.py --bundle --variant "$VARIANT" --build "$RUNNER_TEMP/end-build"
+      - name: Test measured island geometry
+        if: matrix.variant == 'E'
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/end-target
+        run: |
+          cargo test --release -p seedmap-core observed_islands -- --test-threads=2 2>&1 | tee "$RUNNER_TEMP/end-build/island-tests.log"
+          python - <<'PY'
+          import os, re
+          from pathlib import Path
+          text = (Path(os.environ['RUNNER_TEMP'])/'end-build/island-tests.log').read_text()
+          rows = re.findall(r'test result: ok\. (\d+) passed; (\d+) failed;', text)
+          assert rows and sum(int(n) for n,_ in rows) > 0, 'Measured geometry tests did not run'
+          assert all(int(n) == 0 for _,n in rows)
+          PY
       - name: Measure both seeds in the End only
         run: |
           for label in owner second; do

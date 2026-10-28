@@ -1,0 +1,709 @@
+{
+  "status": "verified",
+  "head": "eb5736d73c5c129208a699f177e0b17d2bbf3f54",
+  "run_id": 40644442462,
+  "pairs": 22424,
+  "counts_vs_A": {
+    "A": {
+      "owner": {
+        "outside": 16,
+        "resolved": 0,
+        "new_failure": 0,
+        "worsened": 0,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      },
+      "second": {
+        "outside": 36,
+        "resolved": 0,
+        "new_failure": 0,
+        "worsened": 0,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      }
+    },
+    "B": {
+      "owner": {
+        "outside": 22,
+        "resolved": 0,
+        "new_failure": 6,
+        "worsened": 28,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      },
+      "second": {
+        "outside": 38,
+        "resolved": 1,
+        "new_failure": 3,
+        "worsened": 43,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      }
+    },
+    "C": {
+      "owner": {
+        "outside": 14,
+        "resolved": 2,
+        "new_failure": 0,
+        "worsened": 34,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      },
+      "second": {
+        "outside": 38,
+        "resolved": 0,
+        "new_failure": 2,
+        "worsened": 66,
+        "new_rows": 2,
+        "new_outside": 0,
+        "removed_rows": 0
+      }
+    },
+    "D": {
+      "owner": {
+        "outside": 19,
+        "resolved": 2,
+        "new_failure": 5,
+        "worsened": 37,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      },
+      "second": {
+        "outside": 36,
+        "resolved": 1,
+        "new_failure": 1,
+        "worsened": 64,
+        "new_rows": 2,
+        "new_outside": 0,
+        "removed_rows": 0
+      }
+    }
+  },
+  "central_hashes": {
+    "A": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    },
+    "B": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    },
+    "C": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    },
+    "D": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    }
+  },
+  "builds": {
+    "A": {
+      "base_head": "eb5736d73c5c129208a699f177e0b17d2bbf3f54",
+      "variant": "A",
+      "base_source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "patch_sha256": "a985d88b721bc127ed1531ed6a9d4032674198d9dc10da4e0de47032273f6d75",
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "reference_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+      "control_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+      "files": {
+        "mcsheriffanya": "fb0d7e9973761ccadd0a4c642cdbbe16dcdf6692905efa9b467c57f3f3a4e1b3",
+        "genaudit-starts": "181a71b370a13881702540f18330585648f6438fa43af2fbd37ef0b7aa6b543f",
+        "Cargo.lock": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+      }
+    },
+    "B": {
+      "base_head": "eb5736d73c5c129208a699f177e0b17d2bbf3f54",
+      "variant": "B",
+      "base_source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "source_sha256": "65f71b8d65d447656c8c96acf30f54d7ff096abc74c5fb5e9c7ee1db2589ef0b",
+      "patch_sha256": "e99cf2f65f68acae1093124862f2e0faa72e1063d54a61015ee61ec43a90e898",
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "reference_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+      "control_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+      "files": {
+        "mcsheriffanya": "6d08891c544a288dd4a83f25892b354a724d84b435e0924dbe70cedd55c8dda9",
+        "genaudit-starts": "5e817eb01561833d0ee09b84632d65aa4f8724c8659d95cae62c8364ad711642",
+        "Cargo.lock": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+      }
+    },
+    "C": {
+      "base_head": "eb5736d73c5c129208a699f177e0b17d2bbf3f54",
+      "variant": "C",
+      "base_source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "source_sha256": "a606f7bbc48bc136c9a99e5a99beb5aecd6112c8acc63866e4109e07807913ab",
+      "patch_sha256": "bd93c044ca27384ac01674b43adf48ee8f79395f13ec89f01141a62f0ed10aef",
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "reference_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+      "control_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+      "files": {
+        "mcsheriffanya": "46a104e051611c497ae2e26fc32dcdda2db615f8d0efd583e0d101377ad3cb3e",
+        "genaudit-starts": "99e7be7e40367c3aa7730419a81a03609402d727bc3d7971941c668556490739",
+        "Cargo.lock": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+      }
+    },
+    "D": {
+      "base_head": "eb5736d73c5c129208a699f177e0b17d2bbf3f54",
+      "variant": "D",
+      "base_source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "source_sha256": "6469666500fe0efac0d6c836df1981bb24490c5166e55f7ab84e6f199cb5ae74",
+      "patch_sha256": "9c289771969de37e21cd145033f153fa4443f2fe16b42c4466c4ac16050cc2ba",
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "reference_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+      "control_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+      "files": {
+        "mcsheriffanya": "6bd56eab98b182a84398080e446200d7366b5b5c4c7a88fcf7789b561ed35fd3",
+        "genaudit-starts": "434630a9138ccaa29518da58b7ef4f17bd6154d6f65ce5d1c3dc481b96ce2b22",
+        "Cargo.lock": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+      }
+    }
+  },
+  "edges": {
+    "A": {
+      "owner": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 34045,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 727,
+          "jump_ge16_count": 727,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 529377,
+          "jump_ge16_count": 38,
+          "share": 7.178249149471927e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11147,
+          "jump_ge16_count": 11147,
+          "share": 1.0
+        }
+      ],
+      "second": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 32479,
+          "jump_ge16_count": 7,
+          "share": 0.00021552387696665537
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 794,
+          "jump_ge16_count": 794,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 507396,
+          "jump_ge16_count": 43,
+          "share": 8.474643079567045e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 12483,
+          "jump_ge16_count": 12483,
+          "share": 1.0
+        }
+      ]
+    },
+    "B": {
+      "owner": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 33547,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 559,
+          "jump_ge16_count": 559,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 521944,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 8995,
+          "jump_ge16_count": 8995,
+          "share": 1.0
+        }
+      ],
+      "second": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 32045,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 631,
+          "jump_ge16_count": 631,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 499753,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 10242,
+          "jump_ge16_count": 10242,
+          "share": 1.0
+        }
+      ]
+    },
+    "C": {
+      "owner": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 33918,
+          "jump_ge16_count": 1,
+          "share": 2.948287045226723e-05
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 853,
+          "jump_ge16_count": 853,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 526647,
+          "jump_ge16_count": 55,
+          "share": 0.00010443427950790568
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 13127,
+          "jump_ge16_count": 13127,
+          "share": 1.0
+        }
+      ],
+      "second": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 32283,
+          "jump_ge16_count": 1,
+          "share": 3.0976055509091474e-05
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 914,
+          "jump_ge16_count": 914,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 504765,
+          "jump_ge16_count": 39,
+          "share": 7.726367715669668e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 14823,
+          "jump_ge16_count": 14823,
+          "share": 1.0
+        }
+      ]
+    },
+    "D": {
+      "owner": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 33427,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 689,
+          "jump_ge16_count": 689,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 519318,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11064,
+          "jump_ge16_count": 11064,
+          "share": 1.0
+        }
+      ],
+      "second": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 31854,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 750,
+          "jump_ge16_count": 750,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 497271,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 12667,
+          "jump_ge16_count": 12667,
+          "share": 1.0
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Saved compact receipts/edge counts checked; raw worlds are not downloaded, so edge counts and central hashes are attested by preserved runtime outputs rather than recomputed from local worlds."
+  ]
+}

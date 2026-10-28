@@ -15,7 +15,7 @@ import genaudit_263_end_ci as e
 class EndCiTests(unittest.TestCase):
     def test_factorial_patches_keep_other_end_code(self):
         original = e.baseline()
-        a,b,c,d = [e.variant_source(original,v) for v in e.VARIANTS]
+        a,b,c,d = [e.variant_source(original,v) for v in ('A','B','C','D')]
         self.assertEqual(a, original)
         self.assertIn(b'Vec::new()\n    }\n\n    fn main_column',b)
         self.assertIn(b'const ISLETS: f64 = 0.3;',c)
@@ -25,6 +25,59 @@ class EndCiTests(unittest.TestCase):
             self.assertEqual(value.split(b'    fn main_column',1)[1],original.split(b'    fn main_column',1)[1])
         with self.assertRaises(ValueError): e.variant_source(original,'other')
         with self.assertRaises(ValueError): e.variant_source(original.replace(b'0.225;',b'0.224;'),'C')
+
+    def test_observed_shapes_change_geometry_without_advancing_placement_stream(self):
+        original=e.baseline().decode()
+        actual=e.variant_source(original.encode(),'E').decode()
+        declaration='#[path = "end_island_shapes_26_3.rs"]\nmod observed_islands;\n\n'
+        self.assertTrue(actual.startswith(declaration))
+        body=actual.removeprefix(declaration)
+        boundary='                    let radius = 4 + roll.below(3);\n'
+        before,tail=original.split(boundary)
+        patched_before,patched_tail=body.split(boundary)
+        self.assertEqual(before,patched_before)
+        after='\n                }\n            }\n        }\n        result\n    }\n'
+        geometry,rest=tail.split(after,1)
+        patched_geometry,patched_rest=patched_tail.split(after,1)
+        self.assertEqual(rest,patched_rest)
+        self.assertIn('for layer in 1..radius',geometry)
+        self.assertNotIn('roll.below',patched_geometry)
+        self.assertEqual(patched_geometry.count('self.dice(ix, iz)'),1)
+        self.assertIn('observed_islands::model_count(radius)',patched_geometry)
+        self.assertIn('observed_islands::column(radius, model, x - ix, z - iz)',patched_geometry)
+        self.assertIn('result.push((top + bottom, top + observed_top));',patched_geometry)
+        with self.assertRaises(ValueError):
+            e.variant_source(original.replace('for layer in 1..radius','for layer in 1..=radius').encode(),'E')
+
+    def test_observed_model_inputs_must_match_committed_files_and_receipt(self):
+        original=e.baseline()
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/e.SOURCE).parent.mkdir(parents=True)
+            (root/e.SOURCE).write_bytes(e.variant_source(original,'E'))
+            build=root/'build';build.mkdir()
+            for name in ['mcsheriffanya','genaudit-starts','Cargo.lock']:(build/name).write_text(name)
+            control=root/'control.gz';control.write_bytes(b'fixture')
+            committed={str(path):('committed '+str(path)).encode() for path in e.MODEL_INPUTS}
+            for name,data in committed.items():
+                file=root/name;file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes(data)
+            def output(command,**kwargs):
+                if command[:3]==['git','diff','--name-only']:return str(e.SOURCE)+'\n'
+                return committed[command[-1].removeprefix('HEAD:')]
+            with patch.object(e,'REPO',root),patch.object(e,'CONTROL',control),patch.object(e,'baseline',return_value=original),patch.object(e.ci,'head',return_value='fixture-head'),patch.object(e.subprocess,'check_output',side_effect=output):
+                data=e.bundle(build,'E');e.verify_bundle(build,'E')
+                self.assertEqual(data['model_inputs_sha256'],{p:e.digest(b) for p,b in committed.items()})
+                for path in e.MODEL_INPUTS:
+                    file=root/path;raw=file.read_bytes();file.write_bytes(raw+b'changed')
+                    with self.assertRaises(ValueError):e.verify_bundle(build,'E')
+                    with self.assertRaises(ValueError):e.bundle(build,'E')
+                    file.write_bytes(raw)
+                receipt=build/'end-build.json';saved=receipt.read_text()
+                data['model_inputs_sha256'].pop(str(e.MODEL_INPUTS[0]))
+                receipt.write_text(json.dumps(data))
+                with self.assertRaises(ValueError):e.verify_bundle(build,'E')
+                receipt.write_text(saved)
+                with patch.object(e.subprocess,'check_output',side_effect=e.subprocess.CalledProcessError(128,['git','show'])):
+                    with self.assertRaises(e.subprocess.CalledProcessError):e.verify_bundle(build,'E')
 
     def test_real_frozen_plan_end_only(self):
         frozen=e.ci.reference()
