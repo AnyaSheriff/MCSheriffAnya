@@ -1,0 +1,1458 @@
+{
+  "status": "verified",
+  "head": "40387b93c5b4ed8c79e3f49f6a4a7a2bf8cb4bfb",
+  "run_id": 40649990757,
+  "pairs": 11212,
+  "counts_vs_A": {
+    "A": {
+      "owner": {
+        "outside": 16,
+        "resolved": 0,
+        "new_failure": 0,
+        "worsened": 0,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      },
+      "second": {
+        "outside": 36,
+        "resolved": 0,
+        "new_failure": 0,
+        "worsened": 0,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      }
+    },
+    "E": {
+      "owner": {
+        "outside": 16,
+        "resolved": 0,
+        "new_failure": 0,
+        "worsened": 39,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      },
+      "second": {
+        "outside": 36,
+        "resolved": 0,
+        "new_failure": 0,
+        "worsened": 30,
+        "new_rows": 0,
+        "new_outside": 0,
+        "removed_rows": 0
+      }
+    }
+  },
+  "central_hashes": {
+    "A": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    },
+    "E": {
+      "owner": "514d2dce760565f382fb5e7d536b8d5881be65e069b2b40d35ab6dd14a975aea",
+      "second": "08a5b74ca290e8900bd11bf578eef5c7af4b8ae97c27e78e3b4f5add440cfd89"
+    }
+  },
+  "builds": {
+    "A": {
+      "base_head": "40387b93c5b4ed8c79e3f49f6a4a7a2bf8cb4bfb",
+      "variant": "A",
+      "base_source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "model_inputs_sha256": {},
+      "patch_sha256": "a985d88b721bc127ed1531ed6a9d4032674198d9dc10da4e0de47032273f6d75",
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "reference_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+      "control_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+      "files": {
+        "mcsheriffanya": "fb0d7e9973761ccadd0a4c642cdbbe16dcdf6692905efa9b467c57f3f3a4e1b3",
+        "genaudit-starts": "860c3996e5db6c83a57685b1a3acbff9d39605cf3d63dd19cb79c24515442ddb",
+        "Cargo.lock": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+      }
+    },
+    "E": {
+      "base_head": "40387b93c5b4ed8c79e3f49f6a4a7a2bf8cb4bfb",
+      "variant": "E",
+      "base_source_sha256": "71a11eb74a1023cb8401a4ab52ea4e43ec00652a7fb2263f1694c64964bc702c",
+      "source_sha256": "48daf5398423782c8652430ca5dabd36ca56106873d3a1ee616a37ee85c14d11",
+      "model_inputs_sha256": {
+        "src/world/end_island_shapes_26_3.rs": "b3dbebee6edcf96e18d1152baf99ca35a33a562637a147b622ed86127849dcc4",
+        "testdata/world-profile/genaudit-26.3/end-island-shapes-26.3.json": "5c964adafc83fa17d6fbc8ab41700d60f98d943ae1bb93bf9dc655e5834e2986",
+        "testdata/world-profile/genaudit-26.3/end-island-shapes-observations-26.3.json": "4998e4db2d846c4509d1a59b880d4ad7cde3bab0827463929eb71699675af2de"
+      },
+      "patch_sha256": "3c77e96624a1235a311c41fbcbc5c8ddd2e2ed6b4455b36e580b84646081ca98",
+      "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+      "reference_sha256": "aaa7668ff9ac83ee904a5b7762e76840e069ba1100bf16fd628860cbf86aab36",
+      "control_sha256": "a0cc6560a322cf2516e04e93a3658515f2326c593edd5099125bf7bd20c34af5",
+      "files": {
+        "mcsheriffanya": "cc1e4d1e46aa4eb02a9bc10c13888155038465b6da6c3c26c607266f8f55a571",
+        "genaudit-starts": "6c8e781db49ab7c08650966bfdb01d1ef332b7c82ef7f8ce8abf537c369cdb85",
+        "Cargo.lock": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+      }
+    }
+  },
+  "edges": {
+    "A": {
+      "owner": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 34045,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 727,
+          "jump_ge16_count": 727,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 529377,
+          "jump_ge16_count": 38,
+          "share": 7.178249149471927e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11147,
+          "jump_ge16_count": 11147,
+          "share": 1.0
+        }
+      ],
+      "second": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 32479,
+          "jump_ge16_count": 7,
+          "share": 0.00021552387696665537
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 794,
+          "jump_ge16_count": 794,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 507396,
+          "jump_ge16_count": 43,
+          "share": 8.474643079567045e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 12483,
+          "jump_ge16_count": 12483,
+          "share": 1.0
+        }
+      ]
+    },
+    "E": {
+      "owner": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 34274,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 692,
+          "jump_ge16_count": 692,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 532322,
+          "jump_ge16_count": 42,
+          "share": 7.889961339189438e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11138,
+          "jump_ge16_count": 11138,
+          "share": 1.0
+        }
+      ],
+      "second": [
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 32695,
+          "jump_ge16_count": 2,
+          "share": 6.117143294081663e-05
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 820,
+          "jump_ge16_count": 820,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 510520,
+          "jump_ge16_count": 51,
+          "share": 9.989814306981118e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 12359,
+          "jump_ge16_count": 12359,
+          "share": 1.0
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Saved compact receipts/edge counts checked; raw worlds are not downloaded, so edge counts and central hashes are attested by preserved runtime outputs rather than recomputed from local worlds."
+  ],
+  "geometry_models": {
+    "exact_observation_models": 32,
+    "classes": {
+      "4": 10,
+      "5": 14,
+      "6": 8
+    },
+    "rust_tests_passed": 4
+  },
+  "effects": {
+    "owner": {
+      "improved": [
+        {
+          "metric": "depth/32/underground_air",
+          "before": 8.621987,
+          "after": 9.081706,
+          "vanilla": 13.471102,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "depth/48/underground_air",
+          "before": 3.311286,
+          "after": 4.375816,
+          "vanilla": 7.032673,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "height_biome/small_end_islands/p95",
+          "before": 51.0,
+          "after": 53.0,
+          "vanilla": 56.0,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_component_volume/p99",
+          "before": 9070.72,
+          "after": 9172.92,
+          "vanilla": 10480.96,
+          "verdict": "within",
+          "tolerance": 2096.192
+        },
+        {
+          "metric": "cave_component_volume/p95",
+          "before": 7732.75,
+          "after": 7786.9,
+          "vanilla": 8086.4,
+          "verdict": "within",
+          "tolerance": 1617.28
+        },
+        {
+          "metric": "depth/64/air",
+          "before": 99.732917,
+          "after": 99.701927,
+          "vanilla": 99.535236,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "depth/16/underground_air",
+          "before": 38.045568,
+          "after": 38.345755,
+          "vanilla": 38.206379,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "depth/48/air",
+          "before": 72.134374,
+          "after": 72.0947,
+          "vanilla": 72.051577,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "overhang_proxy_columns",
+          "before": 0.003345,
+          "after": 0.004599,
+          "vanilla": 0.010034,
+          "verdict": "within",
+          "tolerance": 1
+        }
+      ],
+      "worsened": [
+        {
+          "metric": "cave_shape_proxy/thin_like",
+          "before": 0.041741,
+          "after": 0.036746,
+          "vanilla": 0.243667,
+          "verdict": "outside",
+          "tolerance": 0.1
+        },
+        {
+          "metric": "cave_component_volume/p50",
+          "before": 4293.0,
+          "after": 4308.0,
+          "vanilla": 3346.0,
+          "verdict": "outside",
+          "tolerance": 669.2
+        },
+        {
+          "metric": "border_jump_ge16_share",
+          "before": 1.046276,
+          "after": 1.005946,
+          "vanilla": 1.162657,
+          "verdict": "within",
+          "tolerance": 0.25
+        },
+        {
+          "metric": "layer/end_barrens/-5/air",
+          "before": 66.572593,
+          "after": 66.55951,
+          "vanilla": 71.15803,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-5/end_stone",
+          "before": 33.427407,
+          "after": 33.44049,
+          "vanilla": 28.84197,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-4/air",
+          "before": 65.789474,
+          "after": 65.725927,
+          "vanilla": 70.18394,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-4/end_stone",
+          "before": 34.210526,
+          "after": 34.274073,
+          "vanilla": 29.81606,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-3/air",
+          "before": 65.086722,
+          "after": 65.000748,
+          "vanilla": 68.967563,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-3/end_stone",
+          "before": 34.913278,
+          "after": 34.999252,
+          "vanilla": 31.032437,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "depth/64/underground_air",
+          "before": 4.52936,
+          "after": 6.150276,
+          "vanilla": 4.645692,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "layer/end_barrens/-2/air",
+          "before": 64.483029,
+          "after": 64.400792,
+          "vanilla": 67.798985,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-2/end_stone",
+          "before": 35.516971,
+          "after": 35.599208,
+          "vanilla": 32.201015,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "window2/blocks/end_stone",
+          "before": 4447.495868,
+          "after": 4452.050505,
+          "vanilla": 3999.155188,
+          "verdict": "within",
+          "tolerance": 799.8310376492195
+        },
+        {
+          "metric": "layer/small_end_islands/-5/air",
+          "before": 94.706553,
+          "after": 94.51124,
+          "vanilla": 97.234144,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-5/end_stone",
+          "before": 5.293447,
+          "after": 5.48876,
+          "vanilla": 2.765856,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-4/air",
+          "before": 94.453386,
+          "after": 94.184124,
+          "vanilla": 96.867906,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-4/end_stone",
+          "before": 5.546614,
+          "after": 5.815876,
+          "vanilla": 3.132094,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-3/air",
+          "before": 94.11235,
+          "after": 93.580352,
+          "vanilla": 96.188635,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-3/end_stone",
+          "before": 5.88765,
+          "after": 6.419648,
+          "vanilla": 3.811365,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "jump_ge16_share",
+          "before": 1.046135,
+          "after": 1.043342,
+          "vanilla": 1.104646,
+          "verdict": "within",
+          "tolerance": 0.25
+        },
+        {
+          "metric": "layer/end_barrens/-1/air",
+          "before": 63.965311,
+          "after": 63.836349,
+          "vanilla": 66.282634,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-1/end_stone",
+          "before": 36.034689,
+          "after": 36.163651,
+          "vanilla": 33.717366,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-2/air",
+          "before": 93.645601,
+          "after": 93.080109,
+          "vanilla": 95.433102,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-2/end_stone",
+          "before": 6.354399,
+          "after": 6.919891,
+          "vanilla": 4.566898,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "inside_jump_ge16_share",
+          "before": 1.046126,
+          "after": 1.045755,
+          "vanilla": 1.100904,
+          "verdict": "within",
+          "tolerance": 0.25
+        },
+        {
+          "metric": "top/end_barrens/air",
+          "before": 62.503738,
+          "after": 62.395335,
+          "vanilla": 64.423457,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/end_barrens/end_stone",
+          "before": 37.496262,
+          "after": 37.604665,
+          "vanilla": 35.576543,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-1/air",
+          "before": 92.998765,
+          "after": 92.210555,
+          "vanilla": 94.211124,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-1/end_stone",
+          "before": 7.001235,
+          "after": 7.789445,
+          "vanilla": 5.788876,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/small_end_islands/air",
+          "before": 92.005672,
+          "after": 91.344481,
+          "vanilla": 93.21483,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/small_end_islands/end_stone",
+          "before": 7.994328,
+          "after": 8.655519,
+          "vanilla": 6.78517,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_shape_proxy/other",
+          "before": 0.012843,
+          "after": 0.01213,
+          "vanilla": 0.064217,
+          "verdict": "within",
+          "tolerance": 0.1
+        },
+        {
+          "metric": "depth/0/underground_air",
+          "before": 96.162064,
+          "after": 96.18066,
+          "vanilla": 95.694144,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "height_mean/small_end_islands",
+          "before": 3.435686,
+          "after": 3.866309,
+          "vanilla": 2.998949,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/end_barrens",
+          "before": 19.102291,
+          "after": 19.177389,
+          "vanilla": 18.403646,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "blocks/end_stone",
+          "before": 4030.458794,
+          "after": 4033.353193,
+          "vanilla": 3871.25223,
+          "verdict": "within",
+          "tolerance": 774.2504459507671
+        },
+        {
+          "metric": "cave_shape_proxy/large_chamber_like",
+          "before": 0.574741,
+          "after": 0.58152,
+          "vanilla": 0.567606,
+          "verdict": "within",
+          "tolerance": 0.11352122725651088
+        },
+        {
+          "metric": "window1/blocks/end_stone",
+          "before": 4738.407713,
+          "after": 4741.30303,
+          "vanilla": 4676.322314,
+          "verdict": "within",
+          "tolerance": 935.2644628099174
+        },
+        {
+          "metric": "blocks/air",
+          "before": 61482.678915,
+          "after": 61479.784517,
+          "vanilla": 61641.470924,
+          "verdict": "within",
+          "tolerance": 12328.294184801998
+        }
+      ],
+      "unchanged_count": 181,
+      "A_edges_aggregate": [
+        {
+          "zone": "main",
+          "kind": "land_land",
+          "denominator": 76221,
+          "jump_ge16_count": 293,
+          "share": 0.003844084963461513
+        },
+        {
+          "zone": "main",
+          "kind": "land_void",
+          "denominator": 2778,
+          "jump_ge16_count": 2778,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "kind": "land_land",
+          "denominator": 563422,
+          "jump_ge16_count": 38,
+          "share": 6.744500569732811e-05
+        },
+        {
+          "zone": "outer",
+          "kind": "land_void",
+          "denominator": 11874,
+          "jump_ge16_count": 11874,
+          "share": 1.0
+        }
+      ],
+      "E_edges_aggregate": [
+        {
+          "zone": "main",
+          "kind": "land_land",
+          "denominator": 76221,
+          "jump_ge16_count": 293,
+          "share": 0.003844084963461513
+        },
+        {
+          "zone": "main",
+          "kind": "land_void",
+          "denominator": 2778,
+          "jump_ge16_count": 2778,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "kind": "land_land",
+          "denominator": 566596,
+          "jump_ge16_count": 42,
+          "share": 7.41268911181865e-05
+        },
+        {
+          "zone": "outer",
+          "kind": "land_void",
+          "denominator": 11830,
+          "jump_ge16_count": 11830,
+          "share": 1.0
+        }
+      ]
+    },
+    "second": {
+      "improved": [
+        {
+          "metric": "depth/64/underground_air",
+          "before": 5.020552,
+          "after": 6.808388,
+          "vanilla": 11.065292,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "depth/48/underground_air",
+          "before": 3.412795,
+          "after": 4.601698,
+          "vanilla": 7.501125,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "depth/32/underground_air",
+          "before": 9.248644,
+          "after": 9.745324,
+          "vanilla": 12.165673,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "depth/48/air",
+          "before": 74.480755,
+          "after": 74.439452,
+          "vanilla": 72.247804,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "jump_ge16_share",
+          "before": 1.16176,
+          "after": 1.155127,
+          "vanilla": 0.944824,
+          "verdict": "within",
+          "tolerance": 0.25
+        },
+        {
+          "metric": "inside_jump_ge16_share",
+          "before": 1.162519,
+          "after": 1.153898,
+          "vanilla": 0.948537,
+          "verdict": "within",
+          "tolerance": 0.25
+        },
+        {
+          "metric": "window2/blocks/end_stone",
+          "before": 3750.828283,
+          "after": 3754.387511,
+          "vanilla": 4576.758494,
+          "verdict": "within",
+          "tolerance": 915.3516988062444
+        },
+        {
+          "metric": "layer/end_barrens/-5/air",
+          "before": 64.454869,
+          "after": 64.4601,
+          "vanilla": 67.697524,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-5/end_stone",
+          "before": 35.545131,
+          "after": 35.5399,
+          "vanilla": 32.302476,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/end_midlands",
+          "before": 44.079154,
+          "after": 44.086036,
+          "vanilla": 46.09185,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/end_midlands/air",
+          "before": 20.455228,
+          "after": 20.445405,
+          "vanilla": 17.825166,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/end_midlands/end_stone",
+          "before": 79.544772,
+          "after": 79.554595,
+          "vanilla": 82.174834,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-5/end_stone",
+          "before": 77.147282,
+          "after": 77.142659,
+          "vanilla": 74.852026,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-5/air",
+          "before": 22.852718,
+          "after": 22.857341,
+          "vanilla": 25.147347,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_component_volume/p99",
+          "before": 8968.33,
+          "after": 9125.84,
+          "vanilla": 10458.6,
+          "verdict": "within",
+          "tolerance": 2091.7200000000003
+        },
+        {
+          "metric": "height_biome/small_end_islands/p95",
+          "before": 52.0,
+          "after": 53.0,
+          "vanilla": 55.0,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-1/air",
+          "before": 21.365916,
+          "after": 21.349737,
+          "vanilla": 19.621539,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-1/end_stone",
+          "before": 78.634084,
+          "after": 78.650263,
+          "vanilla": 80.378461,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-4/end_stone",
+          "before": 77.599737,
+          "after": 77.595692,
+          "vanilla": 75.959947,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-4/air",
+          "before": 22.400263,
+          "after": 22.404308,
+          "vanilla": 24.039426,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_shape_proxy/other",
+          "before": 0.01213,
+          "after": 0.012487,
+          "vanilla": 0.060293,
+          "verdict": "within",
+          "tolerance": 0.1
+        },
+        {
+          "metric": "height_mean/end_highlands",
+          "before": 58.604419,
+          "after": 58.604944,
+          "vanilla": 59.62439,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/end_barrens/air",
+          "before": 61.183384,
+          "after": 61.108398,
+          "vanilla": 60.150354,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/end_barrens/end_stone",
+          "before": 38.816616,
+          "after": 38.891602,
+          "vanilla": 39.849646,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "blocks/end_stone",
+          "before": 3725.123082,
+          "after": 3727.690689,
+          "vanilla": 3927.202997,
+          "verdict": "within",
+          "tolerance": 785.4405993578309
+        },
+        {
+          "metric": "height_mean/end_barrens",
+          "before": 19.966588,
+          "after": 20.020229,
+          "vanilla": 20.562471,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_component_volume/p95",
+          "before": 7676.0,
+          "after": 7744.2,
+          "vanilla": 8034.6,
+          "verdict": "within",
+          "tolerance": 1606.92
+        },
+        {
+          "metric": "layer/end_highlands/-1/air",
+          "before": 1.141423,
+          "after": 1.136173,
+          "vanilla": 0.545284,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_highlands/-1/end_stone",
+          "before": 98.858577,
+          "after": 98.863827,
+          "vanilla": 99.454716,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-3/air",
+          "before": 22.018884,
+          "after": 22.021773,
+          "vanilla": 22.611106,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-3/end_stone",
+          "before": 77.981116,
+          "after": 77.978227,
+          "vanilla": 77.388894,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_highlands/-2/air",
+          "before": 1.166625,
+          "after": 1.165575,
+          "vanilla": 0.600078,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_highlands/-2/end_stone",
+          "before": 98.833375,
+          "after": 98.834425,
+          "vanilla": 99.399922,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-2/air",
+          "before": 21.675643,
+          "after": 21.673331,
+          "vanilla": 21.149554,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_midlands/-2/end_stone",
+          "before": 78.324357,
+          "after": 78.326669,
+          "vanilla": 78.850446,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_highlands/-3/air",
+          "before": 1.184476,
+          "after": 1.182376,
+          "vanilla": 0.660174,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_highlands/-3/end_stone",
+          "before": 98.815524,
+          "after": 98.817624,
+          "vanilla": 99.339826,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "depth/64/air",
+          "before": 99.792014,
+          "after": 99.770631,
+          "vanilla": 99.677382,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "blocks/air",
+          "before": 61790.067428,
+          "after": 61787.499822,
+          "vanilla": 61585.020335,
+          "verdict": "within",
+          "tolerance": 12317.004067070995
+        },
+        {
+          "metric": "overhang_proxy_columns",
+          "before": 0.0,
+          "after": 0.000418,
+          "vanilla": 0.005714,
+          "verdict": "within",
+          "tolerance": 1
+        }
+      ],
+      "worsened": [
+        {
+          "metric": "depth/16/underground_air",
+          "before": 42.211415,
+          "after": 42.514928,
+          "vanilla": 36.781501,
+          "verdict": "outside",
+          "tolerance": 2
+        },
+        {
+          "metric": "border_jump_ge16_share",
+          "before": 1.149982,
+          "after": 1.17418,
+          "vanilla": 0.88726,
+          "verdict": "outside",
+          "tolerance": 0.25
+        },
+        {
+          "metric": "cave_shape_proxy/thin_like",
+          "before": 0.050303,
+          "after": 0.043882,
+          "vanilla": 0.210132,
+          "verdict": "outside",
+          "tolerance": 0.1
+        },
+        {
+          "metric": "cave_component_volume/p50",
+          "before": 4459.5,
+          "after": 4468.0,
+          "vanilla": 3430.0,
+          "verdict": "outside",
+          "tolerance": 686.0
+        },
+        {
+          "metric": "depth/0/underground_air",
+          "before": 97.292176,
+          "after": 97.306398,
+          "vanilla": 95.315364,
+          "verdict": "within",
+          "tolerance": 2
+        },
+        {
+          "metric": "layer/end_barrens/-4/air",
+          "before": 63.888114,
+          "after": 63.867188,
+          "vanilla": 66.842571,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-4/end_stone",
+          "before": 36.111886,
+          "after": 36.132812,
+          "vanilla": 33.157429,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-5/air",
+          "before": 94.22082,
+          "after": 94.09751,
+          "vanilla": 97.024248,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-5/end_stone",
+          "before": 5.77918,
+          "after": 5.90249,
+          "vanilla": 2.975752,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-4/air",
+          "before": 93.949193,
+          "after": 93.730167,
+          "vanilla": 96.644218,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-4/end_stone",
+          "before": 6.050807,
+          "after": 6.269833,
+          "vanilla": 3.355782,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-3/air",
+          "before": 93.576245,
+          "after": 93.150697,
+          "vanilla": 95.892449,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-3/end_stone",
+          "before": 6.423755,
+          "after": 6.849303,
+          "vanilla": 4.107551,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-2/air",
+          "before": 93.086455,
+          "after": 92.62124,
+          "vanilla": 95.325398,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-2/end_stone",
+          "before": 6.913545,
+          "after": 7.37876,
+          "vanilla": 4.674602,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-1/end_stone",
+          "before": 7.57321,
+          "after": 8.250983,
+          "vanilla": 5.89162,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-3/air",
+          "before": 63.349261,
+          "after": 63.316127,
+          "vanilla": 65.6648,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-3/end_stone",
+          "before": 36.650739,
+          "after": 36.683873,
+          "vanilla": 34.3352,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/small_end_islands/-1/air",
+          "before": 92.42679,
+          "after": 91.749017,
+          "vanilla": 94.096403,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/small_end_islands/end_stone",
+          "before": 8.54503,
+          "after": 9.230995,
+          "vanilla": 6.939582,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "top/small_end_islands/air",
+          "before": 91.45497,
+          "after": 90.769005,
+          "vanilla": 93.048441,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/small_end_islands",
+          "before": 3.719056,
+          "after": 4.160122,
+          "vanilla": 3.013184,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-2/air",
+          "before": 62.8976,
+          "after": 62.860979,
+          "vanilla": 64.286557,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-2/end_stone",
+          "before": 37.1024,
+          "after": 37.139021,
+          "vanilla": 35.713443,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "window1/blocks/end_stone",
+          "before": 4646.403122,
+          "after": 4649.452709,
+          "vanilla": 4488.801653,
+          "verdict": "within",
+          "tolerance": 897.7603305785124
+        },
+        {
+          "metric": "layer/end_highlands/-4/air",
+          "before": 1.226478,
+          "after": 1.228579,
+          "vanilla": 0.739713,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_highlands/-4/end_stone",
+          "before": 98.773522,
+          "after": 98.771421,
+          "vanilla": 99.260287,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_shape_proxy/large_chamber_like",
+          "before": 0.566893,
+          "after": 0.573314,
+          "vanilla": 0.559044,
+          "verdict": "within",
+          "tolerance": 0.11180877631109526
+        },
+        {
+          "metric": "layer/end_barrens/-1/air",
+          "before": 62.524414,
+          "after": 62.466867,
+          "vanilla": 62.579599,
+          "verdict": "within",
+          "tolerance": 5
+        },
+        {
+          "metric": "layer/end_barrens/-1/end_stone",
+          "before": 37.475586,
+          "after": 37.533133,
+          "vanilla": 37.420401,
+          "verdict": "within",
+          "tolerance": 5
+        }
+      ],
+      "unchanged_count": 169,
+      "A_edges_aggregate": [
+        {
+          "zone": "main",
+          "kind": "land_land",
+          "denominator": 76024,
+          "jump_ge16_count": 276,
+          "share": 0.0036304324950015786
+        },
+        {
+          "zone": "main",
+          "kind": "land_void",
+          "denominator": 3036,
+          "jump_ge16_count": 3036,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "kind": "land_land",
+          "denominator": 539875,
+          "jump_ge16_count": 50,
+          "share": 9.261403102570039e-05
+        },
+        {
+          "zone": "outer",
+          "kind": "land_void",
+          "denominator": 13277,
+          "jump_ge16_count": 13277,
+          "share": 1.0
+        }
+      ],
+      "E_edges_aggregate": [
+        {
+          "zone": "main",
+          "kind": "land_land",
+          "denominator": 76024,
+          "jump_ge16_count": 276,
+          "share": 0.0036304324950015786
+        },
+        {
+          "zone": "main",
+          "kind": "land_void",
+          "denominator": 3036,
+          "jump_ge16_count": 3036,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "kind": "land_land",
+          "denominator": 543215,
+          "jump_ge16_count": 53,
+          "share": 9.756726158151008e-05
+        },
+        {
+          "zone": "outer",
+          "kind": "land_void",
+          "denominator": 13179,
+          "jump_ge16_count": 13179,
+          "share": 1.0
+        }
+      ]
+    }
+  }
+}
