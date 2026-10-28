@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "name": "Измерительная гипотеза полушаговых радиальных слоёв, не точная формула оригинала",
+  "q_values": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "initial_q": [
+    8,
+    10,
+    12
+  ],
+  "visible_decrements_q": [
+    1,
+    3
+  ],
+  "expected_plots_per_series": 32,
+  "layer_rule": "extent=ceil(q/2); |dx|,|dz|<=extent; 4*(dx²+dz²)<=(q+2)²",
+  "stop_rule": "unknown; intentionally untested",
+  "step_probabilities": "unknown; no assigned weights",
+  "development": "32previouslyobserved placements,160layers; no retrospective blindholdout",
+  "heldout_seed": 2026102803,
+  "policy": "Если новый контроль отвергнет семейство/переходы, записать отказ; не менять гипотезу по этому holdout."
+}

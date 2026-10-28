@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "frozen_at_utc": "2026-10-28T12:45:24.439585+00:00",
+  "base_head": "c18f33fb3d7aa1f834f01bf2ef46afbe23ade9cd",
+  "source_jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+  "hypothesis_path": "testdata/world-profile/genaudit-26.3/end-island-procedural-hypothesis.json",
+  "plan_path": "testdata/world-profile/genaudit-26.3/end-island-procedural-heldout-plan.json",
+  "input_sha256": {
+    "tools/measure/genaudit_263_end_geometry.py": "2b69fc065b9893daafc258e0c0871d74ac89fd7cc871bf56edd8cc07f3b5f590",
+    "tools/measure/test_genaudit_263_end_geometry.py": "ebb42be5a7cb5220188ea5d131725702c9d1582441747f02de68fa309d1011c1",
+    "tools/measure/genaudit_263_end_geometry_probe.py": "e93873fa98143ee053e0e5ac2753722d795c8457d84efe9a1c5938747e544b5d",
+    "testdata/world-profile/genaudit-26.3/end-island-procedural-hypothesis.json": "e045eb342202248259bce436e376143e37eab35e2b68e145f18a1b0428642311",
+    "testdata/world-profile/genaudit-26.3/end-island-procedural-heldout-plan.json": "09cb9d11e3313d02df33fcfa19487778c680e349447e61456f215a9365b94152",
+    "tools/measure/genaudit_263_io.py": "a3b1c3ea47e17bd80ab9cf07c58246f01c47a8fed9ddf25e55c4f6e58bbbb3e8",
+    "tools/measure/census_263.py": "a132fe866ca54b789e9585b255fec56750f19b3b9305c053034f7e3318c66a0e"
+  },
+  "development_checks": "6PythonPASS;32oldplots160layers; frozen before observing seed2026102803",
+  "heldout_policy": "Do not tune hypothesis from newholdout; stoprule/RNGweights unknown",
+  "lifecycle": "flock;fresh output;TERM110/KILL115;work100;cap120;ports26386TCP26387UDP"
+}
