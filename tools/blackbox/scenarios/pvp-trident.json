@@ -1,5 +1,6 @@
 {
  "name": "pvp-trident",
+ "attr_phase": true,
  "about": "Удар трезубцем в ближнем бою: урон 9 из атрибутов, износ 1, звук сильного удара.",
  "second": true,
  "track_self": true,

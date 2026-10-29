@@ -1,5 +1,6 @@
 {
   "name": "sword-sweep-neighbours",
+  "attr_phase": true,
   "about": "[проверить] Grounded wooden sword: sweep particle, secondary damage, Sweeping Edge III and one 0.4 knockback; repeat quickly to suppress sweep.",
   "blocks": [],
   "setup": [

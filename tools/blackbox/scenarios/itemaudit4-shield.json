@@ -1,5 +1,6 @@
 {
   "name": "itemaudit4-shield",
+  "attr_phase": true,
   "about": "[проверить] Crossbow shooter raises offhand shield during 24-block arrow flight, before Thorns reflection. Facing/5t activation and reflected damage; не запускался.",
   "second": true,
   "track_self": true,

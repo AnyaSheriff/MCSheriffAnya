@@ -229,7 +229,9 @@ pub enum Order {
     SetEnderSlot { slot: usize, stack: Option<crate::inventory::Stack> },
 
     /// Сменить режим игры: подключение само скажет об этом своему клиенту.
-    GameMode { mode: i32 },
+    /// `at` — такт команды: чужое подключение берёт поручение тактом позже,
+    /// а атрибуты дальности у оригинала отсчитываются от самой команды.
+    GameMode { mode: i32, at: u64 },
 
     /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
     Hurt { amount: f32, source: crate::survival::Source },

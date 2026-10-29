@@ -752,6 +752,7 @@ pub async fn play_session(
         shared.catalog(),
     );
 
+    player.restart_attrs_tracking(*shared.ticks.borrow());
     player.main_hand = look.main_hand;
     player.view = view_for(shared, &look);
 
@@ -4628,7 +4629,7 @@ async fn send_pending_world_events(
                 player.net.renew_effect_particles();
 
                 if let Some((attribute, ..)) = effect.kind.modifier() {
-                    player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                    player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                 }
             }
             WorldEvent::PotionEffect { .. } => {}
@@ -4674,7 +4675,7 @@ async fn send_pending_world_events(
                     // того же срока (чёрный ящик, stray-slowness: Effect на +27,
                     // Attributes на +28; повтор — Effect +89, Attributes +90).
                     if let Some((attribute, ..)) = effect.kind.modifier() {
-                        player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                        player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                     }
                 }
             }
@@ -4731,7 +4732,7 @@ async fn send_pending_world_events(
 
                     vitals::give_effect(stream, player, curse).await?;
                     // Скорость удара уходит на такт позже эффекта (elder-fatigue).
-                    player.attrs_touched.push((crate::attributes::ATTACK_SPEED, *shared.ticks.borrow() + 1));
+                    player.attrs_touched.push((crate::attributes::ATTACK_SPEED, player.attr_due(*shared.ticks.borrow() + 1)));
                     send_game_event(stream, GAME_EVENT_ELDER_CURSE, if *silent { 0.0 } else { 1.0 }).await?;
                 }
             }
@@ -6648,7 +6649,7 @@ async fn read_and_log_play_packets(
                         player.net.renew_effect_particles();
 
                         if let Some((attribute, ..)) = effect.kind.modifier() {
-                            player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                            player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                         }
                     }
                 }
@@ -6878,6 +6879,9 @@ async fn read_and_log_play_packets(
                     prefetch = Prefetch::new();
                     prefetch.slots = chunks.loads.slots.clone();
 
+                    // Новое появление в мире — новый отсчёт рассылки атрибутов.
+                    player.restart_attrs_tracking(*shared.ticks.borrow());
+
                     // Как у оригинала, всё о самом игроке уходит сразу, до чанков.
                     // (После перехода без смерти место и «жди чанки» ушли выше:
                     // без «жди чанки» клиент висит на экране загрузки и не шлёт
@@ -7001,9 +7005,8 @@ async fn read_and_log_play_packets(
                 // Режим сменила команда — своя или чужая (с Bedrock, из
                 // консоли): клиенту нужен Game Event «смена режима», строка
                 // в списке игроков — тоже.
-                Order::GameMode { mode } => {
-                    let now = *shared.ticks.borrow();
-                    vitals::game_mode_order(stream, player, mode, now).await?;
+                Order::GameMode { mode, at } => {
+                    vitals::game_mode_order(stream, player, mode, at).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
                     player.save_with_catalog(&shared.playerdata, shared.catalog());
                 }
@@ -7042,7 +7045,7 @@ async fn read_and_log_play_packets(
 
                     crate::commands_world::apply_attribute_edit(&mut player.attrs, &edit);
                     crate::commands_world::finish_attribute_edit(shared, &player.uuid, &player.attrs);
-                    player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                    player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                 }
 
                 // `enchant`: зачарование предмету в основной руке.
@@ -11881,6 +11884,26 @@ impl OpenWindow {
 }
 
 impl PlayerState {
+    /// 26.3: Update Attributes уходит раз в два такта, и чётность берётся от
+    /// появления игрока в мире (вход, возрождение, переход), а не от возраста
+    /// мира. Чёрный ящик, attr-respawn-even/odd-probe ×3: возрождение на +20 —
+    /// рассылки на чётных тактах (42, 52, 64…), на +21 — на нечётных (41, 53…).
+    fn restart_attrs_tracking(&mut self, now: u64) {
+        if let Some(phase) = self.attrs_tracking_phase.as_mut() {
+            *phase = now % 2;
+        }
+    }
+
+    /// Ближайший такт рассылки атрибутов не раньше `earliest`: в 26.3 — только
+    /// такты своей чётности (attribute-phase-equipment: и износ, и смена режима),
+    /// в 26.1.2 — сам `earliest`.
+    fn attr_due(&self, earliest: u64) -> u64 {
+        match self.attrs_tracking_phase {
+            Some(phase) if earliest % 2 != phase => earliest + 1,
+            _ => earliest,
+        }
+    }
+
     /// Заводит запись об игроке. `saved` — то, что осталось от прошлого
     /// захода: оттуда берутся место, поворот и режим игры. Если игрок здесь
     /// впервые, он появляется в точке появления.

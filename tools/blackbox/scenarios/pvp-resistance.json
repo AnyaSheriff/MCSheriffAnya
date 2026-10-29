@@ -1,5 +1,6 @@
 {
  "name": "pvp-resistance",
+ "attr_phase": true,
  "about": "Сопротивление II у жертвы: −40 % урона (вики, Resistance).",
  "second": true,
  "track_self": true,

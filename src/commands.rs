@@ -271,7 +271,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 for (uuid, _) in &targets {
                     if players.members().iter().any(|member| member.uuid == *uuid && member.game_mode != mode) {
                         players.set_game_mode(uuid, mode);
-                        players.order(uuid, Order::GameMode { mode });
+                        players.order(uuid, Order::GameMode { mode, at: *shared.ticks.borrow() });
                     }
                 }
             }

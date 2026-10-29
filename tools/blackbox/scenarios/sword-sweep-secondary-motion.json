@@ -1,5 +1,6 @@
 {
   "name": "sword-sweep-secondary-motion",
+  "attr_phase": true,
   "about": "[проверить] Explicit primary target (which=0), off-axis secondary cow, third cow outside sweep range; repeated hit during immunity. pvp-sweep records radial damage knockback followed by facing knockback.",
   "blocks": [],
   "setup": [

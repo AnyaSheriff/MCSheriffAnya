@@ -72,6 +72,10 @@ const bot = mineflayer.createBot({ host, port, username: USER, version: '26.1', 
 // поворот. Записывает первый: что он получает сам (`track_self`, он —
 // жертва) и что видит о втором (`track_players`).
 const USER2 = `${USER}b`;
+// Когда сервер принял вход: от него у оригинала идут свои счётчики игрока
+// (например, двухтактовая рассылка атрибутов). Пишется в запись как такт.
+let loginMs = null;
+bot._client.once('login', () => { loginMs = Date.now(); });
 const bot2 = scenario.second ? mineflayer.createBot({ host, port, username: USER2, version: '26.1', auth: 'offline', respawn: true }) : null;
 const events = [];
 let serverAge = null, ageStamp = 0;       // возраст мира из последнего «обновления времени»
@@ -673,6 +677,22 @@ const calibrate = async (times = 6) => {
 
 const sleepTicks = (n) => new Promise(r => setTimeout(r, n * TICK_MS));
 const say = async (cmd) => { bot.chat('/' + cmd); await sleepTicks(2); };
+// Чётность рассылки атрибутов робота `b` (26.3: раз в два такта, отсчёт от
+// входа или возрождения — attr-respawn-*-probe). Меняем ему скорость удара и
+// смотрим, в каком такте пришёл ответ; null — ответа не дождались.
+const attrParity = async (b, name) => {
+  let hook = null;
+  const got = new Promise((r) => {
+    hook = (p) => { if (isSelfOf(b)(p.entityId) && p.properties.some(x => String(x.key).includes('attack_speed'))) r(tickNow()); };
+    b._client.on('entity_update_attributes', hook);
+  });
+  await say(`attribute ${name} minecraft:attack_speed base set 4.5`);
+  const t = await Promise.race([got, sleepTicks(40).then(() => null)]);
+  b._client.removeListener('entity_update_attributes', hook);
+  await say(`attribute ${name} minecraft:attack_speed base reset`);
+  await sleepTicks(6);
+  return t === null ? null : t % 2;
+};
 const setBlock = (b) => say(`setblock ${ORIGIN.x + b.at[0]} ${ORIGIN.y + b.at[1]} ${ORIGIN.z + b.at[2]} ${b.state}`);
 // Команда сценария: `$(dx,dy,dz)` заменяется настоящими координатами точки
 // площадки — так в `cmd` можно звать summon, data, item и прочее. Дробные
@@ -751,6 +771,22 @@ bot.once('spawn', async () => {
     if (clockSamples.length < 2) throw new Error('не удалось сверить часы с сервером: нечем привязывать такты');
     await calibrate();
     await say(`setblock ${ORIGIN.x + PAD} ${ORIGIN.y} ${ORIGIN.z + PAD} minecraft:air`);
+    // `attr_phase`: у двух роботов своя чётность рассылки атрибутов, по
+    // моменту входа — случайная. Второго робота возрождаем, пока его
+    // чётность не совпадёт с первым: тогда одно выравнивание начала записи
+    // (ниже) годится обоим, и у обоих серверов такты сравнимы.
+    if (scenario.attr_phase && bot2) {
+      for (let i = 0; i < 8; i++) {
+        const [p1, p2] = [await attrParity(bot, USER), await attrParity(bot2, USER2)];
+        console.error(`attr_phase: чётность ${p1} / ${p2}`);
+        if (p1 === null || p2 === null) throw new Error('attr_phase: сервер не прислал атрибуты робота');
+        if (p1 === p2) break;
+        const respawned = new Promise((r) => bot2.once('spawn', r));
+        await say(`kill ${USER2}`);
+        if (await Promise.race([respawned.then(() => true), sleepTicks(100).then(() => false)]) === false) throw new Error('attr_phase: второй робот не возродился');
+        await sleepTicks(10);
+      }
+    }
 
     for (const b of scenario.blocks) await setBlock(b);
     for (const c of scenario.setup || []) {
@@ -785,6 +821,11 @@ bot.once('spawn', async () => {
     if (clockSamples.length < 2) throw new Error('не удалось сверить часы с сервером: нечем привязывать такты');
 
     fixedBase = tickBase + clockOffset;
+    // `attr_phase`: начало записи — на такте той же чётности, что и рассылка
+    // атрибутов робота; иначе у двух серверов атрибуты расходятся на такт
+    // наугад (itemaudit4-knockback-phase).
+    const attrPhase = scenario.attr_phase ? await attrParity(bot, USER) : null;
+    if (scenario.attr_phase && attrPhase === null) throw new Error('attr_phase: сервер не прислал атрибуты робота');
     recording = true; t0 = Date.now();
     // Нажатия расставляем по тактам сервера, а не по часам робота: `after` —
     // это такты от первого нажатия. Целимся в середину такта, чтобы промах
@@ -795,6 +836,7 @@ bot.once('spawn', async () => {
     // попадает в случайную фазу относительно действий, и записи двух
     // серверов не сравнить.
     if (scenario.align) baseTick = Math.ceil(baseTick / scenario.align) * scenario.align;
+    if (attrPhase !== null && (baseTick - attrPhase) % 2 !== 0) baseTick += 1;
     for (const a of scenario.actions) {
       // Граница счётного такта — это ровно середина между приходами пакетов,
       // то есть середина настоящего такта сервера: дальше всего от его краёв,
@@ -925,7 +967,7 @@ bot.once('spawn', async () => {
       if (c.startsWith('!wait ')) { await sleepTicks(Number(c.slice(6))); continue; }
       await say(expand(c));
     }
-    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, lane: LANE, window: { first: baseTick, last }, events }, null, 1));
+    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, lane: LANE, window: { first: baseTick, last }, join_tick: loginMs === null ? null : Math.floor((loginMs - fixedBase) / TICK_MS), events }, null, 1));
     console.log(`записано событий: ${events.length} → ${outFile}`);
     if (bot2) bot2.quit();
     bot.quit();

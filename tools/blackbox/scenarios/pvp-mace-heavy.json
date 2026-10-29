@@ -1,5 +1,6 @@
 {
  "name": "pvp-mace-heavy",
+ "attr_phase": true,
  "about": "Удар булавой с большой высоты (8 блоков, >5 пролёта): прибавка второй ступени (2 за блок), звук smash_ground_heavy.",
  "second": true,
  "track_self": true,

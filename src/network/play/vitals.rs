@@ -724,7 +724,7 @@ pub(super) async fn game_mode_order(stream: &mut Outgoing<'_>, player: &mut Play
     send_game_event_game_mode(stream, mode).await?;
     send_player_abilities(stream, player).await?;
     for attribute in [crate::attributes::BLOCK_INTERACTION_RANGE, crate::attributes::ENTITY_INTERACTION_RANGE] {
-        player.attrs_touched.push((attribute, now + 2));
+        player.attrs_touched.push((attribute, player.attr_due(now + 2)));
     }
     Ok(())
 }
@@ -1625,9 +1625,7 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
     touched.sort_unstable();
     touched.dedup();
 
-    if touched.contains(&crate::attributes::ATTACK_SPEED) {
-        player.speed_due.push(now + 1);
-    }
+    let speed_touched = touched.contains(&crate::attributes::ATTACK_SPEED);
 
     for attribute in &touched {
         player.inventory.note_attribute(*attribute as u8);
@@ -1649,6 +1647,14 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
             |phase| if !consecutive && (now + 1) % 2 == phase { 1 } else { 2 });
         (attribute, now + delay)
     }));
+
+    // Чужим клиентам скорость удара. 26.3: тем же тактом, что и самому
+    // игроку — у оригинала один отсчёт на игрока (attribute-phase-equipment:
+    // свои Attributes и чужие entity_update_attributes вместе, +1 или +2).
+    // Снимок для соседей виден им тактом позже, поэтому срок на такт раньше.
+    if let Some(due) = player.attrs_touched.iter().rev().find(|(attribute, _)| *attribute == crate::attributes::ATTACK_SPEED).map(|(_, due)| *due).filter(|_| speed_touched) {
+        player.speed_due.push(if tracking_phase.is_some() { due - 1 } else { now + 1 });
+    }
 }
 
 /// Что на игроке из вещей, дающих атрибуты: рука, вторая рука, броня.
@@ -2776,7 +2782,7 @@ pub(super) async fn struck(stream: &mut Outgoing<'_>, shared: &Shared, player: &
 fn observe_oxygen(shared: &Shared, player: &mut PlayerState, submerged: bool) {
     if submerged && !player.net.oxygen_seen && shared.catalog().changed_rules() {
         player.net.oxygen_seen = true;
-        player.attrs_touched.push((ATTRIBUTE_OXYGEN, *shared.ticks.borrow() + 1));
+        player.attrs_touched.push((ATTRIBUTE_OXYGEN, player.attr_due(*shared.ticks.borrow() + 1)));
     }
 }
 
@@ -3357,6 +3363,20 @@ mod tests {
             }
             assert_eq!(due,if profile==Profile::Preview26_3 {vec![16,58,100,140]} else {vec![17,58,100,141]});
         }
+    }
+
+    #[test]
+    fn attribute_phase_follows_the_spawn_tick_in_263_only() {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        // attr-respawn-even/odd-probe: возрождение +20 — рассылки 42, 52…; +21 — 41, 53…
+        for (spawn,want) in [(20,[42,52]),(21,[41,53])] {
+            let mut player=PlayerState::new_for_catalog([76;16],"AttrSpawn".into(),None,None,0x7f,76,(0.5,64.0,0.5),Catalog::new(Profile::Preview26_3));
+            player.restart_attrs_tracking(spawn);
+            assert_eq!([player.attr_due(41),player.attr_due(52)],want);
+        }
+        let mut player=PlayerState::new_for_catalog([77;16],"AttrOld".into(),None,None,0x7f,77,(0.5,64.0,0.5),Catalog::new(Profile::Java26_1_2));
+        player.restart_attrs_tracking(21);
+        assert_eq!(player.attr_due(52),52);
     }
 
     #[test]

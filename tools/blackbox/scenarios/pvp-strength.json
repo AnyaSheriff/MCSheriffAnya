@@ -1,5 +1,6 @@
 {
  "name": "pvp-strength",
+ "attr_phase": true,
  "about": "Сила II у нападающего: эффект и его пакеты, +6 к урону меча (7 → 13).",
  "second": true,
  "track_self": true,

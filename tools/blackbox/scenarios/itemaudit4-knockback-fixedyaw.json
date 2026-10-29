@@ -1,5 +1,6 @@
 {
   "name": "itemaudit4-knockback-fixedyaw",
+  "attr_phase": true,
   "about": "Read-only diagnostic variant: same itemaudit4-knockback setup and actions, with explicit yaw 180° toward the cow at -Z to remove startup-orientation ambiguity.",
   "blocks": [],
   "setup": [

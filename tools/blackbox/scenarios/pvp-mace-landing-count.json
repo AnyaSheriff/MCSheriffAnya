@@ -1,5 +1,6 @@
 {
   "name": "pvp-mace-landing-count",
+  "attr_phase": true,
   "about": "[проверить] Smash landing particle count at several hit heights. Records separate hits after cooldown; distinguishes height/count formulas from the two known points (105 and cap 200).",
   "second": true,
   "track_self": true,

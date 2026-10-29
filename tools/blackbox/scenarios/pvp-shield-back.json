@@ -1,5 +1,6 @@
 {
  "name": "pvp-shield-back",
+ "attr_phase": true,
  "about": "Щит жертвы держит удар: что получает нападающий (отдача, звуки) — замер.",
  "second": true,
  "track_self": true,

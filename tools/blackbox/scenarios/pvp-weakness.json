@@ -1,5 +1,6 @@
 {
  "name": "pvp-weakness",
+ "attr_phase": true,
  "about": "Слабость I у нападающего (3 с): −4 к урону меча (7 → 3), снятие эффекта по сроку.",
  "second": true,
  "track_self": true,

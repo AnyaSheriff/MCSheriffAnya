@@ -171,7 +171,7 @@ async fn self_command_sends_abilities_after_state_was_applied_before_queued_orde
     handle_client_packet(&PacketInfo { id: SERVERBOUND_CHAT_COMMAND, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }, &mut p, &shared);
     assert_eq!(p.game_mode, 1);
     let orders = shared.players.lock().unwrap().take_orders(&p.uuid);
-    assert!(matches!(orders.as_slice(), [Order::GameMode { mode: 1 }]));
+    assert!(matches!(orders.as_slice(), [Order::GameMode { mode: 1, .. }]));
     let mut out = Outgoing::capture();
     vitals::game_mode_order(&mut out, &mut p, 1, 10).await.unwrap();
     let mut bytes = out.queued();

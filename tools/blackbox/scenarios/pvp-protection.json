@@ -1,5 +1,6 @@
 {
  "name": "pvp-protection",
+ "attr_phase": true,
  "about": "Броня с защитой IV на каждой детали: EPF 16 → снижение ещё на 64 % от урона после брони; износ брони.",
  "second": true,
  "track_self": true,

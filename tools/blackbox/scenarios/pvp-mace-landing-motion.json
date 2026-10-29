@@ -1,5 +1,6 @@
 {
   "name": "pvp-mace-landing-motion",
+  "attr_phase": true,
   "about": "[проверить] Follow-up to the fresh 26.1.2 pvp-mace-landing-count recording. Client movement packets and client Y/velocity distinguish pre-landing distance, the last movement segment, smash reset and packet phase. Also covers intermediate hit heights. Do not add timing tolerances before comparing repeated vanilla recordings. Reset attacker effects, safe-fall distance and gravity to remove hidden setup-state ambiguity.",
   "second": true,
   "track_self": true,
