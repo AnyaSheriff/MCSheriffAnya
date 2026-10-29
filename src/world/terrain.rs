@@ -678,6 +678,18 @@ impl CaveGrid {
     /// `depth` — сколько камня над местом: у самой поверхности залы
     /// сходят на нет, остаются только узкие ходы.
     pub fn hollow(&self, x: i32, y: i32, z: i32, depth: i32) -> bool {
+        hollow_by(self.values(x, y, z), y, depth, self.preview)
+    }
+
+    /// Вики, World generation: полости взаимодействуют с плотностью склона.
+    /// У опыта A6 прежний независимый порог выедал тело гор после роутера.
+    fn hollow_protected(&self, x: i32, y: i32, z: i32, depth: i32, protection: f64) -> bool {
+        let mut values = self.values(x, y, z);
+        values[2] -= protection;
+        hollow_by(values, y, depth, self.preview)
+    }
+
+    fn values(&self, x: i32, y: i32, z: i32) -> [f64; 3] {
         let (cx, cz) = ((x - self.x0) / CELL_WIDTH, (z - self.z0) / CELL_WIDTH);
         let layer = (y - self.y0) / CELL_HEIGHT;
         let tx = ((x - self.x0) % CELL_WIDTH) as f64 / CELL_WIDTH as f64;
@@ -706,7 +718,7 @@ impl CaveGrid {
             *value = lerp(bottom, top, ty);
         }
 
-        hollow_by(values, y, depth, self.preview)
+        values
     }
 }
 
@@ -826,6 +838,8 @@ const RIVER_BANK: f64 = 300.0;
 
 /// Рельеф мира: набор шумов от одного семени.
 pub struct Terrain {
+    /// Опыт A6: включается только MCSA_A6_DENSITY=1, приёмка не пройдена [проверить].
+    density_router: Option<Box<terrain_density::Router>>,
     /// Фазы климата 26.3; старые профили оставляют прежние шумы.
     climate_fields: Option<Box<climate_noise::ClimateFields>>,
     continent: Noise,
@@ -866,12 +880,15 @@ mod census;
 mod distribution;
 #[path = "climate_noise.rs"]
 mod climate_noise;
+#[path = "terrain_density.rs"]
+mod terrain_density;
 
 impl Terrain {
     /// Заводит рельеф от семени мира. Каждому шуму достаётся своё семя, иначе
     /// климат и рельеф повторяли бы друг друга.
     pub fn new(seed: i64, style: Style) -> Terrain {
         Terrain {
+            density_router: None,
             climate_fields: None,
             continent: Noise::new(seed),
             erosion: Noise::new(seed ^ 0x51_7C_C1_B7),
@@ -897,6 +914,9 @@ impl Terrain {
     /// Включает генерацию 26.2/26.3 (только профиль Preview26_3).
     pub fn with_preview(mut self, preview: bool) -> Terrain {
         self.preview = preview;
+        self.density_router = (preview && self.style == Style::Vanilla
+            && std::env::var("MCSA_A6_DENSITY").is_ok_and(|v| v == "1"))
+            .then(|| Box::new(terrain_density::Router::new(self.seed)));
         self.climate_fields = (preview && self.style == Style::Vanilla).then(|| Box::new(climate_noise::ClimateFields::new(self.seed)));
         self.bands = if preview { preview_terracotta_bands(self.seed) } else { terracotta_bands(self.seed) };
         self
@@ -952,9 +972,11 @@ impl Terrain {
     }
 
     /// Ключ кэшей генерации: профиль влияет на высоту и декорации даже
-    /// при одинаковом семени. Стиль занимает младший бит, 26.3 — следующий.
+    /// при одинаковом семени. Стиль занимает младший бит, 26.3 — следующий,
+    /// опытная плотность A6 — третий.
     pub fn generation_profile(&self) -> u8 {
         u8::from(self.style == Style::Vanilla) | (u8::from(self.preview) << 1)
+            | (u8::from(self.density_router.is_some()) << 2)
     }
 
     /// Семя мира, от которого заведены шумы.
@@ -1302,6 +1324,10 @@ impl Terrain {
         let z0 = z_from.div_euclid(CELL_WIDTH) * CELL_WIDTH;
         let across_x = (x_to.div_euclid(CELL_WIDTH) * CELL_WIDTH - x0) / CELL_WIDTH + 2;
         let across_z = (z_to.div_euclid(CELL_WIDTH) * CELL_WIDTH - z0) / CELL_WIDTH + 2;
+
+        if let Some(router) = &self.density_router {
+            return router.grid(x0, z0, across_x, across_z, |x, z| self.climate_at(x, z));
+        }
 
         let mut reliefs = Vec::with_capacity((across_x * across_z) as usize);
 
@@ -1712,7 +1738,13 @@ impl Terrain {
 
         // Пещеры проедают камень, но не подходят к самой поверхности и не
         // трогают дно мира.
-        if depth > CAVE_ROOF && y > BOTTOM + 5 && caves.hollow(x, y, z, depth) {
+        let hollow = || {
+            if self.density_router.is_some() {
+                caves.hollow_protected(x, y, z, depth,
+                    terrain_density::cave_surface_protection(&column.climate, y, depth))
+            } else { caves.hollow(x, y, z, depth) }
+        };
+        if depth > CAVE_ROOF && y > BOTTOM + 5 && hollow() {
             return match self.aquifer_at(x, y, z) {
                 Fluid::Air => AIR,
                 Fluid::Water => common().water,
@@ -2020,14 +2052,16 @@ impl Terrain {
 
         let (x, z) = (chunk_x * 16 + 8, chunk_z * 16 + 8);
         let climate = self.climate_at(x, z);
-        let surface = match self.style {
+        let surface = if let Some(router) = &self.density_router {
+            router.chunk_surface_level(&climate, x, z)
+        } else { match self.style {
             Style::Vanilla => {
                 let relief = self.relief_at(&climate, x, z);
 
                 relief.surface.min(relief.cap).floor() as i32
             }
             Style::Smooth => self.smooth_height(&climate, x, z),
-        };
+        } };
 
         SURFACES.with(|surfaces| {
             let mut surfaces = surfaces.borrow_mut();
@@ -3266,7 +3300,10 @@ impl Terrain {
             // Высокие кряжи оголяются: на них держится только камень.
             // Глубже земли — камень; снег незачем проверять для каждого блока.
             _ if depth > 3 => None,
-            _ if height > SEA + 50 && !snowy() => None,
+            // Вики, World generation: «first few layers are dirt».
+            // Сам Y не оголяет лес: этот старый срез снимал почву у соседей
+            // вишнёвой рощи после подъёма поверхности. По умолчанию прежний.
+            _ if self.density_router.is_none() && height > SEA + 50 && !snowy() => None,
             _ => match depth {
                 0 => Some(grass),
                 1..=3 => Some("dirt"),
