@@ -2688,6 +2688,28 @@ async fn orbs_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Play
     Ok(())
 }
 
+/// Мирная сложность в выживании и в творческом одинаково: сытость +1 раз
+/// в 10 тактов, здоровье и насыщение +1 раз в 20 (насыщение не выше
+/// сытости). Чёрный ящик 26.3, peaceful-saturation-probe: в творческом с
+/// нуля сытость 1, 2, 3… через каждые 10 тактов, насыщение 1, 2… через 20,
+/// лечение в тот же такт; pvp-thorns: у ударившего после мирной паузы
+/// между сценариями насыщение 19–20, у нас было 5. Лечение и насыщение
+/// при выключенном natural_health_regeneration стоят (прежняя запись
+/// pvp-thorns263); сытость — [проверить].
+fn peaceful_tick(shared: &Shared, player: &mut PlayerState) {
+    if player.vit.food < 20 && player.vit.age.is_multiple_of(10) {
+        player.vit.food += 1;
+    }
+
+    if shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed) && player.vit.age.is_multiple_of(20) {
+        if player.vit.health < player.vit.max_health {
+            player.vit.heal(1.0);
+        }
+
+        player.vit.saturation = (player.vit.saturation + 1.0).min(player.vit.food as f32);
+    }
+}
+
 /// Творческий режим: тонуть не тонет, но бездна бьёт и здесь.
 async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     player.vit.age = player.vit.age.wrapping_add(1);
@@ -2696,13 +2718,8 @@ async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
     // на easy сохраняет5, пока прежнее ядро ошибочно накапливало8.
     // С выключенной natural_health_regeneration значение сохраняется.
     // [проверить] Фаза20 тактов вне этой записи.
-    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
-        && difficulty == survival::PEACEFUL
-        && shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)
-        && player.vit.age.is_multiple_of(20)
-    {
-        player.vit.heal(1.0);
-        player.vit.saturation = (player.vit.saturation + 1.0).min(player.vit.food as f32);
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 && difficulty == survival::PEACEFUL {
+        peaceful_tick(shared, player);
     }
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
     if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
@@ -2916,13 +2933,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     // Мирная сложность лечит сама и кормит (вики, Difficulty: «Peaceful»).
     if difficulty == survival::PEACEFUL {
-        if player.vit.health < survival::MAX_HEALTH && player.vit.age.is_multiple_of(20) {
-            player.vit.heal(1.0);
-        }
-
-        if player.vit.food < 20 && player.vit.age.is_multiple_of(10) {
-            player.vit.food += 1;
-        }
+        peaceful_tick(shared, player);
     }
 
     effects_and_eating_tick(stream, shared, player, difficulty).await?;

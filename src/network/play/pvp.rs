@@ -239,6 +239,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         player.vit.fall = 0.0;
         player.vit.smash_landing = true;
         player.vit.smash_forgives = data.level("wind_burst") > 0;
+        player.vit.wind_lift = player.vit.smash_forgives;
         player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 

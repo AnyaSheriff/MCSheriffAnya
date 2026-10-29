@@ -1050,6 +1050,12 @@ pub struct Vitals {
     /// Защита после Wind Burst: pvp-mace-wind-burst, падение с 9 блоков
     /// без урона. [проверить] Предел защиты ветра вне записанной траектории.
     pub smash_forgives: bool,
+    /// Подброшен взрывом ветра: путь вниз до начала подъёма прощается.
+    /// Вики, Fall damage: «Being hit by a wind charge resets an entity's
+    /// fall distance». Чёрный ящик 26.3, pvp-mace-wind-burst: шаг вниз,
+    /// пришедший после удара до подброса, у оригинала не попадает в высоту
+    /// приземления (частиц 90, у нас было 100).
+    pub wind_lift: bool,
 
     /// Высота падения до последнего шага приземления (для частиц), 0 — не
     /// приземлялся в этом шаге.
@@ -1186,6 +1192,7 @@ impl Vitals {
             fall: 0.0,
             smash_landing: false,
             smash_forgives: false,
+            wind_lift: false,
             landed_from: 0.0,
             landed_total: 0.0,
             dead: false,
@@ -1628,8 +1635,13 @@ impl Vitals {
             self.fall = 0.0;
             self.smash_landing = false;
             self.smash_forgives = false;
+            self.wind_lift = false;
 
             return None;
+        }
+
+        if dy > 0.0 && std::mem::take(&mut self.wind_lift) {
+            self.fall = 0.0;
         }
 
         let before = self.fall;
@@ -1649,6 +1661,7 @@ impl Vitals {
         self.landed_from = before;
         self.landed_total = distance;
         self.smash_landing = false;
+        self.wind_lift = false;
 
         if std::mem::take(&mut self.smash_forgives) {
             return None;
@@ -1878,6 +1891,22 @@ mod tests {
         assert_eq!(v.land(0.0, true, false, 1.0), Some(5.0));
         // после приземления счёт с нуля
         assert_eq!(v.land(-0.1, true, false, 1.0), None);
+    }
+
+    #[test]
+    fn a_wind_lift_drops_the_fall_gathered_before_rising() {
+        // pvp-mace-wind-burst: шаг вниз после удара до подброса не входит в
+        // высоту приземления — частиц 90 (9,65 блока), а не 100.
+        let mut v = Vitals::new();
+
+        v.wind_lift = true;
+        assert_eq!(v.land_java(-0.585, false, false, 1.0), None);
+        assert_eq!(v.land_java(1.2, false, false, 1.0), None);
+        assert!(!v.wind_lift);
+        assert_eq!(v.fall, 0.0);
+        let _ = v.land_java(-9.65, false, false, 1.0);
+        let _ = v.land_java(-0.4, true, false, 1.0);
+        assert_eq!(landing_particles(v.landed_from as f32), 90);
     }
 
     #[test]

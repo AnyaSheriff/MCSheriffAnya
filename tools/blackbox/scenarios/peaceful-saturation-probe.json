@@ -1,0 +1,77 @@
+{
+ "name": "peaceful-saturation-probe",
+ "about": "Насыщение на мирной сложности: в творческом и в выживании, с natural_health_regeneration. Видно по Set Health после /damage.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "track_second": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration true",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot2)",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "effect give $(bot2) minecraft:hunger 4 255",
+  "!wait 90",
+  "effect clear $(bot2)",
+  "!wait 5"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "damage $(bot2) 1"
+  },
+  {
+   "after": 2,
+   "cmd": "difficulty peaceful"
+  },
+  {
+   "after": 1,
+   "cmd": "gamemode creative $(bot2)"
+  },
+  {
+   "after": 120,
+   "cmd": "gamemode survival $(bot2)"
+  },
+  {
+   "after": 1,
+   "cmd": "difficulty normal"
+  },
+  {
+   "after": 1,
+   "cmd": "effect give $(bot2) minecraft:hunger 4 255"
+  },
+  {
+   "after": 90,
+   "cmd": "effect clear $(bot2)"
+  },
+  {
+   "after": 2,
+   "cmd": "damage $(bot2) 1"
+  },
+  {
+   "after": 2,
+   "cmd": "difficulty peaceful"
+  },
+  {
+   "after": 120,
+   "cmd": "difficulty normal"
+  }
+ ],
+ "record_ticks": 130,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot2)",
+  "effect clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

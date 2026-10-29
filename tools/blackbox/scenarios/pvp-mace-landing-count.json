@@ -116,5 +116,15 @@
     "fill $(-2,-1,-2) $(7,12,7) air"
   ],
   "item_components": true,
-  "track_second_velocity": true
+  "track_second_velocity": true,
+  "random": [
+    {
+      "type": "mask",
+      "name": "насыщение ударившего после паузы",
+      "kind": "sv",
+      "pattern": "(b: Set Health health=[0-9.H]+ food=\\d+ saturation=)\\d+",
+      "replace": "$1S",
+      "why": "насыщение второго робота копится в мирной паузе между сценариями (+1 раз в 20 тактов, peaceful-saturation-probe) и зависит от длины паузы: у оригинала 17–20 от прогона к прогону, у нас 16–20"
+    }
+  ]
 }

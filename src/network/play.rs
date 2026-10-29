@@ -8472,6 +8472,7 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
         player.vit.fall = 0.0;
         player.vit.smash_landing = true;
         player.vit.smash_forgives = data.level("wind_burst") > 0;
+        player.vit.wind_lift = player.vit.smash_forgives;
         player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 
@@ -12233,6 +12234,10 @@ impl PlayerState {
             || saved.shoulders != self.shoulders
             || saved.vitals.health != self.vit.health
             || saved.vitals.food != self.vit.food
+            // Насыщение тоже: при быстром перезаходе новый вход читает файл
+            // раньше записи при выходе (pvp-thorns 26.3: после мирной паузы
+            // у оригинала насыщение 19–20, у нас с диска приходило 5).
+            || saved.vitals.saturation != self.vit.saturation
     }
 
     /// Записывает положение на диск, если оно отличается от того, что там уже
