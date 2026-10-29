@@ -160,6 +160,10 @@ const key = (e) => {
 
 const load = (file) => {
   const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!Array.isArray(saved.events) || saved.events.some(e => !e || typeof e.kind !== 'string'
+      || !Number.isFinite(e.tick ?? e.ms))) {
+    throw new Error(`Некорректные события или время записи: ${file}`);
+  }
   // Окно записи (`window` от bot.js): что пришло после такта `last`, робот
   // слушал лишь затем, чтобы не потерять сам последний такт. Такое
   // отбрасывается у обеих сторон одинаково — по такту сервера от начала.
@@ -207,6 +211,13 @@ const load = (file) => {
 };
 
 const [a, b] = sides.map(s => load(s.file));
+// Одни команды робота (включая continuous) не доказывают ответ сервера.
+// Пустое окно или события только до первого действия нельзя считать PASS.
+for (const [i, events] of [a, b].entries()) {
+  if (!events.some(e => e.kind !== 'do' && e.kind !== 'press')) {
+    throw new Error(`Нет сравниваемых ответов сервера: ${sides[i].file}`);
+  }
+}
 
 // Правила случайного (`random` в сценарии). Каждое — объект с `type`, `name`
 // (как оно подписано в отчёте) и `why` (почему это случайно у оригинала:
@@ -368,6 +379,10 @@ for (const [side, list] of [['a', a], ['b', b]]) {
   }
 }
 const warnings = applyRandom(a, b);
+const actions = events => events.filter(e => e.kind === 'do' || e.kind === 'press').map(e => e.text);
+if (JSON.stringify(actions(a)) !== JSON.stringify(actions(b))) {
+  warnings.push('Последовательности действий робота различаются');
+}
 const steps = Math.max(...a.map(e => e.step), ...b.map(e => e.step)) + 1;
 const lines = [];
 let same = 0, extra = 0, missing = 0, shifted = 0;
@@ -456,9 +471,12 @@ const out = lines.join('\n');
 console.log(out);
 const stamp = new Date().toISOString().slice(0, 16).replace('T', '-').replace(':', '');
 fs.writeFileSync(path.join(HERE, 'reports', `${name}-${stamp}.md`), out + '\n');
+// Сохраняем полный отчёт и прежние правила сравнения, но не выдаём ошибку за успех.
+// Заметки о порядке внутри такта остаются отдельными замечаниями, как раньше.
+process.exitCode = shifted || missing || extra || warnings.length || same === 0 ? 1 : 0;
 };
 
 (async () => {
   if (process.argv.includes('--record')) await record();
   compare();
-})();
+})().catch(error => { console.error(error.message); process.exitCode = 1; });

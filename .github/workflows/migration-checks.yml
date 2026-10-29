@@ -35,12 +35,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Prepare logs and Python dependencies
         run: |
           mkdir -p "$RUNNER_TEMP/migration-checks"
           python -m pip install -r tools/measure/genaudit_263_requirements.txt 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-dependencies.log"
       - name: Check measurement tools
         run: |
+          node --test tools/blackbox/*.test.js 2>&1 | tee "$RUNNER_TEMP/migration-checks/node-blackbox-tests.log"
           python -m unittest discover -s tools/measure -p test_genaudit_263_end_edges.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-end-edges.log"
           python -m unittest discover -s tools/measure -p test_ocean_263.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-ocean.log"
       - name: Build plugin examples for workspace tests

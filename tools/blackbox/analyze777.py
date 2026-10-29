@@ -209,16 +209,25 @@ def main():
         scenario=json.loads((Path(__file__).parent/'scenarios'/f"{row['scenario']}.json").read_text())
         outputs=[path.with_name(path.stem+'-events.json') for path in paths]
         errors=[project_record(json.loads(path.read_text()),decoder,scenario,data,out,sounds) for path,out in zip(paths,outputs)]
-        result=subprocess.run(['node',str(Path(__file__).parent/'compare.js'),row['scenario'],'--files',*map(str,outputs)],capture_output=True,text=True,check=True)
+        result=subprocess.run(['node',str(Path(__file__).parent/'compare.js'),row['scenario'],'--files',*map(str,outputs)],capture_output=True,text=True,check=False)
         (a.folder/f"{row['scenario']}-comparison.txt").write_text(result.stdout)
+        (a.folder/f"{row['scenario']}-comparison.stderr.txt").write_text(result.stderr)
         counts=re.search(r'Совпало: (\d+). Сдвинуто по тактам: (\d+). Нет у нас: (\d+). Лишнее у нас: (\d+).',result.stdout)
-        assert counts,'comparison summary missing'
+        row['comparison_exit_code']=result.returncode
+        if not counts:
+            # Не оставляем старый PASS, если повторная сверка отвергла запись.
+            for field in ('comparison_counts','warnings','ordering_notes'):row.pop(field,None)
+            row['decode_errors']=errors
+            row['status']='analysis-failed'
+            row['reason']='comparison summary missing: '+result.stderr.strip()
+            print(row['scenario'],row['status'],row['reason'],flush=True)
+            continue
         row['comparison_counts']=list(map(int,counts.groups()));row['decode_errors']=errors
         # Итог compare.js считает сдвиги/пропуски/лишние; заметки о порядке
         # оставляем отдельно, как в исходном отчёте, не меняя прежний вердикт775.
         row['ordering_notes']=result.stdout.count('порядок в такте другой')
         row['warnings']=[line for line in result.stdout.splitlines() if line.startswith('Внимание:')]
-        bad=any(row['comparison_counts'][1:]) or any(errors) or bool(row['warnings'])
+        bad=result.returncode != 0 or any(row['comparison_counts'][1:]) or any(errors) or bool(row['warnings'])
         row['status']='mismatch-open' if bad else 'match'
         row['reason']='original bot.js handlers and compare.js; '+str(row['comparison_counts'])+f'; decoder gaps {[len(v) for v in errors]}'
         print(row['scenario'],row['status'],row['reason'],flush=True)

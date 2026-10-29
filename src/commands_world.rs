@@ -1830,7 +1830,7 @@ fn chunk_pos(x: i32, z: i32) -> String {
 
 fn forceload(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let dimension = crate::commands::dimension_of(source, shared);
-    let dimension_arg = s(format!("minecraft:{}", dimension.name()));
+    let dimension_arg = s(dimension.name());
     let origin = crate::commands::origin_of(source, shared);
     let column = |x: &str, z: &str| -> Option<(i32, i32)> { Some((block_coordinate(x, origin.0)?.div_euclid(16), block_coordinate(z, origin.2)?.div_euclid(16))) };
     let mut forced = shared.world_cmd.forced.lock().expect("удержанные чанки захвачены другим потоком");

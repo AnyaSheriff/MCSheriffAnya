@@ -298,13 +298,57 @@ class LateFailureTests(unittest.TestCase):
             protocol=root/'protocol.json'
             ci.write_json(protocol,{'types':{},'play':{'toClient':{'types':{}},'toServer':{'types':{}}}})
             ci.write_json(root/'entities.json',[])
-            result=Mock(stdout='Совпало: 6. Сдвинуто по тактам: 0. Нет у нас: 0. Лишнее у нас: 0.')
+            result=Mock(stdout='Совпало: 6. Сдвинуто по тактам: 0. Нет у нас: 0. Лишнее у нас: 0.',stderr='',returncode=0)
             with patch('sys.argv',['analyze777',str(root),'--protocol',str(protocol)]), patch.object(analyze777,'project_record',return_value=[]), patch.object(analyze777.subprocess,'run',return_value=result):
                 analyze777.main()
             row=json.loads((root/'comparison-summary.json').read_text())[0]
             self.assertEqual(row['status'],'match')
             self.assertEqual(row['record_status'],'failed')
             self.assertEqual(row['record_error'],'late client/cleanup failure')
+
+    def test_analyzer_keeps_mismatch_evidence_and_continues_to_next_case(self):
+        import analyze777
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            names=['pvp-fist','pvp-crit']
+            ci.write_json(root/'summary.json',[{'scenario':name,'status':'recorded'} for name in names])
+            for name in names:
+                for side in ('official','ours'):ci.write_json(root/f'{name}-{side}.json',{})
+            protocol=root/'protocol.json'
+            ci.write_json(protocol,{'types':{},'play':{'toClient':{'types':{}},'toServer':{'types':{}}}})
+            ci.write_json(root/'entities.json',[])
+            results=[
+                Mock(stdout='Совпало: 5. Сдвинуто по тактам: 0. Нет у нас: 1. Лишнее у нас: 0.',stderr='diagnostic',returncode=1),
+                Mock(stdout='Совпало: 6. Сдвинуто по тактам: 0. Нет у нас: 0. Лишнее у нас: 0.',stderr='',returncode=0),
+            ]
+            with patch('sys.argv',['analyze777',str(root),'--protocol',str(protocol)]), patch.object(analyze777,'project_record',return_value=[]), patch.object(analyze777.subprocess,'run',side_effect=results):
+                analyze777.main()
+            rows=json.loads((root/'comparison-summary.json').read_text())
+            self.assertEqual([row['status'] for row in rows],['mismatch-open','match'])
+            self.assertEqual(rows[0]['comparison_counts'],[5,0,1,0])
+            self.assertEqual((root/'pvp-fist-comparison.txt').read_text(),results[0].stdout)
+            self.assertEqual((root/'pvp-fist-comparison.stderr.txt').read_text(),'diagnostic')
+
+    def test_analyzer_replaces_stale_pass_when_comparator_rejects_recording(self):
+        import analyze777
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            old={'scenario':'pvp-fist','status':'match','comparison_counts':[6,0,0,0],'warnings':[],'ordering_notes':0}
+            ci.write_json(root/'summary.json',[old])
+            ci.write_json(root/'comparison-summary.json',[old])
+            for side in ('official','ours'):ci.write_json(root/f'pvp-fist-{side}.json',{})
+            protocol=root/'protocol.json'
+            ci.write_json(protocol,{'types':{},'play':{'toClient':{'types':{}},'toServer':{'types':{}}}})
+            ci.write_json(root/'entities.json',[])
+            result=Mock(stdout='',stderr='Нет сравниваемых ответов сервера',returncode=1)
+            with patch('sys.argv',['analyze777',str(root),'--protocol',str(protocol)]), patch.object(analyze777,'project_record',return_value=[]), patch.object(analyze777.subprocess,'run',return_value=result):
+                analyze777.main()
+            for file in ('summary.json','comparison-summary.json'):
+                row=json.loads((root/file).read_text())[0]
+                self.assertEqual(row['status'],'analysis-failed')
+                self.assertEqual(row['comparison_exit_code'],1)
+                self.assertNotIn('comparison_counts',row)
+                self.assertIn(result.stderr,row['reason'])
 
     def test_journal_failure_and_missing_identity_cannot_skip_held_servers(self):
         import record777

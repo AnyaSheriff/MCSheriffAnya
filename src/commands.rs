@@ -4277,6 +4277,43 @@ mod tests {
         assert_eq!(second.component, fail("commands.setblock.failed", &[]).component);
     }
 
+    #[test]
+    fn forceload_feedback_uses_one_namespace_in_every_dimension() {
+        use crate::commands_world::{Arg, fail, s, tr};
+        let shared = server();
+
+        for (dimension, name) in [
+            (Dimension::Overworld, "minecraft:overworld"),
+            (Dimension::Nether, "minecraft:the_nether"),
+            (Dimension::End, "minecraft:the_end"),
+        ] {
+            let source = Source::Block { x: 0, y: 5, z: 0, dimension, name: "@".to_string() };
+            // server() даёт плоские миры в памяти: add не запускает обычную генерацию.
+            let cases = [
+                ("forceload query", tr("commands.forceload.added.none", &[s(name)])),
+                ("forceload query 0 0", fail("commands.forceload.query.failure", &[s("[0, 0]"), s(name)])),
+                ("forceload add 0 0", tr("commands.forceload.added.single", &[s("[0, 0]"), s(name)])),
+                ("forceload query", tr("commands.forceload.list.single", &[s(name), s("[0, 0]")])),
+                ("forceload query 0 0", tr("commands.forceload.query.success", &[s("[0, 0]"), s(name)])),
+                ("forceload remove 0 0", tr("commands.forceload.removed.single", &[s("[0, 0]"), s(name)])),
+                ("forceload add 0 0 16 0", tr("commands.forceload.added.multiple", &[Arg::Int(2), s(name), s("[0, 0]"), s("[1, 0]")])),
+                ("forceload query", tr("commands.forceload.list.multiple", &[Arg::Int(2), s(name), s("[0, 0], [1, 0]")])),
+                ("forceload remove 0 0 16 0", tr("commands.forceload.removed.multiple", &[Arg::Int(2), s(name), s("[0, 0]"), s("[1, 0]")])),
+                ("forceload add 0 0", tr("commands.forceload.added.single", &[s("[0, 0]"), s(name)])),
+                ("forceload remove all", tr("commands.forceload.removed.all", &[s(name)])),
+                ("forceload query", tr("commands.forceload.added.none", &[s(name)])),
+            ];
+
+            for (command, expected) in cases {
+                let answer = run(command, &source, &shared);
+                assert_eq!(answer.reply, expected.reply, "{name}: {command}");
+                assert_eq!(answer.component, expected.component, "{name}: {command}");
+                assert_eq!(answer.result, expected.result, "{name}: {command}");
+            }
+            assert!(crate::commands_world::forced_chunks(&shared, dimension).is_empty());
+        }
+    }
+
     /// cmdblock-repeat.md:9–42: по одному Disguised Chat каждому игроку,
     /// без дублирующего System Chat и без ответа в LastOutput.
     #[test]

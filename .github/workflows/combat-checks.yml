@@ -53,6 +53,7 @@ jobs:
       - name: Check orchestration without Minecraft
         run: |
           mkdir -p "$RUNNER_TEMP/combat-output"
+          node --test tools/blackbox/*.test.js 2>&1 | tee "$RUNNER_TEMP/combat-output/node-blackbox-tests.log"
           python -m unittest discover -s tools/blackbox -p test_combat_ci.py -v 2>&1 | tee "$RUNNER_TEMP/combat-output/orchestration-tests.log"
           python -m unittest discover -s tools/blackbox -p test_record777.py -v 2>&1 | tee "$RUNNER_TEMP/combat-output/recorder-tests.log"
           node --check tools/blackbox/replay777.js 2>&1 | tee "$RUNNER_TEMP/combat-output/node-replay-syntax.log"
