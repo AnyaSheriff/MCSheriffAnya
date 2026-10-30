@@ -42,10 +42,18 @@ class RecordingSequenceTests(unittest.TestCase):
             (folder/'probe-official.json').write_text(json.dumps(self.raw(start=-100)))
             def capture(*call,**kwargs):
                 calls.append((call[0],call[7],kwargs['reference_sha256']))
-                raw=self.raw();call[4].write_text(json.dumps(raw));return raw
+                self.assertFalse(call[4].exists())
+                # Реальный Recorder хранит пары entities как tuple; JSON даёт list.
+                raw=self.raw(initial=[{'entity':1,'entities':[(42,30)]}],commands=[{'command':'before cleanup'}])
+                call[4].write_text(json.dumps(raw))
+                # Как в record: cleanup дополняет тот же список после JSONwrite.
+                raw['commands'].append({'command':'cleanup mutation'})
+                return raw
             with patch('record777.record',side_effect=capture):
                 run_scenario_sides(args,{'name':'probe'},[('official',None,1),('ours',None,2)],{},None)
             self.assertIsNone(calls[0][1]);self.assertEqual(calls[1][1]['start'],10)
+            self.assertEqual(calls[1][1]['initial'][0]['entities'],[[42,30]])
+            self.assertEqual(calls[1][1]['commands'],[{'command':'before cleanup'}])
             self.assertEqual(calls[1][2],hashlib.sha256((folder/'probe-official.json').read_bytes()).hexdigest())
 
     def test_failed_official_with_partial_file_never_starts_ours(self):
@@ -53,10 +61,22 @@ class RecordingSequenceTests(unittest.TestCase):
             folder=Path(directory);args=self.args(folder);calls=[]
             (folder/'probe-official.json').write_text(json.dumps(self.raw(start=-100)))
             def fail(*call,**kwargs):
-                calls.append(call[0]);call[4].write_text(json.dumps(self.raw()))
+                calls.append(call[0]);self.assertFalse(call[4].exists())
+                call[4].write_text(json.dumps(self.raw()))
                 raise RuntimeError('late official cleanup failure')
             with patch('record777.record',side_effect=fail):
                 with self.assertRaisesRegex(RuntimeError,'late official cleanup'):
+                    run_scenario_sides(args,{'name':'probe'},[('official',None,1),('ours',None,2)],{},None)
+            self.assertEqual(calls,[1])
+
+    def test_successful_return_with_invalid_fresh_json_does_not_start_ours(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder=Path(directory);args=self.args(folder);calls=[]
+            def capture(*call,**kwargs):
+                calls.append(call[0]);call[4].write_text(json.dumps(self.raw(clients=[])))
+                return self.raw()
+            with patch('record777.record',side_effect=capture):
+                with self.assertRaisesRegex(ValueError,'incomplete'):
                     run_scenario_sides(args,{'name':'probe'},[('official',None,1),('ours',None,2)],{},None)
             self.assertEqual(calls,[1])
 

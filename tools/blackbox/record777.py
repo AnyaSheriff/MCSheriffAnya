@@ -715,15 +715,15 @@ def run_scenario_sides(args, scenario, servers, protocol, speed_attribute, previ
         print(label, name, flush=True)
         # Старая запись не может выдать неудачную новую попытку за завершённую.
         if output.exists():output.unlink()
-        result = record(port, protocol, scenario, rcon, output, args.version,
+        record(port, protocol, scenario, rcon, output, args.version,
                         args.output/'sound-observations.json' if label=='official' and args.version==777 else None,
                         reference if label=='ours' and (not args.parallel or args.core_only) else None,
                         tracking_kind, speed_attribute, {row['id']:row['name'] for row in entities}, args.isolate_vitals,
                         reference_sha256=reference_sha256 if label=='ours' and (not args.parallel or args.core_only) else None)
         if label=='official' and not args.parallel:
-            reference = checked_reference(result, scenario, args.version, args.isolate_vitals)
-            if json.loads(output.read_text()) != reference:
-                raise ValueError('fresh official reference differs from completed recording')
+            # record уже завершил cleanup. Берём неизменный JSON, а не его
+            # возвращённые живые списки, которые cleanup мог дополнить.
+            reference = checked_reference(json.loads(output.read_text()), scenario, args.version, args.isolate_vitals)
             reference_sha256=hashlib.sha256(output.read_bytes()).hexdigest()
 
     if args.parallel:
