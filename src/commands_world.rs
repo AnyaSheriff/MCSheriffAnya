@@ -1714,10 +1714,10 @@ pub(crate) fn replace_equipment(named: &str, slot: u8, stack: Option<crate::inve
                     && crate::mob::equipment::set_slot(mob, slot, stack) { changed += 1; }
             }
             Target::Player { uuid, .. } => {
-                let order = if slot == 0 { Order::Hold { stack } } else {
-                    Order::SetSlot { slot: match slot { 1 => crate::inventory::OFFHAND, 2 => 8, 3 => 7, 4 => 6, _ => 5 }, stack }
-                };
-                shared.players.lock().expect("игроки").order(&uuid, order);
+                if slot == 0 { shared.order_mainhand(&uuid, stack); } else {
+                    shared.players.lock().expect("игроки").order(&uuid,
+                        Order::SetSlot { slot: match slot { 1 => crate::inventory::OFFHAND, 2 => 8, 3 => 7, 4 => 6, _ => 5 }, stack });
+                }
                 changed += 1;
             }
         }

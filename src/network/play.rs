@@ -132,6 +132,8 @@ mod review_tests;
 #[cfg(test)]
 mod custom_data_tests;
 #[cfg(test)]
+mod command_equipment_tests;
+#[cfg(test)]
 mod disconnect_tests;
 #[cfg(test)]
 mod save_conservation_tests;
@@ -3176,6 +3178,30 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
     players.set_held(&player.uuid, player.inventory.held());
     players.set_gear(&player.uuid, gear);
 
+}
+
+/// Чёрный ящик 41111789931: /item меняет собственный Slot и чужой
+/// Equipment в одном такте. Публикация обязана предшествовать отпусканию
+/// барьера; Attributes и перезарядку здесь не пересчитываем. [проверить]
+async fn apply_command_hold(
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState,
+    stack: Option<Stack>, completion: Option<Arc<crate::shared::CommandEquipmentCompletion>>,
+) -> io::Result<()> {
+    let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
+    player.inventory.set(slot, stack);
+    send_container_slot(stream, player, slot).await?;
+    publish_player(shared, player);
+    if let Some(completion) = completion { completion.finish(); }
+    Ok(())
+}
+
+/// Только командная рука прерывает ожидание ещё не готового входного пакета.
+/// Notify хранит сигнал между проверкой очереди и началом ожидания.
+async fn command_hold_wake(shared: &Shared, uuid: &[u8; 16], wake: &tokio::sync::Notify) {
+    loop {
+        if shared.players.lock().expect("игроки").has_command_hold(uuid) { return; }
+        wake.notified().await;
+    }
 }
 
 fn publish_ui(shared: &Shared, player: &PlayerState) {
@@ -6416,6 +6442,7 @@ async fn read_and_log_play_packets(
     let mut pending: Vec<Reaction> = Vec::new();
     let mut inbound = Inbound::start(stream.stream(), shared)?;
     let mut finished_tick = false;
+    let mut orders_woken = false;
     let mut pearl_orders = Vec::new();
     let wake = shared.players.lock().expect("список игроков захвачен другим потоком").waker(&player.uuid);
 
@@ -6429,7 +6456,9 @@ async fn read_and_log_play_packets(
         player.light_updates.step(stream, shared, player.dimension, light_center, player.view).await?;
         stream.flush().await?;
 
-        let ready = if std::mem::take(&mut finished_tick) { None } else { tokio::select! {
+        let ready = if std::mem::take(&mut finished_tick) { None } else if std::mem::take(&mut orders_woken) {
+            Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await)
+        } else { tokio::select! {
             biased;
             _ = control.cancelled() => return Ok(()),
             _ = ticks.changed() => None,
@@ -7050,6 +7079,10 @@ async fn read_and_log_play_packets(
                     send_container_slot(stream, player, slot).await?;
                 }
 
+                Order::CommandHold { stack, completion } => {
+                    apply_command_hold(stream, shared, player, stack, completion).await?;
+                }
+
                 Order::Clear => {
                     for slot in 0..inventory::SLOTS as i32 {
                         player.inventory.set(slot, None);
@@ -7208,6 +7241,10 @@ async fn read_and_log_play_packets(
                                     break;
                                 }
                                 _ = control.cancelled() => return Ok(()),
+                                _ = command_hold_wake(shared, &player.uuid, &wake) => {
+                                    orders_woken = true;
+                                    break;
+                                }
                                 _ = tokio::time::sleep_until(player.keep_alive.next_wake()) => {
                                     if player.keep_alive.expired() {
                                         return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
@@ -7223,7 +7260,7 @@ async fn read_and_log_play_packets(
                         }
                     }
 
-                    if finished_tick {
+                    if finished_tick || orders_woken {
                         inbound.queued = Some(Ok((packet, arrived, permit)));
                         break;
                     }
@@ -10934,7 +10971,10 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
         let length = usize::try_from(cursor.varint()?).ok()?;
         let data = cursor.bytes(length)?;
 
-        if kind == 0 && !crate::stackdata::read_custom_data(data, &mut extras) { return None; }
+        if kind == 0 {
+            if !crate::stackdata::read_custom_data(data, &mut extras) { return None; }
+            continue;
+        }
 
         if kind == 50 {
             if !crate::stackdata::read_bundle_component(data, &mut extras) { return None; }

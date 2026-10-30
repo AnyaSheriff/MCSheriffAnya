@@ -216,6 +216,8 @@ pub enum Order {
     /// Положить в основную руку (выбранную ячейку панели) это — или
     /// опустошить её: `item replace entity <игрок> weapon.mainhand`.
     Hold { stack: Option<crate::inventory::Stack> },
+    /// 26.3 /item: до снимка такта нужна опубликованная рука владельца.
+    CommandHold { stack: Option<crate::inventory::Stack>, completion: Option<std::sync::Arc<crate::shared::CommandEquipmentCompletion>> },
 
     /// Очистить инвентарь.
     Clear,
@@ -747,7 +749,7 @@ impl Players {
             };
             if let Some(reason) = reason { connection.disconnect(reason); }
         }
-        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. });
+        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. } | Order::CommandHold { .. });
 
         self.orders.entry(*uuid).or_default().push(order);
 
@@ -765,6 +767,9 @@ impl Players {
         self.wakes.entry(*uuid).or_default().clone()
     }
 
+    /// Этот будильник регистрирует Java Play loop; Bedrock его не использует.
+    pub(crate) fn has_java_waker(&self, uuid: &[u8; 16]) -> bool { self.wakes.contains_key(uuid) }
+
     /// Куда игрока перенесёт последнее ждущее поручение, если перенос в
     /// своём измерении и после него нет перехода в другое.
     pub fn pending_teleport(&self, uuid: &[u8; 16]) -> Option<(f64, f64, f64)> {
@@ -779,6 +784,10 @@ impl Players {
     /// Забирает поручения для этого игрока.
     pub fn take_orders(&mut self, uuid: &[u8; 16]) -> Vec<Order> {
         self.orders.remove(uuid).unwrap_or_default()
+    }
+
+    pub(crate) fn has_command_hold(&self, uuid: &[u8; 16]) -> bool {
+        self.orders.get(uuid).is_some_and(|orders| orders.iter().any(|order| matches!(order, Order::CommandHold { .. })))
     }
 
     /// Все, кто сейчас на сервере.

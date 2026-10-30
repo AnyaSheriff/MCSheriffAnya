@@ -1191,7 +1191,7 @@ impl BedrockWorld {
                     self.bag.inventory.set(slot, stack); self.bag.touched(&[slot]); packets.extend(self.bag.slot_packet(slot));
                 }
                 crate::players::Order::SetEnderSlot { .. } => {}
-                crate::players::Order::Hold { stack } => {
+                crate::players::Order::Hold { stack } | crate::players::Order::CommandHold { stack, .. } => {
                     let slot = crate::inventory::FIRST_HOTBAR + self.bag.inventory.selected();
 
                     self.bag.inventory.set(slot, stack);

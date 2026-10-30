@@ -19,6 +19,28 @@ use crate::world::World;
 /// Место в мире: x, y, z.
 pub type Place = (f64, f64, f64);
 
+/// Поручение /item удерживает границу только до публикации новой руки.
+/// Arc допускает клонирование Order; finish/Drop освобождают счётчик один раз.
+#[derive(Debug)]
+pub struct CommandEquipmentCompletion {
+    waiting: Arc<[std::sync::atomic::AtomicUsize; 2]>,
+    index: usize,
+    until: u64,
+    active: std::sync::atomic::AtomicBool,
+}
+
+impl CommandEquipmentCompletion {
+    pub(crate) fn finish(&self) {
+        if self.active.swap(false, Ordering::AcqRel) {
+            self.waiting[self.index].fetch_sub(1, Ordering::AcqRel);
+        }
+    }
+}
+
+impl Drop for CommandEquipmentCompletion {
+    fn drop(&mut self) { self.finish(); }
+}
+
 /// То, что видят все подключения сразу.
 ///
 /// **Порядок замков.** Если нужно держать несколько замков сразу, брать их
@@ -84,6 +106,7 @@ pub struct Shared {
     /// прочитанное сразу после сигнала начала `T`, ляжет в `T + 1`, и ждать
     /// его такту незачем — раньше он терял на этом всё терпение.
     pub waiting_for_tick: Arc<[std::sync::atomic::AtomicUsize; 2]>,
+    command_equipment: Mutex<Vec<std::sync::Weak<CommandEquipmentCompletion>>>,
 
     /// Номер, который достанется следующей сущности.
     ///
@@ -181,6 +204,45 @@ pub struct Shared {
 }
 
 impl Shared {
+    /// Только /item weapon.mainhand в основном профиле 26.3. Профиль 26.1.2,
+    /// Bedrock и другие ячейки сохраняют прежнюю очередь. Замков через await нет.
+    pub(crate) fn order_mainhand(&self, uuid: &[u8; 16], stack: Option<crate::inventory::Stack>) {
+        let java = self.players.lock().expect("игроки").has_java_waker(uuid);
+        let order = if java && self.catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+            let completed = *self.ticks.borrow();
+            let started = *self.tick_starts.borrow();
+            let until = started.max(completed.saturating_add(1));
+            let index = (until.wrapping_sub(1) % 2) as usize;
+            let completion = {
+                let mut pending = self.command_equipment.lock().expect("поручения экипировки");
+                pending.retain(|weak| weak.upgrade().is_some_and(|ticket| ticket.active.load(Ordering::Acquire)));
+                // Не растим отдельный registry без границы. При перегрузке
+                // поручение остаётся в FIFO и будит владельца, но такт не ждёт.
+                if pending.len() >= 1024 { None } else {
+                    self.waiting_for_tick[index].fetch_add(1, Ordering::AcqRel);
+                    let ticket = Arc::new(CommandEquipmentCompletion {
+                        waiting: self.waiting_for_tick.clone(), index, until,
+                        active: std::sync::atomic::AtomicBool::new(true),
+                    });
+                    pending.push(Arc::downgrade(&ticket));
+                    Some(ticket)
+                }
+            };
+            crate::players::Order::CommandHold { stack, completion }
+        } else { crate::players::Order::Hold { stack } };
+        self.players.lock().expect("игроки").order(uuid, order);
+    }
+
+    /// После прежних 5 мс такт продолжает работу. Поздний владелец применит
+    /// поручение, но уже не удержит следующий такт той же чётности.
+    pub(crate) fn expire_command_equipment(&self, tick: u64) {
+        self.command_equipment.lock().expect("поручения экипировки").retain(|weak| {
+            let Some(ticket) = weak.upgrade() else { return false; };
+            if ticket.until <= tick { ticket.finish(); }
+            ticket.active.load(Ordering::Acquire)
+        });
+    }
+
     pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
 
     /// Мир этого измерения.
@@ -280,6 +342,7 @@ impl Shared {
             publication: Mutex::new(()),
             tick_starts: tokio::sync::watch::channel(0).0,
             waiting_for_tick: Arc::new([std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0)]),
+            command_equipment: Mutex::new(Vec::new()),
             // Номера начинаются с единицы: ноль клиент понимает как «никого».
             entity_ids: AtomicI32::new(1),
             readers: AtomicU64::new(1),

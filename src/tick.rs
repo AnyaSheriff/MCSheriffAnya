@@ -226,19 +226,7 @@ async fn run(shared: Arc<Shared>) {
         // Ждём недолго: застрявшее подключение не должно останавливать мир.
         shared.tick_starts.send_replace(ticks);
 
-        let patience = tokio::time::Instant::now() + PATIENCE;
-
-        let earlier = &shared.waiting_for_tick[(ticks.wrapping_sub(1) % 2) as usize];
-
-        while earlier.load(std::sync::atomic::Ordering::Acquire) > 0
-            && tokio::time::Instant::now() < patience
-        {
-            tokio::task::yield_now().await;
-        }
-
-        if earlier.load(std::sync::atomic::Ordering::Acquire) > 0 {
-            log_debug!("Такт {}: действия игроков не успели к началу такта", ticks);
-        }
+        wait_for_player_packets(&shared, ticks).await;
 
         // Функции: `#minecraft:tick` и запланированное `schedule` — в начале
         // такта, после действий игроков, без замков (functions.rs).
@@ -552,15 +540,35 @@ async fn run(shared: Arc<Shared>) {
 
         // Сначала фиксируем рассылку, потом будим подключения. Их поздние
         // публикации относятся уже к следующему концу такта [проверить].
-        {
-            let _publication = shared.publication.lock().expect("публикация такта");
-            for dimension in Dimension::ALL {
-                shared.world_in(dimension).lock().expect("мир").publish_events();
-            }
-            shared.players.lock().expect("игроки").publish_tick();
-            shared.ticks.send_replace(ticks);
-        }
+        publish_finished_tick(&shared, ticks);
     }
+}
+
+/// Прежнее ограниченное ожидание: сетевой ввод и командные поручения руки
+/// завершают публикацию до снимка, если подключение уложилось в 5 мс.
+pub(crate) async fn wait_for_player_packets(shared: &Shared, tick: u64) -> bool {
+    let patience = tokio::time::Instant::now() + PATIENCE;
+    let earlier = &shared.waiting_for_tick[(tick.wrapping_sub(1) % 2) as usize];
+    while earlier.load(std::sync::atomic::Ordering::Acquire) > 0
+        && tokio::time::Instant::now() < patience
+    {
+        tokio::task::yield_now().await;
+    }
+    let complete = earlier.load(std::sync::atomic::Ordering::Acquire) == 0;
+    if !complete { log_debug!("Такт {}: действия игроков не успели к началу такта", tick); }
+    shared.expire_command_equipment(tick);
+    complete
+}
+
+/// Одна граница публикации для работы сервера и проверки порядка владельца
+/// и наблюдателя. Поздние записи остаются следующему такту.
+pub(crate) fn publish_finished_tick(shared: &Shared, tick: u64) {
+    let _publication = shared.publication.lock().expect("публикация такта");
+    for dimension in Dimension::ALL {
+        shared.world_in(dimension).lock().expect("мир").publish_events();
+    }
+    shared.players.lock().expect("игроки").publish_tick();
+    shared.ticks.send_replace(tick);
 }
 
 /// Раз во сколько тактов писать в лог (при `debug`), сколько времени ушло на

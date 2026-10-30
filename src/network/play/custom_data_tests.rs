@@ -3,6 +3,8 @@ use super::*;
 use crate::stackdata::{self, CustomData, Data};
 use mcsa_protocol::{JavaVersion, items};
 
+const SPAWN: (f64, f64, f64) = (0.5, 64.0, 0.5);
+
 fn custom() -> CustomData {
     // Все 12 типов, включая long вне точности f64 и MUTF-8 NUL + 😀.
     let mut bytes = vec![10];

@@ -2732,10 +2732,8 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
             return Answer::saying("Такого игрока нет на сервере".to_string());
         }
 
-        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
-
         for (uuid, _) in &targets {
-            players.order(uuid, Order::Hold { stack });
+            shared.order_mainhand(uuid, stack);
         }
 
         return Answer::saying(format!("Предмет в руке заменён — игрокам: {}", names_of(&targets)));
