@@ -1,6 +1,6 @@
 {
-  "build_run_id": "40693373598",
-  "head": "0920966b61a654150ee74a701034f3c9b0a53490",
-  "runtime_sha256": "930d36b3987d6cc5d8a2a35279eaed3f1f306abacb9e4828dd4dc3f3d781f335",
-  "note": "Verified full CI, all receipt hashes, and eight live pot wire comparisons before selecting this runtime."
+  "build_run_id": "40945489166",
+  "head": "261dd5e5a73652ea09895ebcc9e7fc57eca5b3a5",
+  "runtime_sha256": "487b3db29ee5e84977794ad305c4f2dfda9d1cbf8a32cdb6e86926a1ebf9b4a3",
+  "note": "Verified pre-hotbar runtime baseline: root checked exact successful run and all 12 artifact hashes. Compare fresh native combat against this baseline before selecting the candidate."
 }
