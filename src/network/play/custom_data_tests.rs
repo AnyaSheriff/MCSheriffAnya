@@ -57,6 +57,7 @@ async fn creative_custom_data_survives_native_profiles_player_file_container_and
         assert_eq!(p.inventory.slot(36),Some(expected));
         p.inventory.set_cursor(Some(expected.with_count(3)));
         let dir = std::env::temp_dir().join(format!("mcsa-custom-data-{}-{}",std::process::id(),version.protocol()));
+        std::fs::create_dir_all(&dir).unwrap();
         let data = saved(&p);playerdata::save_for_catalog(&dir,&p.uuid,&data,catalog).unwrap();
         let restored = playerdata::load_checked_for_catalog(&dir,&p.uuid,catalog).unwrap().unwrap();
         assert_eq!(restored,data);std::fs::remove_dir_all(&dir).unwrap();
