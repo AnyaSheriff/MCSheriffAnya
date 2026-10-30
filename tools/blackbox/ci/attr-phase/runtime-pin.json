@@ -1,6 +1,6 @@
 {
-  "build_run_id": "40945489166",
-  "head": "261dd5e5a73652ea09895ebcc9e7fc57eca5b3a5",
-  "runtime_sha256": "487b3db29ee5e84977794ad305c4f2dfda9d1cbf8a32cdb6e86926a1ebf9b4a3",
-  "note": "Root verified exact successful migration-checks run, receipt head and all 12 artifact SHA256 values on 2026-10-30. No Rust changes in the attribute-phase harness patch."
+  "build_run_id": "41090660290",
+  "head": "ecb9091226e0a56680300da2ab64f4f58e27b3df",
+  "runtime_sha256": "aaf8a5c1dc2e98a33f984cf9920a78a8e2c262b188f0111085cb1fba9fc60dd2",
+  "note": "Verified successful full CI, all 12 receipt hashes, and the hotbar packet-handler regression in both test profiles. Fresh combat validation follows this exact build."
 }
