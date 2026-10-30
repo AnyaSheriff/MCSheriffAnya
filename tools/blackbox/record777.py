@@ -326,8 +326,19 @@ def dig_status(status, version):
     return status + int(version == 777 and status > 0)
 
 
-def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False):
+def aligned_start(initial_tick, constraints):
+    """Один сдвиг должен сохранить ВСЕ фазы; несовместимость — ошибка подготовки."""
+    period = math.lcm(*(row['period'] for row in constraints)) if constraints else 1
+    for delay in range(period):
+        candidate = initial_tick + delay
+        if all(candidate % row['period'] == row['residue'] for row in constraints):
+            return candidate
+    raise ValueError('incompatible recording phases: '+json.dumps(constraints, sort_keys=True))
+
+
+def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False, reference_sha256=None):
     clients=[]; commands=[]
+    phase_alignment={}
     origin=s.get('origin',[100,-59,100])
     def command(text, delay=True):
         text=expand(text,origin)
@@ -492,7 +503,9 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         around=[first+((p-first+.025)%.05-.025) for p in phases]
         clock += min(around)+.025
         start_tick=math.ceil((time.monotonic()-clock)/.05)+3
-        if s.get('align'): start_tick=math.ceil(start_tick/s['align'])*s['align']
+        phase_alignment={'initial_start_tick':start_tick,'reference_sha256':reference_sha256,'verified':False,'constraints':[]}
+        constraints=phase_alignment['constraints']
+        if s.get('align'): constraints.append({'source':'scenario.align','period':s['align'],'residue':0})
         elif any(c.attribute_samples for c in clients):
             # Слежение игрока идёт через такт. Совмещаем фазу нажатия с уже
             # наблюдённой рассылкой атрибутов; допуск compare.js не расширяем.
@@ -514,14 +527,19 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                     before=math.floor((samples[-1]-reference['clock'])/.05)
                     reference_start=round((reference['start']-reference['clock'])/.05)
                     desired_phase=(reference_start+first_attack.get('after',0)-before)%2
-            start_tick+=(phase_tick-start_tick-first_attack.get('after',0)+desired_phase)%2
+            constraints.append({'source':'player_attributes','period':2,'residue':(phase_tick-first_attack.get('after',0)+desired_phase)%2,
+                                'sample_tick':phase_tick,'desired_phase':desired_phase,'attacker':attacker})
         if version==777 and reference and s.get('track_mobs') and tracking_kind is not None:
             before=tracking_origin(reference['clients'][0].get('preroll',[]),reference['initial'][0]['entities'],tracking_kind)
             current=tracking_origin(clients[0].preroll,clients[0].entities,tracking_kind)
             if before is not None and current is not None:
                 phase=(round((reference['start']-reference['clock'])/.05)-math.floor((before-reference['clock'])/.05))%60
                 current_tick=math.floor((current-clock)/.05)
-                start_tick+=(phase-(start_tick-current_tick))%60
+                constraints.append({'source':'mob_tracking','period':60,'residue':(phase+current_tick)%60,
+                                    'reference_phase':phase,'current_origin_tick':current_tick})
+        start_tick=aligned_start(start_tick,constraints)
+        phase_alignment['final_start_tick']=start_tick
+        phase_alignment['verified']=all(start_tick%row['period']==row['residue'] for row in constraints)
         start=clock+start_tick*.05
         initial=[{'entity':c.entity,'entities':c.entities.copy(),'position':c.position.copy()} for c in clients]
         for c in clients:c.recording=True;c.events=[];c.external_ticks=True
@@ -588,7 +606,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                 c.send('block_dig',varint(dig_status(action.get('status',0),version))+pack_position(pos)+bytes([action.get('face',1)])+varint(c.sequence))
         time.sleep(max(0,start+(s['record_ticks']+13)*.05-time.monotonic()))
         for c in clients:c.recording=False;c.external_ticks=False
-        result={'scenario':s['name'],'protocol':version,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
+        result={'scenario':s['name'],'protocol':version,'phase_alignment':phase_alignment,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
         output.write_text(json.dumps(result,indent=1)+'\n')
         for text in s.get('cleanup',[]):
             special(text,clients) if text.startswith('!') else command(text)
@@ -596,7 +614,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         return result
     finally:
         if not output.exists():
-            failed={'scenario':s['name'],'commands':commands,'clients':[{'events':c.events,'records':c.records,'wire_sent':c.wire_sent,'failure':c.failure} for c in clients if c is not None]}
+            failed={'scenario':s['name'],'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'error':repr(sys.exc_info()[1]),'phase_alignment':phase_alignment,'commands':commands,'clients':[{'events':c.events,'records':c.records,'wire_sent':c.wire_sent,'failure':c.failure} for c in clients if c is not None]}
             output.with_name(output.stem+'-failed.json').write_text(json.dumps(failed,indent=1)+'\n')
         for c in clients:
             if c is not None:c.close()
@@ -638,6 +656,85 @@ def cleanup_servers(servers,lifecycle,save_lifecycle,all_ports):
     except Exception as error:lifecycle['cleanup_errors'].append(repr(error))
 
 
+def checked_reference(raw, scenario, version, isolate_vitals):
+    if (raw.get('scenario') != scenario['name'] or raw.get('protocol') != version
+            or raw.get('isolate_vitals') != isolate_vitals
+            or not re.fullmatch('[0-9a-f]{64}', str(raw.get('recorder_sha256','')))
+            or not raw.get('clients') or not raw.get('initial')
+            or len(raw['clients']) != len(raw['initial'])
+            or ('phase_alignment' in raw and not raw['phase_alignment'].get('verified'))
+            or not isinstance(raw.get('start'), (int, float))
+            or not isinstance(raw.get('clock'), (int, float))
+            or any(not client.get('events') or client.get('failure') for client in raw['clients'])):
+        raise ValueError('official reference is incomplete or has a different capture identity')
+    return raw
+
+
+def run_scenario_sides(args, scenario, servers, protocol, speed_attribute, previous=None, saved_manifests=()):
+    """Свежая опора появляется только после успешного record вместе с cleanup."""
+    if args.skip_recorded_core:
+        raise ValueError('--skip-recorded-core disabled: saved raw has no per-file runtime identity; re-record ours')
+    name = scenario['name']
+    entities = json.loads((args.data/'entities.json').read_text())
+    tracking_kind = next(row['id'] for row in entities if row['name']=='cow')
+    reference = None
+    reference_sha256 = None
+
+    def saved_reference():
+        if not previous or previous.get('record_status') != 'complete' or previous.get('record_error'):
+            raise ValueError('saved official reference needs a completed previous scenario')
+        raw=checked_reference(json.loads((args.output/f'{name}-official.json').read_text()),
+                              scenario, args.version, args.isolate_vitals)
+        scenario_sha=hashlib.sha256((ROOT/f'tools/blackbox/scenarios/{name}.json').read_bytes()).hexdigest()
+        matches=[manifest for manifest in saved_manifests
+                 if manifest.get('protocol')==args.version
+                 and manifest.get('isolate_vitals')==args.isolate_vitals
+                 and manifest.get('recorder_sha256')==raw.get('recorder_sha256')
+                 and manifest.get('scenario_sha256',{}).get(name)==scenario_sha
+                 and manifest.get('data_sha256')
+                 and all((args.data/file).is_file() and hashlib.sha256((args.data/file).read_bytes()).hexdigest()==expected
+                         for file,expected in manifest['data_sha256'].items())]
+        if not matches:raise ValueError('saved official reference has no matching previous source/data manifest')
+        return raw
+
+    if args.core_only:
+        # Явный --core-only использует только завершённую сохранённую опору.
+        reference = saved_reference()
+        reference_sha256=hashlib.sha256((args.output/f'{name}-official.json').read_bytes()).hexdigest()
+
+    def run_side(label, rcon, port):
+        nonlocal reference, reference_sha256
+        output = args.output/f'{name}-{label}.json'
+        if args.resume and label=='official' and output.exists():
+            if label=='official':
+                saved = saved_reference()
+                if not args.parallel:
+                    reference = saved
+                    reference_sha256=hashlib.sha256(output.read_bytes()).hexdigest()
+            return
+        print(label, name, flush=True)
+        # Старая запись не может выдать неудачную новую попытку за завершённую.
+        if output.exists():output.unlink()
+        result = record(port, protocol, scenario, rcon, output, args.version,
+                        args.output/'sound-observations.json' if label=='official' and args.version==777 else None,
+                        reference if label=='ours' and (not args.parallel or args.core_only) else None,
+                        tracking_kind, speed_attribute, {row['id']:row['name'] for row in entities}, args.isolate_vitals,
+                        reference_sha256=reference_sha256 if label=='ours' and (not args.parallel or args.core_only) else None)
+        if label=='official' and not args.parallel:
+            reference = checked_reference(result, scenario, args.version, args.isolate_vitals)
+            if json.loads(output.read_text()) != reference:
+                raise ValueError('fresh official reference differs from completed recording')
+            reference_sha256=hashlib.sha256(output.read_bytes()).hexdigest()
+
+    if args.parallel:
+        # Обе стороны пишутся независимо: читать файл второй стороны в гонке нельзя.
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures=[pool.submit(run_side,label,rcon,port) for label,rcon,port in servers]
+            for future in futures:future.result()
+    else:
+        for label,rcon,port in servers:run_side(label,rcon,port)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--data',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
@@ -648,13 +745,16 @@ def main():
     p.add_argument('--parallel',action='store_true')
     p.add_argument('--official-port',type=int,default=26140)
     p.add_argument('--core-port',type=int,default=26142)
-    p.add_argument('--skip-recorded-core',action='store_true')
+    p.add_argument('--skip-recorded-core',action='store_true',help='disabled: saved raw cannot prove its own runtime identity')
     p.add_argument('--resume',action='store_true');p.add_argument('--core-only',action='store_true')
     p.add_argument('--official-only',action='store_true')
     p.add_argument('--isolate-vitals',action='store_true')
     p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
-    a=p.parse_args();assert a.binary.is_file(), 'verified binary required'
+    a=p.parse_args()
+    if a.skip_recorded_core:
+        p.error('--skip-recorded-core disabled: re-record ours to verify runtime identity')
+    assert a.binary.is_file(), 'verified binary required'
     if a.max_seconds<0:raise ValueError('negative run limit')
     speed_attribute=None
     if a.version==777:
@@ -674,6 +774,7 @@ def main():
         raw=(a.data/'protocol.json').read_bytes()
         assert hashlib.sha256(raw).hexdigest()=='0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3','pinned775 protocol mismatch'
         tables={'protocol.json':json.loads(raw)}
+    saved_manifests=[json.loads(path.read_text()) for path in a.output.glob('run-*.json')] if a.resume else []
     a.output.mkdir(parents=True,exist_ok=a.resume)
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
     manifest={'isolate_vitals':a.isolate_vitals,'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'java':a.java,'max_seconds':a.max_seconds,'scenario_sha256':{name:hashlib.sha256((ROOT/'tools/blackbox/scenarios'/f'{name}.json').read_bytes()).hexdigest() for name in selected},'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
@@ -733,23 +834,13 @@ def main():
         for name in selected:
             row={'scenario':name,'status':'mismatch-open','record_status':'pending'}
             existing=next((i for i,value in enumerate(summary) if value['scenario']==name),None)
+            previous_row = summary[existing].copy() if existing is not None else None
             if existing is None:summary.append(row)
             else:summary[existing]=row
             try:
                 s=json.loads((ROOT/'tools/blackbox/scenarios'/f'{name}.json').read_text());validate(s)
-                def run_side(label,rcon,port):
-                    if a.resume and (label=='official' or a.skip_recorded_core) and (a.output/f'{name}-{label}.json').exists():return
-                    print(label,name,flush=True)
-                    reference_path=a.output/f'{name}-official.json'
-                    reference=json.loads(reference_path.read_text()) if label=='ours' and a.core_only and reference_path.exists() else None
-                    tracking_kind=next(row['id'] for row in json.loads((a.data/'entities.json').read_text()) if row['name']=='cow')
-                    record(port,tables['protocol.json'],s,rcon,a.output/f'{name}-{label}.json',a.version,a.output/'sound-observations.json' if label=='official' and a.version==777 else None,reference,tracking_kind,speed_attribute,{row['id']:row['name'] for row in json.loads((a.data/'entities.json').read_text())},a.isolate_vitals)
-                if a.parallel:
-                    with ThreadPoolExecutor(max_workers=2) as pool:
-                        futures=[pool.submit(run_side,label,rcon,port) for (label,_),(_,_,rcon,port) in zip(labels,servers)]
-                        for future in futures:future.result()
-                else:
-                    for (label,_),(_,_,rcon,port) in zip(labels,servers):run_side(label,rcon,port)
+                run_scenario_sides(a, s, [(label,rcon,port) for (label,_),(_,_,rcon,port) in zip(labels,servers)],
+                                   tables['protocol.json'], speed_attribute, previous_row, saved_manifests)
                 row['reason']='recorded; original comparison projection pending'
                 row['record_status']='complete'
             except Exception as error:
@@ -764,6 +855,9 @@ def main():
                 [a.official_port,a.official_port+1,a.core_port,a.core_port+1])
         finally:
             for sig,handler in previous.items():signal.signal(sig,handler)
+
+    if any(row.get('record_status') != 'complete' for row in summary):
+        raise RuntimeError('one or more scenario recordings did not complete')
 
 
 if __name__=='__main__':main()

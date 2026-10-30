@@ -1,0 +1,25 @@
+{
+ "name": "mob-forced-update-odd",
+ "about": "Проверка появления и 60-тактового нулевого движения NoAI-коровы без ударов; обе чётности действия.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode creative $(bot)",
+  "kill @e[type=cow,distance=..48]"
+ ],
+ "actions": [
+  {
+   "after": 31,
+   "cmd": "summon cow $(4.5,0,3.5) {NoAI:1b}"
+  }
+ ],
+ "record_ticks": 165,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true"
+ ]
+}

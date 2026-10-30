@@ -189,6 +189,37 @@ class ResultTests(unittest.TestCase):
         ci.write_json(root / 'lifecycle.json', lifecycle)
         return name, row, lifecycle
 
+    def test_full_configured_suite_requires_all_fifteen_cases_including_noai_probes(self):
+        import copy
+        from record777 import validate
+        scenarios=json.loads((ci.ROOT/'tools/blackbox/ci/sources-777.json').read_text())['scenarios']
+        self.assertEqual(len(scenarios),15)
+        self.assertEqual(len(set(scenarios)),len(scenarios))
+        self.assertEqual(scenarios[-2:],['mob-forced-update-even','mob-forced-update-odd'])
+        for name,after in zip(scenarios[-2:],[30,31]):
+            probe=json.loads((ci.ROOT/f'tools/blackbox/scenarios/{name}.json').read_text());validate(probe)
+            self.assertEqual(probe['record_ticks'],165)
+            self.assertEqual(probe['actions'],[{'after':after,'cmd':'summon cow $(4.5,0,3.5) {NoAI:1b}'}])
+            self.assertNotIn('random',probe)
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);first,row,_=self.populated(root)
+            rows=[]
+            for name in scenarios:
+                current=copy.deepcopy(row);current['scenario']=name;rows.append(current)
+                if name==first:continue
+                for side in ('official','ours'):
+                    raw=json.loads((root/f'{first}-{side}.json').read_text());raw['scenario']=name
+                    ci.write_json(root/f'{name}-{side}.json',raw)
+                    ci.write_json(root/f'{name}-{side}-events.json',json.loads((root/f'{first}-{side}-events.json').read_text()))
+                (root/f'{name}-comparison.txt').write_text('nonempty comparison fixture')
+            run=json.loads((root/'run-one.json').read_text());run['scenario_names']=scenarios
+            ci.write_json(root/'run-one.json',run);ci.write_json(root/'comparison-summary.json',rows)
+            result=ci.audit_results(root,scenarios,'b'*64)
+            self.assertEqual(result['status'],'match');self.assertEqual(len(result['comparisons']),15)
+            # Старые13 не могут датьPASS вместо нового набора из15случаев.
+            ci.write_json(root/'comparison-summary.json',rows[:-2])
+            self.assertEqual(ci.audit_results(root,scenarios,'b'*64)['status'],'infrastructure-failed')
+
     def test_missing_raw_failed_client_and_incomplete_comparison_are_not_matches(self):
         for failure in ('missing-raw', 'client-failure', 'missing-counts', 'decode-gap', 'missing-scenario', 'cleanup-error', 'late-record-error'):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as folder:

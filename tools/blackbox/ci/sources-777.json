@@ -50,6 +50,8 @@
     "sword-sweep-secondary-motion",
     "pvp-knockback",
     "pvp-sprint-knockback",
-    "itemaudit4-knockback-fixedyaw"
+    "itemaudit4-knockback-fixedyaw",
+    "mob-forced-update-even",
+    "mob-forced-update-odd"
   ]
 }
