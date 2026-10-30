@@ -3,7 +3,8 @@
 // официальный777 отклоняет второе движение; bot.js/compare.js неизменны.
 'use strict';
 const path = require('path');
-const mineflayer = require(path.join(process.env.HOME, 'node_modules', 'mineflayer'));
+const modules = process.env.MCSA_BB_NODE_MODULES || path.join(process.env.HOME, 'node_modules');
+const mineflayer = require(path.join(modules, 'mineflayer'));
 const createBot = mineflayer.createBot;
 mineflayer.createBot = (options) => {
   const view = process.env.MCSA_BB_VIEW_DISTANCE;

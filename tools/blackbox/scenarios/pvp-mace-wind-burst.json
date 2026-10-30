@@ -17,6 +17,7 @@
   "clear $(bot2)",
   "kill $(bot)",
   "!wait 30",
+  "!syncattrs",
   "item replace entity $(bot) armor.chest with minecraft:diamond_chestplate",
   "item replace entity $(bot) armor.legs with minecraft:diamond_leggings",
   "give $(bot2) minecraft:mace[enchantments={wind_burst:1}] 1",

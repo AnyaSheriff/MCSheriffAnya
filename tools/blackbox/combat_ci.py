@@ -145,7 +145,7 @@ def helper_sources(root=ROOT):
                     if candidate.is_file():
                         pending.append(candidate)
                         break
-    result.update(directories[0] / name for name in ('bot.js', 'compare.js', 'replay777.js', 'value-order.js', 'data/sounds.json'))
+    result.update(directories[0] / name for name in ('bot.js', 'attr-phase.js', 'compare.js', 'replay777.js', 'value-order.js', 'data/sounds.json'))
     result.update(root / name for name in ('tools/protocol-bridge/testdata/attribute-id-observations.json',
                   'tools/blackbox/ci/sources-777.json', 'tools/blackbox/ci/runtime-pin.json',
                   '.github/workflows/combat-checks.yml', 'docs/combat-ci-26.3.md'))

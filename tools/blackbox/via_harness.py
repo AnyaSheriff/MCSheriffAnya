@@ -8,11 +8,13 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import threading
 import time
 import uuid
+from combat_process import process_identity, stop_process, ports_free
 
 ROOT = Path(__file__).resolve().parents[2]
 JAVA = '/usr/lib/jvm/java-25-openjdk/bin/java'
@@ -61,6 +63,8 @@ class WireTap:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--java', default=JAVA)
+    parser.add_argument('--max-seconds', type=int, default=1800)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--jar', type=Path, required=True)
@@ -80,6 +84,7 @@ def main():
     args = parser.parse_args()
     assert 26100 <= args.port <= 26194
     assert 26200 <= args.ours_port <= 26296
+    assert 1 <= args.max_seconds <= 3600
     assert args.repeat > 0
     assert 0 <= args.reference_wait <= 600
     assert args.primary != '26.3' or args.proxy, '26.3 requires symmetric translation'
@@ -94,17 +99,48 @@ def main():
         if path:
             manifest[key] = {'path': str(path.resolve()), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
     manifest['scripts'] = {n: hashlib.sha256((ROOT / 'tools/blackbox' / n).read_bytes()).hexdigest()
-                           for n in ('bot.js', 'compare.js', 'via_ticks.js', '../protocol-bridge/probe_gameplay.py')}
+                           for n in ('bot.js', 'attr-phase.js', 'compare.js', 'value-order.js', 'via_ticks.js', 'via_harness.py')}
     (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     children, logs, rows, taps = [], [], [], []
+    deadline_all = time.monotonic() + args.max_seconds
+    lifecycle = {'servers': [], 'commands': [], 'cleanup': [], 'cleanup_errors': []}
+    lifecycle_lock = threading.Lock()
+    checked_ports = [args.port, args.port + 1, args.port + 4,
+                     args.ours_port, args.ours_port + 1, args.ours_port + 4]
+
+    def save_lifecycle():
+        temporary = out / 'lifecycle.json.tmp'
+        temporary.write_text(json.dumps(lifecycle, indent=2) + '\n')
+        temporary.replace(out / 'lifecycle.json')
+
+    def budget(limit):
+        remaining = deadline_all - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError('total harness deadline exceeded')
+        return min(limit, remaining)
+
+    def spawn(argv, folder, **kwargs):
+        child = subprocess.Popen(argv, cwd=folder, start_new_session=True, **kwargs)
+        with lifecycle_lock:
+            children.append(child)
+            entry = {'pid': child.pid, 'identity': None, 'label': folder.name}
+            lifecycle['servers'].append(entry)
+            lifecycle['commands'].append({'pid': child.pid, 'cwd': str(folder), 'argv': argv})
+            entry['identity'] = process_identity(child.pid)
+            save_lifecycle()
+        return child
+
+    def interrupted(sig, frame):
+        raise InterruptedError(f'harness interrupted: {sig}')
+
+    previous_signals = {sig: signal.signal(sig, interrupted) for sig in (signal.SIGTERM, signal.SIGINT)}
 
     def start(argv, folder, port):
         log = (folder / 'server.log').open('w')
         logs.append(log)
-        child = subprocess.Popen(argv, cwd=folder, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
-        children.append(child)
+        child = spawn(argv, folder, stdin=subprocess.PIPE, text=True, stdout=log, stderr=subprocess.STDOUT)
         (folder / 'pid').write_text(str(child.pid))
-        deadline = time.monotonic() + 150
+        deadline = time.monotonic() + budget(150)
         while time.monotonic() < deadline:
             if child.poll() is not None:
                 raise RuntimeError(f'{folder.name} exited: ' + (folder / 'server.log').read_text()[-1800:])
@@ -143,7 +179,7 @@ def main():
             if label == 'official':
                 shutil.copyfile(args.jar, folder / 'server.jar')
                 (folder / 'eula.txt').write_text('eula=true\n')
-                argv = [JAVA, '-Xms128M', f'-Xmx{args.official_heap}', '-jar', 'server.jar', 'nogui']
+                argv = [args.java, '-Xms128M', f'-Xmx{args.official_heap}', '-jar', 'server.jar', 'nogui']
             else:
                 (cfg / 'mcsa.properties').write_text(
                     f'java-version={args.primary}\nsend-error-reports=false\nauth-enabled=false\n'
@@ -160,7 +196,7 @@ def main():
                 folder.mkdir()
                 # Отключаем неиспользуемый HTTP-служебный порт Bedrock до запуска.
                 (folder / 'viabedrock.yml').write_text('translate-resource-packs: false\n')
-                start([JAVA, '-Xmx512M', '-jar', str(args.proxy.resolve()), 'cli',
+                start([args.java, '-Xmx512M', '-jar', str(args.proxy.resolve()), 'cli',
                        '--bind-address', f'127.0.0.1:{port + 1}', '--target-address', f'127.0.0.1:{target}',
                        '--target-version', args.primary, '--compression-threshold', '-1'], folder, port + 1)
         if args.streaming_observation:
@@ -198,8 +234,15 @@ def main():
                         try:
                             environment = dict(os.environ)
                             if args.streaming_observation: environment['MCSA_BB_VIEW_DISTANCE'] = 'short'
-                            result = subprocess.run(argv, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=240, env=environment)
-                            code = result.returncode
+                            child = spawn(argv, ROOT, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, env=environment)
+                            try:
+                                code = child.wait(timeout=budget(240))
+                            finally:
+                                entry = next(r for r in lifecycle['servers'] if r['pid'] == child.pid)
+                                stopped = stop_process(child, identity=entry['identity'])
+                                with lifecycle_lock:
+                                    lifecycle['cleanup'].append(stopped)
+                                    save_lifecycle()
                         except subprocess.TimeoutExpired:
                             code = 124
                     return label, dest, code
@@ -214,30 +257,40 @@ def main():
                 if all(code == 0 for _, _, code in results):
                     result = subprocess.run(['node', str(ROOT / 'tools/blackbox/compare.js'), name, '--files',
                                              str(captures['official']), str(captures['ours'])],
-                                            cwd=ROOT, text=True, capture_output=True, timeout=30)
+                                            cwd=ROOT, text=True, capture_output=True, timeout=budget(30))
                     (out / f'{name}-{repeat}-compare.log').write_text(result.stdout + result.stderr)
                     match = COUNTS.search(result.stdout)
+                    row['compare_exit'] = result.returncode
                     row['counts'] = list(map(int, match.groups())) if match else None
                     row['warnings'] = [line for line in result.stdout.splitlines() if line.startswith('Внимание:')]
-                    row['status'] = 'match' if row['counts'] is not None and not any(row['counts'][1:]) and not row['warnings'] else 'mismatch-open'
+                    row['status'] = 'match' if result.returncode == 0 and row['counts'] is not None and row['counts'][0] > 0 and not any(row['counts'][1:]) and not row['warnings'] else 'mismatch-open'
                 rows.append(row)
                 (out / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n')
                 print(row, flush=True)
     finally:
         for tap in taps:
             tap.listener.close()
+        for sig in previous_signals:
+            signal.signal(sig, signal.SIG_IGN)
         for child in reversed(children):
-            if child.poll() is None:
-                child.terminate()
-        for child in reversed(children):
+            if any(row['pid'] == child.pid for row in lifecycle['cleanup']):
+                continue
+            entry = next(row for row in lifecycle['servers'] if row['pid'] == child.pid)
             try:
-                child.wait(30)
-            except subprocess.TimeoutExpired:
-                child.kill()
-                child.wait()
+                lifecycle['cleanup'].append(stop_process(child, identity=entry['identity']))
+            except Exception as error:
+                lifecycle['cleanup_errors'].append({'pid': child.pid, 'error': str(error)})
+        lifecycle['ports_free'] = ports_free(checked_ports)
+        save_lifecycle()
         for log in logs:
             log.close()
+        for sig, handler in previous_signals.items():
+            signal.signal(sig, handler)
+    return 0 if (len(rows) == len(names) * args.repeat and all(row['status'] == 'match' for row in rows)
+                 and not lifecycle['cleanup_errors'] and all(lifecycle['ports_free'].values())
+                 and all(row['group_gone'] for row in lifecycle['cleanup'])) else 1
+
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

@@ -1,0 +1,10 @@
+{
+  "name": "mcsa-attr-phase-ci",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "mineflayer": "4.39.0",
+    "minecraft-data": "3.117.0",
+    "vec3": "0.1.10"
+  }
+}

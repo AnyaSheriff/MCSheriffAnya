@@ -1,0 +1,19 @@
+{
+  "official_jar": {
+    "url": "https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar",
+    "sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "bytes": 62294556
+  },
+  "proxy": {
+    "url": "https://github.com/ViaVersion/ViaProxy/releases/download/v3.4.14/ViaProxy-3.4.14.jar",
+    "bytes": 48835170,
+    "sha256": "2894bbfb2f4342f8fde887af6c689313efd5b0e46a8006775eea0e21e2948ab5"
+  },
+  "scenarios": [
+    "pvp-weakness",
+    "pvp-resistance",
+    "pvp-shield-back"
+  ],
+  "repeat": 2
+}
