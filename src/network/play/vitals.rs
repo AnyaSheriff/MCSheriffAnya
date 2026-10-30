@@ -1601,6 +1601,12 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
 /// Пересчитывает модификаторы от предметов, если рука или броня сменились.
 /// Зовётся и в конце такта, и перед ударом: урон берётся из атрибутов.
 pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
+    update_equipment_at(player, now, now);
+}
+
+/// Смена hotbar в начале такта: отсчёт удара прежний, срок рассылки —
+/// от уже начавшегося такта. Остальные пути передают одинаковые номера.
+pub(super) fn update_equipment_at(player: &mut PlayerState, now: u64, tracking_tick: u64) {
     let equipment = equipment_of(player);
 
     if equipment == player.equip_seen {
@@ -1614,6 +1620,7 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
         player.last_attack = now;
     }
 
+    let now = tracking_tick;
     player.equip_seen = equipment;
 
     // Атрибуты, которых касались предметы до и после: снятый и вновь
@@ -3347,6 +3354,78 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn hotbar_packet_waits_for_attribute_phase_without_changing_attack_clock() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        // 41088730983: у оригинала hotbar1875 -> Attributes1877 при фазе1;
+        // у нас было1807 -> 1807. Проверяем handler и настоящую рассылку.
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for phase in [0, 1] {
+                for tick in [100, 101] {
+                    let catalog = Catalog::new(profile);
+                    let shared = Shared::new(
+                        World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                        Default::default(), Default::default(), Default::default(),
+                        crate::ops::Ops::open(std::path::Path::new("tmp/hotbar-attribute-phase/ops.json")),
+                        crate::skins::Settings::default(),
+                    );
+                    let mut player = PlayerState::new_for_catalog(
+                        [78; 16], "HotbarPhase".into(), None, None, 0x7f, 78,
+                        (0.5, 64.0, 0.5), catalog,
+                    );
+                    player.restart_attrs_tracking(phase);
+                    let sword = blocks::item_named("diamond_sword").unwrap();
+                    let axe = blocks::item_named("iron_axe").unwrap();
+                    player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(sword, 1)));
+                    player.inventory.set(inventory::FIRST_HOTBAR + 1, Some(Stack::new(axe, 1)));
+                    sync_attributes(&mut Outgoing::capture(), &mut player, 20).await.unwrap();
+                    sync_attributes(&mut Outgoing::capture(), &mut player, 30).await.unwrap();
+                    assert!(player.attrs_touched.is_empty());
+                    player.last_attack = 42;
+                    shared.ticks.send_replace(tick - 1);
+                    shared.tick_starts.send_replace(tick);
+                    let mut body = encode_varint(super::super::SET_CARRIED_ITEM);
+                    body.extend_from_slice(&1u16.to_be_bytes());
+                    let packet = PacketInfo {
+                        id: super::super::SET_CARRIED_ITEM, length: body.len() as i32, body,
+                        teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None,
+                    };
+
+                    super::super::handle_client_packet(&packet, &mut player, &shared);
+                    assert_eq!(player.inventory.held(), Some(Stack::new(axe, 1)));
+                    assert_eq!(player.last_attack, tick - 1, "прежний отсчёт перезарядки");
+                    let due = if profile == Profile::Preview26_3 {
+                        tick + if tick % 2 == phase { 2 } else { 1 }
+                    } else { tick + 1 };
+                    assert_eq!(player.attrs_touched.iter().find(|(id, _)| *id == crate::attributes::ATTACK_SPEED).map(|(_, at)| *at), Some(due));
+                    // Повтор выбора той же ячейки не сбрасывает зарядку и срок.
+                    let waiting = player.attrs_touched.clone();
+                    shared.ticks.send_replace(tick);
+                    super::super::handle_client_packet(&packet, &mut player, &shared);
+                    assert_eq!(player.last_attack, tick - 1);
+                    assert_eq!(player.attrs_touched, waiting);
+
+                    for now in tick..due {
+                        let mut out = Outgoing::capture();
+                        sync_attributes(&mut out, &mut player, now).await.unwrap();
+                        assert!(out.queued().is_empty(), "{profile:?}, phase={phase}, tick={tick}, now={now}: рано");
+                    }
+                    let mut out = Outgoing::capture();
+                    sync_attributes(&mut out, &mut player, due).await.unwrap();
+                    let mut bytes = out.queued();
+                    let sent = read_packet(&mut bytes).await.unwrap();
+                    assert_eq!(sent.id, UPDATE_ATTRIBUTES);
+                    let speed = player.attrs.get(crate::attributes::ATTACK_SPEED).unwrap().clone();
+                    assert_eq!(sent.payload(), crate::attributes::encode_update(player.entity_id, &[speed]));
+                    assert!(bytes.is_empty(), "один пакет в назначенный срок");
+                    let mut out = Outgoing::capture();
+                    sync_attributes(&mut out, &mut player, due + 1).await.unwrap();
+                    assert!(out.queued().is_empty(), "без повторной отправки");
+                }
+            }
+        }
+    }
 
     #[test]
     fn equipment_attribute_ticks_follow_263_cycle_and_keep_2612_delays() {

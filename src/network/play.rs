@@ -8260,7 +8260,16 @@ fn handle_client_packet_inner(
                 player.inventory.select(slot as i32);
                 // Перезарядка начинается при выборе, даже если до следующего
                 // удара нет рассылки атрибутов; износ не меняет тип оружия.
-                vitals::update_equipment(player, *shared.ticks.borrow());
+                let attack_tick = *shared.ticks.borrow();
+                // Чёрный ящик 41088730983, pvp-shield-back: hotbar на
+                // своей чётности — Attributes через два такта, а не сразу.
+                // Пакет уже в начале нового такта, ticks ещё хранит конец
+                // предыдущего. Для 26.3 срок считаем от начала; прежний
+                // отсчёт перезарядки сохраняем. [проверить] свежим повтором.
+                let tracking_tick = if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                    attack_tick.max(*shared.tick_starts.borrow())
+                } else { attack_tick };
+                vitals::update_equipment_at(player, attack_tick, tracking_tick);
 
                 // Сменил руку — щит опущен, лук спущен впустую.
                 if player.net.using.is_some_and(|using| using.hand == 0) {
