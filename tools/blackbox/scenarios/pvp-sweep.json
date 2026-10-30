@@ -1,5 +1,6 @@
 {
  "name": "pvp-sweep",
+ "native_phase": "mob_tracking",
  "about": "Взмах мечом при полном заряде на земле: звук attack.sweep и частица sweep_attack перед нападающим; рядом стоящий моб получает урон взмаха.",
  "second": true,
  "track_self": true,

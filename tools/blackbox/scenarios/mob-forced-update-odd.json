@@ -1,6 +1,6 @@
 {
  "name": "mob-forced-update-odd",
- "about": "Проверка появления и 60-тактового нулевого движения NoAI-коровы без ударов; обе чётности действия.",
+ "about": "Проверка появления и 60-тактового нулевого движения тихой NoAI-коровы без ударов; обе чётности действия.",
  "exclusive": true,
  "track_mobs": true,
  "blocks": [],
@@ -13,7 +13,7 @@
  "actions": [
   {
    "after": 31,
-   "cmd": "summon cow $(4.5,0,3.5) {NoAI:1b}"
+   "cmd": "summon cow $(4.5,0,3.5) {NoAI:1b,Silent:1b}"
   }
  ],
  "record_ticks": 165,

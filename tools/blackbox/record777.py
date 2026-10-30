@@ -309,6 +309,13 @@ def attribute_sample(payload,entity,speed_attribute=None):
 
 
 def validate(scenario):
+    policy=scenario.get('native_phase','all')
+    if policy not in ('all','mob_tracking'):
+        raise ValueError('unknown native_phase policy: '+str(policy))
+    if policy=='mob_tracking' and 'align' in scenario:
+        raise ValueError('native_phase mob_tracking cannot be combined with explicit align')
+    if policy=='mob_tracking' and not scenario.get('track_mobs'):
+        raise ValueError('native_phase mob_tracking requires track_mobs')
     supported = {'after','cmd','bot','attack','which','target','use','release','hand','hotbar','control','look','fly','set','click','face','cursor','dig','status','respawn','window_click','close','inventory','interact','sneaking','leave_bed','button','slot_state','select_trade'}
     for a in scenario['actions']:
         if set(a)-supported:
@@ -336,7 +343,38 @@ def aligned_start(initial_tick, constraints):
     raise ValueError('incompatible recording phases: '+json.dumps(constraints, sort_keys=True))
 
 
-def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False, reference_sha256=None):
+def select_start_tick(evidence, policy='all', capture_side=None, current_origin_tick=None, version=777):
+    """Применяет явную область подготовки; наблюдённые фазы не скрываются."""
+    if policy not in ('all','mob_tracking'):
+        raise ValueError('unknown native_phase policy: '+str(policy))
+    evidence['declared_policy']=policy
+    if version!=777:policy='all'
+    measured=evidence['constraints']
+    evidence.update(policy=policy,observed_constraints=[],applied_constraints=list(measured),
+                    current_origin_tick=current_origin_tick,verified=False)
+    if policy=='mob_tracking':
+        applied=[row for row in measured if row['source']=='mob_tracking']
+        evidence['observed_constraints']=[dict(row,reason='native_phase mob_tracking: measured but not aligned; only mob cycle is selected for setup')
+                                          for row in measured if row['source']!='mob_tracking']
+        evidence['applied_constraints']=applied
+        evidence['constraints']=applied
+        if len(evidence['observed_constraints'])!=1 or evidence['observed_constraints'][0]['source']!='player_attributes':
+            raise ValueError('native_phase mob_tracking needs exactly one measured attribute constraint; no other exclusions allowed')
+        if current_origin_tick is None or capture_side not in ('official','ours'):
+            raise ValueError('native_phase mob_tracking needs a captured current tracking origin and explicit side')
+        if capture_side=='ours' and (len(applied)!=1 or 'reference_origin_tick' not in applied[0]
+                or not re.fullmatch('[0-9a-f]{64}',str(evidence.get('reference_sha256','')))):
+            raise ValueError('native_phase mob_tracking needs verified official reference and both tracking origins')
+        if capture_side=='official' and (applied or evidence.get('reference_sha256') is not None):
+            raise ValueError('official mob_tracking must choose its natural start without a reference')
+    evidence['constraints']=evidence['applied_constraints']
+    final=aligned_start(evidence['initial_start_tick'],evidence['constraints'])
+    evidence['final_start_tick']=final
+    evidence['verified']=all(final%row['period']==row['residue'] for row in evidence['constraints'])
+    return final
+
+
+def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False, reference_sha256=None, capture_side=None):
     clients=[]; commands=[]
     phase_alignment={}
     origin=s.get('origin',[100,-59,100])
@@ -503,7 +541,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         around=[first+((p-first+.025)%.05-.025) for p in phases]
         clock += min(around)+.025
         start_tick=math.ceil((time.monotonic()-clock)/.05)+3
-        phase_alignment={'initial_start_tick':start_tick,'reference_sha256':reference_sha256,'verified':False,'constraints':[]}
+        phase_alignment={'declared_policy':s.get('native_phase','all'),'initial_start_tick':start_tick,'reference_sha256':reference_sha256,'verified':False,'constraints':[]}
         constraints=phase_alignment['constraints']
         if s.get('align'): constraints.append({'source':'scenario.align','period':s['align'],'residue':0})
         elif any(c.attribute_samples for c in clients):
@@ -529,17 +567,18 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                     desired_phase=(reference_start+first_attack.get('after',0)-before)%2
             constraints.append({'source':'player_attributes','period':2,'residue':(phase_tick-first_attack.get('after',0)+desired_phase)%2,
                                 'sample_tick':phase_tick,'desired_phase':desired_phase,'attacker':attacker})
-        if version==777 and reference and s.get('track_mobs') and tracking_kind is not None:
-            before=tracking_origin(reference['clients'][0].get('preroll',[]),reference['initial'][0]['entities'],tracking_kind)
+        current_tick=None
+        if version==777 and s.get('track_mobs') and tracking_kind is not None:
             current=tracking_origin(clients[0].preroll,clients[0].entities,tracking_kind)
-            if before is not None and current is not None:
-                phase=(round((reference['start']-reference['clock'])/.05)-math.floor((before-reference['clock'])/.05))%60
-                current_tick=math.floor((current-clock)/.05)
-                constraints.append({'source':'mob_tracking','period':60,'residue':(phase+current_tick)%60,
-                                    'reference_phase':phase,'current_origin_tick':current_tick})
-        start_tick=aligned_start(start_tick,constraints)
-        phase_alignment['final_start_tick']=start_tick
-        phase_alignment['verified']=all(start_tick%row['period']==row['residue'] for row in constraints)
+            if current is not None:current_tick=math.floor((current-clock)/.05)
+            if reference:
+                before=tracking_origin(reference['clients'][0].get('preroll',[]),reference['initial'][0]['entities'],tracking_kind)
+                if before is not None and current_tick is not None:
+                    before_tick=math.floor((before-reference['clock'])/.05)
+                    phase=(round((reference['start']-reference['clock'])/.05)-before_tick)%60
+                    constraints.append({'source':'mob_tracking','period':60,'residue':(phase+current_tick)%60,
+                                        'reference_phase':phase,'current_origin_tick':current_tick,'reference_origin_tick':before_tick})
+        start_tick=select_start_tick(phase_alignment,s.get('native_phase','all'),capture_side,current_tick,version=version)
         start=clock+start_tick*.05
         initial=[{'entity':c.entity,'entities':c.entities.copy(),'position':c.position.copy()} for c in clients]
         for c in clients:c.recording=True;c.events=[];c.external_ticks=True
@@ -719,7 +758,7 @@ def run_scenario_sides(args, scenario, servers, protocol, speed_attribute, previ
                         args.output/'sound-observations.json' if label=='official' and args.version==777 else None,
                         reference if label=='ours' and (not args.parallel or args.core_only) else None,
                         tracking_kind, speed_attribute, {row['id']:row['name'] for row in entities}, args.isolate_vitals,
-                        reference_sha256=reference_sha256 if label=='ours' and (not args.parallel or args.core_only) else None)
+                        reference_sha256=reference_sha256 if label=='ours' and (not args.parallel or args.core_only) else None, capture_side=label)
         if label=='official' and not args.parallel:
             # record уже завершил cleanup. Берём неизменный JSON, а не его
             # возвращённые живые списки, которые cleanup мог дополнить.

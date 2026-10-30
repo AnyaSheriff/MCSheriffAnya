@@ -11,7 +11,7 @@ from analyze777 import Decoder, project_record
 from record777 import aim_at, dig_status, make_recorder, protocol_rotation, validate, window_click_payload, pack_interact_location, velocity
 from smoke import read_varint
 from types import SimpleNamespace
-from record777 import run_scenario_sides, aligned_start
+from record777 import run_scenario_sides, aligned_start, select_start_tick
 
 
 class RecordingSequenceTests(unittest.TestCase):
@@ -149,6 +149,64 @@ class RecordingSequenceTests(unittest.TestCase):
         self.assertEqual(aligned_start(121,[{'period':2,'residue':0},{'period':60,'residue':0}]),180)
         self.assertEqual(aligned_start(120,[{'period':2,'residue':0},{'period':60,'residue':0}]),120)
 
+    def test_actual_phase_selection_applies_all_by_default_and_exposes_opted_in_attribute_phase(self):
+        attribute={'source':'player_attributes','period':2,'residue':1,'sample_tick':8225}
+        mob={'source':'mob_tracking','period':60,'residue':54,'current_origin_tick':8256,'reference_origin_tick':8000}
+        def evidence(rows):return {'initial_start_tick':8393,'reference_sha256':'a'*64,'constraints':rows}
+        default=evidence([attribute,mob])
+        with self.assertRaisesRegex(ValueError,'incompatible recording phases'):
+            select_start_tick(default,'all','ours',8256)
+        self.assertFalse(default['verified']);self.assertEqual(default['observed_constraints'],[])
+        selected=evidence([attribute,mob])
+        final=select_start_tick(selected,'mob_tracking','ours',8256)
+        self.assertEqual(final,8394);self.assertEqual(selected['constraints'],[mob])
+        self.assertEqual(selected['applied_constraints'],[mob]);self.assertTrue(selected['verified'])
+        observed=selected['observed_constraints'];self.assertEqual(len(observed),1)
+        self.assertEqual(observed[0]['source'],'player_attributes');self.assertEqual(observed[0]['residue'],1)
+        self.assertTrue(observed[0]['reason']);self.assertNotEqual(final%2,attribute['residue'])
+        natural={'initial_start_tick':8393,'reference_sha256':None,'constraints':[attribute]}
+        self.assertEqual(select_start_tick(natural,'mob_tracking','official',8256),8393)
+        self.assertEqual(natural['constraints'],[]);self.assertEqual(natural['observed_constraints'][0]['source'],'player_attributes')
+        compatible=evidence([dict(attribute,residue=0),mob])
+        self.assertEqual(select_start_tick(compatible,'all','ours',8256),8394)
+        self.assertEqual(len(compatible['applied_constraints']),2)
+
+    def test_legacy_775_keeps_attribute_alignment_under_native_only_sweep_policy(self):
+        evidence={'initial_start_tick':120,'reference_sha256':None,
+                  'constraints':[{'source':'player_attributes','period':2,'residue':1}]}
+        self.assertEqual(select_start_tick(evidence,'mob_tracking','ours',None,version=775),121)
+        self.assertEqual(evidence['policy'],'all');self.assertEqual(evidence['declared_policy'],'mob_tracking')
+        self.assertEqual(evidence['observed_constraints'],[]);self.assertTrue(evidence['verified'])
+
+    def test_opted_in_phase_selection_never_falls_back_without_reference_or_origins(self):
+        mob={'source':'mob_tracking','period':60,'residue':54,'reference_origin_tick':8000}
+        attribute={'source':'player_attributes','period':2,'residue':1}
+        for side,current,sha,rows in [('ours',None,'a'*64,[mob]),('ours',8256,None,[mob]),
+                                       ('ours',8256,'a'*64,[]),('ours',8256,'a'*64,[{'source':'mob_tracking','period':60,'residue':54}]),
+                                       ('official',None,None,[]),(None,8256,None,[])]:
+            with self.subTest(side=side,current=current,sha=sha,rows=rows):
+                evidence={'initial_start_tick':8393,'reference_sha256':sha,'constraints':[attribute]+rows}
+                with self.assertRaises(ValueError):select_start_tick(evidence,'mob_tracking',side,current)
+                self.assertFalse(evidence['verified'])
+        with self.assertRaisesRegex(ValueError,'unknown native_phase'):
+            select_start_tick({'initial_start_tick':0,'constraints':[]},'typo')
+
+    def test_sweep_policy_preserves_existing_comparison_scope_and_combat_actions(self):
+        scenario=json.loads((Path(__file__).parent/'scenarios/pvp-sweep.json').read_text());validate(scenario)
+        self.assertEqual(scenario['native_phase'],'mob_tracking');self.assertTrue(scenario['track_mobs'])
+        self.assertFalse(scenario.get('track_second'));self.assertFalse(scenario.get('track_second_attributes'))
+        self.assertEqual(scenario['actions'],[{'after':0,'attack':True,'bot':2}])
+        self.assertIn('summon cow $(4.5,0,3.5) {NoAI:1b}',scenario['setup'])
+        attributes=[row for row in scenario['random'] if row['match']=='^sv (other entity_update_attributes|Attributes )']
+        self.assertEqual(len(attributes),1);self.assertEqual(attributes[0]['type'],'count')
+        self.assertEqual(attributes[0]['range'],[0,8]);self.assertIs(attributes[0]['anytick'],True)
+        invalid=dict(scenario,native_phase='typo')
+        with self.assertRaisesRegex(ValueError,'unknown native_phase'):validate(invalid)
+        invalid=dict(scenario,track_mobs=False)
+        with self.assertRaisesRegex(ValueError,'requires track_mobs'):validate(invalid)
+        with self.assertRaisesRegex(ValueError,'explicit align'):validate(dict(scenario,align=2))
+
+
 
 class HarnessTests(unittest.TestCase):
     def test_stationary_client_keeps_twenty_tick_heartbeat_and_moves_immediately(self):
@@ -165,6 +223,22 @@ class HarnessTests(unittest.TestCase):
             client.position[0]+=1
             client.send('tick_end')
             self.assertEqual(sum(n=='position_look' for n,p in sent),3)
+
+    def test_noai_tracking_probes_are_silent_and_have_two_complete_periods_without_combat(self):
+        # Точная команда запрещает скрытый урон/движение и случайные допуски:
+        # измеряем появление и два периода слежения, а не голос NoAI.
+        for parity,after in [('even',30),('odd',31)]:
+            with self.subTest(parity=parity):
+                scenario=json.loads((Path(__file__).parent/f'scenarios/mob-forced-update-{parity}.json').read_text())
+                validate(scenario)
+                self.assertEqual(scenario['name'],f'mob-forced-update-{parity}')
+                self.assertEqual(scenario['record_ticks'],165)
+                self.assertTrue(scenario['track_mobs'])
+                self.assertEqual(scenario['actions'],[{'after':after,'cmd':'summon cow $(4.5,0,3.5) {NoAI:1b,Silent:1b}'}])
+                self.assertGreaterEqual(scenario['record_ticks']-after,120)
+                self.assertNotIn('random',scenario)
+                self.assertEqual(scenario['setup'],['difficulty normal','gamerule natural_health_regeneration false',
+                                                  'gamemode creative $(bot)','kill @e[type=cow,distance=..48]'])
 
     def test_bot_radians_and_block_aim_use_protocol_degrees(self):
         import math

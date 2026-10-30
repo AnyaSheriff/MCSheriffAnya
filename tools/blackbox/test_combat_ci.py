@@ -199,7 +199,7 @@ class ResultTests(unittest.TestCase):
         for name,after in zip(scenarios[-2:],[30,31]):
             probe=json.loads((ci.ROOT/f'tools/blackbox/scenarios/{name}.json').read_text());validate(probe)
             self.assertEqual(probe['record_ticks'],165)
-            self.assertEqual(probe['actions'],[{'after':after,'cmd':'summon cow $(4.5,0,3.5) {NoAI:1b}'}])
+            self.assertEqual(probe['actions'],[{'after':after,'cmd':'summon cow $(4.5,0,3.5) {NoAI:1b,Silent:1b}'}])
             self.assertNotIn('random',probe)
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);first,row,_=self.populated(root)
