@@ -19,6 +19,8 @@ use crate::network::packet::decode_varint;
 use crate::network::varint::{encode_string, encode_varint};
 use crate::snbt::{self, Value};
 
+mod custom_data;
+pub use custom_data::CustomData;
 pub(crate) mod storage_depth;
 #[cfg(test)]
 mod storage_depth_tests;
@@ -157,6 +159,8 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 /// Довески одной стопки.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Data {
+    /// Java custom_data: все типы NBT и исходные биты значений.
+    pub custom_data: Option<CustomData>,
     /// Цвет брони и стороны горшка; метки файла 18, 19 (1–17 заняты).
     pub dyed_color: Option<i32>,
     pub pot_decorations: Option<[i32; 4]>,
@@ -385,6 +389,9 @@ pub fn enchantment_number(name: &str) -> Option<u16> {
 pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     let mut count = 0;
     let mut out = Vec::new();
+    if let Some(custom) = &data.custom_data {
+        out.extend(encode_varint(0)); out.extend_from_slice(custom.as_bytes()); count += 1;
+    }
     count += crate::mob::water::bucket::encode(data, &mut out);
 
     if !data.stew.is_empty() {
@@ -527,18 +534,8 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
             if let Some(content) = data.contents.iter().find(|c| c.slot == slot) {
                 out.push(1);
                 let stack = crate::inventory::Stack::from_stored(content.item, content.count);
-                let data = content.data.map(get).unwrap_or_default();
-                let (mut n, mut extra) = encode_components(&data);
-                if let Some(kind) = stack.tnt.and_then(crate::custom_tnt::by_id) {
-                    extra.extend(encode_varint(0));
-                    extra.extend(crate::network::nbt::Compound::new().string(crate::custom_tnt::MARKER,kind.name).encode_network());
-                    n += 1;
-                    if data.name.is_none() {
-                        extra.extend(encode_varint(COMPONENT_CUSTOM_NAME));
-                        extra.extend(crate::network::nbt::text_component(kind.title));
-                        n += 1;
-                    }
-                }
+                let stack = crate::inventory::Stack { data: content.data, ..stack };
+                let (n, extra) = encode_stack_components(&stack, false);
                 for value in [stack.item, content.count, n, 0] { out.extend(encode_varint(value)); }
                 out.extend(extra);
             } else { out.push(0); }
@@ -558,7 +555,7 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         out.extend(encode_varint(50)); out.extend(encode_varint(data.bundle.len() as i32));
         for c in &data.bundle {
             let s=crate::inventory::Stack::from_stored(c.item,c.count);
-            let (n,extra)=encode_components(&c.data.map(get).unwrap_or_default());
+            let (n,extra)=encode_stack_components(&crate::inventory::Stack {data:c.data,..s}, false);
             for v in [s.item,c.count,n,0] { out.extend(encode_varint(v)); } out.extend(extra);
         }
         count+=1;
@@ -715,15 +712,77 @@ fn skip_nbt(reader: &mut Reader<'_>, depth: usize) -> Option<()> {
     let kind = reader.take(1)?[0]; value(reader,kind,depth)
 }
 
-/// Читает один компонент, присланный клиентом (Untrusted Slot: тело
-/// известной длины), и записывает его в довески. Незнакомый пропускается.
+/// Строго читает весь compound до изменения довесков.
+pub fn read_custom_data(body: &[u8], data: &mut Data) -> bool {
+    let Some(custom) = CustomData::from_bytes(body) else { return false; };
+    data.custom_data = Some(custom);
+    true
+}
+
+/// Старый TNT с единственной служебной меткой остаётся прежней стопкой.
+/// При дополнительных полях сохраняется весь compound, включая метку.
+pub fn stack_with_components(item: i32, count: i32, mut data: Data) -> crate::inventory::Stack {
+    let tnt = if Some(item) == crate::blocks::item_named("tnt") {
+        data.custom_data.as_ref().and_then(|custom| custom.ascii_field(crate::custom_tnt::MARKER))
+            .and_then(crate::custom_tnt::by_name)
+    } else { None };
+    if let Some(kind) = tnt {
+        let marker = crate::network::nbt::Compound::new().string(crate::custom_tnt::MARKER, kind.name).encode_network();
+        if data.custom_data.as_ref().map(CustomData::as_bytes) == Some(marker.as_slice()) { data.custom_data = None; }
+        if data.name.as_deref() == Some(kind.title) { data.name = None; }
+    }
+    crate::inventory::Stack { tnt: tnt.map(|kind| kind.id), ..crate::inventory::Stack::new(item, count).with_extras(data) }
+}
+
+/// Служебная метка не должна перезаписать пользовательское поле или
+/// превратить сохраняемую стопку в компонент, который наш читатель отвергнет.
+pub(crate) fn valid_tnt_custom_data(stack: &crate::inventory::Stack, data: &Data) -> bool {
+    let Some(kind) = stack.tnt.and_then(crate::custom_tnt::by_id) else { return true; };
+    let Some(custom) = &data.custom_data else { return true; };
+    (!custom.has_field(crate::custom_tnt::MARKER) || custom.ascii_field(crate::custom_tnt::MARKER) == Some(kind.name))
+        && custom.with_ascii_field(crate::custom_tnt::MARKER,kind.name).as_bytes().len() <= u16::MAX as usize
+}
+
+/// Один custom_data и полные довески; оформление TNT добавляется отдельно.
+/// У вложенного шаблона сохраняем прежнее простое имя без описания.
+pub fn encode_stack_components(stack: &crate::inventory::Stack, decorated: bool) -> (i32, Vec<u8>) {
+    let mut data = stack.extras();
+    let kind = stack.tnt.and_then(crate::custom_tnt::by_id);
+    if let Some(kind) = kind {
+        let custom = data.custom_data.take().unwrap_or_else(|| CustomData::from_bytes(&[10,0]).expect("пустой compound"));
+        data.custom_data = Some(custom.with_ascii_field(crate::custom_tnt::MARKER, kind.name));
+    }
+    let (mut count, mut bytes) = encode_components(&data);
+    if let Some(kind) = kind {
+        if data.name.is_none() {
+            bytes.extend(encode_varint(COMPONENT_CUSTOM_NAME));
+            bytes.extend(if decorated {
+                crate::network::nbt::Compound::new().string("text",kind.title).string("color",kind.colour).boolean("italic",false).encode_network()
+            } else { crate::network::nbt::text_component(kind.title) });
+            count += 1;
+        }
+        if decorated {
+            bytes.extend(encode_varint(11)); bytes.extend(encode_varint(1));
+            bytes.extend(crate::network::nbt::Compound::new().string("text",kind.lore).string("color","gray").boolean("italic",false).encode_network());
+            count += 1;
+        }
+    }
+    (count, bytes)
+}
+
+/// Читает известный компонент; незнакомые компоненты здесь пропускаются.
+/// Для custom_data недоверенного клиента нужен строгий read_custom_data.
 pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
     let _ = read_component_cursor(kind, &mut Reader { bytes: body, at: 0, failed: false }, data, 0);
 }
 
 pub fn read_bundle_component(body: &[u8], data: &mut Data) -> bool {
     let mut reader = Reader { bytes: body, at: 0, failed: false };
-    read_component_cursor(50, &mut reader, data, 0) && reader.at == body.len()
+    let mut parsed = Data::default();
+    if !read_component_cursor(50, &mut reader, &mut parsed, 0)
+        || reader.at != body.len() || to_bytes(&parsed).len() > u16::MAX as usize { return false; }
+    data.bundle = parsed.bundle;
+    true
 }
 
 /// Неполный или неподдержанный контейнер не должен молча терять содержимое.
@@ -738,6 +797,11 @@ pub fn read_container_component(body: &[u8], data: &mut Data) -> bool {
 
 fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, depth: usize) -> bool {
     match kind {
+        0 => {
+            let Some((custom, length)) = CustomData::read_prefix(&reader.bytes[reader.at..]) else { return false; };
+            if reader.take(length).is_none() { return false; }
+            data.custom_data = Some(custom);
+        }
         COMPONENT_CONTAINER => {
             if depth >= 16 { return false; }
             // Пока сохраняем и размещаем ровно 27 ячеек шалкера. Большие
@@ -754,27 +818,12 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
                 if item == 0 || crate::blocks::item_name(item).is_none() || !(1..=127).contains(&count)
                     || !(0..=256).contains(&added) || removed != 0 { return false; }
                 let mut extra = Data::default();
-                let mut tnt = None;
                 let mut seen = std::collections::BTreeSet::new();
                 for _ in 0..added {
                     let Some(component) = reader.varint() else { return false; };
-                    if !seen.insert(component) { return false; }
-                    if component == 0 {
-                        // Свою метку TNT сохраняем; произвольный custom_data
-                        // пока не храним и не должны молча отбрасывать.
-                        let start = reader.at;
-                        if skip_nbt(reader, depth + 1).is_none() || Some(item) != crate::blocks::item_named("tnt") { return false; }
-                        let bytes = &reader.bytes[start..reader.at];
-                        let Some(name) = crate::network::nbt::string_field(bytes,crate::custom_tnt::MARKER) else { return false; };
-                        let Some(kind) = crate::custom_tnt::by_name(&name) else { return false; };
-                        if bytes != crate::network::nbt::Compound::new().string(crate::custom_tnt::MARKER,kind.name).encode_network() { return false; }
-                        tnt = Some(kind.id);
-                    } else if !read_component_cursor(component, reader, &mut extra, depth + 1) { return false; }
+                    if !seen.insert(component) || !read_component_cursor(component, reader, &mut extra, depth + 1) { return false; }
                 }
-                if let Some(kind) = tnt.and_then(crate::custom_tnt::by_id)
-                    && extra.name.as_deref() == Some(kind.title) { extra.name = None; }
-                let mut stack = crate::inventory::Stack::new(item, count).with_extras(extra);
-                stack.tnt = tnt;
+                let stack = stack_with_components(item, count, extra);
                 contents.push(Content { slot: slot as u8, item: stack.stored_item(), count, data: stack.data });
             }
             data.contents = contents;
@@ -787,12 +836,16 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
                 let (Some(item), Some(count), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false; };
                 if crate::blocks::item_name(item).is_none() || !(1..=99).contains(&count) || !(0..=256).contains(&added) || !(0..=256).contains(&removed) { return false; }
                 let mut extra = Data::default();
+                let mut seen = std::collections::BTreeSet::new();
                 for _ in 0..added {
                     let Some(kind) = reader.varint() else { return false; };
-                    if !read_component_cursor(kind, reader, &mut extra, depth + 1) { return false; }
+                    if !seen.insert(kind) || !read_component_cursor(kind, reader, &mut extra, depth + 1) { return false; }
                 }
-                for _ in 0..removed { if reader.varint().is_none() { return false; } }
-                let stack = crate::inventory::Stack::new(item,count).with_extras(extra);
+                for _ in 0..removed {
+                    let Some(kind) = reader.varint() else { return false; };
+                    if !seen.insert(kind) { return false; }
+                }
+                let stack = stack_with_components(item, count, extra);
                 contents.push(Content { slot: 0, item: stack.stored_item(), count, data: stack.data });
             }
             data.bundle = contents;
@@ -975,7 +1028,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -1015,7 +1068,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -1031,6 +1084,11 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         out.push(u8::from(data.name.is_some()));
         out.extend_from_slice(&(length as u16).to_be_bytes());
         out.extend_from_slice(&name.as_bytes()[..length]);
+
+        if let Some(custom) = &data.custom_data {
+            out.push(22); out.extend_from_slice(&(custom.as_bytes().len() as u32).to_be_bytes());
+            out.extend_from_slice(custom.as_bytes());
+        }
 
         if !data.charged_projectiles.is_empty() {
             let bytes = projectiles::encode(data);
@@ -1274,6 +1332,11 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
+                22 => {
+                    if data.custom_data.is_some() { return None; }
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    data.custom_data = Some(CustomData::from_bytes(reader.take(length)?)?);
+                }
                 21 => {
                     let count = reader.take(1)?[0]; if count > 4 { return None; }
                     for _ in 0..count {
@@ -1415,6 +1478,9 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
     for part in components.map(split_top_level).unwrap_or_default() {
         let (key, value) = part.split_once('=').ok_or_else(|| format!("нет значения у {part}"))?;
         let key = key.trim().strip_prefix("minecraft:").unwrap_or(key.trim());
+        if key == "custom_data" {
+            return Err("custom_data в командах пока не поддерживается: NBT нельзя сохранить без потери типов".into());
+        }
         let value = snbt::parse(value.trim()).ok_or_else(|| format!("не разобрать значение {value}"))?;
 
         match key {

@@ -108,6 +108,27 @@ mod tests {
     }
 
     #[test]
+    fn custom_data_controls_inventory_and_ground_merging_without_losing_types() {
+        let tagged = |bytes: &[u8]| stack(2).with_extras(crate::stackdata::Data {
+            custom_data: Some(crate::stackdata::CustomData::from_bytes(bytes).unwrap()), ..Default::default()
+        });
+        let first = tagged(&[10,1,0,1,b'a',1,3,0,1,b'b',0,0,0,2,0]);
+        let same = tagged(&[10,3,0,1,b'b',0,0,0,2,1,0,1,b'a',1,0]);
+        let different = tagged(&[10,2,0,1,b'a',0,1,3,0,1,b'b',0,0,0,2,0]);
+        assert_eq!(first.data,same.data);
+        assert!(!first.stacks_with(&different));
+        let mut inventory = crate::inventory::Inventory::new();
+        inventory.put(first); inventory.put(different); inventory.put(same);
+        let counts: Vec<_> = inventory.slots().iter().flatten().map(|s|s.count).collect();
+        assert_eq!(counts,vec![4,2]);
+        let mut items = pair(first,different,(0.0,64.0,0.0));
+        items.merge_items(&[1]);assert_eq!(items.items.len(),2);
+        let mut items = pair(first,same,(0.0,64.0,0.0));
+        items.merge_items(&[1]);assert_eq!(items.items.len(),1);
+        assert_eq!(items.items[0].stack,first.with_count(4));
+    }
+
+    #[test]
     fn stationary_items_check_every_forty_ticks_and_equal_initiator_disappears() {
         let mut items = pair(stack(1), stack(1), (0.0, 64.0, 0.0));
         for item in &mut items.items { item.no_gravity = true; item.ticks = 0; }

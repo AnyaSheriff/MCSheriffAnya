@@ -653,6 +653,8 @@ mod tests {
             assert_eq!(data.inventory.slot(37), Some(crate::inventory::Stack::new(10, 5)));
             assert_eq!(data.ender[4], Some(crate::inventory::Stack::new(1, 7)));
             assert_eq!(data.inventory.cursor(), None);
+            assert!(data.inventory.slots().iter().flatten().all(|stack| stack.extras().custom_data.is_none()));
+            assert!(data.ender.iter().flatten().all(|stack| stack.extras().custom_data.is_none()));
             assert_eq!((data.vitals.health, data.vitals.food, data.vitals.experience), (18.0, 19, 7));
             assert_eq!(data.vitals.experience_total, if layout == 9 { 42 } else { 7 });
             assert_eq!(data.vitals.xp_seed, 123456);

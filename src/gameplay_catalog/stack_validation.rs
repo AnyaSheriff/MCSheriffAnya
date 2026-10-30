@@ -63,6 +63,7 @@ impl Catalog {
         }
         let Some(id) = stack.data else { return Ok(()); };
         let data = stackdata::try_get(id).ok_or_else(|| fail(StackProblem::MissingComponents))?;
+        if !stackdata::valid_tnt_custom_data(stack, &data) { return Err(fail(StackProblem::CustomTnt)); }
         let mut nested = |content: &Content, location| {
             path.push(location);
             // Вложенные записи хранят stored_item, включая метку custom TNT.

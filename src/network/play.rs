@@ -130,6 +130,8 @@ mod bundle_use;
 #[cfg(test)]
 mod review_tests;
 #[cfg(test)]
+mod custom_data_tests;
+#[cfg(test)]
 mod disconnect_tests;
 #[cfg(test)]
 mod save_conservation_tests;
@@ -2614,58 +2616,26 @@ fn item_place((x, y, z): (f64, f64, f64), on_ground: bool) -> Position {
 
 /// Дописывает «слот» протокола: сколько предметов и какой это предмет.
 ///
-/// Довески передаются только у особого динамита (`slot_components`), у
-/// прочих предметов их нет.
+/// Полные довески передаются общим кодеком; оформление TNT добавляется к ним.
 fn push_slot(body: &mut Vec<u8>, stack: Option<Stack>) {
     match stack {
         Some(stack) => {
             body.extend_from_slice(&encode_varint(stack.count));
             body.extend_from_slice(&encode_varint(stack.item));
 
-            match stack.tnt.and_then(crate::custom_tnt::by_id) {
-                Some(kind) => body.extend_from_slice(&slot_components(kind)),
-                None => {
-                    // Довески стопки (износ, зачарования…) — компонентами
-                    // (stackdata.rs); ничего не убираем.
-                    let (added, components) = crate::stackdata::encode_components(&stack.extras());
-
-                    body.extend_from_slice(&encode_varint(added));
-                    body.extend_from_slice(&encode_varint(0));
-                    body.extend_from_slice(&components);
-                }
-            }
+            let (added, components) = crate::stackdata::encode_stack_components(&stack, true);
+            body.extend_from_slice(&encode_varint(added));
+            body.extend_from_slice(&encode_varint(0));
+            body.extend_from_slice(&components);
         }
         None => body.extend_from_slice(&encode_varint(0)),
     }
 }
 
-/// Номера довесков предмета в 775 (minecraft-data, protocol.json,
-/// SlotComponentType): custom_data, custom_name, lore.
+#[cfg(test)]
 const COMPONENT_CUSTOM_DATA: i32 = 0;
+#[cfg(test)]
 const COMPONENT_CUSTOM_NAME: i32 = 6;
-const COMPONENT_LORE: i32 = 11;
-
-/// Довески особого динамита: три добавленных, ни одного убранного —
-/// цветное название без курсива, строка описания серым и пометка
-/// `{mcsheriffanya_tnt:"вид"}` в custom_data (её клиент в творческом
-/// режиме присылает обратно — так вид и узнаётся).
-fn slot_components(kind: &crate::custom_tnt::Kind) -> Vec<u8> {
-    let text = |text: &str, colour: &str| {
-        nbt::Compound::new().string("text", text).string("color", colour).boolean("italic", false).encode_network()
-    };
-
-    let mut out = encode_varint(3);
-
-    out.extend_from_slice(&encode_varint(0));
-    out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_NAME));
-    out.extend_from_slice(&text(kind.title, kind.colour));
-    out.extend_from_slice(&encode_varint(COMPONENT_LORE));
-    out.extend_from_slice(&encode_varint(1));
-    out.extend_from_slice(&text(kind.lore, "gray"));
-    out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_DATA));
-    out.extend_from_slice(&nbt::Compound::new().string(crate::custom_tnt::MARKER, kind.name).encode_network());
-    out
-}
 
 /// Отправляет выбранный слот панели быстрого доступа.
 ///
@@ -10941,8 +10911,8 @@ fn read_slot(cursor: &mut Cursor) -> Option<(Option<Stack>, bool)> {
 
 /// Читает слот от клиента в творческом режиме (Untrusted Slot): у каждого
 /// довеска там своя длина, поэтому их можно пропускать. Из довесков
-/// смотрится только custom_data — пометка особого динамита; прочие
-/// отбрасываются, как и прежде.
+/// custom_data сохраняется целиком; неподдержанный или битый compound
+/// отвергается до изменения инвентаря.
 fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
     let count = cursor.varint()?;
 
@@ -10952,21 +10922,19 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
 
     let mut stack = Stack::new(cursor.varint()?, count);
     let added = cursor.varint()?;
-    let _removed = cursor.varint()?;
+    let removed = cursor.varint()?;
+    if !(0..=256).contains(&added) || !(0..=256).contains(&removed) { return None; }
+    let mut seen = std::collections::BTreeSet::new();
 
     let mut extras = crate::stackdata::Data::default();
 
-    for _ in 0..added.clamp(0, 256) {
+    for _ in 0..added {
         let kind = cursor.varint()?;
+        if !seen.insert(kind) { return None; }
         let length = usize::try_from(cursor.varint()?).ok()?;
         let data = cursor.bytes(length)?;
 
-        if kind == COMPONENT_CUSTOM_DATA
-            && let Some(name) = nbt::string_field(data, crate::custom_tnt::MARKER)
-            && Some(stack.item) == blocks::item_named("tnt")
-        {
-            stack.tnt = crate::custom_tnt::by_name(&name).map(|kind| kind.id);
-        }
+        if kind == 0 && !crate::stackdata::read_custom_data(data, &mut extras) { return None; }
 
         if kind == 50 {
             if !crate::stackdata::read_bundle_component(data, &mut extras) { return None; }
@@ -10977,15 +10945,12 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
         } else { crate::stackdata::read_component(kind, data, &mut extras); }
     }
 
-    // Имя особого динамита — от его вида, своим именем оно не хранится.
-    if let Some(kind) = stack.tnt.and_then(crate::custom_tnt::by_id)
-        && extras.name.as_deref() == Some(kind.title)
-    {
-        extras.name = None;
+    for _ in 0..removed {
+        if !seen.insert(cursor.varint()?) { return None; }
     }
-
     if crate::stackdata::to_bytes(&extras).len() > u16::MAX as usize { return None; }
-    Some(Some(stack.with_extras(extras)))
+    stack = crate::stackdata::stack_with_components(stack.item, stack.count, extras);
+    Some(Some(stack))
 }
 
 /// Разбирает сообщение о содержимом слота инвентаря в творческом режиме.
@@ -11014,6 +10979,7 @@ fn read_creative_slot_with_catalog(payload: &[u8], player: &mut PlayerState, cat
 
     let slot = cursor.u16()? as i16;
     let stack = read_untrusted_slot(&mut cursor)?;
+    if cursor.offset != payload.len() { return None; }
 
     // Номер предмета и число — тоже от клиента. Несуществующий предмет
     // в руке ушёл бы всем остальным и отключил бы их, а число больше стопки
