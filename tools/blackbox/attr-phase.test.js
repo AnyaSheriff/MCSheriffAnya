@@ -93,5 +93,18 @@ test('phase scenarios that kill a player synchronize after respawn, before loado
     assert.ok(!setup.slice(0, marker).some(c => /^(give |item replace |effect give )/.test(c)), file);
     covered++;
   }
-  assert.equal(covered, 14);
+  assert.equal(covered, 15);
+  const probe = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios', 'pvp-hotbar-attribute-phase.json')));
+  assert.deepEqual(probe.actions, [
+    { after: 30, hotbar: 1, bot: 2 }, { after: 51, hotbar: 0, bot: 2 },
+    { after: 72, hotbar: 1, bot: 2 }, { after: 93, hotbar: 0, bot: 2 },
+  ]);
+  for (const flag of ['attr_phase', 'second', 'track_self', 'track_players', 'track_second', 'item_components']) assert.equal(probe[flag], true);
+  assert.equal(probe.record_ticks, 120);
+  assert.equal(probe.random, undefined); // Attributes обоим клиентам проверяются без допуска.
+  const marker = probe.setup.indexOf(SYNC_COMMAND);
+  for (const command of [
+    'item replace entity $(bot2) hotbar.0 with minecraft:diamond_sword',
+    'item replace entity $(bot2) hotbar.1 with minecraft:iron_axe',
+  ]) assert.ok(probe.setup.indexOf(command) > marker);
 });

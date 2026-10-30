@@ -13,7 +13,8 @@
   "scenarios": [
     "pvp-weakness",
     "pvp-resistance",
-    "pvp-shield-back"
+    "pvp-shield-back",
+    "pvp-hotbar-attribute-phase"
   ],
   "repeat": 2
 }

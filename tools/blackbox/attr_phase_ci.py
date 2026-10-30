@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Узкий CI: три живых сценария × два повтора штатного bot.js, без сборки."""
+"""Узкий CI: четыре живых сценария × два повтора штатного bot.js, без сборки."""
 import argparse
 import json
 import os
@@ -15,7 +15,7 @@ from combat_ci import (ROOT, checked_file, cleanup_manifest, fetch, preflight,
 from combat_process import ports_free
 
 CONFIG = ROOT / 'tools/blackbox/ci/attr-phase'
-NAMES = ['pvp-weakness', 'pvp-resistance', 'pvp-shield-back']
+NAMES = ['pvp-weakness', 'pvp-resistance', 'pvp-shield-back', 'pvp-hotbar-attribute-phase']
 REPEAT = 2
 PORTS = [26170, 26171, 26174, 26270, 26271, 26274]
 

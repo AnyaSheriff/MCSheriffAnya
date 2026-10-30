@@ -1,0 +1,67 @@
+{
+ "name": "pvp-hotbar-attribute-phase",
+ "attr_phase": true,
+ "about": "[проверить] Чётность Attributes при смене слота второго игрока: меч ↔ топор, без боя. Четыре смены на чётных и нечётных смещениях; свои и чужие Attributes сравниваются строго по тактам.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "track_second": true,
+ "item_components": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "effect clear $(bot)",
+  "effect clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "!syncattrs",
+  "item replace entity $(bot2) hotbar.0 with minecraft:diamond_sword",
+  "item replace entity $(bot2) hotbar.1 with minecraft:iron_axe",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 30,
+   "hotbar": 1,
+   "bot": 2
+  },
+  {
+   "after": 51,
+   "hotbar": 0,
+   "bot": 2
+  },
+  {
+   "after": 72,
+   "hotbar": 1,
+   "bot": 2
+  },
+  {
+   "after": 93,
+   "hotbar": 0,
+   "bot": 2
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

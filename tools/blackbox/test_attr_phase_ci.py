@@ -37,7 +37,7 @@ def populate(root):
         'proxy': {'sha256': sources['proxy']['sha256']},
         'scripts': {name: ci.sha(ci.ROOT / 'tools/blackbox' / name)
                     for name in ('bot.js', 'attr-phase.js', 'compare.js', 'via_ticks.js')}})
-    servers = [{'pid': i + 100, 'identity': {}} for i in range(16)]
+    servers = [{'pid': i + 100, 'identity': {}} for i in range(4 + 2 * len(ci.NAMES) * ci.REPEAT)]
     lifecycle = {'servers': servers, 'cleanup_errors': [],
                  'commands': [{'pid': s['pid'], 'argv': ['node' if i >= 4 else 'java']}
                               for i, s in enumerate(servers)],
@@ -70,13 +70,13 @@ class CaptureTests(unittest.TestCase):
 
 
 class AuditTests(unittest.TestCase):
-    def test_complete_fresh_matrix_has_twelve_validated_captures(self):
+    def test_complete_fresh_matrix_has_all_validated_captures(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             populate(root)
             result = ci.audit(root, 'a' * 64)
             self.assertEqual(result['status'], 'match', result)
-            self.assertEqual(len(result['captures']), 12)
+            self.assertEqual(len(result['captures']), 2 * len(ci.NAMES) * ci.REPEAT)
 
     def test_stale_runtime_sources_and_scope_manifest_fail(self):
         for key, value in [('binary', {'sha256': 'b' * 64}), ('jar', {'sha256': 'b' * 64}),
