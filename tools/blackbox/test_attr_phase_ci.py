@@ -76,6 +76,7 @@ class AuditTests(unittest.TestCase):
             populate(root)
             result = ci.audit(root, 'a' * 64)
             self.assertEqual(result['status'], 'match', result)
+            self.assertEqual(len(ci.NAMES), 5)
             self.assertEqual(len(result['captures']), 2 * len(ci.NAMES) * ci.REPEAT)
 
     def test_stale_runtime_sources_and_scope_manifest_fail(self):

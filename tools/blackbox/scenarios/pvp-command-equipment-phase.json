@@ -1,0 +1,63 @@
+{
+ "name": "pvp-command-equipment-phase",
+ "attr_phase": true,
+ "about": "[проверить] Только командная замена деревянного меча второго игрока: износ1..4 на +15/+56/+98/+139. Запись собственной ячейки b:Slot36 и чужой экипировки связывает одну замену с её видимостью владельцу и наблюдателю. Без боя и допусков для Attributes.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "track_second": true,
+ "track_second_slots": true,
+ "item_components": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "effect clear $(bot)",
+  "effect clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "!syncattrs",
+  "!hotbar2 0",
+  "item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 15,
+   "cmd": "item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword[damage=1]"
+  },
+  {
+   "after": 56,
+   "cmd": "item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword[damage=2]"
+  },
+  {
+   "after": 98,
+   "cmd": "item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword[damage=3]"
+  },
+  {
+   "after": 139,
+   "cmd": "item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword[damage=4]"
+  }
+ ],
+ "record_ticks": 160,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

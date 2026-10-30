@@ -93,7 +93,7 @@ test('phase scenarios that kill a player synchronize after respawn, before loado
     assert.ok(!setup.slice(0, marker).some(c => /^(give |item replace |effect give )/.test(c)), file);
     covered++;
   }
-  assert.equal(covered, 15);
+  assert.equal(covered, 16);
   const probe = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios', 'pvp-hotbar-attribute-phase.json')));
   assert.deepEqual(probe.actions, [
     { after: 30, hotbar: 1, bot: 2 }, { after: 51, hotbar: 0, bot: 2 },
@@ -107,4 +107,16 @@ test('phase scenarios that kill a player synchronize after respawn, before loado
     'item replace entity $(bot2) hotbar.0 with minecraft:diamond_sword',
     'item replace entity $(bot2) hotbar.1 with minecraft:iron_axe',
   ]) assert.ok(probe.setup.indexOf(command) > marker);
+  const commands = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios', 'pvp-command-equipment-phase.json')));
+  for (const flag of ['attr_phase', 'second', 'track_self', 'track_players', 'track_second', 'track_second_slots', 'item_components']) assert.equal(commands[flag], true);
+  assert.equal(commands.random, undefined);
+  assert.deepEqual(commands.actions, [15, 56, 98, 139].map((after, i) => ({
+    after, cmd: `item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword[damage=${i + 1}]`,
+  })));
+  const commandMarker = commands.setup.indexOf(SYNC_COMMAND);
+  const initial = commands.setup.indexOf('item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword');
+  assert.ok(initial > commandMarker);
+  const selected = commands.setup.indexOf('!hotbar2 0');
+  assert.ok(selected > commandMarker && selected < initial);
+  assert.ok(commands.record_ticks > commands.actions.at(-1).after);
 });

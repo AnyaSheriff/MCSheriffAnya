@@ -14,7 +14,8 @@
     "pvp-weakness",
     "pvp-resistance",
     "pvp-shield-back",
-    "pvp-hotbar-attribute-phase"
+    "pvp-hotbar-attribute-phase",
+    "pvp-command-equipment-phase"
   ],
   "repeat": 2
 }

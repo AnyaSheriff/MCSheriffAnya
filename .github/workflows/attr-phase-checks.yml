@@ -63,7 +63,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/attr-phase-node"
           cp tools/blackbox/ci/attr-phase/package*.json "$RUNNER_TEMP/attr-phase-node/"
           npm ci --prefix "$RUNNER_TEMP/attr-phase-node" --ignore-scripts --omit=dev --no-audit --no-fund 2>&1 | tee "$RUNNER_TEMP/attr-phase-output/npm-install.log"
-      - name: Eight fresh symmetric comparisons through full bot setup
+      - name: Ten fresh symmetric comparisons through full bot setup
         timeout-minutes: 34
         run: |
           python tools/blackbox/attr_phase_ci.py run \
