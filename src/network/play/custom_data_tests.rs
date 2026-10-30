@@ -110,8 +110,9 @@ fn creative_custom_data_rejects_malformed_before_replacing_existing_slot() {
 fn custom_data_nested_items_and_tnt_extras_survive_creative_and_storage() {
     let ordinary=Stack::new(blocks::item_named("stone").unwrap(),2).with_extras(Data {custom_data:Some(custom()),..Default::default()});
     let kind=crate::custom_tnt::by_name("nuke").unwrap();
-    let mut compound=nbt::Compound::new().string(crate::custom_tnt::MARKER,kind.name).int("other",17).encode_network();
-    // Числовое поле перед marker также не должно мешать определению TNT.
+    let mut compound=nbt::Compound::new().string(crate::custom_tnt::MARKER,kind.name).int("aaa",17).encode_network();
+    // После сортировки aaa (TAG_Int) стоит перед служебной строкой TNT;
+    // поиск метки должен пропустить числовое поле, сохранив его.
     let custom=CustomData::from_bytes(&compound).unwrap();compound=custom.as_bytes().to_vec();
     let tnt=stackdata::stack_with_components(blocks::item_named("tnt").unwrap(),2,Data {custom_data:Some(custom),damage:3,name:Some("Особое имя".into()),..Default::default()});
     assert_eq!(tnt.tnt,Some(kind.id));
@@ -119,7 +120,7 @@ fn custom_data_nested_items_and_tnt_extras_survive_creative_and_storage() {
     let shulker=Stack::new(blocks::item_named("shulker_box").unwrap(),1).with_extras(Data {contents:vec![content(ordinary,0),content(tnt,26)],..Default::default()});
     let bundle=Stack::new(blocks::item_named("bundle").unwrap(),1).with_extras(Data {bundle:vec![content(ordinary,0),content(tnt,0)],..Default::default()});
     let arrow=Stack::new(blocks::item_named("arrow").unwrap(),1).with_extras(ordinary.extras());
-    let crossbow=Stack::new(blocks::item_named("crossbow").unwrap(),1).with_extras(Data {charged:1,charged_arrow:Some(content(arrow,0)),..Default::default()});
+    let crossbow=Stack::new(blocks::item_named("crossbow").unwrap(),1).with_extras(Data {charged:1,charged_arrow:Some(stackdata::Content {slot:0,item:arrow.item,count:arrow.count,data:arrow.data}),..Default::default()});
     for version in [JavaVersion::V26_1_2,JavaVersion::V26_3] {
         for expected in [shulker,bundle,crossbow,tnt] {
             let payload=received_payload(expected,36,version);let mut p=player();
