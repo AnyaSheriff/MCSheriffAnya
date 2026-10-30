@@ -28,6 +28,18 @@ test('exhausted synchronization rejects instead of starting a bad recording', as
   assert.equal(respawns, 8);
 });
 
+test('repeated same-phase respawns try both timing parities before recording', async () => {
+  let phase = 1;
+  const delays = [];
+  const result = await synchronize(async i => i === 0 ? 0 : phase, async extraTicks => {
+    delays.push(extraTicks);
+    // Модель наблюдавшегося зависания: без дополнительного такта фаза та же.
+    if (extraTicks === 1) phase = 0;
+  });
+  assert.deepEqual(delays, [0, 1]);
+  assert.deepEqual(result, { players: [0, 0], respawns: 2 });
+});
+
 test('missing or malformed phase cannot look like an aligned pair', async () => {
   for (const phase of [null, undefined, NaN, -1, 2, '0', false]) {
     let respawns = 0;

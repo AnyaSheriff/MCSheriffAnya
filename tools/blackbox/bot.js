@@ -778,7 +778,8 @@ bot.once('spawn', async () => {
     let phaseRespawns = 0;
     const syncAttrs = async () => {
       if (!bot2) return;
-      const result = await attrPhaseTools.synchronize(measurePhase, async () => {
+      const result = await attrPhaseTools.synchronize(measurePhase, async extraTicks => {
+        if (extraTicks) await sleepTicks(extraTicks);
         let spawned;
         const respawned = new Promise(resolve => { spawned = resolve; bot2.once('spawn', spawned); });
         try {

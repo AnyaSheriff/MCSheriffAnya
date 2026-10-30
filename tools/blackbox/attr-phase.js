@@ -27,7 +27,9 @@ async function synchronize(measure, respawnSecond, maxRespawns = 8, observe = ()
     observe(players, respawns);
     if (players[0] === players[1]) return { players, respawns };
     if (respawns === maxRespawns) throw new Error(`attr_phase: не удалось выровнять игроков после ${maxRespawns} возрождений`);
-    await respawnSecond();
+    // Одинаковая длительность подготовки может снова и снова давать ту же
+    // чётность respawn. Пробуем обе задержки; измерение остаётся обязательным.
+    await respawnSecond(respawns % 2);
   }
 }
 
