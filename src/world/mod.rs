@@ -3282,6 +3282,19 @@ impl World {
         })
     }
 
+    /// Публикует готовый свет только при совпадении всех девяти входов.
+    /// Итог с соседями нужен и случайным тактам: повторно сшивать его не надо.
+    pub fn accept_prepared_light(&mut self, prepared: &mut light::PreparedLight) -> bool {
+        if !self.light_is_current(prepared) { return false; }
+        let revisions = std::array::from_fn(|slot| {
+            prepared.inputs[slot].as_ref().map_or(u32::MAX, |input| input.revision)
+        });
+        self.store_light(std::mem::take(&mut prepared.recounted));
+        // Mixed-секции разделяют Arc: массивы уровней света не копируются.
+        self.sky_cache.insert(prepared.center, (revisions, Arc::new(prepared.light.clone())));
+        true
+    }
+
     /// Кладёт в чанки пересчитанный собственный свет — если их блоки с тех
     /// пор не менялись.
     pub fn store_light(&mut self, recounted: Vec<light::Recounted>) {
@@ -3462,6 +3475,13 @@ impl World {
         // Ревизия нового экземпляра снова начинается с нуля; маска старого
         // чанка при том же номере ревизии больше не описывает его секции.
         self.random_sections.remove(&key);
+        // Тот же номер ревизии после загрузки не означает те же секции.
+        // Готовый свет всех девяти центров мог использовать прежний экземпляр.
+        for dx in -1..=1 {
+            for dz in -1..=1 {
+                self.sky_cache.remove(&(chunk_x + dx, chunk_z + dz));
+            }
+        }
         self.chunks.insert(key, chunk);
         self.unloaded.remove(&key);
 
@@ -8641,6 +8661,76 @@ mod decoration_tests;
 #[cfg(test)]
 mod prepared_light_regressions {
     use super::*;
+
+    #[test]
+    fn accepted_prepared_light_reuses_final_cache_and_invalidates_on_neighbour_change() {
+        let mut world = World::in_memory();
+        world.ensure(0, 0);
+        world.ensure(1, 0);
+        let torch = crate::blocks::state_by_name("torch").unwrap();
+        world.set_block(16, 10, 0, torch);
+        let mut prepared = world.light_job(0, 0).unwrap().prepare();
+        let expected = prepared.light.at(15, 10, 0);
+        assert!(world.accept_prepared_light(&mut prepared));
+        assert!(prepared.recounted.is_empty());
+        let cached = world.sky_cache[&(0, 0)].1.clone();
+        assert_eq!(*cached, prepared.light);
+        assert_eq!(world.light_full(15, 10, 0), expected);
+        assert!(Arc::ptr_eq(&cached, &world.sky_cache[&(0, 0)].1));
+        world.set_block(16, 10, 0, AIR);
+        assert_ne!(world.light_full(15, 10, 0).1, expected.1);
+        assert!(!Arc::ptr_eq(&cached, &world.sky_cache[&(0, 0)].1));
+    }
+
+    #[test]
+    fn reloaded_neighbour_with_same_revision_invalidates_accepted_final_light() {
+        let mut world = World::in_memory();
+        world.ensure(0, 0);
+        world.ensure(1, 0);
+        let mut prepared = world.light_job(0, 0).unwrap().prepare();
+        assert!(world.accept_prepared_light(&mut prepared));
+        let old = world.sky_cache[&(0, 0)].1.clone();
+        assert_eq!(world.light_full(15, 10, 0).1, 0);
+        let revision = world.chunk_revision(1, 0).unwrap();
+        let mut replacement = Chunk::flat();
+        replacement.set(16, 10, 0, crate::blocks::state_by_name("torch").unwrap());
+        replacement.revision = revision;
+        world.chunks.remove(&(1, 0));
+        world.insert_chunk(1, 0, replacement, true, &[]);
+        assert_eq!(world.chunk_revision(1, 0), Some(revision));
+        assert!(!world.sky_cache.contains_key(&(0, 0)));
+        assert!(!world.light_is_current(&prepared));
+        assert_eq!(world.light_full(15, 10, 0).1, 13);
+        assert!(!Arc::ptr_eq(&old, &world.sky_cache[&(0, 0)].1));
+    }
+
+    #[test]
+    fn rejected_prepared_light_preserves_recounted_and_existing_cache() {
+        for change in 0..3 {
+            let mut world = World::in_memory();
+            world.ensure(0, 0);
+            world.ensure(1, 0);
+            let mut prepared = world.light_job(0, 0).unwrap().prepare();
+            let recounted = prepared.recounted.len();
+            assert!(recounted > 0);
+            let cache = Arc::new(light::ChunkLight::open_sky());
+            world.sky_cache.insert((0, 0), ([u32::MAX; 9], cache.clone()));
+            match change {
+                0 => { world.set_block(16, 10, 0, crate::blocks::state_by_name("torch").unwrap()); }
+                1 => { world.chunks.remove(&(1, 0)); }
+                _ => {
+                    let revision = world.chunk_revision(1, 0).unwrap();
+                    world.chunks.remove(&(1, 0));
+                    world.ensure(1, 0);
+                    assert_eq!(world.chunk_revision(1, 0), Some(revision));
+                }
+            }
+            assert!(!world.accept_prepared_light(&mut prepared), "изменение {change}");
+            assert_eq!(prepared.recounted.len(), recounted);
+            assert!(Arc::ptr_eq(&cache, &world.sky_cache[&(0, 0)].1));
+            assert!(world.chunks[&(0, 0)].fresh_light().is_none());
+        }
+    }
 
     #[test]
     fn newer_b_light_publication_invalidates_older_a_including_cache_reuse() {

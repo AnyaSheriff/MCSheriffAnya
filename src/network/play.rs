@@ -2992,8 +2992,7 @@ impl ProgressiveChunks {
             if !inside(place) || sent.contains(&place) { continue; }
             {
                 let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-                if !world.light_is_current(&prepared) { continue; }
-                world.store_light(std::mem::take(&mut prepared.recounted));
+                if !world.accept_prepared_light(&mut prepared) { continue; }
             }
             if let Some(size) = send_prepared_chunk(stream, shared.world_in(dimension), place.0, place.1, &prepared).await? {
                 bytes += size;
@@ -3068,8 +3067,7 @@ impl LightUpdates {
             let Some(mut prepared) = job.await.map_err(io::Error::other)?? else { continue; };
             {
                 let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-                if !world.light_is_current(&prepared) { self.pending.insert((x, z)); continue; }
-                world.store_light(std::mem::take(&mut prepared.recounted));
+                if !world.accept_prepared_light(&mut prepared) { self.pending.insert((x, z)); continue; }
             }
             if inside((x, z)) {
                 if stream.legacy_view()?.is_some() {
