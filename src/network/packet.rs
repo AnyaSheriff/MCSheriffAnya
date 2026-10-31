@@ -309,6 +309,44 @@ async fn write_until<W: AsyncWrite + Unpin>(stream: &mut W, bytes: &[u8], deadli
     }).await.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "срок записи в сокет истёк"))?
 }
 
+/// Предел транспорта неизменен; ответ читателя может снять только предел
+/// текущего Keep Alive. Частичная запись продолжает ту же future без повтора.
+async fn write_until_alive<W: AsyncWrite + Unpin>(stream: &mut W, bytes: &[u8], hard_deadline: Instant,
+    alive: Option<&super::keep_alive::KeepAlive>,
+) -> io::Result<()> {
+    let mut changes = alive.map(super::keep_alive::KeepAlive::subscribe);
+    let writing = async {
+        stream.write_all(bytes).await?;
+        stream.flush().await
+    };
+    tokio::pin!(writing);
+    loop {
+        let now = Instant::now();
+        if alive.is_some_and(super::keep_alive::KeepAlive::closed) {
+            return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен"));
+        }
+        if now >= hard_deadline {
+            return Err(io::Error::new(io::ErrorKind::TimedOut, "срок записи в сокет истёк"));
+        }
+        if alive.is_some_and(super::keep_alive::KeepAlive::expired) {
+            return Err(io::Error::new(io::ErrorKind::TimedOut, "срок ответа Keep Alive истёк"));
+        }
+        let limit = alive.and_then(super::keep_alive::KeepAlive::deadline).map_or(hard_deadline, |deadline| deadline.min(hard_deadline));
+        tokio::select! {
+            biased;
+            // После старого таймера снова читаем control: ACK мог уже снять его.
+            _ = tokio::time::sleep_until(limit) => {}
+            _ = async {
+                match &mut changes {
+                    Some(changes) => { let _ = changes.changed().await; }
+                    None => std::future::pending::<()>().await,
+                }
+            } => {}
+            result = &mut writing => return result,
+        }
+    }
+}
+
 /// Сколько байт исходящих пакетов копится, прежде чем уйти в сокет, даже
 /// если круг подключения ещё не кончился: так вход в мир или перенос, где
 /// шлются сотни чанков, не держит в памяти их все разом.
@@ -330,6 +368,7 @@ pub struct Outgoing<'a> {
     queued_at: Option<Instant>,
     control: Option<crate::sessions::Control>,
     deadline: Option<Instant>,
+    keep_alive: Option<super::keep_alive::KeepAlive>,
     failed: bool,
     version: JavaVersion,
     probe_776: bool,
@@ -389,12 +428,12 @@ impl<'a> Outgoing<'a> {
         let legacy = stream.legacy.clone();
         let probe_776 = stream.probe_776_enabled();
         let content = stream.content;
-        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), queued_at: None, control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
+        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version, probe_776, entities: Default::default(), legacy }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), queued_at: None, control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
+    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
     pub(crate) fn capture_content(version: JavaVersion, content: mcsa_protocol::content::ContentCodec) -> Self {
@@ -403,7 +442,7 @@ impl<'a> Outgoing<'a> {
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), queued_at: None, control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
+        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -531,6 +570,8 @@ impl<'a> Outgoing<'a> {
 
     pub fn deadline(&mut self, deadline: Option<Instant>) { self.deadline = deadline; }
 
+    pub fn keep_alive(&mut self, alive: super::keep_alive::KeepAlive) { self.keep_alive = Some(alive); }
+
     /// Отправляет всё накопленное. После частичной записи продолжать поток
     /// нельзя: повтор с начала буфера испортил бы границы пакетов.
     pub async fn flush(&mut self) -> io::Result<()> {
@@ -543,13 +584,14 @@ impl<'a> Outgoing<'a> {
         let writing = timing_enabled().then(Instant::now);
         let bytes = self.buffer.len();
         let control = self.control.clone();
+        let alive = self.keep_alive.clone();
         let result = tokio::select! {
             biased;
             result = async {
                 match &mut self.stream {
-                    Transport::Tcp(stream) => write_until(*stream, &self.buffer, deadline).await,
+                    Transport::Tcp(stream) => write_until_alive(*stream, &self.buffer, deadline, alive.as_ref()).await,
                     #[cfg(test)]
-                    Transport::Duplex(stream) => write_until(*stream, &self.buffer, deadline).await,
+                    Transport::Duplex(stream) => write_until_alive(*stream, &self.buffer, deadline, alive.as_ref()).await,
                     #[cfg(test)]
                     Transport::Capture => Ok(()),
                 }
@@ -577,7 +619,8 @@ impl<'a> Outgoing<'a> {
         if self.failed { return; }
         self.buffer.clear();
         self.control = None;
-        self.deadline = Some(Instant::now() + Duration::from_millis(250));
+        self.keep_alive = None;
+        self.deadline(Some(Instant::now() + Duration::from_millis(250)));
         if self.version == JavaVersion::V1_12_2 || self.probe_776 {
             if self.send(body).await.is_ok() { let _ = self.flush().await; }
             return;
@@ -711,7 +754,7 @@ mod tests {
                 let foreign = matches!(version, JavaVersion::V26_2 | JavaVersion::V1_21_4);
                 let mut out = Outgoing::capture_content(version, content);
                 out.probe_776 = foreign;
-                let mut keep_alive = KeepAlive::new();
+                let keep_alive = KeepAlive::new();
                 // Используем настоящий pending ID, а не только проверку таблицы.
                 tokio::time::pause();
                 tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
@@ -938,7 +981,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn keep_alive_deadline_interrupts_an_already_blocked_write() {
         use crate::network::keep_alive::{KeepAlive, KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT};
-        let mut alive = KeepAlive::new();
+        let alive = KeepAlive::new();
         tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
         alive.send_due().unwrap();
         tokio::time::advance(KEEP_ALIVE_TIMEOUT - Duration::from_secs(2)).await;
@@ -1053,6 +1096,97 @@ mod tests {
 
         assert_eq!((first.id, first.body), (1, vec![1, 10]));
         assert_eq!((second.id, second.body), (2, vec![2, 20, 21]));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reader_ack_removes_stale_write_cap_without_repeating_encrypted_partial_bytes() {
+        use crate::network::keep_alive::{KeepAlive, KEEP_ALIVE_INTERVAL};
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let id = alive.send_due().unwrap();
+        tokio::time::advance(Duration::from_secs(13)).await;
+        let (writer, peer) = tokio::io::duplex(1);
+        let mut writer = super::super::connection::CryptoStream::new(writer);
+        let mut peer = super::super::connection::CryptoStream::new(peer);
+        writer.enable_encryption(&[7; 16]);
+        peer.enable_encryption(&[7; 16]);
+        let writing_alive = alive.clone();
+        let task = tokio::spawn(async move {
+            write_until_alive(&mut writer, &[11, 22, 33, 44], Instant::now() + WRITE_TIMEOUT, Some(&writing_alive)).await
+        });
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(1)).await;
+        assert!(alive.answer(&id.to_be_bytes()));
+        tokio::time::advance(Duration::from_secs(2)).await;
+        let mut bytes = [0; 4];
+        peer.read_exact(&mut bytes).await.unwrap();
+        task.await.unwrap().unwrap();
+        assert_eq!(bytes, [11, 22, 33, 44]);
+        assert_eq!(peer.read(&mut [0]).await.unwrap(), 0);
+        assert!(!alive.expired());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn dynamic_write_without_reply_still_stops_at_original_keep_alive_deadline() {
+        use crate::network::keep_alive::{KeepAlive, KEEP_ALIVE_INTERVAL};
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        alive.send_due().unwrap();
+        tokio::time::advance(Duration::from_secs(13)).await;
+        let (mut writer, _peer) = tokio::io::duplex(1);
+        let start = Instant::now();
+        let error = write_until_alive(&mut writer, &[1, 2, 3], start + WRITE_TIMEOUT, Some(&alive)).await.unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+        assert_eq!(start.elapsed(), Duration::from_secs(2));
+        assert!(alive.expired());
+        assert!(!alive.closed());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reader_ack_does_not_extend_absolute_transport_timeout() {
+        use crate::network::keep_alive::{KeepAlive, KEEP_ALIVE_INTERVAL};
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let id = alive.send_due().unwrap();
+        tokio::time::advance(Duration::from_secs(13)).await;
+        let (mut writer, _peer) = tokio::io::duplex(1);
+        let start = Instant::now();
+        let writing_alive = alive.clone();
+        let task = tokio::spawn(async move {
+            write_until_alive(&mut writer, &[1, 2, 3], start + WRITE_TIMEOUT, Some(&writing_alive)).await
+        });
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(1)).await;
+        assert!(alive.answer(&id.to_be_bytes()));
+        tokio::time::advance(WRITE_TIMEOUT - Duration::from_secs(1)).await;
+        assert_eq!(task.await.unwrap().unwrap_err().kind(), io::ErrorKind::TimedOut);
+        assert_eq!(start.elapsed(), WRITE_TIMEOUT);
+        assert!(!alive.expired());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reader_close_interrupts_blocked_output_and_disconnect_detaches_control() {
+        use crate::network::keep_alive::KeepAlive;
+        let alive = KeepAlive::new();
+        let (mut writer, _peer) = tokio::io::duplex(1);
+        let writing_alive = alive.clone();
+        let start = Instant::now();
+        let task = tokio::spawn(async move {
+            write_until_alive(&mut writer, &[1, 2, 3], start + WRITE_TIMEOUT, Some(&writing_alive)).await
+        });
+        tokio::task::yield_now().await;
+        alive.close();
+        assert_eq!(task.await.unwrap().unwrap_err().kind(), io::ErrorKind::ConnectionAborted);
+        assert_eq!(start.elapsed(), Duration::ZERO);
+        let (mut writer, mut peer) = tokio::io::duplex(1024);
+        let mut out = Outgoing::duplex(&mut writer);
+        out.keep_alive(alive);
+        let component = crate::network::nbt::translated("disconnect.timeout");
+        let mut body = vec![0x20];
+        body.extend_from_slice(&component);
+        out.disconnect(&body).await;
+        assert!(out.keep_alive.is_none());
+        assert_eq!(read_packet(&mut peer).await.unwrap().payload(), component);
     }
 
     /// Большой пакет не копится: буфер сбрасывается, как только перерос предел.
