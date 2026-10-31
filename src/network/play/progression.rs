@@ -7,6 +7,63 @@ pub(super) struct Location {
     nether_origin: Option<(f64, f64, f64)>,
     levitation_origin: Option<f64>,
     landed_from_world_height: bool,
+    structure: Option<StructureProbe>,
+}
+
+// Холодные кольца крепостей считаются долго: ни сеть, ни замок мира не ждут их.
+// Вики, Advancement: «Enter a ...». Отложенный такт выдачи [проверить].
+struct StructureProbe {
+    dimension: Dimension,
+    at: (i32, i32, i32),
+    result: tokio::sync::oneshot::Receiver<Option<&'static str>>,
+    task: tokio::task::JoinHandle<()>,
+}
+
+impl Drop for StructureProbe {
+    fn drop(&mut self) { self.task.abort(); }
+}
+
+fn structure_slots() -> &'static Arc<tokio::sync::Semaphore> {
+    static SLOTS: std::sync::OnceLock<Arc<tokio::sync::Semaphore>> = std::sync::OnceLock::new();
+    SLOTS.get_or_init(|| Arc::new(tokio::sync::Semaphore::new(4)))
+}
+
+impl Location {
+    fn schedule_structure(&mut self, slots: &Arc<tokio::sync::Semaphore>, dimension: Dimension,
+        at: (i32, i32, i32), check: impl FnOnce() -> Option<&'static str> + Send + 'static,
+    ) {
+        if self.structure.is_some() { return; }
+        let Ok(permit) = slots.clone().try_acquire_owned() else { return; };
+        let (sender, result) = tokio::sync::oneshot::channel();
+        let task = tokio::task::spawn_blocking(move || {
+            let _permit = permit;
+            let _ = sender.send(check());
+        });
+        self.structure = Some(StructureProbe { dimension, at, result, task });
+    }
+
+    fn poll_structure(&mut self, dimension: Dimension, at: (i32, i32, i32)) -> Option<&'static str> {
+        let probe = self.structure.as_mut()?;
+        let result = match probe.result.try_recv() {
+            Ok(result) => result,
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty) => return None,
+            Err(tokio::sync::oneshot::error::TryRecvError::Closed) => None,
+        };
+        let current = probe.dimension == dimension && probe.at == at;
+        self.structure.take();
+        if current { result } else { None }
+    }
+}
+
+fn location_block(player: &PlayerState) -> (i32, i32, i32) {
+    (player.x.floor() as i32, player.y.floor() as i32, player.z.floor() as i32)
+}
+
+pub(super) fn poll_structure(player: &mut PlayerState) {
+    let at = location_block(player);
+    if let Some(id) = player.progress_location.poll_structure(player.dimension, at) {
+        player.progress.trigger(id);
+    }
 }
 
 pub(super) fn changed_dimension(player: &mut PlayerState, next: Dimension, at: (f64, f64, f64)) {
@@ -21,6 +78,7 @@ pub(super) fn changed_dimension(player: &mut PlayerState, next: Dimension, at: (
         }
         player.progress_location.nether_origin = None;
     }
+    player.progress_location.structure.take();
     player.progress_location.levitation_origin = None;
     player.progress_location.landed_from_world_height = false;
 }
@@ -48,15 +106,17 @@ pub(super) fn effects(player: &mut PlayerState) {
 
 pub(super) fn location(shared: &Shared, player: &mut PlayerState) {
     let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
-    let (x, y, z) = (player.x.floor() as i32, player.y.floor() as i32, player.z.floor() as i32);
+    let (x, y, z) = location_block(player);
     if player.sneaking && redstone::near_sculk_sensor(&world, (player.x, player.y, player.z)) { player.progress.trigger("adventure/avoid_vibration"); }
     player.progress.biome(player.dimension, world.mob_biome(x, y, z));
-    if let Some(id) = world.progress_structure(x, y, z) { player.progress.trigger(id); }
+    let structure = world.progress_structure_check(x, y, z);
     if player.on_ground && blocks::block_at_state(world.get_block(x, (player.y - 0.2).floor() as i32, z)) == Some("powder_snow")
         && player.inventory.slot(8).and_then(|s| blocks::item_name(s.item)) == Some("leather_boots")
     {
         player.progress.trigger("adventure/walk_on_powder_snow_with_leather_boots");
     }
+    drop(world);
+    player.progress_location.schedule_structure(structure_slots(), player.dimension, (x, y, z), structure);
 }
 
 /// Выдача только за установку участником, а не за нахождение рядом.
@@ -75,6 +135,93 @@ mod tests {
         player.progress.stats = crate::stats::Stats::new();
         player.progress.adv = crate::advancements::AdvState::new();
         player
+    }
+
+    fn probe_runtime() -> tokio::runtime::Runtime {
+        tokio::runtime::Builder::new_current_thread().enable_time().max_blocking_threads(1).build().unwrap()
+    }
+
+    #[test]
+    fn cold_structure_probe_leaves_network_running_and_deduplicates() {
+        probe_runtime().block_on(async {
+            let slots = Arc::new(tokio::sync::Semaphore::new(1));
+            let mut location = Location::default();
+            let (release, gate) = std::sync::mpsc::channel();
+            let (entered, started) = tokio::sync::oneshot::channel();
+            location.schedule_structure(&slots, Dimension::Overworld, (1, 64, 2), move || {
+                entered.send(()).unwrap();
+                gate.recv().unwrap();
+                Some("story/follow_ender_eye")
+            });
+            started.await.unwrap();
+            location.schedule_structure(&slots, Dimension::Overworld, (1, 64, 2), || panic!("повторная проверка"));
+            let pending = location.poll_structure(Dimension::Overworld, (1, 64, 2));
+            // Задача сети исполняется, хотя холодная проверка ещё не закончилась.
+            let network = tokio::spawn(async { tokio::task::yield_now().await; 777 });
+            let response = tokio::time::timeout(Duration::from_secs(1), network).await;
+            release.send(()).unwrap();
+            (&mut location.structure.as_mut().unwrap().task).await.unwrap();
+            assert!(pending.is_none());
+            assert_eq!(response.unwrap().unwrap(), 777);
+            assert_eq!(location.poll_structure(Dimension::Overworld, (1, 64, 2)), Some("story/follow_ender_eye"));
+            assert!(location.poll_structure(Dimension::Overworld, (1, 64, 2)).is_none());
+            assert_eq!(slots.available_permits(), 1);
+        });
+    }
+
+    #[test]
+    fn structure_probe_discards_changed_position_and_dimension() {
+        probe_runtime().block_on(async {
+            let slots = Arc::new(tokio::sync::Semaphore::new(1));
+            for (dimension, at) in [(Dimension::Nether, (1, 64, 2)), (Dimension::Overworld, (2, 64, 2))] {
+                let mut location = Location::default();
+                location.schedule_structure(&slots, Dimension::Overworld, (1, 64, 2), || Some("story/follow_ender_eye"));
+                (&mut location.structure.as_mut().unwrap().task).await.unwrap();
+                assert!(location.poll_structure(dimension, at).is_none());
+                assert!(location.structure.is_none());
+            }
+        });
+    }
+
+    #[test]
+    fn structure_probe_bounds_work_and_cancels_queued_on_drop() {
+        probe_runtime().block_on(async {
+            let slots = Arc::new(tokio::sync::Semaphore::new(1));
+            let (release, gate) = std::sync::mpsc::channel();
+            let (entered, started) = tokio::sync::oneshot::channel();
+            let blocker = tokio::task::spawn_blocking(move || { entered.send(()).unwrap(); gate.recv().unwrap(); });
+            started.await.unwrap();
+            let executed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let observed = executed.clone();
+            let mut first = Location::default();
+            first.schedule_structure(&slots, Dimension::Overworld, (0, 64, 0), move || {
+                observed.store(true, std::sync::atomic::Ordering::SeqCst); None
+            });
+            let mut second = Location::default();
+            second.schedule_structure(&slots, Dimension::Overworld, (0, 64, 0), || panic!("превышен предел"));
+            let limited = second.structure.is_none();
+            drop(first);
+            release.send(()).unwrap();
+            blocker.await.unwrap();
+            // Барьер в том же однопоточном пуле: отменённая работа уже убрана.
+            tokio::task::spawn_blocking(|| {}).await.unwrap();
+            assert!(limited);
+            assert!(!executed.load(std::sync::atomic::Ordering::SeqCst));
+            assert_eq!(slots.available_permits(), 1);
+        });
+    }
+
+    #[test]
+    fn structure_probe_panic_releases_capacity_and_clears_pending() {
+        probe_runtime().block_on(async {
+            let slots = Arc::new(tokio::sync::Semaphore::new(1));
+            let mut location = Location::default();
+            location.schedule_structure(&slots, Dimension::Overworld, (0, 64, 0), || panic!("ошибка расчёта"));
+            assert!((&mut location.structure.as_mut().unwrap().task).await.unwrap_err().is_panic());
+            assert!(location.poll_structure(Dimension::Overworld, (0, 64, 0)).is_none());
+            assert!(location.structure.is_none());
+            assert_eq!(slots.available_permits(), 1);
+        });
     }
 
     #[test]

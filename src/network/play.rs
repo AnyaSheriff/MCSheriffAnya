@@ -5716,6 +5716,7 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         if entry.1 == player.advancement_revision { entry.0 = player.progress.adv.clone(); }
     }
     progression::effects(player);
+    progression::poll_structure(player);
     // Предметы у игрока: набор сверяется с таблицей «есть предмет».
     {
         let names: Vec<&str> = player.inventory.slots()[5..].iter().flatten().filter_map(|stack| blocks::item_name(stack.item)).collect();

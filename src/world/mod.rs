@@ -4271,8 +4271,10 @@ impl World {
 
     /// Вики, Advancement: «Enter a ...» — внутри рамки строения, а не рядом
     /// с похожими блоками. Рамки нашей генерации; [проверить] границы оригинала.
-    pub fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
-        self.generator.progress_structure(x, y, z)
+    /// Снимок генератора без замка мира: вызывающий считает его в фоновом пуле.
+    pub fn progress_structure_check(&self, x: i32, y: i32, z: i32) -> impl FnOnce() -> Option<&'static str> + Send + 'static + use<> {
+        let generator = Arc::clone(&self.generator);
+        move || generator.progress_structure(x, y, z)
     }
 
     /// Прогрев ленивых кэшей построек для достижений (кольца крепостей Края
