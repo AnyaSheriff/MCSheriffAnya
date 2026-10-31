@@ -2956,6 +2956,7 @@ impl Mob {
             // Волк в броне стонет тише (0,4; gaps2-wolf-armor), в том числе когда броня лопнула.
             if !armor_absorbs || self.tame.armor.is_none() {
                 let volume = if armored_wolf { 0.4 } else { self.sound_volume() };
+                ai::cow_hurt_sound(self);
                 self.events.push(Event::Sound { name: hurt, volume, pitch: self.voice_pitch() });
             }
             golem::crack_sound(self, before);

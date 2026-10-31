@@ -264,6 +264,67 @@ fn ai_enabled_cow_keeps_voice_and_movement() {
 }
 
 #[test]
+fn normal_and_no_ai_cow_keep_120_ticks_quiet_after_accepted_hurt() {
+    for profile in [crate::gameplay_catalog::Profile::Java26_1_2, crate::gameplay_catalog::Profile::Preview26_3] {
+        let catalog = crate::gameplay_catalog::Catalog::new(profile);
+        let view = VoiceFlat { flat: Flat::new(), catalog };
+        for no_ai in [false, true] {
+            let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+            cow.no_ai = no_ai;
+            let mut rng = Rng::new(7);
+            cow.tick(&view, &ctx(), &mut rng);
+            assert!(!cow.hurt(1.0, Source::PlayerAttack, None).unwrap().died);
+            assert!(cow.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.cow.hurt", .. })));
+            cow.events.clear();
+            let began = cow.ticks;
+            while cow.ticks < began + 120 {
+                cow.tick(&view, &ctx(), &mut rng);
+                assert!(!cow.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.cow.ambient", .. })));
+                cow.events.clear();
+            }
+            let mut resumed = false;
+            for _ in 0..1002 {
+                cow.tick(&view, &ctx(), &mut rng);
+                resumed |= cow.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.cow.ambient", .. }));
+                cow.events.clear();
+            }
+            assert!(resumed, "пауза не выключает последующий голос");
+        }
+    }
+}
+
+#[test]
+fn silent_no_ai_cow_hurt_preserves_internal_voice_schedule_and_rng() {
+    let view = Flat::new();
+    let mut results = Vec::new();
+    for silent in [false, true] {
+        let mut items = Items::new();
+        let from = items.watch_changes(1);
+        let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+        cow.no_ai = true;
+        cow.silent = silent;
+        items.add_mob(cow);
+        let mut rng = Rng::new(19);
+        let mut internal = Vec::new();
+        for tick in 0..1002 {
+            if tick == 100 { assert!(items.mobs_mut()[0].hurt(1.0, Source::PlayerAttack, None).is_some()); }
+            items.mobs_mut()[0].tick(&view, &ctx(), &mut rng);
+            for event in &items.mobs()[0].events {
+                if let Event::Sound { .. } = event { internal.push((tick, event.clone())); }
+            }
+            items.flush_mob_events(&mut || panic!("голос не создаёт сущности"), &mut rng);
+        }
+        assert!(internal.iter().any(|(_, event)| matches!(event, Event::Sound { name: "minecraft:entity.cow.ambient", .. })));
+        let (changes, _) = items.changes_since(from, 1);
+        let published = changes.into_iter().filter(|change| matches!(change,
+            crate::items::Change::MobEvent { event: Event::Sound { .. }, .. })).count();
+        assert_eq!(published, if silent { 0 } else { internal.len() });
+        results.push((internal, rng.next_u64()));
+    }
+    assert_eq!(results[0], results[1]);
+}
+
+#[test]
 fn no_ai_voice_consumes_one_draw_per_tick_only_for_supported_kinds() {
     let view = Flat::new();
     for kind in [Kind::Cow, Kind::Villager, Kind::Wither, Kind::EnderDragon, Kind::Pig, Kind::Sheep, Kind::Chicken] {

@@ -778,6 +778,17 @@ pub fn hush(mob: &mut Mob) {
     mob.brain.ambient = -80;
 }
 
+// minecraft.wiki/w/Animal, History 1.21.100: «6 seconds, matching Java Edition».
+// Это база 120 тактов, не среднее случайного интервала. Восемь hurt/control
+// пар 41189450985 совместимы с ней; точный RNG/такт сброса [проверить].
+const COW_AMBIENT_INTERVAL: i32 = 120;
+
+/// Только принятый несмертельный hurt-звук коровы начинает паузу заново.
+/// Вызывается после проверки урона; остальные виды и торговый hush прежние.
+pub(super) fn cow_hurt_sound(mob: &mut Mob) {
+    if mob.kind == Kind::Cow { mob.brain.ambient = -COW_AMBIENT_INTERVAL; }
+}
+
 pub fn voice(mob: &mut Mob, rng: &mut Rng) {
     mob.brain.ambient += 1;
 
@@ -791,7 +802,86 @@ pub fn voice(mob: &mut Mob, rng: &mut Rng) {
             return;
         }
 
-        mob.brain.ambient = -80;
+        mob.brain.ambient = if mob.kind == Kind::Cow { -COW_AMBIENT_INTERVAL } else { -80 };
         mob.events.push(super::Event::Sound { name: ambient, volume: mob.sound_volume(), pitch: mob.voice_pitch() });
+    }
+}
+
+#[cfg(test)]
+mod cow_ambient_tests {
+    use super::*;
+    use crate::survival::Source;
+
+    #[test]
+    fn cow_ambient_uses_120_tick_base_without_extra_random_draws() {
+        for profile in [crate::gameplay_catalog::Profile::Java26_1_2, crate::gameplay_catalog::Profile::Preview26_3] {
+            let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+            cow.catalog = crate::gameplay_catalog::Catalog::new(profile);
+            assert_eq!(cow.brain.ambient, 0, "начальная фаза не меняется");
+            cow.brain.ambient = 999;
+            let mut rng = Rng::new(7);
+            let mut expected = rng.clone();
+            voice(&mut cow, &mut rng);
+            expected.below(1000);
+            assert_eq!(cow.brain.ambient, -120);
+            assert_eq!(cow.events.len(), 1);
+            cow.events.clear();
+            for _ in 0..120 {
+                voice(&mut cow, &mut rng);
+                expected.below(1000);
+                assert!(cow.events.is_empty());
+                assert_eq!(rng.clone().next_u64(), expected.clone().next_u64());
+            }
+            assert_eq!(cow.brain.ambient, 0);
+        }
+    }
+
+    #[test]
+    fn cow_hurt_resets_only_after_accepted_nonfatal_sound() {
+        for no_ai in [false, true] {
+            for silent in [false, true] {
+                let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+                cow.no_ai = no_ai;
+                cow.silent = silent;
+                cow.brain.ambient = 17;
+                assert!(cow.hurt(0.0, Source::PlayerAttack, None).is_none());
+                assert_eq!(cow.brain.ambient, 17);
+                assert!(!cow.hurt(1.0, Source::PlayerAttack, None).unwrap().died);
+                assert_eq!(cow.brain.ambient, -120);
+                cow.brain.ambient = -100;
+                assert!(cow.hurt(1.0, Source::PlayerAttack, None).is_none());
+                assert_eq!(cow.brain.ambient, -100, "отклонённый i-frame не сбрасывает паузу");
+                // Сильный удар принят существующим путём Some+hurtSound;
+                // точная фаза оригинала для такого случая [проверить].
+                assert!(!cow.hurt(2.0, Source::PlayerAttack, None).unwrap().died);
+                assert_eq!(cow.brain.ambient, -120);
+                cow.brain.ambient = -45;
+                assert!(cow.hurt(1000.0, Source::GenericKill, None).unwrap().died);
+                assert_eq!(cow.brain.ambient, -45, "смерть не создаёт новую ambient-паузу");
+                assert!(cow.hurt(1.0, Source::PlayerAttack, None).is_none());
+                assert_eq!(cow.brain.ambient, -45);
+            }
+        }
+    }
+
+    #[test]
+    fn non_cow_voice_hurt_and_trading_hush_keep_previous_counter() {
+        for kind in [Kind::Pig, Kind::Villager, Kind::Mooshroom] {
+            let mut mob = Mob::new(1, kind, (0.5, 1.0, 0.5));
+            mob.brain.ambient = 999;
+            voice(&mut mob, &mut Rng::new(7));
+            assert_eq!(mob.brain.ambient, -80);
+            mob.brain.ambient = 17;
+            assert!(mob.hurt(1.0, Source::PlayerAttack, None).is_some());
+            assert_eq!(mob.brain.ambient, 17);
+        }
+        let mut villager = Mob::new(1, Kind::Villager, (0.5, 1.0, 0.5));
+        villager.brain.ambient = 999;
+        hush(&mut villager);
+        assert_eq!(villager.brain.ambient, -80);
+        assert!(!trade_sound_due(&mut villager));
+        villager.brain.ambient = -80 + crate::villager::TRADE_SOUND_GAP + 1;
+        assert!(trade_sound_due(&mut villager));
+        assert_eq!(villager.brain.ambient, -80);
     }
 }
