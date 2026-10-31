@@ -1,0 +1,6 @@
+{
+  "build_run_id": "41118157596",
+  "head": "39e27cff7804c3aadcb0c9167e0b78e8d1ce2903",
+  "runtime_sha256": "409e7c8f66c5c32bde8ab0050be86990d4fb627234302dbf4ef0b8040bc9cabd",
+  "note": "Frozen baseline; NoAI ambient scoped probe. Strict timing/count comparison remains diagnostic."
+}

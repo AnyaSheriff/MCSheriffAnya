@@ -1,0 +1,45 @@
+{
+  "name": "noai-cow-ambient-silent",
+  "about": "Ограниченная серия 3×600 тактов: голос взрослой NoAI-коровы; Silent-контроль. Без атак; случайное время не сравнивается отдельным аудитором.",
+  "exclusive": true,
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode creative $(bot)",
+    "kill @e[type=cow,distance=..48]"
+  ],
+  "actions": [
+    {
+      "after": 30,
+      "cmd": "summon cow $(4.5,0,3.5) {NoAI:1b,Age:0,Silent:1b}"
+    },
+    {
+      "after": 630,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 650,
+      "cmd": "summon cow $(4.5,0,3.5) {NoAI:1b,Age:0,Silent:1b}"
+    },
+    {
+      "after": 1250,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 1270,
+      "cmd": "summon cow $(4.5,0,3.5) {NoAI:1b,Age:0,Silent:1b}"
+    },
+    {
+      "after": 1870,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    }
+  ],
+  "record_ticks": 1890,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true"
+  ]
+}
