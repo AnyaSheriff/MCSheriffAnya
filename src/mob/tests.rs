@@ -217,13 +217,13 @@ fn no_ai_cow_silent_filters_published_voice_without_changing_rng_or_schedule() {
             let mut rng = Rng::new(7);
             let mut internal = Vec::new();
             for tick in 0..1002 {
-                items.mobs[0].tick(&view, &ctx(), &mut rng);
-                assert_eq!(items.mobs[0].catalog, catalog);
-                for event in &items.mobs[0].events {
+                items.mobs_mut()[0].tick(&view, &ctx(), &mut rng);
+                assert_eq!(items.mobs()[0].catalog, catalog);
+                for event in &items.mobs()[0].events {
                     if let Event::Sound { .. } = event { internal.push((tick, event.clone())); }
                 }
                 items.flush_mob_events(&mut || panic!("голос не создаёт сущности"), &mut rng);
-                assert!(items.mobs[0].events.is_empty());
+                assert!(items.mobs()[0].events.is_empty());
             }
             assert!(!internal.is_empty());
             let (changes, _) = items.changes_since(from, 1);
