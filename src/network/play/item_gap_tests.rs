@@ -166,6 +166,35 @@ async fn gap_777_removes_ghost_and_restores_missing_current_state_without_stale_
     assert!(next.queued().is_empty(), "tail не воспроизводится повторно");
     send_item_moves(&mut next, &shared, dimension, &mut seen).await.unwrap();
     assert!(next.queued().is_empty(), "shown cache соответствует уже отправленной полной позиции");
+    send_item_moves(&mut next, &shared, dimension, &mut seen).await.unwrap();
+    assert!(next.queued().is_empty());
+    assert!(seen.values().all(|shown| shown.first_sent), "проверка движения не сбрасывает отчёт появления");
+    {
+        let mut items = shared.items_in(dimension).lock().unwrap();
+        for item in items.items_mut().iter_mut().filter(|item| item.block.is_some()) {
+            item.x += 1.0;
+            item.vx = -0.25;
+            item.on_ground = !item.on_ground;
+        }
+    }
+    send_item_moves(&mut next, &shared, dimension, &mut seen).await.unwrap();
+    let changed = self::packets(&next).await;
+    for packet_id in [TELEPORT_ENTITY, 0x65] {
+        let ids: Vec<_> = changed.iter().filter(|(id, _)| *id == wire_id(packet_id))
+            .map(|(_, payload)| entity_id(payload)).collect();
+        assert_eq!(ids, [11, 12], "реальная смена физики по-прежнему передаётся");
+    }
+    assert_eq!(changed.len(), 4);
+    assert!(seen.values().all(|shown| shown.first_sent));
+    for item in expected.iter().filter(|item| item.block.is_some()) {
+        let shown = seen[&item.entity_id];
+        assert_eq!(shown.place, (item.x + 1.0, item.y, item.z));
+        assert_eq!(shown.speed, (-0.25, item.vy, item.vz));
+        assert_eq!(shown.on_ground, !item.on_ground);
+    }
+    let mut unchanged = out(&shared);
+    send_item_moves(&mut unchanged, &shared, dimension, &mut seen).await.unwrap();
+    assert!(unchanged.queued().is_empty(), "повторно физика не изменилась");
 }
 
 #[tokio::test]
