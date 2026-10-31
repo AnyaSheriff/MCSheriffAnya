@@ -7725,7 +7725,7 @@ mod keep_alive_lag_tests {
         let challenge = super::super::packet::read_packet(&mut peer).await.unwrap();
         assert_eq!(challenge.payload(), &1i64.to_be_bytes());
         task.await.unwrap().unwrap();
-        assert_eq!(alive.deadline(), Some(Instant::now() + KEEP_ALIVE_TIMEOUT));
+        assert_eq!(alive.deadline(), Some(tokio::time::Instant::now() + KEEP_ALIVE_TIMEOUT));
         assert!(alive.answer(challenge.payload()));
     }
 }
