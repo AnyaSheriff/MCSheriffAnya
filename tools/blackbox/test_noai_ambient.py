@@ -1,11 +1,13 @@
 """Отрицательные проверки ограниченного NoAI аудита; без игры, Cargo и сети."""
 import copy
+import io
 import json
 from pathlib import Path
 import unittest
 import tempfile
 from unittest.mock import patch
-from noai_ambient_audit import audit_capture, audit, WINDOWS, SCENARIOS, SOUND
+from noai_ambient_audit import audit_capture, audit, sound_name, WINDOWS, SCENARIOS, SOUND
+from analyze777 import Decoder
 from noai_ambient_ci import verdict
 
 
@@ -44,6 +46,49 @@ class AuditTests(unittest.TestCase):
         value=json.loads(bytes.fromhex(e['hex']));callback(value)
         e['hex']=json.dumps(value).encode().hex()
         return raw
+
+    def test_real_decoder_inline_data_holder_and_registry_id_are_distinct(self):
+        # Схема ItemSoundHolder/ItemSoundEvent из закреплённого JSON777;
+        # байты inline-заголовка взяты из фактического пакета candidate.
+        protocol={'types':{
+            'ItemSoundHolder':['registryEntryHolder',{'baseName':'soundId','otherwise':{'name':'data','type':'ItemSoundEvent'}}],
+            'ItemSoundEvent':['container',[{'name':'soundName','type':'string'},{'name':'fixedRange','type':['option','f32']}]],
+        },'play':{'toClient':{'types':{}}}}
+        decoder=Decoder(protocol)
+        stream=io.BytesIO(bytes.fromhex('001c6d696e6563726166743a656e746974792e636f772e616d6269656e7400'))
+        literal=decoder.read(stream,'ItemSoundHolder')
+        self.assertEqual(stream.read(),b'')
+        self.assertEqual(literal,{'data':{'soundName':SOUND,'fixedRange':None}})
+        self.assertEqual(sound_name(literal,{'0':'minecraft:ambient.cave'}),SOUND)
+        indexed=decoder.read(io.BytesIO(b'\xc3\x03'),'ItemSoundHolder')
+        self.assertEqual(indexed,{'soundId':450})
+        self.assertEqual(sound_name(indexed,{'450':SOUND}),SOUND)
+        self.assertIsNone(sound_name(indexed,{}))
+        for malformed in [None,{}, {'soundId':True},{'soundId':-1},{'soundId':'450'},
+                          {'data':None},{'data':{'soundName':42}},{'data':{'soundName':''}},
+                          {'sound':{'soundName':SOUND}},{'soundId':450,'data':{'soundName':SOUND}}]:
+            with self.subTest(holder=malformed),self.assertRaises(ValueError):
+                sound_name(malformed,{'450':SOUND})
+
+    def test_inline_ambient_keeps_all_capture_guards_and_unknown_id_is_not_ambient(self):
+        raw=fixture()
+        for entry in raw['clients'][0]['events']:
+            if entry['name']=='sound_effect':
+                value=json.loads(bytes.fromhex(entry['hex']))
+                value['sound']={'data':{'soundName':SOUND,'fixedRange':None}}
+                entry['hex']=json.dumps(value).encode().hex()
+        report=self.run_capture(raw)
+        self.assertEqual(report['errors'],[])
+        self.assertEqual([w['sound_count'] for w in report['windows']],[1,1,1])
+        first=next(entry for entry in raw['clients'][0]['events'] if entry['name']=='sound_effect')
+        value=json.loads(bytes.fromhex(first['hex']));value['volume']=.5
+        first['hex']=json.dumps(value).encode().hex()
+        self.assertIn('ambient volume/pitch',self.run_capture(raw)['errors'])
+        unknown=self.mutate('sound_effect',lambda value:value.update(sound={'soundId':999999}))
+        self.assertEqual([w['sound_count'] for w in self.run_capture(unknown)['windows']],[0,1,1])
+        malformed=self.mutate('sound_effect',lambda value:value.update(sound={'data':{'soundName':None}}))
+        with self.assertRaises(ValueError):
+            self.run_capture(malformed)
 
     def test_fixed_three_windows_keep_every_sound_timestamp(self):
         report=self.run_capture(fixture())

@@ -22,6 +22,24 @@ def near(actual, expected):
     return len(actual) == len(expected) and all(math.isfinite(a) and abs(a-b) < 1e-6 for a,b in zip(actual, expected))
 
 
+def sound_name(holder, sounds):
+    """registryEntryHolder: индекс реестра либо inline-ветка data из JSON777."""
+    if not isinstance(holder, dict):
+        raise ValueError('malformed sound holder')
+    if set(holder) == {'soundId'}:
+        sound_id = holder['soundId']
+        if type(sound_id) is not int or sound_id < 0:
+            raise ValueError('malformed sound registry id')
+        # Неизвестный индекс не приписывается корове по запасному имени.
+        return sounds.get(str(sound_id))
+    if set(holder) == {'data'}:
+        data = holder['data']
+        if not isinstance(data, dict) or not isinstance(data.get('soundName'), str) or not data['soundName']:
+            raise ValueError('malformed inline sound')
+        return data['soundName']
+    raise ValueError('unknown or ambiguous sound holder shape')
+
+
 def audit_capture(raw, decoder, cow_type, sounds, silent):
     errors, observations = [], []
     windows = [{'start_tick':a, 'end_tick':b, 'spawns':[], 'sounds':[], 'metadata':[], 'metadata_packets':[]} for a,b in WINDOWS]
@@ -96,7 +114,7 @@ def audit_capture(raw, decoder, cow_type, sounds, silent):
                 if any(value.get(k,0) for k in ('yaw','pitch','headYaw')):
                     errors.append('cow rotation')
         if name in ('sound_effect','entity_sound_effect'):
-            holder=value['sound'];sound=sounds.get(str(holder.get('soundId')),holder.get('sound',{}).get('soundName'))
+            sound=sound_name(value['sound'],sounds)
             if sound != SOUND:
                 continue
             if name!='sound_effect':
