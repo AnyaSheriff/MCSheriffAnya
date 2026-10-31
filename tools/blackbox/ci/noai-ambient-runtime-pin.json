@@ -1,6 +1,6 @@
 {
-  "build_run_id": "41118157596",
-  "head": "39e27cff7804c3aadcb0c9167e0b78e8d1ce2903",
-  "runtime_sha256": "409e7c8f66c5c32bde8ab0050be86990d4fb627234302dbf4ef0b8040bc9cabd",
-  "note": "Frozen baseline; NoAI ambient scoped probe. Strict timing/count comparison remains diagnostic."
+  "build_run_id": "41185482641",
+  "head": "bd47859fd86c85084790318482ff06fe25c1272e",
+  "runtime_sha256": "75aec761a151872c26745d788379bce2f246b6874162364ebc9028ed1b93faca",
+  "note": "Verified full CI: 12 receipt hashes, 15 new regression tests in both Rust configurations. Fresh native combat and scoped NoAI voice checks follow this exact runtime."
 }
