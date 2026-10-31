@@ -8727,7 +8727,13 @@ mod prepared_light_regressions {
             }
             assert!(!world.accept_prepared_light(&mut prepared), "изменение {change}");
             assert_eq!(prepared.recounted.len(), recounted);
-            assert!(Arc::ptr_eq(&cache, &world.sky_cache[&(0, 0)].1));
+            if change == 2 {
+                // Загрузка нового экземпляра уже сбросила соседний кеш;
+                // отклонённый результат не должен восстановить старый свет.
+                assert!(!world.sky_cache.contains_key(&(0, 0)));
+            } else {
+                assert!(Arc::ptr_eq(&cache, &world.sky_cache[&(0, 0)].1));
+            }
             assert!(world.chunks[&(0, 0)].fresh_light().is_none());
         }
     }
