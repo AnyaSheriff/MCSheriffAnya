@@ -105,7 +105,7 @@ fn gaussian_throw_spread_has_requested_scale_and_tails() {
 async fn gameplay_burst_keeps_fifo_and_stops_at_commands_or_next_tick() {
     let shared = shared();
     let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
-    let mut inbound = Inbound { packets: receiver, reader: tokio::spawn(async {}), queued: None };
+    let mut inbound = Inbound { packets: receiver, reader: tokio::spawn(async {}), queued: None, alive: KeepAlive::new() };
     for (id, arrived) in [(SET_PLAYER_POSITION, 3), (USE_ITEM, 3), (SERVERBOUND_CHAT_COMMAND, 3), (USE_ITEM, 4)] {
         sender.send(Ok((packet(id, Vec::new()), arrived, TickPermit::new(&shared.waiting_for_tick, arrived, is_gated(id))))).unwrap();
     }
