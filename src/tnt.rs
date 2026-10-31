@@ -17,7 +17,7 @@
 // Чего вики не говорит прямо, помечено «[проверить]» — это сверит чёрный
 // ящик (сценарии tnt-lever, tnt-chain, tnt-dispenser).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::blocks;
 use crate::custom_tnt::{self, KindId};
@@ -620,6 +620,18 @@ fn push_entities(
     centre: (f64, f64, f64),
     power: f32,
 ) -> (Pushes, Vec<Impact>) {
+    let mut cells = ExposureCells::new(world);
+    push_entities_with_cells(&mut cells, items, players, centre, power)
+}
+
+fn push_entities_with_cells(
+    cells: &mut ExposureCells<'_>,
+    items: &mut Items,
+    players: &[Target],
+    centre: (f64, f64, f64),
+    power: f32,
+) -> (Pushes, Vec<Impact>) {
+    let world = cells.world;
     let reach = 2.0 * power as f64;
     let nether_star = blocks::item_named("nether_star");
 
@@ -630,7 +642,7 @@ fn push_entities(
         };
         let eyes = if item.fuse.is_some() { 0.0 } else { height * EYES_SHARE };
 
-        let Some(impact) = impact(world, centre, reach, (item.x, item.y, item.z), (width, height)) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (item.x, item.y, item.z), (width, height)) else {
             continue;
         };
         let Some(push) = push_towards(centre, (item.x, item.y + eyes, item.z), impact) else {
@@ -656,7 +668,7 @@ fn push_entities(
     for cart in items.carts_mut().iter_mut().filter(|cart| cart.blast.is_none()) {
         let size = (crate::minecart::WIDTH, crate::minecart::HEIGHT);
 
-        let Some(impact) = impact(world, centre, reach, (cart.x, cart.y, cart.z), size) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (cart.x, cart.y, cart.z), size) else {
             continue;
         };
         let Some(push) = push_towards(centre, (cart.x, cart.y + size.1 * EYES_SHARE, cart.z), impact) else {
@@ -673,7 +685,7 @@ fn push_entities(
     for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn && !(mob.kind == crate::mob::Kind::Wither && mob.entity_id == source)) {
         let size = mob.size();
 
-        let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (mob.x, mob.y, mob.z), size) else {
             continue;
         };
 
@@ -711,7 +723,7 @@ fn push_entities(
 
     for player in players {
         let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
-        let Some(impact) = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
             continue;
         };
 
@@ -730,12 +742,18 @@ fn push_entities(
 /// высота): `(1 − distance/reach) · exposure`. None — дальше радиуса.
 fn impact(world: &World, centre: (f64, f64, f64), reach: f64, feet: (f64, f64, f64), size: (f64, f64)) -> Option<f64> {
     let distance = distance(centre, feet) / reach;
+    if distance > 1.0 { return None; }
+    Some((1.0 - distance) * exposure(world, centre, feet, size))
+}
+
+fn impact_with_cells(cells: &mut ExposureCells<'_>, centre: (f64, f64, f64), reach: f64, feet: (f64, f64, f64), size: (f64, f64)) -> Option<f64> {
+    let distance = distance(centre, feet) / reach;
 
     if distance > 1.0 {
         return None;
     }
 
-    Some((1.0 - distance) * exposure(world, centre, feet, size))
+    Some((1.0 - distance) * exposure_with_cells(cells, centre, feet, size))
 }
 
 /// Прибавка к скорости: длиной `impact`, от центра к точке `towards`.
@@ -778,6 +796,44 @@ fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
 }
 
+/// Только одна неизменяемая фаза взрыва: следующий взрыв видит новые блоки.
+/// Вытеснения нет: после предела новые клетки идут прежним путём, старые hits
+/// продолжают работать. HashMap не выделяет память до первой вставки.
+struct ExposureCells<'w> {
+    world: &'w World,
+    cells: HashMap<Pos, bool, CoordHash>,
+    limit: usize,
+    #[cfg(test)]
+    misses: usize,
+}
+
+impl<'w> ExposureCells<'w> {
+    fn new(world: &'w World) -> Self { Self::with_limit(world, 4096) }
+
+    fn with_limit(world: &'w World, limit: usize) -> Self {
+        Self { world, cells: HashMap::default(), limit, #[cfg(test)] misses: 0 }
+    }
+
+    fn block_has_box(&mut self, pos: Pos) -> bool {
+        if let Some(&value) = self.cells.get(&pos) { return value; }
+        #[cfg(test)]
+        { self.misses += 1; }
+        let state = self.world.get_block(pos.0, pos.1, pos.2);
+        let value = exposure_block_has_box(self.world.catalog(), state);
+        if self.cells.len() < self.limit { self.cells.insert(pos, value); }
+        value
+    }
+}
+
+fn exposure_block_has_box(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    // Сохраняем full-cell policy и прежний fail-closed для неизвестных состояний.
+    match catalog.block_entry(state) {
+        Ok(Some(_)) => true,
+        Ok(None) => blocks::has_box(state),
+        Err(_) => true,
+    }
+}
+
 /// Открытость сущности взрыву — доля лучей от точек в её ящике к центру,
 /// которые не упёрлись в блок (вики, Explosion, «Exposure»). Точки — сетка
 /// ⌈2·ширина+1⌉ × ⌈2·высота+1⌉ × ⌈2·длина+1⌉ с шагом ширина/(2·ширина+1);
@@ -787,7 +843,11 @@ fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
 /// Луч заслоняет любой блок с ящиком столкновений, как целый куб.
 /// [проверить]: у оригинала неполные блоки (плиты, ступени) заслоняют
 /// только своей формой.
-pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), (width, height): (f64, f64)) -> f64 {
+pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), size: (f64, f64)) -> f64 {
+    exposure_with_cells(&mut ExposureCells::new(world), centre, feet, size)
+}
+
+fn exposure_with_cells(cells: &mut ExposureCells<'_>, centre: (f64, f64, f64), feet: (f64, f64, f64), (width, height): (f64, f64)) -> f64 {
     let step_x = 1.0 / (width * 2.0 + 1.0);
     let step_y = 1.0 / (height * 2.0 + 1.0);
     let shift = (1.0 - (1.0 / step_x).floor() * step_x) / 2.0;
@@ -806,7 +866,7 @@ pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), (
             while fz <= 1.0 {
                 let point = (low.0 + fx * width + shift, low.1 + fy * height, low.2 + fz * width + shift);
 
-                if !ray_blocked(world, point, centre) {
+                if !ray_blocked_with_cells(cells, point, centre) {
                     open += 1;
                 }
 
@@ -825,7 +885,12 @@ pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), (
 
 /// Упирается ли отрезок от `from` до `to` в блок с ящиком: проход по
 /// клеткам, через которые он идёт, по порядку.
+#[cfg(test)]
 fn ray_blocked(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> bool {
+    ray_blocked_with_cells(&mut ExposureCells::new(world), from, to)
+}
+
+fn ray_blocked_with_cells(cells: &mut ExposureCells<'_>, from: (f64, f64, f64), to: (f64, f64, f64)) -> bool {
     let cell = |v: f64| v.floor() as i32;
     let mut at = [cell(from.0), cell(from.1), cell(from.2)];
     let end = [cell(to.0), cell(to.1), cell(to.2)];
@@ -851,15 +916,7 @@ fn ray_blocked(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> boo
     // Отрезок короче радиуса взрыва — клеток на пути немного; предел на
     // всякий случай.
     for _ in 0..256 {
-        let state = world.get_block(at[0], at[1], at[2]);
-        // Базовый проход считает занятой целую клетку с ящиком. Для новых
-        // плит каждая разрешённая форма имеет объём; правило старых блоков сохранено.
-        let has_box = match world.catalog().block_entry(state) {
-            Ok(Some(_)) => true,
-            Ok(None) => blocks::has_box(state),
-            Err(_) => true,
-        };
-        if has_box { return true; }
+        if cells.block_has_box((at[0], at[1], at[2])) { return true; }
 
         if at == end {
             return false;
@@ -1800,3 +1857,7 @@ mod catalog_drop_exposure_tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "tnt/exposure_cache_tests.rs"]
+mod exposure_cache_tests;
