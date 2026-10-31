@@ -287,17 +287,27 @@ fn isolated_tcp_reader_fixture() {
         assert!(f.alive.deadline().is_some(), "одного байта рамки недостаточно для ACK");
         if parts[2] == "cancel" {
             let budget = f.inbound.as_ref().unwrap()._budget.clone();
+            let cancelled = f.inbound.as_ref().unwrap().reader.abort_handle();
             drop(f.inbound.take());
             assert!(f.alive.closed());
             assert_eq!(f.queued(), 0);
             assert_eq!(budget.usage(), (0, 0));
             drop(f.server.take());
+            assert!(wait_until(|| cancelled.is_finished(), Duration::from_secs(2)),
+                "отменённый reader должен завершиться без main unlock");
             let mut byte = [0];
-            let count = f.peer_runtime.block_on(async {
+            let closed = f.peer_runtime.block_on(async {
                 tokio::time::timeout(Duration::from_secs(2), f.peer.as_mut().unwrap().read(&mut byte))
-                    .await.expect("reader fd должен закрыться без main unlock").unwrap()
+                    .await.expect("reader fd должен закрыться без main unlock")
             });
-            assert_eq!(count, 0);
+            // При отмене частично отправленного кадра байт может остаться
+            // в TCP receive buffer: закрытие тогда даёт RST вместо FIN/EOF.
+            // Разрешены только эти два исхода, не данные и не любая ошибка.
+            match closed {
+                Ok(0) => {},
+                Err(error) if error.kind() == io::ErrorKind::ConnectionReset => {},
+                other => panic!("ожидалось закрытие отменённого reader: {other:?}"),
+            }
             return;
         }
         f.write_raw(&ack[1..]);
