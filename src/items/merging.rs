@@ -144,6 +144,8 @@ mod tests {
     fn mixed_tnt_preserves_ordinary_merge_schedule_order_and_pickup_delay() {
         let mut ordinary = pair(stack(12), stack(20), (0.0, 64.0, 0.0));
         let mut mixed = pair(stack(12), stack(20), (0.0, 64.0, 0.0));
+        // UUID содержит время создания: обе стороны начинают одним снимком.
+        mixed.items.clone_from(&ordinary.items);
         for store in [&mut ordinary, &mut mixed] {
             for item in &mut store.items { item.no_gravity = true; }
             store.items[0].age = 5;
