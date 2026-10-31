@@ -34,7 +34,7 @@ use super::connection::Connection;
 use tokio::time::timeout;
 
 use super::nbt;
-use super::keep_alive::KeepAlive;
+use super::keep_alive::{KeepAlive, ReaderGuard};
 use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect};
 #[cfg(test)]
 use super::packet::read_packet;
@@ -3316,8 +3316,9 @@ async fn command_hold_wake(shared: &Shared, uuid: &[u8; 16], wake: &tokio::sync:
 
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
+    let ping = player.keep_alive.latency();
     let mut players = shared.players.lock().expect("игроки");
-    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
+    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { ping, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
     if first {
         let packets: Vec<_> = players.ui.list_names.iter().map(|(uuid, (_, name))| crate::presentation::list_packet(uuid, Some(name))).collect();
         for packet in packets { players.order(&player.uuid, Order::Packet(packet)); }
@@ -4317,6 +4318,18 @@ async fn send_keep_alive(stream: &mut Outgoing<'_>, id: i64) -> io::Result<()> {
     push_i64(&mut body, id);
 
     write_body(stream, body).await
+}
+
+/// Сначала старый вывод, затем отдельная рамка Keep Alive без работы мира
+/// между резервированием и flush. Drop ticket закрывает отменённую отправку.
+async fn send_keep_alive_due(stream: &mut Outgoing<'_>, alive: &KeepAlive) -> io::Result<()> {
+    if !alive.due() { return Ok(()); }
+    stream.flush().await?;
+    let Some(ticket) = alive.begin_send() else { return Ok(()); };
+    send_keep_alive(stream, ticket.id()).await?;
+    stream.flush().await?;
+    if !ticket.sent() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "отправка Keep Alive отменена")); }
+    Ok(())
 }
 
 /// Отправляет Set Default Spawn Position — точку возрождения.
@@ -6551,7 +6564,9 @@ async fn read_and_log_play_packets(
     let mut ticks = shared.ticks.subscribe();
     let mut starts = shared.tick_starts.subscribe();
     let mut pending: Vec<Reaction> = Vec::new();
-    let mut inbound = Inbound::start(stream.stream(), shared)?;
+    stream.keep_alive(player.keep_alive.clone());
+    let mut keep_alive_updates = player.keep_alive.subscribe();
+    let mut inbound = Inbound::start(stream.stream(), shared, player.keep_alive.clone())?;
     let mut finished_tick = false;
     let mut orders_woken = false;
     let mut pearl_orders = Vec::new();
@@ -6561,7 +6576,7 @@ async fn read_and_log_play_packets(
         // Всё, что прошлый круг положил в очередь, уходит одной записью,
         // прежде чем ждать клиента или конца такта.
         if control.reason().is_some() { return Ok(()); }
-        stream.deadline(player.keep_alive.deadline());
+        if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
         let light_center = player.chunk();
         stream.flush().await?;
         player.light_updates.step(stream, shared, player.dimension, light_center, player.view).await?;
@@ -6573,11 +6588,14 @@ async fn read_and_log_play_packets(
             biased;
             _ = control.cancelled() => return Ok(()),
             _ = ticks.changed() => None,
+            _ = keep_alive_updates.changed() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await),
             ready = tokio::time::timeout_at(player.keep_alive.next_wake(), inbound.recv()) => Some(ready),
             // Поручение (перенос командой) — обработать сразу, как у оригинала,
             // где пакет переноса уходит в миг команды.
             _ = wake.notified() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await),
         } };
+
+        if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
 
         // Связь пропала без закрытия соединения (Wi-Fi, NAT): TCP заметит это
         // через много минут, а до тех пор ник занят и вернуться нельзя. Как
@@ -6603,10 +6621,7 @@ async fn read_and_log_play_packets(
             return Ok(());
         }
 
-        if let Some(id) = player.keep_alive.send_due() {
-            stream.deadline(player.keep_alive.deadline());
-            send_keep_alive(stream, id).await?;
-        }
+        send_keep_alive_due(stream, &player.keep_alive).await?;
 
         // Время суток клиент считает сам, но время от времени его надо
         // сверять с сервером — иначе часы разойдутся. Сверяем по возрасту
@@ -7356,15 +7371,15 @@ async fn read_and_log_play_packets(
                                     orders_woken = true;
                                     break;
                                 }
+                                _ = keep_alive_updates.changed() => {
+                                    if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
+                                }
                                 _ = tokio::time::sleep_until(player.keep_alive.next_wake()) => {
+                                    if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
                                     if player.keep_alive.expired() {
                                         return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
                                     }
-                                    if let Some(id) = player.keep_alive.send_due() {
-                                        stream.deadline(player.keep_alive.deadline());
-                                        send_keep_alive(stream, id).await?;
-                                        stream.flush().await?;
-                                    }
+                                    send_keep_alive_due(stream, &player.keep_alive).await?;
                                 }
                                 changed = starts.changed() => if changed.is_err() { break; },
                             }
@@ -7498,6 +7513,34 @@ struct Inbound {
     packets: tokio::sync::mpsc::UnboundedReceiver<io::Result<Incoming>>,
     reader: tokio::task::JoinHandle<()>,
     queued: Option<io::Result<Incoming>>,
+    alive: KeepAlive,
+}
+
+// Неигровой ACK принимается до создания TickPermit и постановки в FIFO.
+fn inbound_packet(packet: PacketInfo, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+) -> Option<Incoming> {
+    if packet.id == SERVERBOUND_KEEP_ALIVE {
+        alive.answer(packet.payload());
+        return None;
+    }
+    let permit = TickPermit::new(waiting, arrived, is_gated(packet.id));
+    Some((packet, arrived, permit))
+}
+
+// Ошибка чтения идёт тем же FIFO вслед за уже декодированными действиями.
+// Только нештатный выход без успешной передачи ошибки закрывает guard.
+fn forward_read(read: io::Result<PacketInfo>, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+    sender: &tokio::sync::mpsc::UnboundedSender<io::Result<Incoming>>, guard: &mut ReaderGuard,
+) -> bool {
+    match read {
+        Ok(packet) => inbound_packet(packet, arrived, waiting, alive).is_none_or(|packet| sender.send(Ok(packet)).is_ok()),
+        Err(error) => {
+            if sender.send(Err(error)).is_ok() { guard.disarm(); }
+            false
+        }
+    }
 }
 
 impl Inbound {
@@ -7517,7 +7560,7 @@ impl Inbound {
         if ready { packet.ok() } else { self.queued = Some(packet); None }
     }
 
-    fn start(stream: &mut Connection, shared: &Shared) -> io::Result<Self> {
+    fn start(stream: &mut Connection, shared: &Shared, alive: KeepAlive) -> io::Result<Self> {
         // Буфер читателя хранит уже расшифрованные байты; состояние CFB8
         // передаётся из Configuration без сброса IV.
         let mut own = tokio::io::BufReader::new(stream.take_reader()?);
@@ -7529,32 +7572,159 @@ impl Inbound {
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
 
+        let receiving = alive.clone();
         let reader = tokio::spawn(async move {
+            let mut guard = receiving.reader_guard();
             loop {
                 let read = super::packet::read_play_packet_with_content(&mut own, version, legacy.as_ref(), probe_776, content).await;
                 let arrived = *starts.borrow();
-                let failed = read.is_err();
-
-                let read = read.map(|packet| {
-                    let permit = TickPermit::new(&waiting, arrived, is_gated(packet.id));
-                    (packet, arrived, permit)
-                });
-                if sender.send(read).is_err() || failed {
-                    return;
-                }
+                if !forward_read(read, arrived, &waiting, &receiving, &sender, &mut guard) { return; }
             }
         });
 
-        Ok(Self { packets, reader, queued: None })
+        Ok(Self { packets, reader, queued: None, alive })
     }
 }
 
 impl Drop for Inbound {
     fn drop(&mut self) {
+        self.alive.close();
         self.reader.abort();
 
         // При закрытии канала неприменённые пакеты отпустят TickPermit.
         self.packets.close();
+    }
+}
+
+#[cfg(test)]
+mod keep_alive_lag_tests {
+    use super::*;
+    use crate::network::keep_alive::{KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT};
+
+    fn packet(id: i32, payload: &[u8]) -> PacketInfo {
+        let mut body = encode_varint(id);
+        body.extend_from_slice(payload);
+        PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false,
+            foreign_inventory: false, legacy_inventory: None }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reader_ack_bypasses_gameplay_fifo_and_does_not_take_tick_permit() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let id = alive.send_due().unwrap();
+        let waiting = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0)]);
+        let mut gameplay = Vec::new();
+        gameplay.push(inbound_packet(packet(ATTACK, &[]), 0, &waiting, &alive).unwrap());
+        for _ in 0..1000 {
+            assert!(inbound_packet(packet(SERVERBOUND_KEEP_ALIVE, &(id + 1).to_be_bytes()), 0, &waiting, &alive).is_none());
+        }
+        assert!(inbound_packet(packet(SERVERBOUND_KEEP_ALIVE, &id.to_be_bytes()), 0, &waiting, &alive).is_none());
+        gameplay.push(inbound_packet(packet(SET_CARRIED_ITEM, &[]), 0, &waiting, &alive).unwrap());
+        assert_eq!(waiting[0].load(Ordering::Acquire), 2);
+        let (ticks, mut tick_receiver) = tokio::sync::watch::channel(0);
+        ticks.send_replace(1);
+        let tick_won = tokio::select! {
+            biased;
+            _ = tick_receiver.changed() => true,
+            _ = std::future::pending::<()>() => false,
+        };
+        assert!(tick_won);
+        tokio::time::advance(KEEP_ALIVE_TIMEOUT + Duration::from_secs(1)).await;
+        assert!(!alive.expired(), "готовый такт и очередь игры не задерживают приём ACK");
+        assert_eq!(gameplay.iter().map(|(packet, _, _)| packet.id).collect::<Vec<_>>(), [ATTACK, SET_CARRIED_ITEM]);
+        drop(gameplay);
+        assert_eq!(waiting[0].load(Ordering::Acquire), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn decoded_gameplay_precedes_eof_and_malformed_error_without_timeout_close() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        for (kind, message) in [(io::ErrorKind::UnexpectedEof, "peer EOF"), (io::ErrorKind::InvalidData, "malformed packet")] {
+            let alive = KeepAlive::new();
+            tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+            let id = alive.send_due().unwrap();
+            assert!(alive.answer(&id.to_be_bytes()));
+            let waiting = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0)]);
+            let (sender, mut packets) = tokio::sync::mpsc::unbounded_channel();
+            let mut guard = alive.reader_guard();
+            assert!(forward_read(Ok(packet(ATTACK, &[])), 0, &waiting, &alive, &sender, &mut guard));
+            assert!(!forward_read(Err(io::Error::new(kind, message)), 0, &waiting, &alive, &sender, &mut guard));
+            drop(guard);
+            drop(sender);
+            assert!(!alive.closed());
+            assert!(!alive.expired());
+            let game = packets.recv().await.unwrap().unwrap();
+            assert_eq!(game.0.id, ATTACK);
+            assert_eq!(waiting[0].load(Ordering::Acquire), 1);
+            drop(game);
+            let error = match packets.recv().await.unwrap() { Err(error) => error, Ok(_) => panic!("нужна ошибка после игрового пакета") };
+            assert_eq!(error.kind(), kind);
+            assert_eq!(error.to_string(), message);
+            assert!(packets.recv().await.is_none());
+            assert_eq!(waiting[0].load(Ordering::Acquire), 0);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn failed_terminal_handoff_keeps_reader_guard_armed() {
+        use std::sync::atomic::AtomicUsize;
+        let alive = KeepAlive::new();
+        let waiting = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0)]);
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+        drop(receiver);
+        let mut guard = alive.reader_guard();
+        assert!(!forward_read(Err(io::Error::new(io::ErrorKind::UnexpectedEof, "peer EOF")), 0, &waiting, &alive, &sender, &mut guard));
+        drop(guard);
+        assert!(alive.closed());
+        assert!(!alive.expired());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancelled_challenge_flush_closes_sending_ticket() {
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let sending = alive.clone();
+        let (_peer, mut writer) = tokio::io::duplex(1);
+        let task = tokio::spawn(async move {
+            let mut out = Outgoing::duplex(&mut writer);
+            out.keep_alive(sending.clone());
+            send_keep_alive_due(&mut out, &sending).await
+        });
+        tokio::task::yield_now().await;
+        assert!(!alive.due());
+        assert_eq!(alive.deadline(), None);
+        task.abort();
+        assert!(task.await.unwrap_err().is_cancelled());
+        assert!(alive.closed());
+        assert!(!alive.answer(&1i64.to_be_bytes()));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn due_challenge_flushes_old_output_before_starting_response_clock() {
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let sending = alive.clone();
+        let (mut peer, mut writer) = tokio::io::duplex(1);
+        let task = tokio::spawn(async move {
+            let mut out = Outgoing::duplex(&mut writer);
+            out.keep_alive(sending.clone());
+            // Полная старая рамка используется только как вывод до challenge.
+            send_keep_alive(&mut out, 999).await?;
+            send_keep_alive_due(&mut out, &sending).await
+        });
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(3)).await;
+        assert_eq!(alive.deadline(), None);
+        assert!(alive.due(), "challenge ещё не зарезервирован за старой записью");
+        let old = super::super::packet::read_packet(&mut peer).await.unwrap();
+        assert_eq!(old.payload(), &999i64.to_be_bytes());
+        let challenge = super::super::packet::read_packet(&mut peer).await.unwrap();
+        assert_eq!(challenge.payload(), &1i64.to_be_bytes());
+        task.await.unwrap().unwrap();
+        assert_eq!(alive.deadline(), Some(Instant::now() + KEEP_ALIVE_TIMEOUT));
+        assert!(alive.answer(challenge.payload()));
     }
 }
 
@@ -7919,7 +8089,8 @@ fn handle_client_packet_inner(
         }
         SERVERBOUND_KEEP_ALIVE => {
             log_debug!("Play: клиент ответил на Keep Alive");
-            player.keep_alive.answer(payload);
+            // В рабочем соединении ответ уже принял Inbound до FIFO игры.
+            // Повторное принятие здесь исказило бы срок и RTT.
         }
         CONFIRM_TELEPORTATION => {
             if accept_teleport(packet, player) {
