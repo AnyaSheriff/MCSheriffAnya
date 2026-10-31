@@ -10,6 +10,7 @@
 // пока её никто не трогает, проверять нечего.
 
 mod idle;
+mod tnt_diagnostics;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -175,6 +176,7 @@ async fn run(shared: Arc<Shared>) {
     let mut presence = shared.players.lock().expect("игроки").presence();
     let mut ticks: u64 = 0;
     let mut phases = PhaseStats::default();
+    let mut tnt_diagnostics = tnt_diagnostics::Diagnostics::from_env();
     let mut mob_rng = crate::mob::Rng::new(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |passed| passed.as_nanos() as u64));
     // Ночь пропускается в начале этого такта (`morning`): спящих будят
     // концом прошлого.
@@ -248,8 +250,14 @@ async fn run(shared: Arc<Shared>) {
             crate::commands_world::step_borders(&shared);
         }
 
+        // Не более одного снимка на измерение; вывод только после освобождения замков.
+        let mut tnt_reports: Option<Vec<tnt_diagnostics::Batch>> = None;
         for dimension in Dimension::ALL.into_iter().filter(|_| plan.run_world) {
+            let diagnostic_due = tnt_diagnostics.as_ref().is_some_and(|diagnostics| diagnostics.due(ticks, dimension));
+            let world_wait = diagnostic_due.then(std::time::Instant::now);
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+
+            let world_wait_us = world_wait.map_or(0, |clock| clock.elapsed().as_micros().min(u64::MAX as u128) as u64);
 
             // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
             // с них.
@@ -418,12 +426,24 @@ async fn run(shared: Arc<Shared>) {
 
             let (splashes, exploding, gains) = {
                 let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                let mut diagnostic = if diagnostic_due {
+                    tnt_diagnostics.as_mut().and_then(|diagnostics| diagnostics.begin(ticks, dimension, &items, &world, world_wait_us))
+                } else { None };
+                // Измеряется step_with_water + снимок after_step + step_orbs + burn_fuses.
+                let item_clock = diagnostic.as_ref().map(|_| std::time::Instant::now());
                 let splashes = items.step_with_water(&solid, &holds_block, &loaded, &water);
+                if let Some(batch) = &mut diagnostic { batch.after_step(&items, &world); }
 
                 let gains = items.step_orbs(&pullers, &solid);
 
                 // Сперва шаг, потом запал — у каждого динамита.
-                (splashes, items.burn_fuses(&loaded), gains)
+                let exploding = items.burn_fuses(&loaded);
+                if let Some(mut batch) = diagnostic {
+                    let elapsed = item_clock.map_or(0, |clock| clock.elapsed().as_micros().min(u64::MAX as u128) as u64);
+                    batch.finish(&items, exploding.len(), elapsed);
+                    tnt_reports.get_or_insert_with(|| Vec::with_capacity(3)).push(batch);
+                }
+                (splashes, exploding, gains)
             };
 
             // Подобранное шариками уходит подключениям: они прибавят очки и
@@ -515,6 +535,10 @@ async fn run(shared: Arc<Shared>) {
             }
 
             phases.add(5, &mut clock);
+        }
+
+        if let Some(reports) = tnt_reports {
+            for report in reports { report.log(); }
         }
 
         // Работа такта сделана: подключения рассылают, что случилось.

@@ -2179,3 +2179,121 @@ mod progress_tests {
 #[cfg(test)]
 #[path = "items/gap_tests.rs"]
 mod gap_tests;
+
+#[cfg(test)]
+mod tnt_chunk_characterization_tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    // Характеризация текущего ядра, не контракт vanilla: движение проверяет
+    // исходный чанк, а запал — чанк после движения. [проверить] чёрным ящиком.
+    #[derive(Debug, PartialEq)]
+    struct FrozenState {
+        position: (f64, f64, f64),
+        velocity: (f64, f64, f64),
+        fuse: Option<i32>,
+        ticks: u64,
+    }
+
+    fn state(item: &Dropped) -> FrozenState {
+        FrozenState {
+            position: (item.x, item.y, item.z),
+            velocity: (item.vx, item.vy, item.vz),
+            fuse: item.fuse,
+            ticks: item.ticks,
+        }
+    }
+
+    fn resume_until_explosion(items: &mut Items, id: i32, remaining: i32) {
+        let (_, cursor) = items.changes_since(0, id as u64);
+        for permitted in 1..=remaining {
+            items.step(&|_, _, _| false, &|_, _, _| false, &|_, _| true);
+            let exploded = items.burn_fuses(&|_, _| true);
+            if permitted < remaining {
+                assert!(exploded.is_empty());
+                assert_eq!(items.items.iter().find(|item| item.entity_id == id).unwrap().fuse,
+                    Some(remaining - permitted));
+            } else {
+                assert_eq!(exploded.len(), 1);
+                assert_eq!(exploded[0].entity_id, id);
+                assert_eq!(exploded[0].fuse, Some(0));
+            }
+        }
+        assert!(!items.items.iter().any(|item| item.entity_id == id));
+        assert!(items.burn_fuses(&|_, _| true).is_empty());
+        let (changes, _) = items.changes_since(cursor, id as u64);
+        assert_eq!(changes.iter().filter(|change| matches!(change,
+            Change::Gone { entity_id } if *entity_id == id)).count(), 1);
+    }
+
+    #[test]
+    fn tnt_crossing_loaded_chunk_freezes_until_reload_characterization() {
+        // Положительная, отрицательная и диагональная границы; явная скорость,
+        // без случайного начального толчка. -0.1 должен попасть именно в -1.
+        for (position, velocity, destination) in [
+            ((15.9, 120.0, 8.0), (0.3, 0.0, 0.0), (1, 0)),
+            ((0.1, 120.0, 8.0), (-0.3, 0.0, 0.0), (-1, 0)),
+            ((15.9, 120.0, 15.9), (0.3, 0.0, 0.3), (1, 1)),
+        ] {
+            let mut items = Items::new();
+            items.prime(701, 0, position, velocity, 4, None);
+            let calls = RefCell::new(Vec::new());
+            let loaded = |x, z| {
+                calls.borrow_mut().push((x, z));
+                (x, z) == (0, 0)
+            };
+            items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+            assert!(items.burn_fuses(&loaded).is_empty());
+            assert_eq!(*calls.borrow(), vec![(0, 0), destination]);
+            let crossed = &items.items[0];
+            assert_eq!(((crossed.x.floor() as i32).div_euclid(16),
+                (crossed.z.floor() as i32).div_euclid(16)), destination);
+            assert_ne!((crossed.x, crossed.y, crossed.z), position);
+            assert_eq!(crossed.fuse, Some(4));
+            let frozen = state(crossed);
+            let (_, cursor) = items.changes_since(0, 701);
+            for _ in 0..100 {
+                calls.borrow_mut().clear();
+                items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+                assert!(items.burn_fuses(&loaded).is_empty());
+                assert_eq!(*calls.borrow(), vec![destination, destination]);
+                assert_eq!(state(&items.items[0]), frozen);
+                assert!(items.changes_since(cursor, 701).0.is_empty());
+            }
+            resume_until_explosion(&mut items, 701, 4);
+        }
+    }
+
+    #[test]
+    fn tnt_initially_unloaded_freezes_while_neighbor_burns_characterization() {
+        let mut items = Items::new();
+        items.prime(801, 0, (-0.5, 120.0, 8.0), (0.0, 0.0, 0.0), 3, None);
+        items.prime(802, 0, (8.0, 120.0, 8.0), (0.0, 0.0, 0.0), 3, None);
+        let frozen = state(&items.items[0]);
+        let (_, mut cursor) = items.changes_since(0, 801);
+        let calls = RefCell::new(Vec::new());
+        let loaded = |x, z| {
+            assert!([(0, 0), (-1, 0)].contains(&(x, z)));
+            calls.borrow_mut().push((x, z));
+            (x, z) == (0, 0)
+        };
+        let mut exploded_ids = Vec::new();
+        for tick in 1..=100 {
+            calls.borrow_mut().clear();
+            items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+            let exploded = items.burn_fuses(&loaded);
+            assert_eq!(exploded.len(), usize::from(tick == 3));
+            exploded_ids.extend(exploded.into_iter().map(|item| item.entity_id));
+            assert_eq!(state(items.items.iter().find(|item| item.entity_id == 801).unwrap()), frozen);
+            assert_eq!(calls.borrow().iter().filter(|&&chunk| chunk == (-1, 0)).count(), 2);
+            let (changes, next) = items.changes_since(cursor, 801);
+            if tick > 3 { assert!(changes.is_empty()); }
+            cursor = next;
+            if tick < 3 {
+                assert_eq!(items.items.iter().find(|item| item.entity_id == 802).unwrap().fuse, Some(3 - tick));
+            }
+        }
+        assert_eq!(exploded_ids, vec![802]);
+        resume_until_explosion(&mut items, 801, 3);
+    }
+}
