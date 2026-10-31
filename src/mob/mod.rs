@@ -2279,6 +2279,10 @@ impl Mob {
         }
 
         if self.no_ai {
+            // Чёрный ящик 26.3, mob-forced-update-even/odd: NoAI-корова
+            // подаёт cow.ambient; голос не включает движение и цели.
+            if self.kind == Kind::Cow { ai::voice(self, rng); }
+
             // Запал крипера — не мысль, а его такт: подожжённый NoAI взрывается
             // (чёрный ящик, creeper-explode).
             let mut plan = ai::Plan::default();

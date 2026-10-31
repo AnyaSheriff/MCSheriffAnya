@@ -151,6 +151,138 @@ fn no_ai_mob_stands_still() {
     assert_eq!((cow.x, cow.z), (0.5, 0.5), "NoAI не двигается сам");
 }
 
+// Только голосовые регрессии: tick берёт профиль из View, а не из Mob.
+struct VoiceFlat {
+    flat: Flat,
+    catalog: crate::gameplay_catalog::Catalog,
+}
+
+impl View for VoiceFlat {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
+    fn block(&self, x: i32, y: i32, z: i32) -> i32 { self.flat.block(x, y, z) }
+    fn loaded(&self, x: i32, z: i32) -> bool { self.flat.loaded(x, z) }
+}
+
+#[test]
+fn no_ai_cow_ticks_voice_without_movement_or_goals() {
+    for profile in [crate::gameplay_catalog::Profile::Java26_1_2, crate::gameplay_catalog::Profile::Preview26_3] {
+        let catalog = crate::gameplay_catalog::Catalog::new(profile);
+        let view = VoiceFlat { flat: Flat::new(), catalog };
+        for age in [0, -24000] {
+            let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+            cow.catalog = catalog;
+            cow.no_ai = true;
+            cow.age = age;
+            cow.face(37.0);
+            let mut rng = Rng::new(1);
+            let mut sounds = 0;
+
+            for _ in 0..1002 {
+                assert_eq!(cow.tick(&view, &ctx(), &mut rng), ai::Plan::default());
+                assert_eq!((cow.x, cow.y, cow.z), (0.5, 1.0, 0.5));
+                assert_eq!((cow.yaw, cow.head_yaw), (37.0, 37.0));
+                assert_eq!(cow.brain.doing, ai::Doing::Idle);
+                assert!(cow.h.target.is_none());
+                assert!(cow.no_ai);
+                assert_eq!(cow.catalog, catalog);
+                for event in std::mem::take(&mut cow.events) {
+                    if let Event::Sound { name, volume, pitch } = event {
+                        assert_eq!(name, "minecraft:entity.cow.ambient");
+                        assert_eq!(volume, 0.4);
+                        let base = if age < 0 { 1.5 } else { 1.0 };
+                        assert!((base - 0.2..=base + 0.2).contains(&pitch));
+                        sounds += 1;
+                    }
+                }
+            }
+            assert!(sounds > 0, "голос должен пройти через настоящий Mob::tick");
+        }
+    }
+}
+
+#[test]
+fn no_ai_cow_silent_filters_published_voice_without_changing_rng_or_schedule() {
+    for profile in [crate::gameplay_catalog::Profile::Java26_1_2, crate::gameplay_catalog::Profile::Preview26_3] {
+        let catalog = crate::gameplay_catalog::Catalog::new(profile);
+        let view = VoiceFlat { flat: Flat::new(), catalog };
+        let mut results = Vec::new();
+        for silent in [false, true] {
+            let mut items = Items::with_catalog(catalog);
+            let from = items.watch_changes(1);
+            let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+            cow.catalog = catalog;
+            cow.no_ai = true;
+            cow.silent = silent;
+            items.add_mob(cow);
+            let mut rng = Rng::new(7);
+            let mut internal = Vec::new();
+            for tick in 0..1002 {
+                items.mobs[0].tick(&view, &ctx(), &mut rng);
+                assert_eq!(items.mobs[0].catalog, catalog);
+                for event in &items.mobs[0].events {
+                    if let Event::Sound { .. } = event { internal.push((tick, event.clone())); }
+                }
+                items.flush_mob_events(&mut || panic!("голос не создаёт сущности"), &mut rng);
+                assert!(items.mobs[0].events.is_empty());
+            }
+            assert!(!internal.is_empty());
+            let (changes, _) = items.changes_since(from, 1);
+            let published: Vec<_> = changes.into_iter().filter_map(|change| {
+                if let crate::items::Change::MobEvent { entity_id, at, event: Event::Sound { name, volume, pitch } } = change {
+                    Some((entity_id, at, name, volume, pitch))
+                } else { None }
+            }).collect();
+            assert_eq!(published.len(), if silent { 0 } else { internal.len() });
+            for (entity_id, at, name, volume, _) in published {
+                assert_eq!(entity_id, 1);
+                assert_eq!(at, (0.5, 1.0, 0.5));
+                assert_eq!(name, "minecraft:entity.cow.ambient");
+                assert_eq!(volume, 0.4);
+            }
+            results.push((internal, rng.next_u64()));
+        }
+        assert_eq!(results[0], results[1], "Silent фильтрует публикацию, но не счёт голоса или RNG");
+    }
+}
+
+#[test]
+fn ai_enabled_cow_keeps_voice_and_movement() {
+    let view = Flat::new();
+    let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(7);
+    let mut voiced = false;
+    let mut moved = false;
+    for _ in 0..1002 {
+        cow.tick(&view, &ctx(), &mut rng);
+        moved |= (cow.x, cow.z) != (0.5, 0.5);
+        voiced |= cow.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.cow.ambient", .. }));
+        cow.events.clear();
+    }
+    assert!(voiced, "обычный путь ИИ сохранил голос");
+    assert!(moved, "обычный путь ИИ сохранил прогулку");
+    assert!(!cow.no_ai);
+}
+
+#[test]
+fn no_ai_voice_consumes_one_draw_per_tick_only_for_supported_kinds() {
+    let view = Flat::new();
+    for kind in [Kind::Cow, Kind::Villager, Kind::Wither, Kind::EnderDragon, Kind::Pig, Kind::Sheep, Kind::Chicken] {
+        let mut mob = Mob::new(1, kind, (0.5, 1.0, 0.5));
+        mob.no_ai = true;
+        let mut rng = Rng::new(19);
+        let mut expected = rng.clone();
+        // Первый такт только снимает fresh; затем ровно один draw голоса.
+        for _ in 0..3 {
+            let ticks = mob.ticks;
+            mob.tick(&view, &ctx(), &mut rng);
+            if mob.ticks != ticks && matches!(kind, Kind::Cow | Kind::Villager | Kind::Wither | Kind::EnderDragon) {
+                expected.below(1000);
+            }
+            assert_eq!(rng.clone().next_u64(), expected.clone().next_u64(), "{kind:?}: лишний или пропущенный голос");
+        }
+    }
+}
+
 #[test]
 fn a_hit_hurts_pushes_and_starts_invulnerability() {
     let view = Flat::new();
