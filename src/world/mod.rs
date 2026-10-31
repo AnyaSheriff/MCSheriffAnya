@@ -8710,6 +8710,10 @@ mod prepared_light_regressions {
             let mut world = World::in_memory();
             world.ensure(0, 0);
             world.ensure(1, 0);
+            // Сгенерированный плоский чанк уже имеет готовый собственный свет.
+            // Правка делает его устаревшим, чтобы результат действительно нёс пересчёт.
+            world.set_block(0, 10, 0, crate::blocks::state_by_name("stone").unwrap());
+            assert!(world.chunks[&(0, 0)].fresh_light().is_none());
             let mut prepared = world.light_job(0, 0).unwrap().prepare();
             let recounted = prepared.recounted.len();
             assert!(recounted > 0);
