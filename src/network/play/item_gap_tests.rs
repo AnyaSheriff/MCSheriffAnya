@@ -1,5 +1,6 @@
 //! Потерянный журнал: настоящая граница Items и пакеты777 в памяти.
 use super::*;
+use crate::stackdata;
 use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
 
 fn shared() -> Shared {
