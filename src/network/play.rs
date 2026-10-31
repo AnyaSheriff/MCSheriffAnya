@@ -2577,7 +2577,9 @@ async fn send_item_moves(
             continue;
         };
 
-        let now = shown_item(&item);
+        let mut now = shown_item(&item);
+        // Отчёт появления — состояние доставки, а не изменение физики.
+        now.first_sent = shown.first_sent;
 
         if now == shown {
             continue;
