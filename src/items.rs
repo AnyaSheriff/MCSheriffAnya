@@ -290,6 +290,9 @@ pub enum Change {
 pub struct Items {
     catalog: crate::gameplay_catalog::Catalog,
     items: Vec<Dropped>,
+    /// Только тестовый снимок входа merge: в рабочей сборке отсутствует.
+    #[cfg(test)]
+    merge_due_for_test: Vec<i32>,
 
     /// Вагонетки в порядке появления: у них своя физика (minecart.rs), но
     /// журнал общий с предметами — клиенты узнают о них тем же путём.
@@ -330,6 +333,8 @@ impl Items {
         Self {
             catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
             items: Vec::new(),
+            #[cfg(test)]
+            merge_due_for_test: Vec::new(),
             carts: Vec::new(),
             bolts: Vec::new(),
             frames: Vec::new(),
@@ -906,7 +911,10 @@ impl Items {
             // Возраст считается уже с этого такта: первая проверка стоящего
             // предмета — на сороковом его такте (чёрный ящик item-merge:
             // предмет, возникший в такте 0, исчезает в такте 39).
-            if (item.ticks + 1).is_multiple_of(if moved_cell { 2 } else { 40 }) {
+            // TNT и падающие блоки не сливаются (merging::mergeable): не
+            // искать их номера в общем списке ради заведомого отказа.
+            if item.fuse.is_none() && item.block.is_none()
+                && (item.ticks + 1).is_multiple_of(if moved_cell { 2 } else { 40 }) {
                 merge_due.push(item.entity_id);
             }
             item.ticks += 1;

@@ -11,6 +11,11 @@ impl Items {
     /// меньшая (при равенстве — начавшая проверку) исчезает. [проверить] Фаза
     /// проверки 2/40 тактов и расширение рамки X/Z на 0,5 без расширения Y.
     pub(super) fn merge_items(&mut self, due: &[i32]) {
+        #[cfg(test)]
+        {
+            self.merge_due_for_test.clear();
+            self.merge_due_for_test.extend_from_slice(due);
+        }
         for id in due {
             let Some(mut index) = self.items.iter().position(|item| item.entity_id == *id) else { continue; };
             if !mergeable(&self.items[index]) { continue; }
@@ -79,6 +84,89 @@ mod tests {
         items.drop_item(1, a, (0.0, 64.0, 0.0), (0.0, 0.0, 0.0), 10);
         items.drop_item(2, b, at, (0.0, 0.0, 0.0), 40);
         items
+    }
+
+    #[test]
+    fn primed_tnt_skips_merge_queue_without_changing_motion_age_or_fuse() {
+        let mut group = Items::new();
+        let tnt = crate::blocks::state_by_name("tnt").unwrap();
+        for id in 1..=8 {
+            group.prime(id, tnt, (id as f64 * 2.0, 90.0, 0.0), (0.75, 0.2, 0.0), 80, None);
+            // Обе фазы очереди: стоящий TNT40 и пересекающий клетки TNT2.
+            if id % 2 == 0 {
+                let item = group.items.last_mut().unwrap();
+                item.no_gravity = true;
+                (item.vx, item.vy, item.vz) = (0.0, 0.0, 0.0);
+            }
+        }
+        let mut alone: Vec<_> = group.items.iter().map(|item| {
+            let mut store = Items::new();
+            store.items.push(item.clone());
+            store
+        }).collect();
+        let loaded = |_, _| true;
+        for tick in 1..=80 {
+            group.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+            assert!(group.merge_due_for_test.is_empty(), "TNT в очереди на такте {tick}");
+            let gone = group.burn_fuses(&loaded);
+            let mut expected = Vec::new();
+            let mut expected_gone = Vec::new();
+            for store in &mut alone {
+                store.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+                expected_gone.extend(store.burn_fuses(&loaded));
+                expected.extend(store.items.iter().cloned());
+            }
+            // Полный Dropped включает позицию/скорость, age/ticks, fuse и
+            // shown_fuse; одиночные сущности дают независимый от очереди путь.
+            assert_eq!(format!("{:?}", group.items), format!("{expected:?}"));
+            assert_eq!(format!("{gone:?}"), format!("{expected_gone:?}"));
+            assert_eq!(gone.len(), if tick == 80 { 8 } else { 0 });
+        }
+    }
+
+    #[test]
+    fn falling_blocks_skip_merge_queue_and_still_age_and_move() {
+        let mut items = Items::new();
+        let sand = crate::blocks::state_by_name("sand").unwrap();
+        items.prime(1, sand, (0.0, 90.0, 0.0), (0.75, 0.0, 0.0), 80, None);
+        items.items[0].fuse = None;
+        for _ in 0..40 {
+            items.step(&|_, _, _| false, &|_, _, _| false, &|_, _| true);
+            assert!(items.merge_due_for_test.is_empty());
+        }
+        let item = &items.items[0];
+        assert_eq!((item.age, item.ticks), (40, 40));
+        assert!(item.x > 0.0 && item.y < 90.0);
+        assert_eq!(item.block, Some(sand));
+    }
+
+    #[test]
+    fn mixed_tnt_preserves_ordinary_merge_schedule_order_and_pickup_delay() {
+        let mut ordinary = pair(stack(12), stack(20), (0.0, 64.0, 0.0));
+        let mut mixed = pair(stack(12), stack(20), (0.0, 64.0, 0.0));
+        for store in [&mut ordinary, &mut mixed] {
+            for item in &mut store.items { item.no_gravity = true; }
+            store.items[0].age = 5;
+            store.items[1].age = 30;
+        }
+        let tnt = crate::blocks::state_by_name("tnt").unwrap();
+        mixed.prime(3, tnt, (0.0, 64.0, 0.0), (0.0, 0.0, 0.0), 80, None);
+        mixed.items[2].no_gravity = true;
+        for tick in 1..=40 {
+            ordinary.step(&|_, _, _| false, &|_, _, _| false, &|_, _| true);
+            mixed.step(&|_, _, _| false, &|_, _, _| false, &|_, _| true);
+            assert_eq!(mixed.merge_due_for_test, ordinary.merge_due_for_test);
+            assert_eq!(mixed.merge_due_for_test, if tick == 40 { vec![1, 2] } else { vec![] });
+            let without_tnt: Vec<_> = mixed.items.iter().filter(|item| item.entity_id != 3).cloned().collect();
+            assert_eq!(format!("{without_tnt:?}"), format!("{:?}", ordinary.items));
+            assert_eq!(without_tnt.len(), if tick == 40 { 1 } else { 2 });
+        }
+        let survivor = &ordinary.items[0];
+        assert_eq!((survivor.entity_id, survivor.stack.count, survivor.age, survivor.pickup_delay), (2, 32, 45, 45));
+        let (baseline_changes, _) = ordinary.changes_since(0, 1);
+        let (mixed_changes, _) = mixed.changes_since(0, 1);
+        let merges = |changes: Vec<Change>| changes.into_iter().filter(|change| matches!(change, Change::Stack { .. } | Change::Gone { .. })).collect::<Vec<_>>();
+        assert_eq!(format!("{:?}", merges(baseline_changes)), format!("{:?}", merges(mixed_changes)));
     }
 
     #[test]
