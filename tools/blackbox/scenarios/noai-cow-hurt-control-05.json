@@ -1,0 +1,51 @@
+{
+  "name": "noai-cow-hurt-control-05",
+  "about": "Фиксированная пара NoAI Cow:400 номинальных тактов, один удар кулаком первой через100тактов после появления; вторая без урона. Только наблюдение, не timing/count/RNG parity.",
+  "exclusive": true,
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "kill @e[type=cow,distance=..48]",
+    "fill $(-4,-1,-4) $(10,-1,8) stone",
+    "fill $(-4,0,-4) $(10,6,8) air",
+    "tp $(bot) $(3.5,0,3.5) 180 0",
+    "!hotbar 0",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 10,
+      "cmd": "summon cow $(3.5,0,1.5) {NoAI:1b,Age:0}"
+    },
+    {
+      "after": 10,
+      "cmd": "summon cow $(7.5,0,1.5) {NoAI:1b,Age:0}"
+    },
+    {
+      "after": 110,
+      "attack": true,
+      "which": 0
+    },
+    {
+      "after": 410,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    }
+  ],
+  "record_ticks": 430,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true"
+  ]
+}

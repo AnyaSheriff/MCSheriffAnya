@@ -1,0 +1,6 @@
+{
+  "build_run_id": "41185482641",
+  "head": "bd47859fd86c85084790318482ff06fe25c1272e",
+  "runtime_sha256": "75aec761a151872c26745d788379bce2f246b6874162364ebc9028ed1b93faca",
+  "note": "Exact runtime selected by owner for fixed hurt/control observation only; no Rust build or parity claim."
+}
