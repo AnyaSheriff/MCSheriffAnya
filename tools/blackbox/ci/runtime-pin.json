@@ -1,6 +1,6 @@
 {
-  "build_run_id": "41196853937",
-  "head": "517876ec315583d95e666a55bdde110de0ae74ec",
-  "runtime_sha256": "9fbdc61f4e9949072391473c95a710aa06f03eb0ad0fda98029b494e429a1acc",
-  "note": "Verified full CI: 12 receipt hashes and 49 new regression tests in both Rust configurations. Fresh native combat, scoped NoAI voice, and hurt/control observations use this exact runtime; gameplay parity is not inferred from unit tests."
+  "build_run_id": "41206441067",
+  "head": "47987dad9edec135efc079b31582e6de1bfd988e",
+  "runtime_sha256": "05c31c6161e59fcbb79d79cfbe9697a443def6df43bfebbbc0e4e9e35a83e91a",
+  "note": "Verified full CI: 12 receipt hashes, 57 tracked regression tests in both Rust configurations, and 11 isolated TCP modes per configuration. Fresh native combat uses this exact runtime; gameplay parity is not inferred from unit tests."
 }
