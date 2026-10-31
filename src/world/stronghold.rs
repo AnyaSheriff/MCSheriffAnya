@@ -310,22 +310,47 @@ pub fn starts(seed: i64, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>
     starts_with_profile(seed, false, land)
 }
 
+// Отдельная ячейка на ключ: долгий поиск не держит общий замок и не
+// дублируется между прогревом, генерацией и проверками достижений.
+#[cfg(not(seedmap_core))]
+type StartCell = Arc<OnceLock<Arc<Vec<(i32, i32)>>>>;
+#[cfg(not(seedmap_core))]
+type StartCache = Mutex<HashMap<(i64, bool), StartCell>>;
+
+#[cfg(not(seedmap_core))]
+fn cached_starts(cache: &StartCache, key: (i64, bool), calculate: impl FnOnce() -> Vec<(i32, i32)>) -> Arc<Vec<(i32, i32)>> {
+    let cell = {
+        let mut cache = cache.lock().unwrap_or_else(|poison| poison.into_inner());
+        cache.entry(key).or_default().clone()
+    };
+    cell.get_or_init(|| Arc::new(calculate())).clone()
+}
+
 fn starts_with_profile(seed: i64, preview: bool, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>> {
-    static CACHE: Cache<(i64, bool), Vec<(i32, i32)>> = OnceLock::new();
+    let calculate = || if preview { biased_points(seed, land) } else { legacy_biased_points(seed, land) };
     #[cfg(not(seedmap_core))]
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-
-    #[cfg(not(seedmap_core))]
-    if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&(seed, preview)) {
-        return found.clone();
+    {
+        static CACHE: OnceLock<StartCache> = OnceLock::new();
+        cached_starts(CACHE.get_or_init(Default::default), (seed, preview), calculate)
     }
+    #[cfg(seedmap_core)]
+    { Arc::new(calculate()) }
+}
 
-    let out = if preview { biased_points(seed,land) } else { legacy_biased_points(seed,land) };
-
-    let out = Arc::new(out);
-    #[cfg(not(seedmap_core))]
-    cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert((seed, preview), out.clone());
-    out
+// Вики, Stronghold: «moved up to 112 block». В обоих наших профилях
+// quart-поиск и div_euclid сдвигают старт не более чем на 7 чанков по оси:
+// preview: [16c−104, 16c+120], legacy: [16c−102, 16c+122].
+// build/contains допускают только старты в пределах RADIUS_CHUNKS=9.
+// Поэтому отсутствие исходной точки в квадрате радиуса 17 (16 + запас)
+// строго исключает результат, не меняя поиск биома и случайные числа.
+#[cfg(not(seedmap_core))]
+fn raw_start_near(seed: i64, preview: bool, chunk_x: i32, chunk_z: i32) -> bool {
+    let points = if preview {
+        ring_candidates(seed).into_iter().map(|(point, _)| point).collect()
+    } else { legacy_ring_points(seed) };
+    let radius = i64::from(RADIUS_CHUNKS) + 8;
+    points.into_iter().any(|(x, z)| (i64::from(x) - i64::from(chunk_x)).abs() <= radius
+        && (i64::from(z) - i64::from(chunk_z)).abs() <= radius)
 }
 
 /// Раскладка крепости со стартом в этом чанке. Нет портальной комнаты —
@@ -857,6 +882,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
         return;
     };
     let seed = terrain.seed();
+    if !raw_start_near(seed, terrain.generation_profile() & 2 != 0, chunk_x, chunk_z) { return; }
     let near: Vec<(i32, i32)> = starts_of(terrain)
         .iter()
         .copied()
@@ -912,6 +938,7 @@ fn texts_of(piece: &Placed) -> &'static [String] {
 /// Вход в рамку крепости: план уже закэширован генератором.
 #[cfg(not(seedmap_core))]
 pub fn contains(terrain: &super::terrain::Terrain, x: i32, y: i32, z: i32) -> bool {
+    if !raw_start_near(terrain.seed(), terrain.generation_profile() & 2 != 0, x.div_euclid(16), z.div_euclid(16)) { return false; }
     starts_of(terrain).iter().filter(|(cx, cz)| (cx - x.div_euclid(16)).abs() <= RADIUS_CHUNKS && (cz - z.div_euclid(16)).abs() <= RADIUS_CHUNKS)
         .any(|&(cx, cz)| super::in_structure_bounds(plan_cached(terrain.seed(), cx, cz).iter().map(|p| p.bounds), (x, y, z)))
 }
@@ -919,6 +946,101 @@ pub fn contains(terrain: &super::terrain::Terrain, x: i32, y: i32, z: i32) -> bo
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn starts_cache_initializes_once_for_concurrent_callers() {
+        use std::sync::{Barrier, atomic::{AtomicUsize, Ordering}};
+        let cache = StartCache::default();
+        let barrier = Barrier::new(8);
+        let calls = AtomicUsize::new(0);
+        let values = std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8).map(|_| scope.spawn(|| {
+                barrier.wait();
+                cached_starts(&cache, (-701, true), || {
+                    calls.fetch_add(1, Ordering::SeqCst);
+                    vec![(-80, 91)]
+                })
+            })).collect();
+            workers.into_iter().map(|worker| worker.join().unwrap()).collect::<Vec<_>>()
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(&*values[0], &[(-80, 91)]);
+        assert!(values.iter().all(|value| Arc::ptr_eq(value, &values[0])));
+    }
+
+    #[test]
+    fn starts_cache_retries_panics_and_does_not_lock_other_keys() {
+        let cache = StartCache::default();
+        assert!(std::panic::catch_unwind(|| cached_starts(&cache, (17, true), || panic!("прерванный поиск"))).is_err());
+        let recovered = cached_starts(&cache, (17, true), || {
+            // Вложенный другой ключ требует свободного общего замка.
+            let other_profile = cached_starts(&cache, (17, false), || vec![(3, 4)]);
+            assert_eq!(&*other_profile, &[(3, 4)]);
+            vec![(-5, -6)]
+        });
+        let reused = cached_starts(&cache, (17, true), || panic!("повторный поиск"));
+        assert!(Arc::ptr_eq(&recovered, &reused));
+        assert_eq!(&*recovered, &[(-5, -6)]);
+    }
+
+    #[test]
+    fn raw_start_rejection_keeps_extreme_biome_search_corners() {
+        for preview in [false, true] {
+            let seed = -91;
+            let raw = if preview { ring_points(seed) } else { legacy_ring_points(seed) };
+            let (rx, rz) = raw[0];
+            for dx in [-7, 7] {
+                for dz in [-7, 7] {
+                    let offset = |direction| if direction < 0 { -104 } else { 120 };
+                    let extra = if preview { 0 } else { 2 };
+                    let target = (rx * 16 + offset(dx) + extra, rz * 16 + offset(dz) + extra);
+                    // Единственная предпочтительная quart-клетка — самый
+                    // дальний угол реального поиска; резервуар обязан взять её.
+                    let land = |x, z| (x, z) == target;
+                    let selected = if preview { biased_points(seed, &land) } else { legacy_biased_points(seed, &land) };
+                    assert_eq!(selected[0], (rx + dx, rz + dz));
+                    assert!(raw_start_near(seed, preview, selected[0].0 + dx.signum() * 9, selected[0].1 + dz.signum() * 9));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn raw_start_rejection_preserves_real_biased_candidates_and_boundaries() {
+        // Выбирает настоящие результаты обоих существующих алгоритмов,
+        // а не искусственные точки, вычисленные по проверяемому радиусу.
+        for seed in [-91, 0, 901] {
+            for preview in [false, true] {
+                let raw = if preview { ring_points(seed) } else { legacy_ring_points(seed) };
+                for preference in 0..3 {
+                    let land = |x: i32, z: i32| match preference {
+                        0 => false,
+                        1 => true,
+                        _ => (i64::from(x) * 31 + i64::from(z) * 17).rem_euclid(11) < 4,
+                    };
+                    let selected = if preview { biased_points(seed, &land) } else { legacy_biased_points(seed, &land) };
+                    assert_eq!(selected.len(), raw.len());
+                    assert!(selected.iter().any(|&(x, z)| x < 0 && z < 0));
+                    for (&(x, z), &(rx, rz)) in selected.iter().zip(&raw) {
+                        assert!((x - rx).abs() <= 7 && (z - rz).abs() <= 7);
+                        for (dx, dz) in [(0, 0), (-9, -9), (-9, 9), (9, -9), (9, 9)] {
+                            // Эти чанки действующий build/contains допускает
+                            // включительно, даже на внешнем углу фильтра.
+                            assert!(raw_start_near(seed, preview, x + dx, z + dz),
+                                "seed={seed}, preview={preview}, selected=({x},{z}), offset=({dx},{dz})");
+                        }
+                    }
+                }
+                // Пустота у нуля и координаты вне всех колец не требуют биомов.
+                for (x, z) in [(0, 0), (i32::MIN, i32::MAX), (i32::MAX, i32::MIN)] {
+                    assert!(!raw_start_near(seed, preview, x, z));
+                    let selected = if preview { biased_points(seed, &|_, _| true) } else { legacy_biased_points(seed, &|_, _| true) };
+                    assert!(!selected.iter().any(|&(sx, sz)| (i64::from(sx) - i64::from(x)).abs() <= 9
+                        && (i64::from(sz) - i64::from(z)).abs() <= 9));
+                }
+            }
+        }
+    }
 
     /// Все образцы разбираются; размеры — по замеру.
     #[test]
