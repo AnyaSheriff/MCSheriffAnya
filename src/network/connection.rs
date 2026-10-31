@@ -24,11 +24,18 @@ pub struct CryptoStream<S> {
     pub legacy: Option<LegacySession>,
     #[cfg(test)]
     pub(crate) probe_776: bool,
+    #[cfg(test)]
+    read_pending_probe: Option<std::sync::mpsc::Sender<()>>,
 }
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, chunk_biomes: None, content: Default::default(), encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false }
+        Self { inner, chunk_biomes: None, content: Default::default(), encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false, #[cfg(test)] read_pending_probe: None }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn probe_read_pending(&mut self, sender: std::sync::mpsc::Sender<()>) {
+        self.read_pending_probe = Some(sender);
     }
 
     pub(crate) fn probe_776_enabled(&self) -> bool {
@@ -76,7 +83,7 @@ impl Connection {
         reader.login_session_id = self.login_session_id;
         reader.legacy = self.legacy.clone();
         #[cfg(test)]
-        { reader.probe_776 = self.probe_776; }
+        { reader.probe_776 = self.probe_776; reader.read_pending_probe = self.read_pending_probe.take(); }
         self.read_taken = true;
         Ok(reader)
     }
@@ -101,7 +108,14 @@ impl<S: AsyncRead + Unpin> AsyncRead for CryptoStream<S> {
             return Poll::Ready(Err(io::Error::other("читатель уже передан")));
         }
         let start = buf.filled().len();
-        ready!(Pin::new(&mut this.inner).poll_read(cx, buf))?;
+        match Pin::new(&mut this.inner).poll_read(cx, buf) {
+            Poll::Ready(result) => result?,
+            Poll::Pending => {
+                #[cfg(test)]
+                if let Some(probe) = this.read_pending_probe.take() { let _ = probe.send(()); }
+                return Poll::Pending;
+            }
+        }
         if let Some(cipher) = &mut this.decryptor {
             decrypt(cipher, &mut buf.filled_mut()[start..]);
         }

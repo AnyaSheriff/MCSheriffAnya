@@ -204,6 +204,11 @@ impl KeepAlive {
 
     // Старые codec/timeout fixtures моделируют уже завершённую отправку.
     #[cfg(test)]
+    pub(super) fn make_due_for_test(&self) {
+        self.inner.state.lock().expect("Keep Alive").last_sent = Instant::now() - KEEP_ALIVE_INTERVAL;
+    }
+
+    #[cfg(test)]
     pub fn send_due(&self) -> Option<i64> {
         let ticket = self.begin_send()?;
         let id = ticket.id();

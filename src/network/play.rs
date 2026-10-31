@@ -7480,6 +7480,8 @@ struct TickPermit {
     received: Option<tokio::time::Instant>,
     waiting: Option<Arc<[std::sync::atomic::AtomicUsize; 2]>>,
     index: usize,
+    // Заряд очереди живёт и после recv, до обработки/отбрасывания пакета.
+    _inbound_charge: Option<InboundCharge>,
 }
 
 impl TickPermit {
@@ -7489,7 +7491,7 @@ impl TickPermit {
             waiting[index].fetch_add(1, std::sync::atomic::Ordering::AcqRel);
             waiting.clone()
         });
-        Self { waiting, index, received: super::packet::timing_enabled().then(tokio::time::Instant::now) }
+        Self { waiting, index, received: super::packet::timing_enabled().then(tokio::time::Instant::now), _inbound_charge: None }
     }
 }
 
@@ -7498,6 +7500,40 @@ impl Drop for TickPermit {
         if let Some(waiting) = &self.waiting {
             waiting[self.index].fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
         }
+    }
+}
+
+// Верхняя граница ещё не обработанных игровых пакетов, не ACK. После них
+// допускается одна незаряженная terminal error. Байты — capacity тела плюс
+// inline Incoming, не полная heap-память (legacy action может иметь довески).
+const INBOUND_PACKETS: usize = 4096;
+const INBOUND_BYTES: usize = 8 * 1024 * 1024;
+
+#[derive(Default)]
+struct InboundBudget { used: Mutex<(usize, usize)> }
+
+impl InboundBudget {
+    fn charge(self: &Arc<Self>, bytes: usize) -> io::Result<InboundCharge> {
+        let mut used = self.used.lock().expect("очередь входных пакетов");
+        if used.0 >= INBOUND_PACKETS || bytes > INBOUND_BYTES.saturating_sub(used.1) {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Переполнена очередь игровых пакетов"));
+        }
+        used.0 += 1;
+        used.1 += bytes;
+        Ok(InboundCharge { budget: self.clone(), bytes })
+    }
+
+    #[cfg(test)]
+    fn usage(&self) -> (usize, usize) { *self.used.lock().unwrap() }
+}
+
+struct InboundCharge { budget: Arc<InboundBudget>, bytes: usize }
+
+impl Drop for InboundCharge {
+    fn drop(&mut self) {
+        let mut used = self.budget.used.lock().expect("очередь входных пакетов");
+        used.0 -= 1;
+        used.1 -= self.bytes;
     }
 }
 
@@ -7516,28 +7552,56 @@ struct Inbound {
     reader: tokio::task::JoinHandle<()>,
     queued: Option<io::Result<Incoming>>,
     alive: KeepAlive,
+    _budget: Arc<InboundBudget>,
+    #[cfg(test)]
+    _yield_count: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 // Неигровой ACK принимается до создания TickPermit и постановки в FIFO.
+#[cfg(test)]
 fn inbound_packet(packet: PacketInfo, arrived: u64,
     waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
 ) -> Option<Incoming> {
-    if packet.id == SERVERBOUND_KEEP_ALIVE {
-        alive.answer(packet.payload());
-        return None;
-    }
-    let permit = TickPermit::new(waiting, arrived, is_gated(packet.id));
-    Some((packet, arrived, permit))
+    inbound_packet_budgeted(packet, arrived, waiting, alive, None).expect("тест без лимита очереди")
 }
 
-// Ошибка чтения идёт тем же FIFO вслед за уже декодированными действиями.
-// Только нештатный выход без успешной передачи ошибки закрывает guard.
+fn inbound_packet_charge(packet: &PacketInfo) -> usize {
+    packet.body.capacity().saturating_add(std::mem::size_of::<Incoming>())
+}
+
+fn inbound_packet_budgeted(packet: PacketInfo, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+    budget: Option<&Arc<InboundBudget>>,
+) -> io::Result<Option<Incoming>> {
+    if packet.id == SERVERBOUND_KEEP_ALIVE {
+        alive.answer(packet.payload());
+        return Ok(None);
+    }
+    let charge = budget.map(|budget| budget.charge(inbound_packet_charge(&packet))).transpose()?;
+    let mut permit = TickPermit::new(waiting, arrived, is_gated(packet.id));
+    permit._inbound_charge = charge;
+    Ok(Some((packet, arrived, permit)))
+}
+
+// Ошибка чтения/переполнения идёт FIFO вслед за уже принятыми действиями.
+// При успешной передаче terminal error guard не закрывает control раньше FIFO.
+#[cfg(test)]
 fn forward_read(read: io::Result<PacketInfo>, arrived: u64,
     waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
     sender: &tokio::sync::mpsc::UnboundedSender<io::Result<Incoming>>, guard: &mut ReaderGuard,
 ) -> bool {
-    match read {
-        Ok(packet) => inbound_packet(packet, arrived, waiting, alive).is_none_or(|packet| sender.send(Ok(packet)).is_ok()),
+    forward_read_budgeted(read, arrived, waiting, alive, sender, guard, None)
+}
+
+fn forward_read_budgeted(read: io::Result<PacketInfo>, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+    sender: &tokio::sync::mpsc::UnboundedSender<io::Result<Incoming>>, guard: &mut ReaderGuard,
+    budget: Option<&Arc<InboundBudget>>,
+) -> bool {
+    let incoming = read.and_then(|packet| inbound_packet_budgeted(packet, arrived, waiting, alive, budget));
+    match incoming {
+        Ok(None) => true,
+        Ok(Some(packet)) => sender.send(Ok(packet)).is_ok(),
         Err(error) => {
             if sender.send(Err(error)).is_ok() { guard.disarm(); }
             false
@@ -7563,9 +7627,17 @@ impl Inbound {
     }
 
     fn start(stream: &mut Connection, shared: &Shared, alive: KeepAlive) -> io::Result<Self> {
-        // Буфер читателя хранит уже расшифрованные байты; состояние CFB8
-        // передаётся из Configuration без сброса IV.
-        let mut own = tokio::io::BufReader::new(stream.take_reader()?);
+        Self::start_on(super::inbound_runtime::handle()?, stream, shared, alive)
+    }
+
+    fn start_on(handle: &tokio::runtime::Handle, stream: &mut Connection, shared: &Shared, alive: KeepAlive) -> io::Result<Self> {
+        // take_reader дублирует OS fd и регистрирует from_std именно здесь.
+        // Перенос одной task без новой регистрации оставил бы старый reactor.
+        let reader = {
+            let _entered = handle.enter();
+            stream.take_reader()?
+        };
+        let mut own = tokio::io::BufReader::new(reader);
         let version = own.get_ref().client_version();
         let legacy = own.get_ref().legacy.clone();
         let probe_776 = own.get_ref().probe_776_enabled();
@@ -7573,19 +7645,38 @@ impl Inbound {
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
-
+        let budget = Arc::new(InboundBudget::default());
+        let incoming_budget = budget.clone();
+        #[cfg(test)]
+        let yield_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        #[cfg(test)]
+        let reader_yields = yield_count.clone();
         let receiving = alive.clone();
-        let reader = tokio::spawn(async move {
-            let mut guard = receiving.reader_guard();
+        // Guard существует и при отмене task до её первого poll.
+        let mut guard = receiving.reader_guard();
+        let reader = handle.spawn(async move {
+            let (mut frames, mut bytes) = (0usize, 0usize);
             loop {
                 let read = super::packet::read_play_packet_with_content(&mut own, version, legacy.as_ref(), probe_776, content).await;
+                frames += 1;
+                bytes += read.as_ref().map_or(0, |packet| packet.body.len());
                 let arrived = *starts.borrow();
-                if !forward_read(read, arrived, &waiting, &receiving, &sender, &mut guard) { return; }
+                if !forward_read_budgeted(read, arrived, &waiting, &receiving, &sender, &mut guard, Some(&incoming_budget)) { return; }
+                if frames >= 64 || bytes >= 256 * 1024 {
+                    // Горячий сокет не занимает общий IO executor без перерыва.
+                    #[cfg(test)]
+                    reader_yields.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    tokio::task::yield_now().await;
+                    frames = 0;
+                    bytes = 0;
+                }
             }
         });
 
-        Ok(Self { packets, reader, queued: None, alive })
+        Ok(Self { packets, reader, queued: None, alive, _budget: budget,
+            #[cfg(test)] _yield_count: yield_count })
     }
+
 }
 
 impl Drop for Inbound {
@@ -13569,3 +13660,10 @@ mod shulker_hotbar_tests;
 
 #[cfg(test)]
 mod item_gap_tests;
+
+#[cfg(test)]
+mod inbound_budget_tests;
+
+#[cfg(test)]
+#[path = "play/inbound_runtime_tests.rs"]
+mod inbound_runtime_tests;

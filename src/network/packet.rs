@@ -233,6 +233,14 @@ pub(super) async fn read_play_packet_routed<S: AsyncRead + Unpin>(stream: &mut S
     read_play_packet_with_content(stream, version, legacy, probe_776, Default::default()).await
 }
 
+#[cfg(test)]
+static LEGACY_LOCK_PROBE: std::sync::Mutex<Option<std::sync::mpsc::Sender<()>>> = std::sync::Mutex::new(None);
+
+#[cfg(test)]
+pub(super) fn probe_legacy_lock_wait(sender: std::sync::mpsc::Sender<()>) {
+    *LEGACY_LOCK_PROBE.lock().unwrap() = Some(sender);
+}
+
 pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
     if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(probe_776 && matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2)) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
@@ -253,8 +261,23 @@ pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: 
             return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None,
                 punch: false, foreign_inventory: false, legacy_inventory: action });
         }
-        let body = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?
-            .serverbound(&packet.body).map_err(translate_error)?;
+        let body = loop {
+            // Общий IO worker не ждёт std mutex старого encoder. Порядок
+            // serverbound сохраняется: следующий кадр читается после этого.
+            let ready = {
+                match legacy.try_lock() {
+                    Ok(mut session) => Some(session.serverbound(&packet.body).map_err(translate_error)),
+                    Err(std::sync::TryLockError::Poisoned(_)) => return Err(io::Error::other("Состояние соединения1.12.2 повреждено")),
+                    Err(std::sync::TryLockError::WouldBlock) => {
+                        #[cfg(test)]
+                        if let Some(probe) = LEGACY_LOCK_PROBE.lock().unwrap().take() { let _ = probe.send(()); }
+                        None
+                    }
+                }
+            };
+            if let Some(result) = ready { break result?; }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        };
         let (id, _) = decode_varint(&body)?;
         return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None });
     }
