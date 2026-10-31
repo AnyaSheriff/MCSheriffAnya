@@ -2307,6 +2307,90 @@ async fn send_pick_up(
     write_body(stream, body).await
 }
 
+/// При потере журнала заново показывает только Dropped: предметы, блоки и TNT.
+/// Мобы, вагонетки, рамки, шарики и Bedrock требуют отдельного восстановления.
+async fn recover_dropped(
+    stream: &mut Outgoing<'_>,
+    seen: &mut SeenItems,
+    changes: &[items::Change],
+    current: &[Dropped],
+) -> io::Result<std::collections::HashSet<i32>> {
+    let ids = dropped_recovery_ids(seen, changes, current);
+    // Удаляем и живые старые IDs: Spawn после этого всегда однозначно создаёт
+    // сущность заново. Прочие карты слежения здесь не очищаются.
+    let mut old: Vec<_> = seen.keys().copied().collect();
+    old.sort_unstable();
+    for entity_id in old {
+        send_remove_entity(stream, entity_id).await?;
+        seen.remove(&entity_id);
+    }
+    for item in current {
+        send_dropped_item(stream, item).await?;
+        // Обычный Spawn падающего блока содержит нулевую скорость, а shown_item
+        // уже запомнит текущую. Явная сверка нужна для всех трёх видов.
+        send_teleport_with_speed(stream, item.entity_id,
+            item_place((item.x, item.y, item.z), item.on_ground), (item.vx, item.vy, item.vz)).await?;
+        let mut data = encode_varint(SET_ENTITY_DATA);
+        data.extend_from_slice(&encode_varint(item.entity_id));
+        data.push(5); // NoGravity, включая явный false.
+        data.extend_from_slice(&encode_varint(8)); // PROPERTY_BOOLEAN.
+        data.push(u8::from(item.no_gravity));
+        if let Some(fuse) = item.fuse {
+            // Новое появление: текущий остаток, не shown_fuse прошлого такта
+            // (там также бывает служебный -1). Обычная рассылка не меняется.
+            data.push(TNT_FUSE_PROPERTY);
+            data.extend_from_slice(&encode_varint(PROPERTY_INT));
+            data.extend_from_slice(&encode_varint(fuse));
+            data.push(TNT_BLOCK_PROPERTY);
+            data.extend_from_slice(&encode_varint(PROPERTY_BLOCK_STATE));
+            data.extend_from_slice(&encode_varint(item.block.unwrap_or_else(|| blocks::state_by_name("tnt").unwrap_or(0))));
+        }
+        data.push(PROPERTIES_END);
+        write_body(stream, data).await?;
+        let mut shown = shown_item(item);
+        shown.first_sent = true; // Полное состояние уже ушло, это не такт появления.
+        seen.insert(item.entity_id, shown);
+    }
+    Ok(ids)
+}
+
+fn dropped_recovery_ids(seen: &SeenItems, changes: &[items::Change], current: &[Dropped]) -> HashSet<i32> {
+    let mut ids: std::collections::HashSet<i32> = seen.keys().copied().collect();
+    ids.extend(current.iter().map(|item| item.entity_id));
+    for change in changes {
+        match change {
+            items::Change::Dropped(item) => { ids.insert(item.entity_id); }
+            items::Change::Stack { entity_id, .. } | items::Change::Fuse { entity_id, .. } => {
+                ids.insert(*entity_id);
+            }
+            _ => {}
+        }
+    }
+    ids
+}
+
+fn other_item_change_id(change: &items::Change) -> Option<i32> {
+    match change {
+        items::Change::Cart(cart) => Some(cart.entity_id),
+        items::Change::Lightning(bolt) => Some(bolt.entity_id),
+        items::Change::Frame(frame) => Some(frame.entity_id),
+        items::Change::Orb(orb) => Some(orb.entity_id),
+        items::Change::FrameItem { entity_id, .. } | items::Change::FrameRotation { entity_id, .. }
+            | items::Change::MobEvent { entity_id, .. } => Some(*entity_id),
+        _ => None,
+    }
+}
+
+/// Taken/Gone общие с шариками и другими семействами: неизвестный ID
+/// не считаем Dropped. Stack/Fuse принадлежат только Dropped.
+fn dropped_change(change: &items::Change, ids: &std::collections::HashSet<i32>) -> bool {
+    match change {
+        items::Change::Dropped(_) | items::Change::Stack { .. } | items::Change::Fuse { .. } => true,
+        items::Change::Gone { entity_id } | items::Change::Taken { entity_id, .. } => ids.contains(entity_id),
+        _ => false,
+    }
+}
+
 /// Досылает клиенту всё, что случилось с лежащими предметами.
 async fn send_pending_item_changes(
     stream: &mut Outgoing<'_>,
@@ -2320,19 +2404,47 @@ async fn send_pending_item_changes(
     let Known { carts, frames, mobs, listener } = known;
     let orb_range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
 
-    let changes = {
+    let batch = {
         let mut items = shared
             .items_in(dimension)
             .lock()
             .expect("предметы захвачены другим потоком");
 
-        let (changes, count) = items.changes_since(*from, reader);
-        *from = count;
-
-        changes
+        if stream.client_version() == mcsa_protocol::JavaVersion::V26_3 {
+            items.changes_since_checked(*from, reader)
+        } else {
+            let (changes, end) = items.changes_since(*from, reader);
+            items::CheckedChanges { changes, end, dropped: None }
+        }
+    };
+    let items::CheckedChanges { changes, end, dropped } = batch;
+    // При ошибке отправки подключение закрывается; эту границу не используют снова.
+    *from = end;
+    let recovered = if let Some(current) = dropped {
+        // Один reset может быть большим: своевременный keepalive во время
+        // него пока не гарантирован; это не полное восстановление сущностей.
+        let started = Instant::now();
+        let ids = dropped_recovery_ids(seen, &changes, &current);
+        if ids.iter().any(|id| carts.contains_key(id) || frames.contains_key(id) || mobs.contains_key(id))
+            || changes.iter().filter_map(other_item_change_id).any(|id| ids.contains(&id))
+        {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Номер Dropped совпал с другим семейством при восстановлении"));
+        }
+        let old_count = seen.len();
+        log_info!("Пропущены записи Items: Java777 Dropped reset, old={}, current={}, tail={}, end={}; прочие семейства не восстановлены",
+            old_count, current.len(), changes.len(), end);
+        let recovered = recover_dropped(stream, seen, &changes, &current).await?;
+        log_info!("Java777 Dropped reset сформирован: old={}, current={}, elapsed_ms={}; прочие семейства не восстановлены",
+            old_count, current.len(), started.elapsed().as_millis());
+        Some(recovered)
+    } else {
+        None
     };
 
     for change in changes {
+        if recovered.as_ref().is_some_and(|ids| dropped_change(&change, ids)) {
+            continue;
+        }
         match change {
             items::Change::Dropped(item) => {
                 send_dropped_item(stream, &item).await?;
@@ -13281,3 +13393,6 @@ mod chunk_stream_tests;
 
 #[cfg(test)]
 mod shulker_hotbar_tests;
+
+#[cfg(test)]
+mod item_gap_tests;

@@ -286,6 +286,14 @@ pub enum Change {
     },
 }
 
+/// Атомарная граница журнала и, только при потере записей, текущие Dropped.
+/// Остальные семейства общего журнала этим снимком не восстанавливаются.
+pub struct CheckedChanges {
+    pub changes: Vec<Change>,
+    pub end: usize,
+    pub dropped: Option<Vec<Dropped>>,
+}
+
 /// Все предметы, лежащие в мире, и журнал изменений.
 pub struct Items {
     catalog: crate::gameplay_catalog::Catalog,
@@ -1180,6 +1188,16 @@ impl Items {
     /// Изменения, начиная с записи `from`.
     pub fn changes_since(&mut self, from: usize, reader: Reader) -> (Vec<Change>, usize) {
         (self.changes.since(from, reader), self.changes.count())
+    }
+
+    /// Проверяет потерю ДО чтения: `since` уже освобождает прочитанные записи.
+    /// Вызывать под одним Items lock; кодировать и отправлять после его отпускания.
+    pub fn changes_since_checked(&mut self, from: usize, reader: Reader) -> CheckedChanges {
+        let lagged = self.changes.lagged(from);
+        let end = self.changes.count();
+        let dropped = lagged.then(|| self.items.clone());
+        let changes = self.changes.until(from, end, reader);
+        CheckedChanges { changes, end, dropped }
     }
 
     /// Записывает читателя журнала.
@@ -2157,3 +2175,7 @@ mod progress_tests {
         assert!(items.take_progress_kills().is_empty());
     }
 }
+
+#[cfg(test)]
+#[path = "items/gap_tests.rs"]
+mod gap_tests;
