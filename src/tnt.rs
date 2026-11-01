@@ -494,6 +494,32 @@ fn rays(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option<f32>
     rays_with(world, centre, power, cap, true)
 }
 
+/// Геометрия лучей неизменна; сохраняем исходный порядок i/j/k и порядок
+/// операций f64. Случайная сила по-прежнему выбирается отдельно для каждого луча.
+fn ray_steps() -> &'static [(f64, f64, f64)] {
+    static STEPS: std::sync::OnceLock<Vec<(f64, f64, f64)>> = std::sync::OnceLock::new();
+    STEPS.get_or_init(|| {
+        let mut steps = Vec::with_capacity(1352);
+        let edge = |n: i32| n == 0 || n == GRID - 1;
+        let last = (GRID - 1) as f64;
+        for i in 0..GRID {
+            for j in 0..GRID {
+                for k in 0..GRID {
+                    if !(edge(i) || edge(j) || edge(k)) { continue; }
+                    let raw = (
+                        i as f64 / last * 2.0 - 1.0,
+                        j as f64 / last * 2.0 - 1.0,
+                        k as f64 / last * 2.0 - 1.0,
+                    );
+                    let length = (raw.0 * raw.0 + raw.1 * raw.1 + raw.2 * raw.2).sqrt();
+                    steps.push((raw.0 / length * RAY_STEP, raw.1 / length * RAY_STEP, raw.2 / length * RAY_STEP));
+                }
+            }
+        }
+        steps
+    })
+}
+
 /// Лучи; `resist` — гасят ли их блоки. Лучи заряда ветра блоками не
 /// гасятся: у оригинала взрыв силой 1,2 у люка задел 60–66 клеток, а с
 /// гашением задел бы одну (чёрный ящик, wind-charge-throw) [проверить:
@@ -506,66 +532,47 @@ fn rays_with(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option
     // огонь взрыва с огнём.
     let mut touched = Vec::new();
     let mut doomed = Vec::new();
-    let edge = |n: i32| n == 0 || n == GRID - 1;
-    let last = (GRID - 1) as f64;
+    for &step in ray_steps() {
+        let mut intensity = power * (0.7 + world.random_unit() * 0.6);
+        let mut at = centre;
 
-    for i in 0..GRID {
-        for j in 0..GRID {
-            for k in 0..GRID {
-                if !(edge(i) || edge(j) || edge(k)) {
-                    continue;
+        while intensity > 0.0 {
+            let cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+
+            // За краем мира блоков нет — луч дальше не идёт.
+            if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&cell.1) {
+                break;
+            }
+
+            let state = world.get_block(cell.0, cell.1, cell.2);
+
+            if state != AIR && resist {
+                // Синий череп иссушителя: прочность не больше 0,8, кроме
+                // неразрушимого (mob/wither.rs).
+                let Ok(own_resistance) = world.catalog().blast_resistance(state) else {
+                    // Неизвестный профильный блок нельзя считать воздухом или ломать.
+                    break;
+                };
+                let resistance = match cap {
+                    Some(cap) if !crate::mob::wither::wither_immune(state) => own_resistance.min(cap),
+                    _ => own_resistance,
+                };
+
+                intensity -= (resistance + 0.3) * 0.3;
+            }
+
+            if intensity > 0.0 {
+                if reached.insert(cell) {
+                    touched.push(cell);
                 }
 
-                let raw = (
-                    i as f64 / last * 2.0 - 1.0,
-                    j as f64 / last * 2.0 - 1.0,
-                    k as f64 / last * 2.0 - 1.0,
-                );
-                let length = (raw.0 * raw.0 + raw.1 * raw.1 + raw.2 * raw.2).sqrt();
-                let step = (raw.0 / length * RAY_STEP, raw.1 / length * RAY_STEP, raw.2 / length * RAY_STEP);
-
-                let mut intensity = power * (0.7 + world.random_unit() * 0.6);
-                let mut at = centre;
-
-                while intensity > 0.0 {
-                    let cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
-
-                    // За краем мира блоков нет — луч дальше не идёт.
-                    if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&cell.1) {
-                        break;
-                    }
-
-                    let state = world.get_block(cell.0, cell.1, cell.2);
-
-                    if state != AIR && resist {
-                        // Синий череп иссушителя: прочность не больше 0,8, кроме
-                        // неразрушимого (mob/wither.rs).
-                        let Ok(own_resistance) = world.catalog().blast_resistance(state) else {
-                            // Неизвестный профильный блок нельзя считать воздухом или ломать.
-                            break;
-                        };
-                        let resistance = match cap {
-                            Some(cap) if !crate::mob::wither::wither_immune(state) => own_resistance.min(cap),
-                            _ => own_resistance,
-                        };
-
-                        intensity -= (resistance + 0.3) * 0.3;
-                    }
-
-                    if intensity > 0.0 {
-                        if reached.insert(cell) {
-                            touched.push(cell);
-                        }
-
-                        if can_blow_up(world.catalog(), state) && seen.insert(cell) {
-                            doomed.push(cell);
-                        }
-                    }
-
-                    at = (at.0 + step.0, at.1 + step.1, at.2 + step.2);
-                    intensity -= RAY_FADE;
+                if can_blow_up(world.catalog(), state) && seen.insert(cell) {
+                    doomed.push(cell);
                 }
             }
+
+            at = (at.0 + step.0, at.1 + step.1, at.2 + step.2);
+            intensity -= RAY_FADE;
         }
     }
 
@@ -1861,3 +1868,7 @@ mod catalog_drop_exposure_tests {
 #[cfg(test)]
 #[path = "tnt/exposure_cache_tests.rs"]
 mod exposure_cache_tests;
+
+#[cfg(test)]
+#[path = "tnt/ray_direction_tests.rs"]
+mod ray_direction_tests;
