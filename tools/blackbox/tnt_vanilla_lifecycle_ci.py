@@ -18,7 +18,8 @@ SELECTOR = '@e[type=minecraft:tnt,limit=1]'
 
 
 def game_time(answer):
-    values = re.findall(r'The time is (\d+)', answer)
+    values = re.findall(r'(?:The game time is (\d+) tick\(s\)|The time is (\d+))(?=\s|$)', answer)
+    values = [new or old for new, old in values]
     if len(values) != 1:
         raise ValueError('missing or ambiguous gametime acknowledgment')
     return int(values[0])

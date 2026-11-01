@@ -17,7 +17,10 @@ def receipt():
 class Guards(unittest.TestCase):
     def test_time_requires_one_explicit_acknowledgment(self):
         self.assertEqual(game_time('The time is 123\n[Server] barrier'), 123)
-        for text in ('unknown', 'The time is 1\nThe time is 2'):
+        self.assertEqual(game_time('[16:37:27] [Server thread/INFO]: System chat: The game time is 1 tick(s)'), 1)
+        for text in ('unknown', 'The time is 1\nThe time is 2',
+                     'The time is 1\nThe game time is 1 tick(s)',
+                     'The game time is 1', 'The game time is 1 day(s)'):
             with self.assertRaises(ValueError):
                 game_time(text)
 
