@@ -103,15 +103,10 @@ def experiment(runtime, output):
     (config / 'mcsa.properties').write_text('java-version=26.3\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\noffline-license-mode=disabled\nbedrock-port=0\nprefetch-chunks=0\n')
     (config / 'skins.toml').write_text('mojang=false\nely=false\n')
     (config / 'server.properties').write_text(f'server-ip=127.0.0.1\nserver-port={PORT}\nonline-mode=false\nenable-rcon=false\nnetwork-compression-threshold=-1\nlevel-name=world\nlevel-type=minecraft:flat\ngenerator-settings={{"layers":[{{"block":"minecraft:bedrock","height":1}},{{"block":"minecraft:stone","height":3}}],"biome":"minecraft:plains"}}\ngenerate-structures=false\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\npause-when-empty-seconds=0\n')
-    fixture = folder / 'world/datapacks/probe/data/probe/function'
-    fixture.mkdir(parents=True)
-    (fixture / 'noop.mcfunction').write_text('# Собственная пустая функция для чтения глобального due.\n')
-    (fixture / 'prime.mcfunction').write_text('setblock 8 5 8 minecraft:tnt\nsetblock 9 5 8 minecraft:redstone_block\nforceload remove 0 0\nschedule function probe:reload 100t\n')
-    (fixture / 'reload.mcfunction').write_text('forceload add 0 0\n')
     shutil.copytree(config, folder / 'config-before')
     receipt = {'scope': 'own-core-characterization-not-vanilla-or-8000-causality',
                'port': PORT, 'runtime_sha256': sha(runtime), 'commands': [], 'alignment_attempts': [],
-               'fixture_sha256': {str(p.relative_to(folder)): sha(p) for p in fixture.iterdir()},
+               'fixture_sha256': {}, 'fixture_preparation': 'pending-server-ready',
                'config_sha256_before_launch': {p.name: sha(p) for p in config.iterdir()}}
     env = dict(os.environ)
     for key in ('GH_TOKEN', 'GITHUB_TOKEN'):
@@ -157,6 +152,14 @@ def experiment(runtime, output):
             identity = process_identity(proc.pid)
             receipt['process_identity'] = identity
             wait('Готово')
+            # Мир создаёт сам сервер: преждевременный datapack делает его неизвестным старым миром.
+            fixture = folder / 'world/datapacks/probe/data/probe/function'
+            fixture.mkdir(parents=True)
+            (fixture / 'noop.mcfunction').write_text('# Собственная пустая функция для чтения глобального due.\n')
+            (fixture / 'prime.mcfunction').write_text('setblock 8 5 8 minecraft:tnt\nsetblock 9 5 8 minecraft:redstone_block\nforceload remove 0 0\nschedule function probe:reload 100t\n')
+            (fixture / 'reload.mcfunction').write_text('forceload add 0 0\n')
+            receipt['fixture_sha256'] = {str(p.relative_to(folder)): sha(p) for p in fixture.iterdir()}
+            receipt['fixture_preparation'] = 'after-server-ready-before-first-command'
             command('tick freeze', 'The game is frozen')
             # При alignment даже медленное чтение ack не догонит будущий prime.
             command('tick rate 1', 'Set the target tick rate to 1.0 per second')

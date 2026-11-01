@@ -1,9 +1,11 @@
 """Ложный loaded/unloaded след не должен пройти приёмку."""
 import copy
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from tnt_chunk_lifecycle_ci import aligned, clean_shutdown, records, schedule_due, validate
+from tnt_chunk_lifecycle_ci import aligned, clean_shutdown, experiment, records, schedule_due, validate
 
 
 def fixture(prime=65):
@@ -89,6 +91,43 @@ class LifecycleGuards(unittest.TestCase):
         with patch('tnt_diagnostics_ci.stop_process', return_value={
                 'method': 'stop-and-eof', 'exit_code': 0, 'group_gone': True}):
             self.assertEqual(clean_shutdown(proc, {'pid': 123})['exit_code'], 0)
+
+    def test_fresh_world_is_untouched_until_server_ready(self):
+        # Сервер видит действительно новый мир, функции доступны перед первой командой.
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)
+            runtime = output / 'dummy-runtime'
+            runtime.write_text('not executable; Popen is mocked')
+            proc = Mock()
+            proc.pid = 123
+            proc.poll.return_value = None
+
+            def launch(*args, **kwargs):
+                self.assertFalse((kwargs['cwd'] / 'world').exists())
+                kwargs['stdout'].write('Готово\n')
+                kwargs['stdout'].flush()
+                return proc
+
+            def first_command(text):
+                self.assertEqual(text, 'tick freeze\n')
+                fixture = output / 'lifecycle/world/datapacks/probe/data/probe/function'
+                self.assertEqual(sorted(p.name for p in fixture.iterdir()),
+                                 ['noop.mcfunction', 'prime.mcfunction', 'reload.mcfunction'])
+                raise RuntimeError('intentional mocked command boundary')
+
+            proc.stdin.write.side_effect = first_command
+            with patch('tnt_chunk_lifecycle_ci.subprocess.Popen', side_effect=launch), \
+                    patch('tnt_chunk_lifecycle_ci.process_identity', return_value={'pid': 123}), \
+                    patch('tnt_chunk_lifecycle_ci.stop_process', return_value={
+                        'method': 'already-exited', 'exit_code': 0, 'group_gone': True}), \
+                    patch('tnt_chunk_lifecycle_ci.group_exists', return_value=False), \
+                    patch('tnt_chunk_lifecycle_ci.ports_free', return_value={'26152': True}):
+                with self.assertRaisesRegex(RuntimeError, 'intentional mocked command boundary'):
+                    experiment(runtime, output)
+            import json
+            receipt = json.loads((output / 'lifecycle/receipt.json').read_text())
+            self.assertEqual(receipt['fixture_preparation'], 'after-server-ready-before-first-command')
+            self.assertEqual(len(receipt['fixture_sha256']), 3)
 
     def test_bad_json_is_failure(self):
         with self.assertRaises(ValueError):
