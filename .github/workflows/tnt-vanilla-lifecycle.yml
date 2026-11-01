@@ -1,0 +1,44 @@
+name: Vanilla TNT forceload observations
+on:
+  push:
+    branches: ['wip/tnt-vanilla-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tnt-vanilla-lifecycle
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Offline guards
+        run: python -m unittest discover -s tools/blackbox -p test_tnt_vanilla_lifecycle_ci.py -v
+      - name: Two fresh vanilla worlds; no client and no retries
+        timeout-minutes: 5
+        run: python tools/blackbox/tnt_vanilla_lifecycle_ci.py --output "$RUNNER_TEMP/tnt-vanilla-output"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tnt-vanilla-lifecycle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/tnt-vanilla-output/receipt.json
+            ${{ runner.temp }}/tnt-vanilla-output/*/receipt.json
+            ${{ runner.temp }}/tnt-vanilla-output/*/console.log
+            ${{ runner.temp }}/tnt-vanilla-output/*/server.properties*
+            ${{ runner.temp }}/tnt-vanilla-output/*/eula.txt
+          retention-days: 7
+          if-no-files-found: warn
