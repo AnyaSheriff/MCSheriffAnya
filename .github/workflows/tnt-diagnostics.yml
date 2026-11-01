@@ -1,0 +1,60 @@
+name: TNT diagnostic console smoke
+
+on:
+  push:
+    branches: ['wip/tnt-observe-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tnt-diagnostics
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check acceptance guards without runtime
+        run: python -m unittest discover -s tools/blackbox -p test_tnt_diagnostics_ci.py -v
+      - name: Verify exact successful full build
+        id: pin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/blackbox/tnt_diagnostics_ci.py pin --output "$RUNNER_TEMP/tnt-output"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.pin.outputs.build_run_id }}
+          name: ${{ steps.pin.outputs.artifact_name }}
+          path: ${{ runner.temp }}/tnt-runtime
+      - name: One TNT with diagnostics enabled and disabled
+        timeout-minutes: 2
+        run: python tools/blackbox/tnt_diagnostics_ci.py run --artifact "$RUNNER_TEMP/tnt-runtime" --output "$RUNNER_TEMP/tnt-output"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tnt-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/tnt-output/*.json
+            ${{ runner.temp }}/tnt-output/*/receipt.json
+            ${{ runner.temp }}/tnt-output/*/console.log
+            ${{ runner.temp }}/tnt-output/*/config/
+          retention-days: 7
+          if-no-files-found: warn

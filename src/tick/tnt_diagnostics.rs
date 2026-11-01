@@ -55,7 +55,8 @@ pub(super) struct Batch {
     tick: u64, dimension: &'static str, sampling: &'static str, budget_exhausted: bool,
     world_lock_wait_us: u64, item_stage_elapsed_us: u64,
     before: Snapshot, after_step: Snapshot, exploding: usize,
-    // Все выбранные ID после burn_fuses: None означает удаление в exploding.
+    // Все выбранные ID после burn_fuses: None — ID уже отсутствует; это не
+    // обязательно взрыв (step_with_water тоже удаляет упавшее в пустоту).
     sampled_fuses_after_burn: Vec<(i32, Option<i32>)>,
 }
 impl Batch {
