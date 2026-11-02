@@ -82,7 +82,7 @@ fn describe(properties: &ServerProperties, shared: &Shared) -> String {
         format!("MCSheriffAnya {} — сервер Minecraft", env!("CARGO_PKG_VERSION")),
         properties.motd.clone(),
         String::new(),
-        format!("Java Edition {} — этот порт ({}, TCP)", super::VERSION_NAME, properties.server_port),
+        format!("Java Edition {} — этот порт ({}, TCP)", shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3).name(), properties.server_port),
     ];
 
     if shared.settings.bedrock_port != 0 {
@@ -107,6 +107,25 @@ fn describe(properties: &ServerProperties, shared: &Shared) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn description_uses_the_world_primary_version() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for (profile, name) in [(Profile::Java26_1_2, "26.1.2"), (Profile::Preview26_3, "26.3")] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(
+                crate::world::World::in_memory_with_catalog(catalog),
+                crate::world::World::in_memory_with_catalog(catalog),
+                Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/text-info-version/ops.json")),
+                Default::default(),
+            );
+            let text = describe(&ServerProperties::default(), &shared);
+            assert!(text.contains(&format!("Java Edition {name} — этот порт")));
+            let other = if name == "26.3" { "26.1.2" } else { "26.3" };
+            assert!(!text.contains(&format!("Java Edition {other} — этот порт")));
+        }
+    }
 
     #[test]
     fn handshake_is_not_text() {
