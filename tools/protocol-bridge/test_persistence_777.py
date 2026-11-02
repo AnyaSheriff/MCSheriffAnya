@@ -6,6 +6,13 @@ from smoke import varint
 
 
 class PersistenceTests(unittest.TestCase):
+    def test_actual_core_initial_hand_metadata_and_invalid_arm(self):
+        entity, fields = player_metadata(bytes.fromhex('010000000614000f2a0110007fff'))
+        self.assertEqual(entity,1)
+        self.assertEqual(fields,{0:0,6:0,15:1,16:127})
+        with self.assertRaises(AssertionError):
+            player_metadata(bytes.fromhex('010f2a02ff'))
+
     def probe(self):
         p = object.__new__(Probe)
         p.wire=[];p.effects={};p.xp=None;p.health=None

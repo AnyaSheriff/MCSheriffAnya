@@ -81,6 +81,10 @@ def player_metadata(payload):
             value = struct.unpack('>b',data.read(1))[0]
         elif kind in (1,19,20,23,24):
             value = read_varint(data.read)
+        elif kind == 42:
+            # Закреплённый protocol777 JSON: humanoid_arm, left0/right1.
+            value = read_varint(data.read)
+            assert value in (0,1), 'invalid humanoid arm'
         elif kind == 3:
             value = struct.unpack('>f',data.read(4))[0]
             assert math.isfinite(value)
