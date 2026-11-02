@@ -19,7 +19,11 @@ use crate::inventory::Inventory;
 use crate::gameplay_catalog::{Catalog, Profile, StackError, StackLocation, StackProblem};
 use crate::log_warn;
 
+#[cfg(test)]
+mod effects_tests;
 mod cursor;
+mod effects;
+pub use effects::SavedEffects;
 
 /// Подпись файла игрока: по ней сервер понимает, что файл его.
 const MAGIC: &[u8; 4] = b"MCPD";
@@ -51,7 +55,9 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// Версия 11 — новые полные записи мобов внутри переносимых ульев;
 /// старые читатели должны отвергнуть файл до изменения инвентаря.
 /// Версия 12 — сохранённые способности после хвоста курсора.
-pub(crate) const FORMAT_VERSION: u32 = 12;
+/// Версия 13 — ограниченный хвост эффектов, скрытых слоёв и поглощения.
+pub(crate) const FORMAT_VERSION: u32 = 13;
+const ABILITIES_VERSION: u32 = 12;
 const MOB_STORAGE_VERSION: u32 = 11;
 const ABILITIES_SIZE: usize = 13;
 const CURSOR_VERSION: u32 = 10;
@@ -230,6 +236,7 @@ impl Abilities {
 /// Что сервер помнит об игроке между заходами.
 #[derive(Clone, PartialEq, Debug)]
 pub struct PlayerData {
+    pub effects: SavedEffects,
     pub abilities: Abilities,
     /// Сущности попугаев на плечах: независимые записи Mob.
     pub shoulders: [Option<Vec<u8>>; 2],
@@ -446,6 +453,7 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
     let mut ender = empty_ender();
     let mut shoulders = [None,None];
     let mut saved_cursor = None;
+    let mut effects = SavedEffects::default();
     let mut abilities = Abilities::for_mode(i32::from_be_bytes(take(bytes, 40)?));
     let (mut inventory, dimension, vitals, respawn) = match version {
         OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
@@ -456,9 +464,10 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
 
             (read_inventory(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | CURSOR_VERSION | MOB_STORAGE_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | CURSOR_VERSION | MOB_STORAGE_VERSION | ABILITIES_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
-            if version >= FORMAT_VERSION {
+            if version >= FORMAT_VERSION { effects = effects::take(&mut tail)?; }
+            if version >= ABILITIES_VERSION {
                 let (rest, stored) = tail.split_at(tail.len().checked_sub(ABILITIES_SIZE)?);
                 abilities = Abilities::read(stored)?;
                 tail = rest;
@@ -529,6 +538,7 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
     let game_mode = i32::from_be_bytes(take(bytes, 40)?);
     if ![x, y, z].into_iter().all(f64::is_finite) || ![yaw, pitch].into_iter().all(f32::is_finite) || !(0..=3).contains(&game_mode) { return None; }
     Some(PlayerData {
+        effects,
         abilities,
         shoulders,
         x, y, z, yaw, pitch, game_mode,
@@ -606,6 +616,7 @@ fn encode_inner(data: &PlayerData, catalog: Catalog) -> io::Result<Vec<u8>> {
     }
 
     data.abilities.write(&mut out);
+    effects::append(&data.effects, &mut out)?;
     Ok(out)
 }
 
@@ -627,6 +638,7 @@ mod tests {
 
     fn sample() -> PlayerData {
         PlayerData {
+            effects: Default::default(),
             abilities: Abilities::for_mode(1),
             shoulders: [None,None],
             inventory: Inventory::new(),
@@ -762,6 +774,7 @@ mod tests {
         data.inventory.set_cursor(Some(crate::inventory::Stack::new(1, 7)));
         data.vitals.experience_total = 42;
         let mut bytes = encode(&data).unwrap();
+        strip_effects_tail(&mut bytes);
         bytes.truncate(bytes.len() - ABILITIES_SIZE);
         bytes[4..8].copy_from_slice(&MOB_STORAGE_VERSION.to_be_bytes());
         assert_eq!(parse(&bytes), Some(data));
@@ -801,6 +814,7 @@ mod tests {
                     let path = path_for(&directory, &uuid);
                     let mut legacy = encode_inner(&expected, catalog).unwrap();
                     // Раскладки10/11 отличаются от12 отсутствием способностей.
+                    strip_effects_tail(&mut legacy);
                     legacy.truncate(legacy.len() - ABILITIES_SIZE);
                     legacy[4..8].copy_from_slice(&layout.to_be_bytes());
                     fs::write(&path, &legacy).unwrap();
@@ -832,7 +846,9 @@ mod tests {
 
     #[test]
     fn corrupt_or_truncated_abilities_are_rejected() {
-        let bytes = encode(&sample()).unwrap();
+        let mut bytes = encode(&sample()).unwrap();
+        strip_effects_tail(&mut bytes);
+        bytes[4..8].copy_from_slice(&ABILITIES_VERSION.to_be_bytes());
         for missing in 1..=ABILITIES_SIZE {
             assert!(parse(&bytes[..bytes.len() - missing]).is_none());
         }
@@ -851,7 +867,15 @@ mod tests {
         }
     }
 
+    fn strip_effects_tail(bytes: &mut Vec<u8>) {
+        let mut tail = bytes.as_slice();
+        effects::take(&mut tail).expect("хвост эффектов v13");
+        let length = tail.len();
+        bytes.truncate(length);
+    }
+
     fn strip_cursor_tail(bytes: &mut Vec<u8>) {
+        strip_effects_tail(&mut bytes);
         bytes.truncate(bytes.len() - ABILITIES_SIZE);
         let mut tail = bytes.as_slice();
         cursor::take(&mut tail).expect("хвост курсора v10");
@@ -1050,6 +1074,7 @@ mod tests {
         // Текущий простой Parrot использует прежнюю раскладку без annex.
         let mut old = sample(); old.shoulders[0] = Some(valid);
         let mut bytes = encode_inner(&old, native).unwrap();
+        strip_effects_tail(&mut bytes);
         bytes.truncate(bytes.len() - ABILITIES_SIZE);
         bytes[4..8].copy_from_slice(&10u32.to_be_bytes());
         fs::write(&path, &bytes).unwrap();

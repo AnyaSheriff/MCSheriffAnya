@@ -157,7 +157,7 @@ pub fn read_manifest(world: &Path) -> Result<Option<Manifest>, Error> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TransitionKind {
     NoChange, Upgrade, Downgrade,
-    /// Только playerdata10/11→12 при прежней игровой идентичности; без конвертации содержимого.
+    /// Только playerdata8–12→13 при прежней игровой идентичности; без конвертации содержимого.
     StorageUpgrade,
 }
 
@@ -212,7 +212,8 @@ pub fn plan_transition(
         && source.save_format == target.save_format
         && source.save_format == (SaveFormat { region_layout: 1, playerdata_layout: crate::playerdata::FORMAT_VERSION })
         && manifest.save_format.region_layout == 1
-        && matches!(manifest.save_format.playerdata_layout, 8..=11);
+        && matches!(manifest.save_format.playerdata_layout, 8..=12)
+        && manifest.save_format.playerdata_layout < crate::playerdata::FORMAT_VERSION;
     if source.save_format != manifest.save_format && !storage_upgrade { return Err(Error::FormatMismatch); }
     let kind = if storage_upgrade { TransitionKind::StorageUpgrade } else {
         match source.release_order.cmp(&target.release_order) {
@@ -302,7 +303,7 @@ pub(crate) fn storage_profile(version: &str) -> Result<ProfileDescriptor, Error>
 pub enum StartupCheck {
     /// Разрешён прежний путь запуска, но источник всё ещё не установлен.
     LegacyUnidentified,
-    /// Внутренний guard до снимка и атомарной публикации storage10/11→12.
+    /// Внутренний guard до снимка и атомарной публикации storage8–12→13.
     /// prepare никогда не возвращает этот незавершённый результат.
     StorageUpgradePending { snapshot_id: String },
     /// Совпали только заявленные поля; это не проверка всех файлов мира.
@@ -527,6 +528,31 @@ mod tests {
         assert!(plan.requires_full_backup());
         assert_eq!(plan.source.save_format.playerdata_layout, 11);
         assert_eq!(plan.target.save_format.playerdata_layout, crate::playerdata::FORMAT_VERSION);
+    }
+
+
+    #[test]
+    fn player_twelve_upgrade_requires_snapshot_and_cannot_downgrade_in_place() {
+        let current = current_profile();
+        assert_eq!(current.save_format.playerdata_layout, 13);
+        for layout in 8..=12 {
+            let mut previous = manifest(&current);
+            previous.save_format.playerdata_layout = layout;
+            let plan = plan_transition(Some(&previous), &current.gameplay_version,
+                std::slice::from_ref(&current)).unwrap();
+            assert_eq!(plan.kind, TransitionKind::StorageUpgrade);
+            assert!(plan.requires_full_backup());
+            assert_eq!(plan.source.save_format.playerdata_layout, layout);
+            assert_eq!(plan.target.save_format.playerdata_layout, 13);
+        }
+        let mut future = manifest(&current);
+        future.save_format.playerdata_layout = 14;
+        assert!(matches!(plan_transition(Some(&future), &current.gameplay_version,
+            std::slice::from_ref(&current)), Err(Error::FormatMismatch)));
+        let mut old_target = current.clone();
+        old_target.save_format.playerdata_layout = 12;
+        assert!(matches!(plan_transition(Some(&manifest(&current)), &old_target.gameplay_version,
+            std::slice::from_ref(&old_target)), Err(Error::FormatMismatch)));
     }
 
     #[test]

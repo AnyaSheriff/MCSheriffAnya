@@ -2,7 +2,7 @@
 """Проверка обновления нашего формата мира; без --run только план."""
 import argparse,ctypes,ctypes.util,hashlib,json,os,shutil,signal,socket,struct,subprocess,time,traceback,zlib
 from pathlib import Path
-PLAN=['old native775 standalone, isolated config/world/26048; setblock,save-all,stop', 'freeze raw old world tree; no gameplay manifest', 'new standalone same world: one full backup+storage receipt, no gameplay label; backup byte hashes equal frozen old tree', 'save-all/stop, inspect own region payload version5; no player login so no player11 runtime claim', 'restart: same receipt/backup IDs, no extra backup', 'copied malformed/future receipts: fail before listener, world hashes unchanged']
+PLAN=['old native775 standalone, isolated config/world/26048; setblock,save-all,stop', 'freeze raw old world tree; no gameplay manifest', 'new standalone same world: one full backup+storage receipt, no gameplay label; backup byte hashes equal frozen old tree', 'save-all/stop, inspect own region payload version5; no player login so no player13 runtime claim', 'restart: same receipt/backup IDs, no extra backup', 'copied malformed/future receipts: fail before listener, world hashes unchanged']
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def tree(p):
  return {str(f.relative_to(p)):{'size':f.stat().st_size,'sha256':sha(f)} for f in sorted(p.rglob('*')) if f.is_file()}
@@ -68,7 +68,7 @@ def versions(world):
  return rows
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--run',action='store_true');ap.add_argument('--old-binary',type=Path);ap.add_argument('--old-sha256');ap.add_argument('--new-binary',type=Path);ap.add_argument('--new-sha256');ap.add_argument('--output',type=Path);a=ap.parse_args()
- if not a.run:print(json.dumps({'plan':PLAN,'required':'--old-binary --old-sha256 --new-binary --new-sha256 --output','port':26048,'scope':'native775 chunk runtime only; no player login/no player11 claim'},indent=2));return
+ if not a.run:print(json.dumps({'plan':PLAN,'required':'--old-binary --old-sha256 --new-binary --new-sha256 --output','port':26048,'scope':'native775 chunk runtime only; no player login/no player13 claim'},indent=2));return
  assert a.old_binary and a.old_sha256 and a.new_binary and a.new_sha256 and a.output
  OLD=a.old_binary.resolve();OLD_SHA=a.old_sha256
  assert sha(OLD)==OLD_SHA and sha(a.new_binary)==a.new_sha256
@@ -76,7 +76,7 @@ def main():
  try:
   report['runs']['old']=launch(OLD,live,'old');world=live/'world';assert not (world/'mcsa-world.json').exists() and not (world/'mcsa-storage.json').exists()
   frozen=root/'old-world-frozen';shutil.copytree(world,frozen);before=tree(frozen);(root/'old-tree.json').write_text(json.dumps(before,indent=2)+'\n');report['old_chunk_versions']=versions(frozen);assert all(x['version']==4 for x in report['old_chunk_versions'])
-  report['runs']['new']=launch(a.new_binary.resolve(),live,'new');receipt=json.loads((world/'mcsa-storage.json').read_text());assert receipt==dict(schema=1,region_layout=1,chunk_layout=5,playerdata_layout=11,snapshot_id=receipt['snapshot_id']);assert not (world/'mcsa-world.json').exists()
+  report['runs']['new']=launch(a.new_binary.resolve(),live,'new');receipt=json.loads((world/'mcsa-storage.json').read_text());assert receipt==dict(schema=1,region_layout=1,chunk_layout=5,playerdata_layout=13,snapshot_id=receipt['snapshot_id']);assert not (world/'mcsa-world.json').exists()
   backup=live/'backups/world'/receipt['snapshot_id'];assert tree(backup/'world')==before;report['backup_exact_old_tree']=True;report['receipt']=receipt
   report['new_chunk_versions']=versions(world)
   new_chunks={(x['region'],x['slot']):x['version'] for x in report['new_chunk_versions']};old_keys={(x['region'],x['slot']) for x in report['old_chunk_versions']}

@@ -40,7 +40,7 @@ fn raw_payload(bytes: &[u8]) -> Vec<u8> {
     payload.extend_from_slice(bytes);payload
 }
 fn saved(p: &PlayerState) -> PlayerData {
-    PlayerData {abilities:playerdata::Abilities::for_mode(p.game_mode),shoulders:[None,None],x:p.x,y:p.y,z:p.z,
+    PlayerData {effects:Default::default(),abilities:playerdata::Abilities::for_mode(p.game_mode),shoulders:[None,None],x:p.x,y:p.y,z:p.z,
         yaw:p.yaw,pitch:p.pitch,game_mode:p.game_mode,inventory:p.inventory.clone(),dimension:p.dimension,
         vitals:Default::default(),respawn:None,ender:playerdata::empty_ender()}
 }

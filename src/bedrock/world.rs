@@ -434,7 +434,7 @@ impl BedrockWorld {
         let game_mode = saved.as_ref().map_or(crate::commands::GAME_MODE_CREATIVE, |data| data.game_mode);
         let bag = Bag::new(saved.as_ref().map(|data| data.inventory.clone()).unwrap_or_else(crate::inventory::Inventory::new));
 
-        let health = health::Health::new(saved.as_ref().map(|data| &data.vitals));
+        let health = health::Health::new_with_effects(saved.as_ref().map(|data| &data.vitals), &saved.as_ref().map(|data| data.effects.clone()).unwrap_or_default());
         let entity_id = shared.next_entity_id();
         let runtime_id = entity_id as u64;
         let position = (spawn.0 as f32, spawn.1 as f32 + EYES, spawn.2 as f32);
@@ -3923,6 +3923,7 @@ impl BedrockWorld {
             inventory: self.bag.inventory_with_cursor(),
             dimension: self.dimension,
             vitals: self.health.vit.saved(),
+            effects: self.health.vit.saved_effects(),
             // Точку возрождения Bedrock-игрок пока не ставит: сохраняем прежнюю.
             respawn: self.body.respawn_point(),
             ender: self.ender.clone(),
@@ -3933,8 +3934,14 @@ impl BedrockWorld {
     fn save_if_changed(&mut self) {
         self.progress.save(&self.identity.uuid);
         let data = self.player_data();
+        let mut compared = data.clone();
+        // Длительности меняются каждый такт: отдельно сохраняем их раз в 100 тактов.
+        if let Some(saved) = &self.saved
+            && !saved.effects.needs_save(&data.effects) {
+            compared.effects = saved.effects.clone();
+        }
 
-        if self.saved.as_ref() == Some(&data) {
+        if self.saved.as_ref() == Some(&compared) {
             return;
         }
 

@@ -1389,9 +1389,45 @@ pub(super) async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> 
     write_body(stream, body).await
 }
 
-/// При входе опыт сообщается, только если он есть.
-pub(super) async fn send_experience_if_any(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::Result<()> {
-    if vit.xp > 0 { send_experience(stream, vit).await } else { Ok(()) }
+/// Официальный 777 присылает при входе и нулевой опыт (запись 41393643616).
+/// Для прежних профилей сохраняем прежний путь до отдельного наблюдения.
+pub(super) async fn send_join_experience(stream: &mut Outgoing<'_>, vit: &Vitals, catalog: crate::gameplay_catalog::Catalog) -> io::Result<()> {
+    if vit.xp > 0 || catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        send_experience(stream, vit).await
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod join_experience_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn login_xp_sends_one_exact_packet_even_for_zero_points_and_nonzero_total() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for (xp, total, level, bar) in [(0, 0, 0, 0.0_f32), (0, 7, 0, 0.0), (10, 7, 1, 1.0 / 3.0)] {
+                let mut vit = Vitals::new();
+                vit.xp = xp;
+                vit.xp_total = total;
+                let mut out = Outgoing::capture();
+                send_health(&mut out, &vit).await.unwrap();
+                send_join_experience(&mut out, &vit, Catalog::new(profile)).await.unwrap();
+                let mut bytes = out.queued();
+                assert_eq!(read_packet(&mut bytes).await.unwrap().id, SET_HEALTH);
+                if profile == Profile::Preview26_3 || xp > 0 {
+                    let packet = read_packet(&mut bytes).await.unwrap();
+                    assert_eq!(packet.id, SET_EXPERIENCE);
+                    let mut expected = bar.to_be_bytes().to_vec();
+                    expected.extend_from_slice(&encode_varint(level));
+                    expected.extend_from_slice(&encode_varint(total));
+                    assert_eq!(packet.payload(), expected);
+                }
+                assert!(bytes.is_empty(), "опыт после здоровья, без повторного пакета");
+            }
+        }
+    }
 }
 
 /// Команда `experience`: очки или уровни, клиенту — Set Experience.
@@ -3310,6 +3346,24 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
         Some(sound) if !renewed => send_sound_at(stream, sound, SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, 1.0).await,
         _ => Ok(()),
     }
+}
+
+/// Восстановленные эффекты уже действуют: сообщаем их без повторного наложения.
+pub(super) async fn send_initial_effects(stream: &mut Outgoing<'_>, player: &PlayerState) -> io::Result<()> {
+    for effect in &player.vit.effects {
+        write_body(stream, initial_effect_packet(player.entity_id, *effect)).await?;
+    }
+    Ok(())
+}
+
+fn initial_effect_packet(entity_id: i32, effect: survival::Effect) -> Vec<u8> {
+    let mut body = encode_varint(ENTITY_EFFECT);
+    body.extend_from_slice(&encode_varint(entity_id));
+    body.extend_from_slice(&encode_varint(effect.kind.id()));
+    body.extend_from_slice(&encode_varint(effect.amplifier));
+    body.extend_from_slice(&encode_varint(if effect.kind.instant() { 1 } else { effect.ticks_left }));
+    body.push(effect.flags());
+    body
 }
 
 /// Модификаторы атрибутов от действующих эффектов (сила, слабость, скорость,

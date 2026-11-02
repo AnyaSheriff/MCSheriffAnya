@@ -1088,8 +1088,9 @@ async fn enter_world(
         }
 
         send_default_spawn_position(stream, player.spawn_point).await?;
+        vitals::send_initial_effects(stream, player).await?;
         vitals::send_health(stream, &player.vit).await?;
-        vitals::send_experience_if_any(stream, &player.vit).await?;
+        vitals::send_join_experience(stream, &player.vit, shared.catalog()).await?;
         send_game_event_start_waiting(stream).await?;
         let (age, time, _) = world_age(shared, player.dimension);
         send_time(stream, age, Some(time)).await?;
@@ -7285,6 +7286,10 @@ async fn read_and_log_play_packets(
                 }
                 sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
+                // Длительности эффектов сохраняем и у молчащего клиента.
+                if (*shared.ticks.borrow()).is_multiple_of(100) {
+                    player.save_if_needed(&shared.playerdata, shared.catalog());
+                }
                 progress_tick(stream, shared, player).await?;
                 maps::send_ticks(stream, shared, player).await?;
                 glide::tick(shared, player);
@@ -12361,7 +12366,7 @@ impl PlayerState {
         abilities.flying &= abilities.mayfly;
 
         // Здоровье, еда, воздух и огонь — как при выходе.
-        let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored(&data.vitals)).unwrap_or_default();
+        let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored_with_effects(&data.vitals, &data.effects)).unwrap_or_default();
         let mut attrs = crate::attributes::Attributes::player();
         attrs.set_catalog(catalog);
         attrs.set_creative_ranges(game_mode == GAME_MODE_CREATIVE);
@@ -12372,7 +12377,7 @@ impl PlayerState {
             vit.xp_seed = crate::enchanting::new_seed(u64::from_be_bytes(uuid[..8].try_into().unwrap_or_default()));
         }
 
-        Self {
+        let mut player = Self {
             spawn_point: spawn,
             respawn: saved.as_ref().and_then(|data| data.respawn),
             ender: saved.as_ref().map_or_else(playerdata::empty_ender, |data| data.ender.clone()),
@@ -12468,7 +12473,10 @@ impl PlayerState {
             reported: None,
             stopped: false,
             saved,
-        }
+        };
+        vitals::apply_effect_modifiers(&mut player);
+        player.net = vitals::Net::synced(&player.vit);
+        player
     }
 
     /// Запись игрока для общего списка.
@@ -12646,6 +12654,7 @@ impl PlayerState {
             || saved.ender != self.ender
             || saved.shoulders != self.shoulders
             || saved.vitals.health != self.vit.health
+            || saved.effects.needs_save(&self.vit.saved_effects())
             || saved.vitals.food != self.vit.food
             // Насыщение тоже: при быстром перезаходе новый вход читает файл
             // раньше записи при выходе (pvp-thorns 26.3: после мирной паузы
@@ -12678,6 +12687,7 @@ impl PlayerState {
             inventory: self.inventory.clone(),
             dimension: self.dimension,
             vitals: self.vit.saved(),
+            effects: self.vit.saved_effects(),
             respawn: self.respawn,
             ender: self.ender.clone(),
         };
@@ -12974,6 +12984,7 @@ mod tests {
             game_mode: GAME_MODE_CREATIVE,
             dimension: Default::default(),
             vitals: Default::default(),
+            effects: Default::default(),
             respawn: None,
             ender: playerdata::empty_ender(),
         };
@@ -13017,6 +13028,7 @@ mod tests {
             game_mode: 0,
             dimension: Default::default(),
             vitals: Default::default(),
+            effects: Default::default(),
             respawn: None,
             ender: playerdata::empty_ender(),
         };
@@ -13044,6 +13056,7 @@ mod tests {
             pitch: 0.0,
             game_mode: 0,
             dimension: Default::default(),
+            effects: Default::default(),
             vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21, experience_total: 21, xp_seed: 5 },
             respawn: None,
             ender: playerdata::empty_ender(),

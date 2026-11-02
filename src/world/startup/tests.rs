@@ -62,6 +62,8 @@ fn bad_manifests_refuse_without_migration_and_release_the_guard() {
     wrong_profile.gameplay_version = "unsupported-profile".into();
     let mut future = current.clone();
     future.schema += 1;
+    let mut future_layout = current.clone();
+    future_layout.save_format.playerdata_layout = 14;
     let mut old_layout = current.clone();
     old_layout.save_format.playerdata_layout = 7;
     for bytes in [
@@ -69,6 +71,7 @@ fn bad_manifests_refuse_without_migration_and_release_the_guard() {
         serde_json::to_vec(&wrong_profile).unwrap(),
         serde_json::to_vec(&future).unwrap(),
         serde_json::to_vec(&old_layout).unwrap(),
+        serde_json::to_vec(&future_layout).unwrap(),
         b"{".to_vec(),
     ] {
         fs::write(&path, &bytes).unwrap();
@@ -182,8 +185,8 @@ fn old_storage_world(fixture: &Fixture) -> (PathBuf, Vec<u8>) {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn known_storage_ten_and_eleven_upgrade_after_verified_backup_and_restart_does_not_repeat_it() {
-    for layout in [8, 9, 10, 11] {
+fn known_storage_eight_through_twelve_upgrade_after_verified_backup_and_restart_does_not_repeat_it() {
+    for layout in [8, 9, 10, 11, 12] {
         let fixture = Fixture::new();
         let (world, _) = old_storage_world(&fixture);
         let mut manifest = current_manifest();
@@ -346,6 +349,8 @@ fn malformed_future_or_ambiguous_storage_receipts_refuse_without_writing_world()
         let mut value = valid.clone(); value[key] = serde_json::json!(999);
         invalid.push(serde_json::to_vec(&value).unwrap());
     }
+    let mut future_layout = valid.clone(); future_layout["playerdata_layout"] = serde_json::json!(14);
+    invalid.push(serde_json::to_vec(&future_layout).unwrap());
     for bad_id in ["", "../world", "0123456789ABCDEF0123456789ABCDEF"] {
         let mut value = valid.clone(); value["snapshot_id"] = serde_json::json!(bad_id);
         invalid.push(serde_json::to_vec(&value).unwrap());
@@ -416,7 +421,7 @@ fn guard_drop_unlocks_even_with_an_inherited_descriptor() {
 #[cfg(target_os = "linux")]
 #[test]
 fn old_unidentified_receipts_upgrade_after_backup_without_assigning_gameplay() {
-    for layout in [8, 9, 10, 11] {
+    for layout in [8, 9, 10, 11, 12] {
         let fixture = Fixture::new();
         let world = fixture.world(); fs::create_dir(&world).unwrap();
         fs::write(world.join("session.lock"), b"old-lock").unwrap();
@@ -468,4 +473,40 @@ fn preview_storage_upgrade_refuses_bad_identity_and_failed_backup_without_relabe
     assert_eq!(fs::read(world.join("playerdata/fixture.dat")).unwrap(), b"old-player-bytes-preserved");
     assert_eq!(fs::read(outside).unwrap(), b"preserve-outside");
     assert!(!fixture.0.join("backups").exists());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn frozen_layout_twelve_player_survives_verified_upgrade_save_and_restart() {
+    let fixture = Fixture::new();
+    let (world, _) = old_storage_world(&fixture);
+    let mut manifest = current_manifest();
+    manifest.save_format.playerdata_layout = 12;
+    let previous_manifest = serde_json::to_vec(&manifest).unwrap();
+    fs::write(world.join(profile::MANIFEST_NAME), &previous_manifest).unwrap();
+    let players = world.join("playerdata");
+    let uuid = [0x32; 16];
+    let frozen: &[u8] = include_bytes!("../../../testdata/playerdata-layout12.bin");
+    let player_path = crate::playerdata::path_for(&players, &uuid);
+    fs::write(&player_path, frozen).unwrap();
+    let before = crate::playerdata::load_checked(&players, &uuid).unwrap().unwrap();
+    let guard = prepare(&world).unwrap();
+    let StartupCheck::ManifestMatches { snapshot_id } = &guard.check else { panic!("перенос не завершён"); };
+    let backup = fixture.0.join("backups/world").join(snapshot_id);
+    super::super::snapshot::verify_backup(&backup).unwrap();
+    let backup_player = crate::playerdata::path_for(&backup.join("world/playerdata"), &uuid);
+    assert_eq!(fs::read(&backup_player).unwrap(), frozen);
+    assert_eq!(fs::read(backup.join("world").join(profile::MANIFEST_NAME)).unwrap(), previous_manifest);
+    assert_eq!(fs::read(&player_path).unwrap(), frozen);
+    assert_eq!(crate::playerdata::load_checked(&players, &uuid).unwrap().unwrap(), before);
+    crate::playerdata::save(&players, &uuid, &before).unwrap();
+    let upgraded = fs::read(&player_path).unwrap();
+    assert_eq!(u32::from_be_bytes(upgraded[4..8].try_into().unwrap()), 13);
+    assert_eq!(crate::playerdata::load_checked(&players, &uuid).unwrap().unwrap(), before);
+    let check = guard.check.clone();
+    drop(guard);
+    assert_eq!(prepare(&world).unwrap().check, check);
+    assert_eq!(crate::playerdata::load_checked(&players, &uuid).unwrap().unwrap(), before);
+    assert_eq!(fs::read(&backup_player).unwrap(), frozen);
+    assert_eq!(fs::read_dir(fixture.0.join("backups/world")).unwrap().count(), 1);
 }

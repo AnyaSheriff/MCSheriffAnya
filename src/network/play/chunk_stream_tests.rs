@@ -250,7 +250,7 @@ fn restoring_a_player_below_the_world_relocates_without_losing_saved_state() {
     inventory.set(36, Some(Stack::new(1, 23)));
     inventory.set_cursor(Some(Stack::new(1, 7)));
     let abilities = playerdata::Abilities { flying: true, ..playerdata::Abilities::for_mode(1) };
-    let saved = PlayerData { abilities, shoulders: [None, None], inventory: inventory.clone(),
+    let saved = PlayerData { effects: Default::default(), abilities, shoulders: [None, None], inventory: inventory.clone(),
         x: 100.0, y: f64::from(world::MIN_Y - 10), z: -50.0, yaw: 23.0, pitch: 7.0, game_mode: 1,
         dimension: Default::default(), vitals: playerdata::SavedVitals { experience_total: 42, ..Default::default() },
         respawn: None, ender: playerdata::empty_ender() };

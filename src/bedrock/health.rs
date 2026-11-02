@@ -95,8 +95,22 @@ fn revive(vit: &mut Vitals, inventory: &mut crate::inventory::Inventory) -> Opti
 }
 
 impl Health {
+    #[cfg(test)]
     pub fn new(saved: Option<&crate::playerdata::SavedVitals>) -> Self {
-        let mut vit = saved.map(Vitals::restored).unwrap_or_default();
+        Self::new_with_effects(saved, &crate::playerdata::SavedEffects::default())
+    }
+
+    pub fn new_with_effects(saved: Option<&crate::playerdata::SavedVitals>, effects: &crate::playerdata::SavedEffects) -> Self {
+        let mut vit = saved.map(|saved| Vitals::restored_with_effects(saved, effects)).unwrap_or_default();
+        let mut attrs = crate::attributes::Attributes::player();
+        for effect in &vit.effects {
+            if let Some((attribute, id, per_level, operation)) = effect.kind.modifier() {
+                attrs.set_modifier(attribute, crate::attributes::Modifier::new(id, f64::from(per_level as f32) * f64::from(effect.amplifier + 1), operation));
+            }
+        }
+        vit.apply_limits(attrs.value(crate::attributes::MAX_HEALTH) as f32,
+            attrs.value(crate::attributes::MAX_ABSORPTION) as f32,
+            attrs.value(crate::attributes::SAFE_FALL_DISTANCE) as f32);
         if vit.xp_seed == 0 { vit.xp_seed = crate::enchanting::new_seed(0); }
         Self { vit, hits: Vec::new(), sent: None }
     }

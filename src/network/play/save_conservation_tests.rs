@@ -67,3 +67,73 @@ fn java_autosaved_cursor_survives_disk_and_bedrock_with_full_inventory() {
     assert_eq!(restored.inventory.cursor(), Some(held));
     assert_eq!(restored.inventory.cursor().unwrap().extras(), held.extras());
 }
+
+#[tokio::test]
+async fn effects_survive_java_file_bedrock_and_initial_java_packets() {
+    if isolated("effects_survive_java_file_bedrock_and_initial_java_packets") { return; }
+    use crate::survival::EffectKind;
+    let directory = std::path::Path::new("playerdata");
+    std::fs::create_dir(directory).unwrap();
+    let uuid = [236; 16];
+    let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+    let mut player = PlayerState::new_for_catalog(uuid, "EffectsSave".into(), None, None, 0x7f, 1, (0.5, 70.0, 0.5), catalog);
+    player.vit.give_effect(EffectKind::HealthBoost, 1, 900);
+    player.vit.give_effect(EffectKind::Speed, 1, 900);
+    for (level, ticks) in [(0, 900), (1, 700), (2, 500), (3, 100)] {
+        player.vit.give_effect(EffectKind::Poison, level, ticks);
+    }
+    player.vit.give_effect(EffectKind::Absorption, 1, 900);
+    vitals::apply_effect_modifiers(&mut player);
+    player.vit.health = 27.0;
+    player.vit.absorption = 3.0;
+    let expected = player.vit.saved_effects();
+    player.save_with_catalog(directory, catalog);
+    assert!(!player.needs_save());
+    player.vit.effects_tick();
+    assert!(!player.needs_save(), "простое уменьшение длительности не пишет каждый такт");
+    let mut saved = playerdata::load_checked_for_catalog(directory, &uuid, catalog).unwrap().unwrap();
+    let mut bedrock = crate::bedrock::health::Health::new_with_effects(Some(&saved.vitals), &saved.effects);
+    assert_eq!(bedrock.vit.health, 27.0);
+    assert_eq!(bedrock.vit.max_health, 28.0);
+    assert_eq!(bedrock.vit.saved_effects(), expected);
+    let mut view = crate::bedrock::player_state::View::default();
+    let mut packets = Vec::new();
+    view.sync(1, &bedrock.vit, 0, 0, (0.0, 0.0, 0.0), &mut packets);
+    for effect in &expected.active {
+        assert!(packets.contains(&crate::bedrock::player_state::mob_effect(1, 1, *effect).unwrap()));
+    }
+    packets.clear();
+    view.sync(1, &bedrock.vit, 0, 1, (0.0, 0.0, 0.0), &mut packets);
+    assert!(packets.is_empty(), "первоначальные эффекты приходят один раз");
+    bedrock.vit.effects_tick();
+    saved.vitals = bedrock.vit.saved();
+    saved.effects = bedrock.vit.saved_effects();
+    playerdata::save_for_catalog(directory, &uuid, &saved, catalog).unwrap();
+    let saved = playerdata::load_checked_for_catalog(directory, &uuid, catalog).unwrap().unwrap();
+    let mut restored = PlayerState::new_for_catalog(uuid, "EffectsSave".into(), Some(saved.clone()), None, 0x7f, 2, (0.5, 70.0, 0.5), catalog);
+    restored.entity_id = 42;
+    assert_eq!(restored.vit.saved_effects(), saved.effects);
+    assert_eq!(restored.vit.health, 27.0);
+    assert_eq!(restored.attrs.value(crate::attributes::MAX_HEALTH), 28.0);
+    assert!(restored.attrs.value(crate::attributes::MOVEMENT_SPEED) > 0.13);
+    let mut outgoing = Outgoing::capture();
+    vitals::send_initial_effects(&mut outgoing, &restored).await.unwrap();
+    let bytes = outgoing.queued();
+    let mut expected_bytes = Vec::new();
+    for effect in &restored.vit.effects {
+        let mut body = encode_varint(ENTITY_EFFECT);
+        for value in [42, effect.kind.id(), effect.amplifier, effect.ticks_left] { body.extend_from_slice(&encode_varint(value)); }
+        body.push(effect.flags());
+        expected_bytes.extend_from_slice(&encode_varint(body.len() as i32));
+        expected_bytes.extend(body);
+    }
+    assert_eq!(bytes, expected_bytes);
+    assert_eq!(restored.vit.absorption, 3.0);
+    restored.vit.remove_effects(None);
+    assert!(restored.vit.saved_effects().hidden.is_empty());
+    let mut dead = saved;
+    dead.vitals.health = 0.0;
+    let dead = PlayerState::new_for_catalog(uuid, "EffectsSave".into(), Some(dead), None, 0x7f, 2, (0.5, 70.0, 0.5), catalog);
+    assert!(dead.vit.effects.is_empty());
+    assert_eq!(dead.vit.absorption, 0.0);
+}

@@ -1250,6 +1250,27 @@ impl Vitals {
         }
     }
 
+    /// Снимок без временных сетевых очередей и повторного применения выдачи.
+    pub fn saved_effects(&self) -> crate::playerdata::SavedEffects {
+        crate::playerdata::SavedEffects { active: self.effects.clone(), hidden: self.hidden_effects.clone(), absorption: self.absorption }
+    }
+
+    pub fn restore_effects(&mut self, saved: &crate::playerdata::SavedEffects) {
+        self.effects.clone_from(&saved.active);
+        self.hidden_effects.clone_from(&saved.hidden);
+        self.absorption = saved.absorption;
+    }
+
+    /// Лимиты атрибутов адаптер пересчитает после восстановления эффектов.
+    pub fn restored_with_effects(saved: &crate::playerdata::SavedVitals, effects: &crate::playerdata::SavedEffects) -> Self {
+        let mut vit = Self::restored(saved);
+        if saved.health > 0.0 {
+            vit.health = saved.health;
+            vit.restore_effects(effects);
+        }
+        vit
+    }
+
     /// Удар. `immune` — игрок неуязвим по режиму (творческий, наблюдатель).
     /// Возвращает исход или None, если удар не прошёл (вики, Damage:
     /// «Invulnerability frames»).
