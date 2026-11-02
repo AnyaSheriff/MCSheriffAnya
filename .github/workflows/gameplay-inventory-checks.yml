@@ -104,6 +104,15 @@ jobs:
           python tools/protocol-bridge/probe_gameplay_inventory_777.py \
             --binary "$RUNNER_TEMP/gameplay-input/mcsheriffanya" \
             --data "$RUNNER_TEMP/gameplay-input/data" --output "$RUNNER_TEMP/gameplay-output/ours" --port 26282
+      - name: Compare complete fixed snapshot scope
+        if: inputs.build_run_id != ''
+        env:
+          RUNTIME_SHA: ${{ inputs.runtime_sha256 }}
+        run: |
+          python tools/protocol-bridge/compare_gameplay_inventory_777.py \
+            --official "$RUNNER_TEMP/gameplay-output/official/result.json" \
+            --ours "$RUNNER_TEMP/gameplay-output/ours/result.json" \
+            --runtime-sha "$RUNTIME_SHA" --output "$RUNNER_TEMP/gameplay-output/comparison.json"
       - name: Save exact source and artifact hashes
         if: always()
         env:

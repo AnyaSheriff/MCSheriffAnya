@@ -1,9 +1,11 @@
 """Проверки декодера доказательств; не заменяют свежий серверный запуск."""
 import io
+import copy
 import struct
 import unittest
 from probe_gameplay_inventory_777 import Probe, click_payload, predicted_pickup_payload, predict_pickup
 from smoke import varint, read_varint
+from compare_gameplay_inventory_777 import compare, STAGES, CHECKS
 
 
 class EvidenceTests(unittest.TestCase):
@@ -71,6 +73,42 @@ class EvidenceTests(unittest.TestCase):
     def test_click_is_real_shift_and_stale_state_is_signed_varint(self):
         self.assertEqual(click_payload(2,36), b'\0\2\0\x24\0\1\0\0')
         self.assertEqual(click_payload(-1,5,0), b'\0\xff\xff\xff\xff\x0f\0\5\0\0\0\0')
+
+
+class ComparisonGuards(unittest.TestCase):
+    def reports(self):
+        # Синтетическая фикстура проверяет отказы сравнения, не поведение игры.
+        report = {'protocol':777, 'target':'official', 'exit_code':0, 'checks':list(CHECKS),
+                  'observe_only':False, 'checks_kind':'asserted-invariants',
+                  'jar_sha1':'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c', 'target_sha256':'a'*64,
+                  'packets':[{'direction':d, 'name':n} for d,n in [('out','window_click'), ('out','client_command'),
+                             ('in','window_items'), ('in','respawn'), ('in','experience')]],
+                  'snapshots':[{'stage':s, 'packet_index':5, 'ground_item_entities':[],
+                                'inventory':{'window':0,'revision':1,'slots':[None]*46,'cursor':None},
+                                'xp':{'progress':.125,'level':17,'total':403}} for s in STAGES]}
+        other=copy.deepcopy(report);other['target']='core'
+        return report,other
+
+    def test_comparison_ignores_only_state_id_not_items_cursor_or_experience(self):
+        a,b=self.reports();b['snapshots'][0]['inventory']['revision']=999
+        self.assertEqual(compare(a,b,'a'*64)['status'],'match')
+        b['snapshots'][0]['inventory']['slots'][9]={'item':'stone','count':1}
+        b['snapshots'][1]['inventory']['cursor']={'item':'stone','count':2}
+        b['snapshots'][-1]['xp']['level']=0
+        self.assertEqual([x['field'] for x in compare(a,b,'a'*64)['mismatches']],['slots','cursor','xp'])
+
+    def test_comparison_rejects_missing_coverage_raw_evidence_and_failed_probe(self):
+        for mutate in [lambda b:b['snapshots'].pop(), lambda b:b['checks'].pop(),
+                       lambda b:b['packets'].pop(), lambda b:b.update(error='failed'),
+                       lambda b:b.update(observe_only=True, checks_kind='observed-actions-only'),
+                       lambda b:b.update(behavior_failures=['wrong items']),
+                       lambda b:b['snapshots'][0].update(ground_item_entities=[7])]:
+            a,b=self.reports();mutate(b)
+            with self.assertRaises(ValueError): compare(a,b,'a'*64)
+
+    def test_comparison_rejects_wrong_runtime_identity(self):
+        a,b=self.reports()
+        with self.assertRaises(ValueError): compare(a,b,'b'*64)
 
 
 if __name__ == '__main__':

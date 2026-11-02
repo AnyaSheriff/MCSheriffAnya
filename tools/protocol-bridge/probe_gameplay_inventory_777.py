@@ -232,6 +232,13 @@ def main():
                     check(client.inventory['slots'][9] is None and client.inventory['cursor']=={'item':'stone','count':3}, label+' pickup applied once')
                     check(sum(row['direction']=='out' and row['name']=='window_click' for row in replies)==1, label+' exactly one click')
                     check(not client.ground_items, label+' ground after pickup')
+                    # Тишина при совпавшем prediction ещё не доказывает pickup:
+                    # сервер мог игнорировать его. До закрытия окна запрашиваем
+                    # авторитетный снимок; камень в слот шлема не помещается.
+                    confirm = len(client.wire)
+                    click(5, revision=-1, mode=0)
+                    check(any(row['direction']=='in' and row['name']=='window_items' for row in client.wire[confirm:]), label+' authoritative confirmation missing')
+                    check(client.inventory['slots'][9] is None and client.inventory['cursor']=={'item':'stone','count':3}, label+' server confirms pickup before close')
                     snapshot(label+'-after')
                     client.send('close_window', b'\0')
                     client.pump(.5)
