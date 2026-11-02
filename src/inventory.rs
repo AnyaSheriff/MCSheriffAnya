@@ -589,7 +589,7 @@ impl Inventory {
         Click { understood: true, thrown: None }
     }
 
-    /// Щелчок с Shift: стопка перекладывается между рюкзаком и панелью.
+    /// Щелчок с Shift: сначала свободная экипировка, затем рюкзак/панель.
     fn quick_move(&mut self, slot: i32) -> bool {
         let Some(index) = self.index(slot) else {
             return false;
@@ -598,6 +598,24 @@ impl Inventory {
         let Some(stack) = self.slots[index] else {
             return true;
         };
+
+        let mut left = stack.count;
+        // Вики, Controls: «corresponding armor slot». Наблюдение777:
+        // из pumpkin8 надевается одна, остальные семь тем же щелчком
+        // уходят в противоположную часть инвентаря; из offhand тоже надеваем.
+        // Сетка крафта и уже надетая броня идут сразу в обычные слоты.
+        if (FIRST_MAIN..=OFFHAND).contains(&slot)
+            && let Some(target) = crate::combat::info(stack.item).and_then(|info| match info.equip_slot {
+                2 => Some(OFFHAND),
+                4..=7 => Some(12 - i32::from(info.equip_slot)),
+                _ => None,
+            })
+            && target != slot && self.slots[target as usize].is_none()
+        {
+            let moved = left.min(Self::slot_limit(target, stack));
+            self.slots[target as usize] = remainder(stack, moved);
+            left -= moved;
+        }
 
         // Из панели вещь уходит в рюкзак, из рюкзака — в панель, из брони
         // и второй руки — куда придётся.
@@ -610,8 +628,6 @@ impl Inventory {
         };
 
         self.slots[index] = None;
-
-        let mut left = stack.count;
 
         // Сперва досыпаем в начатые стопки того же предмета.
         for target in &targets {
@@ -831,6 +847,59 @@ pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn shift_equipment_matches_24_official_777_inventory_snapshots() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/inventory-shift-777.json")).unwrap();
+        assert_eq!(fixture["protocol"], 777);
+        assert_eq!(fixture["cases"].as_array().unwrap().len(), 24);
+        let read = |value: &serde_json::Value| {
+            let mut inventory = Inventory::new();
+            for (slot, stack) in value.as_object().unwrap() {
+                inventory.set(slot.parse().unwrap(), Some(Stack::new(
+                    blocks::item_named(stack["item"].as_str().unwrap()).unwrap(), stack["count"].as_i64().unwrap() as i32)));
+            }
+            inventory
+        };
+        for case in fixture["cases"].as_array().unwrap() {
+            let mut inventory = read(&case["before"]);
+            let expected = read(&case["after"]);
+            let before: i32 = inventory.slots().iter().flatten().map(|s| s.count).sum();
+            let result = inventory.click(case["slot"].as_i64().unwrap() as i32, 0, 1);
+            assert!(result.understood && result.thrown.is_none(), "{}", case["name"]);
+            assert_eq!(inventory.slots(), expected.slots(), "{}", case["name"]);
+            assert!(inventory.cursor().is_none());
+            assert_eq!(inventory.slots().iter().flatten().map(|s| s.count).sum::<i32>(), before);
+        }
+    }
+
+    #[test]
+    fn shift_equipment_preserves_components_binding_and_full_inventory_remainders() {
+        let pumpkin = Stack::new(blocks::item_named("carved_pumpkin").unwrap(), 8);
+        let stone = Stack::new(blocks::item_named("stone").unwrap(), 64);
+        for source in [FIRST_MAIN, FIRST_HOTBAR] {
+            let mut inventory = Inventory::new();
+            for slot in FIRST_MAIN..=LAST_HOTBAR { inventory.set(slot, Some(stone)); }
+            let mut data = crate::stackdata::Data::default();
+            data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+            let stack = pumpkin.with_extras(data);
+            inventory.set(source, Some(stack));
+            inventory.set_cursor(Some(Stack::new(blocks::item_named("diamond").unwrap(), 3)));
+            let cursor = inventory.cursor();
+            let result = inventory.click(source, 0, 1);
+            assert!(result.understood && result.thrown.is_none());
+            assert_eq!(inventory.slot(5), Some(stack.with_count(1)));
+            assert_eq!(inventory.slot(source), Some(stack.with_count(7)));
+            assert_eq!(inventory.cursor(), cursor);
+            // Нельзя вытащить надетую проклятую вещь следующей Shift-командой.
+            let equipped = inventory.clone();
+            inventory.click(5, 0, 1);
+            assert_eq!(inventory, equipped);
+            // При занятом шлеме и полной противоположной части всё остаётся.
+            inventory.click(source, 0, 1);
+            assert_eq!(inventory, equipped);
+        }
+    }
+
     #[test]
     fn strict_inventory_accepts_legacy_optional_empty_attribute_tail() {
         let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);

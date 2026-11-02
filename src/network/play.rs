@@ -6870,7 +6870,7 @@ async fn read_and_log_play_packets(
                     let reader = player.reader;
 
                     if respawning {
-                        vitals::respawned(player);
+                        vitals::respawned_in(shared, player);
 
                         if let Some(yaw) = target.as_ref().and_then(|target| target.yaw) {
                             player.yaw = yaw;

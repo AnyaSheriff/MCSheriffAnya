@@ -1727,14 +1727,19 @@ impl Vitals {
         .max(0);
     }
 
-    /// Возрождение: всё заново.
+    /// Возрождение без сохранения опыта.
+    #[cfg(test)]
     pub fn respawned(&mut self) {
-        let effects = std::mem::take(&mut self.effects);
+        self.respawned_with_keep_inventory(false);
+    }
+
+    /// Правило keep_inventory сохраняет опыт; здоровье, еда и эффекты сбрасываются.
+    pub fn respawned_with_keep_inventory(&mut self, keep_inventory: bool) {
+        let (xp, xp_total) = if keep_inventory { (self.xp, self.xp_total) } else { (0, 0) };
         let xp_seed = self.xp_seed;
 
         // Семя зачарования переживает смерть [проверить].
-        *self = Self { xp_seed, ..Self::new() };
-        drop(effects);
+        *self = Self { xp, xp_total, xp_seed, ..Self::new() };
     }
 }
 

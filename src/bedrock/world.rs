@@ -1921,7 +1921,10 @@ impl BedrockWorld {
             return;
         }
 
-        self.health.respawned();
+        // Как у Java: читаем правило в момент возрождения. Смена правила
+        // между смертью и возрождением отдельно не сопоставлена.
+        let keep = self.shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
+        self.health.respawned_with_keep_inventory(keep);
         self.body.respawned();
 
         let spawn = self.shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").spawn_position();

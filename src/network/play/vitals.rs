@@ -1756,9 +1756,20 @@ pub(super) async fn send_respawn_intro(stream: &mut Outgoing<'_>, player: &Playe
     send_default_spawn_position(stream, player.spawn_point).await
 }
 
+/// Опыт сохраняется по правилу мира в момент возрождения.
+/// Смена правила между смертью и возрождением отдельно не сопоставлена.
+pub(super) fn respawned_in(shared: &Shared, player: &mut PlayerState) {
+    let keep = shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
+    respawned_with_keep_inventory(player, keep);
+}
+
 /// Возрождение: всё заново, точка смерти остаётся в пакете Respawn.
 pub(super) fn respawned(player: &mut PlayerState) {
-    player.vit.respawned();
+    respawned_with_keep_inventory(player, false);
+}
+
+fn respawned_with_keep_inventory(player: &mut PlayerState, keep_inventory: bool) {
+    player.vit.respawned_with_keep_inventory(keep_inventory);
     player.abilities = playerdata::Abilities::for_mode(player.game_mode);
     player.flight_owners[0] = None;
     player.flight_owners[1] = None;
@@ -3487,6 +3498,47 @@ mod tests {
         respawned(&mut player);
         assert_eq!(player.attrs.value(BLOCK_INTERACTION_RANGE), 5.0);
         assert_eq!(player.attrs.value(ENTITY_INTERACTION_RANGE), 5.0);
+    }
+
+    #[test]
+    fn respawn_reads_keep_inventory_and_preserves_exact_experience() {
+        let shared = bow_shared();
+        for keep in [false, true] {
+            shared.keep_inventory.store(keep, std::sync::atomic::Ordering::Relaxed);
+            let mut player = PlayerState::new([93; 16], "RespawnXp".into(), None, None, 0x7f, 93, (0.5, 64.0, 0.5));
+            // Уровень 12 и неполная шкала; суммарный счёт отличается от текущего XP.
+            let xp = survival::total_at_level(12) + 7;
+            player.vit.xp = xp;
+            player.vit.xp_total = 1234;
+            player.vit.xp_seed = 91;
+            player.vit.food = 2;
+            player.vit.saturation = 0.0;
+            player.vit.give_effect(survival::EffectKind::Poison, 0, 500);
+            player.vit.give_effect(survival::EffectKind::Poison, 1, 50);
+            player.vit.give_effect(survival::EffectKind::Absorption, 0, 500);
+            player.vit.dead = true;
+            player.vit.health = 0.0;
+            player.net.sent_health = 0.0;
+            player.net.xp_taken.push(17);
+            player.net.new_orbs.push(((0.5, 64.0, 0.5), 9));
+            player.net.announced_health = Some(0.0);
+            respawned_in(&shared, &mut player);
+            assert_eq!((player.vit.xp, player.vit.xp_total), if keep { (xp, 1234) } else { (0, 0) });
+            assert_eq!(survival::level_of(player.vit.xp), if keep { (12, 7.0 / survival::level_size(12) as f32) } else { (0, 0.0) });
+            assert_eq!((player.vit.health, player.vit.food, player.vit.saturation, player.vit.dead), (20.0, 20, 5.0, false));
+            assert_eq!((player.vit.absorption, player.vit.xp_seed), (0.0, 91));
+            assert!(player.vit.effects.is_empty());
+            assert!(player.net.hits.is_empty());
+            assert!(player.net.xp_taken.is_empty());
+            assert!(player.net.new_orbs.is_empty());
+            assert!(player.net.announced_health.is_none());
+            assert_eq!(player.net.sent_health, Net::new().sent_health);
+            // Скрытый слабый яд тоже не должен вернуться в новой жизни.
+            for _ in 0..501 {
+                let tick = player.vit.effects_tick();
+                assert!(tick.restored.is_empty() && tick.hurt.is_empty());
+            }
+        }
     }
 
     #[test]

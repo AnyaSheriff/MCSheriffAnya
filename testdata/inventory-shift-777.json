@@ -1,0 +1,509 @@
+{
+  "protocol": 777,
+  "run_id": "41339918035",
+  "source_head": "d2c377b647b3da09b0f6f85abda44359d207eb50",
+  "official_jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "capture_sha256": "323b2f474ef42af997a6dc391311c1e36770a38e72f25aff1cf471534082fcdb",
+  "cases": [
+    {
+      "name": "iron_helmet-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      },
+      "after": {
+        "5": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_helmet-occupied",
+      "slot": 36,
+      "before": {
+        "5": {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        "36": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      },
+      "after": {
+        "5": {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_helmet-unequip",
+      "slot": 5,
+      "before": {
+        "5": {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        "10": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_chestplate-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "iron_chestplate",
+          "count": 1
+        }
+      },
+      "after": {
+        "6": {
+          "item": "iron_chestplate",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_chestplate-occupied",
+      "slot": 36,
+      "before": {
+        "6": {
+          "item": "iron_chestplate",
+          "count": 1
+        },
+        "36": {
+          "item": "iron_chestplate",
+          "count": 1
+        }
+      },
+      "after": {
+        "6": {
+          "item": "iron_chestplate",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_chestplate",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_chestplate-unequip",
+      "slot": 6,
+      "before": {
+        "6": {
+          "item": "iron_chestplate",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_chestplate",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "iron_chestplate",
+          "count": 1
+        },
+        "10": {
+          "item": "iron_chestplate",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_leggings-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "iron_leggings",
+          "count": 1
+        }
+      },
+      "after": {
+        "7": {
+          "item": "iron_leggings",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_leggings-occupied",
+      "slot": 36,
+      "before": {
+        "7": {
+          "item": "iron_leggings",
+          "count": 1
+        },
+        "36": {
+          "item": "iron_leggings",
+          "count": 1
+        }
+      },
+      "after": {
+        "7": {
+          "item": "iron_leggings",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_leggings",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_leggings-unequip",
+      "slot": 7,
+      "before": {
+        "7": {
+          "item": "iron_leggings",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_leggings",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "iron_leggings",
+          "count": 1
+        },
+        "10": {
+          "item": "iron_leggings",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_boots-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "iron_boots",
+          "count": 1
+        }
+      },
+      "after": {
+        "8": {
+          "item": "iron_boots",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_boots-occupied",
+      "slot": 36,
+      "before": {
+        "8": {
+          "item": "iron_boots",
+          "count": 1
+        },
+        "36": {
+          "item": "iron_boots",
+          "count": 1
+        }
+      },
+      "after": {
+        "8": {
+          "item": "iron_boots",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_boots",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "iron_boots-unequip",
+      "slot": 8,
+      "before": {
+        "8": {
+          "item": "iron_boots",
+          "count": 1
+        },
+        "9": {
+          "item": "iron_boots",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "iron_boots",
+          "count": 1
+        },
+        "10": {
+          "item": "iron_boots",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "elytra-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "elytra",
+          "count": 1
+        }
+      },
+      "after": {
+        "6": {
+          "item": "elytra",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "elytra-occupied",
+      "slot": 36,
+      "before": {
+        "6": {
+          "item": "elytra",
+          "count": 1
+        },
+        "36": {
+          "item": "elytra",
+          "count": 1
+        }
+      },
+      "after": {
+        "6": {
+          "item": "elytra",
+          "count": 1
+        },
+        "9": {
+          "item": "elytra",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "elytra-unequip",
+      "slot": 6,
+      "before": {
+        "6": {
+          "item": "elytra",
+          "count": 1
+        },
+        "9": {
+          "item": "elytra",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "elytra",
+          "count": 1
+        },
+        "10": {
+          "item": "elytra",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "carved_pumpkin-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "carved_pumpkin",
+          "count": 1
+        }
+      },
+      "after": {
+        "5": {
+          "item": "carved_pumpkin",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "carved_pumpkin-occupied",
+      "slot": 36,
+      "before": {
+        "5": {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        "36": {
+          "item": "carved_pumpkin",
+          "count": 1
+        }
+      },
+      "after": {
+        "5": {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        "9": {
+          "item": "carved_pumpkin",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "carved_pumpkin-unequip",
+      "slot": 5,
+      "before": {
+        "5": {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        "9": {
+          "item": "carved_pumpkin",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "carved_pumpkin",
+          "count": 2
+        }
+      }
+    },
+    {
+      "name": "shield-equip",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "shield",
+          "count": 1
+        }
+      },
+      "after": {
+        "45": {
+          "item": "shield",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "shield-occupied",
+      "slot": 36,
+      "before": {
+        "45": {
+          "item": "shield",
+          "count": 1
+        },
+        "36": {
+          "item": "shield",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "shield",
+          "count": 1
+        },
+        "45": {
+          "item": "shield",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "shield-unequip",
+      "slot": 45,
+      "before": {
+        "9": {
+          "item": "shield",
+          "count": 1
+        },
+        "45": {
+          "item": "shield",
+          "count": 1
+        }
+      },
+      "after": {
+        "9": {
+          "item": "shield",
+          "count": 1
+        },
+        "10": {
+          "item": "shield",
+          "count": 1
+        }
+      }
+    },
+    {
+      "name": "stack8-inventory.0",
+      "slot": 9,
+      "before": {
+        "9": {
+          "item": "carved_pumpkin",
+          "count": 8
+        }
+      },
+      "after": {
+        "5": {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        "36": {
+          "item": "carved_pumpkin",
+          "count": 7
+        }
+      }
+    },
+    {
+      "name": "stack8-hotbar.0",
+      "slot": 36,
+      "before": {
+        "36": {
+          "item": "carved_pumpkin",
+          "count": 8
+        }
+      },
+      "after": {
+        "5": {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        "9": {
+          "item": "carved_pumpkin",
+          "count": 7
+        }
+      }
+    },
+    {
+      "name": "offhand-helmet",
+      "slot": 45,
+      "before": {
+        "45": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      },
+      "after": {
+        "5": {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      }
+    }
+  ]
+}

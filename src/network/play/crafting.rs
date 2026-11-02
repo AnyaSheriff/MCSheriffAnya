@@ -107,7 +107,7 @@ fn sync(player: &PlayerState, before: &[Option<Stack>], cursor_before: Option<St
 
 pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
     let mut reader = Cursor::new(payload);
-    let (Some(window), Some(_state), Some(slot), Some(button), Some(mode)) = (reader.varint(), reader.varint(), reader.u16(), reader.u8(), reader.varint()) else { return; };
+    let (Some(window), Some(state), Some(slot), Some(button), Some(mode)) = (reader.varint(), reader.varint(), reader.u16(), reader.u8(), reader.varint()) else { return; };
     let table = is_table(player);
     if window != if table { player.window.as_ref().unwrap().id } else { 0 } { return; }
     if player.window.is_some() && !table { return; }
@@ -115,6 +115,9 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
         reaction.close_window = Some(window); close_own_window(shared, player); reaction.inventory = true; return;
     }
     if player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR { return; }
+    // Как у хранилищ: устаревший state не отменяет действие, но требует
+    // полного снимка независимо от совпавшего предсказания клиента.
+    reaction.inventory |= state != player.state_id;
     let mut predicted = None;
     if let Some(count) = reader.varint() {
         let (mut list, mut readable) = (Vec::new(), true);
@@ -419,6 +422,46 @@ mod tests {
         click(&shared,&mut p,&packet(0,0,0,1),&mut r);
         assert_eq!(p.inventory.slot(44),Some(item("oak_planks",8)));assert!(p.inventory.slot(1).is_none());assert!(p.inventory.slot(0).is_none());
         click(&shared,&mut p,&packet(0,0,0,1),&mut r);assert_eq!(p.inventory.slot(44),Some(item("oak_planks",8)));
+    }
+    fn craft_state_sync(table_open: bool) {
+        for stale in [false,true] {
+            for predicted in [false,true] {
+                let shared=shared();let mut p=player();
+                let window = if table_open {
+                    shared.world_in(Dimension::Overworld).lock().unwrap().set_block(0,64,0,blocks::state_by_name("crafting_table").unwrap());
+                    table(&mut p);p.window.as_mut().unwrap().shown[1]=Some(item("oak_log",2));1
+                } else { p.inventory.set(1,Some(item("oak_log",2)));0 };
+                refresh(&shared,&mut p);p.state_id=7;
+                let mut payload=encode_varint(window);payload.extend(encode_varint(if stale {6} else {7}));
+                payload.extend(0_i16.to_be_bytes());payload.push(0);payload.extend(encode_varint(0));
+                if predicted {
+                    // После одного крафта остаётся одно бревно, курсор получает
+                    // четыре доски. Предсказание полностью совпадает с сервером.
+                    let hashed = |bytes: &mut Vec<u8>, stack: Stack| {
+                        bytes.push(1);bytes.extend(encode_varint(stack.item));bytes.extend(encode_varint(stack.count));bytes.extend([0,0]);
+                    };
+                    payload.extend(encode_varint(1));payload.extend(1_i16.to_be_bytes());
+                    hashed(&mut payload,item("oak_log",1));hashed(&mut payload,item("oak_planks",4));
+                } else { payload.extend([0,0]); }
+                let mut reaction=Reaction::default();
+                click(&shared,&mut p,&payload,&mut reaction);
+                assert_eq!(grid(&p)[0],Some(item("oak_log",1)),"table={table_open},stale={stale},predicted={predicted}");
+                assert_eq!(p.inventory.cursor(),Some(item("oak_planks",4)),"действие исполняется ровно один раз");
+                assert_eq!(snapshot(&p)[0],Some(item("oak_planks",4)));
+                assert_eq!(reaction.inventory,stale,"table={table_open},predicted={predicted}");
+                if predicted {
+                    assert!(reaction.slots.is_empty());assert!(reaction.window_slots.is_empty());assert!(reaction.cursor.is_none());
+                }
+            }
+        }
+    }
+    #[test]
+    fn inventory_stale_state_crafts_once_and_resyncs_even_with_matching_prediction() {
+        craft_state_sync(false);
+    }
+    #[test]
+    fn workbench_stale_state_crafts_once_and_resyncs_even_with_matching_prediction() {
+        craft_state_sync(true);
     }
     #[test]
     fn tables_are_private_and_close_on_break_or_distance() {

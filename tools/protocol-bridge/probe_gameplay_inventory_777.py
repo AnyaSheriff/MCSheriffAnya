@@ -21,6 +21,7 @@ class Probe(InventoryProbe):
         super().__init__(*args)
         self.wire = []
         self.xp = None
+        self.ground_items = set()
 
     def send(self, name, payload=b''):
         self.wire.append({'direction': 'out', 'name': name, 'payload': payload.hex()})
@@ -28,11 +29,20 @@ class Probe(InventoryProbe):
 
     def observe_packet(self, name, payload):
         if name in ('window_items', 'set_slot', 'set_player_inventory', 'set_cursor_item',
-                    'experience', 'respawn', 'death_combat_event', 'update_health'):
+                    'experience', 'respawn', 'death_combat_event', 'update_health', 'spawn_entity', 'entity_destroy'):
             self.wire.append({'direction': 'in', 'name': name, 'payload': payload.hex()})
         super().observe_packet(name, payload)
         data = io.BytesIO(payload)
-        if name == 'set_player_inventory':
+        if name == 'spawn_entity':
+            entity = read_varint(data.read)
+            assert len(data.read(16)) == 16
+            if read_varint(data.read) == 72:
+                self.ground_items.add(entity)
+        elif name == 'entity_destroy':
+            for _ in range(read_varint(data.read)):
+                self.ground_items.discard(read_varint(data.read))
+            assert not data.read()
+        elif name == 'set_player_inventory':
             slot = read_varint(data.read)
             value = self.slot(data)
             assert not data.read()
@@ -51,12 +61,27 @@ def click_payload(revision, place, mode=1):
     return b'\0' + varint(revision) + struct.pack('>hb', place, 0) + varint(mode) + b'\0\0'
 
 
+
+def predicted_pickup_payload(revision, item_id, count=3):
+    # option HashedSlot: present, item ID, count, added hashes, removed IDs.
+    cursor = b'\1' + varint(item_id) + varint(count) + b'\0\0'
+    return (b'\0' + varint(revision) + struct.pack('>hb', 9, 0)
+            + b'\0\1' + struct.pack('>h', 9) + b'\0' + cursor)
+
+
+def predict_pickup(client):
+    value = client.inventory['slots'][9]
+    assert value == {'item':'stone', 'count':3}, client.inventory
+    assert client.inventory['cursor'] is None, client.inventory
+    client.inventory['slots'][9] = None
+    client.inventory['cursor'] = dict(value)
+
 def assert_slots(client, expected):
     if getattr(client, 'observe_only', False):
         return
     slots = [None] * 46
     for place, item in expected.items():
-        slots[place] = {'item': item, 'count': 1}
+        slots[place] = {'item': item[0], 'count': item[1]} if isinstance(item, tuple) else {'item': item, 'count': 1}
     assert client.inventory['window'] == 0 and client.inventory['slots'] == slots, client.inventory
     assert client.inventory['cursor'] is None, client.inventory
 
@@ -133,7 +158,7 @@ def main():
                 setup('fill -2 63 -2 2 63 2 stone', 'tp McsaProbe 0.5 64 0.5',
                       'gamemode survival McsaProbe', 'gamerule minecraft:keep_inventory true')
                 def snapshot(stage):
-                    report['snapshots'].append({'stage':stage, 'packet_index':len(client.wire), 'inventory':json.loads(json.dumps(client.inventory)), 'xp':client.xp})
+                    report['snapshots'].append({'stage':stage, 'packet_index':len(client.wire), 'ground_item_entities':sorted(client.ground_items), 'inventory':json.loads(json.dumps(client.inventory)), 'xp':client.xp})
                 def click(place, revision=None, mode=1):
                     client.send('window_click', click_payload(client.inventory['revision'] if revision is None else revision, place, mode))
                     client.pump(.4)
@@ -150,7 +175,7 @@ def main():
                     snapshot(item+'-occupied')
                     report['checks'].append(item+'-occupied-moves-main')
                     click(armor)
-                    assert_slots(client, {9:item,10:item})
+                    assert_slots(client, {9:(item,2)} if item=='carved_pumpkin' else {9:item,10:item})
                     snapshot(item+'-unequipped')
                     report['checks'].append(item+'-shift-unequips')
                 for source, slot in [('inventory.0',9), ('hotbar.0',36)]:
@@ -183,6 +208,40 @@ def main():
                 check(any(r['direction']=='in' and r['name']=='window_items' for r in client.wire[before:]), 'stale state lacks full resync')
                 assert_slots(client, {9:'iron_boots',10:'iron_boots'})
                 report['checks'].append('stale-state-full-resync')
+                stone_id = next(key for key, value in names.items() if value == 'stone')
+                for stale in (False, True):
+                    label = 'pickup-stale' if stale else 'pickup-current'
+                    setup('clear McsaProbe', 'kill @e[type=item]',
+                          'item replace entity McsaProbe inventory.0 with stone 3')
+                    check(client.inventory['slots'][9] == {'item':'stone', 'count':3}, label+' setup')
+                    check(not client.ground_items, label+' ground before')
+                    snapshot(label+'-before')
+                    revision = client.inventory['revision']
+                    start = len(client.wire)
+                    # Ровно один click; локальное предсказание отмечено отдельно.
+                    payload = predicted_pickup_payload(-1 if stale else revision, stone_id)
+                    predict_pickup(client)
+                    report.setdefault('predictions', []).append({'stage':label, 'revision':revision,
+                        'sent_revision':-1 if stale else revision, 'slot9':None,
+                        'cursor':{'item':'stone', 'count':3}, 'packet_index':start})
+                    client.send('window_click', payload)
+                    client.pump(.6)
+                    replies = client.wire[start:]
+                    full = [row for row in replies if row['direction']=='in' and row['name']=='window_items']
+                    check(bool(full) == stale, label+' full-window only for stale state')
+                    check(client.inventory['slots'][9] is None and client.inventory['cursor']=={'item':'stone','count':3}, label+' pickup applied once')
+                    check(sum(row['direction']=='out' and row['name']=='window_click' for row in replies)==1, label+' exactly one click')
+                    check(not client.ground_items, label+' ground after pickup')
+                    snapshot(label+'-after')
+                    client.send('close_window', b'\0')
+                    client.pump(.5)
+                    # Пустой click со stale ID только запрашивает полный снимок.
+                    click(5, revision=-1, mode=0)
+                    check(client.inventory['cursor'] is None, label+' close returned cursor')
+                    check(sum(v['count'] for v in client.inventory['slots'] if v and v['item']=='stone')==3, label+' exactly three stone after close')
+                    check(not client.ground_items, label+' no dropped items after close')
+                    snapshot(label+'-closed-authoritative')
+                    report['checks'].append(label+'-exact-prediction-single-action')
                 setup('experience set McsaProbe 17 levels', 'experience set McsaProbe 3 points')
                 check(client.xp and client.xp['level']==17 and client.xp['progress']>0, client.xp)
                 xp = dict(client.xp) if client.xp else None
