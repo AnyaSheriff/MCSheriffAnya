@@ -8,7 +8,6 @@
 /// Лежат здесь, а не в одном только ответе списку серверов: по ним же
 /// решается, пускать ли клиента, и по ним же объясняется отказ.
 pub const NATIVE_VERSION: mcsa_protocol::JavaVersion = mcsa_protocol::JavaVersion::V26_1_2;
-pub const PROTOCOL_VERSION: i32 = NATIVE_VERSION.protocol();
 pub const VERSION_NAME: &str = NATIVE_VERSION.name();
 
 pub mod listener;
