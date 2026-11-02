@@ -705,7 +705,7 @@ mod tests {
             let catalog = Catalog::new(Profile::Preview26_3);
             let loaded = load_checked_for_catalog(&directory, &uuid, catalog).unwrap().unwrap();
             save_for_catalog(&directory, &uuid, &loaded, catalog).unwrap();
-            assert_eq!(&fs::read(&path).unwrap()[4..8], &12u32.to_be_bytes());
+            assert_eq!(&fs::read(&path).unwrap()[4..8], &FORMAT_VERSION.to_be_bytes());
             assert_eq!(load_checked_for_catalog(&directory, &uuid, catalog).unwrap(), Some(loaded));
             drop(guard);
             drop(startup::prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_3).unwrap());
