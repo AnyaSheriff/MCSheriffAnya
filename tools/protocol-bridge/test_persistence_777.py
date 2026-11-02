@@ -1,6 +1,6 @@
 import struct
 import unittest
-from probe_persistence_777 import Probe, compare, snapshot
+from probe_persistence_777 import Probe, compare, snapshot, evidence_failures
 from smoke import varint
 
 
@@ -30,6 +30,15 @@ class PersistenceTests(unittest.TestCase):
         b=snapshot(p,'fresh','b')
         failures=compare({'snapshots':[b]},{'snapshots':[a]})
         self.assertEqual(len(failures),2)
+
+    def test_order_and_duplicates_rejected(self):
+        p=self.probe();a=snapshot(p,'a','s');b=snapshot(p,'b','s')
+        self.assertTrue(compare({'snapshots':[a,b]},{'snapshots':[b,a]}))
+        self.assertTrue(compare({'snapshots':[a,a]},{'snapshots':[a,a]}))
+
+    def test_empty_or_failed_evidence_rejected(self):
+        self.assertTrue(evidence_failures({},official=True))
+        self.assertTrue(evidence_failures({'target':'core','observe_only':True}))
 
     def test_comparator_duration_and_flags_exact(self):
         p=self.probe();p.effects={'1':{'duration':100,'amplifier':0,'flags':1}}

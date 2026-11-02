@@ -59,12 +59,66 @@ def compare(expected, actual):
     failures = []
     left = {s['stage']:s for s in expected['snapshots']}
     right = {s['stage']:s for s in actual['snapshots']}
-    if set(left) != set(right):
-        failures.append('snapshot stages differ')
+    left_stages = [s['stage'] for s in expected['snapshots']]
+    right_stages = [s['stage'] for s in actual['snapshots']]
+    if left_stages != right_stages or len(set(left_stages)) != len(left_stages) or len(set(right_stages)) != len(right_stages):
+        failures.append('snapshot stages differ, are reordered or duplicated')
     for stage in left.keys() & right.keys():
         for field in ('xp', 'xp_packets', 'effects', 'health'):
             if left[stage][field] != right[stage][field]:
                 failures.append(f'{stage}: {field}: expected {left[stage][field]!r}, actual {right[stage][field]!r}')
+    return failures
+
+
+STAGES = ['fresh-login', 'zero-bar-positive-total-before', 'zero-bar-positive-total-login',
+          'nonzero-before', 'nonzero-login', 'effects-before', 'effects-relogin',
+          'effects-restart', 'hidden-promoted']
+
+
+def evidence_failures(report, official=False):
+    failures = []
+    if report.get('protocol') != 777 or report.get('error'):
+        failures.append('invalid protocol or report error')
+    if report.get('server_exits') != [0, 0]:
+        failures.append('both real server exits must be zero')
+    if official and (report.get('target') != 'official' or report.get('behavior_failures')
+                     or report.get('status') not in ('OBSERVATION', 'PASS')):
+        failures.append('official evidence is not clean')
+    if not official and (report.get('target') != 'core' or report.get('observe_only') is not False):
+        failures.append('core evidence must use strict mode')
+    snapshots = report.get('snapshots', [])
+    if [s.get('stage') for s in snapshots] != STAGES:
+        failures.append('missing, reordered or duplicate canonical snapshot stages')
+    sessions = report.get('sessions', [])
+    by_name = {value['name']:value for value in sessions}
+    if len(by_name) != len(sessions):
+        failures.append('duplicate sessions')
+    for value in snapshots:
+        packets = by_name.get(value.get('session'), {}).get('packets', [])
+        index = value.get('packet_index', -1)
+        if not isinstance(index, int) or not 0 < index <= len(packets):
+            failures.append(str(value.get('stage'))+': invalid raw packet boundary')
+            continue
+        replay = object.__new__(Probe)
+        replay.wire=[]; replay.xp=None; replay.effects={}; replay.health=None
+        try:
+            for packet in packets[:index]:
+                assert packet['direction'] in ('in','out')
+                payload = bytes.fromhex(packet['payload'])
+                if packet['direction'] == 'in':
+                    replay.observe_packet(packet['name'],payload)
+            rebuilt = snapshot(replay,value['stage'],value['session'])
+            for field in ('xp','xp_packets','effects','health'):
+                if rebuilt[field] != value[field]:
+                    failures.append(value['stage']+': raw replay differs for '+field)
+            incoming = {p['name'] for p in packets[:index] if p['direction']=='in'}
+            if not {'login','position','experience','update_health'} <= incoming:
+                failures.append(value['stage']+': raw login/XP/health packets missing')
+            if value['stage'].startswith('effects-') or value['stage']=='hidden-promoted':
+                if not value['effects'] or 'entity_effect' not in incoming:
+                    failures.append(value['stage']+': raw active effect packets missing')
+        except (ValueError,KeyError,AssertionError,struct.error,EOFError) as error:
+            failures.append(value['stage']+': raw replay error '+repr(error))
     return failures
 
 
@@ -105,7 +159,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mcsa-persistence-777-') as directory:
         root = Path(directory)
         (root/'eula.txt').write_text('eula=true\n')
-        properties = f'server-ip=127.0.0.1\nserver-port={a.port}\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\n'
+        properties = f'server-ip=127.0.0.1\nserver-port={a.port}\nonline-mode=false\nwhite-list=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\n'
         (root/'server.properties').write_text(properties)
         if a.binary:
             (root/'config').mkdir()
@@ -206,7 +260,7 @@ def main():
                 report['behavior_failures'].append('effect setup returned no effect packets')
             if a.expected:
                 expected = json.loads(a.expected.read_text())
-                assert expected['target']=='official' and not expected.get('error')
+                assert not evidence_failures(expected, official=True), evidence_failures(expected, official=True)
                 report['expected_sha256']=hashlib.sha256(a.expected.read_bytes()).hexdigest()
                 report['behavior_failures'].extend(compare(expected,report))
             for stage in ('fresh-login','zero-bar-positive-total-login','nonzero-login','effects-relogin','effects-restart'):
@@ -226,6 +280,11 @@ def main():
                 report['status']='ERROR'
                 report['error']='nonzero server exit'
             (a.output/'result.json').write_text(json.dumps(report,indent=2)+'\n')
+    if a.binary and report['status'] not in ('ERROR',):
+        report['behavior_failures'].extend(evidence_failures(report))
+        if report['behavior_failures']:
+            report['status']='FAIL'
+        (a.output/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     assert report['status'] not in ('FAIL','ERROR'), report['behavior_failures']
     print(json.dumps({'status':report['status'],'behavior_failures':report['behavior_failures']}))
 
