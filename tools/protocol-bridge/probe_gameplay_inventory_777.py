@@ -157,6 +157,12 @@ def main():
                         client.pump(.35)
                 setup('fill -2 63 -2 2 63 2 stone', 'tp McsaProbe 0.5 64 0.5',
                       'gamemode survival McsaProbe', 'gamerule minecraft:keep_inventory true')
+                # Вход с нулевым XP отдельно оставляем в доказательствах: ядро пока
+                # не присылает начальный пакет, официальный сервер присылает.
+                # Здесь проверяем переносы и respawn с одинаковым явным состоянием.
+                report['initial_xp_before_setup'] = client.xp
+                setup('experience add McsaProbe 1 points', 'experience add McsaProbe -1 points')
+                assert client.xp == {'progress':0.0, 'level':0, 'total':0}, 'explicit initial XP missing or wrong'
                 def snapshot(stage):
                     report['snapshots'].append({'stage':stage, 'packet_index':len(client.wire), 'ground_item_entities':sorted(client.ground_items), 'inventory':json.loads(json.dumps(client.inventory)), 'xp':client.xp})
                 def click(place, revision=None, mode=1):
