@@ -6,7 +6,7 @@
 
 A Minecraft-compatible game server written from scratch in Rust.
 
-[![Java Edition 26.1.2](https://img.shields.io/badge/Java_Edition-26.1.2-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#what-works)
+[![Java Edition 26.3](https://img.shields.io/badge/Java_Edition-26.3-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#what-works)
 [![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock_26.10–26.13-partial-F28C28?style=for-the-badge&logo=xbox&logoColor=white)](#status)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![MIT](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)](LICENSE)
@@ -29,7 +29,7 @@ server from the outside. It contains no code from Mojang, Paper, Spigot,
 Fabric, Forge or any other server core. MCSheriffAnya is not affiliated with or
 endorsed by Mojang or Microsoft.
 
-- **Client version:** Java Edition 26.1.2 (protocol 775). Older clients work
+- **Primary version:** Java Edition 26.3 (protocol 777). Older clients work
   through ViaFabricPlus and similar tools. Player IDs are generated offline from
   nicknames (UUID v3 "OfflinePlayer:<name>"), old player data is migrated
   automatically.
@@ -159,8 +159,8 @@ boxes, packet compression. See the full list below.
 
 ✅ works · 🟡 partial · ❌ not yet
 
-**Java Edition 26.1.2** — verified tick by tick against the official server
-with the black box (about 300 scenarios).
+**The primary version is Java Edition 26.3.** Full parity remains under
+verification. Earlier tick-by-tick 26.1.2 results do not establish full 26.3 parity.
 
 | Area | State | Notes |
 | --- | --- | --- |
@@ -222,7 +222,18 @@ binary, use `cargo build --release`; to omit the plugin host, use
 
 Run it from a terminal if you want to type console commands. The first start
 creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
-26.1.2 client to `localhost:25565`.
+26.3 client to `localhost:25565`.
+
+A new installation starts without questions using `java-version=26.3`. Anonymous
+error reports are enabled, with a notice on the first start. Disable them with
+`send-error-reports=false` in `config/mcsa.properties`; an existing `false` is
+preserved.
+
+An old 26.1.2 world is never upgraded automatically. Stop the server and explicitly
+run `./target/debug/mcsheriffanya --upgrade-world-26.3 /path/to/world`; the command
+validates the data and creates a verified backup before upgrading. Then set
+`java-version=26.3` and start the server. For a release build or Docker, use the
+corresponding binary with the same arguments.
 
 ## Docker
 

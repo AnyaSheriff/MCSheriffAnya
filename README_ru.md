@@ -6,7 +6,7 @@
 
 Игровой сервер, совместимый с Minecraft, написанный на Rust с нуля.
 
-[![Java Edition 26.1.2](https://img.shields.io/badge/Java_Edition-26.1.2-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#что-работает)
+[![Java Edition 26.3](https://img.shields.io/badge/Java_Edition-26.3-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#что-работает)
 [![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock_26.10–26.13-partial-F28C28?style=for-the-badge&logo=xbox&logoColor=white)](#состояние)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![MIT](https://img.shields.io/badge/Лицензия-MIT-3DA639?style=for-the-badge)](LICENSE)
@@ -28,7 +28,7 @@ MCSheriffAnya — независимая реализация серверног
 нет кода Mojang, Paper, Spigot, Fabric, Forge и других ядер. MCSheriffAnya не
 связан с Mojang и Microsoft и ими не одобрен.
 
-- **Версия клиента:** Java Edition 26.1.2 (протокол 775). Старые клиенты
+- **Основная версия:** Java Edition 26.3 (протокол 777). Старые клиенты
   заходят через ViaFabricPlus и подобные средства. Идентификаторы игроков
   считаются офлайн из ника (UUID v3 «OfflinePlayer:<ник>»), старые файлы
   игроков переносятся автоматически.
@@ -162,8 +162,8 @@ MCSheriffAnya — независимая реализация серверног
 
 ✅ работает · 🟡 частично · ❌ пока нет
 
-**Java Edition 26.1.2** — сверено с официальным сервером по тактам чёрным
-ящиком (около 300 сценариев).
+**Основная версия — Java Edition 26.3.** Полный паритет ещё проверяется.
+Прежние сверки 26.1.2 по тактам не доказывают полный паритет 26.3.
 
 | Область | Статус | Примечания |
 | --- | --- | --- |
@@ -225,7 +225,18 @@ cargo build
 
 Чтобы вводить команды в консоль, запускайте из терминала. При первом
 запуске создаются `config/`, `world/`, `logs/` и `playerdata/`. Подключайтесь
-клиентом 26.1.2 к `localhost:25565`.
+клиентом 26.3 к `localhost:25565`.
+
+Новая установка запускается без вопросов с `java-version=26.3`. Анонимные
+отчёты об ошибках включены; при первом запуске консоль сообщает об этом.
+Отключение: `send-error-reports=false` в `config/mcsa.properties`. Уже
+сохранённое `false` не меняется.
+
+Старый мир 26.1.2 автоматически не повышается. Остановите сервер и явно
+выполните `./target/debug/mcsheriffanya --upgrade-world-26.3 /путь/world`: команда
+проверяет данные и создаёт проверенную резервную копию перед повышением.
+Затем установите `java-version=26.3` и запустите сервер. Для release-сборки
+или Docker используйте соответствующий бинарник с теми же аргументами.
 
 ## Docker
 
@@ -279,7 +290,7 @@ UID/GID `10001:10001` право записи. Настройки Java меня�
 
 - `config/server.properties` — те же ключи и формат, что у оригинала. Ничего
   из него в код не зашито.
-- `config/mcsa.properties` (MCSheriffAnya.properties, тот же вид `ключ=значение`, что у `server.properties`) — собственные настройки MCSheriffAnya: `debug`; `prefetch-chunks` и `prefetch-at-once` — на сколько чанков дальше прорисовки мир складывается заранее (0 — выключить); `bedrock-port` и `bedrock-online-mode` (если true, заходят только проверенные Xbox Live; если false — все, но права оператора только проверенные); `autumn-forests` и `pink-cherry-groves` — небольшие дополнения, которых нет у оригинала (редкие осенние пятна в лесу, розоватая трава и больше лепестков в вишнёвых рощах; `false` — мир как у оригинала); `text-info` — справка о сервере текстом для `telnet адрес порт`, браузера и curl; `portal-delay` — сколько тактов стоять в портале перед переходом в Незер в выживании (80 по умолчанию, как у оригинала); `portal-min-width`, `portal-min-height`, `portal-max-width`, `portal-max-height` — какие проёмы портала зажигаются (по умолчанию от 2×3 до 21×21, как у оригинала; сторона от 1 до 256); `send-error-reports` — отправлять ли анонимные отчёты об ошибках разработчикам (false по умолчанию; в отчётах удаляются ники, адреса и опознаватели).
+- `config/mcsa.properties` (MCSheriffAnya.properties, тот же вид `ключ=значение`, что у `server.properties`) — собственные настройки MCSheriffAnya: `debug`; `prefetch-chunks` и `prefetch-at-once` — на сколько чанков дальше прорисовки мир складывается заранее (0 — выключить); `bedrock-port` и `bedrock-online-mode` (если true, заходят только проверенные Xbox Live; если false — все, но права оператора только проверенные); `autumn-forests` и `pink-cherry-groves` — небольшие дополнения, которых нет у оригинала (редкие осенние пятна в лесу, розоватая трава и больше лепестков в вишнёвых рощах; `false` — мир как у оригинала); `text-info` — справка о сервере текстом для `telnet адрес порт`, браузера и curl; `portal-delay` — сколько тактов стоять в портале перед переходом в Незер в выживании (80 по умолчанию, как у оригинала); `portal-min-width`, `portal-min-height`, `portal-max-width`, `portal-max-height` — какие проёмы портала зажигаются (по умолчанию от 2×3 до 21×21, как у оригинала; сторона от 1 до 256); `send-error-reports` — отправлять ли анонимные отчёты об ошибках разработчикам (true для новой установки; сохранённое false не меняется; в отчётах удаляются ники, адреса и опознаватели).
 - `config/skins.toml` — какие источники скинов использовать (Mojang, Ely.by) и загружать ли скины игроков Bedrock в Mojang через MineSkin для видимости у игроков Java.
 - `ops.json` — операторы, формат оригинала.
 

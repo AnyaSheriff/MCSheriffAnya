@@ -1,7 +1,7 @@
-// Отчёты об ошибках — анонимно и только с согласия владельца сервера.
+// Анонимные отчёты об ошибках; новая установка предупреждает об отправке.
 //
-// Включается ключом `send-error-reports=true` в config/mcsa.properties; по
-// умолчанию выключено, и тогда здесь ничего не копится и никуда не уходит.
+// Ключ `send-error-reports` в config/mcsa.properties: в новой установке
+// true с предупреждением. false полностью отключает отправку.
 //
 // Что считается ошибкой: падение потока (panic) и строка лога уровня ERROR.
 // К отчёту прикладываются последние строки лога — чтобы было видно, что
@@ -25,6 +25,25 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::{log_info, log_warn};
+
+/// Первое предупреждение зависит от состояния ДО создания конфигурации.
+pub fn first_start_warning(first_start: bool, enabled: bool) -> Option<&'static str> {
+    (first_start && enabled).then_some("Включена анонимная отправка отчётов об ошибках разработчикам: ошибка и до 50 последних строк лога. Ники, адреса, UUID, XUID и чат очищаются. Отключить: send-error-reports=false в config/mcsa.properties; затем перезапустите сервер.")
+}
+
+#[cfg(test)]
+mod first_start_tests {
+    #[test]
+    fn warning_only_for_enabled_reports_on_first_start() {
+        let warning = super::first_start_warning(true, true).unwrap();
+        assert!(warning.contains("50"));
+        assert!(warning.contains("send-error-reports=false"));
+        assert!(warning.contains("очищаются"));
+        for (first, enabled) in [(false, false), (false, true), (true, false)] {
+            assert!(super::first_start_warning(first, enabled).is_none());
+        }
+    }
+}
 
 /// Куда отправляются отчёты.
 const RECEIVER: &str = "https://log.sheriffanya.ru:7443/v1/report";

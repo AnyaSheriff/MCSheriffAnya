@@ -47,6 +47,8 @@ jobs:
           node --test tools/blackbox/*.test.js 2>&1 | tee "$RUNNER_TEMP/migration-checks/node-blackbox-tests.log"
           python -m unittest discover -s tools/measure -p test_genaudit_263_end_edges.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-end-edges.log"
           python -m unittest discover -s tools/measure -p test_ocean_263.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-ocean.log"
+      - name: Check startup smoke harness guards
+        run: python -m unittest discover -s tools -p test_check_startup_263.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-startup263.log"
       - name: Build plugin examples for workspace tests
         working-directory: plugins-examples
         run: cargo build --release --target wasm32-wasip2 2>&1 | tee "$RUNNER_TEMP/migration-checks/plugin-examples.log"
@@ -58,6 +60,9 @@ jobs:
         run: cargo test --release --no-default-features 2>&1 | tee "$RUNNER_TEMP/migration-checks/no-default-tests.log"
       - name: Build runtime
         run: cargo build --release 2>&1 | tee "$RUNNER_TEMP/migration-checks/build.log"
+      - name: Check isolated headless startup 26.3
+        run: |
+          sudo unshare --net -- bash -c 'ip link set lo up; exec python3 tools/check_startup_263.py --binary target/release/mcsheriffanya --output "$1"' bash "$RUNNER_TEMP/migration-checks"
       - name: Record commit and artifact hashes
         if: always()
         env:
@@ -69,6 +74,7 @@ jobs:
           output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'migration-checks'
           output.mkdir(parents=True, exist_ok=True)
           paths = sorted(output.glob('*.log'))
+          paths += sorted(p for p in output.glob('*.json') if p.name != 'receipt.json')
           paths += [root / 'Cargo.lock', root / 'plugins-examples/Cargo.lock', root / 'target/release/mcsheriffanya']
           receipt = {
               'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),

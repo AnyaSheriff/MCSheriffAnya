@@ -138,7 +138,7 @@ use network::configuration::{
     send_brand, send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
 };
 use network::handshake::read_handshake;
-use network::{PROTOCOL_VERSION, VERSION_NAME};
+use network::PROTOCOL_VERSION;
 use network::login::{
     format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_disconnect_json, send_login_success,
     valid_name,
@@ -163,16 +163,16 @@ fn main() -> io::Result<()> {
             return world::migration::upgrade(Path::new(&args[2]));
         }
     }
-    use std::io::IsTerminal;
-    if !config::first_start::prepare(Path::new("."),std::io::stdin().is_terminal(),&mut std::io::stdin().lock(),&mut std::io::stdout().lock())? { return Ok(()); }
-    // Неподдержанная игровая версия не должна запускать даже перенос хранения.
-    // Передаём ровно эти проверенные настройки в runtime, не читая их повторно.
-    let first_start = !Path::new(config::mcsheriffanya::FILE).exists();
-    let settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
+    let prepared = config::first_start::prepare(Path::new("."))?;
+    let first_start = prepared.first_start;
+    // Проверяем настройки до загрузки мира; stdin для первоначальной настройки не нужен.
+    let settings = prepared.settings;
     settings.validate()?;
     // Проверяем мир до создания каталогов, слушателей и фоновых писателей.
     // Замок живёт дольше runtime; session.lock измерений остаются отдельными.
-    let world_guard = world::startup::prepare_for_version(Path::new(WORLD_PATH), settings.java_version.expect("проверенная версия"))?;
+    let world_guard = world::startup::prepare_for_version(Path::new(WORLD_PATH), settings.java_version.expect("проверенная версия"))
+        .map_err(|error| io::Error::new(error.kind(), format!("{error}. Для переноса старого мира сохраните резервную копию и выполните mcsheriffanya --upgrade-world-26.3 world; затем укажите java-version=26.3")))?;
+    prepared.save()?;
     log_debug!("Проверка заявленного профиля мира: {:?}", world_guard.check);
     if !world_guard.has_exclusive_lock() {
         log_warn!("На этой платформе доступна только читающая проверка профиля мира; общий межпроцессный замок пока не реализован");
@@ -225,10 +225,8 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     // как у обычного сервера.
     let primary = settings.java_version.expect("проверенная версия");
     log_info!("Основная версия игры: Minecraft Java {} (протокол {})", primary.name(), primary.protocol());
-    if first_start {
-        log_info!("Первый запуск: основная версия задаётся строкой java-version={} в config/mcsa.properties", VERSION_NAME);
-        log_info!("Чтобы выбрать более старую версию, остановите сервер, сохраните копию мира и укажите поддерживаемую версию в java-version. В этой сборке доступны 26.1.2 и новый мир26.3; прежняя внутренняя версия {}", VERSION_NAME);
-        log_info!("При online-mode=false: offline-license-mode=cosmetics — лицензии для косметики; disabled — без проверки лицензий. Пароли настраиваются отдельно через auth-enabled");
+    if let Some(warning) = reports::first_start_warning(first_start, settings.send_error_reports) {
+        log_warn!("{}", warning);
     }
     log::set_debug(settings.debug);
     log::set_console_colors(settings.console_colors);
@@ -239,7 +237,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
         log_info!("Подробный лог включён (config/mcsa.properties)");
     }
 
-    // Отчёты об ошибках — только если владелец их включил.
+    // Сохранённое false всегда отключает отчёты.
     reports::start(settings.send_error_reports);
 
     // Образец таблицы «кому чей скин» — чтобы было видно, что писать.
@@ -605,7 +603,7 @@ async fn handle_connection_inner(
                 &properties.motd,
                 online as i32,
                 properties.max_players,
-                shared.settings.java_version.unwrap_or(network::NATIVE_VERSION),
+                shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3),
             )
             .await?;
         }
@@ -652,8 +650,8 @@ async fn handle_connection_inner(
                     &mut socket,
                     &format!(
                         "Ваша версия не подходит под ядро сервера\nНужен Minecraft {} (протокол {})",
-                        shared.settings.java_version.unwrap_or(network::NATIVE_VERSION).name(),
-                        shared.settings.java_version.unwrap_or(network::NATIVE_VERSION).protocol()
+                        shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3).name(),
+                        shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3).protocol()
                     ),
                 )
                 .await?;

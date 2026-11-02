@@ -351,8 +351,45 @@ impl Shared {
             skins,
             properties,
             skin_settings,
-            settings: Default::default(),
+            // Каталог переданного мира определяет начальные настройки и для старых
+            // фикстур/миграции. Основной запуск отдельно проверяет конфиг и заменяет их.
+            settings: crate::config::mcsheriffanya::Settings {
+                java_version: Some(match catalog.profile() {
+                    crate::gameplay_catalog::Profile::Java26_1_2 => mcsa_protocol::JavaVersion::V26_1_2,
+                    crate::gameplay_catalog::Profile::Preview26_3 => mcsa_protocol::JavaVersion::V26_3,
+                }),
+                ..Default::default()
+            },
             world_cmd: Default::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn constructor_settings_match_all_world_catalogs() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for (profile, version) in [
+            (Profile::Java26_1_2, mcsa_protocol::JavaVersion::V26_1_2),
+            (Profile::Preview26_3, mcsa_protocol::JavaVersion::V26_3),
+        ] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(
+                World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                PathBuf::new(), PathBuf::new(), Default::default(),
+                Ops::open(std::path::Path::new("tmp/shared-catalog-fixture/ops.json")),
+                Default::default(),
+            );
+            assert_eq!(shared.settings.java_version, Some(version));
+            assert_eq!(Catalog::for_version(shared.settings.java_version.unwrap()), shared.catalog());
+            for dimension in [Dimension::Overworld, Dimension::Nether, Dimension::End] {
+                assert_eq!(shared.world_in(dimension).lock().unwrap().catalog(), catalog);
+            }
+        }
+        assert_eq!(crate::config::mcsheriffanya::Settings::default().java_version,
+            Some(mcsa_protocol::JavaVersion::V26_3));
     }
 }

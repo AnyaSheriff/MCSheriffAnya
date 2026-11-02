@@ -5,6 +5,7 @@
 // в том же виде key=value: подробный лог, складывание мира впрок и порт
 // для Bedrock.
 
+#[cfg(test)]
 use std::fs;
 use std::path::Path;
 
@@ -116,9 +117,9 @@ impl Settings {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
                 "config/mcsa.properties: при viaproxy=true требуется viaproxy-memory не менее 320M (по умолчанию 512M)"));
         }
-        if !matches!(self.java_version, Some(mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3)) {
+        if !matches!(self.java_version, Some(mcsa_protocol::JavaVersion::V26_3)) {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
-                format!("config/mcsa.properties: эта сборка поддерживает java-version={}; также доступен новый мир26.3; перенос существующего мира ещё не завершён", crate::network::VERSION_NAME)));
+                "config/mcsa.properties: поддерживается только java-version=26.3. Для старого мира сохраните резервную копию, выполните mcsheriffanya --upgrade-world-26.3 world, затем укажите java-version=26.3"));
         }
         if self.offline_license_mode == OfflineLicenseMode::Invalid {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
@@ -152,7 +153,7 @@ impl Default for Settings {
         Settings {
             viaproxy: false,
             viaproxy_memory: 512 * 1024 * 1024,
-            java_version: Some(crate::network::NATIVE_VERSION),
+            java_version: Some(mcsa_protocol::JavaVersion::V26_3),
             auth_enabled: true,
             auth_premium: true,
             offline_license_mode: OfflineLicenseMode::Cosmetics,
@@ -182,6 +183,7 @@ impl Settings {
     /// значения из прежнего файла, если он был) и берёт что есть. Ключ,
     /// который не разобрался, берётся по умолчанию — с предупреждением
     /// в логе.
+    #[cfg(test)]
     pub fn load(path: &Path) -> Self {
         if !path.exists() {
             let settings = OLD_FILES
@@ -211,7 +213,7 @@ impl Settings {
     }
 
     /// Разбирает файл: нет ключа — значение по умолчанию.
-    fn parse(text: &str, path: &Path) -> Self {
+    pub(super) fn parse(text: &str, path: &Path) -> Self {
         let values = parse_properties(text);
         let default = Settings::default();
 
@@ -260,7 +262,7 @@ impl Settings {
     }
 
     /// Файл с пояснениями — чтобы было понятно, что править.
-    fn to_file(self) -> String {
+    pub(super) fn to_file(self) -> String {
         let mut text = String::from(HEADER);
 
         for (_, section) in self.sections() {
@@ -273,11 +275,11 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 23] {
+    pub(super) fn sections(self) -> [(&'static str, String); 23] {
         [
             ("viaproxy", format!("# Настройка внешнего ViaProxy; запуск в этой сборке не реализован.\nviaproxy={}\n", self.viaproxy)),
             ("viaproxy-memory", format!("# Память ViaProxy: минимум 320M при viaproxy=true; по умолчанию 512M.\nviaproxy-memory={}\n", if self.viaproxy_memory.is_multiple_of(1024 * 1024) { format!("{}M", self.viaproxy_memory / (1024 * 1024)) } else { self.viaproxy_memory.to_string() })),
-            ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Поддерживаются 26.1.2 и новые миры26.3. Перед сменой версии\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
+            ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Поддерживается только 26.3. Перед переносом старого мира\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
             ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
@@ -369,6 +371,7 @@ send-error-reports={}
     /// прежней версией сервера), — с пояснениями и значениями по умолчанию.
     /// Остальное в файле не трогается. Не записалось — не беда: настройки
     /// всё равно берутся по умолчанию.
+    #[cfg(test)]
     fn add_missing(self, path: &Path, text: &str) {
         let values = parse_properties(text);
         let missing: Vec<_> = self.sections().into_iter().filter(|(key, _)| !values.contains_key(*key)).collect();
@@ -420,22 +423,30 @@ fn read_java_version<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Resul
 const HEADER: &str = "# Настройки MCSheriffAnya, которых нет в server.properties.\n";
 
 /// Имя файла — без папки: прежние файлы лежат там же, где и новый.
+#[cfg(test)]
 fn file_name(path: &str) -> &str {
     Path::new(path).file_name().and_then(|name| name.to_str()).unwrap_or(path)
 }
 
+/// Читающая часть переноса нужна также проверке до изменения мира/конфига.
+pub(super) fn parse_old_text(text: &str) -> Result<Settings, toml::de::Error> {
+    let mut settings: Settings = toml::from_str(text)?;
+    if !text.lines().any(|line| line.trim_start().starts_with("offline_license_mode")) {
+        settings.offline_license_mode = if settings.auth_enabled && settings.auth_premium {
+            OfflineLicenseMode::Cosmetics
+        } else { OfflineLicenseMode::Disabled };
+    }
+    Ok(settings)
+}
+
 /// Читает прежний toml-файл и убирает его: его значения уйдут в новый файл.
 /// Не разобрался — значения по умолчанию, а старый файл остаётся лежать.
+#[cfg(test)]
 fn move_old_file(old: &Path, path: &Path) -> Settings {
     let text = fs::read_to_string(old).unwrap_or_default();
 
-    match toml::from_str::<Settings>(&text) {
-        Ok(mut settings) => {
-            if !text.lines().any(|line| line.trim_start().starts_with("offline_license_mode")) {
-                settings.offline_license_mode = if settings.auth_enabled && settings.auth_premium {
-                    OfflineLicenseMode::Cosmetics
-                } else { OfflineLicenseMode::Disabled };
-            }
+    match parse_old_text(&text) {
+        Ok(settings) => {
             match fs::remove_file(old) {
                 Ok(()) => log_info!("Настройки перенесены: {} → {}", old.display(), path.display()),
                 Err(error) => log_warn!("{} перенесён в {}, но не удалён: {}", old.display(), path.display(), error),
@@ -491,7 +502,7 @@ mod tests {
         let path = Path::new("mcsa.properties");
         for version in ["1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "unknown", ""] {
             let settings = Settings::parse(&format!("java-version={version}"), path);
-            assert_eq!(settings.validate().is_ok(), matches!(version, "26.1.2" | "26.3"));
+            assert_eq!(settings.validate().is_ok(), version == "26.3");
             assert_eq!(Settings::parse(&settings.to_file(), path), settings);
         }
         assert!(Settings::parse("", path).validate().is_ok());
