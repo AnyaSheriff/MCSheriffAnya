@@ -1403,6 +1403,19 @@ pub(super) async fn send_join_experience(stream: &mut Outgoing<'_>, vit: &Vitals
 mod join_experience_tests {
     use super::*;
 
+    #[test]
+    fn restored_effect_packet_keeps_visibility_without_new_grant_bit() {
+        for (ambient, visible, show_icon, flags) in [(false, false, false, 0), (false, true, true, 6), (true, true, false, 3)] {
+            let effect = survival::Effect { kind: survival::EffectKind::NightVision,
+                amplifier: 0, ticks_left: survival::INFINITE, ambient, visible, show_icon };
+            let body = initial_effect_packet(42, effect);
+            let mut expected = encode_varint(ENTITY_EFFECT);
+            for value in [42, 15, 0, -1] { expected.extend_from_slice(&encode_varint(value)); }
+            expected.push(flags);
+            assert_eq!(body, expected);
+        }
+    }
+
     #[tokio::test]
     async fn login_xp_sends_one_exact_packet_even_for_zero_points_and_nonzero_total() {
         use crate::gameplay_catalog::{Catalog, Profile};
@@ -3362,7 +3375,9 @@ fn initial_effect_packet(entity_id: i32, effect: survival::Effect) -> Vec<u8> {
     body.extend_from_slice(&encode_varint(effect.kind.id()));
     body.extend_from_slice(&encode_varint(effect.amplifier));
     body.extend_from_slice(&encode_varint(if effect.kind.instant() { 1 } else { effect.ticks_left }));
-    body.push(effect.flags());
+    // Вход не является новой выдачей: официальный777 не ставит bit8
+    // (41456459340: Poison14→6, скрытый NightVision8→0).
+    body.push(effect.flags() & !0x08);
     body
 }
 

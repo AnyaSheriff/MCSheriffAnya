@@ -123,7 +123,7 @@ async fn effects_survive_java_file_bedrock_and_initial_java_packets() {
     for effect in &restored.vit.effects {
         let mut body = encode_varint(ENTITY_EFFECT);
         for value in [42, effect.kind.id(), effect.amplifier, effect.ticks_left] { body.extend_from_slice(&encode_varint(value)); }
-        body.push(effect.flags());
+        body.push(effect.flags() & !0x08);
         expected_bytes.extend_from_slice(&encode_varint(body.len() as i32));
         expected_bytes.extend(body);
     }
