@@ -875,7 +875,7 @@ mod tests {
     }
 
     fn strip_cursor_tail(bytes: &mut Vec<u8>) {
-        strip_effects_tail(&mut bytes);
+        strip_effects_tail(bytes);
         bytes.truncate(bytes.len() - ABILITIES_SIZE);
         let mut tail = bytes.as_slice();
         cursor::take(&mut tail).expect("хвост курсора v10");

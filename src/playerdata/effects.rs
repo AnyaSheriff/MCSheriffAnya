@@ -81,7 +81,7 @@ pub(super) fn take(tail: &mut &[u8]) -> Option<SavedEffects> {
     if active > MAX_ACTIVE || hidden > MAX_HIDDEN || length != HEADER_SIZE + (active + hidden) * RECORD_SIZE { return None; }
     let mut saved = SavedEffects { absorption: f32::from_be_bytes(payload.get(..4)?.try_into().ok()?),
         active: Vec::with_capacity(active), hidden: Vec::with_capacity(hidden) };
-    for (index, record) in payload[HEADER_SIZE..].chunks_exact(RECORD_SIZE).enumerate() {
+    for (index, record) in payload[HEADER_SIZE..].as_chunks::<RECORD_SIZE>().0.iter().enumerate() {
         if record[9] & !7 != 0 { return None; }
         let effect = Effect { kind: EffectKind::from_id(i32::from(record[0]))?,
             amplifier: i32::from_be_bytes(record[1..5].try_into().ok()?),
