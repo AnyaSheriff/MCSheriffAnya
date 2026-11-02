@@ -54,10 +54,26 @@ class PersistenceTests(unittest.TestCase):
         before={'effects':{'0':{'duration':600}},'effect_receipts':{'0':{'time':0.5}}}
         after={'effects':{'0':{'duration':580}},'effect_receipts':{'0':{'time':7.5}}}
         self.assertFalse(duration_failure(report,before,after,'0'))
+        after['effects']['0']['duration']=600
+        self.assertTrue(duration_failure(report,before,after,'0'), 'reset to original600 must fail')
         after['effects']['0']['duration']=460
         self.assertTrue(duration_failure(report,before,after,'0'))
         after['effects']['0']['duration']=601
         self.assertTrue(duration_failure(report,before,after,'0'))
+
+    def test_raw_and_snapshot_timestamps_are_bounded(self):
+        packet=lambda at:{'direction':'out','name':'tick_end','payload':'','time':at}
+        report={'target':'core','observe_only':False,'protocol':777,'server_exits':[0,0],
+                'sessions':[{'name':'s','connect_started':1.0,'closed_at':4.0,'packets':[packet(3.0),packet(2.0)]}],
+                'snapshots':[]}
+        self.assertTrue(any('packet timestamp' in x for x in evidence_failures(report)))
+        report['sessions'][0]['packets']=[packet(2.0)]
+        p=self.probe();value=snapshot(p,'fresh-login','s')
+        value.update(packet_index=1,time=5.0)
+        report['snapshots']=[value]
+        self.assertTrue(any('snapshot timestamp' in x for x in evidence_failures(report)))
+        report['sessions'][0]['packets']=[packet(0.5)]
+        self.assertTrue(any('packet timestamp' in x for x in evidence_failures(report)))
 
     def test_actual_official_absorption_metadata(self):
         self.assertEqual(player_metadata(bytes.fromhex('03110340000000ff')),(3,{17:2.0}))

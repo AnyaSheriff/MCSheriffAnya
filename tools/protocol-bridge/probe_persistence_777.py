@@ -169,10 +169,12 @@ def duration_failure(report, before, after, kind):
         return True
     if old['duration']==-1:
         return new['duration'] != -1
-    if new['duration'] <= 0 or new['duration'] > old['duration']:
+    if new['duration'] <= 0 or new['duration'] >= old['duration']:
         return True
     start=before['effect_receipts'][kind]['time']
     end=after['effect_receipts'][kind]['time']
+    # До logout игрок остаётся online >=3s: finite duration обязан уменьшиться.
+    # Равный исходному grant — не свидетельство сохранения, а возможный reset.
     # Packet receipt, not snapshot time. Six-second offline intervals are excluded.
     allowance=math.ceil(online_seconds(report,start,end)*20)+20
     return old['duration']-new['duration'] > allowance
@@ -242,17 +244,45 @@ def evidence_failures(report, official=False):
     by_name={v['name']:v for v in sessions}
     if len(by_name) != len(sessions):
         failures.append('duplicate sessions')
+    previous_closed = None
     for current in sessions:
-        if not (isinstance(current.get('connect_started'),(int,float)) and isinstance(current.get('closed_at'),(int,float))
-                and math.isfinite(current['connect_started']) and math.isfinite(current['closed_at'])
-                and current['connect_started'] <= current['closed_at']):
+        started=current.get('connect_started')
+        closed=current.get('closed_at')
+        valid=(isinstance(started,(int,float)) and isinstance(closed,(int,float))
+               and math.isfinite(started) and math.isfinite(closed) and started <= closed)
+        if not valid:
             failures.append('invalid measured session interval')
+            continue
+        if previous_closed is not None and started < previous_closed:
+            failures.append('session intervals overlap or are reordered')
+        previous_closed=closed
+        previous_packet_time=started
+        for packet in current.get('packets',[]):
+            stamp=packet.get('time')
+            if not isinstance(stamp,(int,float)) or not math.isfinite(stamp) or not previous_packet_time <= stamp <= closed:
+                failures.append(current['name']+': packet timestamp outside ordered session interval')
+                break
+            previous_packet_time=stamp
+    previous_snapshot_time=None
     for value in snapshots:
-        packets=by_name.get(value.get('session'),{}).get('packets',[])
+        measured=by_name.get(value.get('session'),{})
+        packets=measured.get('packets',[])
         index=value.get('packet_index',-1)
         if not isinstance(index,int) or not 0 < index <= len(packets):
             failures.append(str(value.get('stage'))+': invalid raw packet boundary')
             continue
+        stamp=value.get('time')
+        try:
+            assert isinstance(stamp,(int,float)) and math.isfinite(stamp)
+            assert measured['connect_started'] <= stamp <= measured['closed_at']
+            assert packets[index-1]['time'] <= stamp
+            if index < len(packets):
+                assert stamp <= packets[index]['time']
+            if previous_snapshot_time is not None:
+                assert previous_snapshot_time <= stamp
+            previous_snapshot_time=stamp
+        except (AssertionError,KeyError,TypeError):
+            failures.append(value['stage']+': snapshot timestamp outside ordered raw boundary')
         replay=object.__new__(Probe)
         replay.wire=[];replay.xp=None;replay.effects={};replay.health=None;replay.absorption=None;replay.entity_id=None
         try:
@@ -367,6 +397,9 @@ def main():
             report['snapshots'].append(snapshot(client,label,session))
         def leave():
             nonlocal client
+            # Не менее3s реальных player ticks до отключения: reset duration нельзя
+            # принять за сохранение, даже если он повторяет первоначальный grant.
+            client.pump(3.1)
             report['sessions'][-1]['closed_at']=time.monotonic()
             client.sock.shutdown(socket.SHUT_RDWR);client.sock.close();client=None
             # Frozen НЕ останавливает эффекты игрока: доказанный official факт.
