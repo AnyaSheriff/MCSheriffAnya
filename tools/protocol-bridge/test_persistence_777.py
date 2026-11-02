@@ -1,6 +1,7 @@
+import json
 import struct
 import unittest
-from probe_persistence_777 import Probe, compare, snapshot, evidence_failures
+from probe_persistence_777 import Probe, compare, snapshot, evidence_failures, duration_failure, player_metadata
 from smoke import varint
 
 
@@ -25,9 +26,9 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(p.effects,{})
 
     def test_strict_comparator_keeps_missing_packet_failure(self):
-        p=self.probe();a=snapshot(p,'fresh','a')
+        p=self.probe();a=snapshot(p,'fresh-login','a')
         p.observe_packet('experience',struct.pack('>f',0)+b'\0\0')
-        b=snapshot(p,'fresh','b')
+        b=snapshot(p,'fresh-login','b')
         failures=compare({'snapshots':[b]},{'snapshots':[a]})
         self.assertEqual(len(failures),2)
 
@@ -40,11 +41,33 @@ class PersistenceTests(unittest.TestCase):
         self.assertTrue(evidence_failures({},official=True))
         self.assertTrue(evidence_failures({'target':'core','observe_only':True}))
 
-    def test_comparator_duration_and_flags_exact(self):
-        p=self.probe();p.effects={'1':{'duration':100,'amplifier':0,'flags':1}}
-        a=snapshot(p,'effects','a');p.effects['1']['duration']=99
-        b=snapshot(p,'effects','b')
+    def test_semantic_flags_and_exact_login_flags(self):
+        p=self.probe();p.effects={'1':{'duration':100,'amplifier':0,'flags':14}}
+        a=snapshot(p,'effects-before','a');p.effects['1']['flags']=6
+        b=snapshot(p,'effects-before','b')
+        self.assertFalse(compare({'snapshots':[a]},{'snapshots':[b]}))
+        a['stage']=b['stage']='effects-relogin';a['xp_packets']=b['xp_packets']=1
         self.assertTrue(compare({'snapshots':[a]},{'snapshots':[b]}))
+
+    def test_offline_seconds_are_excluded_from_duration_budget(self):
+        report={'sessions':[{'connect_started':0,'closed_at':1},{'connect_started':7,'closed_at':8}]}
+        before={'effects':{'0':{'duration':600}},'effect_receipts':{'0':{'time':0.5}}}
+        after={'effects':{'0':{'duration':580}},'effect_receipts':{'0':{'time':7.5}}}
+        self.assertFalse(duration_failure(report,before,after,'0'))
+        after['effects']['0']['duration']=460
+        self.assertTrue(duration_failure(report,before,after,'0'))
+        after['effects']['0']['duration']=601
+        self.assertTrue(duration_failure(report,before,after,'0'))
+
+    def test_actual_official_absorption_metadata(self):
+        self.assertEqual(player_metadata(bytes.fromhex('03110340000000ff')),(3,{17:2.0}))
+        p=self.probe();p.entity_id=3;p.absorption=None
+        p.observe_packet('entity_metadata',bytes.fromhex('03110340000000ff'))
+        self.assertEqual(p.absorption,2.0)
+        p.observe_packet('entity_metadata',bytes.fromhex('04110340800000ff'))
+        self.assertEqual(p.absorption,2.0)
+        with self.assertRaises(AssertionError):
+            player_metadata(bytes.fromhex('0311037fc00000ff'))
 
 
 if __name__=='__main__':unittest.main()
