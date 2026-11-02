@@ -249,8 +249,11 @@ def main():
                     check(not client.ground_items, label+' no dropped items after close')
                     snapshot(label+'-closed-authoritative')
                     report['checks'].append(label+'-exact-prediction-single-action')
-                setup('experience set McsaProbe 17 levels', 'experience set McsaProbe 3 points')
-                check(client.xp and client.xp['level']==17 and client.xp['progress']>0, client.xp)
+                setup('experience set McsaProbe 17 levels', 'experience set McsaProbe 3 points',
+                      'experience add McsaProbe 7 points')
+                # Ненулевая сумма отличает сохранение третьего поля пакета
+                # от случайного совпадения двух нулей после experience set.
+                check(client.xp and client.xp['level']==17 and client.xp['progress']>0 and client.xp['total']==7, client.xp)
                 xp = dict(client.xp) if client.xp else None
                 snapshot('before-death')
                 setup('kill McsaProbe')
