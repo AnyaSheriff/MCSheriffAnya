@@ -138,7 +138,6 @@ use network::configuration::{
     send_brand, send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
 };
 use network::handshake::read_handshake;
-use network::PROTOCOL_VERSION;
 use network::login::{
     format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_disconnect_json, send_login_success,
     valid_name,
@@ -643,7 +642,7 @@ async fn handle_connection_inner(
                 log_info!(
                     "Вход отклонён: версия клиента (протокол {}) не подходит, ядру нужен протокол {}",
                     handshake.protocol_version,
-                    PROTOCOL_VERSION
+                    shared.settings.java_version.expect("проверенная версия").protocol()
                 );
 
                 send_login_disconnect(

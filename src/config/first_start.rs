@@ -52,11 +52,9 @@ pub fn prepare(root: &Path) -> io::Result<Prepared> {
     };
     let original = text.clone();
     let values = super::server_properties::parse_properties(&text);
-    if let Some(version) = values.get("java-version") {
-        if version != "26.3" && version != "choose" {
+    if values.get("java-version").is_some_and(|version| version != "26.3" && version != "choose") {
             return Err(io::Error::new(io::ErrorKind::InvalidInput,
                 "config/mcsa.properties: поддерживается только java-version=26.3. Для старого мира сначала сохраните резервную копию, выполните mcsheriffanya --upgrade-world-26.3 world, затем укажите java-version=26.3. Мир автоматически не изменяется."));
-        }
     }
     if values.get("send-error-reports").is_some_and(|value| !matches!(value.as_str(), "true" | "false" | "choose")) {
         return Err(io::Error::new(io::ErrorKind::InvalidInput,
