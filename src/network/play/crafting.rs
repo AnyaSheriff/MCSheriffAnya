@@ -33,17 +33,21 @@ fn store(player: &mut PlayerState, slots: &[Option<Stack>]) {
 }
 fn result(shared: &Shared, player: &PlayerState, slots: &[Option<Stack>], commit: bool) -> Option<Stack> {
     let padded = grid_ops::padded(slots);
-    let result = recipes::craft_for_catalog(shared.catalog(), &padded)?;
+    let Some(result) = recipes::craft_for_catalog(shared.catalog(), &padded) else {return if crate::plugins::active() {crate::plugins::prepare_craft(&plugin_view(player),slots,None,false,is_table(player))} else {None};};
     if shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed)
         && player.game_mode != GAME_MODE_CREATIVE
         && let Some(id) = recipes::recipe_identity_for_catalog(shared.catalog(), &padded)
         && !player.progress.recipes.knows_recipe(id)
     { return None; }
-    if result.extras().map_post == Some(1) {
+    let result=if result.extras().map_post == Some(1) {
         let mut data = result.extras(); data.map_post = None;
-        return shared.maps.lock().expect("карты").cartography(result.with_extras(data), Stack::new(blocks::item_named("paper")?, 1), commit);
-    }
-    Some(result)
+        shared.maps.lock().expect("карты").cartography(result.with_extras(data), Stack::new(blocks::item_named("paper")?, 1), commit)?
+    } else {result};
+    if crate::plugins::active() {
+        let ingredients:Vec<_>=slots.iter().flatten().collect();
+        let repair=ingredients.len()==2&&ingredients[0].item==ingredients[1].item&&ingredients.iter().all(|s|s.count==1)&&crate::combat::max_damage(ingredients[0])>0;
+        crate::plugins::prepare_craft(&plugin_view(player),slots,Some(result),repair,is_table(player))
+    } else {Some(result)}
 }
 /// Итог после каждой перемены сетки при расходе ингредиентов: по одной на
 /// каждую ячейку, из которой убрали предмет, и на каждый остаток, положенный
@@ -127,6 +131,8 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
         }
         if readable { predicted = Some((list, read_hashed_slot(&mut reader))); }
     }
+    let inventory_before=crate::plugins::active().then(||player.inventory.clone());
+    let original_grid=grid(player);
     let (before, cursor_before) = (snapshot(player), player.inventory.cursor());
     let slot = slot as i16 as i32; let button = button as i8;
     let mut slots = grid(player); let mut dropped = Vec::new(); let mut trace = Vec::new();
@@ -194,8 +200,13 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
             if emptied_here && slot as usize - 1 == i { trace.push(*trace.last().unwrap()); }
         }
     }
+    if crate::plugins::active() {
+        let mut staged=Vec::new();let mut denied=false;
+        for stack in &dropped {let uuid=throw_menu(shared,player,*stack);staged.push(uuid);if super::cancel_thrown(shared,player,uuid) {denied=true;break;}}
+        if denied {shared.items_in(player.dimension).lock().expect("предметы").remove_items(|i|staged.contains(&i.uuid));player.inventory=inventory_before.expect("снимок");store(player,&original_grid);refresh(shared,player);reaction.inventory=true;reaction.window_content=table;reaction.cursor=Some(player.inventory.cursor());return;}
+    }
     store(player, &slots); refresh(shared, player); sync(player, &before, cursor_before, &predicted, trace, reaction);
-    for stack in dropped { player.progress.dropped(stack.item, stack.count); throw_menu(shared, player, stack); }
+    for stack in dropped { player.progress.dropped(stack.item, stack.count); if !crate::plugins::active() {throw_menu(shared, player, stack);} }
 }
 
 pub(super) fn place(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
@@ -224,10 +235,10 @@ pub(super) fn place(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
 
 /// Бросок из окна: предмет появляется у самых ног, на уровне глаз − 0,3, и уходит в случайную сторону
 /// (чёрный ящик, craft-grid-clicks: появление в (0,5; 1,32; 2,5) при игроке в (0,5; 2,5)).
-fn throw_menu(shared: &Shared, player: &PlayerState, stack: Stack) {
+fn throw_menu(shared: &Shared, player: &PlayerState, stack: Stack)->[u8;16] {
     let (spread, angle) = { let mut world = shared.world_in(player.dimension).lock().expect("мир"); (f64::from(world.random_unit()) * 0.5, f64::from(world.random_unit()) * std::f64::consts::TAU) };
     let velocity = (-angle.sin() * spread, 0.2, angle.cos() * spread);
-    shared.items_in(player.dimension).lock().expect("предметы").drop_from_player(shared.next_entity_id(), stack, (player.x, player.y + 1.32, player.z), velocity, player.uuid);
+    shared.items_in(player.dimension).lock().expect("предметы").drop_from_player(shared.next_entity_id(), stack, (player.x, player.y + 1.32, player.z), velocity, player.uuid)
 }
 fn get(player: &PlayerState, slots: &[Option<Stack>], slot: i32) -> Option<Stack> {
     if (1..=slots.len() as i32).contains(&slot) { slots[slot as usize - 1] }
@@ -277,7 +288,7 @@ mod tests {
         let mut p=encode_varint(window);p.extend(encode_varint(0));p.extend(slot.to_be_bytes());p.push(button);p.extend(encode_varint(mode));p.extend([0,0]);p
     }
     fn table(p: &mut PlayerState) {
-        p.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![None;10],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,ender:false,
+        p.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![None;10],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,plugin_chest: None, ender: false,
             station:Some(station::StationWindow{kind:Station::Crafting,pos:(0,64,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None})});
     }
     fn slab_table(profile: crate::gameplay_catalog::Profile, count: i32) -> (Shared, PlayerState) {

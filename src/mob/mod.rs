@@ -15,6 +15,8 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod plugin_attributes;
+pub mod plugin_targets;
 pub mod armor_stand;
 pub mod cushion;
 pub mod sulfur_cube;
@@ -1558,6 +1560,8 @@ pub enum Event {
 /// Моб в мире.
 #[derive(Clone, Debug)]
 pub struct Mob {
+    pub plugin_seen_targets: [Option<i32>;3],
+    pub plugin_attributes: Vec<crate::attributes::Attribute>,
     pub entity_id: i32,
     pub uuid: [u8; 16],
     pub kind: Kind,
@@ -1792,6 +1796,8 @@ impl Mob {
         let h = hostile::State { bow: kind.skeleton(), shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
 
         let mut mob = Self {
+            plugin_seen_targets: [None;3],
+            plugin_attributes: Vec::new(),
             entity_id,
             uuid: uuid_for(entity_id),
             kind,
@@ -1918,7 +1924,7 @@ impl Mob {
 
     pub fn movement_speed(&self) -> f64 {
         let base = if horse::equine(self.kind) { self.horse.speed } else { self.kind.speed() };
-        base + crate::soul::bonus(self.foot_enchants.soul)
+        self.plugin_attribute_value(crate::attributes::MOVEMENT_SPEED, base) + crate::soul::bonus(self.foot_enchants.soul)
     }
 
     pub fn is_baby(&self) -> bool {
@@ -2742,7 +2748,7 @@ impl Mob {
 
     pub fn effect_melee_damage(&self, base: f32) -> f32 {
         use crate::survival::EffectKind;
-        (base + 3.0 * self.vitals.effect_level(EffectKind::Strength) as f32
+        (self.plugin_attack_damage(base) + 3.0 * self.vitals.effect_level(EffectKind::Strength) as f32
             - 4.0 * self.vitals.effect_level(EffectKind::Weakness) as f32).max(0.0)
     }
 
@@ -3154,7 +3160,7 @@ impl Mob {
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self));
+        save::write_head(out, id, !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self));
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -3206,13 +3212,21 @@ impl Mob {
         if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self) {
+        if !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self) {
             leash::write_tail(self, out);
         }
     }
 
     /// Читает запись `write`; None — она испорчена.
     pub fn read(bytes: &mut &[u8]) -> Option<Mob> {
+        Self::read_with_storage_context(bytes, false, false)
+    }
+
+    pub(crate) fn read_with_legacy_plugin_tail(bytes: &mut &[u8], legacy_plugin_tail: bool) -> Option<Mob> {
+        Self::read_with_storage_context(bytes, legacy_plugin_tail, legacy_plugin_tail)
+    }
+
+    pub(crate) fn read_with_storage_context(bytes: &mut &[u8], legacy_plugin_tail: bool, legacy_metadata: bool) -> Option<Mob> {
         let (id, extended) = save::read_head(bytes)?;
         let kind = if id == save::SNOW_SKELETON {
             Kind::Skeleton
@@ -3249,16 +3263,16 @@ impl Mob {
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
         let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
-        let wild = if wildlife::kind(kind) { Some(wildlife::read(bytes)?) } else { None };
+        let wild = if wildlife::kind(kind) { Some(wildlife::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
         let snow_state = if id == save::SNOW_SKELETON { Some(skeleton::read_snow(bytes)?) } else { None };
-        let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read(bytes)?) } else { None };
+        let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
         let water_state = if water::creature(kind) { Some(water::read(bytes)?) } else { None };
         let mut horse_mob = Mob::new(0, kind, (x, y, z));
-        if horse::equine(kind) { horse::read(&mut horse_mob, bytes)?; }
-        let small_state = if small::kind(kind) { Some(small::read(bytes)?) } else { None };
-        let stand_state = if kind==Kind::ArmorStand {Some(armor_stand::State::read(bytes)?)} else {None};
-        let new_state = if newmobs::new_kind(kind) { Some(newmobs::read(bytes)?) } else { None };
-        let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
+        if horse::equine(kind) { horse::read_with_legacy_metadata(&mut horse_mob, bytes, legacy_metadata)?; }
+        let small_state = if small::kind(kind) { Some(small::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
+        let stand_state = if kind==Kind::ArmorStand {Some(armor_stand::State::read_with_legacy_metadata(bytes, legacy_metadata)?)} else {None};
+        let new_state = if newmobs::new_kind(kind) { Some(newmobs::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
+        let tail = if extended { Some(leash::read_tail_with_storage_context(bytes, legacy_plugin_tail, legacy_metadata)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
@@ -3332,6 +3346,7 @@ impl Mob {
 
         if let Some(tail) = tail {
             leash::apply_tail_checked(&mut mob, tail)?;
+            mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
         }
 
         // Снаряд без цели не живёт: прочитанный из файла гаснет.
@@ -4087,6 +4102,7 @@ pub fn step_all(
     next_id: &mut dyn FnMut() -> i32,
 ) -> Outcome {
     let mut outcome = Outcome::default();
+    let mut plugin_targets=Vec::new();
 
     if items.mobs().is_empty() {
         return outcome;
@@ -4141,7 +4157,14 @@ pub fn step_all(
 
         let sense = if guardian::guardian(mob.kind) { &guardian_ctx } else if mob.kind==Kind::Drowned { &drowned_ctx } else { &ctx };
         let shot_weapon = equipment::slot(mob, 0);
+        let old_cooldown=mob.h.cooldown;let old_events=mob.events.len();
         let mut plan = mob.tick(view, sense, rng);
+        if crate::plugins::active() {
+            let targets=mob.plugin_targets();
+            let mut changed=false;
+            for (slot,target) in targets.into_iter().enumerate() {if target!=mob.plugin_seen_targets[slot] {plugin_targets.push((mob.uuid,slot,target,mob.plugin_seen_targets[slot]));changed=true;}}
+            if changed {mob.h.cooldown=old_cooldown;mob.events.truncate(old_events);continue;}
+        }
         // Вики, Strength/Weakness: +3L / −4L к melee; луч стража — магия.
         if !guardian::guardian(mob.kind) && let Some(melee) = &mut plan.melee {
             let target = mates.iter().find(|target| target.id == melee.target).map(|target| target.kind);
@@ -4533,6 +4556,7 @@ pub fn step_all(
     }).collect();
     items.death_reactions.extend(due);
 
+    items.plugin_targets.extend(plugin_targets);
     items.flush_mob_events(next_id, rng);
     items.remove_mobs(|mob| mob.gone() || mob.h.despawn);
 

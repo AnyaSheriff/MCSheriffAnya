@@ -338,6 +338,12 @@ const SERVERBOUND_CHAT_MESSAGE: i32 = 0x09;
 /// Serverbound Chat Command — игрок ввёл команду, начиная с косой черты.
 /// Клиент присылает команду без самой черты, одним полем.
 const SERVERBOUND_CHAT_COMMAND: i32 = 0x07;
+// ViaProxy forwards older clients' commands in the signed packet form.
+// Both forms start with the same command string; unsigned commands remain allowed.
+const SERVERBOUND_CHAT_COMMAND_SIGNED: i32 = 0x08;
+fn is_chat_command(id: i32) -> bool {
+    matches!(id, SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_COMMAND_SIGNED)
+}
 
 /// Clientbound System Chat Message — сообщение в чат от сервера.
 const SYSTEM_CHAT: i32 = 0x79;
@@ -613,6 +619,7 @@ const SAME_POSITION: f64 = 0.001;
 /// подключения этот список свой.
 #[derive(Clone, Copy, PartialEq)]
 struct Shown {
+    silent: bool,
     position: Position,
     skin_parts: u8,
     main_hand: u8,
@@ -701,7 +708,7 @@ pub async fn play_session(
     uuid: &[u8; 16],
     look: configuration::ClientLook,
     shared: &Shared,
-    (came_from, came_to): (&str, &str),
+    (came_from, came_to, limbo_entity): (&str, &str, Option<i32>),
     verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
     if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
@@ -757,6 +764,7 @@ pub async fn play_session(
     );
 
     player.restart_attrs_tracking(*shared.ticks.borrow());
+    player.entity_id = limbo_entity.unwrap_or(0);
     player.main_hand = look.main_hand;
     player.view = view_for(shared, &look);
 
@@ -920,8 +928,10 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
     crate::commands_admin::forget_address(uuid);
     shared.advancement_states.lock().expect("достижения захвачены другим потоком").remove(uuid);
 
-    // Снимок — до ухода из списка; вызов плагина — после отпускания замков.
+    // Во время quit игрок и его снимок ещё доступны Bukkit-обработчикам.
+    // Вызов идёт без замков; удаляем запись только после завершения события.
     let view = if crate::plugins::active() { crate::plugins::PlayerView::find(shared, name) } else { None };
+    if let Some(view) = view { crate::plugins::player_quit(&view); }
 
     let removed = shared
         .players
@@ -938,9 +948,6 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
             .expect("чат захвачен другим потоком")
             .push(format!("{} вышел", name));
 
-        if let Some(view) = view {
-            crate::plugins::player_quit(&view);
-        }
     }
 }
 
@@ -991,11 +998,12 @@ async fn enter_world(
     // Заводим игрока в общем списке до Login (Play): оттуда берётся номер его
     // сущности, а его клиент должен узнать этот номер сразу — по нему он
     // отличает себя от остальных. Остальные узнают о нём из журнала.
+    let from_limbo = player.entity_id != 0;
     let member = player.member();
 
     let joined = {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
-        let joined = players.join(member, shared.next_entity_id());
+        let joined = players.join(member, if player.entity_id == 0 { shared.next_entity_id() } else { player.entity_id });
         if joined.is_some() {
             players.set_gear(&player.uuid, player.gear());
             if let Some(control) = stream.session_control() { players.connection(player.uuid, control); }
@@ -1025,6 +1033,9 @@ async fn enter_world(
     // игрока надо из списка убрать, иначе его ник останется «занятым».
     let entered: io::Result<Option<Entered>> = async {
 
+        if from_limbo {
+            send_respawn_after_death(stream, player.dimension, player).await?;
+        } else {
         send_login(
             stream,
             player.dimension,
@@ -1035,6 +1046,7 @@ async fn enter_world(
             shared.properties.online_mode,
         )
         .await?;
+        }
         send_player_abilities(stream, player).await?;
         send_player_position(stream, player).await?;
 
@@ -1126,6 +1138,7 @@ async fn enter_world(
                     worn: [None; 5],
                     speed_bits: 0,
                     sprinting: false,
+                    silent: false,
                     living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
@@ -1605,7 +1618,7 @@ async fn send_add_entity(stream: &mut Outgoing<'_>, member: &Member) -> io::Resu
 /// Летит он не по дуге, как в игре, — сервер сразу считает, где предмет ляжет:
 /// от места броска вниз до первой опоры. Поднять его можно не сразу, иначе он
 /// тут же вернулся бы в руки тому, кто бросил.
-fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
+fn throw_out_raw(shared: &Shared, player: &PlayerState, stack: Stack) -> [u8;16] {
     // Бросок идёт туда, куда игрок смотрит, — с наклоном: в небо предмет
     // летит вверх, под ноги падает сразу. Дальше он летит сам, по дуге.
     let (look_x, look_y, look_z) = looking(player.yaw, player.pitch);
@@ -1626,7 +1639,7 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
         look_z * items::THROW_SPEED,
     );
 
-    shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").drop_from_player(shared.next_entity_id(), stack, from, velocity, player.uuid);
+    let uuid=shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").drop_from_player(shared.next_entity_id(), stack, from, velocity, player.uuid);
 
     log_debug!(
         "Play: {} выбросил предмет {} ({} шт.)",
@@ -1634,6 +1647,22 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
         stack.item,
         stack.count
     );
+    uuid
+}
+
+// Вынужденные выбросы тоже отменяемы; переполнение сохраняется в файле владельца.
+fn throw_out(shared:&Shared,player:&mut PlayerState,stack:Stack)->[u8;16] {
+    let uuid=throw_out_raw(shared,player,stack);
+    if crate::plugins::active()&&cancel_thrown(shared,player,uuid) {player.inventory.retain_drop(stack);player.inventory_after_window=true;}
+    uuid
+}
+fn cancel_thrown(shared:&Shared,player:&PlayerState,uuid:[u8;16])->bool {
+    if crate::plugins::ground_item(&plugin_view(player),&crate::network::login::format_uuid(&uuid),false,0) {shared.items_in(player.dimension).lock().expect("предметы").remove_items(|item|item.uuid==uuid);true} else {false}
+}
+
+// Предмет доступен обработчику как нативная сущность; отмена удаляет только этот бросок.
+fn throw_out_cancelled(shared: &Shared, player: &PlayerState, stack: Stack) -> bool {
+    let uuid=throw_out_raw(shared,player,stack);cancel_thrown(shared,player,uuid)
 }
 
 /// Взгляд как у оригинала: синус и косинус по таблице на 65536 делений
@@ -1675,12 +1704,23 @@ fn drop_into_world(
     at: (f64, f64, f64),
     velocity: (f64, f64, f64),
     delay: u64,
-) {
-    shared
-        .items_in(dimension)
-        .lock()
-        .expect("предметы захвачены другим потоком")
-        .drop_item(shared.next_entity_id(), stack, at, velocity, delay);
+) -> [u8;16] {
+    let entity_id=shared.next_entity_id();let mut items=shared.items_in(dimension).lock().expect("предметы");
+    items.drop_item(entity_id,stack,at,velocity,delay);
+    items.items().iter().find(|item|item.entity_id==entity_id).expect("новый предмет").uuid
+}
+
+// Guard создан до замка мира: при выходе замки освобождаются раньше события.
+struct BlockDropGuard<'a> {shared: &'a Shared,who: crate::plugins::PlayerView,pos: (i32,i32,i32),data: String,items: Vec<[u8;16]>,enabled: bool}
+impl BlockDropGuard<'_> {
+    fn spawn(&mut self, stack: Stack, at: (f64,f64,f64), velocity: (f64,f64,f64), delay: u64) {self.items.push(drop_into_world(self.shared,self.who.dimension,stack,at,velocity,delay));}
+}
+impl Drop for BlockDropGuard<'_> {
+    fn drop(&mut self) {
+        if !self.enabled||!crate::plugins::active()||std::thread::panicking() {return;}
+        let originals:Vec<_>=self.items.iter().map(crate::network::login::format_uuid).collect();let kept=crate::plugins::block_drop(&self.who,self.pos,self.data.clone(),originals);
+        self.shared.items_in(self.who.dimension).lock().expect("предметы").remove_items(|item|self.items.contains(&item.uuid)&&!kept.contains(&crate::network::login::format_uuid(&item.uuid)));
+    }
 }
 
 /// Подбирает то, до чего игрок дотянулся.
@@ -1690,12 +1730,20 @@ fn drop_into_world(
 fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
     let mut slots = Vec::new();
 
+    let mut allowed=std::collections::HashSet::new();
+    if crate::plugins::active() {
+        let candidates=shared.items_in(player.dimension).lock().expect("предметы").pickup_candidates((player.x,player.y,player.z),player.entity_id);
+        let mut predicted=player.inventory.clone();
+        for item in candidates {let mut probe=predicted.clone();let remaining=probe.put(item.stack).1.map_or(0,|s|s.count);if remaining==item.stack.count {continue;}
+            if !crate::plugins::ground_item(&plugin_view(player),&crate::network::login::format_uuid(&item.uuid),true,remaining) {allowed.insert(item.uuid);predicted=probe;}
+        }
+    }
     // Поднимается столько, сколько влезает: остальное остаётся лежать.
     let taken = shared
         .items_in(player.dimension)
         .lock()
         .expect("предметы захвачены другим потоком")
-        .take_near((player.x, player.y, player.z), player.entity_id, |stack| {
+        .take_near_allowed((player.x, player.y, player.z), player.entity_id, |item|!crate::plugins::active()||allowed.contains(&item.uuid), |stack| {
             let (changed, left) = player.inventory.put(stack);
 
             slots.extend(changed);
@@ -3257,6 +3305,9 @@ async fn send_look(
     write_body(stream, body).await
 }
 
+async fn send_silent(stream: &mut Outgoing<'_>, entity: i32, silent: bool) -> io::Result<()> {let mut body=encode_varint(SET_ENTITY_DATA);body.extend_from_slice(&encode_varint(entity));body.push(4);body.extend_from_slice(&encode_varint(8));body.push(u8::from(silent));body.push(PROPERTIES_END);write_body(stream,body).await}
+fn silent_sound(shared: &Shared, dimension: crate::dimension::Dimension, at: Option<(f64,f64,f64)>, entity: Option<i32>) -> bool {let players=shared.players.lock().expect("игроки");players.members().iter().any(|p|p.dimension==dimension&&players.gear(&p.uuid).silent&&(entity==Some(p.entity_id)||at.is_some_and(|at|(p.position.x-at.0).abs()<0.01&&(p.position.y-at.1).abs()<2.0&&(p.position.z-at.2).abs()<0.01)))}
+
 /// Отправляет Entity Animation: чужой игрок взмахнул рукой.
 async fn send_swing(stream: &mut Outgoing<'_>, entity_id: i32) -> io::Result<()> {
     let mut body = encode_varint(ENTITY_ANIMATION);
@@ -3319,9 +3370,19 @@ async fn command_hold_wake(shared: &Shared, uuid: &[u8; 16], wake: &tokio::sync:
 
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
-    let ping = player.keep_alive.latency();
+    let plugin_state = if crate::plugins::active() { crate::presentation::PlayerState {
+        silent: player.silent, silent_owner: player.silent_owner.clone(),
+        flight_owners: player.flight_owners.clone(), flight_allowed: player.flight_allowed(), flying: player.abilities.flying, flight_fall_damage: player.flight_fall_damage,
+        velocity: player.net.last_delta, fire_ticks: player.vit.fire, in_water: player.net.in_water, in_lava: player.net.in_lava,
+        in_rain: shared.world_in(player.dimension).lock().expect("мир").in_rain(player.x, player.y, player.z, 1.8),
+        eye_height: if player.sneaking { 1.27 } else { 1.62 }, effects: player.vit.effects.clone(),
+    } } else { crate::presentation::PlayerState::default() };
     let mut players = shared.players.lock().expect("игроки");
-    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { ping, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
+    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { plugin_state, open_top: player.window.as_ref().map_or_else(|| player.inventory.slots()[..5].to_vec(), |open| open.shown.clone()), open_kind: player.window.as_ref().map_or("CRAFTING", |open| {
+        if crafting::is_table(player) { "WORKBENCH" } else if open.merchant.is_some() { "MERCHANT" } else if let Some(station) = &open.station { match station.kind { crate::enchanting::Station::Anvil => "ANVIL", crate::enchanting::Station::Grindstone => "GRINDSTONE", crate::enchanting::Station::Smithing => "SMITHING", crate::enchanting::Station::Stonecutter => "STONECUTTER", crate::enchanting::Station::Loom => "LOOM", crate::enchanting::Station::Cartography => "CARTOGRAPHY", crate::enchanting::Station::Crafting => "WORKBENCH", crate::enchanting::Station::Enchanting => "ENCHANTING" } } else { match open.kind {
+            Some(containers::Kind::Furnace) => "FURNACE", Some(containers::Kind::BlastFurnace) => "BLAST_FURNACE", Some(containers::Kind::Smoker) => "SMOKER", Some(containers::Kind::Hopper) => "HOPPER", Some(containers::Kind::Dispenser) => "DISPENSER", Some(containers::Kind::Dropper) => "DROPPER", Some(containers::Kind::BrewingStand) => "BREWING", Some(containers::Kind::Beacon) => "BEACON", Some(containers::Kind::Lectern) => "LECTERN", Some(containers::Kind::Crafter) => "CRAFTER", Some(containers::Kind::ShulkerBox) => "SHULKER_BOX", Some(containers::Kind::EnderChest) => "ENDER_CHEST", _ => "CHEST",
+        } }
+    }).into(), cursor: player.inventory.cursor(), inventory: player.inventory.slots().to_vec(), selected: player.inventory.selected() as u32, ping: player.keep_alive.latency(), health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
     if first {
         let packets: Vec<_> = players.ui.list_names.iter().map(|(uuid, (_, name))| crate::presentation::list_packet(uuid, Some(name))).collect();
         for packet in packets { players.order(&player.uuid, Order::Packet(packet)); }
@@ -3449,6 +3510,7 @@ async fn send_other_moves(
                 worn: gear.worn,
                 speed_bits: u64::from(gear.speed_touch),
                 sprinting: gear.sprinting,
+                silent: gear.silent,
                 living: gear.living,
                 effect_colors: gear.effect_colors,
                 health_bits: gear.health.to_bits(),
@@ -3468,10 +3530,11 @@ async fn send_other_moves(
     for (now, entity_id, here, new, gear) in others {
         // Видно только тех, кто в том же измерении: пришёл — показать,
         // ушёл в другое — убрать.
-        let Some(shown) = seen.get(&entity_id).copied() else {
+        let Some(mut shown) = seen.get(&entity_id).copied() else {
             if let Some(member) = new {
                 send_add_entity(stream, &member).await?;
                 send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
+                if now.silent {send_silent(stream,entity_id,true).await?;}
                 let mut slots = vec![(EQUIPMENT_MAIN_HAND, member.held)];
 
                 slots.extend(worn_slots(&now.worn).into_iter().filter(|(_, stack)| stack.is_some()));
@@ -3488,6 +3551,7 @@ async fn send_other_moves(
             continue;
         }
 
+        if phase==Phase::Moves&&now.silent!=shown.silent {send_silent(stream,entity_id,now.silent).await?;shown.silent=now.silent;if let Some(old)=seen.get_mut(&entity_id){old.silent=now.silent;}}
         // Взмах и экипировка идут отдельными проходами, после событий мира:
         // взмах — перед здоровьем, экипировка — после него (чёрный ящик,
         // pvp-fist, pvp-sword-charged).
@@ -3853,11 +3917,16 @@ fn command_access(shared: &Shared, who: &[u8; 16]) -> (i32, bool) {
 
 async fn send_commands(stream: &mut Outgoing<'_>, shared: &Shared, who: &[u8; 16], may_tnt: bool) -> io::Result<()> {
     let level = shared.ops.lock().expect("права").level_of(who);
-    let body = if stream.stream().client_version().protocol() >= 775 { command_tree::packet(level, stream.stream().client_version().protocol(), may_tnt) } else { legacy_commands(may_tnt) };
+    let protocol = stream.stream().client_version().protocol();
+    let body = if protocol >= 775 {
+        let names = crate::plugins::command_names(shared, who);
+        if names.is_empty() { command_tree::packet(level, protocol, may_tnt) }
+        else { command_tree::packet_with_plugins(level, protocol, may_tnt, &names) }
+    } else { legacy_commands(shared, who, may_tnt) };
     write_body(stream, body).await
 }
 
-fn legacy_commands(may_tnt: bool) -> Vec<u8> {
+fn legacy_commands(shared: &Shared, who: &[u8; 16], may_tnt: bool) -> Vec<u8> {
     /// Виды узлов — младшие два бита флагов.
     const NODE_ROOT: u8 = 0x00;
     const NODE_LITERAL: u8 = 0x01;
@@ -4063,6 +4132,20 @@ fn legacy_commands(may_tnt: bool) -> Vec<u8> {
 
     nodes.extend(admin_nodes);
 
+    // Команды плагинов используют серверные подсказки для остатка строки.
+    let mut plugin_roots = Vec::new();
+    for name in crate::plugins::command_names(shared, who) {
+        let at = nodes.len() as i32;
+        plugin_roots.push(at);
+        nodes.push(literal(&name, &[at + 1], true));
+        let mut argument = vec![NODE_ARGUMENT | EXECUTABLE | 0x10, 0];
+        argument.extend(encode_string("аргументы"));
+        argument.extend(encode_varint(PARSER_STRING));
+        argument.extend(encode_varint(GREEDY));
+        argument.extend(encode_string("minecraft:ask_server"));
+        nodes.push(argument);
+    }
+
     // Корень — заново, с новыми словами.
     {
         let mut root = vec![NODE_ROOT];
@@ -4075,6 +4158,7 @@ fn legacy_commands(may_tnt: bool) -> Vec<u8> {
         children.extend((0..WORLD_COMMANDS.len() as i32).map(|index| world_base + index * 2));
         children.extend(extra_roots);
         children.extend(admin_roots);
+        children.extend(plugin_roots);
         root.extend_from_slice(&encode_varint(children.len() as i32));
 
         for child in children {
@@ -4127,7 +4211,23 @@ fn suggestions_for_input(id: i32, text: &str, shared: &Shared, who: &[u8; 16], p
     let level = shared.ops.lock().expect("права").level_of(who);
     if protocol >= 775 && !text.trim_start_matches('/').starts_with("tnt ") {
         let tree = command_tree::for_level(level, protocol);
-        return Some(command_completion::complete(&tree, id, text, shared, who));
+        let mut result = command_completion::complete(&tree, id, text, shared, who);
+        let line = text.strip_prefix('/').unwrap_or(text);
+        if !line.contains(' ') {
+            let names = crate::plugins::command_names(shared, who);
+            append_plugin_root_hints(&mut result, text, &names);
+        } else {
+            let command = line.split(' ').next().unwrap_or("");
+            let names = crate::plugins::command_names(shared, who);
+            if names.iter().any(|name| name.eq_ignore_ascii_case(command)) {
+                let typed = line.rsplit(' ').next().unwrap_or("");
+                let matches = crate::plugins::tab_complete(shared, who, line).unwrap_or_default()
+                    .into_iter().filter(|value| value.starts_with(typed)).collect::<Vec<_>>();
+                result = Suggestions { id, start: text_length(text) - text_length(typed), length: text_length(typed),
+                    tooltips: vec![None; matches.len()], matches };
+            }
+        }
+        return Some(result);
     }
 
     // Дописывается последнее слово: от него и считаем место замены.
@@ -4147,6 +4247,27 @@ fn suggestions_for_input(id: i32, text: &str, shared: &Shared, who: &[u8; 16], p
     })
 }
 
+/// Дополняем только корневое слово; диапазоны и пояснения ванильных
+/// подсказок остаются согласованы с UTF-16 клиента.
+fn append_plugin_root_hints(result: &mut Suggestions, text: &str, names: &[String]) {
+    let line = text.strip_prefix('/').unwrap_or(text);
+    let typed = line.to_ascii_lowercase();
+    let names: Vec<_> = names.iter().filter(|name| name.starts_with(&typed)).collect();
+    if names.is_empty() { return; }
+    if result.matches.is_empty() {
+        result.start = i32::from(text.starts_with('/'));
+        result.length = text_length(line);
+    }
+    result.tooltips.resize(result.matches.len(), None);
+    let mut matches: Vec<_> = std::mem::take(&mut result.matches).into_iter()
+        .zip(std::mem::take(&mut result.tooltips)).collect();
+    matches.extend(names.into_iter().map(|name| (name.clone(), None)));
+    matches.sort_by_cached_key(|(name, _)| (name.to_lowercase(), name.clone()));
+    matches.dedup_by(|a, b| a.0 == b.0);
+    matches.truncate(1000);
+    (result.matches, result.tooltips) = matches.into_iter().unzip();
+}
+
 /// Что подсказать: имена игроков, названия предметов или что-то ещё —
 /// смотря какая команда и какое слово по счёту дописывается.
 fn hints_for(text: &str, typed: &str, shared: &Shared, who: &[u8; 16]) -> Vec<String> {
@@ -4161,6 +4282,14 @@ fn hints_for(text: &str, typed: &str, shared: &Shared, who: &[u8; 16]) -> Vec<St
     let starting = |list: &mut dyn Iterator<Item = &str>| -> Vec<String> {
         list.filter(|word| word.starts_with(typed)).map(|word| word.to_string()).collect()
     };
+
+    if written == 0 {
+        let names = crate::plugins::command_names(shared, who);
+        let matches: Vec<_> = names.into_iter().filter(|name| name.starts_with(command)).collect();
+        if !matches.is_empty() { return matches; }
+    } else if let Some(values) = crate::plugins::tab_complete(shared, who, line) {
+        return values.into_iter().filter(|value| value.starts_with(typed)).collect();
+    }
 
     // Особый динамит: подсказки — только тем, кому он позволен.
     if command == "tnt" && !crate::permissions::allowed(shared, who, crate::custom_tnt::GIVE_NODE) {
@@ -4611,8 +4740,9 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::Sound(sound) if sound.except == Some(player.entity_id) => {}
-            WorldEvent::Sound(sound) => send_sound(stream, sound).await?,
+            WorldEvent::Sound(sound) => {if !sound.of_player||!silent_sound(shared,player.dimension,sound.exact,None) {send_sound(stream,sound).await?;}},
             WorldEvent::EntitySound { entity_id, name, volume, pitch } => {
+                if silent_sound(shared,player.dimension,None,Some(*entity_id)) {continue;}
                 let mut body = encode_varint(ENTITY_SOUND);
 
                 body.extend_from_slice(&encode_varint(0));
@@ -4953,6 +5083,7 @@ async fn open_window(
     player: &mut PlayerState,
     at: (i32, i32, i32),
 ) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     // Повторное открытие тоже закрывает личную сетку, иначе входы потеряются.
     if crafting::is_table(player) { close_own_window(shared, player); }
     let (halves, slots, kind) = {
@@ -5047,7 +5178,7 @@ async fn open_window(
         props: props.clone(),
         merchant: None,
         station: None,
-        ender: kind == containers::Kind::EnderChest,
+        plugin_chest: None, ender: kind == containers::Kind::EnderChest,
     });
     send_window_content(stream, player, shared.catalog()).await?;
 
@@ -5080,6 +5211,7 @@ async fn open_window(
 /// Chest: «27 slots», как у сундука; Minecart with Hopper: 5 ячеек, окно
 /// воронки). Заголовок — имя сущности. [проверить]: заголовок.
 async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, entity_id: i32) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     let found = {
         let items=shared.items_in(player.dimension).lock().expect("предметы");
         if let Some(mob)=items.mobs().iter().find(|m| m.entity_id==entity_id && crate::mob::land::llama(m.kind) && m.land.tamed && !m.is_dead()) {
@@ -5099,7 +5231,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     else { body.extend_from_slice(&encode_varint(menu)); body.extend_from_slice(&nbt::translated(title)); }
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, plugin_chest: None, ender: false });
     send_window_content(stream, player, shared.catalog()).await
 }
 
@@ -5187,6 +5319,24 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     let Some(window) = &player.window else {
         return Ok(());
     };
+
+    if let Some(chest) = &window.plugin_chest {
+        let (active, slots) = { let chest = chest.lock().expect("сундук"); (chest.active, chest.slots.clone()) };
+        if !active {
+            let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+            body.extend(encode_varint(window.id));
+            write_body(stream, body).await?;
+            close_own_window(shared, player);
+            send_container_content(stream, player, shared.catalog()).await?;
+        } else {
+            let changed: Vec<_> = slots.iter().enumerate().filter(|(i, item)| window.shown[*i] != **item).map(|(i, item)| (i, *item)).collect();
+            for (slot, stack) in changed {
+                player.window.as_mut().expect("окно").shown[slot] = stack;
+                send_window_slot(stream, player, slot, stack).await?;
+            }
+        }
+        return Ok(());
+    }
 
     // Окно станка живёт, пока стоит станок.
     if window.station.is_some() {
@@ -5317,6 +5467,18 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
         return;
     };
 
+    if let Some(chest) = &window.plugin_chest {
+        let (owner, handle) = { let chest = chest.lock().expect("сундук"); (chest.owner.clone(), chest.handle) };
+        crate::plugins::inventory_event(&owner, &plugin_view(player), handle, 1, (-1, 0, 0));
+        // Курсор принадлежит игроку: после закрытия не теряется и не копируется.
+        if let Some(stack) = player.inventory.cursor() {
+            player.inventory.set_cursor(None);
+            if let Some(rest) = player.inventory.put(stack).1 { throw_out(shared, player, rest); }
+            player.inventory_after_window = true;
+        }
+        return;
+    }
+
     // Станок: предметы из его ячеек возвращаются игроку.
     if window.station.is_some() {
         if station::give_back(shared, player, &window) {
@@ -5335,6 +5497,7 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
 
     // Окно торговли: житель свободен; оплата, если осталась, — в инвентарь.
     if let Some(trade) = window.merchant {
+        merchant::notify_close(shared,player,&trade);
         for stack in trade.slots[..2].iter().flatten() {
             if let Some(rest) = player.inventory.put(*stack).1 { throw_out(shared, player, rest); }
         }
@@ -5671,6 +5834,7 @@ async fn send_pending_player_changes(
                 // второй раз в мир не добавляется: клиент заменил бы сущность
                 // новой, а она и так на месте.
                 let shown = Shown {
+                    silent: false,
                     position: member.position,
                     skin_parts: member.skin_parts,
                     main_hand: member.main_hand,
@@ -5719,6 +5883,7 @@ async fn send_pending_player_changes(
 
                 if shown {
                     let now = Shown {
+                        silent: false,
                         position: member.position,
                         skin_parts: member.skin_parts,
                         main_hand: member.main_hand,
@@ -5914,7 +6079,6 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
             }, def.title);
 
             shared.chat.lock().expect("чат захвачен другим потоком").push_rich(line.clone(), None, Some(crate::scoreboard::encode_component(&component)));
-            log_info!("{}", line);
         }
     }
 
@@ -6734,7 +6898,12 @@ async fn read_and_log_play_packets(
             // (play/sleep.rs).
             let mut target = None;
             let order = if respawning {
-                let found = sleep::respawn_target(shared, player);
+                let mut found = sleep::respawn_target(shared, player);
+                if crate::plugins::active() {
+                    let who = plugin_view(player);let mut to = who.clone();to.dimension = found.dimension;to.x = found.at.0;to.y = found.at.1;to.z = found.at.2;to.yaw = found.yaw.unwrap_or(player.yaw);
+                    let to = crate::plugins::respawn(&who, &to, found.bed_spawn, found.anchor_spawn);
+                    found.dimension = to.dimension;found.at = (to.x, to.y, to.z);found.yaw = Some(to.yaw);player.pitch = to.pitch;
+                }
                 let (dimension, (x, y, z)) = (found.dimension, found.at);
 
                 target = Some(found);
@@ -6747,6 +6916,7 @@ async fn read_and_log_play_packets(
 
             match order {
                 Order::Respawn => {}
+                Order::PluginSpawn { point } => { player.respawn = point;player.save_with_catalog(&shared.playerdata, shared.catalog()); }
                 Order::WakeUp => player.wake_due = true,
                 Order::Message { component } => {
                     let mut body = encode_varint(SYSTEM_CHAT);
@@ -6759,9 +6929,14 @@ async fn read_and_log_play_packets(
                     vitals::command_hit(stream, shared, player, amount, source, origin).await?;
                 }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
-                Order::PluginFlight { owner, field, value } => {
-                    if player.apply_plugin_flight(owner, field, value) { send_player_abilities(stream, player).await?; }
+                Order::Health { value } => vitals::set_health(stream, shared, player, value).await?,
+                Order::PluginFlight {owner,field,value} => {
+                    if !player.apply_plugin_flight(owner, field, value) { continue; }
+                    send_player_abilities(stream, player).await?;
                 },
+                Order::PluginSilent {owner,value} => {if value.is_none()&&player.silent_owner.as_deref()!=Some(&owner) {continue;}player.silent=value.unwrap_or(false);player.silent_owner=value.map(|_|owner);send_silent(stream,player.entity_id,player.silent).await?;},
+                Order::PluginFire { ticks } => player.vit.fire = ticks,
+                Order::PluginVelocity { value } => {player.net.velocity = Some(value);send_velocity(stream, player.entity_id, value).await?;},
                 Order::Effect(effect) => {
                     vitals::give_effect(stream, player, effect).await?;
                     // Мгновенный эффект виден соседям до его удаления в ходе
@@ -7156,6 +7331,33 @@ async fn read_and_log_play_packets(
                     send_container_slot(stream, player, slot).await?;
                 }
 
+                Order::PluginOpen { chest } => {
+                    let (title, slots, active) = { let gui = chest.lock().expect("сундук"); (gui.title.clone(), gui.slots.clone(), gui.active) };
+                    if !active { continue; }
+                    if player.window.as_ref().and_then(|open| open.plugin_chest.as_ref()).is_some_and(|old| std::sync::Arc::ptr_eq(old, &chest)) { send_window_content(stream, player, shared.catalog()).await?; continue; }
+                    close_own_window(shared, player);
+                    for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
+                    player.window_counter = player.window_counter % WINDOW_IDS + 1;
+                    let id = player.window_counter;
+                    let mut body = encode_varint(OPEN_SCREEN);
+                    body.extend(encode_varint(id));
+                    body.extend(encode_varint(slots.len() as i32 / 9 - 1));
+                    let title: serde_json::Value = serde_json::from_str(&title).expect("заголовок проверен хозяином");
+                    body.extend(crate::scoreboard::encode_component(&title));
+                    write_body(stream, body).await?;
+                    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: None, shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false, plugin_chest: Some(chest) });
+                    send_window_content(stream, player, shared.catalog()).await?;
+                }
+                Order::PluginClose { owner } => {
+                    if let Some(open) = player.window.as_ref().filter(|open| open.plugin_chest.as_ref().is_none_or(|chest| chest.lock().expect("сундук").owner == owner)) {
+                        let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+                        body.extend(encode_varint(open.id));
+                        write_body(stream, body).await?;
+                        close_own_window(shared, player);
+                        for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
+                        send_container_content(stream, player, shared.catalog()).await?;
+                    }
+                }
                 Order::SetEnderSlot { slot, stack } => {
                     player.ender[slot] = stack;
                     player.save_with_catalog(&shared.playerdata, shared.catalog());
@@ -7357,7 +7559,7 @@ async fn read_and_log_play_packets(
                     // перенос на +1 мс при любой фазе, у нас на +27 — падающий робот
                     // успевал на тик меньше). Мир при этом не меняется: до начала
                     // такта всё равно ничего не идёт.
-                    let at_once = packet.id == SERVERBOUND_CHAT_COMMAND && *ticks.borrow() >= *starts.borrow();
+                    let at_once = is_chat_command(packet.id) && *ticks.borrow() >= *starts.borrow();
 
                     if gated && !at_once {
                         // Ждать начала такта с неотправленным нельзя: оно
@@ -7419,7 +7621,7 @@ async fn read_and_log_play_packets(
                     // уже в этом такте, до шага сущностей, как у оригинала
                     // (minecart-push: вагонетку толкает в такте команды). Пакет
                     // переноса клиенту уйдёт с поручением на ближайшем круге.
-                    let moved = if packet.id == SERVERBOUND_CHAT_COMMAND {
+                    let moved = if is_chat_command(packet.id) {
                         shared.players.lock().expect("список игроков захвачен другим потоком").pending_teleport(&player.uuid)
                     } else {
                         None
@@ -7444,7 +7646,7 @@ async fn read_and_log_play_packets(
                     // Пакеты одной границы — подряд, без рассылки чанков и хода
                     // здоровья между движением и броском. FIFO сохраняется;
                     // команду и её поручения разбирает следующий круг.
-                    incoming = if packet.id == SERVERBOUND_CHAT_COMMAND { None } else { inbound.take_gameplay(*starts.borrow()) };
+                    incoming = if is_chat_command(packet.id) { None } else { inbound.take_gameplay(*starts.borrow()) };
                 }
                 // Запись на диск — после пачки: она не задерживает движение
                 // перед следующим Use Item на той же границе такта.
@@ -7463,7 +7665,7 @@ async fn read_and_log_play_packets(
 fn is_gated(packet_id: i32) -> bool {
     matches!(
         packet_id,
-        USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND | ATTACK
+        USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_COMMAND_SIGNED | ATTACK
             | SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION | SET_PLAYER_ROTATION | SET_PLAYER_ON_GROUND
             | vitals::PLAYER_COMMAND | PLAYER_INPUT | vehicle::VEHICLE_MOVE | vehicle::STEER_BOAT
             // Взмах и смена ячейки тоже ждут начала такта: взмах сбрасывает
@@ -7941,6 +8143,8 @@ async fn apply_reaction(
         send_suggestions(stream, hints).await?;
     }
 
+    if reaction.window_content { send_window_content(stream, player, shared.catalog()).await?; }
+
     for (slot, stack) in reaction.window_slots.clone() {
         send_window_slot(stream, player, slot, stack).await?;
     }
@@ -8063,6 +8267,7 @@ struct Reaction {
 
     /// Ячейки открытого окна хранилища, которые клиент предсказал не так.
     window_slots: Vec<(usize, Option<Stack>)>,
+    window_content: bool,
 
     /// Ячейка окна, опустевшая при закрытии (книга с кафедры): номер окна и ячейка.
     emptied: Option<(i32, usize)>,
@@ -8153,6 +8358,7 @@ fn handle_client_packet(
         // возвращаем настоящую руку, иначе пустая рука вызывает второй Use.
         reaction.inventory=true;
     }
+    if player.inventory.restore_retained() {reaction.inventory=true;reaction.window_content=player.window.is_some();}
 
     // Бездействие (`setidletimeout`): движение и повороты считаются делом,
     // только если место или взгляд правда изменились; ответы на Keep Alive и
@@ -8177,6 +8383,7 @@ fn handle_client_packet_inner(
     let payload = packet.payload();
     let mut reaction = Reaction::default();
 
+    if packet.id==CLICK_CONTAINER && crate::plugins::active() && native_inventory_cancelled(shared,player,payload) {reaction.inventory=true;reaction.window_content=player.window.is_some();reaction.cursor=Some(player.inventory.cursor());return reaction;}
     match packet.id {
         SERVERBOUND_ABILITIES => {
             if let Some(flags)=payload.first() {
@@ -8224,6 +8431,8 @@ fn handle_client_packet_inner(
                 log_debug!("Play: {} прислал недопустимое место {} {} {}", player.name, x, y, z);
                 return reaction;
             }
+
+            let previous_rotation = (player.yaw, player.pitch);
 
             // В пакете «позиция и поворот» углы идут сразу за координатами.
             if packet.id == SET_PLAYER_POSITION_AND_ROTATION
@@ -8282,6 +8491,21 @@ fn handle_client_packet_inner(
 
             let from = (player.x, player.y, player.z);
 
+            let (x, y, z) = if crate::plugins::active() {
+                let mut who = plugin_view(player);
+                who.yaw = previous_rotation.0; who.pitch = previous_rotation.1;
+                let mut to = plugin_view(player); to.x = x; to.y = y; to.z = z;
+                let flags = if packet.id == SET_PLAYER_POSITION { POSITION_BYTES } else { POSITION_BYTES + ROTATION_BYTES };
+                let jump = player.on_ground && y > player.y && payload.get(flags).is_some_and(|flag| flag & ON_GROUND_FLAG == 0);
+                let Some(to) = crate::plugins::player_move(&who, &to, jump) else {
+                    player.yaw = previous_rotation.0; player.pitch = previous_rotation.1;
+                    reaction.resync = true;
+                    return reaction;
+                };
+                reaction.resync |= (to.x, to.y, to.z, to.yaw, to.pitch) != (x, y, z, player.yaw, player.pitch);
+                player.set_rotation(to.yaw, to.pitch);
+                (to.x, to.y, to.z)
+            } else { (x, y, z) };
             player.moved_since_tp = true;
             player.set_position(x, y, z);
 
@@ -8299,7 +8523,12 @@ fn handle_client_packet_inner(
         }
         SET_PLAYER_ROTATION => {
             if let Some((yaw, pitch)) = read_rotation(payload, 0) {
-                player.set_rotation(yaw, pitch);
+                if crate::plugins::active() && !player.awaiting_teleport && !player.vit.dead {
+                    let who = plugin_view(player);let mut to = who.clone();to.yaw = yaw;to.pitch = pitch;
+                    let Some(to) = crate::plugins::player_move(&who, &to, false) else { reaction.resync = true;return reaction; };
+                    reaction.resync |= (to.x, to.y, to.z, to.yaw, to.pitch) != (player.x, player.y, player.z, yaw, pitch);
+                    player.set_position(to.x, to.y, to.z);player.set_rotation(to.yaw, to.pitch);
+                } else { player.set_rotation(yaw, pitch); }
             }
 
             // До подтверждения переноса клиент ещё на старом месте.
@@ -8395,6 +8624,11 @@ fn handle_client_packet_inner(
             }
         }
         USE_ENTITY => {
+            if crate::plugins::active() && !player.vit.dead && player.game_mode!=GAME_MODE_SPECTATOR
+                && let Some((uuid,hand,slot))=armor_stands::plugin_target(payload,player,shared) {
+                publish_ui(shared,player);
+                if crate::plugins::entity_interact(&plugin_view(player),&uuid,hand,slot) {reaction.inventory=true;return reaction;}
+            }
             let mut cursor = Cursor::new(payload);
 
             // Вторая рука пробует, только если основной делать нечего: у
@@ -8433,7 +8667,7 @@ fn handle_client_packet_inner(
                     .push(format!("<{}> {}", player.name, text));
             }
         }
-        SERVERBOUND_CHAT_COMMAND => {
+        SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_COMMAND_SIGNED => {
             if let Some(command) = Cursor::new(payload).string() {
                 if !crate::auth::sensitive_command(&command) { log_debug!("{} ввёл команду: /{}", player.name, command); }
 
@@ -8494,6 +8728,7 @@ fn handle_client_packet_inner(
             // Что бы клиент ни нащёлкал, ответом идёт содержимое инвентаря
             // с сервера: если щелчок понят — новое, если нет — прежнее.
             // Так картинка у клиента не разойдётся с сервером.
+            let before=crate::plugins::active().then(||player.inventory.clone());
             let click = read_click(payload, player);
 
             if !click.understood {
@@ -8502,8 +8737,7 @@ fn handle_client_packet_inner(
 
             // Выброшенное падает на землю рядом с игроком.
             if let Some(stack) = click.thrown {
-                player.progress.dropped(stack.item, stack.count);
-                throw_out(shared, player, stack);
+                if crate::plugins::active() {if throw_out_cancelled(shared,player,stack) {player.inventory=before.expect("снимок инвентаря");}else {player.progress.dropped(stack.item,stack.count);}}else {player.progress.dropped(stack.item,stack.count);throw_out(shared,player,stack);}
             }
 
             reaction.inventory = true;
@@ -8638,6 +8872,14 @@ fn handle_client_packet_inner(
             let mut cursor = Cursor::new(payload);
 
             if let Some(slot) = cursor.u16() {
+                if slot < 9 && i32::from(slot) != player.inventory.selected() && crate::plugins::active() {
+                    publish_ui(shared, player);
+                    if crate::plugins::item_event(&plugin_view(player), 0, i32::from(slot)) {
+                        let mut body = encode_varint(SET_HELD_ITEM);body.extend(encode_varint(player.inventory.selected()));
+                        shared.players.lock().expect("игроки").order(&player.uuid, Order::Packet(body));
+                        return reaction;
+                    }
+                }
                 log_debug!(
                     "Play: игрок выбрал слот {} (байты: {})",
                     slot,
@@ -9519,6 +9761,11 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         format_hex(payload)
     );
 
+    if status == STARTED_DIGGING && crate::plugins::active() && face <= 5 && within_reach(player, (x, y, z))
+        && crate::plugins::interact(&plugin_view(player), 0, 0, Some((x, y, z)), u32::from(face)) & 1 != 0
+    {
+        return Some(Reaction { confirm: vec![(x, y, z)], ..Reaction::accepted(sequence) });
+    }
     // Действия без блока применяем только после полного разбора пакета.
     // Иначе один байт release мог потратить стрелу, а хвост jab — повредить копьё.
     if matches!(status, 5..=7)
@@ -9537,6 +9784,10 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     // Обычная проба official775: action6 меняет обе руки без потери числа
     // предметов (observations-player-actions-26.3.md). Позиция тут не блок.
     if status == 6 {
+        if crate::plugins::active() {
+            publish_ui(shared, player);
+            if crate::plugins::item_event(&plugin_view(player), 2, 0) { return Some(Reaction { slots: vec![player.inventory.selected_slot(), inventory::OFFHAND], ..Reaction::default() }); }
+        }
         let main = player.inventory.selected_slot();
         let held = player.inventory.slot(main);
         let offhand = player.inventory.slot(inventory::OFFHAND);
@@ -9563,6 +9814,8 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             return Some(Reaction::default());
         };
 
+        let notified=crate::plugins::active();
+        if notified && throw_out_cancelled(shared,player,if status==DROP_STACK {held}else {held.with_count(1)}) {return Some(Reaction {inventory:true,..Reaction::default()});}
         let thrown = if status == DROP_STACK {
             player.inventory.set(
                 inventory::FIRST_HOTBAR + player.inventory.selected(),
@@ -9575,7 +9828,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         };
 
         player.progress.dropped(thrown.item, thrown.count);
-        throw_out(shared, player, thrown);
+        if !notified {throw_out(shared, player, thrown);}
 
         return Some(Reaction {
             slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected()],
@@ -9669,6 +9922,9 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         }
     }
 
+    let mut data=format!("minecraft:{}",blocks::block_at_state(state).unwrap_or("air"));
+    if let Some(block)=blocks::orientation_of(state) {let props:Vec<_>=block.properties.iter().filter_map(|p|Some(format!("{}={}",p.name,block.value(state,p.name)?))).collect();if !props.is_empty(){data.push_str(&format!("[{}]",props.join(",")));}}
+    let mut block_drops=BlockDropGuard {shared,who:plugin_view(player),pos:(x,y,z),data,items:Vec::new(),enabled:false};
     if blocks::block_at_state(state) == Some("turtle_egg") {
         let silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
         let drop_egg = !creative && silk && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
@@ -9677,8 +9933,9 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         else { crate::mob::water::eggs::break_one(&mut world,(x,y,z)); }
         redstone::settle(&mut world);
         drop(world);
+        block_drops.enabled=!creative&&shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
         if drop_egg && let Some(item) = blocks::item_named("turtle_egg") {
-            drop_into_world(shared,player.dimension,Stack::new(item,1),(f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),(0.0,0.2,0.0),items::MINED_DELAY);
+            block_drops.spawn(Stack::new(item,1),(f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),(0.0,0.2,0.0),items::MINED_DELAY);
         }
         return Some(answer);
     }
@@ -9754,6 +10011,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         return Some(if creative { answer } else { Reaction::accepted(sequence) });
     };
 
+    block_drops.enabled=!creative&&drops;
     *mined = Some(broken);
     crate::frost::broken(&mut world, (x, y, z), broken, creative, hive_silk);
 
@@ -9761,7 +10019,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         if player.game_mode != GAME_MODE_CREATIVE && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
             for stack in crate::pottery::drops_with_data(sides,pot_data,player.inventory.held()) {
                 let scattered = crate::tick::scattered((x,y,z),|| f64::from(world.random_unit()));
-                drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY);
+                block_drops.spawn(stack,scattered.0,scattered.1,items::MINED_DELAY);
             }
         }
         return Some(Reaction::accepted(sequence));
@@ -9773,7 +10031,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         if !creative { player.progress.mined(broken); }
         let scattered=crate::tick::scattered((x,y,z),||f64::from(world.random_unit()));
         drop(world);
-        if let Some(stack)=stack { drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY); }
+        if let Some(stack)=stack { block_drops.spawn(stack,scattered.0,scattered.1,items::MINED_DELAY); }
         return Some(Reaction::accepted(sequence));
     }
 
@@ -9792,7 +10050,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         drop(world);
 
         if let Some((stack, (at, velocity))) = placed {
-            drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+            block_drops.spawn(stack, at, velocity, items::MINED_DELAY);
         }
 
         return Some(Reaction::accepted(sequence));
@@ -9810,7 +10068,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             }
             player.progress.mined(broken);
             drop(world);
-            if let Some(stack)=stack {drop_into_world(shared,player.dimension,stack,(f64::from(x)+0.5,f64::from(y)+0.25,f64::from(z)+0.5),(0.0,0.0,0.0),items::MINED_DELAY);}
+            if let Some(stack)=stack {block_drops.spawn(stack,(f64::from(x)+0.5,f64::from(y)+0.25,f64::from(z)+0.5),(0.0,0.0,0.0),items::MINED_DELAY);}
         }
         return Some(Reaction::accepted(sequence));
     }
@@ -9858,7 +10116,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             drop(world);
 
             for (stack, (at, velocity)) in placed {
-                drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+                block_drops.spawn(stack, at, velocity, items::MINED_DELAY);
             }
 
             return Some(Reaction::accepted(sequence));
@@ -9869,7 +10127,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         // Мир отпускаем: класть предметы будем под другим замком.
         drop(world);
         for (stack, (at, velocity)) in placed {
-            drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+            block_drops.spawn(stack, at, velocity, items::MINED_DELAY);
             log_debug!("Play: из блока в {} {} {} выпал предмет {} × {}", x, y, z, stack.item, stack.count);
         }
     }
@@ -9915,8 +10173,20 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     /// Вторая рука в поле `hand`.
     const OFF_HAND: i32 = 1;
 
+    let mut interaction=0;
+    if crate::plugins::active() {
+        let mut cursor = Cursor::new(payload);
+        let hand = cursor.varint()?;let clicked = cursor.position()?;let face = cursor.varint()?;
+        cursor.f32()?;cursor.f32()?;cursor.f32()?;cursor.u8()?;let sequence = cursor.sequence()?;
+        if !(0..=1).contains(&hand) || !(0..=5).contains(&face) { return Some(Reaction::accepted(sequence)); }
+        interaction=crate::plugins::interact(&plugin_view(player), 1, hand as u32, Some(clicked), face as u32);
+        if interaction & 3 == 3 {
+            let adjacent = offset_towards(clicked.0, clicked.1, clicked.2, face);
+            return Some(Reaction { confirm: vec![clicked, adjacent], slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected(), inventory::OFFHAND], ..Reaction::accepted(sequence) });
+        }
+    }
     if Cursor::new(payload).varint()? != OFF_HAND {
-        return place_with_main_hand(payload, player, shared);
+        return place_with_main_hand(payload, player, shared, interaction);
     }
 
     let main = inventory::FIRST_HOTBAR + player.inventory.selected();
@@ -9928,7 +10198,7 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     };
 
     swap(player);
-    let mut reaction = place_with_main_hand(payload, player, shared);
+    let mut reaction = place_with_main_hand(payload, player, shared, interaction);
     swap(player);
 
     if let Some(reaction) = &mut reaction {
@@ -9953,7 +10223,7 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
 ///
 /// Возвращает ответ клиенту: подтверждение и, если блок не поставлен, —
 /// настоящее состояние того места, куда он его ставил.
-fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Shared, interaction:u32) -> Option<Reaction> {
     let mut cursor = Cursor::new(payload);
 
     let hand = cursor.varint()?;
@@ -10024,14 +10294,14 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         return Some(refused);
     }
 
-    if let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence) {
+    if interaction & 1 == 0 && let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence, interaction) {
         return Some(reaction);
     }
 
     // Щелчок по рычагу, кнопке, двери, повторителю — это не установка, а
     // действие с ними, и рука тут ни при чём: щёлкают и пустой. Присев,
     // игрок всё-таки ставит блок.
-    if !player.sneaking {
+    if interaction & 1 == 0 && (!player.sneaking || interaction & 4 != 0) {
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         // Командный блок: оператору в творческом режиме — его данные (окно
@@ -10069,7 +10339,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Око в рамку портала, светокамень в якорь, кусок торта. Порядок —
         // как у прочих щелчков (чёрный ящик, comparator-click): повтор
         // блока, повтор за гранью, потом общая рассылка.
-        let held_name = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
+        let held_stack = if interaction & 2 == 0 {player.inventory.held()} else {None};
+        let held_name = held_stack.and_then(|stack| blocks::item_name(stack.item));
 
         // Кровать: сон, точка возрождения, взрыв вне обычного мира; якорь:
         // точка возрождения в Незере, взрыв вне его (play/sleep.rs).
@@ -10107,7 +10378,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // внутри. Окна у него нет; пустой и без пластинки в руке — щелчок
         // идёт дальше, как по обычному блоку.
         if kind == Some(containers::Kind::Jukebox)
-            && let Some(took) = redstone::use_jukebox(&mut world, clicked, player.inventory.held())
+            && let Some(took) = redstone::use_jukebox(&mut world, clicked, held_stack)
         {
             world.tell_directly(clicked_x, clicked_y, clicked_z);
             world.tell_directly(bx, by, bz);
@@ -10127,7 +10398,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Яйцо призыва по спавнеру меняет его вид; яйцо тратится в выживании
         // (вики, Monster Spawner; чёрный ящик, spawner-egg: блок, блок за гранью,
         // блок, данные блока, ячейка).
-        if let Some(entity) = player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).and_then(crate::spawner::egg_entity).map(str::to_string)
+        if let Some(entity) = held_name.and_then(crate::spawner::egg_entity).map(str::to_string)
             && blocks::block_at_state(world.get_block(clicked_x, clicked_y, clicked_z)) == Some("spawner")
             && crate::mob::Kind::from_name(&entity).is_some()
         {
@@ -10160,7 +10431,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         let mut kind = kind.filter(|kind| !matches!(kind, containers::Kind::Jukebox | containers::Kind::Campfire));
 
         if kind == Some(containers::Kind::Lectern) {
-            match redstone::lectern::place_book(&mut world, clicked, player.inventory.held(), 0) {
+            match redstone::lectern::place_book(&mut world, clicked, held_stack, 0) {
                 Some(true) => {
                     world.tell_directly(clicked_x, clicked_y, clicked_z);
                     world.tell_directly(bx, by, bz);
@@ -10178,7 +10449,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Полка: ячейка по точке щелчка меняется с рукой, под током —
         // сцепка с правой частью панели (redstone/shelf.rs). Порядок как
         // у прочих щелчков: звук, повтор блока и за гранью, пачка, данные.
-        if kind == Some(containers::Kind::Shelf) {
+        if interaction & 2 == 0 && kind == Some(containers::Kind::Shelf) {
             let hotbar: Vec<Option<inventory::Stack>> =
                 (0..9).map(|index| player.inventory.slot(inventory::FIRST_HOTBAR + index)).collect();
             let selected = player.inventory.selected() as usize;
@@ -10224,7 +10495,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Резной книжный шкаф: книга из руки — в ячейку под точкой щелчка,
         // из занятой ячейки — игроку (redstone/bookshelf.rs).
         if kind == Some(containers::Kind::ChiseledBookshelf) {
-            match redstone::bookshelf::use_bookshelf(&mut world, clicked, face, (cursor_x, cursor_y, cursor_z), player.inventory.held()) {
+            match redstone::bookshelf::use_bookshelf(&mut world, clicked, face, (cursor_x, cursor_y, cursor_z), held_stack) {
                 Some(used) => {
                     world.tell_directly(clicked_x, clicked_y, clicked_z);
                     world.tell_directly(bx, by, bz);
@@ -10300,7 +10571,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         }
 
-        if let Some(held)=player.inventory.held()
+        if interaction & 2 == 0 && let Some(held)=player.inventory.held()
             && let Some(name)=blocks::item_name(held.item)
             && crate::mob::newblocks::statue_use(&mut world,clicked,name)
         {
@@ -10392,6 +10663,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
     }
+
+    if interaction & 2 != 0 {return Some(refused);}
 
     if let Some(reaction) = debug_stick::interact(shared, player, (clicked_x,clicked_y,clicked_z), face, false, sequence) {
         return Some(reaction);
@@ -10925,6 +11198,10 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     // pvp-shield: от взгляда зависит, держит ли щит удар).
     if !player.awaiting_teleport {
         player.set_rotation(yaw, pitch);
+    }
+
+    if crate::plugins::active() && (0..=1).contains(&hand) && crate::plugins::interact(&plugin_view(player), 3, hand as u32, None, 6) & 2 != 0 {
+        return Some(Reaction { slots: vec![inventory::FIRST_HOTBAR + player.inventory.selected(), inventory::OFFHAND], ..answer });
     }
 
     if let Some(answer) = equipment_sound::use_item(shared, player, hand, sequence) { return Some(answer); }
@@ -11510,6 +11787,12 @@ fn select_bundle(shared: &Shared, player: &mut PlayerState, slot: i32, index: i3
         if let Some(s) = view.get(slot as usize).filter(|s| crate::bundle::is_bundle(s.item)) { view.set(slot as usize, Some(crate::bundle::select(s, index))); }
         return;
     }
+    if let Some(chest) = &open.plugin_chest {
+        let mut chest = chest.lock().expect("сундук");
+        if let Some(stack) = chest.slots.get_mut(slot as usize).and_then(Option::as_mut).filter(|s| crate::bundle::is_bundle(s.item)) { *stack = crate::bundle::select(*stack, index); }
+        open.shown.clone_from(&chest.slots);
+        return;
+    }
     let mut world = shared.world_in(player.dimension).lock().expect("мир");
     let mut slots = if let Some(cart) = open.cart { cart_slots(shared, player.dimension, cart).unwrap_or_default() }
         else if open.ender { player.ender.clone() } else { containers::window_slots(&world, &open.halves) };
@@ -11525,6 +11808,57 @@ fn select_bundle(shared: &Shared, player: &mut PlayerState, slot: i32, index: i3
     } else if open.ender { player.ender.clone_from(&slots); }
     else { containers::store_window_slots(&mut world, &open.halves, &slots); }
     open.shown = slots;
+}
+
+fn prepare_plugin_drag(player: &mut PlayerState, id: i32, slot: i32, button: i8, slots: &[Option<Stack>]) -> Option<(i8, Vec<i32>)> {
+    let (kind, phase) = (button >> 2, button & 3);
+    let Some(held) = player.inventory.cursor() else { player.crafting_drag = None; return None; };
+    if !(0..=2).contains(&kind) || kind == 2 && player.game_mode != GAME_MODE_CREATIVE { player.crafting_drag = None; return None; }
+    if phase == 0 { player.crafting_drag = Some((id, kind, Vec::new())); return None; }
+    let (_, _, mut selected) = player.crafting_drag.take().filter(|(window, started, _)| *window == id && *started == kind)?;
+    if phase == 1 {
+        let mut copy = slots.to_vec();
+        let view = window::Window { container: &mut copy, inventory: &mut player.inventory, kind: None, horse: None };
+        if slot >= 0 && (slot as usize) < view.len() && !selected.contains(&slot) && (kind == 2 || selected.len() < held.count as usize) && view.get(slot as usize).is_none_or(|stack| stack.stacks_with(&held) && stack.count < stack.limit()) { selected.push(slot); }
+        player.crafting_drag = Some((id, kind, selected));
+        None
+    } else { (phase == 2 && !selected.is_empty()).then_some((kind, selected)) }
+}
+
+fn distribute_plugin_drag(inventory: &mut Inventory, slots: &mut [Option<Stack>], kind: i8, selected: &[i32]) {
+    let Some(held) = inventory.cursor() else { return; };
+    let each = match kind { 0 => held.count / selected.len() as i32, 1 => 1, _ => held.limit() };
+    let mut left = held.count;
+    let mut view = window::Window { container: slots, inventory, kind: None, horse: None };
+    for &slot in selected {
+        let old = view.get(slot as usize);
+        if old.is_some_and(|stack| !stack.stacks_with(&held)) { continue; }
+        let count = old.map_or(0, |stack| stack.count);
+        let moved = each.min(held.limit() - count).min(if kind == 2 { held.limit() } else { left });
+        if moved > 0 { view.set(slot as usize, Some(held.with_count(count + moved))); if kind != 2 { left -= moved; } }
+    }
+    view.inventory.set_cursor(inventory::remainder(held, left));
+}
+
+// Снимок и отмена до любой транзакции нативного окна, без замков мира.
+fn native_inventory_cancelled(shared:&Shared,player:&mut PlayerState,payload:&[u8])->bool {
+    if player.window.as_ref().is_some_and(|w|w.plugin_chest.is_some()) {return false;}
+    let mut cursor=Cursor::new(payload);
+    let (Some(id),Some(_),Some(slot),Some(button),Some(mode))=(cursor.varint(),cursor.varint(),cursor.u16(),cursor.u8(),cursor.varint()) else {return false;};
+    if id!=player.window.as_ref().map_or(0,|w|w.id) {return false;}
+    publish_ui(shared,player);
+    if mode==5 {
+        let (kind,phase)=((button as i8)>>2,button&3);
+        if phase==0 {player.plugin_native_drag=Some((id,kind,Vec::new()));return false;}
+        let Some((_,_,mut slots))=player.plugin_native_drag.take().filter(|(w,k,_)|*w==id&&*k==kind) else {return false;};
+        if phase==1 {let raw=i32::from(slot as i16);if raw>=0&&!slots.contains(&raw) {slots.push(raw);}player.plugin_native_drag=Some((id,kind,slots));return false;}
+        if phase!=2||slots.is_empty() {return false;}
+        let mut fields=vec![crate::network::login::format_uuid(&player.uuid)];fields.extend(slots.iter().map(ToString::to_string));
+        let denied=crate::plugins::native_event(13,fields).is_none();
+        if denied {player.crafting_drag=None;}return denied;
+    }
+    player.plugin_native_drag=None;
+    crate::plugins::native_event(12,vec![crate::network::login::format_uuid(&player.uuid),(slot as i16).to_string(),(button as i8).to_string(),mode.to_string()]).is_none()
 }
 
 fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
@@ -11578,6 +11912,42 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     if mode != 5 { player.crafting_drag = None; }
     let cursor_before = player.inventory.cursor();
     let offhand_before = player.inventory.slot(inventory::OFFHAND);
+    if let Some(chest) = window.plugin_chest.clone() {
+        let (owner, handle, active) = { let chest = chest.lock().expect("сундук"); (chest.owner.clone(), chest.handle, chest.active) };
+        publish_player(shared, player);
+        let drag = if mode == 5 {
+            let slots = chest.lock().expect("сундук").slots.clone();
+            prepare_plugin_drag(player, window_id, slot as i16 as i32, button as i8, &slots)
+        } else { player.crafting_drag = None; None };
+        let notify = mode != 5 || drag.is_some();
+        let cancelled = !active || if let Some((_, selected)) = &drag {
+            crate::plugins::drag_event(&owner,&plugin_view(player),handle,selected.clone(),(slot as i16 as i32, button as i8 as i32, mode))
+        } else {notify && crate::plugins::inventory_event(&owner, &plugin_view(player), handle, 0, (slot as i16 as i32, button as i8 as i32, mode))};
+        let mut chest = chest.lock().expect("сундук");
+        let thrown = if cancelled { None } else if let Some((kind, selected)) = drag {
+            distribute_plugin_drag(&mut player.inventory, &mut chest.slots, kind, &selected);
+            None
+        } else if mode == 3 && player.game_mode == GAME_MODE_CREATIVE {
+            let view = window::Window { container: &mut chest.slots, inventory: &mut player.inventory, kind: None, horse: None };
+            if let Some(stack) = usize::try_from(slot as i16).ok().and_then(|slot| view.get(slot)) { view.inventory.set_cursor(Some(stack.with_count(stack.limit()))); }
+            None
+        } else {
+            window::Window { container: &mut chest.slots, inventory: &mut player.inventory, kind: None, horse: None }.click(slot as i16 as i32, button as i8, mode).thrown
+        };
+        let slots = chest.slots.clone();
+        drop(chest);
+        if let Some(stack) = thrown { throw_out(shared, player, stack); }
+        if let Some(open) = player.window.as_mut() { open.shown.clone_from(&slots); }
+        // Отмену клиент получает целиком, включая курсор: предсказанная вещь не остаётся в руке.
+        if cancelled { reaction.window_content = true; return; }
+        reaction.window_slots.extend(slots.into_iter().enumerate());
+        let size = player.window.as_ref().expect("окно").shown.len();
+        for (i, slot) in (inventory::FIRST_MAIN..=inventory::LAST_MAIN).chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR).enumerate() {
+            reaction.window_slots.push((size + i, player.inventory.slot(slot)));
+        }
+        reaction.cursor = Some(player.inventory.cursor());
+        return;
+    }
 
     if window.merchant.is_some() {
         merchant::click(shared, player, (slot as i16 as i32, button as i8, mode), &predicted, predicted_cursor, readable, reaction);
@@ -11638,6 +12008,15 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             slots.clone_from(&slots_before);
             player.inventory = inventory_before.clone();
             click.thrown = None;
+        }
+
+        if crate::plugins::active() && let Some(stack)=click.thrown {
+            drop(world);
+            let denied=throw_out_cancelled(shared,player,stack);
+            world=shared.world_in(player.dimension).lock().expect("мир");
+            if denied {slots.clone_from(&slots_before);player.inventory=inventory_before.clone();}
+            else {player.progress.dropped(stack.item,stack.count);}
+            click.thrown=None;
         }
 
         match cart {
@@ -11978,7 +12357,9 @@ struct PlayerState {
     shoulder_health: f32,
     shoulder_shown: HashMap<i32, [i32; 2]>,
     abilities: playerdata::Abilities,
-    flight_owners: [Option<String>; 3],
+    silent: bool,
+    silent_owner: Option<String>,
+    flight_owners: [Option<String>;3],
     flight_fall_damage: Option<bool>,
     /// Опознаватель игрока — по нему он отличается от остальных в общем списке
     /// и по нему же назван его файл на диске.
@@ -12182,6 +12563,7 @@ struct PlayerState {
     /// больше.
     window_counter: i32,
     /// Перетаскивание в инвентаре, верстаке или хранилище: окно, кнопка, ячейки.
+    plugin_native_drag: Option<(i32,i8,Vec<i32>)>,
     crafting_drag: Option<(i32, i8, Vec<i32>)>,
 
     /// Здоровье, еда, воздух, огонь (survival.rs).
@@ -12269,6 +12651,7 @@ struct OpenWindow {
     /// Окно эндер-сундука: ячейки — личные, `PlayerState::ender`; `halves` —
     /// только сам блок (смотрящие и крышка).
     ender: bool,
+    plugin_chest: Option<std::sync::Arc<std::sync::Mutex<crate::players::PluginChest>>>,
 }
 
 impl OpenWindow {
@@ -12417,6 +12800,8 @@ impl PlayerState {
             shoulder_health: vit.health,
             shoulder_shown: HashMap::new(),
             abilities,
+            silent: false,
+            silent_owner: None,
             flight_owners: Default::default(),
             flight_fall_damage: None,
             ride: vehicle::Ride::default(),
@@ -12449,6 +12834,7 @@ impl PlayerState {
             inventory_after_window: false,
             late_slots: Vec::new(),
             window_counter: 0,
+            plugin_native_drag: None,
             crafting_drag: None,
             net: vitals::Net::synced(&vit),
             vit,
@@ -12508,6 +12894,7 @@ impl PlayerState {
 
         crate::players::Gear {
             abilities: self.abilities,
+            silent: self.silent,
             worn: [slot(inventory::OFFHAND), slot(5), slot(6), slot(7), slot(8)],
             view: crate::players::CombatView {
                 invulnerable: self.vit.invulnerable,
@@ -12709,9 +13096,8 @@ impl PlayerState {
 /// плоского мира точка появления берётся по обычной высоте и висела бы над
 /// землёй — выжившему это стоило бы жизни).
 pub(crate) fn on_the_ground(shared: &Shared, (x, y, z): (f64, f64, f64)) -> (f64, f64, f64) {
-    let mut world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
-
-    world.ensure((x.floor() as i32).div_euclid(CHUNK_SIZE), (z.floor() as i32).div_euclid(CHUNK_SIZE));
+    shared.ensure_chunk(Dimension::Overworld,(x.floor() as i32).div_euclid(CHUNK_SIZE),(z.floor() as i32).div_euclid(CHUNK_SIZE));
+    let world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
 
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
     let mut by = y.floor() as i32;

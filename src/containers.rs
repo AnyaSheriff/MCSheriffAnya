@@ -307,6 +307,10 @@ impl Container {
     /// Записывает хранилище для файла региона: вид, место внутри чанка,
     /// ожидание воронки и непустые ячейки.
     pub fn write(&self, (x, y, z): (i32, i32, i32), out: &mut Vec<u8>) {
+    self.write_with_legacy_metadata((x,y,z), out, false)
+}
+
+pub(crate) fn write_with_legacy_metadata(&self, (x, y, z): (i32, i32, i32), out: &mut Vec<u8>, legacy_metadata: bool) {
         out.push(self.kind.number());
         out.push(((x.rem_euclid(16) << 4) | z.rem_euclid(16)) as u8);
         out.extend_from_slice(&(y as i16).to_be_bytes());
@@ -323,7 +327,7 @@ impl Container {
             // (`Stack::stored_item`).
             out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.push(stack.count.clamp(0, 127) as u8);
-            stack.write_extras(out);
+            stack.write_extras_with_legacy_metadata(out, legacy_metadata);
         }
 
         // Своё у проигрывателя и кафедры — после ячеек.
@@ -349,6 +353,10 @@ impl Container {
     /// Читает хранилище, записанное `write`. Возвращает место (мировые X и
     /// Z по номеру чанка) и само хранилище; None — запись испорчена.
     pub fn read(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32) -> Option<((i32, i32, i32), Container)> {
+    Self::read_with_legacy_metadata(bytes, chunk_x, chunk_z, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, legacy_metadata: bool) -> Option<((i32, i32, i32), Container)> {
         let mut take = |count: usize| -> Option<&[u8]> {
             let (head, rest) = bytes.split_at_checked(count)?;
             *bytes = rest;
@@ -371,7 +379,7 @@ impl Container {
             let count = take(1)?[0] as i32;
             let item = stored.item;
 
-            if let Some(extras) = Stack::read_extras(raw, &mut take)? {
+            if let Some(extras) = Stack::read_extras_strict_with_legacy_metadata(raw, &mut take, legacy_metadata)? {
                 stored = stored.with_extras(extras);
             }
 
@@ -1205,19 +1213,7 @@ pub const HOPPER_COOLDOWN: i32 = 8;
 /// влезло, возвращает обратно).
 pub fn tick_hoppers(world: &mut World, items: &mut crate::items::Items) {
     for pos in world.containers_in_order() {
-        match world.container(pos.0, pos.1, pos.2).map(|c| c.kind) {
-            Some(Kind::Hopper) => tick_hopper(world, items, pos),
-            // Проигрыватель — тоже блок-сущность со своим тактом: песня
-            // кончается в нём.
-            Some(Kind::Jukebox) => crate::redstone::tick_jukebox(world, pos),
-            // Крафтер отсчитывает такты `crafting=true`.
-            Some(Kind::Crafter) => crate::redstone::crafter::tick(world, pos),
-            // Печи и варочная стойка — свой такт (furnace.rs).
-            Some(Kind::Furnace | Kind::BlastFurnace | Kind::Smoker) => crate::furnace::tick_oven(world, pos),
-            Some(Kind::BrewingStand) => crate::furnace::tick_brewing(world, pos),
-            Some(Kind::Campfire) => crate::campfire::tick(world, pos),
-            _ => {}
-        }
+        tick_block_entity(world,items,pos);
     }
 
     after_change(world);
@@ -1834,6 +1830,23 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
         }
         _ => return None,
     })
+}
+
+/// Один шаг блочной сущности; событие печи вызывается снаружи замков.
+pub fn tick_block_entity(world: &mut World, items: &mut crate::items::Items, pos: Pos) {
+        match world.container(pos.0, pos.1, pos.2).map(|c| c.kind) {
+            Some(Kind::Hopper) => tick_hopper(world, items, pos),
+            // Проигрыватель — тоже блок-сущность со своим тактом: песня
+            // кончается в нём.
+            Some(Kind::Jukebox) => crate::redstone::tick_jukebox(world, pos),
+            // Крафтер отсчитывает такты `crafting=true`.
+            Some(Kind::Crafter) => crate::redstone::crafter::tick(world, pos),
+            // Печи и варочная стойка — свой такт (furnace.rs).
+            Some(Kind::Furnace | Kind::BlastFurnace | Kind::Smoker) => crate::furnace::tick_oven(world, pos),
+            Some(Kind::BrewingStand) => crate::furnace::tick_brewing(world, pos),
+            Some(Kind::Campfire) => crate::campfire::tick(world, pos),
+            _ => {}
+        }
 }
 
 #[cfg(test)]

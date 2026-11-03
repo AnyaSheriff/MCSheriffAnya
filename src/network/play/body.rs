@@ -420,12 +420,12 @@ fn finish(shared: &Shared, p: &mut PlayerState, eating: vitals::Eating, done: &m
             if drink == vitals::Drink::Milk {
                 p.vit.remove_effects(None);
             } else if drink == vitals::Drink::Honey {
-                p.vit.eat(6, 1.2);
+                vitals::feed(shared,p,6,1.2,Some(eating.stack));
                 p.vit.remove_effects(Some(crate::survival::EffectKind::Poison));
             }
         }
         None => {
-            p.vit.eat(eating.nutrition, eating.saturation);
+            vitals::feed(shared,p,eating.nutrition,eating.saturation,Some(eating.stack));
 
             remainder = if matches!(name, "suspicious_stew" | "mushroom_stew" | "rabbit_stew" | "beetroot_soup") { "bowl" } else { "" };
         }

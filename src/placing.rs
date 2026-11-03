@@ -821,6 +821,9 @@ fn with_neighbours(
     z: i32,
     state: i32,
 ) -> Option<i32> {
+    if orientation.family == Family::Stairs {
+        return orientation.with(state, "shape", stairs_shape(orientation, world, (x, y, z), state));
+    }
     let mut updated = state;
 
     for (name, value) in neighbour_values(orientation, world, x, y, z, state) {

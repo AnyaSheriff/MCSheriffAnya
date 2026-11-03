@@ -1,0 +1,16 @@
+{
+  "source": "own origin/main 3bb895ee playerdata encode: common released9 body + abilities13 tail; no Minecraft code",
+  "sha256": "6710bb2445d4e52976f490e0a6e31a8007493ecff064291757329299db24db33",
+  "length": 166,
+  "mode": 1,
+  "abilities": {
+    "flying": true,
+    "mayfly": true,
+    "instabuild": true,
+    "invulnerable": false,
+    "may_build": true,
+    "fly_speed": 0.125,
+    "walk_speed": 0.25
+  },
+  "source_playerdata_sha256": "979d720516d7cac4524c04985fad3c76cea78d794e6cf3e5e80c0dc4f3f02623"
+}

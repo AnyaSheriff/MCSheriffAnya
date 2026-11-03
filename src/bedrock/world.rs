@@ -1071,7 +1071,11 @@ impl BedrockWorld {
             match order {
                 // [Bedrock: потом] Общие настройки полёта пока доступны Java.
                 crate::players::Order::PluginFlight { .. } => {},
+                // Пользовательские сундуки доступны только подключениям Java со снимком UI.
+                crate::players::Order::PluginOpen { .. } | crate::players::Order::PluginClose { .. } => {}
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
+                // API set-health допускает только игроков со снимком Java UI.
+                crate::players::Order::Health { .. } | crate::players::Order::PluginSpawn { .. } | crate::players::Order::PluginFire { .. } | crate::players::Order::PluginVelocity { .. } | crate::players::Order::PluginSilent { .. } => {}
                 // [Bedrock: потом] Атрибуция команды; само здоровье обновляется.
                 crate::players::Order::CommandDamage { amount, source, .. } => self.health.hurt(amount, source),
                 crate::players::Order::MagicHit { amount, from, .. } => self.health.hurt(amount, if from.is_some() { crate::survival::Source::IndirectMagic } else { crate::survival::Source::Magic }),
@@ -3975,14 +3979,12 @@ impl BedrockWorld {
                 continue;
             }
 
-            let mut world = self.shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
             for (_, x, z, ready) in arrived.extract_if(.., |chunk| chunk.0 == dimension) {
                 if dimension == self.dimension {
                     self.loading.remove(&(x, z));
                     self.chunks_missing = true;
                 }
-                world.accept(x, z, ready);
+                self.shared.accept_chunk(dimension,x,z,ready);
             }
         }
 

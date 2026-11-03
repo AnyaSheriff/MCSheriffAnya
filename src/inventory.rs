@@ -126,8 +126,13 @@ impl Stack {
     /// Дописывает довески стопки, если они есть: длина и запись
     /// (`stackdata::to_bytes`). Читает их `read_stored`.
     pub fn write_extras(&self, out: &mut Vec<u8>) {
+        self.write_extras_with_legacy_metadata(out, false);
+    }
+
+    pub(crate) fn write_extras_with_legacy_metadata(&self, out: &mut Vec<u8>, legacy: bool) {
         if let Some(data) = self.data {
-            let bytes = crate::stackdata::to_bytes(&crate::stackdata::get(data));
+            let data = crate::stackdata::get(data);
+            let bytes = if legacy { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
 
             out.extend_from_slice(&(bytes.len() as u16).to_be_bytes());
             out.extend_from_slice(&bytes);
@@ -172,12 +177,17 @@ impl Stack {
     }
 
     /// Проверяет именно записанные байты компонентов, включая лишний хвост.
-    pub fn read_extras_strict<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+    pub fn read_extras_strict<'a>(stored: i32, take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+        Self::read_extras_strict_with_legacy_metadata(stored, take, false)
+    }
+
+    pub(crate) fn read_extras_strict_with_legacy_metadata<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>, legacy: bool) -> Option<Option<crate::stackdata::Data>> {
         if stored >= 0 { return Some(None); }
         let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
         let bytes = take(length)?;
         let data = crate::stackdata::from_bytes(bytes)?;
-        (crate::stackdata::to_bytes(&data) == bytes).then_some(Some(data))
+        let canonical = if legacy { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
+        (canonical == bytes).then_some(Some(data))
     }
 
     /// Сколько таких предметов помещается в одну стопку.
@@ -202,6 +212,7 @@ pub struct Inventory {
     /// игрока). Лежат хвостом записи инвентаря — своего места в файле игрока
     /// у них нет.
     seen_attributes: Vec<u8>,
+    retained_drops: Vec<Stack>,
 }
 
 impl Inventory {
@@ -211,6 +222,7 @@ impl Inventory {
             selected: 0,
             cursor: None,
             seen_attributes: Vec::new(),
+            retained_drops: Vec::new(),
         }
     }
 
@@ -224,6 +236,15 @@ impl Inventory {
         if let Err(at) = self.seen_attributes.binary_search(&attribute) {
             self.seen_attributes.insert(at, attribute);
         }
+    }
+
+    /// Отменённый вынужденный выброс остаётся у владельца, даже при полном рюкзаке.
+    pub fn retain_drop(&mut self,stack:Stack) {if let Some(left)=self.put(stack).1 {self.retained_drops.push(left);}}
+    pub fn take_retained(&mut self)->Vec<Stack> {std::mem::take(&mut self.retained_drops)}
+    pub fn restore_retained(&mut self)->bool {
+        let pending=std::mem::take(&mut self.retained_drops);let mut changed=false;
+        for stack in pending {let (slots,left)=self.put(stack);changed|=!slots.is_empty();if let Some(left)=left {self.retained_drops.push(left);}}
+        changed
     }
 
     /// Все слоты по порядку — для отправки клиенту.
@@ -734,6 +755,10 @@ impl Inventory {
     /// Пустые слоты не пишутся: их подавляющее большинство, и незачем занимать
     /// ими место. Поэтому запись — это список «слот, предмет, сколько».
     pub fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes_with_legacy_metadata(false)
+    }
+
+    pub(crate) fn to_bytes_with_legacy_metadata(&self, legacy: bool) -> Vec<u8> {
         let filled: Vec<(usize, Stack)> = self
             .slots
             .iter()
@@ -751,13 +776,17 @@ impl Inventory {
             out.push(slot as u8);
             out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.extend_from_slice(&stack.count.to_be_bytes());
-            stack.write_extras(&mut out);
+            stack.write_extras_with_legacy_metadata(&mut out, legacy);
         }
 
         // Хвост: сколько и какие атрибуты когда-либо имели модификаторы.
-        if !self.seen_attributes.is_empty() {
+        if !self.seen_attributes.is_empty() || !self.retained_drops.is_empty() {
             out.push(self.seen_attributes.len() as u8);
             out.extend_from_slice(&self.seen_attributes);
+        }
+        if !self.retained_drops.is_empty() {
+            out.extend(b"PDRO");out.extend((self.retained_drops.len() as u32).to_be_bytes());
+            for stack in &self.retained_drops {out.extend(stack.stored_item().to_be_bytes());out.extend(stack.count.to_be_bytes());stack.write_extras_with_legacy_metadata(&mut out, legacy);}
         }
 
         out
@@ -765,13 +794,18 @@ impl Inventory {
 
     /// Строгий путь сохранений: неизвестное/усечённое не становится пустой ячейкой.
     pub fn from_bytes_for_catalog(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog) -> Result<Self, crate::gameplay_catalog::StackError> {
+        Self::from_bytes_for_catalog_with_legacy_metadata(bytes, catalog, false)
+    }
+
+    /// Явный импорт main: сравнение со старым писателем20, без ослабления канона.
+    pub(crate) fn from_bytes_for_catalog_with_legacy_metadata(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog, legacy: bool) -> Result<Self, crate::gameplay_catalog::StackError> {
         use crate::gameplay_catalog::{StackError, StackProblem};
         let malformed = || StackError { path: Vec::new(), problem: StackProblem::MalformedEncoding };
         let inventory = Self::from_bytes(bytes).ok_or_else(malformed)?;
         catalog.validate_inventory(&inventory)?;
         // Включая выбранный слот, custom TNT, компоненты и хвост атрибутов.
         // Старый декодер может обрезать/пропустить запись — это не успех.
-        let canonical = inventory.to_bytes();
+        let canonical = inventory.to_bytes_with_legacy_metadata(legacy);
         // Прежний писатель мог явно записывать пустой хвост атрибутов.
         let legacy_empty_tail = inventory.seen_attributes.is_empty()
             && bytes.strip_suffix(&[0]) == Some(canonical.as_slice());
@@ -827,6 +861,18 @@ impl Inventory {
             for id in bytes.get(at + 1..at + 1 + usize::from(number)).unwrap_or_default() {
                 inventory.note_attribute(*id);
             }
+            at+=1+usize::from(number);
+        }
+        if bytes.get(at..at+4)==Some(b"PDRO") {
+            at+=4;
+            let mut take=|n:usize|->Option<&[u8]> {let value=bytes.get(at..at.checked_add(n)?)?;at+=n;Some(value)};
+            let count=u32::from_be_bytes(take(4)?.try_into().ok()?) as usize;
+            if count>bytes.len()/8 {return None;}
+            for _ in 0..count {
+                let item=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
+                let extras=Stack::read_extras(item,&mut take)?;let mut stack=Stack::from_stored(item,count);if let Some(data)=extras {stack=stack.with_extras(data);}
+                if count<=0||count>stack.limit() {return None;}inventory.retained_drops.push(stack);
+            }
         }
 
         Some(inventory)
@@ -847,6 +893,13 @@ pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
 
 #[cfg(test)]
 mod tests {
+    #[test] fn cancelled_overflow_is_persisted_and_restored_when_space_returns() {
+        let mut inventory=super::Inventory::new();let stone=crate::blocks::item_named("stone").unwrap();let kit=super::Stack::new(crate::blocks::item_named("bow").unwrap(),1).with_extras(crate::stackdata::Data {damage:7,..Default::default()});
+        for slot in super::FIRST_MAIN..=super::LAST_HOTBAR {inventory.set(slot,Some(super::Stack::new(stone,64)));}
+        inventory.retain_drop(kit);assert!(!inventory.restore_retained());
+        let mut restored=super::Inventory::from_bytes(&inventory.to_bytes()).unwrap();assert_eq!(restored,inventory);
+        restored.set(super::FIRST_MAIN,None);assert!(restored.restore_retained());assert_eq!(restored.slot(super::FIRST_MAIN),Some(kit));assert!(!restored.restore_retained());
+    }
     #[test]
     fn shift_equipment_matches_24_official_777_inventory_snapshots() {
         let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/inventory-shift-777.json")).unwrap();
@@ -1500,5 +1553,25 @@ mod strict_mob_storage_tests {
         assert!(Stack::read_extras_strict(stack.stored_item(), |n| { let (a,b) = tail.split_at_checked(n)?; tail = b; Some(a) }).is_none());
         assert!(Stack::from_stored_strict(stack.item | i32::MIN, 1, Some(Default::default())).is_none());
         assert!(Stack::from_stored_strict(stack.item, 1, Some(stack.extras())).is_none());
+    }
+}
+
+#[cfg(test)]
+mod main_metadata_import_tests {
+    use super::*;
+    #[test]
+    fn legacy_metadata_canonical_check_is_explicit_and_preserves_nested_items() {
+        let catalog=crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        let extra=crate::stackdata::Data { plugin_meta:Some(r#"{"fixture":"nested"}"#.into()), ..Default::default() };
+        let stone=Stack::new(crate::blocks::item_named("stone").unwrap(),7).with_extras(extra);
+        let nested=crate::stackdata::Data {contents:vec![crate::stackdata::Content {slot:2,item:stone.item,count:stone.count,data:stone.data}], ..Default::default()};
+        let shulker=Stack::new(crate::blocks::item_named("shulker_box").unwrap(),1).with_extras(nested);
+        let mut inventory=Inventory::new();inventory.set(36,Some(shulker));inventory.set(37,Some(stone));
+        let old=inventory.to_bytes_with_legacy_metadata(true);
+        assert!(Inventory::from_bytes_for_catalog(&old,catalog).is_err());
+        assert_eq!(Inventory::from_bytes_for_catalog_with_legacy_metadata(&old,catalog,true),Ok(inventory.clone()));
+        assert_eq!(Inventory::from_bytes_for_catalog(&inventory.to_bytes(),catalog),Ok(inventory));
+        for end in 0..old.len() {assert!(Inventory::from_bytes_for_catalog_with_legacy_metadata(&old[..end],catalog,true).is_err());}
+        let mut extra=old.clone();extra.push(1);assert!(Inventory::from_bytes_for_catalog_with_legacy_metadata(&extra,catalog,true).is_err());
     }
 }

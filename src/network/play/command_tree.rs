@@ -96,6 +96,21 @@ pub(super) fn bytes(hex: &str) -> Vec<u8> {
 
 
 pub(super) fn packet(level: i32, protocol: i32, may_tnt: bool) -> Vec<u8> {
+    packet_with_plugins(level, protocol, may_tnt, &[])
+}
+
+pub(super) fn packet_with_plugins(level: i32, protocol: i32, may_tnt: bool, names: &[String]) -> Vec<u8> {
+    tree_with_plugins(level, protocol, may_tnt, names).encode()
+}
+
+fn plugin_name(name: &str) -> bool {
+    !name.is_empty() && name.len() <= 32
+        && name.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_')
+        && !IMPLEMENTED.contains(&name) && !crate::commands_admin::NAMES.contains(&name)
+        && !crate::auth::sensitive_command(name) && !matches!(name, "tnt" | "plugman")
+}
+
+fn tree_with_plugins(level: i32, protocol: i32, may_tnt: bool, names: &[String]) -> Tree {
     let mut tree = for_level(level, protocol);
 
     // Собственные команды не подменяют ни одной ветви оригинала.
@@ -117,7 +132,16 @@ pub(super) fn packet(level: i32, protocol: i32, may_tnt: bool) -> Vec<u8> {
             tree.nodes.push(Node { flags, name: name.into(), children, redirect: None, parser, properties: properties.into(), suggestion: suggestion.map(str::to_owned) });
         }
     }
-    tree.encode()
+    // Имена уже отфильтрованы по правам в plugins::command_names. Не меняем
+    // записанные ветви оригинала и не позволяем новой ветви их подменить.
+    for name in names {
+        if !plugin_name(name) || tree.nodes[tree.root].children.iter().any(|&index| tree.nodes[index].name == *name) { continue; }
+        let at = tree.nodes.len();
+        tree.nodes[tree.root].children.push(at);
+        tree.nodes.push(Node { flags: 5, children: vec![at + 1], redirect: None, name: name.clone(), parser: None, properties: String::new(), suggestion: None });
+        tree.nodes.push(Node { flags: 22, children: vec![], redirect: None, name: "аргументы".into(), parser: Some(5), properties: "02".into(), suggestion: Some("minecraft:ask_server".into()) });
+    }
+    tree
 }
 
 pub(super) fn op4(protocol: i32) -> &'static Tree {
@@ -184,6 +208,49 @@ mod tests {
         assert!(names(3).contains(&"op".into()));
         assert!(!names(3).contains(&"stop".into()));
         assert!(names(4).contains(&"stop".into()));
+    }
+
+    #[test]
+    fn plugin_roots_preserve_recorded_graph_and_custom_branches() {
+        for protocol in [775, 777] {
+            for level in [0, 2, 4] {
+                for may_tnt in [false, true] {
+                    let base = tree_with_plugins(level, protocol, may_tnt, &[]);
+                    let tree = tree_with_plugins(level, protocol, may_tnt, &["hello".into()]);
+                    assert_eq!(tree.root, base.root);
+                    assert_eq!(tree.protocol, base.protocol);
+                    assert_eq!(tree.nodes.len(), base.nodes.len() + 2);
+                    for (index, original) in base.nodes.iter().enumerate() {
+                        if index == base.root {
+                            let mut root = tree.nodes[index].clone();
+                            assert_eq!(root.children.pop(), Some(base.nodes.len()));
+                            assert_eq!(root, *original);
+                        } else { assert_eq!(tree.nodes[index], *original); }
+                    }
+                    let command = &tree.nodes[base.nodes.len()];
+                    assert_eq!((command.flags, command.name.as_str()), (5, "hello"));
+                    let argument = &tree.nodes[command.children[0]];
+                    assert_eq!((argument.flags, argument.parser, argument.properties.as_str()), (22, Some(5), "02"));
+                    assert_eq!(argument.suggestion.as_deref(), Some("minecraft:ask_server"));
+                    assert_eq!(packet(level, protocol, may_tnt), base.encode());
+                    assert_eq!(packet_with_plugins(level, protocol, may_tnt, &["hello".into()]), tree.encode());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn plugin_roots_reject_duplicates_invalid_names_and_reserved_commands() {
+        let names: Vec<String> = ["hello", "hello", "", "Hello", "bad name", "bad/name", "привет",
+            "login", "register", "changepassword", "op", "give", "seed", "tnt", "plugman"]
+            .into_iter().map(str::to_owned).chain(std::iter::once("a".repeat(33))).collect();
+        for level in [0, 4] {
+            let base = tree_with_plugins(level, 777, false, &[]);
+            let tree = tree_with_plugins(level, 777, false, &names);
+            assert_eq!(tree.nodes.len(), base.nodes.len() + 2);
+            assert_eq!(tree.nodes[base.nodes.len()].name, "hello");
+            assert_eq!(tree.nodes[tree.root].children.len(), base.nodes[base.root].children.len() + 1);
+        }
     }
 
     #[test]

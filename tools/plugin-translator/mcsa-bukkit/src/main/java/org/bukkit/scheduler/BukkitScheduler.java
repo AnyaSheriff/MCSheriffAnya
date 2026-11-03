@@ -1,0 +1,2 @@
+package org.bukkit.scheduler;
+public interface BukkitScheduler { BukkitTask runTask(org.bukkit.plugin.Plugin p,Runnable task); BukkitTask runTaskLater(org.bukkit.plugin.Plugin p,Runnable task,long delay); BukkitTask runTaskTimer(org.bukkit.plugin.Plugin p,Runnable task,long delay,long period); int scheduleSyncDelayedTask(org.bukkit.plugin.Plugin p,Runnable task,long delay); int scheduleSyncRepeatingTask(org.bukkit.plugin.Plugin p,Runnable task,long delay,long period); void cancelTask(int id); void cancelTasks(org.bukkit.plugin.Plugin p); }

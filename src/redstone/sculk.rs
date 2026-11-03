@@ -137,6 +137,10 @@ pub fn game_event(world: &mut World, from: Pos, frequency: u8) {
 
 /// Тот же канал с виновником: крикуны слышат лишь события игрока.
 pub fn game_event_from(world: &mut World, at: (f64, f64, f64), frequency: u8, source: Option<i32>, projectile: bool) {
+    if world.plugin_events_enabled&&crate::plugins::active() {if (1..=15).contains(&frequency) {world.plugin_game_events.push(super::sculk_family::GameEvent {at,frequency,source,projectile});}return;}
+    deliver_game_event(world,at,frequency,source,projectile);
+}
+pub fn deliver_game_event(world: &mut World, at: (f64, f64, f64), frequency: u8, source: Option<i32>, projectile: bool) {
     if !(1..=15).contains(&frequency) { return; }
     let from = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
     let sneaking = source.is_some_and(|id| world.redstone.sculk.players.iter().any(|p| p.id == id && p.sneaking));

@@ -83,6 +83,7 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
 /// Открывает окно торговли: Open Screen, содержимое окна, Merchant Offers
 /// (чёрный ящик, villager-trade: в этом порядке).
 pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, villager_id: i32) -> io::Result<()> {
+    if player.window.as_ref().is_some_and(|open| open.plugin_chest.is_some()) { close_own_window(shared, player); }
     let pending=shared.items_in(player.dimension).lock().expect("торговец").mobs().iter()
         .find(|m|m.entity_id==villager_id).map(|m|((m.x as i32,m.z as i32),m.villager.offers.clone()));
     if let Some((at,mut offers))=pending {
@@ -104,10 +105,14 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         .find(|mob| mob.entity_id == villager_id)
         .map(|mob| (mob.villager.clone(), mob.kind == crate::mob::Kind::WanderingTrader));
 
-    let Some((state, wandering)) = found else {
+    let Some((mut state, wandering)) = found else {
         return Ok(());
     };
 
+    if crate::plugins::active() {
+        if crate::plugins::trade_event(&plugin_view(player),false,&[None;3],&mut state.offers) {release(shared,player.dimension,villager_id);return Ok(());}
+        if let Some(mob)=shared.items_in(player.dimension).lock().expect("торговец").mobs_mut().iter_mut().find(|m|m.entity_id==villager_id) {mob.villager.offers=state.offers.clone();}
+    }
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
 
     let id = player.window_counter;
@@ -129,7 +134,7 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         props: Vec::new(),
         merchant: Some(Merchant { sent_offer_count: state.offers.len(), ..Merchant::new(villager_id) }),
         station: None,
-        ender: false,
+        plugin_chest: None, ender: false,
     });
     send_window_content(stream, player, shared.catalog()).await?;
     write_body(stream, offers_packet(id, &state, wandering)).await
@@ -580,6 +585,7 @@ pub(super) fn close(shared: &Shared, player: &mut PlayerState) -> (Vec<i32>, Vec
         window.merchant = Some(Merchant::new(merchant.villager));
     }
 
+    notify_close(shared,player,&merchant);
     release(shared, player.dimension, merchant.villager);
     changed.sort_unstable();
     changed.dedup();
@@ -606,4 +612,14 @@ pub(super) fn villager_gone(shared: &Shared, player: &PlayerState, villager_id: 
         .mobs()
         .iter()
         .any(|mob| mob.entity_id == villager_id && !mob.is_dead())
+}
+
+// Замки мира и сущностей отпущены до вызова обработчика.
+pub(super) fn notify_close(shared: &Shared, player: &PlayerState, merchant: &Merchant) {
+    if !crate::plugins::active() {return;}
+    let offers=shared.items_in(player.dimension).lock().expect("торговец").mobs().iter().find(|m|m.entity_id==merchant.villager).map(|m|m.villager.offers.clone());
+    if let Some(mut offers)=offers {
+        crate::plugins::trade_event(&plugin_view(player),true,&merchant.slots,&mut offers);
+        if let Some(mob)=shared.items_in(player.dimension).lock().expect("торговец").mobs_mut().iter_mut().find(|m|m.entity_id==merchant.villager) {mob.villager.offers=offers;}
+    }
 }

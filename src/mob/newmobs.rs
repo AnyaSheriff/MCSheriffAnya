@@ -237,7 +237,12 @@ pub fn write(s: &State, out: &mut Vec<u8>) {
         stack.write_extras(out);
     }
 }
+#[cfg(test)]
 pub fn read(bytes: &mut &[u8]) -> Option<State> {
+    read_with_legacy_metadata(bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes: &mut &[u8], legacy_metadata: bool) -> Option<State> {
     let mut take=|n| {let (a,b)=bytes.split_at_checked(n)?;*bytes=b;Some(a)};
     let lifetime=i32::from_be_bytes(take(4)?.try_into().ok()?);
     let outside=i32::from_be_bytes(take(4)?.try_into().ok()?);
@@ -254,7 +259,7 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
     let cargo=if take(1)?[0]!=0 {
         let id=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
         if count<=0 || count>16 {return None;}
-        let data=Stack::read_extras_strict(id,&mut take)?;
+        let data=Stack::read_extras_strict_with_legacy_metadata(id,&mut take, legacy_metadata)?;
         Some(Stack::from_stored_strict(id,count,data)?)
     }else{None};
     Some(State{lifetime,outside,heart,home,harness,oxidation,waxed,oxidize_at,cargo,..State::default()})

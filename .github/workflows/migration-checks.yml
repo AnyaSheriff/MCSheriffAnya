@@ -49,6 +49,20 @@ jobs:
           python -m unittest discover -s tools/measure -p test_ocean_263.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-ocean.log"
       - name: Check startup smoke harness guards
         run: python -m unittest discover -s tools -p test_check_startup_263.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-startup263.log"
+      - name: Check auth smoke guards and fetch pinned JSON protocol
+        run: |
+          python -m unittest discover -s tools/protocol-bridge -p test_startup_auth_777.py -v 2>&1 | tee "$RUNNER_TEMP/migration-checks/python-auth777.log"
+          python - <<'PYCODE'
+          import hashlib, json, os, pathlib, urllib.request
+          records = json.loads(pathlib.Path('tools/protocol-bridge/candidate-sources-26.3.json').read_text())['files']
+          pin = next(row for row in records if row['file'] == 'protocol.json')
+          with urllib.request.urlopen(pin['url'], timeout=30) as response:
+              raw = response.read(pin['bytes'] + 1)
+          assert len(raw) == pin['bytes'] and hashlib.sha256(raw).hexdigest() == pin['sha256']
+          destination = pathlib.Path(os.environ['RUNNER_TEMP']) / 'startup-auth-input'
+          destination.mkdir()
+          (destination / 'protocol.json').write_bytes(raw)
+          PYCODE
       - name: Build plugin examples for workspace tests
         working-directory: plugins-examples
         run: cargo build --release --target wasm32-wasip2 2>&1 | tee "$RUNNER_TEMP/migration-checks/plugin-examples.log"
@@ -63,6 +77,9 @@ jobs:
       - name: Check isolated headless startup 26.3
         run: |
           sudo unshare --net -- bash -c 'ip link set lo up; exec python3 tools/check_startup_263.py --binary target/release/mcsheriffanya --output "$1"' bash "$RUNNER_TEMP/migration-checks"
+      - name: Check isolated offline auth 777
+        run: |
+          sudo unshare --net -- bash -c 'ip link set lo up; exec python3 tools/protocol-bridge/probe_startup_auth_777.py --binary target/release/mcsheriffanya --protocol "$1/protocol.json" --output "$2"' bash "$RUNNER_TEMP/startup-auth-input" "$RUNNER_TEMP/migration-checks/auth777" 2>&1 | tee "$RUNNER_TEMP/migration-checks/auth777-driver.log"
       - name: Record commit and artifact hashes
         if: always()
         env:
@@ -73,8 +90,8 @@ jobs:
           root = pathlib.Path.cwd()
           output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'migration-checks'
           output.mkdir(parents=True, exist_ok=True)
-          paths = sorted(output.glob('*.log'))
-          paths += sorted(p for p in output.glob('*.json') if p.name != 'receipt.json')
+          paths = sorted(output.rglob('*.log'))
+          paths += sorted(p for p in output.rglob('*.json') if p.name != 'receipt.json')
           paths += [root / 'Cargo.lock', root / 'plugins-examples/Cargo.lock', root / 'target/release/mcsheriffanya']
           receipt = {
               'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
@@ -84,7 +101,7 @@ jobs:
               'status_before_receipt': os.environ['CHECKS_STATUS'],
               'runner_os': os.environ['RUNNER_OS'],
               'cargo_build_jobs': os.environ['CARGO_BUILD_JOBS'],
-              'sha256': {str(p.relative_to(root)) if p.is_relative_to(root) else p.name:
+              'sha256': {str(p.relative_to(root)) if p.is_relative_to(root) else str(p.relative_to(output)):
                          hashlib.sha256(p.read_bytes()).hexdigest() for p in paths if p.is_file()},
               'runtime_built': (root / 'target/release/mcsheriffanya').is_file(),
           }

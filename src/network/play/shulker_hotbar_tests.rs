@@ -21,7 +21,7 @@ fn reopen(shared: &Shared, p: &mut PlayerState) {
     let w = shared.world_in(p.dimension).lock().unwrap();
     let shown = containers::window_slots(&w, &[(2,64,0)]);
     p.window = Some(OpenWindow { id: 7, halves: vec![(2,64,0)], cart: None, shown, lectern: false, crafter: false,
-        kind: containers::Kind::of(w.get_block(2,64,0)), props: Vec::new(), merchant: None, station: None, ender: false });
+        kind: containers::Kind::of(w.get_block(2,64,0)), props: Vec::new(), merchant: None, station: None, plugin_chest: None, ender: false });
 }
 fn click(shared: &Shared, p: &mut PlayerState, slot: i16, button: u8, mode: i32, state: i32) -> Reaction {
     let mut body = encode_varint(CLICK_CONTAINER);

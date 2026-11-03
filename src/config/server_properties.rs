@@ -16,6 +16,7 @@ pub struct ServerProperties {
     pub motd: String,
     pub max_players: i32,
     pub server_port: u16,
+    pub server_ip: String,
     /// Проверять Java-профиль у sessionserver перед допуском в мир.
     pub online_mode: bool,
     /// Передавать адрес клиента при проверке сессии (вики, server.properties).
@@ -69,6 +70,7 @@ impl Default for ServerProperties {
             motd: "My Rust Server".to_string(),
             max_players: 20,
             server_port: 25565,
+            server_ip: "0.0.0.0".into(),
             online_mode: true,
             prevent_proxy_connections: false,
             // Значения по умолчанию — те же, что у оригинала.
@@ -128,6 +130,7 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         .unwrap_or(WorldKind::Normal);
 
     Ok(ServerProperties {
+        server_ip: values.get("server-ip").filter(|s| !s.is_empty()).cloned().unwrap_or(defaults.server_ip),
         motd,
         max_players,
         server_port,
@@ -339,6 +342,7 @@ const HONOURED: &[&str] = &[
     "motd",
     "max-players",
     "server-port",
+    "server-ip",
     "view-distance",
     "simulation-distance",
     "pause-when-empty-seconds",

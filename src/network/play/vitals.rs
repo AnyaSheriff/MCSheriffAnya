@@ -1377,6 +1377,18 @@ pub(super) async fn send_health(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::
     write_body(stream, body).await
 }
 
+/// Прямая смена здоровья не является ударом: ноль обходит броню и тотем.
+pub(super) async fn set_health(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, value: f32) -> io::Result<()> {
+    if player.vit.dead { return Ok(()); }
+    player.vit.health = value.min(player.vit.max_health);
+    if value == 0.0 {
+        player.vit.dead = true;
+        die(stream, shared, player, Source::GenericKill, None).await?;
+    }
+    shared.players.lock().expect("игроки").set_health(&player.uuid, player.vit.health);
+    send_health(stream, &player.vit).await
+}
+
 /// Set Experience: доля шкалы, уровень, всего очков.
 pub(super) async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::Result<()> {
     let (level, bar) = survival::level_of(vit.xp);
@@ -1838,6 +1850,9 @@ fn respawned_with_keep_inventory(player: &mut PlayerState, keep_inventory: bool)
 
 /// Смерть: сообщение, событие и выпавшие вещи.
 async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, source: Source, killer: Option<Killer<'_>>) -> io::Result<()> {
+    if crate::plugins::active() {
+        crate::plugins::death(&super::plugin_view(player), shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
+    }
     super::vehicle::dismount(shared, player);
     effect_reactions(shared, player, true);
     let mob = player.net.killer;
@@ -1908,7 +1923,9 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
     // Вещи падают, если не включено `keepInventory` (вики, Keep inventory).
     {
         let keep = shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
-        for stack in crate::combat::death_drops(&mut player.inventory, keep) {
+        let mut drops=crate::combat::death_drops(&mut player.inventory,keep);
+        if crate::plugins::active() {drops=crate::plugins::entity_death(Some(&super::plugin_view(player)),&crate::network::login::format_uuid(&player.uuid),keep,drops);}
+        for stack in drops {
             let spread = |shared: &Shared| {
                 let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -2115,7 +2132,7 @@ pub(super) async fn mob_hit(
         if enchantments.melee_knockback > 0.0 && let Some(dir) = push {
             enchanted_mob_knockback(player, dir, enchantments.melee_knockback);
         }
-        if enchantments.fire_ticks > 0 { ignite(player, enchantments.fire_ticks); }
+        if enchantments.fire_ticks > 0&&allow_ignite(shared,player,attacker,enchantments.fire_ticks) { ignite(player, enchantments.fire_ticks); }
         if source == Source::Arrow && let Some(dir) = push {
             let extra = crate::combat::punch_impulse(enchantments.punch as f32 * 1.2, dir, player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
             if let Some(velocity) = player.net.velocity.as_mut() {
@@ -2209,6 +2226,41 @@ fn projectile_difficulty(amount: f32, source: Source, difficulty: u8, player_own
     } else { amount }
 }
 
+/// Причины публичного Bukkit API; детали источника и модификаторы пока не экспортируются.
+fn plugin_damage_cause(source: Source) -> &'static str {
+    match source {
+        Source::Fall | Source::EnderPearl => "FALL",
+        Source::OnFire => "FIRE_TICK",
+        Source::InFire => "FIRE",
+        Source::Campfire => "CAMPFIRE",
+        Source::Lava => "LAVA",
+        Source::OutOfWorld => "VOID",
+        Source::GenericKill => "KILL",
+        Source::Drown => "DROWNING",
+        Source::InWall => "SUFFOCATION",
+        Source::Starve => "STARVATION",
+        Source::Wither => "WITHER",
+        Source::Cactus | Source::SweetBerryBush | Source::Stalagmite => "CONTACT",
+        Source::HotFloor => "HOT_FLOOR",
+        Source::Freeze => "FREEZE",
+        Source::Lightning => "LIGHTNING",
+        Source::Thorns => "THORNS",
+        Source::Cramming => "CRAMMING",
+        Source::DryOut => "DRYOUT",
+        Source::FlyIntoWall => "FLY_INTO_WALL",
+        Source::SonicBoom => "SONIC_BOOM",
+        Source::FallingAnvil | Source::FallingBlock | Source::FallingStalactite => "FALLING_BLOCK",
+        Source::MobAttack | Source::MobAttackNoAggro | Source::PlayerAttack | Source::MaceSmash | Source::Sting | Source::Spear => "ENTITY_ATTACK",
+        Source::PlayerExplosion | Source::Fireworks => "ENTITY_EXPLOSION",
+        Source::Explosion | Source::BadRespawnPoint => "BLOCK_EXPLOSION",
+        Source::Arrow | Source::MobProjectile | Source::Trident | Source::Fireball | Source::LargeFireball | Source::WitherSkull | Source::Thrown | Source::WindCharge | Source::Spit | Source::UnattributedFireball => "PROJECTILE",
+        Source::Magic | Source::IndirectMagic => "MAGIC",
+        Source::DragonBreath => "DRAGON_BREATH",
+        Source::OutsideBorder => "WORLD_BORDER",
+        Source::Generic => "CUSTOM",
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn hit_by_breached(
     stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
@@ -2216,6 +2268,15 @@ pub(super) async fn hit_by_breached(
 ) -> io::Result<Option<survival::Hit>> {
     if crate::frost::protects(&player.inventory, source) { return Ok(None); }
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
+
+    if crate::plugins::active() {
+        let attacker = {
+            let players=shared.players.lock().expect("игроки");
+            players.members().iter().find(|p| p.entity_id == direct).map(|p| crate::plugins::PlayerView {uuid:p.uuid,name:p.name.clone(),game_mode:p.game_mode,dimension:p.dimension,x:p.position.x,y:p.position.y,z:p.position.z,yaw:p.position.yaw,pitch:p.position.pitch})
+        };
+        let Some(changed) = crate::plugins::damage_from(&super::plugin_view(player), attacker.as_ref(), plugin_damage_cause(source), amount) else { return Ok(None); };
+        amount = changed;
+    }
 
     // Броня и защитные чары — разные слои: Feather Falling действует
     // на падение, Protection — на магию, Fire Protection — на горение.
@@ -3011,7 +3072,10 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
 
-    if let Some(amount) = player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)) {
+    let (old_food,old_saturation)=(player.vit.food,player.vit.saturation);
+    let starvation=player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed));
+    food_change(shared,player,old_food,old_saturation,None);
+    if let Some(amount)=starvation.filter(|_|player.vit.food==0) {
         hit(stream, shared, player, amount, Source::Starve, 0).await?;
     }
 
@@ -3036,7 +3100,9 @@ pub(super) fn effect_reactions(shared: &Shared, player: &mut PlayerState, dead: 
 async fn effects_and_eating_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     effect_reactions(shared, player, false);
     let entity = player.entity_id;
+    let (old_food,old_saturation)=(player.vit.food,player.vit.saturation);
     let survival::EffectTick { hurt, gone, restored } = player.vit.effects_tick();
+    food_change(shared,player,old_food,old_saturation,None);
 
     trial_omen(stream, shared, player, difficulty).await?;
     omens(stream, shared, player, difficulty, &gone).await?;
@@ -3084,6 +3150,13 @@ async fn effects_and_eating_tick(stream: &mut Outgoing<'_>, shared: &Shared, pla
             let effects = std::mem::take(&mut eating.effects);
 
             player.net.eating = None;
+            if crate::plugins::active() {
+                super::publish_ui(shared, player);
+                if crate::plugins::item_event(&super::plugin_view(player), 1, slot) {
+                    send_container_slot(stream, player, slot).await?;
+                    return Ok(());
+                }
+            }
             {
                 let mut world = shared.world_in(player.dimension).lock().expect("мир");
                 crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 8, Some(player.entity_id), false);
@@ -3245,12 +3318,24 @@ pub(super) fn consume_stack(player: &mut PlayerState, slot: i32, remainder: &str
     }
 }
 
+// Событие видит старое значение игрока; насыщение меняется вместе с принятой едой.
+pub(super) fn food_change(shared: &Shared, player: &mut PlayerState, old: i32, old_saturation: f32, item: Option<Stack>) {
+    let proposed=player.vit.food;if !crate::plugins::active() || proposed==old && item.is_none() {return;}
+    let saturation=player.vit.saturation;player.vit.food=old;player.vit.saturation=old_saturation;super::publish_ui(shared,player);
+    let decision=crate::plugins::food_level(&super::plugin_view(player),proposed,item);let accepted=decision.unwrap_or(old);
+    player.vit.food=accepted;
+    player.vit.saturation=(if decision.is_none() {old_saturation} else if proposed>old {old_saturation+(saturation-old_saturation)*((accepted-old).max(0) as f32/(proposed-old) as f32)} else {saturation}).clamp(0.0,accepted as f32);
+}
+pub(super) fn feed(shared: &Shared, player: &mut PlayerState, nutrition: i32, saturation: f32, item: Option<Stack>) {
+    let (old,old_saturation)=(player.vit.food,player.vit.saturation);player.vit.eat(nutrition,saturation);food_change(shared,player,old,old_saturation,item);
+}
+
 async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, nutrition: i32, saturation: f32) -> io::Result<()> {
     let at = (player.x, player.y, player.z);
     let stack = player.inventory.slot(slot);
     let name = stack.and_then(|stack| blocks::item_name(stack.item)).unwrap_or("");
 
-    player.vit.eat(nutrition, saturation);
+    feed(shared,player,nutrition,saturation,stack);
     if name == "chorus_fruit" {
         let destination = {
             let mut world = shared.world_in(player.dimension).lock().expect("мир");
@@ -3289,6 +3374,7 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         (world.random_unit(), world.random_unit(), world.random_unit())
     };
 
+    if player.silent {return Ok(());}
     send_sound_at(stream, "minecraft:entity.generic.eat", SOUND_NEUTRAL, at, 1.0, 1.0 + (a - b) * 0.4).await?;
     send_sound_at(stream, "minecraft:entity.player.burp", SOUND_PLAYERS, at, 0.5, c * 0.1 + 0.9).await
 }
@@ -3296,6 +3382,7 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
 /// Допили: молоко снимает эффекты, в руке остаётся посуда (в творческом
 /// режиме — прежний предмет). Звук питья клиент играет сам [проверить].
 async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, drink: Drink) -> io::Result<()> {
+    let stack=player.inventory.slot(slot);
     if let Some(left) = consume_stack(player, slot, drink.remainder()) {
         super::throw_out(shared, player, left);
     }
@@ -3305,7 +3392,7 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     if drink == Drink::Milk {
         clear_effects(stream, player, None).await?;
     } else if drink == Drink::Honey {
-        player.vit.eat(6, 1.2);
+        feed(shared,player,6,1.2,stack);
         // Вики, Honey Bottle: «unique sound»; после него — отрыжка, как у еды
         // (чёрный ящик, tails-honey-offhand: оба звука до снятия яда).
         let at = (player.x, player.y, player.z);
@@ -3315,6 +3402,7 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
             (world.random_unit(), world.random_unit(), world.random_unit())
         };
 
+        if player.silent {return Ok(());}
         send_sound_at(stream, "minecraft:item.honey_bottle.drink", SOUND_PLAYERS, at, 1.0, 1.0 + (a - b) * 0.4).await?;
         send_sound_at(stream, "minecraft:entity.player.burp", SOUND_PLAYERS, at, 0.5, c * 0.1 + 0.9).await?;
         clear_effects(stream, player, Some(survival::EffectKind::Poison)).await?;
@@ -3325,6 +3413,10 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
 /// Эффект от команды: клиенту — Entity Effect.
 pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerState, effect: survival::Effect) -> io::Result<()> {
+    if crate::plugins::active() {
+        let fields=vec![crate::network::login::format_uuid(&player.uuid),if player.vit.effects.iter().any(|old|old.kind==effect.kind) {"CHANGED"}else {"ADDED"}.into(),effect.kind.name().into(),effect.ticks_left.to_string(),effect.amplifier.to_string(),i32::from(effect.ambient).to_string(),i32::from(effect.visible).to_string(),i32::from(effect.show_icon).to_string()];
+        if crate::plugins::native_event(0,fields).is_none() {return Ok(());}
+    }
     if !player.vit.effect_replaced_by(effect.kind, effect.amplifier, effect.ticks_left) {
         player.vit.give_effect_shown(effect);
         return Ok(());
@@ -3356,7 +3448,7 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
     write_body(stream, body).await?;
 
     match omen {
-        Some(sound) if !renewed => send_sound_at(stream, sound, SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, 1.0).await,
+        Some(sound) if !renewed&&!player.silent => send_sound_at(stream, sound, SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, 1.0).await,
         _ => Ok(()),
     }
 }
@@ -4446,4 +4538,32 @@ mod combat_777_command_tests {
             assert!(player.net.velocity.is_none(), "отклонённый повторный урон не толкает");
         }
     }
+}
+
+#[cfg(test)]
+mod plugin_flight_tests {
+    use super::*;
+    #[test]
+    fn flight_permission_and_fall_rules_preserve_mode_defaults() {
+        let mut player=PlayerState::new([31;16],"Flight".into(),None,None,0x7f,0,(0.5,70.0,0.5));
+        change_game_mode(&mut player,GAME_MODE_SURVIVAL);
+        assert!(!player.flight_allowed());assert!(player.fall_damage_allowed());
+        player.abilities.mayfly=true;assert!(player.flight_allowed());assert!(!player.fall_damage_allowed());
+        player.flight_fall_damage=Some(true);assert!(player.fall_damage_allowed());
+        player.abilities.flying=true;assert!(!player.fall_damage_allowed());
+        player.flight_owners[2]=Some("fixture".into());
+        change_game_mode(&mut player,GAME_MODE_ADVENTURE);
+        change_game_mode(&mut player,GAME_MODE_SURVIVAL);assert!(!player.flight_allowed());assert!(!player.abilities.flying);assert_eq!(player.flight_owners[2].as_deref(),Some("fixture"));
+        change_game_mode(&mut player,GAME_MODE_CREATIVE);assert!(player.flight_allowed());
+        change_game_mode(&mut player,GAME_MODE_SPECTATOR);assert!(player.flight_allowed());
+    }
+}
+
+/// Поджог от сущности проходит отдельно от урона и до изменения огня игрока.
+pub(super) fn allow_ignite(shared: &Shared, player: &PlayerState, attacker: i32, ticks: i32) -> bool {
+    if !crate::plugins::active() {return true;}
+    let source={let players=shared.players.lock().expect("игроки");players.members().iter().find(|p|p.entity_id==attacker).map(|p|p.uuid)};
+    let source=source.or_else(||shared.items_in(player.dimension).lock().expect("сущности").mobs().iter().find(|m|m.entity_id==attacker).map(|m|m.uuid));
+    let Some(source)=source else {return true;};
+    crate::plugins::native_event(6,vec![crate::network::login::format_uuid(&player.uuid),crate::network::login::format_uuid(&source),(ticks as f32/20.0).to_string()]).is_some()
 }

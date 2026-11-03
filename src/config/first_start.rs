@@ -45,7 +45,8 @@ pub fn prepare(root: &Path) -> io::Result<Prepared> {
             settings.validate()?;
             // Оригинальный TOML сохраняем как резервную копию; новый файл
             // получит ровно те настройки, которые проверены для runtime.
-            return Ok(Prepared { first_start: false, settings, path, text: Some(settings.to_file()) });
+            let text = Some(settings.to_file());
+            return Ok(Prepared { first_start: false, settings, path, text });
         },
         Err(error) if error.kind() == io::ErrorKind::NotFound => String::new(),
         Err(error) => return Err(error),
@@ -195,7 +196,7 @@ mod tests {
             assert!(!root.join(super::super::mcsheriffanya::FILE).exists());
         }
         let prepared = super::prepare(&root).unwrap();
-        let expected = prepared.settings;
+        let expected = prepared.settings.clone();
         prepared.save().unwrap();
         let config = root.join(super::super::mcsheriffanya::FILE);
         assert_eq!(super::super::mcsheriffanya::Settings::parse(&fs::read_to_string(&config).unwrap(), &config), expected);

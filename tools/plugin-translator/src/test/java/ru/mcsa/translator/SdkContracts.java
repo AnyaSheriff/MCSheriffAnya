@@ -1,0 +1,135 @@
+package ru.mcsa.translator;
+import org.bukkit.NamespacedKey;
+import net.kyori.adventure.text.*;
+import net.kyori.adventure.text.format.*;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import ru.mcsa.bukkit.Text;
+public final class SdkContracts {
+ private static int checks;private static void check(boolean value){checks++;if(!value)throw new AssertionError("check "+checks);}
+ private static java.util.List<String> styledRuns(Component component){java.util.List<String> out=new java.util.ArrayList<>();styledRuns(ru.mcsa.bukkit.Yaml.parse(Text.json(component)),new java.util.HashMap<>(),out);return out;}
+ private static void styledRuns(java.util.Map<?,?> node,java.util.Map<String,Object> parent,java.util.List<String> out){java.util.Map<String,Object> style=new java.util.HashMap<>(parent);for(String key:java.util.List.of("color","bold","italic"))if(node.containsKey(key))style.put(key,node.get(key));Object text=node.get("text");if(text!=null&&!text.equals(""))out.add(text+"|"+style.get("color")+"|"+style.get("bold")+"|"+style.get("italic"));Object children=node.get("extra");if(children instanceof java.util.List)for(Object child:(java.util.List<?>)children)styledRuns((java.util.Map<?,?>)child,style,out);}
+ public static void main(String[] args){
+  check(org.bukkit.Material.matchMaterial(null)==null);check(org.bukkit.Material.matchMaterial("not_a_material")==null);check(org.bukkit.Material.matchMaterial("minecraft:nEtHeRrAcK")==org.bukkit.Material.NETHERRACK);check(org.bukkit.Material.matchMaterial("STONE")==org.bukkit.Material.STONE);
+  check(NamespacedKey.minecraft("a/b").toString().equals("minecraft:a/b"));
+  check(NamespacedKey.fromString("STONE")==null);
+  check(NamespacedKey.fromString("..:y")!=null);
+  check(NamespacedKey.fromString("x:y:z")==null);
+  check(NamespacedKey.fromString(":stone").equals(NamespacedKey.minecraft("stone")));
+  check(NamespacedKey.minecraft("stone").hashCode()==NamespacedKey.fromString("stone").hashCode());
+  TextComponent text=Component.text("A\n\"\\");
+  TextComponent changed=text.append(Component.text("B")).decoration(TextDecoration.ITALIC,false);
+  check(((Text)text).plain().equals("A\n\"\\"));
+  check(((Text)changed).plain().equals("A\n\"\\B"));
+  check(Text.json(text).equals("{\"text\":\"A\\u000a\\\"\\\\\"}"));
+  check(Text.json(changed).contains("\"italic\":false"));
+  TextComponent legacy=LegacyComponentSerializer.legacyAmpersand().deserialize("&aGreen&lBold&rWhite");
+  check(((Text)legacy).plain().equals("GreenBoldWhite"));
+  check(Text.json(legacy).contains("#55ff55"));
+  check(Text.json(legacy).contains("\"bold\":true"));
+  check(((Text)LegacyComponentSerializer.legacyAmpersand().deserialize("A&zB&")).plain().equals("A&zB&"));
+  check(NamedTextColor.NAMES.value("white")==NamedTextColor.WHITE);
+  check(Component.text("same").append(Component.text("child")).equals(Component.text("same").append(Component.text("child"))));
+  org.bukkit.configuration.file.YamlConfiguration config=new org.bukkit.configuration.file.YamlConfiguration();
+  config.loadFromString("root:\n  number: 4\n  list: [ONE:0, 'two', 3]\n  entries:\n    - when: NEAR\n      nested: {radius: 8, bonus: -10}\n    - when: OTHER\n      enabled: true\n  quoted: \"line\\nnext\"\n");
+  check(config.getInt("root.number")==4);
+  check(config.getStringList("root.list").equals(java.util.List.of("ONE:0","two","3")));
+  check(config.getConfigurationSection("root").getKeys(false).contains("entries"));
+  org.bukkit.configuration.file.YamlConfiguration copy=new org.bukkit.configuration.file.YamlConfiguration();copy.loadFromString(config.saveToString());
+  check(copy.saveToString().equals(config.saveToString()));
+  copy.set("root.number",9);check(copy.getInt("root.number")==9&&config.getInt("root.number")==4);
+  for(String invalid:new String[]{"a: 1\na: 2", "a: [broken", "a: &ref value", "a: \"unclosed", "a: \t1", "a: [x}]"}) {boolean failed=false;try{copy.loadFromString(invalid);}catch(IllegalArgumentException expected){failed=true;}check(failed);}
+  check(copy.getInt("root.number")==9);
+  org.bukkit.inventory.ItemStack item=new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD);
+  org.bukkit.inventory.meta.ItemMeta meta=item.getItemMeta();NamespacedKey marker=NamespacedKey.fromString("test:ability");
+  meta.getPersistentDataContainer().set(marker,org.bukkit.persistence.PersistentDataType.STRING,"blink");
+  meta.displayName(Component.text("Blade").color(NamedTextColor.RED));
+  ((org.bukkit.inventory.meta.Damageable)meta).setDamage(3);meta.addEnchant(org.bukkit.enchantments.Enchantment.SHARPNESS,2,false);
+  item.setItemMeta(meta);meta.getPersistentDataContainer().remove(marker);
+  check(item.getPersistentDataContainer().get(marker,org.bukkit.persistence.PersistentDataType.STRING).equals("blink"));
+  check(!item.getPersistentDataContainer().has(marker,org.bukkit.persistence.PersistentDataType.INTEGER));
+  org.bukkit.inventory.ItemStack restored=org.bukkit.inventory.ItemStack.fromHost(item.getType(),item.getAmount(),item.metadata());
+  check(item.equals(restored)&&item.hashCode()==restored.hashCode());
+  check(((org.bukkit.inventory.meta.Damageable)restored.getItemMeta()).getDamage()==3);
+  check(restored.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.SHARPNESS)==2);
+  restored.editMeta(m->m.getPersistentDataContainer().set(marker,org.bukkit.persistence.PersistentDataType.STRING,"other"));check(!restored.isSimilar(item));
+  org.bukkit.persistence.PersistentDataContainer data=new ru.mcsa.bukkit.DataContainer();java.util.List<String> list=new java.util.ArrayList<>(java.util.List.of("one","two"));data.set(marker,org.bukkit.persistence.PersistentDataType.LIST.strings(),list);list.add("three");check(data.get(marker,org.bukkit.persistence.PersistentDataType.LIST.strings()).size()==2);
+  java.util.List<String> retrieved=data.get(marker,org.bukkit.persistence.PersistentDataType.LIST.strings());retrieved.clear();check(data.get(marker,org.bukkit.persistence.PersistentDataType.LIST.strings()).size()==2);
+  data.set(marker,org.bukkit.persistence.PersistentDataType.INTEGER,42);check(data.get(marker,org.bukkit.persistence.PersistentDataType.INTEGER)==42);
+  check(org.bukkit.Material.DIAMOND_SWORD.getMaxDurability()==1561&&org.bukkit.Material.DIAMOND_SWORD.getMaxStackSize()==1);
+  check(org.bukkit.Material.APPLE.isEdible()&&org.bukkit.Material.STONE.isSolid());
+  check(org.bukkit.enchantments.Enchantment.SHARPNESS.conflictsWith(org.bukkit.enchantments.Enchantment.SMITE));
+  org.bukkit.util.Vector direction=new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(0),0,0,0,90,0).getDirection();check(Math.abs(direction.getX()+1)<1e-12&&Math.abs(direction.getZ())<1e-12);
+  org.bukkit.util.Vector vector=new org.bukkit.util.Vector(3,4,0);check(vector.length()==5&&vector.clone().normalize().length()==1&&vector.length()==5);
+  org.bukkit.Location origin=new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(0),-0.5,1,0),destination=origin.clone().add(new org.bukkit.util.Vector(3,4,0));check(origin.distanceSquared(destination)==25&&origin.getBlockX()==-1);
+  boolean wrongWorld=false;try{origin.distance(new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(1),0,0,0));}catch(IllegalArgumentException expected){wrongWorld=true;}check(wrongWorld);
+  final org.bukkit.inventory.Inventory[] held=new org.bukkit.inventory.Inventory[1];org.bukkit.inventory.InventoryHolder holder=()->held[0];held[0]=new ru.mcsa.bukkit.ChestInventory(holder,27,Component.text("Race"));held[0].setItem(13,item);check(held[0].getHolder()==holder&&held[0].getItem(13).equals(item));held[0].getItem(13).setAmount(0);check(item.getAmount()==1);
+  boolean wrongSize=false;try{new ru.mcsa.bukkit.ChestInventory(null,10,Component.empty());}catch(IllegalArgumentException expected){wrongSize=true;}check(wrongSize);
+  ru.mcsa.bukkit.Permissions.declare("test.public","true");ru.mcsa.bukkit.Permissions.child("test.public","test.child",true);ru.mcsa.bukkit.Permissions.declare("test.child","false");
+  ru.mcsa.bukkit.Permissions.declare("test.admin","op");ru.mcsa.bukkit.Permissions.child("test.admin","test.admin.edit",true);ru.mcsa.bukkit.Permissions.declare("test.admin.edit","false");ru.mcsa.bukkit.Permissions.declare("test.bypass","false");
+  check(ru.mcsa.bukkit.Permissions.has("test.child",false));check(!ru.mcsa.bukkit.Permissions.has("test.admin.edit",false));check(ru.mcsa.bukkit.Permissions.has("test.admin.edit",true));check(!ru.mcsa.bukkit.Permissions.has("test.bypass",true));check(ru.mcsa.bukkit.Permissions.has("unknown",true)&&!ru.mcsa.bukkit.Permissions.has("unknown",false));
+  ru.mcsa.bukkit.Permissions.child("test.public","test.inverted",false);ru.mcsa.bukkit.Permissions.child("test.inverted","test.double",false);ru.mcsa.bukkit.Permissions.child("test.double","test.public",true);check(!ru.mcsa.bukkit.Permissions.has("test.inverted",false)&&ru.mcsa.bukkit.Permissions.has("test.double",false));
+  org.bukkit.event.player.PlayerMoveEvent move=new org.bukkit.event.player.PlayerMoveEvent(null,origin.clone(),origin.clone().add(0.1,0,0));check(move.hasChangedPosition()&&!move.hasChangedBlock());move.getTo().add(1,0,0);check(move.hasChangedBlock());move.setCancelled(true);check(move.isCancelled());
+  org.bukkit.event.player.PlayerInteractEvent interaction=new org.bukkit.event.player.PlayerInteractEvent(null,org.bukkit.event.block.Action.RIGHT_CLICK_AIR,item,null,org.bukkit.block.BlockFace.SELF);check(interaction.hasItem()&&!interaction.hasBlock());interaction.setCancelled(true);check(interaction.useInteractedBlock()==org.bukkit.event.Event.Result.DENY&&interaction.useItemInHand()==org.bukkit.event.Event.Result.DENY);interaction.setCancelled(false);check(!interaction.isCancelled());interaction.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);check(interaction.useItemInHand()==org.bukkit.event.Event.Result.DEFAULT);interaction.setUseItemInHand(org.bukkit.event.Event.Result.ALLOW);check(interaction.isCancelled()&&interaction.useItemInHand()==org.bukkit.event.Event.Result.ALLOW);interaction.setUseInteractedBlock(org.bukkit.event.Event.Result.ALLOW);interaction.setUseItemInHand(org.bukkit.event.Event.Result.DENY);check(!interaction.isCancelled()&&interaction.useItemInHand()==org.bukkit.event.Event.Result.DENY);
+  java.util.List<String> deniedMessages=new java.util.ArrayList<>();org.bukkit.command.CommandSender guest=new org.bukkit.command.CommandSender(){public String getName(){return "guest";}public boolean isOp(){return false;}public boolean hasPermission(String permission){return ru.mcsa.bukkit.Permissions.has(permission,false);}public void sendMessage(String message){deniedMessages.add(message);}};
+  boolean[] called={false};org.bukkit.command.PluginCommand guarded=new org.bukkit.command.PluginCommand("guarded",(sender,command,label,arguments)->{called[0]=true;return true;});guarded.setPermission("test.admin.edit");guarded.setPermissionMessage("Denied: <permission>");
+  check(guarded.execute(guest,"guarded",new String[0])&&!called[0]);check(deniedMessages.equals(java.util.List.of("Denied: test.admin.edit")));check(guarded.tabComplete(guest,"guarded",new String[0]).isEmpty());guarded.setPermission("test.admin.edit;test.child");check(guarded.execute(guest,"guarded",new String[0])&&called[0]);check(ru.mcsa.bukkit.Permissions.has("TEST.CHILD",false));
+  check(new ru.mcsa.bukkit.RemoteWorld(0).getEnvironment()==org.bukkit.World.Environment.NORMAL&&new ru.mcsa.bukkit.RemoteWorld(1).getEnvironment()==org.bukkit.World.Environment.NETHER&&new ru.mcsa.bukkit.RemoteWorld(2).getEnvironment()==org.bukkit.World.Environment.THE_END);
+  check(new ru.mcsa.bukkit.RemoteWorld(0).getMinHeight()==-64&&new ru.mcsa.bukkit.RemoteWorld(0).getMaxHeight()==320);
+  org.bukkit.block.Block relative=new ru.mcsa.bukkit.RemoteWorld(0).getBlockAt(-1,70,2).getRelative(2,-3,4);check(relative.getX()==1&&relative.getY()==67&&relative.getZ()==6);
+  org.bukkit.potion.PotionType poison=org.bukkit.potion.PotionType.LONG_POISON;
+  check(org.bukkit.Registry.POTION.get(org.bukkit.NamespacedKey.minecraft("long_poison"))==poison);
+  check(poison.getPotionEffects().size()==1&&poison.getPotionEffects().get(0).getDuration()==1800);
+  check(org.bukkit.potion.PotionType.STRONG_TURTLE_MASTER.getPotionEffects().size()==2);
+  check(org.bukkit.potion.PotionType.HEALING.getPotionEffects().get(0).getType()==org.bukkit.potion.PotionEffectType.INSTANT_HEALTH);
+  check(org.bukkit.potion.PotionEffectType.POISON.getCategory()==org.bukkit.potion.PotionEffectTypeCategory.HARMFUL);
+  check(org.bukkit.potion.PotionEffectType.GLOWING.getCategory()==org.bukkit.potion.PotionEffectTypeCategory.NEUTRAL);
+  check(org.bukkit.potion.PotionEffectType.SPEED.getCategory()==org.bukkit.potion.PotionEffectTypeCategory.BENEFICIAL);
+  org.bukkit.inventory.ItemStack bottle=new org.bukkit.inventory.ItemStack(org.bukkit.Material.POTION);
+  org.bukkit.inventory.meta.PotionMeta potionMeta=(org.bukkit.inventory.meta.PotionMeta)bottle.getItemMeta();potionMeta.setBasePotionType(poison);bottle.setItemMeta(potionMeta);potionMeta.setBasePotionType(org.bukkit.potion.PotionType.HEALING);
+  check(((org.bukkit.inventory.meta.PotionMeta)bottle.getItemMeta()).getBasePotionType()==poison);
+  check(((org.bukkit.inventory.meta.PotionMeta)org.bukkit.inventory.ItemStack.fromHost(org.bukkit.Material.POTION,1,bottle.metadata()).getItemMeta()).getBasePotionType()==poison);
+  org.bukkit.block.BlockState crop=new ru.mcsa.bukkit.BlockSnapshot(new ru.mcsa.bukkit.RemoteBlock(new ru.mcsa.bukkit.RemoteWorld(0),0,70,0),new String[]{"minecraft:wheat[age=4]","15","15","0","1","4","7"});
+  check(crop.getType()==org.bukkit.Material.WHEAT&&crop.getBlockData() instanceof org.bukkit.block.data.Ageable);
+  check(((org.bukkit.block.data.Ageable)crop.getBlockData()).getAge()==4&&((org.bukkit.block.data.Ageable)crop.getBlockData()).getMaximumAge()==7);
+  org.bukkit.event.player.PlayerItemConsumeEvent eating=new org.bukkit.event.player.PlayerItemConsumeEvent(null,bottle,org.bukkit.inventory.EquipmentSlot.HAND);eating.getItem().setAmount(99);check(eating.getItem().getAmount()==1);eating.setCancelled(true);check(eating.isCancelled());
+  check(org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.minecraft("zombie_horse"))==org.bukkit.entity.EntityType.ZOMBIE_HORSE);
+  check(org.bukkit.Tag.CLIMBABLE.isTagged(org.bukkit.Material.LADDER));
+  check(!org.bukkit.Tag.CLIMBABLE.isTagged(org.bukkit.Material.STONE));
+  check(org.bukkit.Tag.LEAVES.isTagged(org.bukkit.Material.OAK_LEAVES));
+  check(!org.bukkit.Tag.LEAVES.isTagged(org.bukkit.Material.OAK_SAPLING));
+  check(org.bukkit.Tag.CROPS.isTagged(org.bukkit.Material.WHEAT));
+  check(org.bukkit.Tag.FLOWERS.isTagged(org.bukkit.Material.POPPY));
+  check(org.bukkit.Tag.REPLACEABLE.isTagged(org.bukkit.Material.AIR));
+  check(!org.bukkit.Tag.REPLACEABLE.isTagged(org.bukkit.Material.STONE));
+  check(org.bukkit.Tag.ENTITY_TYPES_UNDEAD.isTagged(org.bukkit.entity.EntityType.STRAY));
+  check(!org.bukkit.Tag.ENTITY_TYPES_UNDEAD.isTagged(org.bukkit.entity.EntityType.COW));
+  check(org.bukkit.Material.STONE.getKey().equals(NamespacedKey.minecraft("stone")));
+  org.bukkit.util.RayTraceResult hit=new org.bukkit.util.RayTraceResult(new org.bukkit.util.Vector(1,2,3));hit.getHitPosition().setX(99);check(hit.getHitPosition().getX()==1);
+  check(net.kyori.adventure.util.TriState.byBoolean((Boolean)null)==net.kyori.adventure.util.TriState.NOT_SET);
+  check(net.kyori.adventure.util.TriState.TRUE.toBooleanOrElse(false));
+  check(!net.kyori.adventure.util.TriState.FALSE.toBooleanOrElse(true));
+  org.bukkit.inventory.ItemStack bread=new org.bukkit.inventory.ItemStack(org.bukkit.Material.BREAD,2);org.bukkit.event.entity.FoodLevelChangeEvent food=new org.bukkit.event.entity.FoodLevelChangeEvent(null,14,bread);bread.setAmount(40);check(food.getItem().getAmount()==2);food.setFoodLevel(11);check(food.getFoodLevel()==11);food.setCancelled(true);check(food.isCancelled());
+  org.bukkit.enchantments.EnchantmentOffer offer=new org.bukkit.enchantments.EnchantmentOffer(org.bukkit.enchantments.Enchantment.UNBREAKING,2,30);offer.setCost(21);check(offer.getCost()==21);check(offer.getEnchantmentLevel()==2);
+  String[] prepared=new String[26];java.util.Arrays.fill(prepared,"");prepared[9]="0";prepared[10]="0";for(int i=0;i<5;i++){prepared[11+i*3]="air";prepared[12+i*3]="0";}prepared[11]="book";prepared[12]="1";ru.mcsa.bukkit.PreparedCraft matrix=new ru.mcsa.bukkit.PreparedCraft(null,prepared);org.bukkit.inventory.ItemStack result=matrix.getResult();result.setAmount(3);check(matrix.getResult().getAmount()==1);matrix.setResult(result);check(matrix.getResult().getAmount()==3);
+  org.bukkit.event.inventory.PrepareItemCraftEvent crafting=new org.bukkit.event.inventory.PrepareItemCraftEvent(matrix,matrix.view(),()->new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOOK),false);check(crafting.getRecipe().getResult().getType()==org.bukkit.Material.BOOK);
+  check(new ru.mcsa.bukkit.RemoteWorld(1).equals(new ru.mcsa.bukkit.RemoteWorld(1)));check(!new ru.mcsa.bukkit.RemoteWorld(0).equals(new ru.mcsa.bukkit.RemoteWorld(1)));
+  check(ru.mcsa.bukkit.Numbers.sum(4,7)==11);check(ru.mcsa.bukkit.Numbers.sum(Integer.MAX_VALUE,1)==Integer.MIN_VALUE);
+  org.bukkit.inventory.MerchantRecipe trade=new org.bukkit.inventory.MerchantRecipe(new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOOK),4);org.bukkit.inventory.ItemStack emeralds=new org.bukkit.inventory.ItemStack(org.bukkit.Material.EMERALD,8);trade.addIngredient(emeralds);emeralds.setAmount(50);check(trade.getIngredients().get(0).getAmount()==8);trade.setSpecialPrice(-3);org.bukkit.inventory.MerchantRecipe copyTrade=new org.bukkit.inventory.MerchantRecipe(trade);copyTrade.setSpecialPrice(2);check(trade.getSpecialPrice()==-3);check(copyTrade.getSpecialPrice()==2);copyTrade.getIngredients().get(0).setAmount(60);check(copyTrade.getIngredients().get(0).getAmount()==8);
+  org.bukkit.event.world.LootGenerateEvent loot=new org.bukkit.event.world.LootGenerateEvent(null,java.util.List.of(emeralds));emeralds.setAmount(12);check(loot.getLoot().get(0).getAmount()==50);loot.setLoot(loot.getLoot());check(loot.getLoot().size()==1);loot.setLoot(null);check(loot.getLoot().isEmpty());
+  org.bukkit.event.inventory.FurnaceStartSmeltEvent smelt=new org.bukkit.event.inventory.FurnaceStartSmeltEvent(new ru.mcsa.bukkit.RemoteBlock(new ru.mcsa.bukkit.RemoteWorld(0),0,64,0),200);smelt.setTotalCookTime(40);check(smelt.getTotalCookTime()==40);boolean badCook=false;try{smelt.setTotalCookTime(0);}catch(IllegalArgumentException expected){badCook=true;}check(badCook);
+  final org.bukkit.generator.LimitedRegion[] savedRegion=new org.bukkit.generator.LimitedRegion[1];ru.mcsa.bukkit.Population.list(0).add(new org.bukkit.generator.BlockPopulator(){public void populate(org.bukkit.generator.WorldInfo world,java.util.Random random,int x,int z,org.bukkit.generator.LimitedRegion region){savedRegion[0]=region;check(world.getMinHeight()==-64&&world.getMaxHeight()==320);region.setType(x*16,-64,z*16,org.bukkit.Material.DIAMOND_BLOCK);}});
+  try{check(ru.mcsa.bukkit.Population.apply(new String[]{"0","1","-1","42","1","stone","98304,0,"}).equals("0 diamond_block\n"));boolean closedRegion=false;try{savedRegion[0].getType(16,-64,-16);}catch(IllegalStateException expected){closedRegion=true;}check(closedRegion);}finally{ru.mcsa.bukkit.Population.list(0).clear();}
+  for(String malformed:new String[]{"98304,0","98305,0,","98304,1,"}){boolean refused=false;try{ru.mcsa.bukkit.Population.apply(new String[]{"0","0","0","42","1","stone",malformed});}catch(IllegalStateException expected){refused=true;}check(refused);}
+  check(ru.mcsa.bukkit.Strings.lower("FARMER",java.util.Locale.ROOT).equals("farmer"));check(ru.mcsa.bukkit.Strings.upper("race_id",java.util.Locale.ROOT).equals("RACE_ID"));check(ru.mcsa.bukkit.Strings.lower("I",java.util.Locale.forLanguageTag("tr")).equals("ı"));check(ru.mcsa.bukkit.Strings.lower("ПРИВЕТ",java.util.Locale.ROOT).equals("привет"));
+  int[] writes={0};org.bukkit.inventory.ItemStack live=new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW,2).observe(changedItem->writes[0]++);live.setAmount(1);check(writes[0]==1);org.bukkit.inventory.ItemStack detached=live.clone();detached.setAmount(3);check(writes[0]==1&&live.getAmount()==1);org.bukkit.inventory.meta.Damageable repairMeta=(org.bukkit.inventory.meta.Damageable)live.getItemMeta();repairMeta.setDamage(8);check(writes[0]==1);live.setItemMeta(repairMeta);check(writes[0]==2&&((org.bukkit.inventory.meta.Damageable)live.getItemMeta()).getDamage()==8);live.editMeta(m->((org.bukkit.inventory.meta.Damageable)m).setDamage(0));check(writes[0]==3&&((org.bukkit.inventory.meta.Damageable)live.getItemMeta()).getDamage()==0);
+  TextComponent redReset=Component.text("B").color(NamedTextColor.RED),whiteReset=Component.text("C").color(NamedTextColor.WHITE);for(TextDecoration decoration:TextDecoration.values()){redReset=redReset.decoration(decoration,false);whiteReset=whiteReset.decoration(decoration,false);}Component resetExpected=Component.empty().append(Component.empty()).append(Component.text("A").decoration(TextDecoration.BOLD,true)).append(redReset).append(whiteReset);check(Text.json(resetExpected).equals(Text.json(LegacyComponentSerializer.legacyAmpersand().deserialize("&lA&cB&rC"))));
+  String[] cube=ru.mcsa.bukkit.BlockReads.decode(new String[]{"511","minecraft:air","1","minecraft:stone"});check(cube.length==512&&cube[0]==cube[510]&&cube[511].equals("minecraft:stone"));
+  for(String[] bad:new String[][]{{"511","air"},{"513","air"},{"0","air"},{"512"}}){boolean rejected=false;try{ru.mcsa.bukkit.BlockReads.decode(bad);}catch(IllegalStateException expected){rejected=true;}check(rejected);}
+  for(String sample:new String[]{"","ASCII\u0000fields","Русский — лор","\u007f\u0080\u07ff\u0800\uffff","\ud83d\ude00","\ud800x\udc00","\udbff\udfff"}){byte[] standard=sample.getBytes(java.nio.charset.StandardCharsets.UTF_8);check(java.util.Arrays.equals(ru.mcsa.bukkit.Strings.utf8(sample),standard));check(ru.mcsa.bukkit.Strings.fromUtf8(standard).equals(new String(standard,java.nio.charset.StandardCharsets.UTF_8)));}
+  for(byte[] invalid:new byte[][]{{(byte)0xc0,(byte)0x80},{(byte)0xed,(byte)0xa0,(byte)0x80},{(byte)0xf4,(byte)0x90,(byte)0x80,(byte)0x80},{(byte)0xe2,(byte)0x82}}){boolean rejected=false;try{ru.mcsa.bukkit.Strings.fromUtf8(invalid);}catch(IllegalStateException expected){rejected=true;}check(rejected);}
+  check(styledRuns(LegacyComponentSerializer.legacyAmpersand().deserialize("&lA&cB&rC")).equals(java.util.List.of("A|null|true|null","B|#ff5555|false|false","C|#ffffff|false|false")));
+  Component colored=LegacyComponentSerializer.legacyAmpersand().deserialize("&cRed&rWhite");Text.json(colored);check(styledRuns(Component.empty().decoration(TextDecoration.BOLD,true).append(colored)).equals(java.util.List.of("Red|#ff5555|false|false","White|#ffffff|false|false")));
+  Component mixed=Component.empty().append(Component.text("Reset").decoration(TextDecoration.BOLD,false)).append(Component.text("Inherited"));check(styledRuns(Component.empty().decoration(TextDecoration.BOLD,true).append(mixed)).equals(java.util.List.of("Reset|null|false|null","Inherited|null|true|null")));
+  System.out.println("PASS: "+checks+" контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов");
+ }
+}

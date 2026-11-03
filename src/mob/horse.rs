@@ -313,7 +313,12 @@ pub fn write(mob: &Mob, out: &mut Vec<u8>) {
     }
 }
 
+#[cfg(test)]
 pub fn read(mob: &mut Mob, bytes: &mut &[u8]) -> Option<()> {
+    read_with_legacy_metadata(mob, bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(mob: &mut Mob, bytes: &mut &[u8], legacy_metadata: bool) -> Option<()> {
     mob.tame = tame::read(bytes)?;
     let mut take = |count: usize| { let (head, rest) = bytes.split_at_checked(count)?; *bytes = rest; Some(head) };
     let health = f32::from_be_bytes(take(4)?.try_into().ok()?);
@@ -334,7 +339,7 @@ pub fn read(mob: &mut Mob, bytes: &mut &[u8]) -> Option<()> {
         if take(1)?[0] == 0 { continue; }
         let stored = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let extras = Stack::read_extras_strict(stored, &mut take)?;
+        let extras = Stack::read_extras_strict_with_legacy_metadata(stored, &mut take, legacy_metadata)?;
         *slot = Some(Stack::from_stored_strict(stored, count, extras)?);
     }
     Some(())
@@ -351,7 +356,7 @@ pub fn drive(mob: &mut Mob, view: &dyn super::View, to: (f64, f64, f64), look: (
     let elapsed = mob.ticks.saturating_sub(mob.horse.last_move_tick).min(5) as f64;
     // Скорость атрибута соответствует примерно 43 блокам/с на единицу.
     // Кнопка sprint не добавляет лошади множитель бега игрока.
-    let per_tick = mob.horse.speed * 2.2 + 0.15;
+    let per_tick = mob.plugin_attribute_value(crate::attributes::MOVEMENT_SPEED, mob.horse.speed) * 2.2 + 0.15;
     let budget = (mob.horse.move_budget + elapsed * per_tick).min(per_tick * 5.0);
     let distance = delta.0.hypot(delta.2);
     if distance > budget + 1.0e-6 || delta.1.abs() > 10.0 { return false; }

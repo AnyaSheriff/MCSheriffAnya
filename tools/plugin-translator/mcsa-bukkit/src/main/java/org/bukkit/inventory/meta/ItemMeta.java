@@ -1,0 +1,3 @@
+package org.bukkit.inventory.meta;
+import net.kyori.adventure.text.Component;import org.bukkit.persistence.PersistentDataContainer;import org.bukkit.enchantments.Enchantment;import org.bukkit.inventory.ItemFlag;import java.util.*;
+public interface ItemMeta extends Cloneable {void displayName(Component name);Component displayName();void lore(List<? extends Component> lore);List<Component> lore();PersistentDataContainer getPersistentDataContainer();boolean addEnchant(Enchantment enchant,int level,boolean ignoreRestrictions);Map<Enchantment,Integer> getEnchants();void addItemFlags(ItemFlag... flags);Set<ItemFlag> getItemFlags();ItemMeta clone();}

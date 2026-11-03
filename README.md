@@ -30,9 +30,9 @@ Fabric, Forge or any other server core. MCSheriffAnya is not affiliated with or
 endorsed by Mojang or Microsoft.
 
 - **Primary version:** Java Edition 26.3 (protocol 777). Older clients work
-  through ViaFabricPlus and similar tools. Player IDs are generated offline from
-  nicknames (UUID v3 "OfflinePlayer:<name>"), old player data is migrated
-  automatically.
+  through selected native compatibility routes or client-side tools such as ViaFabricPlus; full support for every older version is not claimed. Player IDs are generated offline from
+  nicknames (UUID v3 "OfflinePlayer:<name>"). Importing an old main world and
+  its player data requires the explicit source-format command below.
 - **Bedrock support:** Bedrock Edition 26.10–26.13 join the core directly with
   native account verification and cross-play features.
 - **Stack:** Rust (edition 2024), Tokio, Serde, TOML.
@@ -152,8 +152,8 @@ endorsed by Mojang or Microsoft.
   statistically measured random distributions still have known differences
   or require further verification.
 
-Not there yet: Java plugins, multiple protocol versions, ender chests, shulker
-boxes, packet compression. See the full list below.
+Full compatibility is still incomplete. See the status table and the version
+compatibility notes below.
 
 ## Status
 
@@ -172,7 +172,7 @@ verification. Earlier tick-by-tick 26.1.2 results do not establish full 26.3 par
 | Commands | ✅ | Vanilla commands, command blocks, datapack functions, scoreboards |
 | Weather | ✅ | |
 | Known differences | 🟡 | Enderman stare, shulker bullets, riptide side effects, mace wind burst particles |
-| Plugins | 🟡 | WebAssembly plugins and modules, hot `/plugman`, API `mcsa:api` (WIT) — [docs/plugins.md](docs/plugins.md). Java API (TeaVM, Jar2WASM) planned |
+| Plugins | 🟡 | WebAssembly plugins and modules, hot `/plugman`, API `mcsa:api` (WIT) — [docs/plugins.md](docs/plugins.md). Java plugin translation via TeaVM/Jar2WASM is available for a supported API subset; new 26.3 Material coverage is partial, with no full Paper/Bukkit compatibility |
 | Multiple protocol versions | ❌ | Planned |
 | Ender chests, shulker boxes | ❌ | |
 | Packet compression | ❌ | |
@@ -229,11 +229,19 @@ error reports are enabled, with a notice on the first start. Disable them with
 `send-error-reports=false` in `config/mcsa.properties`; an existing `false` is
 preserved.
 
-An old 26.1.2 world is never upgraded automatically. Stop the server and explicitly
-run `./target/debug/mcsheriffanya --upgrade-world-26.3 /path/to/world`; the command
-validates the data and creates a verified backup before upgrading. Then set
-`java-version=26.3` and start the server. For a release build or Docker, use the
-corresponding binary with the same arguments.
+Old 26.1.2 worlds are never upgraded automatically. Stop the server and choose
+its source format explicitly:
+
+- World from the former `main` (26.1.2):
+  `./target/debug/mcsheriffanya --upgrade-world-26.3 --from-main-26.1.2 /path/to/world`.
+- World from the migration branch's earlier 775 profile:
+  `./target/debug/mcsheriffanya --upgrade-world-26.3 /path/to/world`.
+
+The importer validates the source, creates a verified backup, converts region and
+player data in a separate candidate, and activates it only after checks. The
+original data remains in the backup. Do not guess the format or edit the manifest
+to bypass rejection. Set `java-version=26.3` after a successful import. Release
+builds and Docker use the same arguments with their corresponding binary.
 
 ## Docker
 
@@ -282,7 +290,11 @@ locked release build. Tag pushes (`v*`) publish the version without `v` and
 
 ViaProxy settings use `viaproxy-memory=512M` by default. With `viaproxy=true`,
 the minimum is **320M**; the core refuses smaller or invalid values at startup.
-This branch validates these settings but does not launch ViaProxy.
+The pinned ViaProxy release has not been verified with the primary 26.3 server.
+`viaproxy=true` therefore fails with an explanation before starting the proxy or
+changing the backend address. Keep `viaproxy=false` and connect directly. Native
+compatibility covers selected older client versions; full 1.12.2 play is not
+claimed. See [version compatibility](docs/java-multiversion.md).
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.

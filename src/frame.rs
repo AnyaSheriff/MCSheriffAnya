@@ -431,6 +431,10 @@ fn spill(world: &mut World, items: &mut Items, shared: &Shared, stack: Stack, at
 /// если он есть. Возраст не пишется: проверка опоры после загрузки идёт
 /// заново от нуля. [проверить]: у оригинала возраст хранится не там.
 pub fn write(frame: &Frame, out: &mut Vec<u8>) {
+    write_with_legacy_metadata(frame, out, false)
+}
+
+pub(crate) fn write_with_legacy_metadata(frame: &Frame, out: &mut Vec<u8>, legacy_metadata: bool) {
     out.push(((frame.pos.0.rem_euclid(16) << 4) | frame.pos.2.rem_euclid(16)) as u8);
     out.extend_from_slice(&(frame.pos.1 as i16).to_be_bytes());
     out.push(frame.facing | (u8::from(frame.glow) << 3) | (u8::from(frame.item.is_some()) << 4) | (u8::from(frame.painting.is_some()) << 5));
@@ -440,13 +444,17 @@ pub fn write(frame: &Frame, out: &mut Vec<u8>) {
     if let Some(stack) = frame.item {
         out.extend_from_slice(&stack.stored_item().to_be_bytes());
         out.push(stack.count.clamp(1, 127) as u8);
-        stack.write_extras(out);
+        stack.write_extras_with_legacy_metadata(out, legacy_metadata);
     }
 }
 
 /// Читает запись `write`; номер сущности выдаёт вызывающий. None — запись
 /// испорчена.
 pub fn read(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, entity_id: i32) -> Option<Frame> {
+    read_with_legacy_metadata(bytes, chunk_x, chunk_z, entity_id, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, entity_id: i32, legacy_metadata: bool) -> Option<Frame> {
     let mut take = |count: usize| -> Option<&[u8]> {
         let (head, rest) = bytes.split_at_checked(count)?;
         *bytes = rest;
@@ -474,7 +482,7 @@ pub fn read(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, entity_id: i32) -> Op
         let mut stored = Stack::from_stored(raw, 0);
         let count = i32::from(take(1)?[0]);
 
-        if let Some(extras) = Stack::read_extras(raw, &mut take)? {
+        if let Some(extras) = Stack::read_extras_strict_with_legacy_metadata(raw, &mut take, legacy_metadata)? {
             stored = stored.with_extras(extras);
         }
 

@@ -34,6 +34,9 @@ pub struct Manifest {
     pub main: Option<String>,
     #[serde(default)]
     pub dependencies: Vec<String>,
+    /// Только запрос разрешений: фактический доступ задаёт администратор ядра.
+    #[serde(default)]
+    pub network_hosts: Vec<String>,
 }
 
 impl Manifest {
@@ -73,6 +76,10 @@ impl Manifest {
 
         if let Some(bad) = self.dependencies.iter().find(|name| !valid_name(name)) {
             return Err(format!("зависимость «{bad}»: неверное имя"));
+        }
+
+        if self.network_hosts.len() > 32 || self.network_hosts.iter().any(|host| !super::network::valid_host(host)) {
+            return Err("network_hosts: нужны точные DNS-имена, без схемы, порта и масок (до 32)".into());
         }
 
         Ok(())

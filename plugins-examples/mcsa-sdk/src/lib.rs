@@ -6,7 +6,7 @@
 pub mod bindings {
     wit_bindgen::generate!({
         path: "../../wit",
-        world: "module",
+        world: "sdk-module",
         pub_export_macro: true,
         default_bindings_module: "mcsa_sdk::bindings",
     });
@@ -56,6 +56,9 @@ pub trait Plugin {
     fn on_command(_from: Sender, _name: String, _args: Vec<String>) -> CommandResult {
         CommandResult { success: false, message: Some("команда не реализована".to_string()) }
     }
+    /// Подсказки аргументов своей команды; не более 100 строк по 512 байт.
+    fn on_tab_complete(_from: Sender, _name: String, _args: Vec<String>) -> Vec<String> { Vec::new() }
+
     /// Сработала задача планировщика.
     fn on_task(_task: u32) {}
 }
@@ -76,6 +79,12 @@ macro_rules! export_plugin {
                 }
                 fn disable() {
                     <$plugin as $crate::Plugin>::disable()
+                }
+            }
+
+            impl $crate::bindings::exports::mcsa::api::completion::Guest for Glue {
+                fn on_tab_complete(from: t::Sender, name: String, args: Vec<String>) -> Vec<String> {
+                    <$plugin as $crate::Plugin>::on_tab_complete(from, name, args)
                 }
             }
 

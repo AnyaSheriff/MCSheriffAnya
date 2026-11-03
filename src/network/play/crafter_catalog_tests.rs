@@ -23,7 +23,7 @@ fn fixture(profile: Profile, complete: bool) -> (Shared, PlayerState) {
     }
     player.window = Some(OpenWindow { id: 1, halves: vec![POS], cart: None, shown: slots,
         lectern: false, crafter: true, kind: Some(containers::Kind::Crafter), props: Vec::new(),
-        merchant: None, station: None, ender: false });
+        merchant: None, station: None, plugin_chest: None, ender: false });
     (shared, player)
 }
 

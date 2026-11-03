@@ -280,6 +280,10 @@ pub fn empty_ender() -> Vec<Option<crate::inventory::Stack>> {
 /// Записывает эндер-сундук: число занятых ячеек, у каждой номер, предмет,
 /// число и довески; в конце — длина записи, чтобы читать файл с хвоста.
 fn write_ender(slots: &[Option<crate::inventory::Stack>], out: &mut Vec<u8>) {
+    write_ender_with_legacy_metadata(slots, out, false);
+}
+
+fn write_ender_with_legacy_metadata(slots: &[Option<crate::inventory::Stack>], out: &mut Vec<u8>, legacy: bool) {
     let start = out.len();
     let filled: Vec<_> = slots.iter().enumerate().filter_map(|(slot, stack)| stack.map(|stack| (slot, stack))).collect();
 
@@ -289,7 +293,7 @@ fn write_ender(slots: &[Option<crate::inventory::Stack>], out: &mut Vec<u8>) {
         out.push(slot as u8);
         out.extend_from_slice(&stack.stored_item().to_be_bytes());
         out.extend_from_slice(&stack.count.to_be_bytes());
-        stack.write_extras(out);
+        stack.write_extras_with_legacy_metadata(out, legacy);
     }
 
     let length = (out.len() - start) as u32;
@@ -438,9 +442,14 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 }
 
 fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerData> {
-    let read_inventory = |bytes: &[u8]| match catalog {
-        Some(catalog) => Inventory::from_bytes_for_catalog(bytes, catalog).ok(),
-        None => Inventory::from_bytes_for_catalog(bytes, Catalog::new(Profile::Java26_1_2)).ok(),
+    parse_with_catalog_and_legacy_metadata(bytes, catalog, false)
+}
+
+fn parse_with_catalog_and_legacy_metadata(bytes: &[u8], catalog: Option<Catalog>, legacy: bool) -> Option<PlayerData> {
+    let read_inventory = |bytes: &[u8]| {
+        let catalog = catalog.unwrap_or(Catalog::new(Profile::Java26_1_2));
+        if legacy { Inventory::from_bytes_for_catalog_with_legacy_metadata(bytes, catalog, true) }
+        else { Inventory::from_bytes_for_catalog(bytes, catalog) }.ok()
     };
     if bytes.len() < SIZE || &bytes[..4] != MAGIC {
         return None;
@@ -500,7 +509,7 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
                 if let Some(catalog) = catalog {
                     // Старый read_ender ограничивает число; сверяем исходные bytes.
                     let mut roundtrip = Vec::new();
-                    write_ender(&ender, &mut roundtrip);
+                    write_ender_with_legacy_metadata(&ender, &mut roundtrip, legacy);
                     if roundtrip.get(..roundtrip.len().checked_sub(4)?)? != stored { return None; }
                     for stack in ender.iter().flatten() { catalog.validate_stack(stack).ok()?; }
                 }
@@ -548,6 +557,38 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
         respawn,
         ender,
     })
+}
+
+/// Только для явно выбранного импорта main26.1.2 после проверенного снимка.
+/// Обычный reader10 остаётся reader курсора; эта функция ничего не пишет.
+pub(crate) fn convert_main_playerdata(bytes: &[u8], catalog: Catalog) -> Result<Vec<u8>, LoadError> {
+    if catalog.profile() != Profile::Java26_1_2 || bytes.get(..4) != Some(MAGIC.as_slice()) {
+        return Err(LoadError::InvalidData);
+    }
+    let version = take::<4>(bytes, 4).map(u32::from_be_bytes).ok_or(LoadError::InvalidData)?;
+    if !(1..=10).contains(&version) { return Err(LoadError::UnsupportedLayout(version)); }
+    let mut source = bytes.to_vec();
+    let abilities = if version == 10 {
+        let start = source.len().checked_sub(ABILITIES_SIZE).filter(|start| *start >= SIZE).ok_or(LoadError::InvalidData)?;
+        let abilities = Abilities::read(&source[start..]).ok_or(LoadError::InvalidData)?;
+        source.truncate(start);
+        source[4..8].copy_from_slice(&TOTAL_EXPERIENCE_VERSION.to_be_bytes());
+        Some(abilities)
+    } else { None };
+    let mut data = parse_with_catalog_and_legacy_metadata(&source, Some(catalog), true).ok_or(LoadError::InvalidData)?;
+    if let Some(abilities) = abilities { data.abilities = abilities; }
+    for stored in data.shoulders.iter_mut().flatten() {
+        let mut rest = stored.as_slice();
+        let mob = crate::mob::Mob::read_with_legacy_plugin_tail(&mut rest, true).ok_or(LoadError::InvalidData)?;
+        if !rest.is_empty() || mob.kind != crate::mob::Kind::Parrot { return Err(LoadError::InvalidData); }
+        mob.validate_item_storage().map_err(|_| LoadError::InvalidData)?;
+        catalog.validate_mob(&mob).map_err(LoadError::IncompatibleInventory)?;
+        let mut normalized = Vec::new();
+        mob.write(&mut normalized);
+        *stored = normalized;
+    }
+    validate_player(&data, catalog).map_err(LoadError::IncompatibleInventory)?;
+    encode_inner(&data, catalog).map_err(|_| LoadError::InvalidData)
 }
 
 /// Забирает следующие N байт, начиная со смещения.
@@ -1466,3 +1507,68 @@ mod tests {
 #[cfg(test)]
 #[path = "playerdata/incompatible_tests.rs"]
 mod incompatible_tests;
+
+#[cfg(test)]
+mod explicit_main_import_tests {
+    use super::*;
+    const MAIN10: &[u8] = include_bytes!("../testdata/playerdata/main10-abilities.mcrw");
+    const PLUGIN10: &[u8] = include_bytes!("../testdata/playerdata/main10-plugin-shoulder.mcrw");
+    fn catalog() -> Catalog { Catalog::new(Profile::Java26_1_2) }
+
+    #[test]
+    fn explicit_main10_preserves_common_fields_and_all_abilities() {
+        let out = convert_main_playerdata(MAIN10, catalog()).unwrap();
+        let mut expected = parse(super::incompatible_tests::RELEASED_V9).unwrap();
+        expected.abilities = Abilities { flying: true, mayfly: true, instabuild: true,
+            invulnerable: false, may_build: true, fly_speed: 0.125, walk_speed: 0.25 };
+        let actual = parse(&out).unwrap();
+        assert_eq!(actual, expected);
+        assert_eq!(&out[4..8], &FORMAT_VERSION.to_be_bytes());
+        assert!(parse(MAIN10).is_none(), "обычный reader10 не угадывает main");
+        assert_eq!(MAIN10, include_bytes!("../testdata/playerdata/main10-abilities.mcrw"));
+        for bytes in [super::incompatible_tests::RELEASED_V8, super::incompatible_tests::RELEASED_V9] {
+            assert_eq!(parse(&convert_main_playerdata(bytes, catalog()).unwrap()), parse(bytes));
+        }
+    }
+
+    #[test]
+    fn explicit_main10_keeps_plugin_metadata_and_normalizes_shoulder_tail() {
+        let out = convert_main_playerdata(PLUGIN10, catalog()).unwrap();
+        let loaded = parse(&out).unwrap();
+        validate_player(&loaded, catalog()).unwrap();
+        assert_eq!(loaded.inventory.slot(36).unwrap().count, 17);
+        assert_eq!(loaded.inventory.slot(36).unwrap().extras().plugin_meta.as_deref(), Some(r#"{"pdc":{"fixture":"main"}}"#));
+        assert_eq!(loaded.inventory.slot(37), Some(crate::inventory::Stack::new(10,5)));
+        assert_eq!(loaded.ender[4], Some(crate::inventory::Stack::new(1,7)));
+        assert_eq!(loaded.vitals.experience_total,42);
+        assert!(loaded.inventory.cursor().is_none());
+        assert_eq!(loaded.effects, SavedEffects::default());
+        let mut old = include_bytes!("../testdata/playerdata/main-parrot-plugin.bin").as_slice();
+        let expected = crate::mob::Mob::read_with_legacy_plugin_tail(&mut old,true).unwrap();
+        assert!(old.is_empty());
+        let mut tail = loaded.shoulders[0].as_ref().unwrap().as_slice();
+        let mob = crate::mob::Mob::read(&mut tail).unwrap();
+        assert!(tail.is_empty());
+        assert_eq!(mob.uuid,[71;16]); assert_eq!(mob.name.as_deref(),Some("Frozen Parrot"));
+        assert_eq!(mob.tame.owner,Some([72;16])); assert!(mob.tame.ordered_sit);
+        assert_eq!(mob.small.variant,3); assert!(mob.silent);
+        assert_eq!(mob.plugin_attributes,expected.plugin_attributes);
+        assert_eq!(mob.vitals.max_health,40.0);
+        assert_eq!(mob.age,-123);
+    }
+
+    #[test]
+    fn explicit_main_import_rejects_wrong_context_truncation_and_corruption() {
+        assert!(convert_main_playerdata(MAIN10,Catalog::new(Profile::Preview26_3)).is_err());
+        for fixture in [MAIN10,PLUGIN10] {
+            for end in 0..fixture.len() { assert!(convert_main_playerdata(&fixture[..end],catalog()).is_err(), "обрезка{end}"); }
+            let mut trailing=fixture.to_vec();trailing.push(0);assert!(convert_main_playerdata(&trailing,catalog()).is_err());
+            let mut invalid=fixture.to_vec();invalid[4..8].copy_from_slice(&13u32.to_be_bytes());
+            assert_eq!(convert_main_playerdata(&invalid,catalog()),Err(LoadError::UnsupportedLayout(13)));
+        }
+        let mut invalid=MAIN10.to_vec();let at=invalid.len()-13;invalid[at]=2;
+        assert!(convert_main_playerdata(&invalid,catalog()).is_err());
+        let ours=encode(&parse(super::incompatible_tests::RELEASED_V9).unwrap()).unwrap();
+        assert!(convert_main_playerdata(&ours,catalog()).is_err());
+    }
+}

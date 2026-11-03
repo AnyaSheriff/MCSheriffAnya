@@ -2,6 +2,7 @@ package ru.sheriffanya.launcher;
 
 import java.io.*;
 import java.net.*;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
@@ -44,11 +45,13 @@ public final class Launcher {
         String port = choosePort(setting("SERVER_PORT"), System.getProperty("spt"));
         Path binary = cwd.resolve("mcsheriffanya");
         Path marker = cwd.resolve("mcsa-update");
-        boolean update = Files.exists(marker) || "1".equals(setting("MCSA_UPDATE"));
-        if (!Files.exists(binary) || update) {
-            install(cwd, binary, setting("MCSA_VERSION"));
-            Files.deleteIfExists(marker);
-        }
+        prepareBinary(cwd, setting("MCSA_VERSION"), setting("MCSA_AUTO_UPDATE"),
+                Files.exists(marker) || "1".equals(setting("MCSA_UPDATE")), new Updates() {
+                    public Asset release(String tag) throws IOException { return fetchRelease(tag); }
+                    public void install(Asset asset) throws IOException {
+                        Launcher.install(cwd, binary, asset, uri -> open(uri, false));
+                    }
+                });
         if (!Files.isRegularFile(binary) || Files.size(binary) == 0) {
             throw failure("Файл mcsheriffanya пуст или не является обычным файлом.");
         }
@@ -140,12 +143,63 @@ public final class Launcher {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    static void install(Path cwd, Path binary, String tag) throws IOException {
-        String arch = System.getProperty("os.arch", "");
-        if (!System.getProperty("os.name", "").equals("Linux")
-                || !(arch.equals("amd64") || arch.equals("x86_64"))) {
-            throw failure("Автозагрузка поддерживает только Linux x86_64. Загрузите подходящий mcsheriffanya вручную.");
+    interface Updates {
+        Asset release(String tag) throws IOException;
+        void install(Asset asset) throws IOException;
+    }
+
+    @FunctionalInterface interface Download { InputStream open(URI uri) throws IOException; }
+
+    static void prepareBinary(Path cwd, String pinned, String autoUpdate, boolean manual,
+            Updates updates) throws IOException {
+        Path binary = cwd.resolve("mcsheriffanya");
+        boolean installed = Files.isRegularFile(binary) && Files.size(binary) > 0;
+        if (installed && !manual && (pinned != null || "0".equals(autoUpdate))) return;
+        try {
+            Asset asset = updates.release(pinned);
+            Path version = cwd.resolve("mcsheriffanya.version");
+            String current = readOptional(version).trim();
+            if (!installed || manual || current.isEmpty() || compareVersions(asset.tag(), current) > 0) {
+                updates.install(asset);
+                writeChanged(version, readOptional(version), asset.tag() + "\n");
+            }
+            if (manual) Files.deleteIfExists(cwd.resolve("mcsa-update"));
+        } catch (IOException | RuntimeException e) {
+            if (!installed) throw e;
+            // Не печатаем чужие сообщения исключений или подписанные URL.
+            System.err.println("Не удалось проверить или установить обновление; запускаем установленный mcsheriffanya.");
         }
+    }
+
+    // Числовые компоненты и prerelease по SemVer; v и build metadata не влияют.
+    static int compareVersions(String left, String right) throws IOException {
+        String[] a = versionParts(left), b = versionParts(right);
+        String[] ac = a[0].split("\\."), bc = b[0].split("\\.");
+        for (int i = 0; i < Math.max(ac.length, bc.length); i++) {
+            int order = new BigInteger(i < ac.length ? ac[i] : "0")
+                    .compareTo(new BigInteger(i < bc.length ? bc[i] : "0"));
+            if (order != 0) return order;
+        }
+        if (a.length == 1 || b.length == 1) return Integer.compare(b.length, a.length);
+        String[] ap = a[1].split("\\."), bp = b[1].split("\\.");
+        for (int i = 0; i < Math.min(ap.length, bp.length); i++) {
+            boolean an = ap[i].matches("[0-9]+"), bn = bp[i].matches("[0-9]+");
+            int order = an && bn ? new BigInteger(ap[i]).compareTo(new BigInteger(bp[i]))
+                    : an != bn ? (an ? -1 : 1) : ap[i].compareTo(bp[i]);
+            if (order != 0) return order;
+        }
+        return Integer.compare(ap.length, bp.length);
+    }
+
+    static String[] versionParts(String tag) throws IOException {
+        if (!tag.matches("v?[0-9]+(?:\\.[0-9]+)*(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?"
+                + "(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?")) {
+            throw failure("Не удалось сравнить метки выпусков.");
+        }
+        return tag.replaceFirst("^v", "").split("\\+", 2)[0].split("-", 2);
+    }
+
+    static Asset fetchRelease(String tag) throws IOException {
         if (tag != null && !tag.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,99}")) {
             throw failure("MCSA_VERSION должен содержать метку выпуска, например v0.2.3-alpha.");
         }
@@ -156,12 +210,20 @@ public final class Launcher {
             copyLimited(input, output, 4 * 1024 * 1024);
             metadata = output.toByteArray();
         }
-        Asset asset = selectAsset(new String(metadata, StandardCharsets.UTF_8), tag);
+        return selectAsset(new String(metadata, StandardCharsets.UTF_8), tag);
+    }
+
+    static void install(Path cwd, Path binary, Asset asset, Download download) throws IOException {
+        String arch = System.getProperty("os.arch", "");
+        if (!System.getProperty("os.name", "").equals("Linux")
+                || !(arch.equals("amd64") || arch.equals("x86_64"))) {
+            throw failure("Автозагрузка поддерживает только Linux x86_64. Загрузите подходящий mcsheriffanya вручную.");
+        }
         System.out.println("Скачиваем выпуск " + asset.tag() + " для Linux x86_64…");
         Path archive = Files.createTempFile(cwd, ".mcsa-download-", ".tar.gz");
         Path extracted = null;
         try {
-            try (InputStream input = open(asset.url(), false);
+            try (InputStream input = download.open(asset.url());
                     OutputStream output = Files.newOutputStream(archive)) {
                 long count = copyLimited(input, output, ARCHIVE_LIMIT);
                 if (count == 0 || count != asset.size()) throw failure("Размер архива не совпал с данными GitHub.");
@@ -226,8 +288,8 @@ public final class Launcher {
             validateUrl(uri, api);
             HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
             connection.setInstanceFollowRedirects(false);
-            connection.setConnectTimeout(15_000);
-            connection.setReadTimeout(60_000);
+            connection.setConnectTimeout(10_000);
+            connection.setReadTimeout(10_000);
             connection.setRequestProperty("User-Agent", "MCSheriffAnya-launcher/" + VERSION);
             connection.setRequestProperty("Accept", api ? "application/vnd.github+json" : "application/octet-stream");
             try {

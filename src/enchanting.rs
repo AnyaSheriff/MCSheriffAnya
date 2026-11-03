@@ -401,6 +401,16 @@ pub fn merchant_enchant(stack: Stack, level: i32, seed: i64) -> Stack {
     stack.with_extras(data)
 }
 
+/// Bukkit ItemFactory: копия предмета, подбор ядра и отдельные сохранённые чары книги.
+pub fn enchant_with_levels(stack: Stack, level: i32, treasure: bool, seed: i64) -> Stack {
+    let Some(name)=blocks::item_name(stack.item) else {return stack;};
+    let mut random=JavaRandom::new(seed);let mut data=stack.extras();
+    let list=select_with_treasure(&mut random,name,enchantability(stack.item),level,treasure);let mut result=stack;
+    if name=="book" && !list.is_empty() {result.item=blocks::item_named("enchanted_book").unwrap_or(stack.item);for (id,level) in list {data.set_stored(id,level);}}
+    else {for (id,level) in list {data.set_enchant(id,level);}}
+    result.with_extras(data)
+}
+
 /// Можно ли зачаровать на столе: зачаровываемый и ещё без зачарований.
 fn enchantable_here(stack: &Stack) -> Option<(&'static str, i32)> {
     let name = blocks::item_name(stack.item)?;
@@ -543,7 +553,7 @@ pub fn anvil(left: Option<Stack>, right: Option<Stack>, name: Option<&str>, crea
     let mut data = left_data.clone();
     let mut cost = 0;
     let mut repair_items = 0;
-    let max = crate::combat::info(left.item).map_or(0, |info| info.max_damage);
+    let max = crate::combat::max_durability(&left);
     let damageable = max > 0 && !left_data.unbreakable;
     let mut base = left_data.repair_cost;
     let right_data = right.map(|right| right.extras()).unwrap_or_default();
@@ -716,7 +726,7 @@ pub fn grind(top: Option<Stack>, bottom: Option<Stack>) -> Option<Stack> {
     let mut data = base.extras();
 
     if let Some(other) = other {
-        let max = crate::combat::info(base.item).map_or(0, |info| info.max_damage);
+        let max = crate::combat::max_durability(&base);
 
         if other.item != base.item || max <= 0 || base.count > 1 || other.count > 1 {
             return None;

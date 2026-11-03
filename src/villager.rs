@@ -152,7 +152,7 @@ impl Offer {
         let base = self.buy.count;
         let demand = (base as f32 * self.multiplier * self.demand.max(0) as f32).floor() as i32;
 
-        (base + demand + self.special).clamp(1, blocks::stack_size(self.buy.item))
+        (base.saturating_add(demand).saturating_add(self.special)).clamp(1, blocks::stack_size(self.buy.item))
     }
 
     /// Распродана ли (вики, Trading: «the trade becomes disabled»).

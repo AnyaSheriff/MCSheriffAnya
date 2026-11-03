@@ -39,9 +39,22 @@ impl std::fmt::Display for OfflineLicenseMode {
 }
 
 /// Настройки.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Предел естественных монстров относительно обычного (0..16).
+    pub monster_spawn_multiplier: f64,
+    /// Доля руды в новых чанках (0..100), старые чанки не меняются.
+    pub ore_retention_percent: u8,
+    /// Явные разрешения HTTPS: имя плагина → точные DNS-имена.
+    pub plugin_network_hosts: std::collections::BTreeMap<String, Vec<String>>,
+    /// Требовать заголовок PROXY v1/v2 для Java TCP.
+    pub proxy_protocol: bool,
+    pub viaproxy_port: u16,
+    pub viaproxy_java: String,
+    pub auth_mode: String,
+    /// Точные адреса TCP-прокси, которым разрешён PROXY (без CIDR).
+    pub proxy_protocol_trusted_sources: Vec<std::net::IpAddr>,
     /// Проверяем лимит даже в сборках без запуска внешнего ViaProxy.
     pub viaproxy: bool,
     #[serde(deserialize_with="read_viaproxy_memory")]
@@ -151,6 +164,14 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            monster_spawn_multiplier: 1.0,
+            ore_retention_percent: 100,
+            plugin_network_hosts: Default::default(),
+            proxy_protocol: false,
+            viaproxy_port: 26101,
+            viaproxy_java: "java".into(),
+            auth_mode: "dialog".into(),
+            proxy_protocol_trusted_sources: vec![std::net::Ipv4Addr::LOCALHOST.into()],
             viaproxy: false,
             viaproxy_memory: 512 * 1024 * 1024,
             java_version: Some(mcsa_protocol::JavaVersion::V26_3),
@@ -231,6 +252,21 @@ impl Settings {
             log_info!("{}: auth-provider больше не нужен — пароли всегда хранятся через Argon2id; настройка игнорируется", path.display());
         }
         Settings {
+            monster_spawn_multiplier: { let value: f64 = take(&values,"monster-spawn-multiplier",1.0,path); if value.is_finite() && (0.0..=16.0).contains(&value) {value} else {log_warn!("monster-spawn-multiplier: нужно число от 0 до 16; беру 1");1.0} },
+            ore_retention_percent: { let value: u8 = take(&values,"ore-retention-percent",100,path); if value <= 100 {value} else {log_warn!("ore-retention-percent: нужно число от 0 до 100; беру 100");100} },
+            plugin_network_hosts: values.get("plugin-network-hosts").map(|value| value.split(',').filter_map(|entry| entry.split_once(':')).map(|(plugin, hosts)| (plugin.trim().to_string(), hosts.split('|').map(|host| host.trim().to_string()).collect())).collect()).unwrap_or_default(),
+            viaproxy_port: take(&values, "viaproxy-port", default.viaproxy_port, path),
+            viaproxy_java: take(&values, "viaproxy-java", default.viaproxy_java, path),
+            auth_mode: take(&values, "auth-mode", default.auth_mode, path),
+            proxy_protocol: take(&values, "proxy-protocol", default.proxy_protocol, path),
+            proxy_protocol_trusted_sources: values.get("proxy-protocol-trusted-sources")
+                .map(|s| s.split(',').filter(|s| !s.trim().is_empty())
+                    .map(|s| s.trim().parse()).collect::<Result<Vec<_>, _>>()
+                    .unwrap_or_else(|_| {
+                        log_warn!("proxy-protocol-trusted-sources: неверные адреса, никому не доверяем");
+                        Vec::new()
+                    }))
+                .unwrap_or(default.proxy_protocol_trusted_sources),
             viaproxy: take(&values, "viaproxy", default.viaproxy, path),
             viaproxy_memory: values.get("viaproxy-memory").map_or(default.viaproxy_memory, |value| proxy_memory_bytes(value).unwrap_or(0)),
             java_version: values.get("java-version").map_or(default.java_version, |value| mcsa_protocol::JavaVersion::from_name(value)),
@@ -262,7 +298,7 @@ impl Settings {
     }
 
     /// Файл с пояснениями — чтобы было понятно, что править.
-    pub(super) fn to_file(self) -> String {
+    pub(super) fn to_file(&self) -> String {
         let mut text = String::from(HEADER);
 
         for (_, section) in self.sections() {
@@ -275,9 +311,17 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    pub(super) fn sections(self) -> [(&'static str, String); 23] {
+    pub(super) fn sections(&self) -> [(&'static str, String); 31] {
         [
-            ("viaproxy", format!("# Настройка внешнего ViaProxy; запуск в этой сборке не реализован.\nviaproxy={}\n", self.viaproxy)),
+            ("monster-spawn-multiplier", format!("# Предел естественных монстров: множитель 0..16; 1 — обычный предел. Не влияет на спавнеры и команды.\nmonster-spawn-multiplier={}\n",self.monster_spawn_multiplier)),
+            ("ore-retention-percent", format!("# Сколько процентов руды оставить в НОВЫХ чанках (0..100); 100 — обычная генерация.\nore-retention-percent={}\n",self.ore_retention_percent)),
+            ("plugin-network-hosts", format!("# HTTPS плагинов выключен по умолчанию. Разрешения: plugin:api.example.org|other.example.org,another:api.example.net\nplugin-network-hosts={}\n", self.plugin_network_hosts.iter().map(|(plugin, hosts)| format!("{plugin}:{}", hosts.join("|"))).collect::<Vec<_>>().join(","))),
+            ("viaproxy-port", format!("viaproxy-port={}\n", self.viaproxy_port)),
+            ("viaproxy-java", format!("# Путь к Java 17+ (рекомендуется 21).\nviaproxy-java={}\n", self.viaproxy_java)),
+            ("auth-mode", format!("# dialog или chat; доверенный PROXY всегда использует chat.\nauth-mode={}\n", self.auth_mode)),
+            ("proxy-protocol", format!("# Java TCP: требовать PROXY v1/v2; прямые подключения отклоняются.\nproxy-protocol={}\n", self.proxy_protocol)),
+            ("proxy-protocol-trusted-sources", format!("# Доверенные TCP-адреса прокси через запятую (точные IP, без CIDR).\n# Пустой список не доверяет никому. Backend закройте от внешнего доступа.\nproxy-protocol-trusted-sources={}\n", self.proxy_protocol_trusted_sources.iter().map(ToString::to_string).collect::<Vec<_>>().join(","))),
+            ("viaproxy", format!("# Автозапуск внешнего ViaProxy; backend принудительно на loopback.\nviaproxy={}\n", self.viaproxy)),
             ("viaproxy-memory", format!("# Память ViaProxy: минимум 320M при viaproxy=true; по умолчанию 512M.\nviaproxy-memory={}\n", if self.viaproxy_memory.is_multiple_of(1024 * 1024) { format!("{}M", self.viaproxy_memory / (1024 * 1024)) } else { self.viaproxy_memory.to_string() })),
             ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Поддерживается только 26.3. Перед переносом старого мира\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
@@ -372,7 +416,7 @@ send-error-reports={}
     /// Остальное в файле не трогается. Не записалось — не беда: настройки
     /// всё равно берутся по умолчанию.
     #[cfg(test)]
-    fn add_missing(self, path: &Path, text: &str) {
+    fn add_missing(&self, path: &Path, text: &str) {
         let values = parse_properties(text);
         let missing: Vec<_> = self.sections().into_iter().filter(|(key, _)| !values.contains_key(*key)).collect();
 
@@ -482,12 +526,40 @@ mod tests {
         assert_eq!(defaults.viaproxy_memory, 512 * 1024 * 1024);
         assert!(defaults.validate().is_ok());
     }
+
+    #[test]
+    fn plugin_controls_default_to_vanilla_and_network_is_opt_in() {
+        let path=std::path::Path::new("mcsa.properties");let defaults=super::Settings::default();
+        assert_eq!((defaults.monster_spawn_multiplier,defaults.ore_retention_percent),(1.0,100));assert!(defaults.plugin_network_hosts.is_empty());
+        let settings=super::Settings::parse("monster-spawn-multiplier=1.5\nore-retention-percent=40\nplugin-network-hosts=fourlegacy:api.example.org|other.example.org\n",path);
+        assert_eq!((settings.monster_spawn_multiplier,settings.ore_retention_percent),(1.5,40));assert_eq!(settings.plugin_network_hosts["fourlegacy"],vec!["api.example.org","other.example.org"]);
+        let invalid=super::Settings::parse("monster-spawn-multiplier=NaN\nore-retention-percent=101\n",path);assert_eq!((invalid.monster_spawn_multiplier,invalid.ore_retention_percent),(1.0,100));
+        assert_eq!(super::Settings::parse(&settings.to_file(),path),settings);
+    }
+
+    #[test]
+    fn proxy_settings_fail_closed_and_round_trip() {
+        use std::net::IpAddr;
+        let path = std::path::Path::new("unused");
+        let defaults = super::Settings::default();
+        assert!(!defaults.proxy_protocol);
+        assert_eq!(defaults.proxy_protocol_trusted_sources, vec!["127.0.0.1".parse::<IpAddr>().unwrap()]);
+        let settings = super::Settings::parse("proxy-protocol=true\nproxy-protocol-trusted-sources=127.0.0.1, ::1\n", path);
+        assert!(settings.proxy_protocol);
+        assert_eq!(settings.proxy_protocol_trusted_sources.len(), 2);
+        assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        for value in ["", "127.0.0.1,typo", "127.0.0.0/8"] {
+            let settings = super::Settings::parse(&format!("proxy-protocol-trusted-sources={value}\n"), path);
+            assert!(settings.proxy_protocol_trusted_sources.is_empty());
+        }
+    }
+
     #[test]
     fn auth_settings_default_and_round_trip() {
         let defaults = super::Settings::default();
         assert!(defaults.auth_enabled && defaults.auth_premium);
         let path = std::path::Path::new("config/mcsa.properties");
-        let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\n", path);
+        let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\nauth-mode=chat\nviaproxy=true\nviaproxy-port=26121\nviaproxy-java=/opt/java path/bin/java\nviaproxy-memory=1G\n", path);
         assert!(!changed.auth_enabled && !changed.auth_premium);
         assert_eq!(super::Settings::parse(&changed.to_file(), path), changed);
         // Старая настройка auth-provider игнорируется и не попадает в файл.

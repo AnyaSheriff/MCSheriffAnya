@@ -1,0 +1,2 @@
+package org.bukkit.event.player;
+public class AsyncPlayerChatEvent extends PlayerEvent implements org.bukkit.event.Cancellable {private String message;private boolean cancelled;public AsyncPlayerChatEvent(org.bukkit.entity.Player p,String m){super(p);message=m;}public String getMessage(){return message;}public void setMessage(String m){message=m;}public boolean isCancelled(){return cancelled;}public void setCancelled(boolean b){cancelled=b;}}

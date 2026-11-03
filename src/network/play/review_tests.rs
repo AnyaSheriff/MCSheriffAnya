@@ -29,7 +29,7 @@ fn bundle_selection_persists_in_chest_and_ender_storage() {
             world.with_container(0,70,0,|c| c.slots.clone_from(&shown));
         }
         p.window = Some(OpenWindow { id:1,halves:vec![(0,70,0)],cart:None,shown,lectern:false,crafter:false,
-            kind:Some(if ender { containers::Kind::EnderChest } else { containers::Kind::Chest }),props:Vec::new(),merchant:None,station:None,ender });
+            kind:Some(if ender { containers::Kind::EnderChest } else { containers::Kind::Chest }),props:Vec::new(),merchant:None,station:None,plugin_chest:None,ender });
         select_bundle(&shared,&mut p,0,1);
         let mut payload = vec![1,0]; payload.extend_from_slice(&0i16.to_be_bytes()); payload.extend([1,0]);
         click_window(&shared,&mut p,&payload,&mut Reaction::default());
@@ -43,11 +43,92 @@ fn cartography_cursor_gets_final_map_components() {
     let id = shared.maps.lock().unwrap().create(p.dimension,0,0,0);
     let input = item("filled_map").with_extras(crate::stackdata::Data {map_id:Some(id),..Default::default()});
     p.window = Some(OpenWindow { id:1,halves:Vec::new(),cart:None,shown:vec![Some(input),Some(item("paper")),Some(input)],lectern:false,crafter:false,
-        kind:None,props:Vec::new(),merchant:None,ender:false,station:Some(station::StationWindow {kind:crate::enchanting::Station::Cartography,pos:(0,70,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None}) });
+        kind:None,props:Vec::new(),merchant:None,plugin_chest: None, ender: false,station:Some(station::StationWindow {kind:crate::enchanting::Station::Cartography,pos:(0,70,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None}) });
     let mut payload = vec![1,0]; payload.extend_from_slice(&2i16.to_be_bytes()); payload.extend([0,0,0]);
     // HashedSlot: предмет и число верны, но map_id клиент ещё не знает.
     payload.push(1); payload.extend(encode_varint(input.item)); payload.extend([1,0,0]);
     let mut reaction = Reaction::default(); station::click(&shared,&mut p,&payload,&mut reaction);
     assert_eq!(p.inventory.cursor().unwrap().extras().map_id,Some(id+1));
     assert_eq!(reaction.cursor,Some(p.inventory.cursor()));
+}
+
+#[test]
+fn plugin_chest_drag_conserves_items_and_skips_foreign_stacks() {
+    let mut p = player();
+    let mut slots = vec![None; 9];
+    p.inventory.set_cursor(Some(item("stone").with_count(8)));
+    assert!(prepare_plugin_drag(&mut p, 1, -999, 0, &slots).is_none());
+    for slot in [0, 1, 2, 3] { assert!(prepare_plugin_drag(&mut p, 1, slot, 1, &slots).is_none()); }
+    assert!(slots.iter().all(Option::is_none));
+    let (kind, selected) = prepare_plugin_drag(&mut p, 1, -999, 2, &slots).unwrap();
+    // Обработчик мог изменить ячейку до применения транзакции.
+    slots[1] = Some(item("dirt"));
+    distribute_plugin_drag(&mut p.inventory, &mut slots, kind, &selected);
+    assert_eq!(slots[1], Some(item("dirt")));
+    assert_eq!(slots[0], Some(item("stone").with_count(2)));
+    assert_eq!(slots.iter().flatten().filter(|s| s.item == item("stone").item).map(|s| s.count).sum::<i32>() + p.inventory.cursor().map_or(0, |s| s.count), 8);
+}
+
+#[test]
+fn plugin_chest_without_live_handler_cannot_give_out_items_and_close_keeps_cursor() {
+    let shared = shared(); let mut p = player();
+    let chest = std::sync::Arc::new(std::sync::Mutex::new(crate::players::PluginChest { owner: "absent".into(), handle: 1, title: "{}".into(), slots: vec![Some(item("diamond")); 9], active: true }));
+    p.window = Some(OpenWindow { id: 1, halves: Vec::new(), cart: None, shown: vec![Some(item("diamond")); 9], lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false, plugin_chest: Some(chest.clone()) });
+    let mut payload = vec![1, 0]; payload.extend(0i16.to_be_bytes()); payload.extend([0, 0, 0, 0]);
+    let mut reaction = Reaction::default(); click_window(&shared, &mut p, &payload, &mut reaction);
+    assert!(p.inventory.cursor().is_none()); assert_eq!(chest.lock().unwrap().slots[0], Some(item("diamond")));
+    assert!(reaction.window_content && reaction.window_slots.is_empty());
+    p.inventory.set_cursor(Some(item("stone").with_count(3)));
+    close_own_window(&shared, &mut p);
+    assert!(p.window.is_none() && p.inventory.cursor().is_none());
+    assert_eq!(p.inventory.slots().iter().flatten().filter(|s| s.item == item("stone").item).map(|s| s.count).sum::<i32>(), 3);
+}
+
+#[tokio::test]
+async fn advancement_completion_enqueues_one_announcement_for_console_and_chat() {
+    let shared=shared();let mut p=player();
+    p.progress.adv=crate::advancements::AdvState::new();
+    for id in ["adventure/kill_a_mob","story/smelt_iron"] {assert!(p.progress.adv.grant_all(id));}
+    let mut out=Outgoing::capture();
+    progress_tick(&mut out,&shared,&mut p).await.unwrap();
+    progress_tick(&mut out,&shared,&mut p).await.unwrap();
+    let chat=shared.chat.lock().unwrap();
+    for title in ["Monster Hunter","Acquire Hardware"] {
+        assert_eq!(chat.since(0).iter().filter(|line|line.contains(title)).count(),1);
+        for who in [&p.uuid,&[31;16]] {
+            assert_eq!(chat.since_for_rich(0,who).iter().filter(|(line,rich)|line.contains(title)&&rich.is_some()).count(),1);
+        }
+    }
+}
+
+#[test]
+fn modern_plugin_root_hints_keep_vanilla_matches_tooltips_and_utf16_ranges() {
+    let shared = shared();
+    let names = vec!["hello".to_string(), "helpful".to_string(), "hello".to_string()];
+    for text in ["", "/", "he", "/he", "HEL", "/HEL"] {
+        let tree = command_tree::for_level(0, 777);
+        let mut result = command_completion::complete(&tree, 17, text, &shared, &[27; 16]);
+        let vanilla = result.matches.clone();
+        append_plugin_root_hints(&mut result, text, &names);
+        assert_eq!(result.id, 17);
+        assert_eq!(result.start, i32::from(text.starts_with('/')));
+        assert_eq!(result.length, text_length(text.strip_prefix('/').unwrap_or(text)));
+        assert_eq!(result.matches.len(), result.tooltips.len());
+        assert!(vanilla.iter().all(|name| result.matches.contains(name)));
+        assert_eq!(result.matches.iter().filter(|name| name.as_str() == "hello").count(), 1);
+        assert!(result.matches.contains(&"helpful".to_string()));
+    }
+    let mut result = Suggestions { id: 18, start: 1, length: 2,
+        matches: vec!["help".into()], tooltips: vec![Some(vec![10, 0])] };
+    append_plugin_root_hints(&mut result, "/he", &names);
+    let help = result.matches.iter().position(|name| name == "help").unwrap();
+    assert_eq!(result.tooltips[help], Some(vec![10, 0]));
+    // Пустой список с учётом прав не раскрывает чужих команд и не
+    // меняет диапазон уже рассчитанного ванильного ответа.
+    let mut empty = Suggestions { id: 19, start: 0, length: 0, matches: Vec::new(), tooltips: Vec::new() };
+    for (text, names) in [("/he", &[][..]), ("/🙂", names.as_slice())] {
+        append_plugin_root_hints(&mut empty, text, names);
+        assert_eq!((empty.start, empty.length), (0, 0));
+        assert!(empty.matches.is_empty() && empty.tooltips.is_empty());
+    }
 }

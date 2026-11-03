@@ -25,6 +25,9 @@ pub(crate) mod startup;
 #[cfg(target_os = "linux")]
 pub(crate) mod migration;
 pub(crate) mod snapshot;
+mod plugin_controls;
+/// Настройка ядра применяется только к вновь сгенерированным чанкам.
+pub static ORE_RETENTION_PERCENT: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(100);
 mod spawn_search;
 #[cfg(test)]
 #[allow(dead_code)]
@@ -412,7 +415,7 @@ pub enum Gust {
 /// сначала по Y (снизу вверх), внутри — по Z, внутри — по X. Поэтому секцию
 /// не приходится перекладывать при отправке.
 #[derive(Clone)]
-struct Chunk {
+pub(crate) struct Chunk {
     /// Секции снизу вверх. None — секция целиком из воздуха.
     ///
     /// Состояние блока хранится в двух байтах, а не в четырёх: номеров
@@ -562,7 +565,7 @@ fn biome_cell(layer: usize, cell_x: usize, cell_z: usize) -> usize {
 }
 
 impl Chunk {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             sections: (0..SECTIONS).map(|_| None).collect(),
             biomes: vec![0; BIOME_LAYERS * BIOME_LAYER],
@@ -1266,6 +1269,10 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 /// Мир целиком: чанки и список изменений.
 pub struct World {
     catalog: crate::gameplay_catalog::Catalog,
+    pub plugin_events_enabled: bool,
+    pub plugin_game_events: Vec<crate::redstone::sculk_family::GameEvent>,
+    /// Предел монстров по владельцам; последняя правка действует до выгрузки.
+    pub plugin_monster_limits: Vec<(String, usize)>,
     pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
     pub fire_tick: bool,
     pub fire_difficulty: u8,
@@ -1618,6 +1625,9 @@ impl World {
     pub fn in_memory_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
         Self {
             catalog,
+            plugin_monster_limits: Vec::new(),
+            plugin_game_events: Vec::new(),
+            plugin_events_enabled: false,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1789,6 +1799,9 @@ impl World {
         let preview = catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3;
         let mut world = Self {
             catalog,
+            plugin_monster_limits: Vec::new(),
+            plugin_game_events: Vec::new(),
+            plugin_events_enabled: false,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1904,6 +1917,7 @@ impl World {
             world.save_level();
         }
 
+        crate::plugins::world_init(if world.is_nether() {crate::dimension::Dimension::Nether}else if world.is_end() {crate::dimension::Dimension::End}else {crate::dimension::Dimension::Overworld});
         Ok(world)
     }
 
@@ -3402,31 +3416,13 @@ impl World {
     /// успели загрузить, изменить, записать и снова выгрузить — тогда на
     /// диске уже новее. Такой чанк не кладётся, а читается заново, здесь же.
     /// Так же — если чанк в стороне прочитать не удалось.
+    #[cfg(test)]
     pub fn accept(&mut self, chunk_x: i32, chunk_z: i32, ready: ReadyChunk) {
-        let key = (chunk_x, chunk_z);
-
-        if self.chunks.contains_key(&key) {
-            return;
-        }
-
-        let stale = ready.epoch + UNLOAD_MEMORY < self.unload_epoch
-            || self.unloaded.get(&key).is_some_and(|at| *at > ready.epoch);
-
-        match ready.taken {
-            Taken::Loaded { chunk, from_disk, wake } if !stale => {
-                self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
-            }
-            Taken::Loaded { .. } => {
-                log_debug!("Мир: чанк {} {} выгружался, пока читался, — читаю заново", chunk_x, chunk_z);
-                self.ensure(chunk_x, chunk_z);
-            }
-            Taken::Unavailable => {
-                self.ensure(chunk_x, chunk_z);
-            }
-        }
+        if !self.accept_prepared(chunk_x,chunk_z,ready) {self.ensure(chunk_x,chunk_z);}
     }
 
     /// Приём фоновой подготовки никогда не читает диск и не генерирует.
+    /// Возврат false требует повторной подготовки вне замка мира.
     pub fn accept_prepared(&mut self, x: i32, z: i32, ready: ReadyChunk) -> bool {
         let key = (x, z);
         if self.chunks.contains_key(&key) { return true; }
@@ -4782,7 +4778,9 @@ fn take_chunk(path: &Path, generator: &Generator, catalog: crate::gameplay_catal
     }
 
     let generated = || {
-        let chunk = Chunk::generated(generator, chunk_x, chunk_z);
+        let mut chunk = Chunk::generated(generator, chunk_x, chunk_z);
+        let seed = match generator {Generator::Normal(terrain)=>terrain.seed(),Generator::Nether(nether)=>nether.seed(),Generator::End(end)=>end.seed(),Generator::Flat=>0};
+        plugin_controls::retain_ores(&mut chunk,chunk_x,chunk_z,seed,ORE_RETENTION_PERCENT.load(std::sync::atomic::Ordering::Relaxed));
         let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
         Taken::Loaded { chunk, from_disk: false, wake }
@@ -4908,10 +4906,16 @@ impl ChunkSource {
 
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
-        ReadyChunk {
-            taken: take_chunk(&self.path, &self.generator, self.catalog, chunk_x, chunk_z),
-            epoch: self.epoch,
+        self.take_with(chunk_x,chunk_z,crate::plugins::active(),crate::plugins::populate)
+    }
+    fn take_with(&self,chunk_x:i32,chunk_z:i32,enabled:bool,populate:impl FnOnce(crate::dimension::Dimension,i32,i32,i64,Chunk)->Chunk)->ReadyChunk {
+        let mut taken=take_chunk(&self.path,&self.generator,self.catalog,chunk_x,chunk_z);
+        if enabled && let Taken::Loaded {chunk,from_disk:false,..}=&mut taken {
+            let (dimension,seed)=match self.generator.as_ref() {Generator::Normal(t)=>(crate::dimension::Dimension::Overworld,t.seed()),Generator::Nether(t)=>(crate::dimension::Dimension::Nether,t.seed()),Generator::End(t)=>(crate::dimension::Dimension::End,t.seed()),Generator::Flat=>(crate::dimension::Dimension::Overworld,0)};
+            *chunk=populate(dimension,chunk_x,chunk_z,seed,chunk.clone());
+            if let Taken::Loaded {chunk,wake,..}=&mut taken {*wake=chunk.fluids_to_wake(chunk_x,chunk_z);}
         }
+        ReadyChunk {taken,epoch:self.epoch}
     }
 }
 
@@ -8696,7 +8700,11 @@ mod prepared_light_regressions {
         replacement.set(16, 10, 0, crate::blocks::state_by_name("torch").unwrap());
         replacement.revision = revision;
         world.chunks.remove(&(1, 0));
-        world.insert_chunk(1, 0, replacement, true, &[]);
+        let ready = ReadyChunk {
+            taken: Taken::Loaded { chunk: replacement, from_disk: true, wake: Vec::new() },
+            epoch: world.unload_epoch,
+        };
+        assert!(world.accept_prepared(1, 0, ready));
         assert_eq!(world.chunk_revision(1, 0), Some(revision));
         assert!(!world.sky_cache.contains_key(&(0, 0)));
         assert!(!world.light_is_current(&prepared));
@@ -8795,8 +8803,83 @@ mod prepared_light_regressions {
     }
 }
 
+type PopulationLoot = Vec<((i32,i32,i32),Vec<Option<crate::inventory::Stack>>)>;
+impl Chunk {
+    pub(crate) fn population_loot(&self) -> PopulationLoot {let mut containers:Vec<_>=self.containers.iter().filter(|(_,c)|c.slots.iter().any(Option::is_some)).map(|(pos,c)|(*pos,c.slots.clone())).collect();containers.sort_by_key(|(p,_)|*p);containers}
+    pub(crate) fn replace_population_loot(&mut self, pos: (i32,i32,i32), slots: Vec<Option<crate::inventory::Stack>>) {if let Some(container)=self.containers.get_mut(&pos) {container.slots=slots;}}
+    pub(crate) fn population_snapshot(&self, catalog: crate::gameplay_catalog::Catalog) -> (Vec<String>,Vec<u32>) {
+        let mut palette=Vec::new();let mut indices=std::collections::HashMap::new();let mut runs=Vec::<u32>::new();
+        for x in 0..16 {for z in 0..16 {for y in MIN_Y..MIN_Y+WORLD_HEIGHT {
+            let name=catalog.name(crate::gameplay_catalog::Kind::State, self.block(x,y,z)).unwrap_or("air");
+            let index=*indices.entry(name).or_insert_with(||{let id=palette.len() as u32;palette.push(name.to_string());id});
+            let n=runs.len();if n>=2&&runs[n-1]==index {runs[n-2]+=1;}else {runs.extend([1,index]);}
+        }}}
+        (palette,runs)
+    }
+    pub(crate) fn apply_population(&mut self, catalog: crate::gameplay_catalog::Catalog, edits: Vec<String>) -> Result<(),String> {
+        if edits.len()>98304 {return Err("Слишком много изменений генерации".into());}
+        let mut changes=Vec::with_capacity(edits.len());for edit in edits {
+            let (index,name)=edit.split_once(' ').ok_or("Неверное изменение генерации")?;let index=index.parse::<i32>().map_err(|_|"Неверный индекс генерации")?;
+            if !(0..98304).contains(&index) {return Err("За пределами области генерации".into());}
+            let state=catalog.default_state(name).map_err(|_| "Неизвестный блок генерации")?.ok_or("Неизвестный блок генерации")?;changes.push((index,state));
+        }
+        for (index,state) in changes {self.set(index/384/16,index%384+MIN_Y,index/384%16,state);}
+        self.light_up_with_catalog(catalog);Ok(())
+    }
+}
+
 #[cfg(test)]
 mod terrain_263_tests;
 
 #[cfg(test)]
 mod badlands_ocean_tests;
+
+#[cfg(test)]
+mod plugin_population_tests {
+    use super::*;
+    #[test]
+    fn population_precedes_synchronous_insertion_and_does_not_revisit_saved_chunks() {
+        let path=std::env::temp_dir().join(format!("mcsa-population-sync-{}",std::process::id()));let _=std::fs::remove_dir_all(&path);
+        let mut world=World::open(&path,Some(1),crate::config::server_properties::WorldKind::Flat).unwrap();
+        let source=world.source();let mut calls=0;
+        let ready=source.take_with(7,-8,true,|_,x,z,_,mut chunk| {calls+=1;assert_eq!((x,z),(7,-8));chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 diamond_block".into()]).unwrap();chunk});
+        assert_eq!(calls,1);assert!(!world.has_chunk(7,-8));assert!(world.accept_prepared(7,-8,ready));assert_eq!(crate::blocks::block_at_state(world.get_block(112,-64,-128)),Some("diamond_block"));
+        world.save_if_needed();drop(world);
+        let world=World::open(&path,Some(1),crate::config::server_properties::WorldKind::Flat).unwrap();
+        let _ready=world.source().take_with(7,-8,true,|_,_,_,_,_|panic!("сохранённый чанк попал в популятор"));drop(world);let _=std::fs::remove_dir_all(path);
+    }
+    #[test]
+    fn population_263_keeps_existing_blocks_and_rejects_unknown_edits_atomically() {
+        use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_NAME};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let legacy = Catalog::new(Profile::Java26_1_2);
+        let state = catalog.state_from_text(&format!("{WHITE_SLAB_NAME}[type=top,waterlogged=true]")).unwrap().unwrap();
+        let mut chunk = Chunk::new();
+        chunk.set(0, MIN_Y, 0, state);
+        let (palette, runs) = chunk.population_snapshot(catalog);
+        assert_eq!(palette[runs[1] as usize], WHITE_SLAB_NAME);
+        assert!(chunk.apply_population(catalog, vec!["1 stone".into(), "2 not_a_real_block".into()]).is_err());
+        assert_eq!(chunk.block(0, MIN_Y, 0), state);
+        assert_eq!(chunk.block(0, MIN_Y + 1, 0), 0);
+        assert!(chunk.apply_population(legacy, vec![format!("0 {WHITE_SLAB_NAME}")]).is_err());
+        assert_eq!(chunk.block(0, MIN_Y, 0), state);
+        chunk.apply_population(catalog, vec![format!("1 {WHITE_SLAB_NAME}"), "2 stone".into()]).unwrap();
+        assert_eq!(chunk.block(0, MIN_Y, 0), state);
+        assert_eq!(chunk.block(0, MIN_Y + 1, 0), catalog.default_state(WHITE_SLAB_NAME).unwrap().unwrap());
+        assert!(chunk.fresh_light().is_some());
+        let (palette, runs) = chunk.population_snapshot(catalog);
+        assert_eq!(runs.as_chunks::<2>().0.iter().map(|row| row[0]).sum::<u32>(), 98304);
+        assert!(palette.iter().any(|name| name == WHITE_SLAB_NAME));
+    }
+
+    #[test]
+    fn population_edits_are_bounded_atomic_and_cover_negative_height() {
+        let mut chunk=Chunk::new();let old=chunk.block(0,-64,0);
+        assert!(chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 diamond_block".into(),"98304 stone".into()]).is_err());
+        assert_eq!(chunk.block(0,-64,0),old);
+        assert!(chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 not_a_real_block".into()]).is_err());
+        chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 diamond_block".into(),"98303 gold_block".into()]).unwrap();
+        assert_eq!(crate::blocks::block_at_state(chunk.block(0,-64,0)),Some("diamond_block"));assert_eq!(crate::blocks::block_at_state(chunk.block(15,319,15)),Some("gold_block"));
+        let (palette,runs)=chunk.population_snapshot(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));assert_eq!(runs.as_chunks::<2>().0.iter().map(|r|r[0]).sum::<u32>(),98304);assert_eq!(palette[runs[1] as usize],"diamond_block");
+    }
+}

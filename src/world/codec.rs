@@ -446,6 +446,17 @@ impl Chunk {
     pub(super) fn decode_for_load_with_catalog(
         bytes: &[u8], catalog: crate::gameplay_catalog::Catalog,
     ) -> Result<Self, DecodeError> {
+        Self::decode_with_storage_context(bytes, catalog, false)
+    }
+
+    pub(super) fn decode_for_main_import_with_catalog(
+        bytes: &[u8], catalog: crate::gameplay_catalog::Catalog,
+    ) -> Result<Self, DecodeError> {
+        if bytes.first() != Some(&4) { return Err(DecodeError::Damaged); }
+        Self::decode_with_storage_context(bytes, catalog, true)
+    }
+
+    fn decode_with_storage_context(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog, legacy_metadata: bool) -> Result<Self, DecodeError> {
         let version = *bytes.first().ok_or(DecodeError::Damaged)?;
         if !matches!(version, 4 | CHUNK_VERSION) { return Err(DecodeError::UnsupportedLayout(version)); }
         let incompatible = std::cell::Cell::new(None);
@@ -455,7 +466,7 @@ impl Chunk {
                 Err(error) => { incompatible.set(Some(error)); false }
             }
         };
-        let chunk = Self::read_current(bytes, &state_ok, catalog, &incompatible).ok_or_else(||
+        let chunk = Self::read_current(bytes, &state_ok, catalog, &incompatible, legacy_metadata).ok_or_else(||
             incompatible.get().unwrap_or(DecodeError::Damaged))?;
         chunk.validate_catalog(catalog)?;
         Ok(chunk)
@@ -497,13 +508,13 @@ impl Chunk {
         Ok(())
     }
 
-    #[cfg(test)]
+    /// Проверяет каталог и пишет текущую раскладку, в том числе при явном импорте main.
     pub(super) fn to_bytes_with_catalog(&self, catalog: crate::gameplay_catalog::Catalog) -> Result<Vec<u8>, DecodeError> {
         self.validate_catalog(catalog)?;
         Ok(self.to_bytes())
     }
 
-    fn read_current(bytes: &[u8], state_ok: &dyn Fn(u16) -> bool, catalog: crate::gameplay_catalog::Catalog, incompatible: &std::cell::Cell<Option<DecodeError>>) -> Option<Self> {
+    fn read_current(bytes: &[u8], state_ok: &dyn Fn(u16) -> bool, catalog: crate::gameplay_catalog::Catalog, incompatible: &std::cell::Cell<Option<DecodeError>>, legacy_metadata: bool) -> Option<Self> {
         let mut reader = Reader::new(bytes.get(1..)?);
         let mut chunk = Chunk::new();
 
@@ -536,9 +547,9 @@ impl Chunk {
 
             for _ in 0..count {
                 let original = rest;
-                let (place, container) = containers::Container::read(&mut rest, 0, 0)?;
+                let (place, container) = containers::Container::read_with_legacy_metadata(&mut rest, 0, 0, legacy_metadata)?;
                 let mut encoded = Vec::new();
-                container.write(place, &mut encoded);
+                container.write_with_legacy_metadata(place, &mut encoded, legacy_metadata);
                 let consumed = original.len().checked_sub(rest.len())?;
                 let invalid = container.slots.iter().flatten().find(|stack| catalog.validate_stack(stack).is_err());
                 if encoded != original.get(..consumed)? || invalid.is_some() {
@@ -583,9 +594,11 @@ impl Chunk {
 
             for _ in 0..count {
                 let original = rest;
-                let frame = crate::frame::read(&mut rest, 0, 0, 0)?;
+                let frame = if legacy_metadata {
+                    crate::frame::read_with_legacy_metadata(&mut rest, 0, 0, 0, true)
+                } else { crate::frame::read(&mut rest, 0, 0, 0) }?;
                 let mut encoded = Vec::new();
-                crate::frame::write(&frame, &mut encoded);
+                crate::frame::write_with_legacy_metadata(&frame, &mut encoded, legacy_metadata);
                 let consumed = original.len().checked_sub(rest.len())?;
                 let invalid = frame.item.as_ref().filter(|stack| catalog.validate_stack(stack).is_err());
                 if encoded != original.get(..consumed)? || invalid.is_some() {
@@ -604,7 +617,7 @@ impl Chunk {
             rest = &rest[2..];
 
             for _ in 0..count {
-                let mob = crate::mob::Mob::read(&mut rest).or_else(|| {
+                let mob = crate::mob::Mob::read_with_storage_context(&mut rest, bytes[0] == 4, legacy_metadata).or_else(|| {
                     incompatible.set(Some(DecodeError::InvalidMob { profile: catalog.profile() }));
                     None
                 })?;
@@ -736,7 +749,10 @@ impl Chunk {
                 let len = u32::from_be_bytes(head[3..7].try_into().ok()?) as usize;
                 let (bytes, tail) = rest.split_at_checked(len)?; rest = tail;
                 if !in_bounds(at.1) || !chunk.pots.contains_key(&at) { return None; }
-                chunk.pot_details.insert(at, crate::stackdata::from_bytes(bytes)?);
+                let data = crate::stackdata::from_bytes(bytes)?;
+                let canonical = if legacy_metadata { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
+                if canonical != bytes { return None; }
+                chunk.pot_details.insert(at, data);
             }
         }
         if rest.len() >= 2 {
@@ -1121,3 +1137,117 @@ mod catalog_tests;
 #[cfg(test)]
 #[path = "codec_mob_storage_tests.rs"]
 mod mob_storage_tests;
+
+#[cfg(test)]
+mod merged_main_mob_tail_tests {
+    use super::*;
+
+    #[test]
+    fn layout_four_uuid_attribute_tail_upgrades_without_overlay_guessing() {
+        let mut mob = crate::mob::Mob::new(97, crate::mob::Kind::Zombie, (1.0, 70.0, 1.0));
+        // Нули в начале UUID похожи на длину дополнения: выбор только по версии чанка.
+        mob.uuid = [0; 16];
+        mob.edit_plugin_attribute(&crate::commands_world::AttributeEdit::SetBase {
+            attribute: crate::attributes::MAX_HEALTH, value: 40.0,
+        }).unwrap();
+        mob.vitals.health = 35.0;
+        let mut record = Vec::new();
+        mob.write(&mut record);
+        // Старый main writer: flags128/name0/leash0/UUID/count/attribute.
+        // В новой записи перед UUID добавлен FFFFFFFF + has_overlay0.
+        let mut tail = vec![128, 0, 0, 0];
+        tail.extend([0xff; 4]);
+        tail.push(0);
+        tail.extend(mob.uuid);
+        tail.push(1);
+        tail.extend(crate::attributes::MAX_HEALTH.to_be_bytes());
+        tail.extend(40.0f64.to_be_bytes());
+        tail.extend(0u16.to_be_bytes());
+        assert!(record.ends_with(&tail));
+        let mut legacy_record = record[..record.len()-tail.len()].to_vec();
+        legacy_record.extend(&tail[..4]);
+        legacy_record.extend(&tail[9..]);
+        let mut chunk = Chunk::flat();
+        chunk.mobs.push(mob.clone());
+        let mut bytes = chunk.to_bytes();
+        let offset = bytes.windows(record.len()).position(|window| window == record).unwrap();
+        bytes.splice(offset..offset+record.len(), legacy_record);
+        bytes[0] = 4;
+        let loaded = Chunk::from_bytes(&bytes).unwrap();
+        assert_eq!(loaded.mobs[0].uuid, mob.uuid);
+        assert_eq!(loaded.mobs[0].plugin_attributes, mob.plugin_attributes);
+        assert_eq!(loaded.mobs[0].vitals.health, 35.0);
+        let upgraded = loaded.to_bytes();
+        assert_eq!(upgraded[0], CHUNK_VERSION);
+        let reloaded = Chunk::from_bytes(&upgraded).unwrap();
+        assert_eq!(reloaded.mobs[0].plugin_attributes, mob.plugin_attributes);
+        assert_eq!(reloaded.mobs[0].uuid, mob.uuid);
+    }
+}
+
+#[cfg(test)]
+mod main_metadata_import_tests {
+    use super::*;
+    use crate::{inventory::Stack, stackdata::{Content, Data}};
+
+    #[test]
+    fn explicit_main_four_import_converts_nested_chest_and_mob_metadata() {
+        let diamond = crate::blocks::item_named("diamond").unwrap();
+        let inner = Data { plugin_meta: Some("{\"customModelData\":71}".into()), ..Default::default() };
+        let inner_stack = Stack::new(diamond, 2).with_extras(inner);
+        let data = Data {
+            plugin_meta: Some("{\"customModelData\":72}".into()),
+            contents: vec![Content { slot: 0, item: inner_stack.stored_item(), count: inner_stack.count, data: inner_stack.data }],
+            ..Default::default()
+        };
+        let stack = Stack::new(crate::blocks::item_named("shulker_box").unwrap(), 1).with_extras(data.clone());
+        let mut chunk = Chunk::flat();
+        chunk.set(1, 80, 1, crate::blocks::state_by_name("chest").unwrap());
+        chunk.containers.get_mut(&(1,80,1)).unwrap().slots[0] = Some(stack);
+        let mut mob = crate::mob::Mob::new(40, crate::mob::Kind::Zombie, (1.0,80.0,1.0));
+        mob.equipment = Some([Some(stack), None, None, None, None, None]);
+        chunk.mobs.push(mob);
+        let mut bytes = chunk.to_bytes();
+        bytes[0] = 4;
+        let current = crate::stackdata::to_bytes(&data);
+        let legacy = crate::stackdata::to_bytes_main_metadata(&data);
+        assert_eq!(current.len(), legacy.len());
+        assert_ne!(current, legacy);
+        let offsets: Vec<_> = bytes.windows(current.len()).enumerate().filter_map(|(i,w)| (w == current).then_some(i)).collect();
+        assert_eq!(offsets.len(), 2);
+        for offset in offsets { bytes[offset..offset+legacy.len()].copy_from_slice(&legacy); }
+        let source = bytes.clone();
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        assert!(Chunk::decode_for_load_with_catalog(&bytes, catalog).is_err());
+        let imported = Chunk::decode_for_main_import_with_catalog(&bytes, catalog).unwrap();
+        assert_eq!(bytes, source);
+        assert_eq!(imported.containers[&(1,80,1)].slots[0], Some(stack));
+        assert_eq!(imported.mobs[0].equipment.as_ref().unwrap()[0], Some(stack));
+        let rewritten = imported.to_bytes();
+        assert_eq!(rewritten[0], CHUNK_VERSION);
+        let reloaded = Chunk::decode_for_load_with_catalog(&rewritten, catalog).unwrap();
+        assert_eq!(reloaded.containers[&(1,80,1)].slots[0], Some(stack));
+        assert_eq!(reloaded.mobs[0].equipment.as_ref().unwrap()[0], Some(stack));
+    }
+}
+
+#[cfg(test)]
+mod main_import_catalog_boundaries {
+    use super::*;
+
+    #[test]
+    fn explicit_main_import_does_not_reinterpret_current_preview_layout() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut chunk = Chunk::new();
+        let state = crate::gameplay_catalog::WHITE_SLAB_FIRST_STATE;
+        chunk.set(1, 80, 1, state);
+        let legacy = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        assert!(matches!(chunk.to_bytes_with_catalog(legacy), Err(DecodeError::UnsupportedCatalogState { .. })));
+        let bytes = chunk.to_bytes_with_catalog(catalog).unwrap();
+        let source = bytes.clone();
+        assert!(Chunk::decode_for_main_import_with_catalog(&bytes, catalog).is_err());
+        let loaded = Chunk::decode_for_load_with_catalog(&bytes, catalog).unwrap();
+        assert_eq!(loaded.block(1,80,1), state);
+        assert_eq!(loaded.to_bytes_with_catalog(catalog).unwrap(), source);
+    }
+}

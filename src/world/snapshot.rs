@@ -106,3 +106,9 @@ pub(crate) fn upgrade_unidentified_storage_receipt(guard: &StartupGuard,
 pub(crate) fn create_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
     linux::create_profile_upgrade(guard)
 }
+
+/// Явно выбранная раскладка playerdata исторической main; замки удержаны до commit.
+#[cfg(target_os = "linux")]
+pub(crate) fn create_main_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
+    linux::create_main_profile_upgrade(guard)
+}

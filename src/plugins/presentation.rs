@@ -6,7 +6,7 @@ use crate::players::{Players, Order};
 use crate::scoreboard::{self as board, NumberFormat};
 use crate::network::{varint::{encode_varint, encode_string}};
 
-fn component(text: &str) -> Option<Value> {
+pub(super) fn component(text: &str) -> Option<Value> {
     if text.len() > 16384 { return None; }
     let mut value: Value = serde_json::from_str(text).ok()?;
     if !valid_component(&value) { return None; }

@@ -1,0 +1,14 @@
+{
+  "source": "Frozen own origin/main3bb895ee playerdata/Mob/small/tame/leash/plugin_attributes/stackdata file writers, independently assembled in Python; no current writer call",
+  "player_sha256": "b561b88c54bb0c6ae0c9c36be0745ed15be9b62683398492df7c29dafcf3f698",
+  "shoulder_sha256": "b0d4ed85a3ad24d878897278326bf8853d4d2755dfdc4f09356300b268ae6c6c",
+  "source_hashes": {
+    "src/playerdata.rs": "979d720516d7cac4524c04985fad3c76cea78d794e6cf3e5e80c0dc4f3f02623",
+    "src/mob/mod.rs": "9cefee9fdefa0e501e3acfc6e07ce53bd1b7a047ea8e06353e6878646b16d879",
+    "src/mob/small.rs": "09d3a59d8062366539a12444a16278ee8cfe71394671ab0f33de12708e8a7a38",
+    "src/mob/tame.rs": "9b1324e189f1b5df0b73a35d4369c4e138c48f3a426c5b3a6b3d3c7679e7ce70",
+    "src/mob/leash.rs": "26d4bb55b903602149d59a963246ef28390e74ddf0d8334d4cc9d9cdee43bb99",
+    "src/mob/plugin_attributes.rs": "11c7800e539c22b24fea140c8f9c42a41de0fad91bf44df08d598b72d775fc8f",
+    "src/stackdata.rs": "dd2188228cecc29138aab8f419150607d2af47bd870e39fa12c5a8c12e48d170"
+  }
+}

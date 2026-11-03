@@ -22,6 +22,7 @@ pub(super) fn modifiers(mob: &Mob, attribute: i32) -> Vec<Modifier> {
         let amount = if attribute == attributes::MOVEMENT_SPEED { crate::soul::bonus(mob.foot_enchants.soul) } else { 1.0 };
         result.push(Modifier::new(crate::soul::ID, amount, attributes::Operation::AddValue));
     }
+    if let Some(entry)=mob.plugin_attributes.iter().find(|a|a.id==attribute) {result.extend(entry.modifiers.iter().cloned());}
     result
 }
 
@@ -36,11 +37,13 @@ pub(super) fn soul_changed(mob: &Mob, before: i32) -> Vec<Attribute> {
     }).collect()
 }
 
+pub(super) fn base(mob:&Mob,id:i32,native:f64)->f64 {mob.plugin_attributes.iter().find(|a|a.id==id).map_or(native,|a|a.base)}
+
 pub(super) fn speed_base(mob: &Mob) -> f64 {
-    if crate::mob::horse::equine(mob.kind) { mob.horse.speed }
-    else if crate::mob::slime::cube(mob.kind) { crate::mob::slime::speed(mob.nether.size) }
-    else if mob.kind == Kind::Wither { 0.6 }
-    else { f64::from(super::mobs::attribute_speed(mob.kind) as f32) }
+    base(mob,attributes::MOVEMENT_SPEED,if crate::mob::horse::equine(mob.kind) {mob.horse.speed}
+    else if crate::mob::slime::cube(mob.kind) {crate::mob::slime::speed(mob.nether.size)}
+    else if mob.kind==Kind::Wither {0.6}
+    else {f64::from(super::mobs::attribute_speed(mob.kind) as f32)})
 }
 
 pub(super) fn speed_modifier(mob: &Mob) -> Option<(&'static str, f64, u8)> {
@@ -62,7 +65,7 @@ pub(super) fn changed(mob: &Mob, before: [i32; 4]) -> Vec<Attribute> {
     ids.into_iter().map(|id| {
         let base = match id {
             attributes::MOVEMENT_SPEED => speed_base(mob),
-            attributes::MAX_HEALTH => f64::from(mob.vitals.max_health),
+            attributes::MAX_HEALTH => base(mob,attributes::MAX_HEALTH,f64::from(mob.vitals.max_health)),
             _ => 0.0,
         };
         let mut modifiers = modifiers(mob, id);
@@ -122,5 +125,18 @@ mod tests {
         let attrs = changed(&mob, old); assert_eq!(attrs.len(), 1); assert!(attrs[0].modifiers.is_empty());
         give(&mut mob, EffectKind::HealthBoost, 0); give(&mut mob, EffectKind::Absorption, 0);
         assert_eq!(changed(&mob, [0;4]).len(), 2);
+    }
+}
+
+#[cfg(test)] mod plugin_attribute_tests {
+    use super::*;
+    #[test] fn plugin_movement_wire_attribute_matches_native_horse_speed() {
+        let mut mob=Mob::new(1,Kind::Horse,(0.0,64.0,0.0));let before=mob.attr_changes;
+        mob.edit_plugin_attribute(&crate::commands_world::AttributeEdit::AddModifier {attribute:attributes::MOVEMENT_SPEED,modifier:Modifier::new("fourlegacy:mounted_speed",0.5,attributes::Operation::AddMultipliedTotal)}).unwrap();
+        let wire=Attribute {id:attributes::MOVEMENT_SPEED,base:speed_base(&mob),modifiers:modifiers(&mob,attributes::MOVEMENT_SPEED)};
+        assert_eq!(wire.value(),mob.movement_speed());assert!(mob.attr_changes>before);
+        mob.edit_plugin_attribute(&crate::commands_world::AttributeEdit::AddModifier {attribute:attributes::MAX_HEALTH,modifier:Modifier::new("fourlegacy:world_buff",0.25,attributes::Operation::AddMultipliedBase)}).unwrap();
+        let health=Attribute {id:attributes::MAX_HEALTH,base:base(&mob,attributes::MAX_HEALTH,f64::from(mob.vitals.max_health)),modifiers:modifiers(&mob,attributes::MAX_HEALTH)};
+        assert_eq!(health.value() as f32,mob.vitals.max_health);
     }
 }

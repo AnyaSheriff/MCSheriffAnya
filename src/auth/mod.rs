@@ -208,6 +208,9 @@ fn arguments(mut line: &str) -> Result<Vec<String>, &'static str> {
 
 fn command_inner(command: &str, source: &crate::commands::Source, shared: &crate::shared::Shared) -> Result<String, &'static str> {
     use crate::commands::Source;
+    if matches!(command.split_whitespace().next(), Some("login" | "register")) {
+        return Err("Вход уже выполнен или парольная авторизация выключена");
+    }
     let service = shared.auth.as_ref().ok_or("Парольная авторизация выключена")?;
     let parsed = arguments(command)?;
     let words: Vec<_> = parsed.iter().map(String::as_str).collect();

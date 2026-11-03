@@ -161,6 +161,8 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 pub struct Data {
     /// Java custom_data: все типы NBT и исходные биты значений.
     pub custom_data: Option<CustomData>,
+    /// Проверенные метаданные API плагинов (включая PDC); хвост файла 23.
+    pub plugin_meta: Option<String>,
     /// Цвет брони и стороны горшка; метки файла 18, 19 (1–17 заняты).
     pub dyed_color: Option<i32>,
     pub pot_decorations: Option<[i32; 4]>,
@@ -421,8 +423,26 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
 
     if let Some(name) = &data.name {
         out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_NAME));
-        out.extend_from_slice(&crate::network::nbt::text_component(name));
+        let styled = data.plugin_meta.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()).and_then(|map| map.get("name").cloned());
+        if let Some(component) = styled.filter(|component| crate::scoreboard::plain_text(component) == *name) { out.extend(crate::scoreboard::encode_component(&component)); }
+        else { out.extend_from_slice(&crate::network::nbt::text_component(name)); }
         count += 1;
+    }
+
+    if let Some(meta) = data.plugin_meta.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()) {
+        if let Some(max) = meta.get("maxDamage").and_then(serde_json::Value::as_i64).filter(|max| (1..=i32::MAX as i64).contains(max)) { out.extend(encode_varint(2)); out.extend(encode_varint(max as i32)); count += 1; }
+        if !data.ominous_banner && let Some(flags) = meta.get("flags").and_then(serde_json::Value::as_array) {
+            let mut hidden = Vec::new();
+            for flag in flags.iter().filter_map(serde_json::Value::as_str) {
+                for component in match flag { "HIDE_ENCHANTS"=>&[13][..],"HIDE_ATTRIBUTES"=>&[16][..],"HIDE_UNBREAKABLE"=>&[4][..],"HIDE_DYE"=>&[44][..],"HIDE_ARMOR_TRIM"=>&[56][..],"HIDE_STORED_ENCHANTS"=>&[42][..],"HIDE_ADDITIONAL_TOOLTIP"=>&[51,72][..],_=>&[][..] } { if !hidden.contains(component) { hidden.push(*component); } }
+            }
+            if !hidden.is_empty() { out.extend(encode_varint(COMPONENT_TOOLTIP_DISPLAY)); out.push(0); out.extend(encode_varint(hidden.len() as i32)); for component in hidden { out.extend(encode_varint(component)); } count += 1; }
+        }
+        if let Some(lore) = meta.get("lore").and_then(serde_json::Value::as_array).filter(|lines| !lines.is_empty()) {
+            out.extend(encode_varint(11)); out.extend(encode_varint(lore.len() as i32));
+            for line in lore { out.extend(crate::scoreboard::encode_component(line)); }
+            count += 1;
+        }
     }
 
     if data.repair_cost != 0 {
@@ -1017,6 +1037,15 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
 
 /// Довески в файл: износ, признак, зачарования, свои модификаторы.
 pub fn to_bytes(data: &Data) -> Vec<u8> {
+    to_bytes_with_metadata_tag(data, 23)
+}
+
+/// Только проверка канона явного импорта main; не писатель обычных сохранений.
+pub(crate) fn to_bytes_main_metadata(data: &Data) -> Vec<u8> {
+    to_bytes_with_metadata_tag(data, 20)
+}
+
+fn to_bytes_with_metadata_tag(data: &Data, metadata_tag: u8) -> Vec<u8> {
     let mut out = Vec::new();
 
     out.extend_from_slice(&data.damage.to_be_bytes());
@@ -1028,7 +1057,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some() || data.plugin_meta.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -1068,7 +1097,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some() || data.plugin_meta.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -1133,12 +1162,13 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&value.to_be_bytes());
             }
         }
+        if let Some(meta) = &data.plugin_meta { out.push(metadata_tag); out.extend((meta.len() as u32).to_be_bytes()); out.extend(meta.as_bytes()); }
         if let Some(color) = data.dyed_color { out.push(18); out.extend(color.to_be_bytes()); }
         if !data.pot_sides.is_empty() {
             out.extend([21, data.pot_sides.len() as u8]);
             for c in &data.pot_sides {
                 out.push(c.slot); out.extend(c.item.to_be_bytes());
-                let bytes = c.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+                let bytes = c.data.map(|id| to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
                 out.extend((bytes.len() as u32).to_be_bytes()); out.extend(bytes);
             }
         }
@@ -1151,7 +1181,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             out.extend([16,data.bundle_selected.unwrap_or(255),data.bundle.len() as u8]);
             for c in &data.bundle {
                 out.extend(c.item.to_be_bytes()); out.extend(c.count.to_be_bytes());
-                let bytes=c.data.map(|id|to_bytes(&get(id))).unwrap_or_default();
+                let bytes=c.data.map(|id|to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
                 out.extend((bytes.len() as u32).to_be_bytes()); out.extend(bytes);
             }
         }
@@ -1164,7 +1194,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         if let Some(ammo) = data.charged_arrow {
             out.push(11);
             out.extend_from_slice(&ammo.item.to_be_bytes());
-            let extras = ammo.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+            let extras = ammo.data.map(|id| to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
             out.extend_from_slice(&(extras.len() as u32).to_be_bytes());
             out.extend_from_slice(&extras);
         }
@@ -1179,7 +1209,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&content.item.to_be_bytes());
                 out.extend_from_slice(&content.count.to_be_bytes());
 
-                let extras = content.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+                let extras = content.data.map(|id| to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
 
                 out.extend_from_slice(&(extras.len() as u16).to_be_bytes());
                 out.extend_from_slice(&extras);
@@ -1350,7 +1380,22 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                 }
                 20 => {
                     let len = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
-                    if !projectiles::read_body(reader.take(len)?, &mut data) { return None; }
+                    let body = reader.take(len)?;
+                    // Старый main использовал ту же метку20 для JSON API.
+                    // Оба ограниченных парсера проверяют весь хвост; неоднозначность — отказ.
+                    let mut charged = data.clone();
+                    let projectile = projectiles::read_body(body, &mut charged);
+                    let metadata = read_plugin_metadata(body);
+                    match (projectile, metadata) {
+                        (true, None) => data = charged,
+                        (false, Some(text)) if data.plugin_meta.is_none() => data.plugin_meta = Some(text),
+                        _ => return None,
+                    }
+                }
+                23 => {
+                    if data.plugin_meta.is_some() { return None; }
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    data.plugin_meta = Some(read_plugin_metadata(reader.take(length)?)?);
                 }
                 18 => { data.dyed_color = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
                 19 => { let mut sides = [0; 4]; for item in &mut sides { *item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?); } data.pot_decorations = Some(sides); }
@@ -2072,4 +2117,47 @@ mod bundle_component_tests {
         assert_eq!(read.bundle,data.bundle);
     }
 
+}
+
+// Ограничение старого API сохраняется при чтении обеих меток.
+fn read_plugin_metadata(bytes: &[u8]) -> Option<String> {
+    if bytes.len() > 16384 { return None; }
+    let text = std::str::from_utf8(bytes).ok()?;
+    let _: serde_json::Value = serde_json::from_str(text).ok()?;
+    Some(text.to_owned())
+}
+
+#[cfg(test)]
+mod merged_plugin_metadata_tests {
+    use super::*;
+    #[test]
+    fn plugin_metadata_23_roundtrip_and_legacy_20_are_unambiguous() {
+        let data = Data { plugin_meta: Some(r#"{"pdc":{"fixture":"value"}}"#.into()), ..Data::default() };
+        let bytes = to_bytes(&data);
+        assert_eq!(from_bytes(&bytes), Some(data.clone()));
+        let tail = data.plugin_meta.as_ref().unwrap().len() + 5;
+        assert_eq!(bytes[bytes.len() - tail], 23);
+        let mut legacy = bytes.clone();
+        let start = legacy.len() - tail;
+        legacy[start] = 20;
+        assert_eq!(from_bytes(&legacy), Some(data));
+        for end in start+1..legacy.len() { assert!(from_bytes(&legacy[..end]).is_none()); }
+        let mut duplicate = bytes.clone(); duplicate.extend_from_slice(&legacy[start..]);
+        assert!(from_bytes(&duplicate).is_none());
+        let mut malformed = bytes.clone(); *malformed.last_mut().unwrap() = b'!';
+        assert!(from_bytes(&malformed).is_none());
+        let too_large = Data { plugin_meta: Some(format!("\"{}\"", "x".repeat(16383))), ..Data::default() };
+        assert!(from_bytes(&to_bytes(&too_large)).is_none());
+    }
+
+    #[test]
+    fn projectile_20_and_metadata_23_survive_together() {
+        let arrow = crate::blocks::item_named("arrow").unwrap();
+        let data = Data { charged: 1, charged_projectiles: vec![ChargedProjectile {
+            content: Content { slot: 0, item: arrow, count: 2, data: None }, intangible: true,
+        }], plugin_meta: Some(r#"{"fixture":true}"#.into()), ..Data::default() };
+        let parsed = from_bytes(&to_bytes(&data)).unwrap();
+        assert_eq!(parsed.plugin_meta, data.plugin_meta);
+        assert_eq!(loaded_projectiles(&parsed), loaded_projectiles(&data));
+    }
 }

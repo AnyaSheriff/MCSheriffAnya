@@ -814,6 +814,15 @@ pub(super) fn create_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBac
         })
 }
 
+// Тот же защищённый снимок; различается только проверяемая конверсия playerdata.
+pub(super) fn create_main_profile_upgrade(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
+    create_with_completion(guard, Options::default(), &mut |_| Ok(()), None, false,
+        &mut |source, backup, uncertain| {
+            source.check_anchor()?;
+            super::super::migration::activate_from_main(guard, backup, uncertain)
+        })
+}
+
 
 fn checked_storage_receipt(source: &LockedWorld<'_>, expected: &super::super::startup::storage_receipt::Receipt) -> io::Result<(File, Stamp)> {
     use super::super::{profile, startup::storage_receipt};

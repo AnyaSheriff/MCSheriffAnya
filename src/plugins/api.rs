@@ -68,6 +68,11 @@ pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
 
 /// Состояние одного плагина (`Store<PluginCtx>`).
 pub struct PluginCtx {
+    pub(super) native_wait: Arc<super::host::NativeWait>,
+    pub pending_mobs: HashMap<[u8;16], (Dimension,crate::mob::Mob)>,
+    pub network: super::network::Access,
+    pub chests: super::inventory::Chests,
+    pub native_items: super::inventory::NativeItems,
     pub name: String,
     /// Модуль из `modules/` — доверенный.
     pub trusted: bool,
@@ -94,6 +99,24 @@ impl WasiView for PluginCtx {
 }
 
 impl PluginCtx {
+    // Синхронный Bukkit-запрос ждёт только нужный чанк; генерация и чтение
+    // идут без замка мира, как при отправке чанков подключению.
+    fn load_block_chunk(&self, dimension: Dimension, x: i32, z: i32) -> bool {
+        if x.abs_diff(0) > 30_000_000 || z.abs_diff(0) > 30_000_000 { return false; }
+        let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
+        for _ in 0..2 {
+            let source = {
+                let world = self.shared.world_in(dimension).lock().expect("мир");
+                if world.has_chunk(cx, cz) { return true; }
+                world.source()
+            };
+            let _wait = self.native_wait.enter();
+            let ready = source.take(cx, cz);
+            if self.shared.world_in(dimension).lock().expect("мир").accept_prepared(cx, cz, ready) { return true; }
+        }
+        false
+    }
+
     /// Задачи, чей час пришёл на такте `now`, в порядке номеров. Одноразовые
     /// удаляются, повторяющиеся переносятся.
     pub fn due_tasks(&mut self, now: u64) -> Vec<u32> {
@@ -214,8 +237,8 @@ impl super::PlayerView {
 }
 
 /// Блок с приставкой: `minecraft:stone`.
-fn block_text(state: i32) -> String {
-    format!("minecraft:{}", crate::blocks::block_at_state(state).unwrap_or("air"))
+fn block_text(catalog: crate::gameplay_catalog::Catalog, state: i32) -> String {
+    format!("minecraft:{}", catalog.name(crate::gameplay_catalog::Kind::State, state).unwrap_or("air"))
 }
 
 /// Имя файла в папке данных: без путей, без точки в начале.
@@ -223,6 +246,23 @@ pub fn safe_file_name(name: &str) -> Result<&str, String> {
     let bad = name.is_empty() || name.len() > 100 || name.starts_with('.') || name.contains(['/', '\\', '\0', ':']);
 
     if bad { Err(format!("имя файла «{name}» не годится: без путей и точки в начале")) } else { Ok(name) }
+}
+
+// Каждая часть относительного пути проверяется; ссылки из data/ не разыменовываем.
+fn data_path(root: &Path, name: &str) -> Result<PathBuf, String> {
+    if name.is_empty() || name.len() > 512 { return Err("пустой или слишком длинный путь данных".into()); }
+    let mut path = root.to_path_buf();
+    let mut paths = vec![path.clone()];
+    for part in name.split('/') { path.push(safe_file_name(part)?); paths.push(path.clone()); }
+    for candidate in paths {
+        match std::fs::symlink_metadata(candidate) {
+            Ok(meta) if meta.file_type().is_symlink() => return Err("символические ссылки в data/ запрещены".into()),
+            Ok(_) => (),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    Ok(path)
 }
 
 fn read_limited(path: &Path) -> Result<Option<Vec<u8>>, String> {
@@ -244,10 +284,18 @@ fn write_file(path: &Path, data: &[u8]) -> Result<(), String> {
     }
 
     // Через временный файл: оборванная запись не оставит половину.
-    let temporary = path.with_extension("tmp");
-
-    std::fs::write(&temporary, data).map_err(|error| error.to_string())?;
-    std::fs::rename(&temporary, path).map_err(|error| error.to_string())
+    use std::io::Write;
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let temporary = path.with_file_name(format!(".mcsa-write-{}-{}", std::process::id(), NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+    let result = (|| {
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&temporary).map_err(|error| error.to_string())?;
+        file.write_all(data).map_err(|error| error.to_string())?;
+        // Обычная запись плагина не требует отдельного дискового барьера:
+        // fsync здесь задерживал общий поток плагинов на сотни миллисекунд.
+        std::fs::rename(&temporary, path).map_err(|error| error.to_string())
+    })();
+    if result.is_err() { let _ = std::fs::remove_file(temporary); }
+    result
 }
 
 impl mcsa::api::types::Host for PluginCtx {}
@@ -266,6 +314,7 @@ impl mcsa::api::log::Host for PluginCtx {
 }
 
 impl mcsa::api::server::Host for PluginCtx {
+    fn is_stopping(&mut self) -> bool {super::stopping()}
     fn api_version(&mut self) -> String {
         super::manifest::API_VERSION.to_string()
     }
@@ -284,6 +333,9 @@ impl mcsa::api::server::Host for PluginCtx {
         }
     }
 
+    fn ready_players(&mut self) -> Vec<wit::Player> {
+        let players=self.shared.players.lock().expect("игроки");players.members().iter().filter(|p|players.ui.info.contains_key(&p.uuid)).map(member_to_wit).collect()
+    }
     fn online_players(&mut self) -> Vec<wit::Player> {
         self.shared.players.lock().expect("список игроков захвачен другим потоком").members().iter().map(member_to_wit).collect()
     }
@@ -296,6 +348,155 @@ impl mcsa::api::server::Host for PluginCtx {
 }
 
 impl mcsa::api::player::Host for PluginCtx {
+    fn get_silent(&mut self, uuid: String) -> Result<bool,String> {let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let players=self.shared.players.lock().expect("игроки");Ok(players.ui.info.get(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state.silent)}
+    fn set_silent(&mut self, uuid: String, silent: bool) -> Result<(),String> {let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let mut players=self.shared.players.lock().expect("игроки");let state=&mut players.ui.info.get_mut(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state;state.silent=silent;state.silent_owner=Some(self.name.clone());players.order(&uuid,Order::PluginSilent {owner:self.name.clone(),value:Some(silent)});Ok(())}
+
+    fn vehicle(&mut self, uuid: String) -> Result<Option<String>,String> {
+        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let (entity_id,dimension)=self.shared.players.lock().expect("игроки").members().iter().find(|p|p.uuid==uuid).map(|p|(p.entity_id,p.dimension)).ok_or("Игрока нет на сервере")?;
+        let Some(vehicle)=self.shared.riding.lock().expect("седоки").vehicle_of(entity_id) else {return Ok(None);};
+        let items=self.shared.items_in(dimension).lock().expect("сущности");
+        Ok(items.mobs().iter().find(|m|m.entity_id==vehicle).map(|m|crate::network::login::format_uuid(&m.uuid)).or_else(||items.carts().iter().find(|c|c.entity_id==vehicle).map(|c|crate::network::login::format_uuid(&c.uuid))))
+    }
+    fn inside_vehicle(&mut self, uuid: String) -> Result<bool,String> {
+        let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let entity_id=self.shared.players.lock().expect("игроки").members().iter().find(|p|p.uuid==uuid).map(|p|p.entity_id).ok_or("Игрока нет на сервере")?;
+        Ok(self.shared.riding.lock().expect("седоки").vehicle_of(entity_id).is_some())
+    }
+
+    fn get_flight(&mut self, uuid: String) -> Result<mcsa::api::player::Flight, String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let players = self.shared.players.lock().expect("игроки");
+        let state = &players.ui.info.get(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state;
+        Ok(mcsa::api::player::Flight { allowed: state.flight_allowed, flying: state.flying, fall_damage: state.flight_fall_damage.map_or(-1, i8::from) })
+    }
+    fn set_flight(&mut self, uuid: String, field: u8, value: i8) -> Result<(), String> {
+        if field > 2 || !(if field == 2 { -1..=1 } else { 0..=1 }).contains(&value) {return Err("Неверное поле или значение полёта".into());}
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        let state = &mut players.ui.info.get_mut(&uuid).ok_or("Игрока Java нет на сервере")?.plugin_state;
+        match field {
+            0 => {state.flight_allowed = value != 0;if value == 0 {state.flying = false;}},
+            1 => {if value != 0 && !state.flight_allowed {return Err("Полёт игроку не разрешён".into());}state.flying = value != 0;},
+            _ => state.flight_fall_damage = if value < 0 {None} else {Some(value != 0)},
+        }
+        state.flight_owners[field as usize]=Some(self.name.clone());
+        players.order(&uuid, Order::PluginFlight {owner:self.name.clone(),field,value});Ok(())
+    }
+
+    fn get_state(&mut self, uuid: String) -> Result<mcsa::api::player::State, String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let players = self.shared.players.lock().expect("игроки");
+        let member = players.members().iter().find(|member| member.uuid == uuid).ok_or("игрока нет на сервере")?;
+        let gear = players.gear(&uuid);
+        let state = &players.ui.info.get(&uuid).ok_or("Состояние доступно только для Java")?.plugin_state;
+        Ok(mcsa::api::player::State {
+            fire_ticks: state.fire_ticks, dead: gear.view.dead, sneaking: member.sneaking,
+            on_ground: member.position.on_ground, in_water: state.in_water, in_lava: state.in_lava,
+            in_rain: state.in_rain, eye_height: state.eye_height,
+            using_item: gear.living & 1 != 0, off_hand: gear.living & 2 != 0,
+            effects: state.effects.iter().map(|effect| mcsa::api::player::PotionEffect {
+                kind: effect.kind.name().into(), duration: effect.ticks_left, amplifier: effect.amplifier,
+                ambient: effect.ambient, particles: effect.visible, icon: effect.show_icon,
+            }).collect(),
+        })
+    }
+    fn set_fire_ticks(&mut self, uuid: String, ticks: i32) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        let info = players.ui.info.get_mut(&uuid).ok_or("игрока Java нет на сервере")?;
+        info.plugin_state.fire_ticks = ticks.max(0);
+        players.order(&uuid, Order::PluginFire { ticks: ticks.max(0) });Ok(())
+    }
+    fn damage(&mut self, uuid: String, amount: f64) -> Result<(), String> {
+        if !amount.is_finite() || amount < 0.0 || amount > f64::from(f32::MAX) { return Err("Урон должен быть конечным неотрицательным числом".into()); }
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.ui.info.contains_key(&uuid) { return Err("игрока Java нет на сервере".into()); }
+        players.order(&uuid, Order::Hurt { amount: amount as f32, source: crate::survival::Source::Generic });Ok(())
+    }
+    fn give_experience(&mut self, uuid: String, amount: i32) -> Result<(), String> {
+        if amount < 0 {return Err("Количество выдаваемого опыта не может быть отрицательным".into());}
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.ui.info.contains_key(&uuid) { return Err("игрока Java нет на сервере".into()); }
+        players.order(&uuid, Order::Experience { set: false, amount, levels: false });Ok(())
+    }
+    fn set_respawn(&mut self, uuid: String, to: Option<wit::Location>) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let point = match to {
+            Some(to) if to.x.is_finite() && to.x.abs() <= 30_000_000.0 && to.z.is_finite() && to.z.abs() <= 30_000_000.0 && to.y.is_finite() && (-2048.0..=2048.0).contains(&to.y) && to.yaw.is_none_or(f32::is_finite) => Some(crate::bed::RespawnPoint { dimension: dimension_from_wit(to.dimension), pos: (to.x.floor() as i32, to.y.floor() as i32, to.z.floor() as i32), yaw: to.yaw.unwrap_or(0.0), forced: false }),
+            None => None,
+            _ => return Err("Недопустимая точка возрождения".into()),
+        };
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.members().iter().any(|member| member.uuid == uuid) {return Err("игрока нет на сервере".into());}
+        if !players.ui.info.contains_key(&uuid) {return Err("Точка возрождения API пока поддерживается только для Java".into());}
+        players.order(&uuid, Order::PluginSpawn { point });Ok(())
+    }
+
+    fn get_bed_action(&mut self, uuid: String, pos: wit::BlockPos) -> Option<mcsa::api::player::BedAction> {
+        let uuid = parse_uuid(&uuid)?;
+        let (member, dead, sleeping) = {let players = self.shared.players.lock().expect("игроки");(players.members().iter().find(|member| member.uuid == uuid)?.clone(), players.gear(&uuid).view.dead, players.gear(&uuid).sleeping.is_some())};
+        let dimension = dimension_from_wit(pos.dimension);if member.dimension != dimension || member.sneaking {return None;}
+        let world = self.shared.world_in(dimension).lock().expect("мир");
+        let head = crate::bed::head_of(&world, (pos.x, pos.y, pos.z))?;
+        let problem = if !crate::bed::beds_work(dimension) {4}
+            else if sleeping || dead || crate::bed::occupied(&world, head) {5}
+            else if !crate::bed::bed_in_reach(&world, head, (member.position.x, member.position.y, member.position.z)) {1}
+            else if crate::bed::bed_obstructed(&world, head) {2}
+            else {let items = self.shared.items_in(dimension).lock().expect("сущности");let (wide, high) = crate::bed::MONSTER_REACH;
+                if member.game_mode != 1 && items.mobs().iter().any(|mob| mob.kind.hostile() && !mob.is_dead() && (mob.x - (f64::from(head.0)+0.5)).abs() <= wide && (mob.y-f64::from(head.1)).abs() <= high && (mob.z-(f64::from(head.2)+0.5)).abs() <= wide) {3} else {0}};
+        let dark = crate::bed::dark_enough(world.time_of_day(), world.weather.is_raining(), world.weather.is_thundering());
+        Some(mcsa::api::player::BedAction { bed: wit::BlockPos { dimension: pos.dimension, x: head.0, y: head.1, z: head.2 }, problem, can_spawn: problem == 0, can_sleep: problem == 0 && dark })
+    }
+
+    fn set_health(&mut self, uuid: String, health: f64) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let maximum=crate::commands_world::plugin_attribute(&self.shared,&uuid,crate::attributes::MAX_HEALTH).ok_or("игрока Java нет на сервере")?.value();
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.ui.info.contains_key(&uuid) {return Err("игрока Java нет на сервере".into());}
+        if !health.is_finite() || health < 0.0 || health > maximum {
+            return Err("здоровье: конечное число от 0 до максимума игрока".into());
+        }
+        if players.gear(&uuid).view.dead { return Err("игрок уже умер".into()); }
+        // Снимок подключения может ещё содержать максимум до ожидающих правок.
+        if let Some(info)=players.ui.info.get_mut(&uuid) {info.max_health=maximum as f32;info.health=health as f32;}
+        players.order(&uuid, Order::Health { value: health as f32 });
+        Ok(())
+    }
+
+    fn add_potion_effect(&mut self, uuid: String, effect: mcsa::api::player::PotionEffect) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let kind = crate::survival::EffectKind::from_name(&effect.kind).ok_or("неизвестный эффект")?;
+        if effect.duration < -1 || !(0..=255).contains(&effect.amplifier) {
+            return Err("эффект: duration >= -1, amplifier от 0 до 255".into());
+        }
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            drop(players);
+            for dimension in Dimension::ALL {let mut items=self.shared.items_in(dimension).lock().expect("сущности");if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&!m.is_dead()) {
+                if !mob.accepts_effect(kind) {return Err("Этот вид сущности не принимает эффект".into());}
+                mob.vitals.give_effect_shown(crate::survival::Effect {kind,amplifier:effect.amplifier,ticks_left:effect.duration,ambient:effect.ambient,visible:effect.particles,show_icon:effect.icon});return Ok(());
+            }}return Err("Живая сущность отсутствует".into());
+        }
+        players.order(&uuid, Order::Effect(crate::survival::Effect { kind, amplifier: effect.amplifier, ticks_left: effect.duration, ambient: effect.ambient, visible: effect.particles, show_icon: effect.icon }));
+        Ok(())
+    }
+
+    fn remove_potion_effect(&mut self, uuid: String, kind: String) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        let kind = crate::survival::EffectKind::from_name(&kind).ok_or("неизвестный эффект")?;
+        let mut players = self.shared.players.lock().expect("игроки");
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            drop(players);
+            for dimension in Dimension::ALL {let mut items=self.shared.items_in(dimension).lock().expect("сущности");if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.uuid==uuid&&!m.is_dead()) {mob.vitals.remove_effects(Some(kind));return Ok(());}}
+            return Err("Живая сущность отсутствует".into());
+        }
+        players.order(&uuid, Order::ClearEffect(kind));
+        Ok(())
+    }
+
     fn send_message(&mut self, uuid: String, message: String) -> bool {
         let Some(uuid) = parse_uuid(&uuid) else { return false };
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
@@ -318,12 +519,14 @@ impl mcsa::api::player::Host for PluginCtx {
             return false;
         }
 
+        let dimension = dimension_from_wit(to.dimension);
+        if !self.shared.players.lock().expect("игроки").members().iter().any(|member| member.uuid == uuid)
+            || !self.load_block_chunk(dimension, to.x.floor() as i32, to.z.floor() as i32) { return false; }
+
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
         let Some(member) = players.members().iter().find(|member| member.uuid == uuid).cloned() else {
             return false;
         };
-
-        let dimension = dimension_from_wit(to.dimension);
 
         if dimension == member.dimension {
             players.order(&uuid, Order::Teleport { x: to.x, y: to.y, z: to.z });
@@ -351,7 +554,7 @@ impl mcsa::api::player::Host for PluginCtx {
         }
 
         let spec = stack.item.strip_prefix("minecraft:").unwrap_or(&stack.item).to_string();
-        let stack = crate::commands::stack_from_spec(&spec, stack.count as i32)?.ok_or_else(|| "воздух выдать нельзя".to_string())?;
+        let stack = crate::commands::stack_from_spec_for_catalog(self.shared.catalog(), &spec, stack.count as i32)?.ok_or_else(|| "воздух выдать нельзя".to_string())?;
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
 
         if !players.members().iter().any(|member| member.uuid == uuid) {
@@ -359,6 +562,37 @@ impl mcsa::api::player::Host for PluginCtx {
         }
 
         players.order(&uuid, Order::Give { stack });
+        Ok(())
+    }
+
+    fn set_game_mode(&mut self, uuid: String, mode: wit::GameMode) -> bool {
+        let Some(uuid) = parse_uuid(&uuid) else { return false };
+        let mode = match mode { wit::GameMode::Survival => 0, wit::GameMode::Creative => 1, wit::GameMode::Adventure => 2, wit::GameMode::Spectator => 3 };
+        let mut players = self.shared.players.lock().expect("список игроков занят");
+        let Some(member) = players.members().iter().find(|member| member.uuid == uuid) else { return false; };
+        if member.game_mode == mode { return true; }
+        players.set_game_mode(&uuid, mode);
+        players.order(&uuid, Order::GameMode { mode, at: *self.shared.ticks.borrow() });
+        true
+    }
+
+    fn operator_level(&mut self, uuid: String) -> Option<u8> {
+        let uuid = parse_uuid(&uuid)?;
+        if !self.shared.players.lock().expect("список игроков занят").members().iter().any(|member| member.uuid == uuid) { return None; }
+        Some(self.shared.ops.lock().expect("список операторов занят").level_of(&uuid) as u8)
+    }
+
+    fn set_inventory_slot(&mut self, uuid: String, slot: u32, stack: Option<wit::ItemStack>) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
+        if !(9..=44).contains(&slot) { return Err("ячейка: от 9 до 44".into()); }
+        let stack = match stack {
+            Some(stack) if stack.count > 0 && stack.count <= 64 => crate::commands::stack_from_spec_for_catalog(self.shared.catalog(), &stack.item, stack.count as i32)?,
+            Some(_) => return Err("count: от 1 до 64".into()),
+            None => None,
+        };
+        let mut players = self.shared.players.lock().expect("список игроков занят");
+        if !players.members().iter().any(|member| member.uuid == uuid) { return Err("игрока нет на сервере".into()); }
+        players.order(&uuid, Order::SetSlot { slot: slot as i32, stack });
         Ok(())
     }
 
@@ -376,18 +610,167 @@ impl mcsa::api::player::Host for PluginCtx {
 }
 
 impl mcsa::api::world::Host for PluginCtx {
+    fn monster_limit(&mut self, dimension: wit::Dimension) -> u32 {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").plugin_monster_limits.last().map_or_else(|| (crate::mob::spawn::MONSTER_CAP as f64*self.shared.settings.monster_spawn_multiplier).round() as u32, |(_,limit)|*limit as u32)
+    }
+    fn set_monster_limit(&mut self, dimension: wit::Dimension, limit: i32) -> Result<(), String> {
+        if !(-1..=10_000).contains(&limit) {return Err("Предел монстров должен быть от -1 до 10000".into());}
+        let mut world=self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
+        world.plugin_monster_limits.retain(|(owner,_)|owner!=&self.name);
+        if limit>=0 {world.plugin_monster_limits.push((self.name.clone(),limit as usize));}Ok(())
+    }
+
+    fn ray_blocks(&mut self, start: wit::Location, dx: f64, dy: f64, dz: f64, distance: f64, fluids: u8, ignore_passable: bool) -> Result<Option<mcsa::api::world::RayHit>, String> {
+        if ![start.x,start.y,start.z,dx,dy,dz,distance].iter().all(|v|v.is_finite()) || start.x.abs()>30_000_000.0 || start.z.abs()>30_000_000.0 || !(-2048.0..=2048.0).contains(&start.y) || !(0.0..=512.0).contains(&distance) || fluids>2 {return Err("Луч: конечные координаты, длина до 512 блоков".into());}
+        let length=dx.hypot(dy).hypot(dz);if length==0.0 || !length.is_finite() {return Err("Направление луча должно быть ненулевым".into());}
+        let direction=[dx/length,dy/length,dz/length];let origin=[start.x,start.y,start.z];
+        let mut cell=[start.x.floor() as i32,start.y.floor() as i32,start.z.floor() as i32];
+        let mut next=[f64::INFINITY;3];let mut delta=[f64::INFINITY;3];let mut step=[0;3];
+        for axis in 0..3 {if direction[axis]!=0.0 {step[axis]=if direction[axis]>0.0 {1} else {-1};delta[axis]=1.0/direction[axis].abs();let edge=f64::from(cell[axis])+if step[axis]>0 {1.0} else {0.0};next[axis]=(edge-origin[axis])/direction[axis];}}
+        let world=self.shared.world_in(dimension_from_wit(start.dimension)).lock().expect("мир");let mut travelled=0.0;let mut face=6;
+        loop {
+            if !world.has_chunk(cell[0].div_euclid(16),cell[2].div_euclid(16)) {return Err("Луч вышел за загруженные чанки".into());}
+            let state=world.get_block(cell[0],cell[1],cell[2]);
+            let liquid=crate::fluids::fluid_at(state);
+            let hit=if let Some((_,level))=liquid { !ignore_passable && (fluids==2 || fluids==1 && level==0) }
+                else if ignore_passable {crate::blocks::has_box(state)} else {!matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(),None|Some("air"|"cave_air"|"void_air"))};
+            if hit {return Ok(Some(mcsa::api::world::RayHit {x:start.x+direction[0]*travelled,y:start.y+direction[1]*travelled,z:start.z+direction[2]*travelled,block:wit::BlockPos {dimension:start.dimension,x:cell[0],y:cell[1],z:cell[2]},face}));}
+            let axis=(0..3).min_by(|a,b|next[*a].total_cmp(&next[*b])).unwrap_or(0);travelled=next[axis];if travelled>distance {return Ok(None);}
+            cell[axis]+=step[axis];next[axis]+=delta[axis];face=match (axis,step[axis]) {(0,1)=>4,(0,_)=>5,(1,1)=>0,(1,_)=>1,(2,1)=>2,_=>3};
+        }
+    }
+
+    fn spawn_particle(&mut self, at: wit::Location, name: String, count: u32, dx: f64, dy: f64, dz: f64) -> Result<(), String> {
+        if ![at.x,at.y,at.z,dx,dy,dz].iter().all(|v| v.is_finite()) || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || [dx,dy,dz].iter().any(|v| !(0.0..=64.0).contains(v)) || count > 4096 {return Err("Недопустимые параметры частиц".into());}
+        if !matches!(name.as_str(), "happy_villager" | "heart") {return Err("Частица вне поддерживаемого каталога".into());}
+        let kind = crate::commands_admin::PARTICLES.iter().position(|n| *n == name).ok_or("Неизвестная частица")? as i32;
+        self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_particle(kind,None,(at.x,at.y,at.z),(dx as f32,dy as f32,dz as f32),0.0,count as i32);Ok(())
+    }
+    fn break_naturally(&mut self, pos: wit::BlockPos) -> Result<bool, String> {
+        let dimension = dimension_from_wit(pos.dimension);
+        let drops = {
+            let mut world = self.shared.world_in(dimension).lock().expect("мир");
+            if !world.has_chunk(pos.x.div_euclid(16),pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+            let state = world.get_block(pos.x,pos.y,pos.z);
+            if crate::mining::properties_with_catalog(world.catalog(), state).0 < 0.0 || matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(),Some("air"|"cave_air"|"void_air")) {return Ok(false);}
+            // Шалкер с содержимым уже выпадает через обычную очередь spill_containers.
+            let packed = world.container(pos.x,pos.y,pos.z).is_some_and(|c| c.kind == crate::containers::Kind::ShulkerBox);
+            let drops = if packed {Vec::new()} else {crate::mining::block_drops_with_catalog(world.catalog(),state,None,||world.random_unit())};
+            crate::placing::break_block(&mut world,pos.x,pos.y,pos.z);drops
+        };
+        let mut items=self.shared.items_in(dimension).lock().expect("предметы");
+        for stack in drops {items.drop_item(self.shared.next_entity_id(),stack,(f64::from(pos.x)+0.5,f64::from(pos.y)+0.5,f64::from(pos.z)+0.5),(0.0,0.2,0.0),10);}
+        Ok(true)
+    }
+
+    fn chunk_loaded(&mut self, dimension: wit::Dimension, x: i32, z: i32) -> bool {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").has_chunk(x, z)
+    }
+    fn highest_block(&mut self, dimension: wit::Dimension, x: i32, z: i32) -> Result<i32, String> {
+        if !self.load_block_chunk(dimension_from_wit(dimension), x, z) { return Err("Не удалось загрузить чанк".into()); }
+        let world = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
+        if !world.has_chunk(x.div_euclid(16), z.div_euclid(16)) {return Err("чанк не загружен".into());}
+        Ok((-64..320).rev().find(|y| !matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, world.get_block(x, *y, z)).ok(), Some("air" | "cave_air" | "void_air"))).unwrap_or(-64))
+    }
+    fn random_tick_speed(&mut self) -> u32 { crate::farming::random_tick_speed() }
+    fn block_details(&mut self, pos: wit::BlockPos) -> Result<mcsa::api::world::BlockState, String> {
+        if !self.load_block_chunk(dimension_from_wit(pos.dimension), pos.x, pos.z) { return Err("Не удалось загрузить чанк".into()); }
+        let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
+        if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+        let state = world.get_block(pos.x, pos.y, pos.z);
+        let mut data = block_text(world.catalog(), state);
+        let mut age = -1; let mut max_age = -1;
+        if let Some(block) = world.catalog().orientation_of(state).ok().flatten() {
+            let props: Vec<_> = block.properties.iter().filter_map(|p| Some(format!("{}={}", p.name, block.value(state, p.name)?))).collect();
+            if !props.is_empty() {data.push_str(&format!("[{}]", props.join(",")));}
+            if let Some(property) = block.properties.iter().find(|p| p.name == "age") {
+                age = block.value(state, "age").and_then(|v| v.parse().ok()).unwrap_or(-1);
+                max_age = property.values.iter().filter_map(|v| v.parse::<i32>().ok()).max().unwrap_or(-1);
+            }
+        }
+        let (sky, light) = world.light_full(pos.x, pos.y, pos.z);
+        Ok(mcsa::api::world::BlockState {data, sky, light: sky.max(light), liquid: matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(), Some("water" | "lava")), passable: !crate::blocks::has_box(state), age, max_age})
+    }
+    fn update_block(&mut self, pos: wit::BlockPos, data: String, force: bool, physics: bool) -> Result<bool, String> {
+        let state = self.shared.catalog().state_from_text(&data).map_err(|_| "неизвестное состояние блока")?.ok_or("неизвестное состояние блока")?;
+        if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
+        let dimension = dimension_from_wit(pos.dimension);
+        {
+            let mut world = self.shared.world_in(dimension).lock().expect("мир");
+            if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+            let current = world.get_block(pos.x, pos.y, pos.z);
+            if !force && world.catalog().name(crate::gameplay_catalog::Kind::State, current) != world.catalog().name(crate::gameplay_catalog::Kind::State, state) {return Ok(false);}
+            if !physics {world.set_block(pos.x, pos.y, pos.z, state);return Ok(true);}
+        }
+        self.set_block(pos, data)?;Ok(true)
+    }
+    fn random_tick(&mut self, pos: wit::BlockPos) -> Result<(), String> {
+        let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
+        if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
+        if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
+        let state = world.get_block(pos.x, pos.y, pos.z);
+        crate::farming::random_tick(&mut world, (pos.x, pos.y, pos.z), state);Ok(())
+    }
+    fn play_sound(&mut self, at: wit::Location, sound: String, volume: f32, pitch: f32) -> Result<(), String> {
+        if !at.x.is_finite() || !at.y.is_finite() || !at.z.is_finite() || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || !volume.is_finite() || !(0.0..=16.0).contains(&volume) || !pitch.is_finite() || !(0.0..=2.0).contains(&pitch) {return Err("Недопустимые параметры звука".into());}
+        if !sound.starts_with("minecraft:") || sound.len() > 256 || !sound.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"_:./-".contains(&b)) {return Err("Недопустимый ключ звука".into());}
+        let sound = match sound.as_str() {
+            "minecraft:block.anvil.use" => "block.anvil.use", "minecraft:entity.enderman.teleport" => "entity.enderman.teleport",
+            "minecraft:entity.evoker.prepare_summon" => "entity.evoker.prepare_summon", "minecraft:entity.magma_cube.squish" => "entity.magma_cube.squish",
+            "minecraft:entity.piglin.admiring_item" => "entity.piglin.admiring_item", "minecraft:entity.player.attack.crit" => "entity.player.attack.crit",
+            _ => return Err("Звук вне поддерживаемого каталога".into()),
+        };
+        self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_sound_player_at((at.x, at.y, at.z), sound, volume, pitch);Ok(())
+    }
+    fn get_border(&mut self, dimension: wit::Dimension) -> mcsa::api::world::Border {
+        let border = crate::commands_world::border_of(&self.shared, dimension_from_wit(dimension));
+        mcsa::api::world::Border { size: border.size(), center_x: border.center_x, center_z: border.center_z }
+    }
+
+    fn set_border(&mut self, dimension: wit::Dimension, value: mcsa::api::world::Border) -> Result<(), String> {
+        if !value.size.is_finite() || !(1.0..=crate::commands_world::MAX_SIZE).contains(&value.size)
+            || !value.center_x.is_finite() || value.center_x.abs() > crate::commands_world::MAX_CENTER
+            || !value.center_z.is_finite() || value.center_z.abs() > crate::commands_world::MAX_CENTER {
+            return Err("рамка: размер 1..59999968, центр в пределах ±29999984".into());
+        }
+        let dimension = dimension_from_wit(dimension);
+        let packet = {
+            let mut borders = self.shared.world_cmd.borders.lock().expect("рамки");
+            let border = &mut borders[dimension.index()];
+            border.from = value.size;
+            border.to = value.size;
+            border.center_x = value.center_x;
+            border.center_z = value.center_z;
+            border.lerp_total = 0;
+            border.lerp_left = 0;
+            border.init_packet()
+        };
+        let mut players = self.shared.players.lock().expect("игроки");
+        let targets: Vec<_> = players.members().iter().filter(|member| member.dimension == dimension).map(|member| member.uuid).collect();
+        for uuid in targets { players.order(&uuid, Order::Packet(packet.clone())); }
+        Ok(())
+    }
+
+    // Снимок 8³ без генерации: пустая строка означает отсутствующий чанк.
+    fn block_cube(&mut self, start: wit::BlockPos) -> Result<Vec<String>,String> {
+        if start.x.abs_diff(0)>30_000_000 || start.z.abs_diff(0)>30_000_000 || !(-2048..=2040).contains(&start.y) {return Err("Куб блоков вне границ мира".into());}
+        let world=self.shared.world_in(dimension_from_wit(start.dimension)).lock().expect("мир");let mut result=Vec::with_capacity(512);
+        for x in start.x..start.x+8 {for y in start.y..start.y+8 {for z in start.z..start.z+8 {result.push(if world.has_chunk(x.div_euclid(16),z.div_euclid(16)) {block_text(world.catalog(), world.get_block(x,y,z))}else {String::new()});}}}Ok(result)
+    }
+
     fn get_block(&mut self, pos: wit::BlockPos) -> Option<String> {
+        if !self.load_block_chunk(dimension_from_wit(pos.dimension), pos.x, pos.z) { return None; }
         let world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
 
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {
             return None;
         }
 
-        Some(block_text(world.get_block(pos.x, pos.y, pos.z)))
+        Some(block_text(world.catalog(), world.get_block(pos.x, pos.y, pos.z)))
     }
 
     fn set_block(&mut self, pos: wit::BlockPos, block: String) -> Result<(), String> {
-        let state = crate::blocks::state_from_text(&block).ok_or_else(|| format!("нет такого блока: {block}"))?;
+        let state = self.shared.catalog().state_from_text(&block).map_err(|_| format!("нет такого блока: {block}"))?.ok_or_else(|| format!("нет такого блока: {block}"))?;
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
 
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {
@@ -411,6 +794,26 @@ impl mcsa::api::world::Host for PluginCtx {
             crate::redstone::settle(&mut world);
         }
 
+        Ok(())
+    }
+
+    fn time(&mut self, dimension: wit::Dimension) -> u32 {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").time_of_day() as u32
+    }
+
+    fn set_time(&mut self, dimension: wit::Dimension, ticks: u32) {
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").set_time_of_day(i64::from(ticks));
+    }
+
+    fn weather(&mut self, dimension: wit::Dimension) -> String {
+        let world = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят");
+        if world.weather.thundering { "thunder" } else if world.weather.raining { "rain" } else { "clear" }.into()
+    }
+
+    fn set_weather(&mut self, dimension: wit::Dimension, kind: String, duration: u32) -> Result<(), String> {
+        let kind = crate::weather::Kind::from_name(&kind).ok_or("погода: clear, rain, thunder")?;
+        if !(1..=2_400_000).contains(&duration) { return Err("срок: от 1 до 2400000 тактов".into()); }
+        self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").weather.set(kind, duration as i32);
         Ok(())
     }
 
@@ -446,7 +849,7 @@ impl mcsa::api::command::Host for PluginCtx {
             return Err(format!("имя команды «{}» не годится: a-z, 0-9, «-», «_»", spec.name));
         }
 
-        if RESERVED.contains(&name.as_str()) || crate::commands_admin::NAMES.contains(&name.as_str()) {
+        if crate::auth::sensitive_command(&name) || RESERVED.contains(&name.as_str()) || crate::commands_admin::NAMES.contains(&name.as_str()) {
             return Err(format!("команда «{name}» принадлежит ядру — другое имя"));
         }
 
@@ -472,6 +875,7 @@ impl mcsa::api::command::Host for PluginCtx {
 
 impl mcsa::api::storage::Host for PluginCtx {
     fn config(&mut self, default_text: String) -> Result<String, String> {
+        let _wait = self.native_wait.enter();
         let path = self.folder.join("config.toml");
 
         match read_limited(&path)? {
@@ -484,19 +888,38 @@ impl mcsa::api::storage::Host for PluginCtx {
     }
 
     fn save_config(&mut self, text: String) -> Result<(), String> {
+        let _wait = self.native_wait.enter();
         write_file(&self.folder.join("config.toml"), text.as_bytes())
     }
 
     fn read(&mut self, name: String) -> Result<Option<Vec<u8>>, String> {
-        read_limited(&self.data_dir().join(safe_file_name(&name)?))
+        let _wait = self.native_wait.enter();
+        read_limited(&data_path(&self.data_dir(), &name)?)
     }
 
     fn write(&mut self, name: String, data: Vec<u8>) -> Result<(), String> {
-        write_file(&self.data_dir().join(safe_file_name(&name)?), &data)
+        let _wait = self.native_wait.enter();
+        write_file(&data_path(&self.data_dir(), &name)?, &data)
+    }
+
+    fn transfer(&mut self, source: String, target: String, replace: bool, move_file: bool) -> Result<(), String> {
+        let _wait = self.native_wait.enter();
+        let source = data_path(&self.data_dir(), &source)?;
+        let target = data_path(&self.data_dir(), &target)?;
+        if source == target { return Ok(()); }
+        if target.exists() && !replace { return Err("целевой файл уже существует".into()); }
+        if move_file {
+            if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|error| error.to_string())?; }
+            std::fs::rename(source, target).map_err(|error| error.to_string())
+        } else {
+            let data = read_limited(&source)?.ok_or("исходный файл отсутствует")?;
+            write_file(&target, &data)
+        }
     }
 
     fn delete(&mut self, name: String) -> Result<bool, String> {
-        match std::fs::remove_file(self.data_dir().join(safe_file_name(&name)?)) {
+        let _wait = self.native_wait.enter();
+        match std::fs::remove_file(data_path(&self.data_dir(), &name)?) {
             Ok(()) => Ok(true),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
             Err(error) => Err(error.to_string()),
@@ -535,6 +958,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn plugin_inventory_keeps_primary_263_items_and_metadata() {
+        use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_ITEM};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let shared = Arc::new(Shared::new(
+            crate::world::World::in_memory_with_catalog(catalog),
+            crate::world::World::in_memory_with_catalog(catalog),
+            PathBuf::new(), PathBuf::new(), Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/plugin-catalog-unused-ops.json")),
+            crate::skins::Settings::default(),
+        ));
+        let mut ctx = PluginCtx {
+            native_wait: Default::default(), pending_mobs: Default::default(),
+            network: super::super::network::Access::new(&[], &[]),
+            chests: Default::default(), native_items: Default::default(),
+            name: "catalog-test".into(), trusted: false, shared,
+            folder: PathBuf::new(), wasi: wasmtime_wasi::WasiCtxBuilder::new().build(),
+            table: ResourceTable::new(), limits: wasmtime::StoreLimitsBuilder::new().build(),
+            tick: 0, tasks: Vec::new(), next_handle: 0, commands: Vec::new(),
+            registry: Default::default(), loaded: Default::default(),
+        };
+        let name = catalog.name(crate::gameplay_catalog::Kind::Item, WHITE_SLAB_ITEM).unwrap();
+        let item = mcsa::api::inventory::Item {
+            kind: name.into(), count: 3, metadata: r#"{"name":{"text":"Плита"}}"#.into(),
+        };
+        let stack = ctx.inventory_stack(Some(item)).unwrap().unwrap();
+        assert_eq!(stack.item, WHITE_SLAB_ITEM);
+        let returned = ctx.inventory_items(&[Some(stack)]).pop().flatten().unwrap();
+        assert_eq!(returned.kind, name);
+        assert_eq!(returned.count, 3);
+        assert!(returned.metadata.contains("Плита"));
+        assert_eq!(ctx.inventory_stack(Some(returned)).unwrap(), Some(stack));
+        let state = catalog.default_state(name).unwrap().unwrap();
+        assert_eq!(block_text(catalog, state), format!("minecraft:{name}"));
+    }
+
+    #[test]
     fn uuid_parses_both_spellings() {
         let uuid = parse_uuid("26d479c9-4844-3b0a-ba59-8cc656622a78").unwrap();
 
@@ -554,6 +1013,20 @@ mod tests {
         assert!(safe_file_name(".hidden").is_err());
         assert!(safe_file_name("").is_err());
         assert!(safe_file_name("c:evil").is_err());
+    }
+
+    #[test]
+    fn relative_data_paths_reject_traversal_and_symlinks() {
+        let root = std::env::temp_dir().join(format!("mcsa-path-test-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        assert_eq!(data_path(&root, "races/humans.yml").unwrap(), root.join("races/humans.yml"));
+        for name in ["", "/absolute", "a/../b", "a//b", "a/", "../outside", "a/hidden:stream"] { assert!(data_path(&root, name).is_err(), "{name}"); }
+        #[cfg(unix)] {
+            std::os::unix::fs::symlink(std::env::temp_dir(), root.join("escape")).unwrap();
+            assert!(data_path(&root, "escape/file").is_err());
+            std::fs::remove_file(root.join("escape")).unwrap();
+        }
+        std::fs::remove_dir(root).unwrap();
     }
 
     #[test]

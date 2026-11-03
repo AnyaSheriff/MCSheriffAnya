@@ -32,13 +32,18 @@ pub fn write(gear:&Gear,out:&mut Vec<u8>) {
         if let Some(s)=stack {out.extend_from_slice(&s.stored_item().to_be_bytes());s.write_extras(out);}
     }
 }
+#[cfg(test)]
 pub fn read(bytes:&mut &[u8])->Option<Gear> {
+    read_with_legacy_metadata(bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes:&mut &[u8], legacy_metadata: bool)->Option<Gear> {
     let mut take=|n| {let (a,b)=bytes.split_at_checked(n)?;*bytes=b;Some(a)};
     let mut gear=[None;3];
     for slot in &mut gear {
         if take(1)?[0]!=0 {
             let item=i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let extra=Stack::read_extras_strict(item,&mut take)?;
+            let extra=Stack::read_extras_strict_with_legacy_metadata(item,&mut take, legacy_metadata)?;
             *slot=Some(Stack::from_stored_strict(item,1,extra)?);
         }
     }

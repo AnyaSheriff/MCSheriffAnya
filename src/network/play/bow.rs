@@ -109,7 +109,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         loyalty: 0,
     };
 
-    shoot(shared, player, &shot, 0.0);
+    if !shoot(shared, player, &shot, 0.0) {return;}
     player.progress.used(bow.item);
 
     // Стрела тратится (кроме творческого и «бесконечности»).
@@ -159,7 +159,7 @@ pub(super) struct Shot {
 
 /// Выпускает стрелу от глаз игрока по взгляду, повёрнутому на `yaw_offset`
 /// градусов (боковые стрелы «залпа»).
-fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
+fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) -> bool {
     let dimension = player.dimension;
     let velocity = projectile::velocity(shared, player, shot.speed, false, yaw_offset);
     let eye = player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1;
@@ -211,8 +211,12 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
     };
 
     shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    if crate::plugins::active()&&shot.trident.is_none()&&crate::plugins::native_event(5,vec![crate::network::login::format_uuid(&player.uuid),crate::network::login::format_uuid(&items::uuid_for(entity_id)),(if shot.crossbow {1.0}else {(shot.speed/3.0).clamp(0.0,1.0)}).to_string()]).is_none() {
+        shared.arrows.lock().expect("стрелы").list.retain(|a|a.entity_id!=entity_id);return false;
+    }
     let mut world = shared.world_in(player.dimension).lock().expect("мир");
     crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 3, Some(player.entity_id), false);
+    true
 }
 
 /// Трезубец в руке `hand` занесён `ticks` тактов и отпущен: бросок, если
@@ -396,8 +400,11 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     for (index, projectile) in projectiles.iter().enumerate() {
         let offset = crossbow_offset(index, projectiles.len(), data.level("multishot") > 0);
         let pitch = if index == 0 { 1.0 } else { 1.0 / (vitals::world_random(shared, dimension) * 0.5 + 1.8) + if index % 2 == 1 { 0.63 } else { 0.43 } };
+        let notified = crate::plugins::active();
+        if !notified {
         shared.world_in(dimension).lock().expect("мир захвачен другим потоком")
             .note_sound_player_at((player.x, player.y, player.z), "minecraft:item.crossbow.shoot", 1.0, pitch);
+        }
         // count внутри шаблона не умножает число выпущенных снарядов:
         // команда с одной записью count:2 даёт одну стрелу и один износ.
         let ammo = Stack { data: projectile.content.data, ..Stack::new(projectile.content.item, 1) };
@@ -419,11 +426,16 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
                 trident: None,
                 loyalty: 0,
             };
-            shoot(shared, player, &shot, offset);
+            if !shoot(shared, player, &shot, offset) { continue; }
             wear += 1;
+        }
+        if notified {
+            shared.world_in(dimension).lock().expect("мир захвачен другим потоком")
+                .note_sound_player_at((player.x, player.y, player.z), "minecraft:item.crossbow.shoot", 1.0, pitch);
         }
     }
 
+    if wear == 0 {return false;}
     // Стрелявшему ячейку не шлют: выстрел его клиент показывает сам (чёрный
     // ящик, crossbow-shoot: у оригинала после выстрела Set Slot нет), соседям
     // уходит экипировка с износом.

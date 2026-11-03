@@ -134,6 +134,7 @@ pub const GLIDE_BIT: u8 = 0x40;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Gear {
     pub abilities: crate::playerdata::Abilities,
+    pub silent: bool,
     pub worn: [Option<Stack>; 5],
     pub view: CombatView,
     /// Скорость удара: её меняет оружие в руке, и остальным она уходит атрибутом.
@@ -188,11 +189,24 @@ pub enum Change {
 /// Команды выполняются не в том подключении, которого касаются: выгнать или
 /// перенести игрока может и консоль, и другой игрок. Поэтому поручение
 /// кладётся сюда, а подключение забирает его на ближайшем круге.
+/// Пользовательский сундук: содержимое общее для всех смотрящих, без блока в мире.
+#[derive(Debug)]
+pub struct PluginChest {
+    pub owner: String,
+    pub handle: u32,
+    pub title: String,
+    pub slots: Vec<Option<crate::inventory::Stack>>,
+    pub active: bool,
+}
+
 #[derive(Clone, Debug)]
 pub enum Order {
-    // Общий вход для API полёта; поверхность plugins переносится отдельно.
-    #[allow(dead_code)]
+    PluginSilent {owner: String, value: Option<bool>},
+    PluginFire { ticks: i32 },
     PluginFlight { owner: String, field: u8, value: i8 },
+    PluginVelocity { value: (f64, f64, f64) },
+    PluginOpen { chest: std::sync::Arc<std::sync::Mutex<PluginChest>> },
+    PluginClose { owner: String },
     /// Выгнать с сервера, показав причину.
     Kick { reason: String },
 
@@ -237,6 +251,8 @@ pub enum Order {
 
     /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
     Hurt { amount: f32, source: crate::survival::Source },
+    /// Прямая смена здоровья API плагина; ноль проходит через обычную смерть.
+    Health { value: f32 },
     /// /damage с прямым виновником, причиной или точкой источника.
     CommandDamage { amount: f32, source: crate::survival::Source, origin: crate::combat::DamageOrigin },
     /// Мгновенный урон зелья с известным бросившим игроком.
@@ -250,6 +266,8 @@ pub enum Order {
 
     /// Возродить умершего игрока (клиент нажал «возродиться»).
     Respawn,
+    /// Личная точка, установленная API плагина.
+    PluginSpawn { point: Option<crate::bed::RespawnPoint> },
 
     /// Проснуться: ночь пропущена (tick.rs) — встать с кровати без
     /// сообщения о спящих (вики, Bed: «Passing the night»).

@@ -58,12 +58,12 @@ fn merchant_cleanup_conserves_inputs_cursor_and_grid_once() {
             player.window = Some(OpenWindow {
                 id: 51, halves: Vec::new(), cart: None, shown: merchant.slots.to_vec(),
                 lectern: false, crafter: false, kind: None, props: Vec::new(),
-                merchant: Some(merchant), station: None, ender: false,
+                merchant: Some(merchant), station: None, plugin_chest: None, ender: false,
             });
             let close = packet(CLOSE_CONTAINER, &encode_varint(51));
             if abrupt {
                 close_own_window(&shared, &mut player);
-                for stack in player.inventory.close_window().thrown { throw_out(&shared, &player, stack); }
+                for stack in player.inventory.close_window().thrown { throw_out(&shared, &mut player, stack); }
             } else {
                 handle_client_packet(&close, &mut player, &shared);
             }
@@ -154,7 +154,7 @@ fn market() -> (Shared, PlayerState) {
     player.window = Some(OpenWindow {
         id: 52, halves: Vec::new(), cart: None, shown: merchant.slots.to_vec(),
         lectern: false, crafter: false, kind: None, props: Vec::new(),
-        merchant: Some(merchant), station: None, ender: false,
+        merchant: Some(merchant), station: None, plugin_chest: None, ender: false,
     });
     (shared, player)
 }

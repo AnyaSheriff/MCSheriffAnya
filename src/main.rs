@@ -121,6 +121,7 @@ mod dragon_fight;
 mod reports;
 mod plugins;
 mod auth;
+mod viaproxy;
 mod console;
 
 use std::io;
@@ -158,14 +159,19 @@ fn main() -> io::Result<()> {
     {
         let args: Vec<_> = std::env::args_os().collect();
         if args.get(1).is_some_and(|v| v == "--upgrade-world-26.3") {
-            if args.len()!=3 { return Err(io::Error::new(io::ErrorKind::InvalidInput,"usage: --upgrade-world-26.3 WORLD")); }
-            return world::migration::upgrade(Path::new(&args[2]));
+            return match args.as_slice() {
+                [_, _, world] => world::migration::upgrade(Path::new(world)),
+                [_, _, source, world] if source == "--from-main-26.1.2" =>
+                    world::migration::upgrade_from_main_26_1_2(Path::new(world)),
+                _ => Err(io::Error::new(io::ErrorKind::InvalidInput,
+                    "usage: --upgrade-world-26.3 [--from-main-26.1.2] WORLD")),
+            };
         }
     }
     let prepared = config::first_start::prepare(Path::new("."))?;
     let first_start = prepared.first_start;
     // Проверяем настройки до загрузки мира; stdin для первоначальной настройки не нужен.
-    let settings = prepared.settings;
+    let settings = prepared.settings.clone();
     settings.validate()?;
     // Проверяем мир до создания каталогов, слушателей и фоновых писателей.
     // Замок живёт дольше runtime; session.lock измерений остаются отдельными.
@@ -200,7 +206,7 @@ fn main() -> io::Result<()> {
     runtime.block_on(server(settings, first_start))
 }
 
-async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) -> io::Result<()> {
+async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool) -> io::Result<()> {
     let started = Instant::now();
 
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
@@ -229,6 +235,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     }
     log::set_debug(settings.debug);
     log::set_console_colors(settings.console_colors);
+    world::ORE_RETENTION_PERCENT.store(settings.ore_retention_percent, std::sync::atomic::Ordering::Relaxed);
     world::terrain::AUTUMN_FORESTS.store(settings.autumn_forests, std::sync::atomic::Ordering::Relaxed);
     world::terrain::PINK_CHERRY_GROVES.store(settings.pink_cherry_groves, std::sync::atomic::Ordering::Relaxed);
 
@@ -243,7 +250,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     skins::prepare(Path::new(skins::DIRECTORY));
 
     // Загружаем настройки сервера (файл создаётся с дефолтами, если его нет).
-    let properties = load_server_properties(SERVER_PROPERTIES_PATH)?;
+    let mut properties = load_server_properties(SERVER_PROPERTIES_PATH)?;
     log_debug!(
         "Конфигурация загружена: motd=\"{}\", max-players={}, server-port={}, \
          view-distance={}, simulation-distance={}",
@@ -254,13 +261,14 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
         properties.simulation_distance
     );
 
+    viaproxy::configure(&mut settings, &mut properties)?;
     network::packet::set_compression_threshold(properties.compression_threshold);
     if settings.verify_license(properties.online_mode) {
         network::online::initialize().await?;
     }
 
-    let bind_address = format!("0.0.0.0:{}", properties.server_port);
-    let listener = TcpListener::bind(&bind_address).await?;
+    let bind_address = format!("{}:{}", properties.server_ip, properties.server_port);
+    let listener = TcpListener::bind((properties.server_ip.as_str(), properties.server_port)).await?;
     log_info!("Сервер запущен на *:{}", properties.server_port);
     log_debug!("Слушаем {}", bind_address);
 
@@ -310,7 +318,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
         skin_settings,
     );
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
-    shared.settings = settings;
+    shared.settings = settings.clone();
     if settings.auth_enabled && !properties.online_mode {
         shared.auth = Some(Arc::new(auth::Service::open(Path::new("auth.db"))?));
     }
@@ -343,6 +351,8 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
 
     // Игроки Bedrock — по UDP, на своём порту.
     bedrock::start(Arc::clone(&shared));
+
+    let mut via = viaproxy::Supervisor::start(&shared.settings, properties.server_port).await?;
 
     log_info!(
         "Готово ({:.3} с)! Чтобы узнать команды, набери help",
@@ -408,6 +418,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     // Последовательность как у обычного сервера: остановка, игроки, мир.
     // Игроки пишутся каждый своим подключением при выходе — поэтому всех
     // выгоняем и ждём, пока подключения их запишут и уйдут из списка.
+    if let Some(via) = &mut via { via.stop().await; }
     log_info!("Остановка сервера");
     log_info!("Сохранение игроков");
     kick_everyone(&shared).await;
@@ -557,9 +568,16 @@ async fn handle_connection(
 }
 
 async fn handle_connection_inner(
-    socket: TcpStream, addr: std::net::SocketAddr, properties: Arc<ServerProperties>,
+    mut socket: TcpStream, addr: std::net::SocketAddr, properties: Arc<ServerProperties>,
     shared: Arc<Shared>, _probe_776: bool,
 ) -> io::Result<()> {
+    let addr = if shared.settings.proxy_protocol {
+        let forwarded = network::proxy_protocol::read(&mut socket, addr, &shared.settings.proxy_protocol_trusted_sources).await?;
+        log_info!("Java PROXY: {} via {}", forwarded, addr);
+        forwarded
+    } else {
+        addr
+    };
     // Подключился не клиент Minecraft (telnet, браузер) — справка текстом.
     if shared.settings.text_info {
         match network::text_info::classify(&socket).await {
@@ -778,7 +796,7 @@ async fn handle_connection_inner(
                 // запретов и вместимости выше — те же, что у родного клиента.
                 play_session(&mut socket, &login.username, &login.uuid,
                     network::configuration::ClientLook::DEFAULT, &shared,
-                    (&came_from, &came_to), authenticated.map(|profile| profile.skin)).await?;
+                    (&came_from, &came_to, None), authenticated.map(|profile| profile.skin)).await?;
                 return Ok(());
             }
 
@@ -831,7 +849,9 @@ async fn handle_connection_inner(
             // Парольный барьер: до Finish Configuration нет игрока, прав,
             // плагиновых join-событий или чтения playerdata. Старую личность
             // при auth-enabled вообще не переносим, включая Ops::adopt.
-            let _auth_session = if !auth::needs_chat_login(socket.client_version())
+            let chat_auth = password_auth.is_some() && (auth::needs_chat_login(socket.client_version())
+                || shared.settings.proxy_protocol || shared.settings.auth_mode == "chat");
+            let _auth_session = if !chat_auth
                 && let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
                 if !auth::dialog::authenticate(&mut socket, auth, identity, addr.ip(), &shared.ops, verified_uuid, config_deadline).await? {
                     return Ok(());
@@ -856,7 +876,7 @@ async fn handle_connection_inner(
             log_debug!("Configuration: чтение пакетов клиента завершено");
 
             // Клиент без dialogs получает только отдельный замороженный мир.
-            let _chat_auth_session = if look.is_some() && auth::needs_chat_login(socket.client_version())
+            let _chat_auth_session = if look.is_some() && chat_auth
                 && let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
                 if !network::play::chat_login(&mut socket, &shared, identity, addr.ip(), verified_uuid, config_deadline).await? {
                     return Ok(());
@@ -889,7 +909,7 @@ async fn handle_connection_inner(
                     &login.uuid,
                     look,
                     &shared,
-                    (&came_from, &came_to),
+                    (&came_from, &came_to, None),
                     authenticated.map(|profile| profile.skin),
                 )
                 .await;

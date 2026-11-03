@@ -495,7 +495,12 @@ pub fn write(mob: &Mob, out: &mut Vec<u8>) {
         }
     }
 }
+#[cfg(test)]
 pub fn read(bytes: &mut &[u8]) -> Option<(State,tame::State)> {
+    read_with_legacy_metadata(bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes: &mut &[u8], legacy_metadata: bool) -> Option<(State,tame::State)> {
     fn take<'a>(bytes: &mut &'a [u8], n: usize) -> Option<&'a [u8]> {
         let (a,b) = bytes.split_at_checked(n)?; *bytes=b; Some(a)
     }
@@ -506,7 +511,7 @@ pub fn read(bytes: &mut &[u8]) -> Option<(State,tame::State)> {
         if take(bytes,1)?[0] != 0 {
             let stored = i32::from_be_bytes(take(bytes,4)?.try_into().ok()?);
             let count = i32::from_be_bytes(take(bytes,4)?.try_into().ok()?);
-            let extra = Stack::read_extras_strict(stored, |n| take(bytes,n))?;
+            let extra = Stack::read_extras_strict_with_legacy_metadata(stored, |n| take(bytes,n), legacy_metadata)?;
             *slot = Some(Stack::from_stored_strict(stored,count,extra)?);
         }
     }
