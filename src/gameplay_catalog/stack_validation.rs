@@ -4,7 +4,7 @@ use crate::{inventory::{Inventory, Stack}, stackdata::{self, Content}};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StackLocation {
-    Slot(usize), Cursor, Container(usize), Bundle(usize), ChargedArrow,
+    Slot(usize), Cursor, PendingReturn(usize), Container(usize), Bundle(usize), ChargedArrow,
     Projectile(usize), PotDecoration(usize), Ender(usize), HiveOccupant(usize), Shoulder(usize),
     MobEquipment(usize), MobTrialGear(usize), MobStandEquipment(usize), MobHorseSlot(usize),
     MobLandCargo(usize), MobLandHeld, MobSmallHeld, MobSmallCargo, MobWildMouth, MobNewCargo,
@@ -35,7 +35,7 @@ impl Catalog {
         self.validate_stack_at(stack, &mut Vec::new(), 0)
     }
 
-    /// Включает броню, вторую руку и курсор; не меняет ни одной ячейки.
+    /// Включает броню, вторую руку, курсор и ожидающие возврата предметы; не меняет ни одной ячейки.
     pub fn validate_inventory(self, inventory: &Inventory) -> Result<(), StackError> {
         for (slot, stack) in inventory.slots().iter().enumerate() {
             if let Some(stack) = stack {
@@ -44,6 +44,9 @@ impl Catalog {
         }
         if let Some(stack) = inventory.cursor() {
             self.validate_stack_at(&stack, &mut vec![StackLocation::Cursor], 0)?;
+        }
+        for (index, stack) in inventory.retained_stacks().iter().enumerate() {
+            self.validate_stack_at(stack, &mut vec![StackLocation::PendingReturn(index)], 0)?;
         }
         Ok(())
     }
@@ -123,6 +126,34 @@ mod tests {
         let mut inventory = Inventory::new();
         inventory.set_cursor(Some(Stack::new(WHITE_SLAB_ITEM, 1)));
         assert_eq!(base().validate_inventory(&inventory).unwrap_err().path, [StackLocation::Cursor]);
+    }
+
+    #[test]
+    fn pending_returns_validate_catalog_nested_components_and_disk_loading() {
+        let mut inventory = Inventory::new();
+        inventory.retain_window_inputs(&[Some(Stack::new(WHITE_SLAB_ITEM, 3))]);
+        assert!(preview().validate_inventory(&inventory).is_ok());
+        assert_eq!(base().validate_inventory(&inventory).unwrap_err().path, [StackLocation::PendingReturn(0)]);
+        let bytes = inventory.to_bytes();
+        assert_eq!(Inventory::from_bytes_for_catalog(&bytes, preview()).unwrap(), inventory);
+        assert!(Inventory::from_bytes_for_catalog(&bytes, base()).is_err());
+        let diamond = crate::blocks::item_named("diamond").unwrap();
+        let nested = Stack::new(diamond, 1).with_extras(stackdata::Data {
+            contents: vec![child(999_999)], ..Default::default()
+        });
+        let huge = Stack::new(diamond, 1).with_extras(stackdata::Data {
+            name: Some("я".repeat(70_000)), ..Default::default()
+        });
+        for stack in [nested, huge] {
+            let mut pending = Inventory::new();
+            pending.retain_window_inputs(&[Some(stack)]);
+            let error = preview().validate_inventory(&pending).unwrap_err();
+            assert_eq!(error.path.first(), Some(&StackLocation::PendingReturn(0)));
+            if stack == nested {
+                assert_eq!(error.path, [StackLocation::PendingReturn(0), StackLocation::Container(0)]);
+            }
+            assert!(Inventory::from_bytes_for_catalog(&pending.to_bytes(), preview()).is_err());
+        }
     }
 
     #[test]

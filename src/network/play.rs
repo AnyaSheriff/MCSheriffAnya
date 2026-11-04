@@ -137,6 +137,8 @@ mod command_equipment_tests;
 mod disconnect_tests;
 #[cfg(test)]
 mod save_conservation_tests;
+#[cfg(test)]
+mod window_persistence_tests;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -13009,6 +13011,34 @@ impl PlayerState {
         self.on_ground = on_ground;
     }
 
+    /// Не меняющий живые ячейки снимок личных вещей, включая входы окна.
+    fn inventory_snapshot(&self) -> std::borrow::Cow<'_, Inventory> {
+        let inputs = self.window.as_ref().and_then(|window| {
+            // Общие хранилища сохраняются своим владельцем. Здесь только
+            // входы личного окна; предварительный итог ещё не принадлежит игроку.
+            if window.plugin_chest.is_some() || window.cart.is_some() || window.ender {
+                return None;
+            }
+            if let Some(station) = &window.station {
+                let start = usize::from(station.kind == crate::enchanting::Station::Crafting);
+                Some(&window.shown[start..start + station.kind.inputs()])
+            } else if window.kind == Some(containers::Kind::Beacon) {
+                Some(&window.shown[..1])
+            } else if let Some(trade) = &window.merchant {
+                Some(&trade.slots[..2])
+            } else {
+                None
+            }
+        });
+        if let Some(inputs) = inputs.filter(|inputs| inputs.iter().any(Option::is_some)) {
+            let mut inventory = self.inventory.clone();
+            inventory.retain_window_inputs(inputs);
+            std::borrow::Cow::Owned(inventory)
+        } else {
+            std::borrow::Cow::Borrowed(&self.inventory)
+        }
+    }
+
     /// Стоит ли записывать положение на диск.
     ///
     /// Запись идёт не на каждое движение: клиент присылает положение двадцать
@@ -13037,7 +13067,7 @@ impl PlayerState {
             || (saved.pitch - self.pitch).abs() >= SAVED_TURN
             || saved.abilities != self.abilities
             || saved.game_mode != self.game_mode
-            || saved.inventory != self.inventory
+            || saved.inventory != *self.inventory_snapshot()
             || saved.ender != self.ender
             || saved.shoulders != self.shoulders
             || saved.vitals.health != self.vit.health
@@ -13071,7 +13101,7 @@ impl PlayerState {
             yaw: self.yaw,
             pitch: self.pitch,
             game_mode: self.game_mode,
-            inventory: self.inventory.clone(),
+            inventory: self.inventory_snapshot().into_owned(),
             dimension: self.dimension,
             vitals: self.vit.saved(),
             effects: self.vit.saved_effects(),
