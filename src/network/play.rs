@@ -846,14 +846,33 @@ pub async fn play_session(
 
 /// Один путь ухода для обрыва, команды и смены подключения.
 fn finish_play(shared: &Shared, player: &mut PlayerState) {
-    // Открытое хранилище теряет смотрящего.
-    close_own_window(shared, player);
-
-    // Курсор и сетка верстака при выходе возвращаются в инвентарь, а что
-    // не влезло — на землю. При аварии до этого шага курсор остаётся в v10.
-    for stack in player.inventory.close_window().thrown {
-        throw_out(shared, player, stack);
+    // Разрыв с незакрытым окном: личные входы и курсор падают на землю.
+    // Fresh paired26.3: «RST»; docs/inventory-reconnect-2026-11-04.md.
+    // Обычный Close Container по-прежнему возвращает их в рюкзак.
+    let mut dropped = Vec::new();
+    if let Some(window) = &mut player.window {
+        let source = window.owned_input_source();
+        if let Some((trade, range)) = source {
+            let inputs = if trade { &mut window.merchant.as_mut().unwrap().slots[..] } else { &mut window.shown[..] };
+            dropped.extend(inputs[range].iter_mut().filter_map(Option::take));
+        }
     }
+    if let Some(cursor) = player.inventory.cursor() {
+        player.inventory.set_cursor(None);
+        dropped.push(cursor);
+    }
+    for slot in 1..=4 {
+        if let Some(stack) = player.inventory.slot(slot) {
+            player.inventory.set(slot, None);
+            dropped.push(stack);
+        }
+    }
+    for stack in dropped { throw_out(shared, player, stack); }
+
+    // Хранилище теряет смотрящего; настоящие входы уже переданы миру.
+    close_own_window(shared, player);
+    // Удаляет предварительный итог личной сетки, не создавая предмет.
+    for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
 
     // При выходе записываем положение в любом случае — в том числе когда
     // соединение оборвалось ошибкой. Иначе последние метры пути пропали бы.
@@ -12613,6 +12632,21 @@ struct PlayerState {
     progress_location: progression::Location,
 }
 
+impl OpenWindow {
+    /// Только личные входы: результат рецепта и общие хранилища не принадлежат окну.
+    fn owned_input_source(&self) -> Option<(bool, std::ops::Range<usize>)> {
+        if self.plugin_chest.is_some() || self.cart.is_some() || self.ender { return None; }
+        if let Some(station) = &self.station {
+            let start = usize::from(station.kind == crate::enchanting::Station::Crafting);
+            Some((false, start..start + station.kind.inputs()))
+        } else if self.kind == Some(containers::Kind::Beacon) {
+            Some((false, 0..1))
+        } else if self.merchant.is_some() {
+            Some((true, 0..2))
+        } else { None }
+    }
+}
+
 /// Окно хранилища, открытое у клиента.
 struct OpenWindow {
     /// Номер окна у клиента.
@@ -13014,21 +13048,9 @@ impl PlayerState {
     /// Не меняющий живые ячейки снимок личных вещей, включая входы окна.
     fn inventory_snapshot(&self) -> std::borrow::Cow<'_, Inventory> {
         let inputs = self.window.as_ref().and_then(|window| {
-            // Общие хранилища сохраняются своим владельцем. Здесь только
-            // входы личного окна; предварительный итог ещё не принадлежит игроку.
-            if window.plugin_chest.is_some() || window.cart.is_some() || window.ender {
-                return None;
-            }
-            if let Some(station) = &window.station {
-                let start = usize::from(station.kind == crate::enchanting::Station::Crafting);
-                Some(&window.shown[start..start + station.kind.inputs()])
-            } else if window.kind == Some(containers::Kind::Beacon) {
-                Some(&window.shown[..1])
-            } else if let Some(trade) = &window.merchant {
-                Some(&trade.slots[..2])
-            } else {
-                None
-            }
+            let (trade, range) = window.owned_input_source()?;
+            let source = if trade { &window.merchant.as_ref().unwrap().slots[..] } else { &window.shown[..] };
+            Some(&source[range])
         });
         if let Some(inputs) = inputs.filter(|inputs| inputs.iter().any(Option::is_some)) {
             let mut inventory = self.inventory.clone();
