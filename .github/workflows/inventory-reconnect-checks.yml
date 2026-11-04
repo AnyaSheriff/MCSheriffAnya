@@ -1,0 +1,125 @@
+name: Inventory reconnect conservation 26.3
+on:
+  push:
+    branches: ['wip/reconnect-observe-*']
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Exact successful migration-checks run (defaults to checked baseline)
+        required: false
+        type: string
+      build_head:
+        description: Full source SHA of that build
+        required: false
+        type: string
+      runtime_sha256:
+        description: Verified runtime SHA256
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: inventory-reconnect-26.3
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Check probe guards and fetch pinned opaque server and JSON tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gameplay-output" "$RUNNER_TEMP/gameplay-input"
+          python -m unittest discover -s tools/protocol-bridge -p test_inventory_reconnect_777.py -v 2>&1 | tee "$RUNNER_TEMP/gameplay-output/guards.log"
+          python tools/protocol-bridge/fetch_tables.py --directory "$RUNNER_TEMP/gameplay-input/data"
+          python - <<'PY'
+          import json, os, pathlib, sys
+          sys.path.insert(0, 'tools/blackbox')
+          from combat_ci import fetch
+          sources=json.loads(pathlib.Path('tools/blackbox/ci/sources-777.json').read_text())
+          fetch(sources['official_jar'], pathlib.Path(os.environ['RUNNER_TEMP'])/'gameplay-input/server.jar')
+          PY
+      - name: Select exact verified runtime
+        id: pin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id || '41858213026' }}
+          INPUT_BUILD_HEAD: ${{ inputs.build_head || 'ccccc44bebfabb1922f1f05f274cacbb5b395fd7' }}
+          INPUT_RUNTIME_SHA256: ${{ inputs.runtime_sha256 || 'b1a8d63eb4bcaca579007f947fd5f446b3ca381789bec778e7103b3e6ecd9301' }}
+        run: |
+          python - <<'PYCODE'
+          import os, pathlib, sys
+          sys.path.insert(0, 'tools/blackbox')
+          from combat_ci import resolve_pin, preflight
+          pin=resolve_pin({}, os.environ['INPUT_BUILD_RUN_ID'], os.environ['INPUT_BUILD_HEAD'], os.environ['INPUT_RUNTIME_SHA256'])
+          selected=preflight(pin, pathlib.Path(os.environ['RUNNER_TEMP'])/'gameplay-output')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as stream:
+              stream.write(f'build_run_id={pin["build_run_id"]}\nartifact_name={selected["artifact_name"]}\n')
+          PYCODE
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.pin.outputs.build_run_id }}
+          name: ${{ steps.pin.outputs.artifact_name }}
+          path: ${{ runner.temp }}/gameplay-build
+      - name: Record official server (observation; behavioral differences remain in artifact)
+        run: |
+          sudo unshare --net -- bash -c 'ip link set lo up; exec python3 "$@"' bash tools/protocol-bridge/probe_inventory_reconnect_777.py \
+            --jar "$RUNNER_TEMP/gameplay-input/server.jar" --java "$JAVA_HOME/bin/java" \
+            --data "$RUNNER_TEMP/gameplay-input/data" --output "$RUNNER_TEMP/gameplay-output/official" \
+            --port 26158
+      - name: Record verified core (strict checks)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, pathlib, shutil, sys
+          sys.path.insert(0, 'tools/blackbox')
+          from combat_ci import verify_artifact
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          selection=json.loads((root/'gameplay-output/build-selection.json').read_text())
+          runtime, receipt=verify_artifact(root/'gameplay-build', selection)
+          target=root/'gameplay-input/mcsheriffanya'
+          shutil.copyfile(runtime,target);target.chmod(0o700)
+          shutil.copyfile(receipt,root/'gameplay-output/build-receipt.json')
+          PY
+          sudo unshare --net -- bash -c 'ip link set lo up; exec python3 "$@"' bash tools/protocol-bridge/probe_inventory_reconnect_777.py \
+            --binary "$RUNNER_TEMP/gameplay-input/mcsheriffanya" \
+            --data "$RUNNER_TEMP/gameplay-input/data" --output "$RUNNER_TEMP/gameplay-output/ours" --port 26258 --expected "$RUNNER_TEMP/gameplay-output/official/result.json"
+      - name: Save exact source and artifact hashes
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'gameplay-output';out.mkdir(exist_ok=True)
+          files={str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.rglob('*')) if p.is_file()}
+          source={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(pathlib.Path('tools/protocol-bridge').glob('*.py'))}
+          source['tools/protocol-bridge/candidate-sources-26.3.json']=hashlib.sha256(pathlib.Path('tools/protocol-bridge/candidate-sources-26.3.json').read_bytes()).hexdigest()
+          source['.github/workflows/inventory-reconnect-checks.yml']=hashlib.sha256(pathlib.Path('.github/workflows/inventory-reconnect-checks.yml').read_bytes()).hexdigest()
+          receipt={'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'run_id':os.environ['GITHUB_RUN_ID'],'status':os.environ['JOB_STATUS'],'files':files,'sources':source}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inventory-reconnect-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gameplay-output/
+          retention-days: 7
+          if-no-files-found: error
