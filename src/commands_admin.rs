@@ -2763,6 +2763,7 @@ fn save_all(ctx: &mut Ctx, rd: &mut Rd) -> R<()> {
         world.save_all();
     }
 
+    ctx.shared.save_ground_items().map_err(|_| failed("commands.save.failed"))?;
     ctx.ok(translate("commands.save.success", vec![]));
 
     Ok(())

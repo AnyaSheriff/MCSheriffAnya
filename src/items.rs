@@ -11,8 +11,8 @@
 // такт, сопротивление 0.98, и порядок действий в такте именно такой —
 // сперва ускорение, потом движение, потом сопротивление.
 //
-// Между запусками сервера лежащие предметы не сохраняются: мир хранит блоки,
-// а не сущности. Поднимать их надо в ту же игру.
+// Обычные лежащие предметы сохраняются отдельным файлом (persistence.rs).
+// Визуальные выдачи с runtime owner и падающие блоки в него не входят.
 //
 // Здесь же живёт подожжённый динамит: он летит и падает так же (вики,
 // Entity: у падающих блоков и TNT тяжесть 0.04 и сопротивление 0.98 после
@@ -22,6 +22,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::inventory::Stack;
 mod merging;
+mod persistence;
 use crate::journal::{Journal, Reader};
 
 /// Докуда дотягивается игрок: его рамка (0.6 × 1.8), раздвинутая на блок
@@ -305,6 +306,7 @@ pub struct Items {
     pub plugin_loaded: Vec<(i32,i32,[u8;16])>,
     pub plugin_deaths: Vec<PluginDeath>,
     items: Vec<Dropped>,
+    ground_items_loaded: bool,
     /// Только тестовый снимок входа merge: в рабочей сборке отсутствует.
     #[cfg(test)]
     merge_due_for_test: Vec<i32>,
@@ -359,6 +361,7 @@ impl Items {
             plugin_spawned: Vec::new(),
             plugin_loaded: Vec::new(),
             items: Vec::new(),
+            ground_items_loaded: false,
             #[cfg(test)]
             merge_due_for_test: Vec::new(),
             carts: Vec::new(),

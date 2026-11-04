@@ -1615,6 +1615,11 @@ impl World {
     /// Каталог принадлежит миру, а не версии подключившегося клиента.
     pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
 
+    /// У мира в памяти нет каталога: проверки не должны писать в рабочий мир.
+    pub(crate) fn storage_directory(&self) -> Option<&Path> {
+        (!self.path.as_os_str().is_empty()).then_some(self.path.as_path())
+    }
+
     /// Пустой мир без файла на диске — только для проверок.
     #[cfg(test)]
     pub fn in_memory() -> Self {

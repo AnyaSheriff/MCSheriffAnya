@@ -25,7 +25,8 @@ def reports():
     official = {'protocol':777, 'target':'official', 'status':'PASS', 'exit_code':0,
                 'jar_sha1':JAR_SHA1, 'item_names':NAMES, 'behavior_failures':[],
                 'observer':[{'direction':'in', 'name':'login', 'payload':''}],
-                'snapshots':[], 'sessions':[], 'ground_events':[]}
+                'snapshots':[], 'sessions':[], 'ground_events':[], 'server_exits':[0,0],
+                'server_log_sha256':{'server.log':'a'*64,'server-1.log':'b'*64}}
     for kind, mode in CASES:
         for phase in ('before', 'after'):
             stage = kind+'-'+mode+'-'+phase
@@ -60,7 +61,30 @@ def reports():
                 session['disconnect'] = mode
             official['sessions'].append(session)
             official['snapshots'].append({'stage':stage, 'packet_index':index,
-                                          'inventory':inv, 'ground':[], 'observer_packet_index':1, 'totals':totals(inv)})
+                                          'inventory':inv, 'ground':[], 'observer_epoch':0, 'observer_packet_index':1, 'totals':totals(inv)})
+    # Последняя RST-фикстура имеет две ground-стопки; ID повторяются после рестарта.
+    ground_packets = []
+    for entity,item,count in ((5,2,2),(6,1,3)):
+        ground_packets += [
+            {'direction':'in','name':'spawn_entity','payload':(varint(entity)+bytes(16)+varint(72)).hex()},
+            {'direction':'in','name':'entity_metadata','payload':(varint(entity)+b'\x08\x07'+varint(count)+varint(item)+b'\0\0\xff').hex()}]
+    official['observer'] += ground_packets
+    final = official['snapshots'][-1]
+    final['inventory']['slots'][10] = None
+    final['inventory']['slots'][11] = None
+    final['ground'] = [{'item':'oak_planks','count':2},{'item':'stone','count':3}]
+    final['observer_packet_index'] = len(official['observer'])
+    official['sessions'][-1]['packets'][-1] = packet(final['inventory'])
+    official['ground_events'] = replay(official['observer'],NAMES).ground_events
+    restarted = copy.deepcopy(final)
+    restarted['stage'] = STAGES[-1]
+    restarted['observer_epoch'] = 1
+    official['snapshots'].append(restarted)
+    restart_session = copy.deepcopy(official['sessions'][-1])
+    restart_session['name'] = STAGES[-1]
+    official['sessions'].append(restart_session)
+    official['restart_observer'] = [{'direction':'in','name':'login','payload':''}] + copy.deepcopy(ground_packets)
+    official['restart_ground_events'] = replay(official['restart_observer'],NAMES).ground_events
     core = copy.deepcopy(official)
     core['target'] = 'core'
     core['jar_sha1'] = None
@@ -68,12 +92,28 @@ def reports():
 
 
 class EvidenceTests(unittest.TestCase):
-    def test_all_sixteen_stages_and_both_disconnect_modes(self):
+    def test_all_seventeen_stages_and_both_disconnect_modes(self):
         official, core = reports()
         self.assertEqual([row['stage'] for row in validate(official,'official')],STAGES)
-        self.assertEqual(len(STAGES),16)
+        self.assertEqual(len(STAGES),17)
         self.assertEqual(len(CASES),8)
         self.assertEqual(compare(official,core),[])
+
+    def test_restart_requires_second_exit_observer_session_and_ground(self):
+        for mutation in ('exit','session','observer','ground','epoch','log'):
+            official,_ = reports()
+            if mutation=='exit': official['server_exits'].pop()
+            elif mutation=='session': official['sessions'].pop()
+            elif mutation=='observer': official['restart_observer'] = []
+            elif mutation=='ground':
+                official['restart_observer'] = official['restart_observer'][:1]
+                official['restart_ground_events'] = []
+                official['snapshots'][-1]['observer_packet_index'] = 1
+                official['snapshots'][-1]['ground'] = []
+                official['snapshots'][-1]['totals'] = {}
+            elif mutation=='epoch': official['snapshots'][-1]['observer_epoch'] = 0
+            else: del official['server_log_sha256']['server-1.log']
+            with self.assertRaises(ValueError): validate(official,'official')
 
     def test_preview_is_not_owned_but_crafting_inputs_and_cursor_are(self):
         official,_ = reports()
@@ -153,7 +193,8 @@ class EvidenceTests(unittest.TestCase):
             spawn = {'direction':'in','name':'spawn_entity','payload':(varint(entity)+bytes(16)+varint(72)).hex()}
             metadata = {'direction':'in','name':'entity_metadata','payload':(varint(entity)+b'\x08\x07\3\1\0\0\xff').hex()}
             # RST personal-after row3: stone moved to ground, absent from bag.
-            report['observer'] += [spawn,metadata]
+            later_ground = report['observer'][1:]
+            report['observer'] = report['observer'][:1]+[spawn,metadata]
             row = report['snapshots'][3]
             row['inventory']['slots'][9] = None
             row['ground'] = [{'item':'stone','count':3}]
@@ -161,7 +202,9 @@ class EvidenceTests(unittest.TestCase):
             report['sessions'][3]['packets'][-1] = packet(row['inventory'])
             # Cleanup history follows snapshot, before next case.
             report['observer'].append({'direction':'in','name':'entity_destroy','payload':(b'\1'+varint(entity)).hex()})
-            for later in report['snapshots'][4:]: later['observer_packet_index'] = 4
+            for later in report['snapshots'][4:15]: later['observer_packet_index'] = 4
+            report['observer'] += later_ground
+            report['snapshots'][15]['observer_packet_index'] = len(report['observer'])
             report['ground_events'] = replay(report['observer'],NAMES).ground_events
         self.assertEqual(compare(official,core),[])
         core['snapshots'][3]['ground'][0]['count'] = 2

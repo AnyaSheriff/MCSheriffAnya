@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Ограниченная A06: свободный рюкзак, курсор, сетки2×2/3×3 и сундук; FIN/RST.
 
-Без полного рюкзака, восстановления выпавшей стопки, рестарта и Bedrock.
+Без полного рюкзака, подбора выпавшей стопки и Bedrock; один обычный рестарт.
 Сторонний код/JAR не читается: сервер используется только как чёрный ящик.
 """
 import argparse
@@ -24,9 +24,9 @@ from smoke import read_varint, varint
 JAR_SHA1 = '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'
 CASES = [(kind, mode) for kind in ('personal', 'crafting', 'chest', 'workbench')
          for mode in ('close-fin', 'open-rst')]
-STAGES = [kind+'-'+mode+'-'+phase for kind, mode in CASES for phase in ('before', 'after')]
+STAGES = [kind+'-'+mode+'-'+phase for kind, mode in CASES for phase in ('before', 'after')] + ['workbench-open-rst-after-restart']
 LIMITS = ['Free inventory space only; simple authored ground stacks decoded from metadata',
-          'No restart, full inventory, other workstations, Bedrock, component or timing claim',
+          'One normal final restart only; no crash restart, full inventory, other workstations, Bedrock, component or timing claim',
           'Graceful means explicit close_window then TCP FIN; abrupt means open-window TCP RST',
           'Second spectator accounts ground stacks; frozen world prevents pickup/physics during snapshots']
 
@@ -148,13 +148,17 @@ def validate(report, target):
             or report.get('status') != 'PASS' or report.get('exit_code') != 0
             or report.get('behavior_failures') or 'error' in report):
         raise ValueError('failed or incomplete report')
+    if report.get('server_exits') != [0,0]:
+        raise ValueError('missing two clean server exits')
+    if set(report.get('server_log_sha256', {})) != {'server.log','server-1.log'} or any(len(value)!=64 for value in report['server_log_sha256'].values()):
+        raise ValueError('missing two server log hashes')
     if target == 'official' and report.get('jar_sha1') != JAR_SHA1:
         raise ValueError('wrong official executable')
     rows = report.get('snapshots', [])
     if [row.get('stage') for row in rows] != STAGES:
         raise ValueError('missing, duplicate or reordered stages')
     sessions = report.get('sessions', [])
-    expected_sessions = [kind+'-'+mode+'-'+phase for kind, mode in CASES for phase in ('before', 'after')]
+    expected_sessions = STAGES
     if [s.get('name') for s in sessions] != expected_sessions:
         raise ValueError('missing or reordered sessions')
     names = {int(k):v for k,v in report['item_names'].items()}
@@ -164,8 +168,18 @@ def validate(report, target):
     witnessed = replay(observer, names)
     if report.get('ground_events') != witnessed.ground_events:
         raise ValueError('ground event history not derived from raw observer')
-    observer_index = 0
-    for row, session in zip(rows, sessions):
+    restart_observer = report.get('restart_observer', [])
+    if not any(p['direction']=='in' and p['name']=='login' for p in restart_observer):
+        raise ValueError('missing restarted live observer')
+    if report.get('restart_ground_events') != replay(restart_observer, names).ground_events:
+        raise ValueError('restart ground history not derived from raw observer')
+    observer_indices = [0,0]
+    original_observer = observer
+    for row_number, (row, session) in enumerate(zip(rows, sessions)):
+        epoch = 1 if row_number==16 else 0
+        if row.get('observer_epoch') != epoch:
+            raise ValueError('wrong observer epoch across restart')
+        observer = restart_observer if epoch else original_observer
         index = row.get('packet_index')
         packets = session.get('packets', [])
         if not any(p['direction']=='in' and p['name']=='login' for p in packets):
@@ -190,12 +204,12 @@ def validate(report, target):
                 raise ValueError('missing real container block use')
             if not any(p['direction']=='in' and p['name']=='open_window' for p in packets[:index]):
                 raise ValueError('missing container open response')
-        if row['stage'].endswith('-after') and inv['cursor'] is not None:
+        if not row['stage'].endswith('-before') and inv['cursor'] is not None:
             raise ValueError('cursor persisted across reconnect')
         boundary = row.get('observer_packet_index')
-        if type(boundary) is not int or not observer_index <= boundary <= len(observer):
+        if type(boundary) is not int or not observer_indices[epoch] <= boundary <= len(observer):
             raise ValueError('invalid observer snapshot packet range')
-        observer_index = boundary
+        observer_indices[epoch] = boundary
         ground = ground_snapshot(replay(observer[:boundary], names))
         if row.get('ground') != ground:
             raise ValueError('ground snapshot not derived from observer packets')
@@ -227,7 +241,8 @@ def validate(report, target):
         else:
             if not any(p['direction']=='in' and p['name']=='window_items' for p in packets):
                 raise ValueError('missing restored authoritative inventory')
-    for before, after in zip(rows[::2], rows[1::2]):
+    observer = original_observer
+    for before, after in zip(rows[:16:2], rows[1:16:2]):
         kind = before['stage'].split('-')[0]
         if '-close-fin-' in before['stage']:
             prefix = replay(observer[:before['observer_packet_index']], names).ground_events
@@ -244,6 +259,17 @@ def validate(report, target):
         if kind=='chest':
             if before['inventory']['slots'][1] != {'item':'dirt', 'count':5} or after['inventory']['slots'][:27] != before['inventory']['slots'][:27]:
                 raise ValueError('chest residual changed')
+    before_restart, after_restart = rows[-2:]
+    if before_restart['ground'] != [{'item':'oak_planks','count':2},{'item':'stone','count':3}]:
+        raise ValueError('final restart fixture must contain observed ground planks2 and stone3')
+    if after_restart['totals'] != {'oak_planks':2,'stone':3}:
+        raise ValueError('restart lost or duplicated items')
+    for field in ('ground','totals'):
+        if before_restart[field] != after_restart[field]:
+            raise ValueError('restart changed '+field)
+    for field in ('slots','cursor'):
+        if before_restart['inventory'][field] != after_restart['inventory'][field]:
+            raise ValueError('restart changed inventory '+field)
     return rows
 
 
@@ -287,7 +313,8 @@ def main():
               'target_sha256':hashlib.sha256(executable.read_bytes()).hexdigest(),
               'jar_sha1':JAR_SHA1 if args.jar else None, 'status':'INCOMPLETE',
               'limits':LIMITS, 'item_names':names, 'sessions':[], 'snapshots':[],
-              'commands':[], 'observer':[], 'ground_events':[], 'behavior_failures':[]}
+              'commands':[], 'observer':[], 'ground_events':[], 'restart_observer':[],
+              'restart_ground_events':[], 'server_exits':[], 'server_log_sha256':{}, 'behavior_failures':[]}
     if args.expected:
         report['expected_sha256'] = hashlib.sha256(args.expected.read_bytes()).hexdigest()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -305,12 +332,33 @@ def main():
             (root/'config/skins.toml').write_text('mojang=false\nely=false\n')
         argv = [args.java, '-Xmx1G', '-jar', str(executable), 'nogui'] if args.jar else [str(executable)]
         actor = observer = None
+        restart_output = None
+        epoch = 0
+        stopped = set()
         log = args.output/'server.log'
         with log.open('w') as output:
             server = subprocess.Popen(argv, cwd=root, stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT, text=True)
+            def stop_server():
+                if server.pid in stopped:
+                    return
+                if server.poll() is None:
+                    try:
+                        server.stdin.write('stop\n'); server.stdin.flush(); server.stdin.close()
+                        server.wait(timeout=30)
+                    except (OSError, subprocess.TimeoutExpired):
+                        server.kill(); server.wait()
+                report['server_exits'].append(server.returncode)
+                stopped.add(server.pid)
+            def ready(path):
+                deadline = time.monotonic()+120
+                while ('Done (' if args.jar else 'Готово (') not in path.read_text():
+                    assert server.poll() is None and time.monotonic()<deadline, 'server readiness timeout'
+                    time.sleep(.1)
             def pump(seconds=.4):
                 deadline = time.monotonic()+seconds
                 while time.monotonic() < deadline:
+                    if not actor and not observer:
+                        time.sleep(.05)
                     for client in (actor, observer):
                         if client:
                             client.pump(.08)
@@ -338,21 +386,19 @@ def main():
                 state = copy.deepcopy(actor.inventory)
                 ground = ground_snapshot(observer)
                 report['snapshots'].append({'stage':stage, 'packet_index':len(actor.wire),
-                                            'observer_packet_index':len(observer.wire),
+                                            'observer_epoch':epoch, 'observer_packet_index':len(observer.wire),
                                             'inventory':state, 'ground':ground, 'totals':totals(state,ground)})
             def open_container(sequence, size):
                 actor.send('block_place', use_payload(2,64,0,sequence))
                 pump(.7)
                 assert actor.inventory and actor.inventory['window'] != 0 and len(actor.inventory['slots'])==size
             try:
-                deadline = time.monotonic()+120
-                while ('Done (' if args.jar else 'Готово (') not in log.read_text():
-                    assert server.poll() is None and time.monotonic()<deadline, 'server readiness timeout'
-                    time.sleep(.1)
+                ready(log)
                 command('gamerule minecraft:spawn_mobs false')
                 command('gamerule minecraft:random_tick_speed 0')
                 observer = connect(args.port, protocol, lambda s,p:Probe(s,p,777,names), username='McsaWitness', login_uuid=bytes([38])*16)
                 report['observer'] = observer.wire
+                report['ground_events'] = observer.ground_events
                 observer.pump(10, lambda packet:packet['name']=='position')
                 command('gamemode spectator McsaWitness')
                 command('tp McsaWitness 8.5 65 0.5')
@@ -405,6 +451,26 @@ def main():
                     snap(label+'-after')
                     actor.sock.shutdown(socket.SHUT_RDWR); actor.sock.close(); actor = None
                     pump(.8)
+                # Последняя ground-фикстура не очищается: обычный stop/start того же мира.
+                observer.sock.close(); observer = None
+                stop_server()
+                assert report['server_exits']==[0], 'first server did not stop cleanly'
+                epoch = 1
+                restart_log = args.output/'server-1.log'
+                restart_output = restart_log.open('w')
+                server = subprocess.Popen(argv, cwd=root, stdin=subprocess.PIPE, stdout=restart_output, stderr=subprocess.STDOUT, text=True)
+                ready(restart_log)
+                command('tick freeze')
+                observer = connect(args.port, protocol, lambda s,p:Probe(s,p,777,names), username='McsaWitness', login_uuid=bytes([38])*16)
+                report['restart_observer'] = observer.wire
+                report['restart_ground_events'] = observer.ground_events
+                observer.pump(10, lambda packet:packet['name']=='position')
+                command('gamemode spectator McsaWitness')
+                command('tp McsaWitness 8.5 65 0.5')
+                actor = join(STAGES[-1])
+                pump(.5)
+                open_container(17,46)
+                snap(STAGES[-1])
                 report['status'] = 'PASS'
             except BaseException as error:
                 report['error'] = repr(error)
@@ -414,15 +480,16 @@ def main():
                 for client in (actor, observer):
                     if client:
                         client.sock.close()
-                if server.poll() is None:
-                    try:
-                        server.stdin.write('stop\n'); server.stdin.flush(); server.stdin.close()
-                        server.wait(timeout=30)
-                    except (OSError, subprocess.TimeoutExpired):
-                        server.kill(); server.wait()
-                report['ground_events'] = observer.ground_events if observer else []
+                stop_server()
+                if restart_output:
+                    restart_output.close()
+                output.flush()
+                for filename in ('server.log','server-1.log'):
+                    path = args.output/filename
+                    if path.exists():
+                        report['server_log_sha256'][filename] = hashlib.sha256(path.read_bytes()).hexdigest()
                 report['exit_code'] = server.returncode
-                if server.returncode != 0:
+                if report['server_exits'] != [0,0]:
                     report['status'] = 'ERROR'
                 if report['status']=='PASS':
                     try:

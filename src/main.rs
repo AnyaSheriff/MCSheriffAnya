@@ -325,13 +325,17 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
     shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));
     let shared = Arc::new(shared);
+    // Предметы восстанавливаются до функций, плагинов, такта и первого входа.
+    shared.load_ground_items()?;
 
-    // Табло пишется на диск своим потоком, раз в пять секунд, если менялось.
+    // Табло и выпавшие предметы пишутся раз в пять секунд по настенным часам,
+    // даже когда мир стоит без игроков. Запись не задерживает поток такта.
     {
         let shared = Arc::clone(&shared);
         std::thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_secs(5));
             save_scoreboard(&shared);
+            let _ = shared.save_ground_items();
         });
     }
 
@@ -432,8 +436,11 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
         tick::store_mobs(&shared, dimension, &mut world);
         world.save_all();
     }
+    // finish_play уже передал оставшиеся личные входы и курсор миру.
+    // Ошибка не скрывается за сообщением об успешной остановке.
+    let ground_saved = shared.save_ground_items().is_ok();
     save_scoreboard(&shared);
-    log_info!("Мир сохранён");
+    if ground_saved { log_info!("Мир сохранён"); }
 
     // Терминал был переключён на посимвольный ввод — возвращаем как было,
     // иначе в нём потом не видно, что набираешь.
@@ -445,7 +452,7 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     // выход не заканчивается, и после `stop` терминал так и висел бы до
     // первой нажатой клавиши. Всё, что нужно было сохранить, к этому времени
     // уже на диске: игроки записаны при выходе, мир — только что.
-    std::process::exit(0);
+    std::process::exit(if ground_saved { 0 } else { 1 });
 }
 
 /// Раньше опознавателем игрока был тот, что присылает клиент, и под ним
