@@ -25,16 +25,18 @@ JAR_SHA1 = '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'
 CASES = [(kind, mode) for kind in ('personal', 'crafting', 'chest')
          for mode in ('close-fin', 'open-rst')]
 STAGES = [kind+'-'+mode+'-'+phase for kind, mode in CASES for phase in ('before', 'after')]
-LIMITS = ['Free inventory space only; no ground stack recovery/count decoder',
+LIMITS = ['Free inventory space only; simple authored ground stacks decoded from metadata',
           'No restart, full inventory, workstation, Bedrock, component or timing claim',
           'Graceful means explicit close_window then TCP FIN; abrupt means open-window TCP RST',
-          'Ground items are forbidden and watched by a second spectator; any item spawn fails']
+          'Second spectator accounts ground stacks; frozen world prevents pickup/physics during snapshots']
 
 
 class Probe(BaseProbe):
     def __init__(self, *args):
         super().__init__(*args)
         self.drops_seen = set()
+        self.ground_stacks = {}
+        self.ground_events = []
 
     def send(self, name, payload=b''):
         # BaseProbe records selected packets; this probe records every play packet.
@@ -52,6 +54,46 @@ class Probe(BaseProbe):
             assert len(data.read(16)) == 16
             if read_varint(data.read) == 72:
                 self.drops_seen.add(entity)
+                assert entity not in self.ground_stacks, 'duplicate item entity spawn'
+                self.ground_stacks[entity] = None
+                self.ground_events.append({'event':'spawn','entity':entity})
+        elif name == 'entity_metadata':
+            data = io.BytesIO(payload)
+            entity = read_varint(data.read)
+            if entity in self.ground_stacks:
+                seen = set()
+                while True:
+                    raw = data.read(1)
+                    assert raw, 'truncated item metadata'
+                    index = raw[0]
+                    if index == 255:
+                        break
+                    assert index not in seen, 'duplicate item metadata index'
+                    seen.add(index)
+                    kind = read_varint(data.read)
+                    # Закреплённый protocol777 JSON: serializer7=item_stack/Slot.
+                    # Raw official41889607814: 05 08 07 03 01 00 00 ff = stone3.
+                    if index == 8:
+                        assert kind == 7, 'item stack must use serializer7'
+                        value = self.slot(data)
+                        assert value and set(value)=={'item','count'}, 'only simple authored ground stacks'
+                        assert value['item'] in ('stone','oak_planks','dirt') and value['count'] > 0
+                        self.ground_stacks[entity] = value
+                        self.ground_events.append({'event':'stack','entity':entity,'stack':copy.deepcopy(value)})
+                    elif index == 0 and kind == 0:
+                        assert len(data.read(1)) == 1, 'truncated item flags'
+                    else:
+                        raise AssertionError(('unexpected item metadata',index,kind))
+                assert not data.read(), 'trailing item metadata'
+        elif name == 'entity_destroy':
+            data = io.BytesIO(payload)
+            for _ in range(read_varint(data.read)):
+                entity = read_varint(data.read)
+                if entity in self.ground_stacks:
+                    value = self.ground_stacks.pop(entity)
+                    assert value is not None, 'item removed before its count was observed'
+                    self.ground_events.append({'event':'destroy','entity':entity,'stack':value})
+            assert not data.read()
 
 
 def replay(packets, names):
@@ -65,6 +107,8 @@ def replay(packets, names):
     client.xp = None
     client.ground_items = set()
     client.drops_seen = set()
+    client.ground_stacks = {}
+    client.ground_events = []
     for packet in packets:
         if packet['direction'] == 'in':
             client.observe_packet(packet['name'], bytes.fromhex(packet['payload']))
@@ -81,12 +125,18 @@ def use_payload(x, y, z, sequence):
     return b'\0'+struct.pack('>Q', packed)+b'\1'+struct.pack('>fff', .5, .5, .5)+b'\0\0'+varint(sequence)
 
 
-def totals(inv):
+def ground_snapshot(client):
+    assert all(value is not None for value in client.ground_stacks.values()), 'missing ground stack metadata'
+    return sorted((copy.deepcopy(value) for value in client.ground_stacks.values()),
+                  key=lambda value:(value['item'],value['count']))
+
+
+def totals(inv, ground=()):
     assert inv and isinstance(inv['slots'], list)
     # Окно0: слот0 — только preview, не принадлежащая игроку стопка.
     values = inv['slots'][1:] if inv['window'] == 0 else inv['slots']
     result = Counter()
-    for value in values + [inv['cursor']]:
+    for value in values + [inv['cursor']] + list(ground):
         if value:
             assert set(value) == {'item', 'count'} and type(value['count']) is int and value['count'] > 0
             result[value['item']] += value['count']
@@ -111,8 +161,10 @@ def validate(report, target):
     observer = report.get('observer', [])
     if not any(p['direction']=='in' and p['name']=='login' for p in observer):
         raise ValueError('missing live observer')
-    if replay(observer, names).drops_seen:
-        raise ValueError('item dropped while actor disconnected')
+    witnessed = replay(observer, names)
+    if report.get('ground_events') != witnessed.ground_events:
+        raise ValueError('ground event history not derived from raw observer')
+    observer_index = 0
     for row, session in zip(rows, sessions):
         index = row.get('packet_index')
         packets = session.get('packets', [])
@@ -125,7 +177,7 @@ def validate(report, target):
         if type(index) is not int or not 0 < index <= len(packets):
             raise ValueError('invalid snapshot packet range')
         measured = replay(packets[:index], names)
-        if measured.inventory != row.get('inventory') or measured.drops_seen:
+        if measured.inventory != row.get('inventory'):
             raise ValueError('snapshot not derived from incoming packets')
         inv = measured.inventory
         expected_size = 63 if row['stage'].startswith('chest-') else 46
@@ -133,7 +185,16 @@ def validate(report, target):
             raise ValueError('wrong window scope')
         if row['stage'].endswith('-after') and inv['cursor'] is not None:
             raise ValueError('cursor persisted across reconnect')
-        if row.get('totals') != totals(inv):
+        boundary = row.get('observer_packet_index')
+        if type(boundary) is not int or not observer_index <= boundary <= len(observer):
+            raise ValueError('invalid observer snapshot packet range')
+        observer_index = boundary
+        ground = ground_snapshot(replay(observer[:boundary], names))
+        if row.get('ground') != ground:
+            raise ValueError('ground snapshot not derived from observer packets')
+        if ('-before' in row['stage'] or '-close-fin-' in row['stage']) and ground:
+            raise ValueError('unexpected ground stack before disconnect or after explicit close')
+        if row.get('totals') != totals(inv, ground):
             raise ValueError('wrong item accounting')
         outgoing = [p['name'] for p in packets if p['direction']=='out']
         if row['stage'].endswith('-before'):
@@ -161,6 +222,11 @@ def validate(report, target):
                 raise ValueError('missing restored authoritative inventory')
     for before, after in zip(rows[::2], rows[1::2]):
         kind = before['stage'].split('-')[0]
+        if '-close-fin-' in before['stage']:
+            prefix = replay(observer[:before['observer_packet_index']], names).ground_events
+            events = replay(observer[:after['observer_packet_index']], names).ground_events[len(prefix):]
+            if any(event['event']=='spawn' for event in events):
+                raise ValueError('explicit close transiently dropped an item')
         expected = {'stone':3} if kind=='personal' else {'oak_planks':2, 'stone':3} if kind=='crafting' else {'dirt':5, 'stone':7}
         if before['totals'] != expected or after['totals'] != expected:
             raise ValueError('lost or duplicated items')
@@ -178,6 +244,8 @@ def compare(official, ours):
     left, right = validate(official, 'official'), validate(ours, 'core')
     differences = []
     for a, b in zip(left, right):
+        if a['ground'] != b['ground']:
+            differences.append({'stage':a['stage'], 'field':'ground'})
         for field in ('slots', 'cursor'):
             if a['inventory'][field] != b['inventory'][field]:
                 differences.append({'stage':a['stage'], 'field':field})
@@ -212,7 +280,7 @@ def main():
               'target_sha256':hashlib.sha256(executable.read_bytes()).hexdigest(),
               'jar_sha1':JAR_SHA1 if args.jar else None, 'status':'INCOMPLETE',
               'limits':LIMITS, 'item_names':names, 'sessions':[], 'snapshots':[],
-              'commands':[], 'observer':[], 'behavior_failures':[]}
+              'commands':[], 'observer':[], 'ground_events':[], 'behavior_failures':[]}
     if args.expected:
         report['expected_sha256'] = hashlib.sha256(args.expected.read_bytes()).hexdigest()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -259,9 +327,12 @@ def main():
                 actor.send('window_click', click_payload(inv['window'], inv['revision'], slot))
                 pump(.6)
             def snap(stage):
-                assert not actor.drops_seen and not observer.drops_seen, 'unexpected ground item'
+                pump(.4)
                 state = copy.deepcopy(actor.inventory)
-                report['snapshots'].append({'stage':stage, 'packet_index':len(actor.wire), 'inventory':state, 'totals':totals(state)})
+                ground = ground_snapshot(observer)
+                report['snapshots'].append({'stage':stage, 'packet_index':len(actor.wire),
+                                            'observer_packet_index':len(observer.wire),
+                                            'inventory':state, 'ground':ground, 'totals':totals(state,ground)})
             def open_chest(sequence):
                 actor.send('block_place', use_payload(2,64,0,sequence))
                 pump(.7)
@@ -273,7 +344,6 @@ def main():
                     time.sleep(.1)
                 command('gamerule minecraft:spawn_mobs false')
                 command('gamerule minecraft:random_tick_speed 0')
-                command('fill -2 63 -2 10 63 2 stone')
                 observer = connect(args.port, protocol, lambda s,p:Probe(s,p,777,names), username='McsaWitness', login_uuid=bytes([38])*16)
                 report['observer'] = observer.wire
                 observer.pump(10, lambda packet:packet['name']=='position')
@@ -284,6 +354,13 @@ def main():
                     actor = join(label+'-before')
                     command('tp McsaProbe 0.5 64 0.5')
                     command('gamemode survival McsaProbe')
+                    # Чанки уже загружены реальным игроком, до входа fill не работал.
+                    command('fill -2 63 -2 10 63 2 stone')
+                    command('tick unfreeze')
+                    command('kill @e[type=item]')
+                    pump(.5)
+                    assert not observer.ground_stacks, 'previous case ground cleanup incomplete'
+                    command('tick freeze')
                     command('clear McsaProbe')
                     if kind=='chest':
                         command('setblock 2 64 0 chest')
@@ -330,6 +407,7 @@ def main():
                         server.wait(timeout=30)
                     except (OSError, subprocess.TimeoutExpired):
                         server.kill(); server.wait()
+                report['ground_events'] = observer.ground_events if observer else []
                 report['exit_code'] = server.returncode
                 if server.returncode != 0:
                     report['status'] = 'ERROR'

@@ -25,7 +25,7 @@ def reports():
     official = {'protocol':777, 'target':'official', 'status':'PASS', 'exit_code':0,
                 'jar_sha1':JAR_SHA1, 'item_names':NAMES, 'behavior_failures':[],
                 'observer':[{'direction':'in', 'name':'login', 'payload':''}],
-                'snapshots':[], 'sessions':[]}
+                'snapshots':[], 'sessions':[], 'ground_events':[]}
     for kind, mode in CASES:
         for phase in ('before', 'after'):
             stage = kind+'-'+mode+'-'+phase
@@ -57,7 +57,7 @@ def reports():
                 session['disconnect'] = mode
             official['sessions'].append(session)
             official['snapshots'].append({'stage':stage, 'packet_index':index,
-                                          'inventory':inv, 'totals':totals(inv)})
+                                          'inventory':inv, 'ground':[], 'observer_packet_index':1, 'totals':totals(inv)})
     core = copy.deepcopy(official)
     core['target'] = 'core'
     core['jar_sha1'] = None
@@ -95,15 +95,56 @@ class EvidenceTests(unittest.TestCase):
             else: official['snapshots'][1] = copy.deepcopy(official['snapshots'][0])
             with self.assertRaises(ValueError): validate(official,'official')
 
-    def test_spawn_then_destroy_still_fails_offline_world_accounting(self):
-        official,_ = reports()
+    def test_ground_spawn_metadata_update_and_destroy_preserve_history(self):
         spawn = varint(123)+bytes(16)+varint(72)
-        official['observer'] += [
+        packets = [
             {'direction':'in','name':'spawn_entity','payload':spawn.hex()},
+            {'direction':'in','name':'entity_metadata','payload':(varint(123)+b'\x08\x07\x03\x01\0\0\xff').hex()},
+            {'direction':'in','name':'entity_metadata','payload':(varint(123)+b'\x08\x07\x02\x01\0\0\xff').hex()},
             {'direction':'in','name':'entity_destroy','payload':(b'\1'+varint(123)).hex()}]
-        client = replay(official['observer'], NAMES)
-        self.assertEqual(client.ground_items,set())
+        client = replay(packets, NAMES)
+        self.assertEqual(client.ground_stacks,{})
         self.assertEqual(client.drops_seen,{123})
+        self.assertEqual([e['event'] for e in client.ground_events],['spawn','stack','stack','destroy'])
+        self.assertEqual(client.ground_events[-1]['stack'],{'item':'stone','count':2})
+
+    def test_ground_metadata_rejects_missing_unknown_duplicate_and_truncated(self):
+        spawn = {'direction':'in','name':'spawn_entity','payload':(b'\5'+bytes(16)+varint(72)).hex()}
+        from probe_inventory_reconnect_777 import ground_snapshot
+        with self.assertRaises(AssertionError): ground_snapshot(replay([spawn],NAMES))
+        for payload in ('05080703010000', '05080300000000ff', '05080703010000080703010000ff',
+                        '0508070301010001ff', '0508070000ff', '05080703010000ff00'):
+            with self.assertRaises((AssertionError,EOFError,IndexError)):
+                replay([spawn,{'direction':'in','name':'entity_metadata','payload':payload}],NAMES)
+        with self.assertRaises(AssertionError):
+            replay([spawn,{'direction':'in','name':'entity_destroy','payload':'0105'}],NAMES)
+
+    def test_rst_ground_is_counted_and_compared_without_entity_ids(self):
+        official,core = reports()
+        for report,entity in ((official,55),(core,77)):
+            spawn = {'direction':'in','name':'spawn_entity','payload':(varint(entity)+bytes(16)+varint(72)).hex()}
+            metadata = {'direction':'in','name':'entity_metadata','payload':(varint(entity)+b'\x08\x07\3\1\0\0\xff').hex()}
+            # RST personal-after row3: stone moved to ground, absent from bag.
+            report['observer'] += [spawn,metadata]
+            row = report['snapshots'][3]
+            row['inventory']['slots'][9] = None
+            row['ground'] = [{'item':'stone','count':3}]
+            row['observer_packet_index'] = 3
+            report['sessions'][3]['packets'][-1] = packet(row['inventory'])
+            # Cleanup history follows snapshot, before next case.
+            report['observer'].append({'direction':'in','name':'entity_destroy','payload':(b'\1'+varint(entity)).hex()})
+            for later in report['snapshots'][4:]: later['observer_packet_index'] = 4
+            report['ground_events'] = replay(report['observer'],NAMES).ground_events
+        self.assertEqual(compare(official,core),[])
+        core['snapshots'][3]['ground'][0]['count'] = 2
+        with self.assertRaises(ValueError): validate(core,'core')
+
+    def test_ground_missing_raw_history_or_invented_counts_fail(self):
+        official,_ = reports()
+        official['ground_events'] = [{'event':'spawn','entity':9}]
+        with self.assertRaises(ValueError): validate(official,'official')
+        official,_ = reports()
+        official['snapshots'][0]['ground'] = [{'item':'stone','count':3}]
         with self.assertRaises(ValueError): validate(official,'official')
 
     def test_missing_observer_click_disconnect_or_raw_inventory_rejected(self):
