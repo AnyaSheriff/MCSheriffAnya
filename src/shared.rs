@@ -65,6 +65,8 @@ pub struct Shared {
 
     /// Предметы, лежащие в мирах, — у каждого измерения свои.
     items: [Mutex<Items>; 3],
+    /// Только писатели sidecar: свежий снимок не обгоняет прежнюю запись.
+    ground_saves: Mutex<()>,
 
     /// Стрелы (arrow.rs): в полёте и застрявшие, всех измерений.
     /// Замок — после предметов.
@@ -265,15 +267,21 @@ impl Shared {
         Ok(())
     }
 
-    /// Полные снимки включают предметы в выгруженных чанках; замок мира уже отпущен.
+    /// Полные снимки включают предметы в выгруженных чанках.
+    /// Кодирование и диск не держат замки мира и предметов; писатели идут по очереди.
     pub(crate) fn save_ground_items(&self) -> std::io::Result<()> {
+        let _writer = self.ground_saves.lock().expect("запись выпавших предметов");
         let mut first_error = None;
         for dimension in Dimension::ALL {
-            if let Some(path) = self.ground_items_path(dimension)
-                && let Err(error) = self.items_in(dimension).lock().expect("предметы").save_ground_items(&path)
-            {
-                crate::log_error!("Выпавшие предметы {} не записаны: {}", dimension.name(), error);
-                if first_error.is_none() { first_error = Some(error); }
+            if let Some(path) = self.ground_items_path(dimension) {
+                let checkpoint = {
+                    let items = self.items_in(dimension).lock().expect("предметы");
+                    items.ground_items_checkpoint()
+                };
+                if let Err(error) = checkpoint.and_then(|checkpoint| checkpoint.save(&path)) {
+                    crate::log_error!("Выпавшие предметы {} не записаны: {}", dimension.name(), error);
+                    if first_error.is_none() { first_error = Some(error); }
+                }
             }
         }
         first_error.map_or(Ok(()), Err)
@@ -378,6 +386,7 @@ impl Shared {
             sessions: crate::sessions::Sessions::default(),
             chat: Mutex::new(Chat::new()),
             items: std::array::from_fn(|_| Mutex::new(Items::with_catalog(catalog))),
+            ground_saves: Mutex::new(()),
             arrows: Mutex::new(crate::arrow::Arrows::new()),
             thrown: Mutex::new(crate::thrown::Thrown::new()),
             fishing: Mutex::new(Vec::new()),

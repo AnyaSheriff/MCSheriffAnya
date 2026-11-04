@@ -329,7 +329,8 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     shared.load_ground_items()?;
 
     // Табло и выпавшие предметы пишутся раз в пять секунд по настенным часам,
-    // даже когда мир стоит без игроков. Запись не задерживает поток такта.
+    // даже когда мир стоит без игроков. Снимок берётся под коротким замком;
+    // кодирование и запись на диск идут вне потока такта и замка предметов.
     {
         let shared = Arc::clone(&shared);
         std::thread::spawn(move || loop {

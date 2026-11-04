@@ -59,15 +59,19 @@ fn decode_record(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog) -> io:
     if !input.0.is_empty() || record(&item, catalog)? != bytes { return Err(invalid()); }
     Ok(item)
 }
-impl Items {
-    /// Только ordinary owner=None: /give-визуализации и owner remainder намеренно исключены.
-    pub(crate) fn save_ground_items(&self, path: &Path) -> io::Result<()> {
+/// Снимок обычных предметов; кодирование и диск не требуют замка Items.
+pub(crate) struct GroundCheckpoint {
+    catalog: crate::gameplay_catalog::Catalog,
+    items: Vec<Dropped>,
+}
+impl GroundCheckpoint {
+    pub(crate) fn save(&self, path: &Path) -> io::Result<()> {
         let mut out = Vec::new(); out.extend(MAGIC); out.extend(VERSION.to_be_bytes()); out.push(profile(self.catalog));
-        let count = self.items.iter().filter(|item| supported(item)).count();
+        let count = self.items.len();
         if count > MAX_ITEMS { return Err(invalid()); }
         out.extend((count as u32).to_be_bytes());
         let mut uuids = HashSet::new();
-        for item in self.items.iter().filter(|item| supported(item)) {
+        for item in &self.items {
             if !uuids.insert(item.uuid) { return Err(invalid()); }
             let bytes = record(item, self.catalog)?;
             if bytes.len() > MAX_RECORD || out.len() + 4 + bytes.len() + 32 > MAX_BYTES { return Err(invalid()); }
@@ -86,6 +90,19 @@ impl Items {
         })();
         if result.is_err() { let _ = fs::remove_file(&temporary); }
         result
+    }
+}
+impl Items {
+    /// Под замком только ограниченное копирование, без сериализации компонентов и fsync.
+    pub(crate) fn ground_items_checkpoint(&self) -> io::Result<GroundCheckpoint> {
+        let count = self.items.iter().filter(|item| supported(item)).count();
+        if count > MAX_ITEMS { return Err(invalid()); }
+        Ok(GroundCheckpoint { catalog: self.catalog,
+            items: self.items.iter().filter(|item| supported(item)).cloned().collect() })
+    }
+    #[cfg(test)]
+    fn save_ground_items(&self, path: &Path) -> io::Result<()> {
+        self.ground_items_checkpoint()?.save(path)
     }
     /// Запуск один раз до тиков. Полный разбор предшествует выдаче runtime ID и публикации.
     pub(crate) fn load_ground_items(&mut self, path: &Path, next_id: &mut dyn FnMut() -> i32) -> io::Result<()> {
@@ -151,6 +168,30 @@ mod tests {
             fs::remove_dir_all(root).unwrap();
         }
     }
+    #[test]
+    fn ground_checkpoint_survives_live_removal_and_component_changes() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let root = root("checkpoint"); let path = root.join("ground");
+        let mut source = fixture(catalog);
+        let expected = record(&source.items[0], catalog).unwrap();
+        let mut visual = source.items[0].clone(); visual.owner = Some(42); visual.uuid = [55;16];
+        source.items.push(visual);
+        let checkpoint = source.ground_items_checkpoint().unwrap();
+        assert_eq!(checkpoint.items.len(), 1);
+        source.items[0].stack = source.items[0].stack.with_extras(crate::stackdata::Data {
+            name: Some("Изменено после снимка".into()), ..Default::default()
+        });
+        source.items.clear();
+        // Ни живого контейнера, ни замка уже нет при кодировании и fsync.
+        drop(source);
+        checkpoint.save(&path).unwrap();
+        let mut restored = Items::with_catalog(catalog);
+        restored.load_ground_items(&path, &mut || 88).unwrap();
+        assert_eq!(restored.items.len(), 1);
+        assert_eq!(record(&restored.items[0], catalog).unwrap(), expected);
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn ground_invalid_save_preserves_file_and_invalid_load_never_mutates_items() {
         let catalog = Catalog::new(Profile::Preview26_3); let root = root("invalid"); let path = root.join("ground");
