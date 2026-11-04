@@ -65,6 +65,8 @@ pub struct Shared {
 
     /// Предметы, лежащие в мирах, — у каждого измерения свои.
     items: [Mutex<Items>; 3],
+    /// Только писатели sidecar: свежий снимок не обгоняет прежнюю запись.
+    ground_saves: Mutex<()>,
 
     /// Стрелы (arrow.rs): в полёте и застрявшие, всех измерений.
     /// Замок — после предметов.
@@ -245,6 +247,46 @@ impl Shared {
 
     pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
 
+    /// Путь берётся у самого мира, включая отдельные каталоги измерений.
+    fn ground_items_path(&self, dimension: Dimension) -> Option<PathBuf> {
+        self.world_in(dimension).lock().expect("мир").storage_directory()
+            .map(|directory| directory.join("dropped-items.mcri"))
+    }
+
+    /// Только при запуске, до такта и подключений. Ошибка файла не означает пустой мир.
+    pub(crate) fn load_ground_items(&self) -> std::io::Result<()> {
+        for dimension in Dimension::ALL {
+            if let Some(path) = self.ground_items_path(dimension) {
+                self.items_in(dimension).lock().expect("предметы")
+                    .load_ground_items(&path, &mut || self.next_entity_id())
+                    .map_err(|error| std::io::Error::new(error.kind(), format!(
+                        "Не удалось загрузить выпавшие предметы {} из {}: {}",
+                        dimension.name(), path.display(), error)))?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Полные снимки включают предметы в выгруженных чанках.
+    /// Кодирование и диск не держат замки мира и предметов; писатели идут по очереди.
+    pub(crate) fn save_ground_items(&self) -> std::io::Result<()> {
+        let _writer = self.ground_saves.lock().expect("запись выпавших предметов");
+        let mut first_error = None;
+        for dimension in Dimension::ALL {
+            if let Some(path) = self.ground_items_path(dimension) {
+                let checkpoint = {
+                    let items = self.items_in(dimension).lock().expect("предметы");
+                    items.ground_items_checkpoint()
+                };
+                if let Err(error) = checkpoint.and_then(|checkpoint| checkpoint.save(&path)) {
+                    crate::log_error!("Выпавшие предметы {} не записаны: {}", dimension.name(), error);
+                    if first_error.is_none() { first_error = Some(error); }
+                }
+            }
+        }
+        first_error.map_or(Ok(()), Err)
+    }
+
     /// Мир этого измерения.
     pub fn world_in(&self, dimension: Dimension) -> &Mutex<World> {
         &self.worlds[dimension.index()]
@@ -344,6 +386,7 @@ impl Shared {
             sessions: crate::sessions::Sessions::default(),
             chat: Mutex::new(Chat::new()),
             items: std::array::from_fn(|_| Mutex::new(Items::with_catalog(catalog))),
+            ground_saves: Mutex::new(()),
             arrows: Mutex::new(crate::arrow::Arrows::new()),
             thrown: Mutex::new(crate::thrown::Thrown::new()),
             fishing: Mutex::new(Vec::new()),
@@ -381,6 +424,77 @@ impl Shared {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn ground_items_checkpoint_uses_actual_dimension_folders_and_survives_reopen() {
+        use crate::config::server_properties::WorldKind;
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tmp")
+            .join(format!("shared-ground-reopen-{}", std::process::id()));
+        assert!(!root.exists(), "каталог принадлежит только этой проверке");
+        let folders = [root.join("custom-overworld"), root.join("custom-nether"), root.join("custom-end")];
+        let open = || Shared::with_end(
+            World::open(&folders[0], Some(1), WorldKind::Flat).unwrap(),
+            World::open(&folders[1], Some(1), WorldKind::Nether).unwrap(),
+            World::open(&folders[2], Some(1), WorldKind::End).unwrap(),
+            root.join("players"), root.join("skins"), Default::default(),
+            Ops::open(&root.join("ops.json")), Default::default(),
+        );
+        let shared = open();
+        shared.load_ground_items().unwrap();
+        let stack = crate::inventory::Stack::new(crate::blocks::item_named("diamond_sword").unwrap(), 1)
+            .with_extras(crate::stackdata::Data { name: Some("Сохранённый меч".into()), damage: 23, ..Default::default() });
+        let mut uuids = Vec::new();
+        for dimension in Dimension::ALL {
+            let uuid = shared.items_in(dimension).lock().unwrap().drop_from_player(
+                shared.next_entity_id(), stack, (4096.5, 70.0, -4096.5), (0.1, 0.2, -0.1), [7; 16]);
+            uuids.push(uuid);
+            assert_eq!(shared.ground_items_path(dimension), Some(folders[dimension.index()].join("dropped-items.mcri")));
+        }
+        shared.save_ground_items().unwrap();
+        // Повторная запись заменяет полный снимок, не добавляет записи.
+        shared.save_ground_items().unwrap();
+        drop(shared);
+        let restored = open();
+        restored.load_ground_items().unwrap();
+        for dimension in Dimension::ALL {
+            let items = restored.items_in(dimension).lock().unwrap();
+            let drops = items.items();
+            assert_eq!(drops.len(), 1);
+            assert_eq!(drops[0].uuid, uuids[dimension.index()]);
+            assert_eq!(drops[0].stack, stack);
+            assert_eq!((drops[0].x, drops[0].y, drops[0].z), (4096.5, 70.0, -4096.5));
+            assert_eq!(drops[0].thrower, Some([7; 16]));
+        }
+        assert!(restored.load_ground_items().is_err(), "повторная загрузка не дублирует предметы");
+        restored.items_in(Dimension::Overworld).lock().unwrap().remove_items(|_| true);
+        restored.save_ground_items().unwrap();
+        drop(restored);
+        let picked_up = open();
+        picked_up.load_ground_items().unwrap();
+        assert!(picked_up.items_in(Dimension::Overworld).lock().unwrap().items().is_empty(),
+            "пустой снимок не воскрешает уже подобранные предметы");
+        assert_eq!(picked_up.items_in(Dimension::Nether).lock().unwrap().items().len(), 1);
+        drop(picked_up);
+        let corrupt = folders[0].join("dropped-items.mcri");
+        std::fs::write(&corrupt, b"broken").unwrap();
+        let invalid = open();
+        let error = invalid.load_ground_items().unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(error.to_string().contains(&corrupt.display().to_string()));
+        assert!(error.to_string().contains(Dimension::Overworld.name()));
+        assert_eq!(std::fs::read(&corrupt).unwrap(), b"broken");
+        drop(invalid);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn in_memory_worlds_have_no_ground_items_checkpoint_path() {
+        let shared = Shared::new(World::in_memory(), World::in_memory(), PathBuf::new(), PathBuf::new(),
+            Default::default(), Ops::open(std::path::Path::new("tmp/shared-ground-memory/ops.json")), Default::default());
+        for dimension in Dimension::ALL { assert!(shared.ground_items_path(dimension).is_none()); }
+        shared.load_ground_items().unwrap();
+        shared.save_ground_items().unwrap();
+    }
+
     use super::*;
 
     #[test]

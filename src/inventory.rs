@@ -244,6 +244,13 @@ impl Inventory {
 
     /// Отменённый вынужденный выброс остаётся у владельца, даже при полном рюкзаке.
     pub fn retain_drop(&mut self,stack:Stack) {if let Some(left)=self.put(stack).1 {self.retained_drops.push(left);}}
+    /// Снимок личного окна: очередь возврата не занимает живые ячейки.
+    pub(crate) fn retain_window_inputs(&mut self, inputs: &[Option<Stack>]) {
+        // Самое большое личное окно — девять входных ячеек верстака.
+        assert!(inputs.len() <= 9);
+        self.retained_drops.extend(inputs.iter().flatten().copied());
+    }
+    pub(crate) fn retained_stacks(&self) -> &[Stack] { &self.retained_drops }
     pub fn take_retained(&mut self)->Vec<Stack> {std::mem::take(&mut self.retained_drops)}
     pub fn restore_retained(&mut self)->bool {
         let pending=std::mem::take(&mut self.retained_drops);let mut changed=false;
