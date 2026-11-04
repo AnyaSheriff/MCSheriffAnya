@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import signal
 import socket
@@ -40,6 +41,27 @@ def validate_boundary(join_count, listed, before, after):
     require(join_count == 0, 'world join before password')
     require(listed == 0, 'unauthenticated player listed')
     require(before == after, 'playerdata changed before password')
+
+
+def parse_list_count(line):
+    # Console renderer main использует английский перевод; старый ответ
+    # поддержан только в точном формате. Чужая строка не означает ноль.
+    line = re.sub(r'^\[\d{2}:\d{2}:\d{2}\] \[Server thread/INFO\]: ', '', line, count=1)
+    number = r'(0|[1-9][0-9]*)'
+    match = re.fullmatch(r'There are '+number+r' of a max of '+number+r' players online: (.*)', line)
+    if match:
+        count, names = int(match[1]), match[3]
+    else:
+        if re.fullmatch(r'Игроков на сервере: 0 из '+number, line):
+            return 0
+        match = re.fullmatch(r'Игроков на сервере: ([1-9][0-9]*) из '+number+r': (.*)', line)
+        if not match:
+            return None
+        count, names = int(match[1]), match[3]
+    players = names.split(', ') if names else []
+    if len(players) != count or any(not re.fullmatch(r'[A-Za-z0-9_]{1,16}', name) for name in players):
+        return None
+    return count
 
 
 def validate_default_dialog(packet_id, payload):
@@ -86,11 +108,12 @@ def exercise(binary, protocol, output, mode, password, wrong):
                 def command(value):
                     process.stdin.write(value+'\n'); process.stdin.flush()
                 def boundary(baseline):
-                    count = text().count('Игроков на сервере:')
+                    def observations():
+                        return [count for line in text().splitlines() if (count := parse_list_count(line)) is not None]
+                    count = len(observations())
                     command('list')
-                    wait(lambda: text().count('Игроков на сервере:') > count)
-                    line = [line for line in text().splitlines() if 'Игроков на сервере:' in line][-1]
-                    listed = int(line.split('Игроков на сервере: ')[1].split()[0])
+                    wait(lambda: len(observations()) > count)
+                    listed = observations()[-1]
                     validate_boundary(text().count('вошёл с номером сущности'), listed, baseline, playerfiles(root))
                     result['checks'].append('no-world-join-list-or-playerdata-before-password')
                 handshake = probe_gameplay.handshake
