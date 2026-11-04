@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ограниченная A06: свободный рюкзак, курсор, сетка2×2 и сундук; FIN/RST.
+"""Ограниченная A06: свободный рюкзак, курсор, сетки2×2/3×3 и сундук; FIN/RST.
 
 Без полного рюкзака, восстановления выпавшей стопки, рестарта и Bedrock.
 Сторонний код/JAR не читается: сервер используется только как чёрный ящик.
@@ -22,11 +22,11 @@ from probe_gameplay_inventory_777 import Probe as BaseProbe
 from smoke import read_varint, varint
 
 JAR_SHA1 = '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'
-CASES = [(kind, mode) for kind in ('personal', 'crafting', 'chest')
+CASES = [(kind, mode) for kind in ('personal', 'crafting', 'chest', 'workbench')
          for mode in ('close-fin', 'open-rst')]
 STAGES = [kind+'-'+mode+'-'+phase for kind, mode in CASES for phase in ('before', 'after')]
 LIMITS = ['Free inventory space only; simple authored ground stacks decoded from metadata',
-          'No restart, full inventory, workstation, Bedrock, component or timing claim',
+          'No restart, full inventory, other workstations, Bedrock, component or timing claim',
           'Graceful means explicit close_window then TCP FIN; abrupt means open-window TCP RST',
           'Second spectator accounts ground stacks; frozen world prevents pickup/physics during snapshots']
 
@@ -133,8 +133,8 @@ def ground_snapshot(client):
 
 def totals(inv, ground=()):
     assert inv and isinstance(inv['slots'], list)
-    # Окно0: слот0 — только preview, не принадлежащая игроку стопка.
-    values = inv['slots'][1:] if inv['window'] == 0 else inv['slots']
+    # Личный инвентарь и верстак имеют46слотов; слот0 — только preview.
+    values = inv['slots'][1:] if len(inv['slots']) == 46 else inv['slots']
     result = Counter()
     for value in values + [inv['cursor']] + list(ground):
         if value:
@@ -180,9 +180,16 @@ def validate(report, target):
         if measured.inventory != row.get('inventory'):
             raise ValueError('snapshot not derived from incoming packets')
         inv = measured.inventory
-        expected_size = 63 if row['stage'].startswith('chest-') else 46
-        if not inv or len(inv['slots']) != expected_size or (inv['window']==0) != (expected_size==46):
+        kind = row['stage'].split('-')[0]
+        expected_size = 63 if kind=='chest' else 46
+        if not inv or len(inv['slots']) != expected_size or (inv['window']==0) != (kind in ('personal','crafting')):
             raise ValueError('wrong window scope')
+        if kind in ('chest','workbench'):
+            uses = [p for p in packets[:index] if p['direction']=='out' and p['name']=='block_place']
+            if len(uses) != 1 or not bytes.fromhex(uses[0]['payload']).startswith(use_payload(2,64,0,1)[:-1]):
+                raise ValueError('missing real container block use')
+            if not any(p['direction']=='in' and p['name']=='open_window' for p in packets[:index]):
+                raise ValueError('missing container open response')
         if row['stage'].endswith('-after') and inv['cursor'] is not None:
             raise ValueError('cursor persisted across reconnect')
         boundary = row.get('observer_packet_index')
@@ -215,7 +222,7 @@ def validate(report, target):
                         raise ValueError('not a real unpredicted normal pickup click')
                     clicks.append(place)
             kind = row['stage'].split('-')[0]
-            if clicks != ([0] if kind=='chest' else [10,1,9] if kind=='crafting' else [9]):
+            if clicks != ([0] if kind=='chest' else [11,1,10] if kind=='workbench' else [10,1,9] if kind=='crafting' else [9]):
                 raise ValueError('missing, repeated or wrong action sequence')
         else:
             if not any(p['direction']=='in' and p['name']=='window_items' for p in packets):
@@ -227,12 +234,12 @@ def validate(report, target):
             events = replay(observer[:after['observer_packet_index']], names).ground_events[len(prefix):]
             if any(event['event']=='spawn' for event in events):
                 raise ValueError('explicit close transiently dropped an item')
-        expected = {'stone':3} if kind=='personal' else {'oak_planks':2, 'stone':3} if kind=='crafting' else {'dirt':5, 'stone':7}
+        expected = {'stone':3} if kind=='personal' else {'oak_planks':2, 'stone':3} if kind in ('crafting','workbench') else {'dirt':5, 'stone':7}
         if before['totals'] != expected or after['totals'] != expected:
             raise ValueError('lost or duplicated items')
         if before['inventory']['cursor'] != {'item':'stone', 'count':7 if kind=='chest' else 3}:
             raise ValueError('cursor was not authoritatively populated')
-        if kind=='crafting' and before['inventory']['slots'][1] != {'item':'oak_planks', 'count':2}:
+        if kind in ('crafting','workbench') and before['inventory']['slots'][1] != {'item':'oak_planks', 'count':2}:
             raise ValueError('crafting inputs were not really placed')
         if kind=='chest':
             if before['inventory']['slots'][1] != {'item':'dirt', 'count':5} or after['inventory']['slots'][:27] != before['inventory']['slots'][:27]:
@@ -333,10 +340,10 @@ def main():
                 report['snapshots'].append({'stage':stage, 'packet_index':len(actor.wire),
                                             'observer_packet_index':len(observer.wire),
                                             'inventory':state, 'ground':ground, 'totals':totals(state,ground)})
-            def open_chest(sequence):
+            def open_container(sequence, size):
                 actor.send('block_place', use_payload(2,64,0,sequence))
                 pump(.7)
-                assert actor.inventory and actor.inventory['window'] != 0 and len(actor.inventory['slots'])==63
+                assert actor.inventory and actor.inventory['window'] != 0 and len(actor.inventory['slots'])==size
             try:
                 deadline = time.monotonic()+120
                 while ('Done (' if args.jar else 'Готово (') not in log.read_text():
@@ -366,14 +373,20 @@ def main():
                         command('setblock 2 64 0 chest')
                         command('item replace block 2 64 0 container.0 with stone 7')
                         command('item replace block 2 64 0 container.1 with dirt 5')
-                        open_chest(number*2+1)
+                        open_container(number*2+1,63)
                         click(0)
                     else:
                         command('item replace entity McsaProbe inventory.0 with stone 3')
-                        if kind=='crafting':
+                        if kind in ('crafting','workbench'):
                             command('item replace entity McsaProbe inventory.1 with oak_planks 2')
-                            click(10); click(1)
-                        click(9)
+                            if kind=='workbench':
+                                # Удаляем остаток предыдущей фикстуры до замены блока.
+                                if mode=='close-fin':
+                                    command('item replace block 2 64 0 container.1 with air')
+                                command('setblock 2 64 0 crafting_table')
+                                open_container(number*2+1,46)
+                            click(11 if kind=='workbench' else 10); click(1)
+                        click(10 if kind=='workbench' else 9)
                     snap(label+'-before')
                     session = report['sessions'][-1]
                     session['disconnect'] = mode
@@ -387,8 +400,8 @@ def main():
                     pump(1.2)
                     actor = join(label+'-after')
                     pump(.5)
-                    if kind=='chest':
-                        open_chest(number*2+2)
+                    if kind in ('chest','workbench'):
+                        open_container(number*2+2,63 if kind=='chest' else 46)
                     snap(label+'-after')
                     actor.sock.shutdown(socket.SHUT_RDWR); actor.sock.close(); actor = None
                     pump(.8)

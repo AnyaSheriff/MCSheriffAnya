@@ -2,7 +2,7 @@
 import copy
 import unittest
 from probe_inventory_reconnect_777 import (CASES, STAGES, JAR_SHA1, click_payload,
-                                          compare, replay, totals, validate)
+                                          compare, replay, totals, validate, use_payload)
 from smoke import varint
 
 NAMES = {1:'stone', 2:'oak_planks', 3:'dirt', 4:'oak_button'}
@@ -29,23 +29,26 @@ def reports():
     for kind, mode in CASES:
         for phase in ('before', 'after'):
             stage = kind+'-'+mode+'-'+phase
-            inv = {'window':2 if kind=='chest' else 0, 'revision':4,
+            inv = {'window':2 if kind in ('chest','workbench') else 0, 'revision':4,
                    'slots':[None]*(63 if kind=='chest' else 46), 'cursor':None}
             stone = {'item':'stone', 'count':7 if kind=='chest' else 3}
             if phase=='before':
                 inv['cursor'] = stone
             else:
-                inv['slots'][27 if kind=='chest' else 9] = stone
+                inv['slots'][27 if kind=='chest' else 10 if kind=='workbench' else 9] = stone
             if kind=='chest':
                 inv['slots'][1] = {'item':'dirt', 'count':5}
-            elif kind=='crafting':
-                inv['slots'][1 if phase=='before' else 10] = {'item':'oak_planks', 'count':2}
+            elif kind in ('crafting','workbench'):
+                inv['slots'][1 if phase=='before' else 11 if kind=='workbench' else 10] = {'item':'oak_planks', 'count':2}
                 if phase=='before':
                     inv['slots'][0] = {'item':'oak_button', 'count':1}
             initial = {'window':0, 'revision':0, 'slots':[None]*46, 'cursor':None}
             packets = [{'direction':'in', 'name':'login', 'payload':''},packet(initial)]
+            if kind in ('chest','workbench'):
+                packets += [{'direction':'out','name':'block_place','payload':use_payload(2,64,0,1).hex()},
+                            {'direction':'in','name':'open_window','payload':(b'\2'+varint(20 if kind=='chest' else 13)).hex()}]
             if phase=='before':
-                for place in ([0] if kind=='chest' else [10,1,9] if kind=='crafting' else [9]):
+                for place in ([0] if kind=='chest' else [11,1,10] if kind=='workbench' else [10,1,9] if kind=='crafting' else [9]):
                     packets.append({'direction':'out', 'name':'window_click',
                                     'payload':click_payload(inv['window'],3,place).hex()})
             packets.append(packet(inv))
@@ -65,9 +68,11 @@ def reports():
 
 
 class EvidenceTests(unittest.TestCase):
-    def test_all_twelve_stages_and_both_disconnect_modes(self):
+    def test_all_sixteen_stages_and_both_disconnect_modes(self):
         official, core = reports()
         self.assertEqual([row['stage'] for row in validate(official,'official')],STAGES)
+        self.assertEqual(len(STAGES),16)
+        self.assertEqual(len(CASES),8)
         self.assertEqual(compare(official,core),[])
 
     def test_preview_is_not_owned_but_crafting_inputs_and_cursor_are(self):
@@ -75,6 +80,29 @@ class EvidenceTests(unittest.TestCase):
         row = official['snapshots'][4]
         self.assertEqual(row['inventory']['slots'][0],{'item':'oak_button','count':1})
         self.assertEqual(totals(row['inventory']),{'oak_planks':2,'stone':3})
+
+    def test_workbench_preview_inputs_real_clicks_and_scope(self):
+        official,_ = reports()
+        row = official['snapshots'][12]
+        self.assertEqual(row['stage'],'workbench-close-fin-before')
+        self.assertNotEqual(row['inventory']['window'],0)
+        self.assertEqual(len(row['inventory']['slots']),46)
+        self.assertEqual(row['inventory']['slots'][0],{'item':'oak_button','count':1})
+        self.assertEqual(totals(row['inventory']),{'oak_planks':2,'stone':3})
+        self.assertEqual(official['snapshots'][13]['inventory']['slots'][11],{'item':'oak_planks','count':2})
+        for mutation in ('missing-click','wrong-window','count-preview','missing-use'):
+            modified = copy.deepcopy(official)
+            target = modified['snapshots'][12]
+            if mutation=='missing-click':
+                modified['sessions'][12]['packets'][4]['name'] = 'tick_end'
+            elif mutation=='missing-use':
+                modified['sessions'][12]['packets'][2]['name'] = 'tick_end'
+            elif mutation=='wrong-window':
+                target['inventory']['window'] = 0
+                modified['sessions'][12]['packets'][target['packet_index']-1] = packet(target['inventory'])
+            else:
+                target['totals']['oak_button'] = 1
+            with self.assertRaises(ValueError): validate(modified,'official')
 
     def test_replay_does_not_trust_fabricated_snapshot_or_totals(self):
         for field in ('inventory', 'totals'):
