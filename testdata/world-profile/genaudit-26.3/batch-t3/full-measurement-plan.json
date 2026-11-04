@@ -1,0 +1,39 @@
+{
+  "method": "Full continuous Overworld footprint of the saved census, generated afresh in our worktree; official profiles reused only after analyzer SHA and complete world manifest equality were verified. Own-biome 3D-volume comparison, no coordinate block match.",
+  "samples": [
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "windows": {
+        "overworld": [
+          [
+            -129,
+            -90,
+            63,
+            102
+          ]
+        ],
+        "the_nether": [],
+        "the_end": []
+      },
+      "chunks": 37249
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "windows": {
+        "overworld": [
+          [
+            -67,
+            -98,
+            125,
+            94
+          ]
+        ],
+        "the_nether": [],
+        "the_end": []
+      },
+      "chunks": 37249
+    }
+  ]
+}

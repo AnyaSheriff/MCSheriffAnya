@@ -1,0 +1,30 @@
+[09:28:54] [Server thread/INFO]: Запуск сервера MCSheriffAnya
+[09:28:54] [Server thread/INFO]: Ядер: 2. Такту отведено ядро 1, остальные — сети и складыванию мира
+[09:28:54] [Server thread/INFO]: Загрузка настроек
+[09:28:54] [Server thread/INFO]: Основная версия игры: Minecraft Java 26.3 (протокол 777)
+[09:28:54] [Server thread/INFO]: Сервер запущен на *:26184
+[09:28:54] [Server thread/INFO]: Подготовка мира "world"
+[09:28:54] [Server thread/INFO]: Семя мира: 1
+[09:28:54] [Server thread/INFO]: Тип мира: minecraft:flat
+[09:28:54] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_nether"
+[09:28:54] [Server thread/INFO]: Семя мира: 1
+[09:28:54] [Server thread/INFO]: Тип мира: minecraft:the_nether
+[09:28:54] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_end"
+[09:28:54] [Server thread/INFO]: Семя мира: 1
+[09:28:54] [Server thread/INFO]: Тип мира: minecraft:the_end
+[09:28:54] [Server thread/INFO]: Плагины: папки plugins/ и modules/ пусты
+[09:28:54] [Server thread/INFO]: Готово (0.001 с)! Чтобы узнать команды, набери help
+[09:28:55] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[09:28:55] [Server thread/INFO]: McsaProbe[/127.0.0.1:46168 → localhost:26184] вошёл с номером сущности 1 в (0.5, 65.0, 0.5)
+[09:28:57] [Server thread/INFO]: McsaProbe зашёл на сервер
+[09:28:58] [Server thread/INFO]: Marked chunk [0, 0] in minecraft:minecraft:overworld to be force loaded
+[09:28:58] [Server thread/INFO]: [Server] MCSA_CORE_DIG_37
+[09:28:58] [Server thread/INFO]: Could not set the block
+[09:28:58] [Server thread/INFO]: [Server] MCSA_CORE_DIG_38
+[09:28:59] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[09:28:59] [Server thread/INFO]: Останавливаю сервер
+[09:28:59] [Server thread/INFO]: McsaProbe вышел
+[09:28:59] [Server thread/INFO]: Остановка сервера
+[09:28:59] [Server thread/INFO]: Сохранение игроков
+[09:28:59] [Server thread/INFO]: Сохранение мира
+[09:28:59] [Server thread/INFO]: Мир сохранён

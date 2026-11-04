@@ -265,11 +265,15 @@ fn scramble(mut value: u64) -> u64 {
 
 /// Чанк старта города в регионе.
 pub fn region_start(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
-    let mut dice = Dice(scramble(
-        (seed as u64) ^ (region_x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (region_z as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F) ^ 10_387_313,
-    ));
-
-    (region_x * REGION + dice.below(SPREAD), region_z * REGION + dice.below(SPREAD))
+    // minecraft.wiki/w/End_City: «chunks numbered 0-8».
+    // Треугольное распределение и поток подтверждены началами сохранённых
+    // регионов 26.3; раскладка частей использует отдельный поток.
+    let placement_seed = seed.wrapping_add(i64::from(region_x).wrapping_mul(341_873_128_712))
+        .wrapping_add(i64::from(region_z).wrapping_mul(132_897_987_541)).wrapping_add(10_387_313);
+    let mut random = super::nether::LegacyRandom::new(placement_seed);
+    let x = (random.below(SPREAD) + random.below(SPREAD)) / 2;
+    let z = (random.below(SPREAD) + random.below(SPREAD)) / 2;
+    (region_x * REGION + x, region_z * REGION + z)
 }
 
 /// Регионы, чьи города могут задевать чанк.
@@ -585,6 +589,21 @@ pub fn sentries(pieces: &[Placed], x0: i32, z0: i32) -> Vec<(i32, i32, i32)> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn census_city_start_stream_matches_saved_regions() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/end-city-starts.json"
+        )).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let seed = case["seed"].as_i64().unwrap();
+            for start in case["starts"].as_array().unwrap() {
+                let x = start["chunk"][0].as_i64().unwrap() as i32;
+                let z = start["chunk"][1].as_i64().unwrap() as i32;
+                assert_eq!(region_start(seed, x.div_euclid(REGION), z.div_euclid(REGION)), (x, z));
+            }
+        }
+    }
 
     #[test]
     fn templates_parse_with_measured_sizes() {

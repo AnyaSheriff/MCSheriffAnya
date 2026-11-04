@@ -1,5 +1,6 @@
 {
  "name": "pvp-protection",
+ "attr_phase": true,
  "about": "Броня с защитой IV на каждой детали: EPF 16 → снижение ещё на 64 % от урона после брони; износ брони.",
  "second": true,
  "track_self": true,
@@ -16,6 +17,7 @@
   "clear $(bot2)",
   "kill $(bot)",
   "!wait 30",
+  "!syncattrs",
   "give $(bot2) minecraft:diamond_sword 1",
   "item replace entity $(bot) armor.head with minecraft:diamond_helmet[enchantments={protection:4}]",
   "item replace entity $(bot) armor.chest with minecraft:diamond_chestplate[enchantments={protection:4}]",

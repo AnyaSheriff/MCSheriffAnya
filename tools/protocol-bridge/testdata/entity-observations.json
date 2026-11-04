@@ -1,0 +1,465 @@
+{
+  "source": "probe_entities.py; ordinary commands, opaque official server",
+  "old": {
+    "version": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "entities": [
+      {
+        "type": "armor_stand",
+        "id": 2,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0102dd708f9d8704439b88afaad9b2d7b315054004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6302050801090341a000000f000510094120000041a0000041f00000ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6302050801090341a000000f000510094120000041a0000041f00000ff"
+          }
+        ]
+      },
+      {
+        "type": "cow",
+        "id": 3,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0103788f5482f4e84cd0b4acedc14e6149a81e4004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63030206010800084d43534120636f770308010903412000000f0001100801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63030206010800084d43534120636f770308010903412000000f0001100801ff"
+          }
+        ]
+      },
+      {
+        "type": "slime",
+        "id": 4,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0104b7f4f0a70b6b4260945b248a8bd5a389754004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63040903418000000f0001100104ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63040903418000000f0001100104ff"
+          }
+        ]
+      },
+      {
+        "type": "magma_cube",
+        "id": 5,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01055314770d6d2c41d98c10057de3f72281504004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63050903411000000f0001100103ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63050903411000000f0001100103ff"
+          }
+        ]
+      },
+      {
+        "type": "falling_block",
+        "id": 6,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0106204423be5b584cc0bb6788c385062a7033400400000000000040540000000000004004000000000000000000008801"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6306050801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6306050801ff"
+          }
+        ]
+      },
+      {
+        "type": "item",
+        "id": 7,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01074d89d2ad66d24daab7c5a2b455453bb7474004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6307050801080705e3010000ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6307050801080705e3010000ff"
+          }
+        ]
+      },
+      {
+        "type": "arrow",
+        "id": 8,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010866fae6a72fd943e6b5ec9cbf1756b9020640040000000000004054000000000000400400000000000019057ffefffe00000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6308050801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6308050801ff"
+          }
+        ]
+      },
+      {
+        "type": "painting",
+        "id": 9,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0109ddb0d91a11474fc087bb946b4f8cebdd5d4000000000000000405400000000000040000000000000000000800002"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6309080c02092219ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6309080c02092219ff"
+          }
+        ]
+      },
+      {
+        "type": "wolf",
+        "id": 10,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010ad029492d27514a73a51914bbba811e1294014004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630a0903410000000f0001120005130d0100000001000000020000000300000004ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630a0903410000000f0001120005130d0100000001000000020000000300000004ff"
+          }
+        ]
+      },
+      {
+        "type": "enderman",
+        "id": 11,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010b6eae8159e1dd4c469e418a97efdc5dea294004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630b0903422000000f0001100f1bff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630b0903422000000f0001100f1bff"
+          }
+        ]
+      },
+      {
+        "type": "block_display",
+        "id": 12,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010cd36706a68fec4369933d41fd7693cb1f0f4004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630c170e1bff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630c080100170e1bff"
+          }
+        ]
+      }
+    ],
+    "respawns": [
+      {
+        "mode": "survival",
+        "dimension": "the_nether",
+        "name": "respawn",
+        "body": "5203146d696e6563726166743a7468655f6e6574686572a63f41d436a19f7c0001000100002003"
+      },
+      {
+        "mode": "creative",
+        "dimension": "the_end",
+        "name": "respawn",
+        "body": "5202116d696e6563726166743a7468655f656e64a63f41d436a19f7c0100000100000003"
+      },
+      {
+        "mode": "spectator",
+        "dimension": "overworld",
+        "name": "respawn",
+        "body": "5200136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c030100010000c1ffffff0f03"
+      },
+      {
+        "mode": "adventure",
+        "dimension": "the_nether",
+        "name": "respawn",
+        "body": "5203146d696e6563726166743a7468655f6e6574686572a63f41d436a19f7c0203000100002003"
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "version": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "entities": [
+      {
+        "type": "armor_stand",
+        "id": 2,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0102f0a868c1b43245b68652a715350aa11c054004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6502050801090341a000000f000510094120000041a0000041f00000ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6502050801090341a000000f000510094120000041a0000041f00000ff"
+          }
+        ]
+      },
+      {
+        "type": "cow",
+        "id": 3,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01039250934ead9544c3a0f8b560951250c01e4004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65030206010800084d43534120636f770308010903412000000f0001100801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65030206010800084d43534120636f770308010903412000000f0001100801ff"
+          }
+        ]
+      },
+      {
+        "type": "slime",
+        "id": 4,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010449cb78da7ddf47caa8e82a97b0b9183e784004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65040903418000000f0001120104ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65040903418000000f0001120104ff"
+          }
+        ]
+      },
+      {
+        "type": "magma_cube",
+        "id": 5,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01058a037fa2bd3a4e818f479f8c0d45b83a514004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65050903411000000f0001120103ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65050903411000000f0001120103ff"
+          }
+        ]
+      },
+      {
+        "type": "falling_block",
+        "id": 6,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01067f693fc441444631992f8ed22c2292fa34400400000000000040540000000000004004000000000000000000008b01"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6506050801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6506050801ff"
+          }
+        ]
+      },
+      {
+        "type": "item",
+        "id": 7,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01070193bdc18b6343899f9e0c23059f47c4484004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650705080108070588020000ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650705080108070588020000ff"
+          }
+        ]
+      },
+      {
+        "type": "arrow",
+        "id": 8,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "0108d67e98bd585b4ec9844e680ed8d787ce0640040000000000004054000000000000400400000000000019057ffefffe00000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6508050801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6508050801ff"
+          }
+        ]
+      },
+      {
+        "type": "painting",
+        "id": 9,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "01099938467a336e4ef2934f4d644928a2165e4000000000000000405400000000000040000000000000000000800002"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6509080c02092219ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6509080c02092219ff"
+          }
+        ]
+      },
+      {
+        "type": "wolf",
+        "id": 10,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010acfa369cad4e04417bc44ff79b32a46a098014004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650a0903410000000f0001120005130d0100000001000000020000000300000004ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650a0903410000000f0001120005130d0100000001000000020000000300000004ff"
+          }
+        ]
+      },
+      {
+        "type": "enderman",
+        "id": 11,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010bbe343856e3114263a9c7251f66cdfa002a4004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650b0903422000000f0001100f1cff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650b0903422000000f0001100f1cff"
+          }
+        ]
+      },
+      {
+        "type": "block_display",
+        "id": 12,
+        "packets": [
+          {
+            "name": "spawn_entity",
+            "body": "010c19a86ef1d7804d26811d6ef4ea70eb730f4004000000000000405400000000000040040000000000000000000000"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650c170e1cff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650c080100170e1cff"
+          }
+        ]
+      }
+    ],
+    "respawns": [
+      {
+        "mode": "survival",
+        "dimension": "the_nether",
+        "name": "respawn",
+        "body": "5403146d696e6563726166743a7468655f6e6574686572a63f41d436a19f7c0002000100002003"
+      },
+      {
+        "mode": "creative",
+        "dimension": "the_end",
+        "name": "respawn",
+        "body": "5402116d696e6563726166743a7468655f656e64a63f41d436a19f7c0101000100000003"
+      },
+      {
+        "mode": "spectator",
+        "dimension": "overworld",
+        "name": "respawn",
+        "body": "5400136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c030200010000c1ffffff0f03"
+      },
+      {
+        "mode": "adventure",
+        "dimension": "the_nether",
+        "name": "respawn",
+        "body": "5403146d696e6563726166743a7468655f6e6574686572a63f41d436a19f7c0204000100002003"
+      }
+    ],
+    "exit_code": 0
+  }
+}

@@ -1,0 +1,10 @@
+[
+  {"name":"plain_stone","command":"stone 3","expected_count":3,"expected_item":"stone","expected_components":{}},
+  {"name":"name","command":"paper[custom_name=\"MCSA probe\"]","expected_count":1,"expected_item":"paper","expected_components":{"6":"MCSA probe"}},
+  {"name":"damage","command":"diamond_sword[damage=7]","expected_count":1,"expected_item":"diamond_sword","expected_components":{"3":7}},
+  {"name":"attribute_attack","command":"stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]","expected_count":1,"expected_item":"stick","expected_components":{"16":3}},
+  {"name":"map_color","command":"stick[map_color=1193046]","expected_count":1,"expected_item":"stick","expected_components":{"45":1193046}},
+  {"name":"swing_animation","command":"stick[swing_animation={type:\"stab\",duration:7}]","expected_count":1,"expected_item":"stick","expected_components":{"40":[2,7]}},
+  {"name":"shifted_wolf_collar","command":"stick[wolf/collar=\"red\"]","expected_count":1,"expected_item":"stick","expected_components":{"85":14}},
+  {"name":"empty","command":"air","expected_count":0}
+]

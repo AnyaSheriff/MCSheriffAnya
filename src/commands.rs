@@ -120,21 +120,24 @@ impl Answer {
 ///
 /// Ноль — можно всем. Всё, что меняет мир или задевает других игроков,
 /// требует прав; их выдают командой `op`, а хранятся они в `ops.json`.
-fn level_needed(command: &str) -> i32 {
+pub(crate) fn level_needed(command: &str) -> i32 {
     // Команды commands_admin.rs: уровни по вики.
     if let Some(level) = crate::commands_admin::level(command) {
         return level;
     }
 
     match command {
-        "help" | "list" | "say" => 0,
+        "help" | "list" | "random" => 0,
+        "op" | "deop" | "kick" => 3,
+        // data сохраняет прежний локальный уровень доступа (data_get_tests).
+        "stop" | "data" => 4,
         // Вики, Commands: trigger и teammsg доступны всем, прочие команды
         // табло и функций — с уровня 2.
         "trigger" | "teammsg" | "tm" => 0,
         "scoreboard" | "team" | "tag" | "bossbar" | "function" | "schedule" | "return" | "execute" | "datapack" => 2,
         // Права на особый динамит — узлом (permissions.rs), не уровнем.
         "tnt" => 0,
-        _ => ops::HIGHEST_LEVEL,
+        _ => 2,
     }
 }
 
@@ -156,47 +159,51 @@ fn allowed(command: &str, source: &Source, shared: &Shared) -> bool {
                 .expect("права захвачены другим потоком")
                 .level_of(uuid);
 
-            level >= needed
+            level >= needed || source_mob(uuid, shared).is_some()
         }
     }
 }
 
-/// Убирает пробелы внутри квадратных скобок вне кавычек: запись предмета с
-/// довесками (`iron_sword[enchantments={sharpness:5, knockback:1}]`) должна
-/// остаться одним словом команды.
-fn compact_item_specs(command: &str) -> String {
-    let mut out = String::with_capacity(command.len());
-    let mut depth = 0;
-    let mut quote: Option<char> = None;
-
-    for c in command.chars() {
-        match (quote, c) {
-            (Some(q), c) if c == q => quote = None,
-            (None, '"' | '\'') if depth > 0 => quote = Some(c),
-            (None, '[') => depth += 1,
-            (None, ']') if depth > 0 => depth -= 1,
-            (None, c) if depth > 0 && c.is_whitespace() => continue,
+/// Пробелы внутри компонентов предмета и SNBT не разделяют аргументы.
+/// Кавычки и экранирование сохраняем: текст книги должен дойти без изменений.
+fn command_arguments(command: &str) -> impl Iterator<Item = &str> {
+    let mut depth = 0usize;
+    let mut quote = None;
+    let mut escaped = false;
+    command.split(move |c: char| {
+        if let Some(q) = quote {
+            if escaped { escaped = false; }
+            else if c == '\\' { escaped = true; }
+            else if c == q { quote = None; }
+            return false;
+        }
+        match c {
+            '"' | '\'' if depth > 0 => quote = Some(c),
+            '[' | '{' => depth += 1,
+            ']' | '}' => depth = depth.saturating_sub(1),
             _ => {}
         }
-
-        out.push(c);
-    }
-
-    out
+        depth == 0 && c.is_whitespace()
+    }).filter(|part| !part.is_empty())
 }
 
 /// Стопка по записи предмета команды (`diamond_sword[damage=5]`): None —
 /// воздух.
 pub(crate) fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
+    stack_from_spec_for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), spec, count)
+}
+
+/// Каталог задаёт сервер; название из команды не может включить новый профиль.
+pub(crate) fn stack_from_spec_for_catalog(catalog: crate::gameplay_catalog::Catalog, spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
     let (name, data) = crate::stackdata::parse_item_spec(spec).map_err(|why| format!("Не разобрать предмет {spec}: {why}"))?;
 
     if name == "air" {
         return Ok(None);
     }
 
-    let number = blocks::item_named(&name).ok_or_else(|| format!("Нет такого предмета: {}", spec.split('[').next().unwrap_or(spec)))?;
+    let number = catalog.item_named(&name).ok().flatten().ok_or_else(|| format!("Нет такого предмета: {}", spec.split('[').next().unwrap_or(spec)))?;
 
-    Ok(Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))).with_extras(data)))
+    Ok(Some(crate::inventory::Stack::new(number, count.min(catalog.stack_size(number).map_err(|_| format!("Нет такого предмета: {name}"))?)).with_extras(data)))
 }
 
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
@@ -213,13 +220,23 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         return answer;
     }
 
-    let compact = compact_item_specs(command);
-    let command = compact.as_str();
-    let mut parts = command.split_whitespace();
+    let mut parts = command_arguments(command);
     let name = parts.next().unwrap_or("");
 
     if !allowed(name, source, shared) {
+        // Новый read-only путь не должен сообщать execute store об успехе отказа.
+        if name == "data" && command_arguments(command).nth(1) == Some("get") {
+            return crate::commands_world::fail("commands.generic.permission", &[]);
+        }
         return Answer::saying("На это у тебя нет прав".to_string());
+    }
+
+    if name == "random" {
+        let arguments: Vec<_> = command.split_whitespace().collect();
+        if (arguments.get(1) == Some(&"reset") || arguments.len() > 3)
+            && !allowed("execute", source, shared) {
+            return Answer::saying("На это у тебя нет прав".to_string());
+        }
     }
 
     match name {
@@ -254,7 +271,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 for (uuid, _) in &targets {
                     if players.members().iter().any(|member| member.uuid == *uuid && member.game_mode != mode) {
                         players.set_game_mode(uuid, mode);
-                        players.order(uuid, Order::GameMode { mode });
+                        players.order(uuid, Order::GameMode { mode, at: *shared.ticks.borrow() });
                     }
                 }
             }
@@ -354,7 +371,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 return Answer::saying("Сколько выдавать? Число должно быть больше нуля".to_string());
             }
 
-            let stack = match stack_from_spec(item_name, count) {
+            let stack = match stack_from_spec_for_catalog(shared.catalog(), item_name, count) {
                 Ok(Some(stack)) => crate::inventory::Stack { count, ..stack },
                 Ok(None) => return Answer::saying(format!("Нет такого предмета: {}", item_name)),
                 Err(why) => return Answer::saying(why),
@@ -377,7 +394,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 }
             }
 
-            crate::commands_feedback::give(stack, &targets)
+            crate::commands_feedback::give(shared.catalog(), stack, &targets)
         }
         "clear" => {
             let named = parts.next();
@@ -521,10 +538,10 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "tp" | "teleport" => {
             let rest: Vec<&str> = parts.collect();
 
-            // Сущности, кроме игроков, — только вагонетки: `tp @e[type=minecart] x y z`.
+            // Вагонетки и мобы обрабатываются отдельно от игроков.
             match rest.as_slice() {
                 [who, place @ ..] if cart_selector(who).is_some() => teleport_carts(who, place, source, shared),
-                [who, place @ ..] if who.starts_with("@e[") && place.len() == 3 && !who.contains("type=!player") => teleport_mobs(who, place, source, shared),
+                [who, place @ ..] if who.starts_with("@e[") && matches!(place.len(), 3 | 5) && !who.contains("type=!player") => teleport_mobs(who, place, source, shared),
                 _ => teleport(&rest, source, shared, None),
             }
         }
@@ -680,19 +697,26 @@ fn custom_tnt(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// где он стоит, у консоли — начало мира.
 pub(crate) fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
     match source {
-        Source::Player { uuid, .. } => shared
-            .players
-            .lock()
-            .expect("список игроков захвачен другим потоком")
-            .members()
-            .iter()
-            .find(|member| &member.uuid == uuid)
-            .map(|member| (member.position.x, member.position.y, member.position.z))
-            .unwrap_or_default(),
+        Source::Player { uuid, .. } => {
+            let position = shared.players.lock().expect("список игроков захвачен другим потоком").members().iter()
+                .find(|member| &member.uuid == uuid).map(|member| (member.position.x,member.position.y,member.position.z));
+            position.or_else(|| source_mob(uuid, shared).map(|m| m.2)).unwrap_or_default()
+        },
         Source::Console => (0.0, 0.0, 0.0),
         // У командного блока — середина блока (`Vec3.atCenterOf`).
         Source::Block { x, y, z, .. } => (*x as f64 + 0.5, *y as f64 + 0.5, *z as f64 + 0.5),
     }
+}
+
+// Исполнитель-моб использует тот же UUID, который отправляется клиенту.
+pub(crate) fn source_mob(uuid: &[u8;16], shared: &Shared) -> Option<(Dimension, i32, (f64,f64,f64))> {
+    for dimension in [Dimension::Overworld, Dimension::Nether, Dimension::End] {
+        let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        if let Some(m) = items.mobs().iter().find(|m| m.uuid == *uuid && !m.is_dead()) {
+            return Some((dimension, m.entity_id, (m.x,m.y,m.z)));
+        }
+    }
+    None
 }
 
 /// Три координаты места для сущности: числа или `~` со сдвигом от `origin`.
@@ -809,7 +833,9 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_mob(kind, rest, source, shared);
     }
 
-    let Some(kind) = crate::minecart::Kind::from_name(name) else {
+    // Лодки тополя есть только в профиле Preview26_3: в 775 у клиента нет такого вида сущности.
+    let Some(kind) = crate::minecart::Kind::from_name(name).filter(|kind| kind.name() != "poplar_boat" && kind.name() != "poplar_chest_boat"
+        || shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3) else {
         return Answer::saying(format!("Пока призываются только вагонетки, предметы, рамки, молния, животные (cow, pig, sheep, chicken), враждебные (zombie, skeleton, creeper, spider), кристалл и дракон Края, а не {}", name));
     };
     let (place, data) = match rest {
@@ -1109,6 +1135,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     crate::mob::armor_stand::apply(mob,data);
     crate::mob::village_golems::apply_data(mob,data);
     crate::mob::land::apply_data(mob, data);
+    crate::mob::sulfur_cube::apply_data(mob, data);
     crate::mob::water::apply_data(mob,data);
     if crate::mob::horse::equine(mob.kind) && let Some(value) = crate::snbt::parse(data) {
         crate::mob::horse::apply_data(mob, &value);
@@ -1181,7 +1208,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     // Магмовый куб: `Size:2` — размер 3 (вики, Magma Cube: размер = Size + 1;
     // чёрный ящик, magma-cube-stand: свойство 16=3, здоровье 9, броня 9).
-    if crate::mob::slime::cube(mob.kind)
+    if crate::mob::slime::cube(mob.kind) && mob.kind != crate::mob::Kind::SulfurCube
         && let Some(size) = crate::snbt::parse(data).and_then(|value| value.get("Size").and_then(|size| size.as_f64()).map(|size| size as i32))
     {
         crate::mob::nether::set_size(mob, size.clamp(0, 126) + 1);
@@ -1390,6 +1417,8 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
         let size = crate::mob::slime::roll_size(&mut rng);
         crate::mob::slime::set_size(&mut mob, size);
     }
+    // Куб серы без данных — большой (наблюдение: /summon без NBT → Size 1; с NBT без Size → малый).
+    if kind == crate::mob::Kind::SulfurCube && data.is_empty() { crate::mob::sulfur_cube::initialize(&mut mob); }
     if crate::mob::land::animal(kind) {
         if data.is_empty() { crate::mob::land::initialize(&mut mob, &mut crate::mob::Rng::new(shared.next_entity_id() as u64)); }
         else if crate::mob::land::llama(kind) {
@@ -1435,8 +1464,78 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
     Answer::saying(format!("Призвана сущность {}", kind.name()))
 }
 
+/// Только два публичных read-only поля онлайн-игрока, не полный NBT сущности.
+fn data_get_player(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    use crate::commands_world::{fail, s, tr};
+    let ["get", "entity", target, field] = parts else { return fail("command.unknown.argument", &[]); };
+    if !matches!(*field, "Pos" | "OnGround") { return fail("argument.nbtpath.nothing_found", &[s(*field)]); }
+    if target.starts_with('@') {
+        let (base, inner) = match target.split_once('[') {
+            Some((base, rest)) => match rest.strip_suffix(']') { Some(inner) => (base, Some(inner)), None => return fail("command.unknown.argument", &[]) },
+            None => (*target, None),
+        };
+        if !matches!(base, "@s" | "@p" | "@r" | "@a" | "@e") { return fail("command.unknown.argument", &[]); }
+        // Старый resolver не перемешивает отфильтрованный @r; не выдаём его
+        // первый элемент за случайный выбор. Полный sort здесь не добавляем.
+        if base == "@r" && inner.is_some() { return fail("command.unknown.argument", &[]); }
+        let mut limit = None; let mut player_type = false; let mut seen_type = false; let mut seen_sort = false;
+        if let Some(inner) = inner {
+            for argument in split_selector_arguments(inner) {
+                let Some((key, value)) = argument.split_once('=') else { return fail("command.unknown.argument", &[]); };
+                match key {
+                    "limit" => {
+                        if limit.is_some() { return fail("command.unknown.argument", &[]); }
+                        match value.parse::<usize>() {
+                            Ok(1) => limit = Some(1),
+                            Ok(0) => return fail("argument.entity.options.limit.toosmall", &[]),
+                            Ok(_) => return fail("argument.entity.toomany", &[]),
+                            Err(_) => return fail("command.unknown.argument", &[]),
+                        }
+                    }
+                    "type" => {
+                        if seen_type { return fail("command.unknown.argument", &[]); }
+                        seen_type = true;
+                        player_type = matches!(value.trim_matches('"'), "player" | "minecraft:player");
+                        if !player_type { return fail("command.unknown.argument", &[]); }
+                    }
+                    "sort" => {
+                        if seen_sort || !((base == "@p" && value == "nearest") || (matches!(base, "@a" | "@e") && value == "arbitrary")) { return fail("command.unknown.argument", &[]); }
+                        seen_sort = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // Синтаксис обязан выбирать одного даже при единственном игроке онлайн.
+        if matches!(base, "@a" | "@e") && limit != Some(1) { return fail("argument.entity.toomany", &[]); }
+        // Общий @e не подменяем player-only resolver: мобы здесь не поддержаны.
+        if base == "@e" && !player_type { return fail("command.unknown.argument", &[]); }
+    }
+    let targets = find_targets(target, source, shared);
+    let [(uuid, _)] = targets.as_slice() else {
+        return fail(if targets.len() > 1 { "argument.entity.toomany" } else { "argument.entity.notfound.player" }, &[]);
+    };
+    let snapshot = shared.players.lock().expect("список игроков").members().iter().find(|member| member.uuid == *uuid).map(|member| (member.name.clone(), member.position));
+    let Some((name, position)) = snapshot else { return fail("argument.entity.notfound.player", &[]); };
+    if !position.x.is_finite() || !position.y.is_finite() || !position.z.is_finite() { return fail("command.unknown.argument", &[]); }
+    let (value, result) = if *field == "Pos" {
+        let number = |v: f64| {
+            let mut text = v.to_string();
+            if !text.contains('.') && !text.contains('e') && !text.contains('E') { text.push_str(".0"); }
+            text.push('d'); text
+        };
+        (format!("[{}, {}, {}]", number(position.x), number(position.y), number(position.z)), 3)
+    } else { (format!("{}b", u8::from(position.on_ground)), i32::from(position.on_ground)) };
+    let mut answer = tr("commands.data.entity.query", &[s(name), s(value)]);
+    // Обычный 777 execute store: Pos даёт3, OnGround byte даёт0/1
+    // (player-floor-ordinary-01). Снимок принятого флага не доказывает физику опоры.
+    answer.result = Some(result);
+    answer
+}
+
 /// `data merge entity <кто> {NoAI:0b,…}` — правка данных мобов.
 fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    if parts.first() == Some(&"get") { return data_get_player(parts, source, shared); }
     if let ["merge", "block", x, y, z, data @ ..] = parts {
         let Some((x, y, z)) = entity_place(&[x, y, z], origin_of(source, shared)) else {
             return Answer::saying("Не понял место блока".to_string());
@@ -1497,15 +1596,58 @@ fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying(format!("Изменено сущностей: {}", changed))
 }
 
-/// `tp @e[type=cow,…] <x> <y> <z>` — перенос мобов: скорость обнуляется.
+/// Official775: relative от rotation контекста; wrap обоих углов, затем clamp pitch.
+/// Своя запись: tools/protocol-bridge/testdata/mob-teleport-observations.json.
+/// Source::Block не хранит rotation; как у консоли, его исходные углы — нули.
+fn mob_teleport_rotation(yaw: &str, pitch: &str, source: &Source, shared: &Shared) -> Option<(f32, f32)> {
+    let origin = match source {
+        Source::Player { uuid, .. } => shared.players.lock().expect("список игроков")
+            .members().iter().find(|member| &member.uuid == uuid)
+            .map(|member| (member.position.yaw, member.position.pitch))?,
+        Source::Console | Source::Block { .. } => (0.0, 0.0),
+    };
+    let angle = |text: &str, from: f32| -> Option<f32> {
+        let value = match text.strip_prefix('~') {
+            Some("") => from,
+            Some(offset) => from + offset.parse::<f32>().ok()?,
+            None => text.parse::<f32>().ok()?,
+        };
+        value.is_finite().then_some(value)
+    };
+    let yaw = angle(yaw, origin.0)?;
+    let pitch = angle(pitch, origin.1)?;
+    let wrap = |value: f32| {
+        // Сначала остаток: прибавление 180 потеряло бы точность малых углов.
+        let value = value % 360.0;
+        if value >= 180.0 { value - 360.0 }
+        else if value < -180.0 { value + 360.0 }
+        else { value }
+    };
+    Some((wrap(yaw), wrap(pitch).clamp(-90.0, 90.0)))
+}
+
+/// `tp @e[type=cow,…] <x> <y> <z> [yaw pitch]` — перенос мобов.
+/// Свои записи official340/775: head следует указанному yaw.
 fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) -> Answer {
     let Some(chosen) = Selector::parse(who) else {
         return Answer::saying("Не понял, кого переносить".to_string());
     };
 
+    // Всё разбирается до захвата/изменения мобов: неверный последний угол
+    // не может оставить частично перенесённую группу сущностей.
+    let look = match place {
+        [_, _, _] => None,
+        [_, _, _, yaw, pitch] => {
+            let Some(look) = mob_teleport_rotation(yaw, pitch, source, shared) else {
+                return Answer::saying("Не понял поворот: нужны конечные yaw и pitch".to_string());
+            };
+            Some(look)
+        }
+        _ => return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z> [yaw pitch]".to_string()),
+    };
     let origin = origin_of(source, shared);
-    let Some((x, y, z)) = entity_place(place, origin) else {
-        return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z>".to_string());
+    let Some((x, y, z)) = entity_place(&place[..3], origin) else {
+        return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z> [yaw pitch]".to_string());
     };
 
     let mut left = chosen.limit.unwrap_or(usize::MAX);
@@ -1515,6 +1657,10 @@ fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) ->
     for mob in items.mobs_mut() {
         if left > 0 && chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) {
             (mob.x, mob.y, mob.z) = (x, y, z);
+            if let Some((yaw, pitch)) = look {
+                mob.face(yaw);
+                mob.pitch = pitch;
+            }
             (mob.vx, mob.vy, mob.vz) = (0.0, 0.0, 0.0);
             // enchant-frost-mobs: NoAI сохраняет OnGround при /tp и уже
             // в следующем такте замораживает воду. Его физика не обновляет
@@ -1943,6 +2089,11 @@ fn experience(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// `gamerule <правило> [значение]`: настоящим считается `keepInventory`,
 /// остальные правила принимаются и молча игнорируются.
 fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
+    // Оба имени из Commands ведут к одному обработчику правила.
+    let normalized: Vec<_> = parts.iter().enumerate().map(|(index, part)| {
+        if index == 0 { part.strip_prefix("minecraft:").unwrap_or(part) } else { *part }
+    }).collect();
+    let parts = normalized.as_slice();
     // Правила командных блоков (command_block.rs).
     if let [rule, rest @ ..] = parts
         && rest.len() <= 1
@@ -2195,15 +2346,11 @@ pub(crate) fn names_of(targets: &[([u8; 16], String)]) -> String {
 /// обычном мире.
 pub(crate) fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
     match source {
-        Source::Player { uuid, .. } => shared
-            .players
-            .lock()
-            .expect("список игроков захвачен другим потоком")
-            .members()
-            .iter()
-            .find(|member| &member.uuid == uuid)
-            .map(|member| member.dimension)
-            .unwrap_or_default(),
+        Source::Player { uuid, .. } => {
+            let dimension = shared.players.lock().expect("список игроков захвачен другим потоком").members().iter()
+                .find(|member| &member.uuid == uuid).map(|member| member.dimension);
+            dimension.or_else(|| source_mob(uuid, shared).map(|m| m.0)).unwrap_or_default()
+        },
         Source::Console => Dimension::Overworld,
         Source::Block { dimension, .. } => *dimension,
     }
@@ -2331,9 +2478,13 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
         return Answer::saying(why);
     }
 
-    let Some(state) = blocks::state_from_text(block) else {
+    let Some(state) = shared.catalog().state_from_text(block).ok().flatten() else {
         return Answer::saying(format!("Не знаю такого блока: {}", block));
     };
+
+    // Вики, Commands/fill: «without triggering block updates and shape updates».
+    // Так можно воспроизвести висящий песок, который ещё не получил обновление.
+    let strict = parts.get(if area { 7 } else { 4 }) == Some(&"strict");
 
     let [x1, y1, z1, x2, y2, z2] = numbers;
     let (x1, x2) = (x1.min(x2), x1.max(x2));
@@ -2380,15 +2531,36 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                 // заменённый сундук ничего не высыпает.
                 world.with_container(x, y, z, |container| container.slots.fill(None));
 
-                if world.get_block(x, y, z) != state {
+                if !strict && world.get_block(x, y, z) != state {
                     world.note_commanded(x, y, z);
                 }
 
-                if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
+                let differs = world.get_block(x, y, z) != state;
+                let updated = if strict && differs {
+                    world.set_debug_state((x, y, z), state);
+                    true
+                } else { !strict && differs && world.set_block(x, y, z, state) };
+                if updated {
                     changed += 1;
                     placed.push((x, y, z));
                 }
 
+                if blocks::block_at_state(state) == Some("decorated_pot") {
+                    let applied = data.is_some_and(|text| crate::pottery::apply_snbt(&mut world,(x,y,z),text));
+                    // Наблюдение777: новый пустой горшок тоже отправляет обновление.
+                    // При карте сторон импорт уже отправил одно окончательное событие.
+                    if updated && world.catalog().changed_rules() && !applied {
+                        world.set_pot_with_details((x,y,z), [0;4], Default::default());
+                    }
+                }
+                if shared.catalog().changed_rules() && blocks::block_at_state(state) == Some("end_gateway")
+                    && let Some(root) = data.and_then(crate::snbt::parse)
+                    && let Some(crate::snbt::Value::List(exit)) = root.get("exit_portal")
+                    && let [ex,ey,ez] = exit.as_slice()
+                    && let (Some(ex),Some(ey),Some(ez)) = (ex.as_f64(),ey.as_f64(),ez.as_f64())
+                {
+                    world.set_gateway((x,y,z),(ex as i32,ey as i32,ez as i32,root.get("ExactTeleport").and_then(crate::snbt::Value::as_f64).is_some_and(|n|n!=0.0)));
+                }
                 if let Some(text)=data.filter(|_|hive) && let Some(mut data)=crate::hive::from_snbt(text) {
                     // Тик блока-сущности у оригинала начинается со следующего такта
                     // после постановки (чёрный ящик, hive-exit: выход на +21 при 20).
@@ -2501,22 +2673,24 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     world.take_spilled();
     crate::containers::after_change(&mut world);
 
-    for x in x1..=x2 {
-        for y in y1..=y2 {
-            for z in z1..=z2 {
-                crate::placing::refresh_neighbours(&mut world, x, y, z);
+    if !strict {
+        for x in x1..=x2 {
+            for y in y1..=y2 {
+                for z in z1..=z2 {
+                    crate::placing::refresh_neighbours(&mut world, x, y, z);
+                }
             }
         }
-    }
 
-    crate::redstone::settle(&mut world);
-
-    // Поставленное командой подстраивается под соседей уже после того, как
-    // соседи узнали о нём (сценарий observer-clock: сосед-наблюдатель
-    // срабатывает раньше поставленного).
-    for place in placed {
-        crate::redstone::command_placed(&mut world, place);
         crate::redstone::settle(&mut world);
+
+        // Поставленное командой подстраивается под соседей уже после того, как
+        // соседи узнали о нём (сценарий observer-clock: сосед-наблюдатель
+        // срабатывает раньше поставленного).
+        for place in placed {
+            crate::redstone::command_placed(&mut world, place);
+            crate::redstone::settle(&mut world);
+        }
     }
 
     world.save_if_due();
@@ -2547,7 +2721,7 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
             },
             _ => return usage(),
         };
-        let stack = match stack_from_spec(thing, count) {
+        let stack = match stack_from_spec_for_catalog(shared.catalog(), thing, count) {
             Ok(stack) => stack,
             Err(why) => return Answer::saying(why),
         };
@@ -2558,10 +2732,8 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
             return Answer::saying("Такого игрока нет на сервере".to_string());
         }
 
-        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
-
         for (uuid, _) in &targets {
-            players.order(uuid, Order::Hold { stack });
+            shared.order_mainhand(uuid, stack);
         }
 
         return Answer::saying(format!("Предмет в руке заменён — игрокам: {}", names_of(&targets)));
@@ -2593,7 +2765,7 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
         None
     } else {
         // С довесками: `potion[potion_contents={potion:"minecraft:water"}]`.
-        match stack_from_spec(thing, count) {
+        match stack_from_spec_for_catalog(shared.catalog(), thing, count) {
             Ok(stack) => stack,
             Err(why) => return Answer::saying(why),
         }
@@ -2655,7 +2827,7 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         _ => return usage(),
     };
 
-    let stack = match stack_from_spec(thing, count) {
+    let stack = match stack_from_spec_for_catalog(shared.catalog(), thing, count) {
         Ok(stack) => stack,
         Err(why) => return Answer::saying(why),
     };
@@ -2762,7 +2934,7 @@ fn weather(parts: &[&str], shared: &Shared) -> Answer {
 
 /// Время по названию или числом.
 fn time_by_name(value: &str) -> Option<i64> {
-    Some(match value {
+    Some(match value.strip_prefix("minecraft:").unwrap_or(value) {
         "day" => 1_000,
         "noon" => 6_000,
         "night" => 13_000,
@@ -3228,8 +3400,8 @@ mod tests {
 
     #[test]
     fn item_specs_stay_one_word_and_carry_their_components() {
-        assert_eq!(compact_item_specs("give a iron_sword[enchantments={sharpness:5, knockback:1}] 1"), "give a iron_sword[enchantments={sharpness:5,knockback:1}] 1");
-        assert_eq!(compact_item_specs("say [a b] c"), "say [ab] c");
+        assert_eq!(command_arguments("give a iron_sword[enchantments={sharpness:5, knockback:1}] 1").collect::<Vec<_>>(), ["give", "a", "iron_sword[enchantments={sharpness:5, knockback:1}]", "1"]);
+        assert_eq!(command_arguments("say [a b] c").collect::<Vec<_>>(), ["say", "[a b]", "c"]);
 
         let stack = stack_from_spec("minecraft:diamond_sword[damage=3,enchantments={sharpness:2}]", 1).expect("разобралось").expect("не воздух");
 
@@ -3302,9 +3474,13 @@ mod tests {
 
     /// Сервер с двумя игроками для проверок команд.
     pub(super) fn server() -> Shared {
+        server_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    fn server_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Shared {
         let shared = Shared::new(
-            World::in_memory(),
-            crate::world::World::in_memory(),
+            World::in_memory_with_catalog(catalog),
+            crate::world::World::in_memory_with_catalog(catalog),
             PathBuf::new(),
             PathBuf::new(),
             Default::default(),
@@ -3449,6 +3625,97 @@ mod tests {
         let answer = run("tp сюда-вот", &first, &shared);
         assert!(answer.reply.contains("Не понял"));
         assert!(orders_for(&shared, 1).is_empty());
+    }
+
+    #[test]
+    fn teleport_mob_absolute_rotation_reaches_mob_handler_and_turns_head() {
+        let shared = server();
+        run("summon cow 1.0 64 2.0 {NoAI:1b,Tags:[\"tp_angle\"]}", &Source::Console, &shared);
+        for (command, expected) in [
+            ("tp @e[type=cow,tag=tp_angle,limit=1] 3.5 64 0.5 90 10", ((3.5,64.0,0.5),(90.0,10.0,90.0),1)),
+            ("teleport @e[type=cow,tag=tp_angle,limit=1] -6.5 64 0.5 180 0", ((-6.5,64.0,0.5),(-180.0,0.0,-180.0),2)),
+            ("tp @e[type=cow,tag=tp_angle,limit=1] 3 64 4 450 -30", ((3.5,64.0,4.5),(90.0,-30.0,90.0),3)),
+            ("tp @e[type=cow,tag=tp_angle,limit=1] 3.5 64 4.5 -450 30", ((3.5,64.0,4.5),(-90.0,30.0,-90.0),4)),
+        ] {
+            assert!(run(command, &Source::Console, &shared).reply.contains("Перенесено сущностей: 1"));
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert_eq!(((mob.x,mob.y,mob.z),(mob.yaw,mob.pitch,mob.head_yaw),mob.teleports), expected);
+        }
+    }
+
+    #[test]
+    fn teleport_mob_pitch_wraps_before_clamping() {
+        // ±270 отличают wrap→clamp от простого clamp; ±360 возвращают ноль.
+        let shared = server();
+        run("summon cow 1.0 64 2.0 {NoAI:1b}", &Source::Console, &shared);
+        for (pitch, expected) in [
+            (95,90.0),(-95,-90.0),(450,90.0),(-450,-90.0),
+            (270,-90.0),(-270,90.0),(360,0.0),(-360,0.0),
+        ] {
+            let command = format!("tp @e[type=cow,limit=1] 3.5 64 0.5 0 {pitch}");
+            assert!(run(&command, &Source::Console, &shared).reply.contains("Перенесено сущностей: 1"));
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert_eq!((mob.yaw,mob.pitch,mob.head_yaw),(0.0,expected,0.0),"pitch={pitch}");
+        }
+    }
+
+    #[test]
+    fn teleport_mob_relative_rotation_uses_executor_and_omission_preserves_look() {
+        // Official775: player35/-12 и console0/0; omitted сохраняет rotation моба.
+        let shared = server();
+        run("summon cow 1.0 64 2.0 {NoAI:1b,Rotation:[80f,20f],Tags:[\"tp_angle\"]}", &Source::Console, &shared);
+        let source = Source::Player { uuid: [1;16], name: "Первый".into() };
+        {
+            let mut players = shared.players.lock().unwrap();
+            let mut position = players.members().iter().find(|member| member.uuid==[1;16]).unwrap().position;
+            position.yaw = 35.0; position.pitch = -12.0;
+            players.set_position(&[1;16], position);
+        }
+        for (who, tail, expected) in [
+            (&source, "~10 ~5", (45.0,-7.0,45.0)),
+            (&source, "~ ~", (35.0,-12.0,35.0)),
+            (&source, "~ ~120", (35.0,90.0,35.0)),
+            (&source, "~ ~-120", (35.0,-90.0,35.0)),
+            (&Source::Console, "~10 ~5", (10.0,5.0,10.0)),
+            (&Source::Console, "~ ~", (0.0,0.0,0.0)),
+        ] {
+            let command=format!("tp @e[type=cow,tag=tp_angle] 3.5 64 4.5 {tail}");
+            assert!(run(&command, who, &shared).reply.contains("Перенесено сущностей: 1"));
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert_eq!((mob.yaw,mob.pitch,mob.head_yaw),expected);
+        }
+        {
+            let mut items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &mut items.mobs_mut()[0];
+            (mob.yaw,mob.pitch,mob.head_yaw)=(70.0,-20.0,35.0);
+        }
+        run("tp @e[type=cow,tag=tp_angle] ~ ~ ~", &source, &shared);
+        let items=shared.items_in(Dimension::Overworld).lock().unwrap();let mob=&items.mobs()[0];
+        assert_eq!((mob.yaw,mob.pitch,mob.head_yaw),(70.0,-20.0,35.0));
+        assert_eq!((mob.x,mob.y,mob.z),(10.0,1.0,0.0));
+    }
+
+    #[test]
+    fn malformed_mob_teleport_does_not_change_any_selected_entity() {
+        let shared=server();
+        for x in [1,2] {
+            run(&format!("summon cow {x}.0 64 2.0 {{NoAI:1b,Rotation:[80f,20f],Tags:[\"tp_angle\"]}}"),&Source::Console,&shared);
+        }
+        let snapshot=|| {
+            shared.items_in(Dimension::Overworld).lock().unwrap().mobs().iter().map(|mob|
+                (mob.entity_id,(mob.x,mob.y,mob.z),(mob.yaw,mob.pitch,mob.head_yaw),
+                 (mob.vx,mob.vy,mob.vz),mob.vitals.fall,mob.on_ground,mob.teleports)).collect::<Vec<_>>()
+        };
+        let before=snapshot();
+        for tail in ["3.5 64 4.5 NaN 0", "3.5 64 4.5 90 Infinity", "3.5 64 4.5 ~bad 0",
+            "3.5 64 4.5 90 ~NaN", "bad 64 4.5 90 0", "3.5 64 4.5 90", "3.5 64 4.5 90 0 extra"] {
+            let answer=run(&format!("tp @e[type=cow,tag=tp_angle] {tail}"),&Source::Console,&shared);
+            assert!(!answer.reply.contains("Перенесено сущностей:"),"{tail}: {}",answer.reply);
+            assert_eq!(snapshot(),before,"{tail}");
+        }
     }
 
     #[test]
@@ -3681,6 +3948,7 @@ mod tests {
         let shared = server();
 
         assert!(run("time set night", &Source::Console, &shared).reply.contains("13000"));
+        assert!(run("time set minecraft:night", &Source::Console, &shared).reply.contains("13000"));
         assert!(run("time query", &Source::Console, &shared).reply.contains("13000"));
 
         run("time add 1000", &Source::Console, &shared);
@@ -3693,6 +3961,94 @@ mod tests {
     }
 
     /// Выдача предметов доходит до игрока поручением.
+    #[test]
+    fn preview_commands_resolve_slab_through_server_catalog() {
+        use crate::gameplay_catalog::{Catalog, Profile, SlabHalf, WHITE_SLAB_ITEM};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let shared = server_with_catalog(catalog);
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        let answer = run(r#"give Первый minecraft:white_concrete_slab[custom_name="Плита"] 70"#, &Source::Console, &shared);
+        assert!(answer.reply.contains("white_concrete_slab"), "{}", answer.reply);
+        let orders = orders_for(&shared, 1);
+        assert!(matches!(orders.as_slice(), [Order::Give { stack }] if stack.item == WHITE_SLAB_ITEM && stack.count == 70 && stack.extras().name.as_deref() == Some("Плита")));
+        let component = answer.component.unwrap();
+        assert!(component.windows(b"block.minecraft.white_concrete_slab".len()).any(|bytes| bytes == b"block.minecraft.white_concrete_slab"));
+        assert!(component.windows(b"minecraft:white_concrete_slab".len()).any(|bytes| bytes == b"minecraft:white_concrete_slab"));
+        let answer = run("setblock 2 65 2 minecraft:white_concrete_slab[type=top,waterlogged=true]", &Source::Console, &shared);
+        assert!(answer.reply.contains("Changed the block"), "{}", answer.reply);
+        let answer = run("fill 3 65 2 4 65 2 white_concrete_slab[type=double]", &Source::Console, &shared);
+        assert!(!answer.reply.contains("Не знаю"), "{}", answer.reply);
+        let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        assert_eq!(catalog.slab_properties(world.get_block(2, 65, 2)), Ok(Some((SlabHalf::Top, true))));
+        for x in 3..=4 {
+            assert_eq!(catalog.slab_properties(world.get_block(x, 65, 2)), Ok(Some((SlabHalf::Double, false))));
+        }
+    }
+
+    #[test]
+    fn replace_item_uses_primary_catalog_for_hands_slots_and_containers() {
+        use crate::gameplay_catalog::{Catalog, Profile, slabs};
+        use crate::inventory::Stack;
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let shared = server_with_catalog(Catalog::new(profile));
+            {
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                world.ensure(0, 0);
+                world.set_block(2, 65, 2, blocks::state_by_name("chest").unwrap());
+            }
+            for row in slabs() {
+                let spec = format!(r#"minecraft:{}[custom_name="Цветная плита"]"#, row.name);
+                for target in ["weapon.mainhand", "weapon.offhand", "hotbar.2", "enderchest.3"] {
+                    let answer = run(&format!("item replace entity Первый {target} with {spec} 2"), &Source::Console, &shared);
+                    let orders = orders_for(&shared, 1);
+                    if profile == Profile::Java26_1_2 {
+                        assert!(answer.reply.contains("Нет такого предмета"));
+                        assert!(orders.is_empty());
+                    } else {
+                        assert_eq!(orders.len(), 1, "{}: {}", row.name, answer.reply);
+                        let stack = match &orders[0] {
+                            Order::Hold { stack } | Order::SetSlot { stack, .. } | Order::SetEnderSlot { stack, .. } => stack.unwrap(),
+                            _ => panic!("неверное поручение замены"),
+                        };
+                        assert_eq!((stack.item, stack.count), (row.item, 2));
+                        assert_eq!(stack.extras().name.as_deref(), Some("Цветная плита"));
+                    }
+                }
+                let stone = Stack::new(blocks::item_named("stone").unwrap(), 7);
+                shared.world_in(Dimension::Overworld).lock().unwrap().with_container(2, 65, 2, |container| container.slots[0] = Some(stone));
+                let answer = run(&format!("item replace block 2 65 2 container.0 with {spec} 2"), &Source::Console, &shared);
+                let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                let stored = world.container(2, 65, 2).unwrap().slots[0].unwrap();
+                if profile == Profile::Java26_1_2 {
+                    assert!(answer.reply.contains("Нет такого предмета"));
+                    assert_eq!(stored, stone);
+                } else {
+                    assert_eq!((stored.item, stored.count), (row.item, 2), "{}", answer.reply);
+                    assert_eq!(stored.extras().name.as_deref(), Some("Цветная плита"));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn native_commands_reject_preview_slab_without_orders_or_world_changes() {
+        let shared = server();
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        let before = shared.world_in(Dimension::Overworld).lock().unwrap().get_block(2, 65, 2);
+        let answer = run("give Первый white_concrete_slab 3", &Source::Console, &shared);
+        assert!(answer.reply.contains("Нет такого предмета"), "{}", answer.reply);
+        assert!(orders_for(&shared, 1).is_empty());
+        for command in ["setblock 2 65 2 white_concrete_slab", "fill 2 65 2 3 65 2 white_concrete_slab[type=double]"] {
+            let answer = run(command, &Source::Console, &shared);
+            assert!(answer.reply.contains("Не знаю такого блока"), "{}", answer.reply);
+            assert_eq!(shared.world_in(Dimension::Overworld).lock().unwrap().get_block(2, 65, 2), before);
+        }
+        let preview = server_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3));
+        let answer = run("give Первый not_a_real_item", &Source::Console, &preview);
+        assert!(answer.reply.contains("Нет такого предмета"));
+        assert!(orders_for(&preview, 1).is_empty());
+    }
+
     #[test]
     fn give_sends_the_items_to_the_player() {
         let shared = server();
@@ -3719,6 +4075,26 @@ mod tests {
 
 
     #[test]
+    fn give_books_preserves_spaces_quotes_and_count() {
+        let shared = server();
+        for (item, component) in [("writable_book", "writable_book_content"), ("written_book", "written_book_content")] {
+            let command = format!(r#"give Первый {item}[{component}={{title:"A story",author:"Some author",pages:["First  page", "Вторая \"страница\" ] {{"]}}] 2"#);
+            let answer = run(&command, &Source::Console, &shared);
+            assert!(answer.reply.contains("Gave"), "{}", answer.reply);
+            let orders = shared.players.lock().unwrap().take_orders(&[1; 16]);
+            let Some(Order::Give { stack }) = orders.first() else { panic!("нет выдачи") };
+            assert_eq!(stack.count, 2);
+            let data = stack.extras();
+            let book = data.book.as_ref().unwrap();
+            assert_eq!(book.pages, ["First  page", "Вторая \"страница\" ] {"]);
+            if item == "written_book" {
+                assert_eq!(book.title.as_deref(), Some("A story"));
+                assert_eq!(book.author, "Some author");
+            }
+        }
+    }
+
+    #[test]
     fn difficulty_and_keep_inventory_are_runtime_settings() {
         let shared = server();
 
@@ -3730,6 +4106,8 @@ mod tests {
 
         run("gamerule keepInventory true", &Source::Console, &shared);
         assert!(shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
+        run("gamerule minecraft:keep_inventory false", &Source::Console, &shared);
+        assert!(!shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
     }
 
     #[test]
@@ -3763,6 +4141,24 @@ mod tests {
         // Только динамит — предмет остаётся.
         assert_eq!(run("kill @e[type=tnt]", &Source::Console, &shared).reply, "Убрано сущностей: 0");
         assert_eq!(run("kill @e[type=item]", &Source::Console, &shared).reply, "Убрано сущностей: 1");
+    }
+
+    #[test]
+    fn strict_fill_leaves_floating_blocks_dormant_until_a_neighbour_changes() {
+        let shared = server();
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        run("fill 3 70 3 7 70 7 sand strict", &Source::Console, &shared);
+        let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        crate::redstone::settle(&mut world);
+        for _ in 0..10 {
+            let due = world.advance(crate::tick::PER_TICK);
+            assert!(due.is_empty(), "strict не должен будить песок");
+        }
+        assert_eq!(world.get_block(5, 70, 5), blocks::state_by_name("sand").unwrap());
+        crate::placing::break_block(&mut world, 5, 70, 5);
+        assert!(world.advance(crate::tick::PER_TICK).is_empty());
+        let due = world.advance(crate::tick::PER_TICK);
+        assert_eq!(due.len(), 4, "сломанный блок будит четырёх соседей через два такта");
     }
 
     #[test]
@@ -3805,6 +4201,63 @@ mod tests {
             .contains("Слишком много"));
     }
 
+    #[test]
+    fn preview_setblock_pot_imports_named_sides_and_ignores_legacy_lists() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let shared = server_with_catalog(catalog);
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        // Официальная проба 26.3: отдельные пустые клетки, не повтор setblock
+        // того же состояния; неверная соседняя сторона не убирает верную.
+        for x in [1, 3, 5] {
+            run(&format!("setblock {x} 69 1 stone"), &Source::Console, &shared);
+            run(&format!("setblock {x} 70 1 air"), &Source::Console, &shared);
+        }
+        for command in [
+            r#"setblock 1 70 1 decorated_pot{sherds:{front:{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}}}"#,
+            r#"setblock 3 70 1 decorated_pot{sherds:[{id:"minecraft:brick",components:{"minecraft:custom_name":"legacy"}}]}"#,
+            r#"setblock 5 70 1 decorated_pot{sherds:{back:{id:"minecraft:no_such_item"},front:{id:"minecraft:angler_pottery_sherd",components:{"minecraft:custom_name":"valid-front"}}}}"#,
+        ] {
+            let reply = run(command, &Source::Console, &shared).reply;
+            assert!(reply.contains("Changed the block"), "{reply}");
+        }
+        let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        for (x, item, name) in [(1, "brick", "side"), (5, "angler_pottery_sherd", "valid-front")] {
+            assert_eq!(world.pot((x, 70, 1)), Some([0, 0, 0, blocks::item_named(item).unwrap()]));
+            let data = world.pot_details((x, 70, 1));
+            assert_eq!(data.pot_sides.len(), 1);
+            assert_eq!(data.pot_sides[0].slot, 3);
+            let side = data.pot_sides[0].data.map(crate::stackdata::get).unwrap_or_default();
+            assert_eq!(side.name.as_deref(), Some(name));
+        }
+        assert_eq!(world.pot((3, 70, 1)), Some([0; 4]));
+        assert!(world.pot_details((3, 70, 1)).pot_sides.is_empty());
+    }
+
+    #[test]
+    fn preview_plain_command_pot_sends_one_observed_empty_update() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let shared = server_with_catalog(catalog);
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        // Официальный wire-опыт777: plain setblock после воздуха даёт 0a00,
+        // а пустой горшок в начальном чанке имеет TAG_End (00).
+        for (x, suffix) in [(1, ""), (3, "{}"), (5, "{sherds:[]}")] {
+            run(&format!("setblock {x} 69 1 stone"), &Source::Console, &shared);
+            run(&format!("setblock {x} 70 1 air"), &Source::Console, &shared);
+            let (_, start) = shared.world_in(Dimension::Overworld).lock().unwrap().events_since(0, 0);
+            let reply = run(&format!("setblock {x} 70 1 decorated_pot{suffix}"), &Source::Console, &shared).reply;
+            assert!(reply.contains("Changed the block"), "{reply}");
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            let (events, _) = world.events_since(start, 0);
+            let updates: Vec<_> = events.iter().filter_map(|e| match e {
+                crate::world::WorldEvent::BlockEntity { x, y, z, kind, nbt } => Some(((*x,*y,*z),*kind,nbt.to_vec())),
+                _ => None,
+            }).collect();
+            assert_eq!(updates, vec![((x,70,1),42,vec![10,0])]);
+            assert!(world.chunk_pots(0, 0).contains(&((x,70,1),vec![0])));
+            assert!(world.pot_details((x,70,1)).pot_sides.is_empty());
+        }
+    }
+
     /// cmdblock-chain.md:33–34: отказ остаётся нулём, но теперь он красный
     /// перевод, а не строка «Там уже такой блок».
     #[test]
@@ -3820,6 +4273,43 @@ mod tests {
         assert_eq!(take_result(), Some(0));
         assert_eq!(second.result, None);
         assert_eq!(second.component, fail("commands.setblock.failed", &[]).component);
+    }
+
+    #[test]
+    fn forceload_feedback_uses_one_namespace_in_every_dimension() {
+        use crate::commands_world::{Arg, fail, s, tr};
+        let shared = server();
+
+        for (dimension, name) in [
+            (Dimension::Overworld, "minecraft:overworld"),
+            (Dimension::Nether, "minecraft:the_nether"),
+            (Dimension::End, "minecraft:the_end"),
+        ] {
+            let source = Source::Block { x: 0, y: 5, z: 0, dimension, name: "@".to_string() };
+            // server() даёт плоские миры в памяти: add не запускает обычную генерацию.
+            let cases = [
+                ("forceload query", tr("commands.forceload.added.none", &[s(name)])),
+                ("forceload query 0 0", fail("commands.forceload.query.failure", &[s("[0, 0]"), s(name)])),
+                ("forceload add 0 0", tr("commands.forceload.added.single", &[s("[0, 0]"), s(name)])),
+                ("forceload query", tr("commands.forceload.list.single", &[s(name), s("[0, 0]")])),
+                ("forceload query 0 0", tr("commands.forceload.query.success", &[s("[0, 0]"), s(name)])),
+                ("forceload remove 0 0", tr("commands.forceload.removed.single", &[s("[0, 0]"), s(name)])),
+                ("forceload add 0 0 16 0", tr("commands.forceload.added.multiple", &[Arg::Int(2), s(name), s("[0, 0]"), s("[1, 0]")])),
+                ("forceload query", tr("commands.forceload.list.multiple", &[Arg::Int(2), s(name), s("[0, 0], [1, 0]")])),
+                ("forceload remove 0 0 16 0", tr("commands.forceload.removed.multiple", &[Arg::Int(2), s(name), s("[0, 0]"), s("[1, 0]")])),
+                ("forceload add 0 0", tr("commands.forceload.added.single", &[s("[0, 0]"), s(name)])),
+                ("forceload remove all", tr("commands.forceload.removed.all", &[s(name)])),
+                ("forceload query", tr("commands.forceload.added.none", &[s(name)])),
+            ];
+
+            for (command, expected) in cases {
+                let answer = run(command, &source, &shared);
+                assert_eq!(answer.reply, expected.reply, "{name}: {command}");
+                assert_eq!(answer.component, expected.component, "{name}: {command}");
+                assert_eq!(answer.result, expected.result, "{name}: {command}");
+            }
+            assert!(crate::commands_world::forced_chunks(&shared, dimension).is_empty());
+        }
     }
 
     /// cmdblock-repeat.md:9–42: по одному Disguised Chat каждому игроку,
@@ -4143,3 +4633,7 @@ mod tests {
     }
 
 }
+
+#[cfg(test)]
+#[path = "commands/data_get_tests.rs"]
+mod data_get_tests;

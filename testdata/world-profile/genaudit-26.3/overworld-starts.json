@@ -1,0 +1,4877 @@
+{
+  "source": "Official 26.3 persisted region starts from both census worlds and existing structure target windows; no game code or archives read.",
+  "starts": [
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -21,
+        -31
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -16,
+        -29
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -31,
+        -27
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -22,
+        -18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -14,
+        -18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -3,
+        -10
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -25,
+        -8
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -3,
+        -2
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -25,
+        -58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -21,
+        -58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -9,
+        -58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -15,
+        -51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -23,
+        -50
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -4,
+        -39
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        -15,
+        -34
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_birch_forest",
+      "chunk": [
+        -16,
+        -85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -10,
+        -82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        -22,
+        -69
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -31,
+        8
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -18,
+        9
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -28,
+        17
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_savanna",
+      "chunk": [
+        -20,
+        18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "pillager_outpost",
+      "chunk": [
+        -11,
+        18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -19,
+        36
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -24,
+        39
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -31,
+        49
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -29,
+        50
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_savanna",
+      "chunk": [
+        -13,
+        53
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -25,
+        58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -6,
+        58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -15,
+        74
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -23,
+        80
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -16,
+        82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -9,
+        82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -19,
+        83
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -32,
+        85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -30,
+        85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -10,
+        98
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -11,
+        101
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        -56,
+        -29
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -56,
+        -26
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -33,
+        -25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -52,
+        -20
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -42,
+        -19
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -45,
+        -14
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trail_ruins",
+      "chunk": [
+        -61,
+        -12
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -41,
+        -5
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -39,
+        -5
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -50,
+        -2
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -60,
+        -56
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -36,
+        -55
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -37,
+        -49
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -62,
+        -47
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -35,
+        -45
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -36,
+        -40
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -60,
+        -90
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -34,
+        -90
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -33,
+        -86
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_plains",
+      "chunk": [
+        -34,
+        -82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -48,
+        -81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -59,
+        -79
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -48,
+        -76
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_mountain",
+      "chunk": [
+        -33,
+        -72
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -36,
+        -71
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        -51,
+        -65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -62,
+        0
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -61,
+        2
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -46,
+        11
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_savanna",
+      "chunk": [
+        -56,
+        20
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_savanna",
+      "chunk": [
+        -53,
+        21
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -64,
+        24
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -52,
+        25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -61,
+        38
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -44,
+        38
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -54,
+        39
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -50,
+        47
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -59,
+        48
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -59,
+        51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -35,
+        55
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -51,
+        56
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -57,
+        59
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -60,
+        62
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -54,
+        62
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -36,
+        63
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -63,
+        65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -38,
+        65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -46,
+        66
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -47,
+        72
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "monument",
+      "chunk": [
+        -54,
+        77
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -58,
+        80
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -62,
+        83
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -44,
+        85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -56,
+        93
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -64,
+        95
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -55,
+        100
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -94,
+        -30
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -85,
+        -29
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -65,
+        -25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        -96,
+        -24
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -80,
+        -20
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -69,
+        -19
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -78,
+        -54
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -85,
+        -51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -72,
+        -51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -90,
+        -50
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -80,
+        -50
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -82,
+        -42
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -86,
+        -85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -89,
+        -81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -84,
+        -81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -77,
+        -74
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -76,
+        -73
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -68,
+        -73
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -76,
+        -70
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -73,
+        -69
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -92,
+        -68
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -82,
+        -65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -69,
+        -65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -95,
+        9
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -67,
+        12
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "stronghold",
+      "chunk": [
+        -94,
+        17
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -83,
+        33
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -81,
+        34
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -90,
+        36
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "pillager_outpost",
+      "chunk": [
+        -80,
+        41
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -68,
+        41
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -65,
+        44
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -82,
+        46
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -78,
+        48
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -86,
+        53
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -72,
+        56
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -88,
+        58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -89,
+        60
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -74,
+        64
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -93,
+        65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -92,
+        65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -78,
+        77
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -91,
+        81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -82,
+        81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -74,
+        81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -69,
+        83
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -68,
+        84
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -84,
+        88
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -91,
+        100
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -98,
+        -32
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -118,
+        -30
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -109,
+        -29
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -122,
+        -26
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -127,
+        -25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -128,
+        -22
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -117,
+        -17
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -118,
+        -5
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -121,
+        -4
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -106,
+        -1
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        -104,
+        -61
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -104,
+        -57
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -120,
+        -46
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        -98,
+        -40
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -122,
+        -38
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -114,
+        -37
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -126,
+        -36
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -113,
+        -34
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -109,
+        -86
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -123,
+        -82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -100,
+        -82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -120,
+        -66
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -119,
+        0
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -98,
+        4
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -108,
+        6
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -123,
+        11
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -111,
+        15
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -112,
+        16
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -110,
+        18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        -126,
+        19
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -99,
+        21
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        -110,
+        23
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -104,
+        24
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        -103,
+        33
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_plains",
+      "chunk": [
+        -100,
+        37
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -109,
+        40
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -101,
+        43
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -128,
+        51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        -112,
+        56
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -116,
+        62
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -125,
+        72
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trail_ruins",
+      "chunk": [
+        -124,
+        76
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -127,
+        80
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -119,
+        80
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -111,
+        80
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -109,
+        86
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -109,
+        87
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -105,
+        89
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -125,
+        93
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -111,
+        93
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -98,
+        102
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_mountain",
+      "chunk": [
+        15,
+        -25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        5,
+        -18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        28,
+        -17
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        11,
+        -8
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        6,
+        -58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trail_ruins",
+      "chunk": [
+        6,
+        -54
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        16,
+        -49
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        24,
+        -39
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        17,
+        -36
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        16,
+        -82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        15,
+        -74
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        21,
+        -71
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        13,
+        -68
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "pillager_outpost",
+      "chunk": [
+        7,
+        0
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        3,
+        2
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_swamp",
+      "chunk": [
+        20,
+        6
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        25,
+        8
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        3,
+        10
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        5,
+        11
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        14,
+        18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        22,
+        18
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        29,
+        20
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_savanna",
+      "chunk": [
+        14,
+        25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck_beached",
+      "chunk": [
+        2,
+        28
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        16,
+        29
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        21,
+        31
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        6,
+        34
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_savanna",
+      "chunk": [
+        9,
+        47
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        23,
+        50
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        15,
+        51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_savanna",
+      "chunk": [
+        21,
+        55
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        27,
+        57
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        9,
+        58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        25,
+        58
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        17,
+        60
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        28,
+        61
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        19,
+        72
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        0,
+        75
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        10,
+        80
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        10,
+        82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        16,
+        82
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        9,
+        84
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        13,
+        85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        15,
+        93
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        11,
+        95
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        28,
+        97
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        46,
+        -31
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        52,
+        -25
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        55,
+        -24
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        46,
+        -20
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck_beached",
+      "chunk": [
+        40,
+        -17
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        60,
+        -16
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        54,
+        -14
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        60,
+        -14
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        46,
+        -11
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        42,
+        -64
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        54,
+        -62
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        53,
+        -59
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        57,
+        -59
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        51,
+        -56
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trail_ruins",
+      "chunk": [
+        35,
+        -55
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        35,
+        -55
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        45,
+        -52
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        59,
+        -51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        36,
+        -50
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        58,
+        -48
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        50,
+        -47
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "shipwreck",
+      "chunk": [
+        40,
+        -43
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        44,
+        -38
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        61,
+        -38
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_swamp",
+      "chunk": [
+        55,
+        -67
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        46,
+        -66
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        38,
+        -65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        50,
+        2
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        39,
+        5
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        41,
+        5
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        43,
+        6
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        45,
+        11
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        45,
+        14
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        43,
+        16
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        44,
+        16
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        42,
+        19
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_savanna",
+      "chunk": [
+        58,
+        19
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_savanna",
+      "chunk": [
+        44,
+        21
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        56,
+        26
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        36,
+        40
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_plains",
+      "chunk": [
+        44,
+        41
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        48,
+        44
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        35,
+        45
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        52,
+        47
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        62,
+        47
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        37,
+        49
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        41,
+        49
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        41,
+        51
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        36,
+        55
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "jungle_pyramid",
+      "chunk": [
+        44,
+        69
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        36,
+        71
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        48,
+        76
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        59,
+        79
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        48,
+        81
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        49,
+        85
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        58,
+        86
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        42,
+        90
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        50,
+        90
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        49,
+        92
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "buried_treasure",
+      "chunk": [
+        57,
+        93
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        49,
+        98
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -5,
+        -25
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -29,
+        -20
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -27,
+        -19
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -1,
+        -17
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -19,
+        -13
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        -29,
+        -63
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -6,
+        -60
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -18,
+        -59
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -12,
+        -58
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -31,
+        -56
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -29,
+        -53
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -16,
+        -50
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_savanna",
+      "chunk": [
+        -22,
+        -43
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -12,
+        -33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -6,
+        -33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -13,
+        -94
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -23,
+        -92
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -15,
+        -87
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -31,
+        -78
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_desert",
+      "chunk": [
+        -15,
+        2
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -10,
+        5
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -24,
+        6
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -14,
+        18
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -12,
+        23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -18,
+        30
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -12,
+        33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -11,
+        36
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -24,
+        42
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -15,
+        47
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -30,
+        54
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -17,
+        60
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -29,
+        61
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -17,
+        62
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -5,
+        63
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -23,
+        76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -18,
+        80
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -19,
+        81
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -9,
+        81
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -9,
+        83
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -20,
+        89
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -55,
+        -31
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -51,
+        -29
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -39,
+        -26
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_savanna",
+      "chunk": [
+        -54,
+        -23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -54,
+        -19
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -33,
+        -14
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -42,
+        -12
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -52,
+        -59
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -33,
+        -54
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_flower_forest",
+      "chunk": [
+        -57,
+        -49
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_savanna",
+      "chunk": [
+        -50,
+        -44
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -49,
+        -44
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -61,
+        -37
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -35,
+        -34
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -53,
+        -90
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        -60,
+        -78
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -37,
+        -77
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -46,
+        -66
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_flower_forest",
+      "chunk": [
+        -36,
+        -98
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -48,
+        -97
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_desert",
+      "chunk": [
+        -48,
+        2
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -43,
+        11
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -54,
+        14
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -33,
+        16
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -41,
+        18
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "desert_pyramid",
+      "chunk": [
+        -63,
+        22
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -63,
+        23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_desert",
+      "chunk": [
+        -59,
+        23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -60,
+        29
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_desert",
+      "chunk": [
+        -49,
+        41
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -48,
+        42
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -35,
+        54
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -55,
+        55
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -40,
+        60
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -63,
+        63
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -59,
+        65
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -34,
+        66
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -37,
+        69
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -33,
+        71
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -62,
+        76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -54,
+        80
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -33,
+        81
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -56,
+        83
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -33,
+        87
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        -61,
+        89
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        -66,
+        -46
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -66,
+        -33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -65,
+        -69
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        -65,
+        43
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "stronghold",
+      "chunk": [
+        -67,
+        57
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        -67,
+        59
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        -66,
+        74
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        0,
+        -24
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_desert",
+      "chunk": [
+        21,
+        -21
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        1,
+        -17
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        28,
+        -11
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        9,
+        -9
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        26,
+        -9
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        28,
+        -7
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        16,
+        -64
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        4,
+        -59
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        19,
+        -51
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "monument",
+      "chunk": [
+        16,
+        -42
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        7,
+        -38
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        2,
+        -34
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        21,
+        -34
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        7,
+        -33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        26,
+        -33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        30,
+        -95
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        30,
+        -92
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_plains",
+      "chunk": [
+        7,
+        -91
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        31,
+        -91
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        6,
+        -85
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        6,
+        -84
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        25,
+        -80
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        1,
+        -77
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        25,
+        -77
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        23,
+        -76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        10,
+        -70
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        21,
+        -67
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        27,
+        6
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        10,
+        9
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        9,
+        16
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_wooded_badlands",
+      "chunk": [
+        6,
+        18
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        27,
+        19
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        12,
+        23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        0,
+        31
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        16,
+        40
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        27,
+        41
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        3,
+        43
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        22,
+        45
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        11,
+        46
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        8,
+        51
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        5,
+        52
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        29,
+        53
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        18,
+        59
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        0,
+        64
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        22,
+        64
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        0,
+        65
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        26,
+        67
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        21,
+        80
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        4,
+        87
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        5,
+        87
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        13,
+        88
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        1,
+        90
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        0,
+        92
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        49,
+        -31
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        55,
+        -31
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trail_ruins",
+      "chunk": [
+        45,
+        -27
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_wooded_badlands",
+      "chunk": [
+        39,
+        -15
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        43,
+        -11
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        42,
+        -6
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        43,
+        -60
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "buried_treasure",
+      "chunk": [
+        45,
+        -59
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        58,
+        -57
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        35,
+        -56
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        47,
+        -56
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        55,
+        -55
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        49,
+        -49
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        61,
+        -37
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        48,
+        -35
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        59,
+        -33
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        54,
+        -88
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        41,
+        -82
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        51,
+        -78
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        41,
+        -75
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        61,
+        -71
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_ocean",
+      "chunk": [
+        53,
+        -67
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        34,
+        -66
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        36,
+        -65
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        39,
+        -98
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "desert_pyramid",
+      "chunk": [
+        48,
+        2
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_desert",
+      "chunk": [
+        53,
+        17
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        41,
+        18
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        37,
+        20
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        34,
+        22
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_wooded_badlands",
+      "chunk": [
+        57,
+        23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        34,
+        40
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        42,
+        40
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_mountain",
+      "chunk": [
+        61,
+        41
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        63,
+        50
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        35,
+        54
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_desert",
+      "chunk": [
+        49,
+        55
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        63,
+        63
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        46,
+        66
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        41,
+        71
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_wooded_badlands",
+      "chunk": [
+        56,
+        76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        62,
+        76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "shipwreck",
+      "chunk": [
+        34,
+        77
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        54,
+        77
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        57,
+        80
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        44,
+        82
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        32,
+        83
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_mountain",
+      "chunk": [
+        53,
+        84
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        45,
+        87
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        44,
+        88
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        95,
+        -28
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_plains",
+      "chunk": [
+        72,
+        -27
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        86,
+        -22
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        76,
+        -18
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        80,
+        -15
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        91,
+        -14
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        90,
+        -12
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        80,
+        -11
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        89,
+        -10
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        82,
+        -6
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        81,
+        -58
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "buried_treasure",
+      "chunk": [
+        87,
+        -47
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        90,
+        -38
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        67,
+        -96
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        89,
+        -82
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        87,
+        -76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        64,
+        -69
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        88,
+        8
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        94,
+        9
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trail_ruins",
+      "chunk": [
+        81,
+        15
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        94,
+        21
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        90,
+        23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        78,
+        34
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        88,
+        34
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "jungle_pyramid",
+      "chunk": [
+        86,
+        38
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        70,
+        47
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        86,
+        49
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        90,
+        52
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        86,
+        62
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "jungle_pyramid",
+      "chunk": [
+        86,
+        66
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        65,
+        69
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        73,
+        76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trail_ruins",
+      "chunk": [
+        82,
+        76
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        83,
+        79
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        86,
+        82
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        73,
+        85
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        95,
+        91
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_birch_forest",
+      "chunk": [
+        84,
+        93
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        67,
+        94
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_plains",
+      "chunk": [
+        103,
+        -23
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        117,
+        -18
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        115,
+        -16
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        99,
+        -14
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        120,
+        -9
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        112,
+        -5
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_sparse_jungle",
+      "chunk": [
+        99,
+        -54
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        98,
+        -50
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        97,
+        -87
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        118,
+        -82
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        101,
+        -74
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        121,
+        -74
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        115,
+        -65
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        124,
+        0
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        115,
+        2
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        124,
+        3
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        96,
+        13
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        123,
+        20
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        103,
+        22
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "pillager_outpost",
+      "chunk": [
+        116,
+        32
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        116,
+        32
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        125,
+        32
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        96,
+        34
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        116,
+        35
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        96,
+        39
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        120,
+        39
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        106,
+        47
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_savanna",
+      "chunk": [
+        110,
+        51
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "abandoned_camp_forest",
+      "chunk": [
+        102,
+        52
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "ruined_portal",
+      "chunk": [
+        120,
+        52
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        110,
+        54
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        101,
+        61
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        116,
+        61
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "village_savanna",
+      "chunk": [
+        103,
+        70
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "trial_chambers",
+      "chunk": [
+        113,
+        74
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        99,
+        83
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        115,
+        86
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "family": "mineshaft",
+      "chunk": [
+        125,
+        88
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ancient_city",
+      "chunk": [
+        145,
+        97
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_desert",
+      "chunk": [
+        -466,
+        -559
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -463,
+        -555
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "desert_pyramid",
+      "chunk": [
+        -465,
+        -553
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -468,
+        -552
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -458,
+        -547
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_jungle",
+      "chunk": [
+        -459,
+        -545
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -222,
+        91
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal",
+      "chunk": [
+        -216,
+        95
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "igloo",
+      "chunk": [
+        -215,
+        96
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -213,
+        102
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -216,
+        103
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "jungle_pyramid",
+      "chunk": [
+        84,
+        -96
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        91,
+        -100
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "jungle_pyramid",
+      "chunk": [
+        22,
+        -121
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trail_ruins",
+      "chunk": [
+        23,
+        -119
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mansion",
+      "chunk": [
+        19,
+        -118
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "abandoned_camp_swamp",
+      "chunk": [
+        -29,
+        -160
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ruined_portal_swamp",
+      "chunk": [
+        -27,
+        -159
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -27,
+        -156
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "swamp_hut",
+      "chunk": [
+        -22,
+        -156
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_plains",
+      "chunk": [
+        -26,
+        -149
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -24,
+        -161
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft_mesa",
+      "chunk": [
+        -411,
+        171
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        -403,
+        174
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_desert",
+      "chunk": [
+        -405,
+        177
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "trial_chambers",
+      "chunk": [
+        -404,
+        182
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_warm",
+      "chunk": [
+        -400,
+        182
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        217,
+        -59
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_snowy",
+      "chunk": [
+        220,
+        -65
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "ocean_ruin_cold",
+      "chunk": [
+        190,
+        -92
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        191,
+        -102
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "village_taiga",
+      "chunk": [
+        187,
+        -98
+      ]
+    },
+    {
+      "seed": 1792932773345722119,
+      "family": "mineshaft",
+      "chunk": [
+        195,
+        -90
+      ]
+    }
+  ]
+}

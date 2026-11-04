@@ -1,0 +1,71 @@
+# bundle-chest-select: оригинал против нас
+
+| такт | оригинал                                                       | у нас                                                          |
+|------|----------------------------------------------------------------|----------------------------------------------------------------|
+| | **▶ click 0,0,0** (первый отклик через 0 / 0 такт.) | **▶ click 0,0,0** |
+| +0 | звук (0.5,0.5,0.5) block.chest.open 0.50 ~0.90                 | звук (0.5,0.5,0.5) block.chest.open 0.50 ~0.96                 |
+| +0 | окно 2                                                         | окно 2                                                         |
+| +0 | содержимое окна 54:bundle×1 55:ender_pearl×10 56:stone×40      | содержимое окна 54:bundle×1 55:ender_pearl×10 56:stone×40      |
+| +0 | блок (0,0,0) chest[facing=south,type=single,waterlogged=false] | блок (0,0,0) chest[facing=south,type=single,waterlogged=false] |
+| +0 | блок (0,1,0) air                                               | блок (0,1,0) air                                               |
+| +0 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":54,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":54,"button":0,"mode":0}** |
+| +0 | ячейка 54: пусто                                               | ячейка 54: пусто                                               |
+| +0 | курсор: bundle×1                                               | курсор: bundle×1                                               |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":55,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":55,"button":0,"mode":0}** |
+| +0 | ячейка 55: пусто                                               | ячейка 55: пусто                                               |
+| +0 | курсор: bundle×1 {bundle_contents={"contents":[{"itemId":1116,"itemCount":10,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} | курсор: bundle×1 {bundle_contents={"contents":[{"itemId":1116,"itemCount":10,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":56,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":56,"button":0,"mode":0}** |
+| +0 | ячейка 56: stone×16                                            | ячейка 56: stone×16                                            |
+| +0 | курсор: bundle×1 {bundle_contents={"contents":[{"itemId":1,"itemCount":24,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]},{"itemId":1116,"itemCount":10,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} | курсор: bundle×1 {bundle_contents={"contents":[{"itemId":1,"itemCount":24,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]},{"itemId":1116,"itemCount":10,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":54,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":54,"button":0,"mode":0}** |
+| +0 | ячейка 54: bundle×1 {bundle_contents={"contents":[{"itemId":1,"itemCount":24,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]},{"itemId":1116,"itemCount":10,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} | ячейка 54: bundle×1 {bundle_contents={"contents":[{"itemId":1,"itemCount":24,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]},{"itemId":1116,"itemCount":10,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +14 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +19 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":54,"button":1,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":54,"button":1,"mode":0}** |
+| +0 | ячейка 54: bundle×1 {bundle_contents={"contents":[{"itemId":1,"itemCount":24,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} | ячейка 54: bundle×1 {bundle_contents={"contents":[{"itemId":1,"itemCount":24,"addedComponentCount":0,"removedComponentCount":0,"components":[],"removeComponents":[]}]}} |
+| +0 | курсор: ender_pearl×10                                         | курсор: ender_pearl×10                                         |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":57,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":57,"button":0,"mode":0}** |
+| +0 | ячейка 57: ender_pearl×10                                      | ячейка 57: ender_pearl×10                                      |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":54,"button":1,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":54,"button":1,"mode":0}** |
+| +0 | ячейка 54: bundle×1                                            | ячейка 54: bundle×1                                            |
+| +0 | курсор: stone×24                                               | курсор: stone×24                                               |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":58,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":58,"button":0,"mode":0}** |
+| +0 | ячейка 58: stone×24                                            | ячейка 58: stone×24                                            |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":57,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":57,"button":0,"mode":0}** |
+| +0 | ячейка 57: пусто                                               | ячейка 57: пусто                                               |
+| +0 | курсор: ender_pearl×10                                         | курсор: ender_pearl×10                                         |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ window_click {"slot":56,"button":0,"mode":0}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":56,"button":0,"mode":0}** |
+| +0 | ячейка 56: ender_pearl×10                                      | ячейка 56: ender_pearl×10                                      |
+| +0 | курсор: stone×16                                               | курсор: stone×16                                               |
+| +4 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| +9 | действие (0,0,0) chest 1/1                                     | действие (0,0,0) chest 1/1                                     |
+| | **▶ close** (первый отклик через 0 / 0 такт.) | **▶ close** |
+| +0 | звук (0.5,0.5,0.5) block.chest.close 0.50 ~0.97                | звук (0.5,0.5,0.5) block.chest.close 0.50 ~0.92                |
+| +0 | действие (0,0,0) chest 1/0                                     | действие (0,0,0) chest 1/0                                     |
+| +0 |                                                                | курсор: пусто  ← лишнее                                        |
+| +4 | действие (0,0,0) chest 1/0                                     | действие (0,0,0) chest 1/0                                     |
+| | **▶ use_item** (первый отклик через 0 / 0 такт.) | **▶ use_item** |
+| +0 | робот: Metadata 8=1                                            | робот: Metadata 8=1                                            |
+
+Совпало: 51. Сдвинуто по тактам: 0. Нет у нас: 0. Лишнее у нас: 1.

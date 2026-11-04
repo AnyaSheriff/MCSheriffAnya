@@ -1,0 +1,5041 @@
+{
+  "protocol": 777,
+  "target": "core",
+  "binary_sha256": "331d5088f5ffe9db5916d26c89aff7ab9b267d550239ded2d6fd0e0ae232d403",
+  "stale_full_sync": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  ],
+  "relogin": {
+    "slots": {
+      "size": 46,
+      "occupied": {
+        "36": {
+          "item": "red_shulker_box",
+          "count": 1,
+          "contents": [
+            {
+              "item": "stone",
+              "count": 3
+            }
+          ]
+        }
+      }
+    },
+    "cursor": null
+  },
+  "relogin_pass": true,
+  "exit_code": 0,
+  "passed": 142,
+  "total": 154,
+  "cases": [
+    {
+      "kind": "shulker_box",
+      "mode": "pickup",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "shift",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-0-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-0-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-1-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-1-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-2-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-2-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-3-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-3-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-4-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-4-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-5-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-5-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-6-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-6-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-7-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-7-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-8-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-8-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "offhand",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "drag-left",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "drag-right",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "collect",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "stale",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "pickup",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "shift",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-0-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-0-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-1-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-1-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-2-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-2-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-3-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-3-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-4-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-4-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-5-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-5-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-6-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-6-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-7-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-7-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-8-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "swap-8-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "offhand",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "drag-left",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "drag-right",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "collect",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "shulker_box",
+      "mode": "stale",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "pickup",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "shift",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-0-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-0-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-1-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-1-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-2-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-2-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-3-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-3-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-4-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-4-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-5-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-5-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-6-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-6-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-7-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-7-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-8-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-8-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "offhand",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "drag-left",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "chest",
+      "mode": "drag-right",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "chest",
+      "mode": "collect",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "stale",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "nested",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "pickup",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "shift",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-0-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-0-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-1-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-1-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-2-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-2-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-3-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-3-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-4-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-4-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-5-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-5-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-6-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-6-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-7-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-7-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-8-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "swap-8-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "offhand",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "drag-left",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "chest",
+      "mode": "drag-right",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "chest",
+      "mode": "collect",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "stale",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "chest",
+      "mode": "nested",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "pickup",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "shift",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-0-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-0-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-1-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-1-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-2-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-2-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-3-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-3-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-4-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-4-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-5-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-5-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-6-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-6-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-7-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-7-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-8-empty",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-8-occupied",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "offhand",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "drag-left",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "barrel",
+      "mode": "drag-right",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "barrel",
+      "mode": "collect",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "stale",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "nested",
+      "after_reopen": false,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "pickup",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "shift",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-0-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-0-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-1-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-1-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "55": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-2-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-2-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "56": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-3-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-3-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "57": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-4-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-4-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "58": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-5-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-5-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "59": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-6-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-6-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "60": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-7-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-7-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-8-empty",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "swap-8-occupied",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "0": {
+              "item": "dirt",
+              "count": 5
+            },
+            "62": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "offhand",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "drag-left",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "barrel",
+      "mode": "drag-right",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": false
+    },
+    {
+      "kind": "barrel",
+      "mode": "collect",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "stone",
+              "count": 19
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "stale",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {}
+        },
+        "cursor": {
+          "item": "stone",
+          "count": 12
+        }
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "61": {
+              "item": "stone",
+              "count": 12
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    },
+    {
+      "kind": "barrel",
+      "mode": "nested",
+      "after_reopen": true,
+      "immediate": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "reopened": {
+        "slots": {
+          "size": 63,
+          "occupied": {
+            "54": {
+              "item": "red_shulker_box",
+              "count": 1,
+              "contents": [
+                {
+                  "item": "stone",
+                  "count": 3
+                }
+              ]
+            }
+          }
+        },
+        "cursor": null
+      },
+      "pass": true
+    }
+  ]
+}

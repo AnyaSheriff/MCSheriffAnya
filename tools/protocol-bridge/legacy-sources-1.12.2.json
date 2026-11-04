@@ -1,0 +1,47 @@
+{
+  "commit": "201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b",
+  "files": [
+    {
+      "file": "dataPaths.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/dataPaths.json",
+      "sha256": "ec79172719a76eba50ab674da727e268a4ffb45d076315b894a98bca62e090d1",
+      "bytes": 90656
+    },
+    {
+      "file": "protocol.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12.2/protocol.json",
+      "sha256": "2dad4c918f6bd4492bfa8159b4db6ffbbf8f088b628258f03d437b0c0b760af9",
+      "bytes": 104045
+    },
+    {
+      "file": "version.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12.2/version.json",
+      "sha256": "a6e9bcb426134c7d044f6e59cb5ba6f1c188f877582ad231fb54a22e7ae4e0c3",
+      "bytes": 78
+    },
+    {
+      "file": "items.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12/items.json",
+      "sha256": "848f590ba8d981b7e310d6b4aca3dd30787e73bce8ebb8ab57fa14971f559da6",
+      "bytes": 56745
+    },
+    {
+      "file": "blocks.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12/blocks.json",
+      "sha256": "9a23d082284b0243c96d1467cbe8cbca8dead11df1145f82148ae0580f82a659",
+      "bytes": 249280
+    },
+    {
+      "file": "legacy.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/common/legacy.json",
+      "sha256": "0d7aec9a3107a62e322f8839ea2b96d24e2945c461c7aa29c6a77f854609a2e9",
+      "bytes": 134814
+    },
+    {
+      "file": "enchantments.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b/data/pc/1.12/enchantments.json",
+      "sha256": "d544deab41630cf976d19fa18b8995efe3bcdd26f090682d379d0a1e746b0abc",
+      "bytes": 11538
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "protocol": 340,
+  "client_sha1": "0f275bc1547d01fa5f56ba34bdc87d981ee12daf",
+  "fixture_sha256": "0799a7910ac01711aabe0fe775dc04bffcfd6ef444c7f7031526eae43ef3f739",
+  "packets": [
+    {
+      "phase": 1,
+      "name": "keep_alive",
+      "bytes": 8,
+      "body_hex": "0b0000001020304001",
+      "token": 69259509761
+    },
+    {
+      "phase": 1,
+      "name": "settings",
+      "bytes": 11,
+      "body_hex": "0405656e5f75730200017f01"
+    },
+    {
+      "phase": 1,
+      "name": "custom_payload",
+      "bytes": 17,
+      "body_hex": "09084d437c4272616e640776616e696c6c61"
+    },
+    {
+      "phase": 1,
+      "name": "teleport_confirm",
+      "bytes": 1,
+      "body_hex": "0001",
+      "teleport": 1
+    },
+    {
+      "phase": 1,
+      "name": "position_look",
+      "bytes": 33,
+      "body_hex": "0e3fe000000000000040504000000000003fe0000000000000000000000000000000",
+      "position": [
+        0.5,
+        65.0,
+        0.5
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "position",
+      "bytes": 25,
+      "body_hex": "0d3fe000000000000040504000000000003fe000000000000000"
+    }
+  ]
+}

@@ -276,3 +276,14 @@ fn calibrate_biome_distribution() {
     for b in Biome::ALL { let i=b.number() as usize; println!("fit\t{}\t{}\t{}", b.name(), target[i], counts[i] as f64/samples.len() as f64); }
     std::fs::write(std::env::var("BIOME_PARAMS_OUT").unwrap(),format!("{p:?}")).unwrap();
 }
+
+#[test]
+#[ignore]
+fn terrain_263_cliff_probe() {
+    let terrain = Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true);
+    let grid = terrain.relief_grid(1088, -512, 1151, -449);
+    for z in -485..=-472 {
+        let row: Vec<_> = (1108..=1128).map(|x| (x, grid.top(x,z), terrain.column_at(x,z).height)).collect();
+        println!("z={z}: {row:?}");
+    }
+}

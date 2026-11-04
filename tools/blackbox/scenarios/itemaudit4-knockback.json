@@ -1,5 +1,6 @@
 {
   "name": "itemaudit4-knockback",
+  "attr_phase": true,
   "about": "[проверить] Четвёртый проход: knockback. Unit-test coverage; vanilla ещё не запускался.",
   "blocks": [],
   "setup": [

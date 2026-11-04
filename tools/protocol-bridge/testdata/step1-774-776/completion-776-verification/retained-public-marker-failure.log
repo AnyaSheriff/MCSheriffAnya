@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_public_776.py", line 89, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_public_776.py", line 71, in main
+    client.pump(10,lambda _:token in client.markers);assert token in client.markers
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_gameplay.py", line 117, in pump
+    raise TimeoutError('expected packet not received; last names: ' + str([r['name'] for r in self.records[start:]][-12:]))
+TimeoutError: expected packet not received; last names: ['keep_alive', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'update_time', 'playerlist_header', 'keep_alive']

@@ -1,0 +1,40 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[15:06:16] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[15:06:16] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[15:06:16] [Server thread/INFO]: McsaProbe[/127.0.0.1:55300 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[15:06:16] [Server thread/INFO]: McsaProbe зашёл на сервер
+[15:06:16] [Server thread/INFO]: Правило spawn_mobs: false
+[15:06:16] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[15:06:17] [Server thread/INFO]: Заполнено блоков: 90
+[15:06:17] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[15:06:17] [Server thread/INFO]: Заполнено блоков: 0
+[15:06:17] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[15:06:18] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[15:06:18] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[15:06:18] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[15:06:18] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[15:06:18] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[15:06:18] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[15:06:18] [Server thread/INFO]: Правило natural_health_regeneration: false
+[15:06:18] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[15:06:19] [Server thread/INFO]: Опознаватель игрока McsaPeer — 04401d94-d4a5-3fdd-9518-a3cc040d6cfd
+[15:06:19] [Server thread/INFO]: Скины: скина McsaPeer нет ни в одном источнике
+[15:06:19] [Server thread/INFO]: McsaPeer[/127.0.0.1:55312 → localhost:26028] вошёл с номером сущности 2 в (0.5, 64.0, 0.5)
+[15:06:19] [Server thread/INFO]: McsaPeer зашёл на сервер
+[15:06:20] [Server thread/INFO]: McsaPeer перенесён в 0.5 65 1.5
+[15:06:20] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[15:06:20] [Server thread/INFO]: Игроку McsaPeer установлен режим: выживание
+[15:06:20] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[15:06:22] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[15:06:22] [Server thread/INFO]: Останавливаю сервер
+[15:06:22] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[15:06:22] [Server thread/INFO]: McsaPeer выгнан: Сервер остановлен
+[15:06:22] [Server thread/INFO]: McsaPeer потерял соединение: отключился
+[15:06:22] [Server thread/INFO]: McsaProbe вышел
+[15:06:22] [Server thread/INFO]: McsaPeer вышел
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2988 filtered out; finished in 7.12s
+

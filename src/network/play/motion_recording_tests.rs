@@ -150,7 +150,12 @@ fn actual_mace_hits_reset_fall_for_players_and_mobs_without_blanket_immunity() {
                 cow.on_ground = true;
                 shared.items_in(p.dimension).lock().unwrap().add_mob(cow);
             }
+            let reader = shared.world_in(p.dimension).lock().unwrap().watch_events(9);
             attack(75,&mut p,&shared);
+            // «Порыв ветра» срабатывает от удара и по мобу, и по игроку.
+            let (events,_) = shared.world_in(p.dimension).lock().unwrap().events_since(reader,9);
+            let winds = events.iter().filter(|event| matches!(event, crate::world::WorldEvent::Explosion(blast) if blast.wind)).count();
+            assert_eq!(winds,usize::from(wind > 0),"player={player_target}, wind={wind}");
             assert_eq!(p.vit.fall,0.0,"player={player_target}, wind={wind}");
             assert!(p.vit.smash_landing);
             assert_eq!(p.vit.smash_forgives,wind > 0);

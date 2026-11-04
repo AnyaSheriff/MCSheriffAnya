@@ -1,0 +1,17 @@
+Unchanged HEAD 748292f78c5c029d880c6437f277f8832008d7c9
+Command: unchanged-HEAD release unit-test binary, default test threads
+Source SHA256: 9f6ebd7e4b15460739c027757b76872cacbcfd05fdf8bf0b2ebe25b21f3ffa01
+
+---- tnt::tests::a_nuke_fits_into_a_tick stdout ----
+ядерный динамит: первый такт 48.817531ms, самый долгий 48.817531ms, тактов 6, сломано блоков 2990, предметов 47
+
+thread 'tnt::tests::a_nuke_fits_into_a_tick' (23752) panicked at src/tnt.rs:1682:9:
+такт взрыва занял 48.817531ms
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tnt::tests::a_nuke_fits_into_a_tick
+
+test result: FAILED. 2961 passed; 1 failed; 89 ignored; 0 measured; 0 filtered out; finished in 60.96s
+

@@ -1,0 +1,649 @@
+{
+  "plan": {
+    "port": 26028,
+    "protocol": 776,
+    "native_protocol": 775,
+    "test": "gameplay_probe::serve_java_26_2_probe",
+    "steps": [
+      "ordinary Login/Configuration/enter_world and first ticks",
+      "stone5 via console give; assert authoritative inventory",
+      "stale revision pickup; assert authoritative resync and five stones on cursor",
+      "console op and client chat_command say mcsa776-smoke",
+      "console tp .5 64 .5; short ACK; remain connected",
+      "stop, preserve selected records and log, verify port free"
+    ],
+    "excluded": [
+      "public admission",
+      "primary776",
+      "mobs",
+      "block entities",
+      "creative input",
+      "world particles",
+      "block actions",
+      "AuthMe/online"
+    ]
+  },
+  "checks": [
+    "normal enter_world and mandatory first tick packets",
+    "give stone5 authoritative inventory",
+    "stale revision pickup and authoritative resync match ordinary776",
+    "client command reaches core and chat response",
+    "core teleport short ACK and session remains connected"
+  ],
+  "protocol_sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c",
+  "test_binary_sha256": "a2001f1179e9c60586287f7e49ba1047d11bb550edc23791581f042ce6759b1a",
+  "records": [
+    {
+      "name": "login",
+      "id": 49,
+      "size": 109
+    },
+    {
+      "name": "abilities",
+      "id": 64,
+      "size": 9
+    },
+    {
+      "name": "position",
+      "id": 72,
+      "size": 61,
+      "position": [
+        0.5,
+        64.0,
+        0.5,
+        0.0,
+        30.0
+      ]
+    },
+    {
+      "name": "declare_commands",
+      "id": 16,
+      "size": 3126
+    },
+    {
+      "name": "declare_recipes",
+      "id": 133,
+      "size": 2134
+    },
+    {
+      "name": "player_info",
+      "id": 70,
+      "size": 31
+    },
+    {
+      "name": "entity_metadata",
+      "id": 99,
+      "size": 14
+    },
+    {
+      "name": "initialize_world_border",
+      "id": 43,
+      "size": 40
+    },
+    {
+      "name": "set_ticking_state",
+      "id": 127,
+      "size": 5
+    },
+    {
+      "name": "step_tick",
+      "id": 128,
+      "size": 1
+    },
+    {
+      "name": "spawn_position",
+      "id": 97,
+      "size": 36
+    },
+    {
+      "name": "update_health",
+      "id": 104,
+      "size": 9
+    },
+    {
+      "name": "game_state_change",
+      "id": 38,
+      "size": 5
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 19
+    },
+    {
+      "name": "update_view_position",
+      "id": 94,
+      "size": 2
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 20734
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "map_chunk",
+      "id": 45,
+      "size": 16635
+    },
+    {
+      "name": "window_items",
+      "id": 18,
+      "size": 50
+    },
+    {
+      "name": "held_item_slot",
+      "id": 105,
+      "size": 1
+    },
+    {
+      "name": "system_chat",
+      "id": 121,
+      "size": 42
+    },
+    {
+      "name": "entity_update_attributes",
+      "id": 131,
+      "size": 113
+    },
+    {
+      "name": "recipe_book_settings",
+      "id": 76,
+      "size": 8
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 2
+    },
+    {
+      "name": "advancements",
+      "id": 130,
+      "size": 5
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 178
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 38
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 30
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 34
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 49
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 42
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 24
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 27
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "recipe_book_add",
+      "id": 74,
+      "size": 20
+    },
+    {
+      "name": "set_slot",
+      "id": 20,
+      "size": 8,
+      "window": 0,
+      "revision": 2,
+      "slot": 36,
+      "count": 5,
+      "item": 1
+    },
+    {
+      "name": "spawn_entity",
+      "id": 1,
+      "size": 52,
+      "entity": 6,
+      "entity_type": 71,
+      "position": [
+        0.5,
+        65.32,
+        0.5
+      ]
+    },
+    {
+      "name": "entity_metadata",
+      "id": 99,
+      "size": 8
+    },
+    {
+      "name": "sound_effect",
+      "id": 117,
+      "size": 60
+    },
+    {
+      "name": "rel_entity_move",
+      "id": 53,
+      "size": 8,
+      "entity": 6,
+      "movement_hex": "00000000000000"
+    },
+    {
+      "name": "entity_metadata",
+      "id": 99,
+      "size": 8
+    },
+    {
+      "name": "entity_destroy",
+      "id": 77,
+      "size": 2
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "keep_alive",
+      "id": 44,
+      "size": 8
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "window_items",
+      "id": 18,
+      "size": 53
+    },
+    {
+      "name": "set_slot",
+      "id": 20,
+      "size": 5,
+      "window": 0,
+      "revision": 4,
+      "slot": 36,
+      "count": 0
+    },
+    {
+      "name": "set_cursor_item",
+      "id": 96,
+      "size": 4
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "system_chat",
+      "id": 121,
+      "size": 29
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "keep_alive",
+      "id": 44,
+      "size": 8
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "position",
+      "id": 72,
+      "size": 61,
+      "position": [
+        0.5,
+        64.0,
+        0.5,
+        0.0,
+        30.0
+      ]
+    },
+    {
+      "name": "update_view_position",
+      "id": 94,
+      "size": 2
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    },
+    {
+      "name": "update_time",
+      "id": 113,
+      "size": 9
+    },
+    {
+      "name": "playerlist_header",
+      "id": 122,
+      "size": 126
+    }
+  ],
+  "teleport_acks": [
+    1,
+    2
+  ],
+  "inventory": {
+    "window": 0,
+    "revision": 4,
+    "slots": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "cursor": {
+      "item": 1,
+      "count": 5
+    }
+  },
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0,
+  "port_free": true,
+  "process_group_gone": true,
+  "passed": true
+}

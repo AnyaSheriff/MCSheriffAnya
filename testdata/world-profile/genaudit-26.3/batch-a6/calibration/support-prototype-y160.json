@@ -1,0 +1,49 @@
+{
+  "method": "Historical first-prototype engineering guard, not a per-biome vanilla tolerance. Recorded aggregate owner bound 7.623 plus two percentage points; the official jagged-peaks extra window has no Y160 denominator.",
+  "reference": "../batch-a5/measurements.json",
+  "seed": 1792932773345722119,
+  "chunks": [
+    [
+      140,
+      109
+    ],
+    [
+      140,
+      110
+    ],
+    [
+      140,
+      111
+    ],
+    [
+      141,
+      109
+    ],
+    [
+      141,
+      110
+    ],
+    [
+      141,
+      111
+    ],
+    [
+      142,
+      109
+    ],
+    [
+      142,
+      110
+    ],
+    [
+      142,
+      111
+    ]
+  ],
+  "minimum_columns": 64,
+  "minimum_denominator": 128,
+  "maximum_air_percent": 9.623,
+  "band_y": 160,
+  "observed_prototype_air": 535,
+  "observed_prototype_denominator": 1123
+}

@@ -1,0 +1,3297 @@
+{
+  "schema": 1,
+  "scope": "ordinary777 white wool source place/break and selected two-line vibration occlusion; discovery only",
+  "source": {
+    "directory": "wool-sculk-discovery-01",
+    "result_sha256": "a9bb4f2d1599c3b8b84a3ff433a2d7a739bec31206e63c040ae3d14775a8c051",
+    "server_log_sha256": "e2a97c671a3333bc7cdd22adeab66593aa63eb045f728300f602431fb02499fd",
+    "runner_sha256": "4d6e8065a1ef99eb7e64dcc72f216887d53aff6b1c05fad2b58cbbd7b6a1c7bd",
+    "copied_runner_sha256": "4d6e8065a1ef99eb7e64dcc72f216887d53aff6b1c05fad2b58cbbd7b6a1c7bd",
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "json_sha256": {
+      "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+      "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+      "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+      "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+    },
+    "helper_sha256": {
+      "probe_gameplay.py": "79d573ed6688c9575466493c6f5fe33386a55ff41fa5c485465f7e7f7e5fbdb8",
+      "probe_white_concrete_slab.py": "f9895658905dc91183780cc58f6a7ba45ac601fb53dc6e3a7805e688abd9cf05",
+      "generate_tables.py": "2b428e4ba2db910b5057c2e9a1e6317263704994c62c9b1c6fd76cd6a16c7602",
+      "smoke.py": "dd57d7b615de376f1b4dfe8339bebf214ce960269e2390dc95b16dba273b3be3",
+      "observe.py": "c6a94cc034c681b518d0686152c06ec649d6794bce7c4d528aa3a6e4aa67df2c"
+    }
+  },
+  "result": "OBSERVED",
+  "survival_mode_events": [
+    {
+      "mode": 1.0,
+      "payload_hex": "033f800000"
+    },
+    {
+      "mode": 0.0,
+      "payload_hex": "0300000000"
+    }
+  ],
+  "cases": [
+    {
+      "label": "emission/stone/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "air",
+      "active": true,
+      "action": "place",
+      "material": {
+        "label": "stone",
+        "block": "stone"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_0": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_0",
+          "server_log_lines": [
+            156
+          ],
+          "observed_marker": "[Server] MCSA_READY_0"
+        },
+        "MCSA_SOURCE_READY_0": {
+          "command": "execute if block 2 65 0 air run say MCSA_SOURCE_READY_0",
+          "server_log_lines": [
+            157
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_0"
+        },
+        "MCSA_PREACTION_0": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_0",
+          "server_log_lines": [
+            159
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_0"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 1,
+        "payload_hex": "000000800000004101",
+        "at": 3876.760089496,
+        "decoded": {
+          "name": "stone",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 3876.952115386,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "emission/stone/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "stone",
+      "active": true,
+      "action": "break",
+      "material": {
+        "label": "stone",
+        "block": "stone"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_1": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_1",
+          "server_log_lines": [
+            175
+          ],
+          "observed_marker": "[Server] MCSA_READY_1"
+        },
+        "MCSA_SOURCE_READY_1": {
+          "command": "execute if block 2 65 0 stone run say MCSA_SOURCE_READY_1",
+          "server_log_lines": [
+            176
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_1"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 0,
+        "payload_hex": "000000800000004100",
+        "at": 3889.909826241,
+        "decoded": {
+          "name": "air",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 3890.102364902,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "emission/full-wool/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "air",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "full-wool",
+        "block": "white_wool"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_2": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_2",
+          "server_log_lines": [
+            193
+          ],
+          "observed_marker": "[Server] MCSA_READY_2"
+        },
+        "MCSA_SOURCE_READY_2": {
+          "command": "execute if block 2 65 0 air run say MCSA_SOURCE_READY_2",
+          "server_log_lines": [
+            194
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_2"
+        },
+        "MCSA_PREACTION_2": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_2",
+          "server_log_lines": [
+            196
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_2"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 2409,
+        "payload_hex": "0000008000000041e912",
+        "at": 3901.352780628,
+        "decoded": {
+          "name": "white_wool",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/full-wool/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "full-wool",
+        "block": "white_wool"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_3": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_3",
+          "server_log_lines": [
+            212
+          ],
+          "observed_marker": "[Server] MCSA_READY_3"
+        },
+        "MCSA_SOURCE_READY_3": {
+          "command": "execute if block 2 65 0 white_wool run say MCSA_SOURCE_READY_3",
+          "server_log_lines": [
+            213
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_3"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 0,
+        "payload_hex": "000000800000004100",
+        "at": 3914.403304731,
+        "decoded": {
+          "name": "air",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/bottom-false/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "air",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "bottom-false",
+        "half": "bottom",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_4": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_4",
+          "server_log_lines": [
+            230
+          ],
+          "observed_marker": "[Server] MCSA_READY_4"
+        },
+        "MCSA_SOURCE_READY_4": {
+          "command": "execute if block 2 65 0 air run say MCSA_SOURCE_READY_4",
+          "server_log_lines": [
+            231
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_4"
+        },
+        "MCSA_PREACTION_4": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_4",
+          "server_log_lines": [
+            233
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_4"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 3708,
+        "payload_hex": "0000008000000041fc1c",
+        "at": 3925.852653091,
+        "decoded": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/bottom-false/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=bottom,waterlogged=false]",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "bottom-false",
+        "half": "bottom",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_5": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_5",
+          "server_log_lines": [
+            249
+          ],
+          "observed_marker": "[Server] MCSA_READY_5"
+        },
+        "MCSA_SOURCE_READY_5": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=bottom,waterlogged=false] run say MCSA_SOURCE_READY_5",
+          "server_log_lines": [
+            250
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_5"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 0,
+        "payload_hex": "000000800000004100",
+        "at": 3938.904156521,
+        "decoded": {
+          "name": "air",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/bottom-true/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "water",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "bottom-true",
+        "half": "bottom",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_6": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_6",
+          "server_log_lines": [
+            267
+          ],
+          "observed_marker": "[Server] MCSA_READY_6"
+        },
+        "MCSA_SOURCE_READY_6": {
+          "command": "execute if block 2 65 0 water run say MCSA_SOURCE_READY_6",
+          "server_log_lines": [
+            268
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_6"
+        },
+        "MCSA_PREACTION_6": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_6",
+          "server_log_lines": [
+            270
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_6"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 3707,
+        "payload_hex": "0000008000000041fb1c",
+        "at": 3950.40257667,
+        "decoded": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/bottom-true/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=bottom,waterlogged=true]",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "bottom-true",
+        "half": "bottom",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_7": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_7",
+          "server_log_lines": [
+            286
+          ],
+          "observed_marker": "[Server] MCSA_READY_7"
+        },
+        "MCSA_SOURCE_READY_7": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=bottom,waterlogged=true] run say MCSA_SOURCE_READY_7",
+          "server_log_lines": [
+            287
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_7"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 89,
+        "payload_hex": "000000800000004159",
+        "at": 3963.503457101,
+        "decoded": {
+          "name": "water",
+          "properties": {
+            "level": "0"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/top-false/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "air",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "top-false",
+        "half": "top",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_8": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_8",
+          "server_log_lines": [
+            304
+          ],
+          "observed_marker": "[Server] MCSA_READY_8"
+        },
+        "MCSA_SOURCE_READY_8": {
+          "command": "execute if block 2 65 0 air run say MCSA_SOURCE_READY_8",
+          "server_log_lines": [
+            305
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_8"
+        },
+        "MCSA_PREACTION_8": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_8",
+          "server_log_lines": [
+            307
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_8"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 3706,
+        "payload_hex": "0000008000000041fa1c",
+        "at": 3974.852898327,
+        "decoded": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/top-false/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=top,waterlogged=false]",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "top-false",
+        "half": "top",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_9": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_9",
+          "server_log_lines": [
+            323
+          ],
+          "observed_marker": "[Server] MCSA_READY_9"
+        },
+        "MCSA_SOURCE_READY_9": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=top,waterlogged=false] run say MCSA_SOURCE_READY_9",
+          "server_log_lines": [
+            324
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_9"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 0,
+        "payload_hex": "000000800000004100",
+        "at": 3987.902790134,
+        "decoded": {
+          "name": "air",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/top-true/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "water",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "top-true",
+        "half": "top",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_10": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_10",
+          "server_log_lines": [
+            341
+          ],
+          "observed_marker": "[Server] MCSA_READY_10"
+        },
+        "MCSA_SOURCE_READY_10": {
+          "command": "execute if block 2 65 0 water run say MCSA_SOURCE_READY_10",
+          "server_log_lines": [
+            342
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_10"
+        },
+        "MCSA_PREACTION_10": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_10",
+          "server_log_lines": [
+            344
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_10"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 3705,
+        "payload_hex": "0000008000000041f91c",
+        "at": 3999.502778383,
+        "decoded": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/top-true/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=top,waterlogged=true]",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "top-true",
+        "half": "top",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_11": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_11",
+          "server_log_lines": [
+            360
+          ],
+          "observed_marker": "[Server] MCSA_READY_11"
+        },
+        "MCSA_SOURCE_READY_11": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=top,waterlogged=true] run say MCSA_SOURCE_READY_11",
+          "server_log_lines": [
+            361
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_11"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 89,
+        "payload_hex": "000000800000004159",
+        "at": 4012.502952941,
+        "decoded": {
+          "name": "water",
+          "properties": {
+            "level": "0"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/double-false/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=bottom,waterlogged=false]",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "double-false",
+        "half": "double",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_12": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_12",
+          "server_log_lines": [
+            378
+          ],
+          "observed_marker": "[Server] MCSA_READY_12"
+        },
+        "MCSA_SOURCE_READY_12": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=bottom,waterlogged=false] run say MCSA_SOURCE_READY_12",
+          "server_log_lines": [
+            379
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_12"
+        },
+        "MCSA_PREACTION_12": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_12",
+          "server_log_lines": [
+            381
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_12"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 3710,
+        "payload_hex": "0000008000000041fe1c",
+        "at": 4023.952371153,
+        "decoded": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/double-false/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=double,waterlogged=false]",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "double-false",
+        "half": "double",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_13": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_13",
+          "server_log_lines": [
+            397
+          ],
+          "observed_marker": "[Server] MCSA_READY_13"
+        },
+        "MCSA_SOURCE_READY_13": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=double,waterlogged=false] run say MCSA_SOURCE_READY_13",
+          "server_log_lines": [
+            398
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_13"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 0,
+        "payload_hex": "000000800000004100",
+        "at": 4037.002741808,
+        "decoded": {
+          "name": "air",
+          "properties": {}
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/double-true/place",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=bottom,waterlogged=true]",
+      "active": false,
+      "action": "place",
+      "material": {
+        "label": "double-true",
+        "half": "double",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_14": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_14",
+          "server_log_lines": [
+            415
+          ],
+          "observed_marker": "[Server] MCSA_READY_14"
+        },
+        "MCSA_SOURCE_READY_14": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=bottom,waterlogged=true] run say MCSA_SOURCE_READY_14",
+          "server_log_lines": [
+            416
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_14"
+        },
+        "MCSA_PREACTION_14": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive] run say MCSA_PREACTION_14",
+          "server_log_lines": [
+            418
+          ],
+          "observed_marker": "[Server] MCSA_PREACTION_14"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 3710,
+        "payload_hex": "0000008000000041fe1c",
+        "at": 4048.501942371,
+        "decoded": {
+          "name": "white_wool_slab",
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "emission/double-true/break",
+      "kind": "emission",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "white_wool_slab[type=double,waterlogged=true]",
+      "active": false,
+      "action": "break",
+      "material": {
+        "label": "double-true",
+        "half": "double",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "prescribed_observation_seconds": 5.5,
+      "query_proof": {
+        "MCSA_READY_15": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_15",
+          "server_log_lines": [
+            434
+          ],
+          "observed_marker": "[Server] MCSA_READY_15"
+        },
+        "MCSA_SOURCE_READY_15": {
+          "command": "execute if block 2 65 0 white_wool_slab[type=double,waterlogged=true] run say MCSA_SOURCE_READY_15",
+          "server_log_lines": [
+            435
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_15"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 89,
+        "payload_hex": "000000800000004159",
+        "at": 4061.502591509,
+        "decoded": {
+          "name": "water",
+          "properties": {
+            "level": "0"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "occlusion/upper/air",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "air",
+        "block": "air"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_16": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_16",
+          "server_log_lines": [
+            449
+          ],
+          "observed_marker": "[Server] MCSA_READY_16"
+        },
+        "MCSA_SOURCE_READY_16": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_16",
+          "server_log_lines": [
+            450
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_16"
+        },
+        "MCSA_BARRIER_READY_16": {
+          "command": "execute if block 3 65 0 air run say MCSA_BARRIER_READY_16",
+          "server_log_lines": [
+            451
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_16"
+        },
+        "MCSA_LEVER_READY_16": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_16",
+          "server_log_lines": [
+            452
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_16"
+        },
+        "MCSA_LEVER_USED_17": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_17",
+          "server_log_lines": [
+            454
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_17"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4072.052443447,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4072.251520132,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/stone",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "stone",
+        "block": "stone"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_17": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_17",
+          "server_log_lines": [
+            466
+          ],
+          "observed_marker": "[Server] MCSA_READY_17"
+        },
+        "MCSA_SOURCE_READY_17": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_17",
+          "server_log_lines": [
+            467
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_17"
+        },
+        "MCSA_BARRIER_READY_17": {
+          "command": "execute if block 3 65 0 stone run say MCSA_BARRIER_READY_17",
+          "server_log_lines": [
+            468
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_17"
+        },
+        "MCSA_LEVER_READY_17": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_17",
+          "server_log_lines": [
+            469
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_17"
+        },
+        "MCSA_LEVER_USED_18": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_18",
+          "server_log_lines": [
+            471
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_18"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4082.951741872,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4083.151376434,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/full-wool",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": false,
+      "barrier": {
+        "label": "full-wool",
+        "block": "white_wool"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_18": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_18",
+          "server_log_lines": [
+            483
+          ],
+          "observed_marker": "[Server] MCSA_READY_18"
+        },
+        "MCSA_SOURCE_READY_18": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_18",
+          "server_log_lines": [
+            484
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_18"
+        },
+        "MCSA_BARRIER_READY_18": {
+          "command": "execute if block 3 65 0 white_wool run say MCSA_BARRIER_READY_18",
+          "server_log_lines": [
+            485
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_18"
+        },
+        "MCSA_LEVER_READY_18": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_18",
+          "server_log_lines": [
+            486
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_18"
+        },
+        "MCSA_LEVER_USED_19": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_19",
+          "server_log_lines": [
+            488
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_19"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4093.951721544,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "occlusion/upper/bottom-false",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "bottom-false",
+        "half": "bottom",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_19": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_19",
+          "server_log_lines": [
+            500
+          ],
+          "observed_marker": "[Server] MCSA_READY_19"
+        },
+        "MCSA_SOURCE_READY_19": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_19",
+          "server_log_lines": [
+            501
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_19"
+        },
+        "MCSA_BARRIER_READY_19": {
+          "command": "execute if block 3 65 0 white_wool_slab[type=bottom,waterlogged=false] run say MCSA_BARRIER_READY_19",
+          "server_log_lines": [
+            502
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_19"
+        },
+        "MCSA_LEVER_READY_19": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_19",
+          "server_log_lines": [
+            503
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_19"
+        },
+        "MCSA_LEVER_USED_20": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_20",
+          "server_log_lines": [
+            505
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_20"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4104.851716516,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4105.051483085,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/bottom-true",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "bottom-true",
+        "half": "bottom",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_20": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_20",
+          "server_log_lines": [
+            517
+          ],
+          "observed_marker": "[Server] MCSA_READY_20"
+        },
+        "MCSA_SOURCE_READY_20": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_20",
+          "server_log_lines": [
+            518
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_20"
+        },
+        "MCSA_BARRIER_READY_20": {
+          "command": "execute if block 3 65 0 white_wool_slab[type=bottom,waterlogged=true] run say MCSA_BARRIER_READY_20",
+          "server_log_lines": [
+            519
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_20"
+        },
+        "MCSA_LEVER_READY_20": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_20",
+          "server_log_lines": [
+            520
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_20"
+        },
+        "MCSA_LEVER_USED_21": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_21",
+          "server_log_lines": [
+            522
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_21"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4115.551765161,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4115.751428406,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/top-false",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "top-false",
+        "half": "top",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_21": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_21",
+          "server_log_lines": [
+            534
+          ],
+          "observed_marker": "[Server] MCSA_READY_21"
+        },
+        "MCSA_SOURCE_READY_21": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_21",
+          "server_log_lines": [
+            535
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_21"
+        },
+        "MCSA_BARRIER_READY_21": {
+          "command": "execute if block 3 65 0 white_wool_slab[type=top,waterlogged=false] run say MCSA_BARRIER_READY_21",
+          "server_log_lines": [
+            536
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_21"
+        },
+        "MCSA_LEVER_READY_21": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_21",
+          "server_log_lines": [
+            537
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_21"
+        },
+        "MCSA_LEVER_USED_22": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_22",
+          "server_log_lines": [
+            539
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_22"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4126.501899734,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4126.701415212,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/top-true",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "top-true",
+        "half": "top",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_22": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_22",
+          "server_log_lines": [
+            551
+          ],
+          "observed_marker": "[Server] MCSA_READY_22"
+        },
+        "MCSA_SOURCE_READY_22": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_22",
+          "server_log_lines": [
+            552
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_22"
+        },
+        "MCSA_BARRIER_READY_22": {
+          "command": "execute if block 3 65 0 white_wool_slab[type=top,waterlogged=true] run say MCSA_BARRIER_READY_22",
+          "server_log_lines": [
+            553
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_22"
+        },
+        "MCSA_LEVER_READY_22": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_22",
+          "server_log_lines": [
+            554
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_22"
+        },
+        "MCSA_LEVER_USED_23": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_23",
+          "server_log_lines": [
+            556
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_23"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4137.351628577,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4137.551673128,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/double-false",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "double-false",
+        "half": "double",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_23": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_23",
+          "server_log_lines": [
+            568
+          ],
+          "observed_marker": "[Server] MCSA_READY_23"
+        },
+        "MCSA_SOURCE_READY_23": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_23",
+          "server_log_lines": [
+            569
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_23"
+        },
+        "MCSA_BARRIER_READY_23": {
+          "command": "execute if block 3 65 0 white_wool_slab[type=double,waterlogged=false] run say MCSA_BARRIER_READY_23",
+          "server_log_lines": [
+            570
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_23"
+        },
+        "MCSA_LEVER_READY_23": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_23",
+          "server_log_lines": [
+            571
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_23"
+        },
+        "MCSA_LEVER_USED_24": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_24",
+          "server_log_lines": [
+            573
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_24"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4148.251670787,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4148.451339242,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/double-true",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "double-true",
+        "half": "double",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_24": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_24",
+          "server_log_lines": [
+            585
+          ],
+          "observed_marker": "[Server] MCSA_READY_24"
+        },
+        "MCSA_SOURCE_READY_24": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_24",
+          "server_log_lines": [
+            586
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_24"
+        },
+        "MCSA_BARRIER_READY_24": {
+          "command": "execute if block 3 65 0 white_wool_slab[type=double,waterlogged=true] run say MCSA_BARRIER_READY_24",
+          "server_log_lines": [
+            587
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_24"
+        },
+        "MCSA_LEVER_READY_24": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_24",
+          "server_log_lines": [
+            588
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_24"
+        },
+        "MCSA_LEVER_USED_25": {
+          "command": "execute if block 2 65 0 lever[powered=true] run say MCSA_LEVER_USED_25",
+          "server_log_lines": [
+            590
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_25"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          65,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000041f741",
+        "at": 4159.151609794,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          66,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000042ebee01",
+        "at": 4159.351334996,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/upper/no-event",
+      "kind": "occlusion",
+      "source": [
+        2,
+        65,
+        0
+      ],
+      "sensor": [
+        6,
+        66,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": false,
+      "barrier": {
+        "label": "no-event",
+        "block": "air"
+      },
+      "geometry": {
+        "name": "upper",
+        "source": [
+          2,
+          65,
+          0
+        ],
+        "sensor": [
+          6,
+          66,
+          0
+        ],
+        "barrier": [
+          3,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.75
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_25": {
+          "command": "execute if block 6 66 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_25",
+          "server_log_lines": [
+            602
+          ],
+          "observed_marker": "[Server] MCSA_READY_25"
+        },
+        "MCSA_SOURCE_READY_25": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_25",
+          "server_log_lines": [
+            603
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_25"
+        },
+        "MCSA_BARRIER_READY_25": {
+          "command": "execute if block 3 65 0 air run say MCSA_BARRIER_READY_25",
+          "server_log_lines": [
+            604
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_25"
+        },
+        "MCSA_LEVER_READY_25": {
+          "command": "execute if block 2 65 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_25",
+          "server_log_lines": [
+            605
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_25"
+        }
+      },
+      "final_source": null,
+      "first_active_sensor": null
+    },
+    {
+      "label": "occlusion/lower/air",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "air",
+        "block": "air"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_26": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_26",
+          "server_log_lines": [
+            618
+          ],
+          "observed_marker": "[Server] MCSA_READY_26"
+        },
+        "MCSA_SOURCE_READY_26": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_26",
+          "server_log_lines": [
+            619
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_26"
+        },
+        "MCSA_BARRIER_READY_26": {
+          "command": "execute if block 5 65 0 air run say MCSA_BARRIER_READY_26",
+          "server_log_lines": [
+            620
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_26"
+        },
+        "MCSA_LEVER_READY_26": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_26",
+          "server_log_lines": [
+            621
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_26"
+        },
+        "MCSA_LEVER_USED_27": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_27",
+          "server_log_lines": [
+            623
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_27"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4180.901407377,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4181.101211667,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/stone",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "stone",
+        "block": "stone"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_27": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_27",
+          "server_log_lines": [
+            635
+          ],
+          "observed_marker": "[Server] MCSA_READY_27"
+        },
+        "MCSA_SOURCE_READY_27": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_27",
+          "server_log_lines": [
+            636
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_27"
+        },
+        "MCSA_BARRIER_READY_27": {
+          "command": "execute if block 5 65 0 stone run say MCSA_BARRIER_READY_27",
+          "server_log_lines": [
+            637
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_27"
+        },
+        "MCSA_LEVER_READY_27": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_27",
+          "server_log_lines": [
+            638
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_27"
+        },
+        "MCSA_LEVER_USED_28": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_28",
+          "server_log_lines": [
+            640
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_28"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4191.80185044,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4192.001316405,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/full-wool",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": false,
+      "barrier": {
+        "label": "full-wool",
+        "block": "white_wool"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_28": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_28",
+          "server_log_lines": [
+            652
+          ],
+          "observed_marker": "[Server] MCSA_READY_28"
+        },
+        "MCSA_SOURCE_READY_28": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_28",
+          "server_log_lines": [
+            653
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_28"
+        },
+        "MCSA_BARRIER_READY_28": {
+          "command": "execute if block 5 65 0 white_wool run say MCSA_BARRIER_READY_28",
+          "server_log_lines": [
+            654
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_28"
+        },
+        "MCSA_LEVER_READY_28": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_28",
+          "server_log_lines": [
+            655
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_28"
+        },
+        "MCSA_LEVER_USED_29": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_29",
+          "server_log_lines": [
+            657
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_29"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4202.801624275,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": null
+    },
+    {
+      "label": "occlusion/lower/bottom-false",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "bottom-false",
+        "half": "bottom",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_29": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_29",
+          "server_log_lines": [
+            669
+          ],
+          "observed_marker": "[Server] MCSA_READY_29"
+        },
+        "MCSA_SOURCE_READY_29": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_29",
+          "server_log_lines": [
+            670
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_29"
+        },
+        "MCSA_BARRIER_READY_29": {
+          "command": "execute if block 5 65 0 white_wool_slab[type=bottom,waterlogged=false] run say MCSA_BARRIER_READY_29",
+          "server_log_lines": [
+            671
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_29"
+        },
+        "MCSA_LEVER_READY_29": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_29",
+          "server_log_lines": [
+            672
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_29"
+        },
+        "MCSA_LEVER_USED_30": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_30",
+          "server_log_lines": [
+            674
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_30"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4213.651703646,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4213.851219184,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/bottom-true",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "bottom-true",
+        "half": "bottom",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_30": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_30",
+          "server_log_lines": [
+            686
+          ],
+          "observed_marker": "[Server] MCSA_READY_30"
+        },
+        "MCSA_SOURCE_READY_30": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_30",
+          "server_log_lines": [
+            687
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_30"
+        },
+        "MCSA_BARRIER_READY_30": {
+          "command": "execute if block 5 65 0 white_wool_slab[type=bottom,waterlogged=true] run say MCSA_BARRIER_READY_30",
+          "server_log_lines": [
+            688
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_30"
+        },
+        "MCSA_LEVER_READY_30": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_30",
+          "server_log_lines": [
+            689
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_30"
+        },
+        "MCSA_LEVER_USED_31": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_31",
+          "server_log_lines": [
+            691
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_31"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4224.451552405,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4224.651236609,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/top-false",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "top-false",
+        "half": "top",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_31": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_31",
+          "server_log_lines": [
+            703
+          ],
+          "observed_marker": "[Server] MCSA_READY_31"
+        },
+        "MCSA_SOURCE_READY_31": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_31",
+          "server_log_lines": [
+            704
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_31"
+        },
+        "MCSA_BARRIER_READY_31": {
+          "command": "execute if block 5 65 0 white_wool_slab[type=top,waterlogged=false] run say MCSA_BARRIER_READY_31",
+          "server_log_lines": [
+            705
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_31"
+        },
+        "MCSA_LEVER_READY_31": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_31",
+          "server_log_lines": [
+            706
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_31"
+        },
+        "MCSA_LEVER_USED_32": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_32",
+          "server_log_lines": [
+            708
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_32"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4235.251679305,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4235.451423623,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/top-true",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "top-true",
+        "half": "top",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_32": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_32",
+          "server_log_lines": [
+            720
+          ],
+          "observed_marker": "[Server] MCSA_READY_32"
+        },
+        "MCSA_SOURCE_READY_32": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_32",
+          "server_log_lines": [
+            721
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_32"
+        },
+        "MCSA_BARRIER_READY_32": {
+          "command": "execute if block 5 65 0 white_wool_slab[type=top,waterlogged=true] run say MCSA_BARRIER_READY_32",
+          "server_log_lines": [
+            722
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_32"
+        },
+        "MCSA_LEVER_READY_32": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_32",
+          "server_log_lines": [
+            723
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_32"
+        },
+        "MCSA_LEVER_USED_33": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_33",
+          "server_log_lines": [
+            725
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_33"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4246.051911473,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4246.251691618,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/double-false",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "double-false",
+        "half": "double",
+        "wet": false,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_33": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_33",
+          "server_log_lines": [
+            737
+          ],
+          "observed_marker": "[Server] MCSA_READY_33"
+        },
+        "MCSA_SOURCE_READY_33": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_33",
+          "server_log_lines": [
+            738
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_33"
+        },
+        "MCSA_BARRIER_READY_33": {
+          "command": "execute if block 5 65 0 white_wool_slab[type=double,waterlogged=false] run say MCSA_BARRIER_READY_33",
+          "server_log_lines": [
+            739
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_33"
+        },
+        "MCSA_LEVER_READY_33": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_33",
+          "server_log_lines": [
+            740
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_33"
+        },
+        "MCSA_LEVER_USED_34": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_34",
+          "server_log_lines": [
+            742
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_34"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4256.851501146,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4257.051289196,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/double-true",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": true,
+      "barrier": {
+        "label": "double-true",
+        "half": "double",
+        "wet": true,
+        "block": "white_wool_slab"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_34": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_34",
+          "server_log_lines": [
+            754
+          ],
+          "observed_marker": "[Server] MCSA_READY_34"
+        },
+        "MCSA_SOURCE_READY_34": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_34",
+          "server_log_lines": [
+            755
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_34"
+        },
+        "MCSA_BARRIER_READY_34": {
+          "command": "execute if block 5 65 0 white_wool_slab[type=double,waterlogged=true] run say MCSA_BARRIER_READY_34",
+          "server_log_lines": [
+            756
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_34"
+        },
+        "MCSA_LEVER_READY_34": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_34",
+          "server_log_lines": [
+            757
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_34"
+        },
+        "MCSA_LEVER_USED_35": {
+          "command": "execute if block 2 64 0 lever[powered=true] run say MCSA_LEVER_USED_35",
+          "server_log_lines": [
+            759
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_USED_35"
+        }
+      },
+      "final_source": {
+        "name": "block_change",
+        "position": [
+          2,
+          64,
+          0
+        ],
+        "state": 8439,
+        "payload_hex": "0000008000000040f741",
+        "at": 4267.851527876,
+        "decoded": {
+          "name": "lever",
+          "properties": {
+            "face": "floor",
+            "facing": "north",
+            "powered": "true"
+          }
+        }
+      },
+      "first_active_sensor": {
+        "name": "block_change",
+        "position": [
+          6,
+          65,
+          0
+        ],
+        "state": 30571,
+        "payload_hex": "0000018000000041ebee01",
+        "at": 4268.051335542,
+        "properties": {
+          "power": "8",
+          "sculk_sensor_phase": "active",
+          "waterlogged": "false"
+        }
+      }
+    },
+    {
+      "label": "occlusion/lower/no-event",
+      "kind": "occlusion",
+      "source": [
+        2,
+        64,
+        0
+      ],
+      "sensor": [
+        6,
+        65,
+        0
+      ],
+      "initial": "lever[powered=false]",
+      "active": false,
+      "barrier": {
+        "label": "no-event",
+        "block": "air"
+      },
+      "geometry": {
+        "name": "lower",
+        "source": [
+          2,
+          64,
+          0
+        ],
+        "sensor": [
+          6,
+          65,
+          0
+        ],
+        "barrier": [
+          5,
+          65,
+          0
+        ],
+        "center_intersection_y": 65.25
+      },
+      "source_gameevent_origin": "unmeasured; coordinates record block centers only",
+      "prescribed_observation_seconds": 3.5,
+      "query_proof": {
+        "MCSA_READY_35": {
+          "command": "execute if block 6 65 0 sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false] run say MCSA_READY_35",
+          "server_log_lines": [
+            771
+          ],
+          "observed_marker": "[Server] MCSA_READY_35"
+        },
+        "MCSA_SOURCE_READY_35": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_SOURCE_READY_35",
+          "server_log_lines": [
+            772
+          ],
+          "observed_marker": "[Server] MCSA_SOURCE_READY_35"
+        },
+        "MCSA_BARRIER_READY_35": {
+          "command": "execute if block 5 65 0 air run say MCSA_BARRIER_READY_35",
+          "server_log_lines": [
+            773
+          ],
+          "observed_marker": "[Server] MCSA_BARRIER_READY_35"
+        },
+        "MCSA_LEVER_READY_35": {
+          "command": "execute if block 2 64 0 lever[face=floor,facing=north,powered=false] run say MCSA_LEVER_READY_35",
+          "server_log_lines": [
+            774
+          ],
+          "observed_marker": "[Server] MCSA_LEVER_READY_35"
+        }
+      },
+      "final_source": null,
+      "first_active_sensor": null
+    }
+  ],
+  "controls": [
+    {
+      "label": "emission/stone/place",
+      "expected_active": true,
+      "observed_active": true,
+      "matched": true
+    },
+    {
+      "label": "emission/stone/break",
+      "expected_active": true,
+      "observed_active": true,
+      "matched": true
+    },
+    {
+      "label": "emission/full-wool/place",
+      "expected_active": false,
+      "observed_active": false,
+      "matched": true
+    },
+    {
+      "label": "emission/full-wool/break",
+      "expected_active": false,
+      "observed_active": false,
+      "matched": true
+    },
+    {
+      "label": "occlusion/upper/air",
+      "expected_active": true,
+      "observed_active": true,
+      "matched": true
+    },
+    {
+      "label": "occlusion/upper/stone",
+      "expected_active": true,
+      "observed_active": true,
+      "matched": true
+    },
+    {
+      "label": "occlusion/upper/full-wool",
+      "expected_active": false,
+      "observed_active": false,
+      "matched": true
+    },
+    {
+      "label": "occlusion/upper/no-event",
+      "expected_active": false,
+      "observed_active": false,
+      "matched": true
+    },
+    {
+      "label": "occlusion/lower/air",
+      "expected_active": true,
+      "observed_active": true,
+      "matched": true
+    },
+    {
+      "label": "occlusion/lower/stone",
+      "expected_active": true,
+      "observed_active": true,
+      "matched": true
+    },
+    {
+      "label": "occlusion/lower/full-wool",
+      "expected_active": false,
+      "observed_active": false,
+      "matched": true
+    },
+    {
+      "label": "occlusion/lower/no-event",
+      "expected_active": false,
+      "observed_active": false,
+      "matched": true
+    }
+  ],
+  "cleanup": {
+    "server_exit": 0,
+    "group_gone": true,
+    "port_free": true
+  },
+  "limits": [
+    "selected discovery only; final dual-target pair pending",
+    "white only, not all16 colors",
+    "not frequency/calibration/event-origin/shapealgorithm/timing/packetformat parity",
+    "no fire/step/landing observations",
+    "wet initial bottom merge resulted in drydouble; separate wetdoublebreak fixture",
+    "prescribed observation window, not measured duration or exact tick timing"
+  ]
+}

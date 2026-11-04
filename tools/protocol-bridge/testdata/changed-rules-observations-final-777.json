@@ -1,0 +1,1360 @@
+{
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "json_sha256": {
+    "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+    "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+    "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+    "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+  },
+  "commands": [
+    {
+      "command": "gamerule minecraft:spawn_mobs false",
+      "result": "Game rule spawn_mobs is now set to false"
+    },
+    {
+      "command": "fill -8 63 -8 8 63 8 stone",
+      "result": "Successfully filled 289 block(s)"
+    },
+    {
+      "command": "tp McsaProbe 0.5 64 0.5 0 0",
+      "result": "Teleported McsaProbe to 0.500000, 64.000000, 0.500000"
+    },
+    {
+      "command": "gamemode survival McsaProbe",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Changed the block at 0, 63, 1"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_hoe",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Hoe]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with shield",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Shield]"
+    },
+    {
+      "command": "execute if block 0 63 1 grass_block run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Could not set the block"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_hoe",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Hoe]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with shield",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Shield]"
+    },
+    {
+      "command": "execute if block 0 63 1 farmland run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Changed the block at 0, 63, 1"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_hoe",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Hoe]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with air",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Air]"
+    },
+    {
+      "command": "execute if block 0 63 1 farmland run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Changed the block at 0, 63, 1"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_hoe",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Hoe]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with air",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Air]"
+    },
+    {
+      "command": "execute if block 0 63 1 farmland run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Changed the block at 0, 63, 1"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_shovel",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Shovel]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with shield",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Shield]"
+    },
+    {
+      "command": "execute if block 0 63 1 grass_block run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Could not set the block"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_shovel",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Shovel]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with shield",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Shield]"
+    },
+    {
+      "command": "execute if block 0 63 1 dirt_path run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Changed the block at 0, 63, 1"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_shovel",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Shovel]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with air",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Air]"
+    },
+    {
+      "command": "execute if block 0 63 1 dirt_path run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "setblock 0 63 1 grass_block",
+      "result": "Changed the block at 0, 63, 1"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.mainhand with iron_shovel",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Iron Shovel]"
+    },
+    {
+      "command": "item replace entity McsaProbe weapon.offhand with air",
+      "result": "Replaced 1 slot(s) on McsaProbe with [Air]"
+    },
+    {
+      "command": "execute if block 0 63 1 dirt_path run say RULE_OK",
+      "result": ""
+    },
+    {
+      "command": "clear McsaProbe",
+      "result": "Removed 1 item(s) from player McsaProbe"
+    },
+    {
+      "command": "team add rules",
+      "result": "Created team [rules]"
+    },
+    {
+      "command": "team modify rules color dark_purple",
+      "result": "Updated the color for team [rules] to dark_purple"
+    },
+    {
+      "command": "team modify rules color darkpurple",
+      "result": "Unknown color 'darkpurple'...darkpurple<--[HERE]"
+    },
+    {
+      "command": "team modify rules color DarkPurple",
+      "result": "Unknown color 'DarkPurple'...DarkPurple<--[HERE]"
+    },
+    {
+      "command": "attribute McsaProbe minecraft:knockback_resistance base set -2",
+      "result": "The base value for attribute Knockback Resistance for entity McsaProbe set to -2.0"
+    },
+    {
+      "command": "attribute McsaProbe minecraft:knockback_resistance get",
+      "result": "The value of attribute Knockback Resistance for entity McsaProbe is -2.0"
+    },
+    {
+      "command": "tick freeze",
+      "result": "The game is frozen"
+    },
+    {
+      "command": "setblock 4 64 4 red_bed",
+      "result": "Changed the block at 4, 64, 4"
+    },
+    {
+      "command": "summon armor_stand 4.5 64.57 4.5 {Tags:[\"bounce\"],Motion:[0d,-1d,0d]}",
+      "result": "Summoned new Armor Stand"
+    },
+    {
+      "command": "tick step 1",
+      "result": "Stepping 1 tick(s)"
+    },
+    {
+      "command": "data get entity @e[tag=bounce,limit=1] Motion",
+      "result": "Armor Stand has the following entity data: [0.0d, 0.6569306967408772d, 0.0d]"
+    },
+    {
+      "command": "fill 12 63 12 28 63 28 bedrock",
+      "result": "Successfully filled 289 block(s)"
+    },
+    {
+      "command": "summon enderman 20.5 64 20.5 {Tags:[\"rider\"],NoAI:1b}",
+      "result": "Summoned new Enderman"
+    },
+    {
+      "command": "summon oak_boat 20.5 64 20.5 {Tags:[\"vehicle\"]}",
+      "result": "Summoned new Oak Boat"
+    },
+    {
+      "command": "ride @e[tag=rider,limit=1] mount @e[tag=vehicle,limit=1]",
+      "result": "Enderman started riding Oak Boat"
+    },
+    {
+      "command": "damage @e[tag=rider,limit=1] 2 minecraft:arrow",
+      "result": "Applied 2.0 damage to Enderman"
+    },
+    {
+      "command": "data get entity @e[tag=rider,limit=1] Health",
+      "result": "Enderman has the following entity data: 38.0f"
+    },
+    {
+      "command": "setblock 6 64 6 decorated_pot",
+      "result": "Changed the block at 6, 64, 6"
+    },
+    {
+      "command": "data get block 6 64 6",
+      "result": "6, 64, 6 has the following block data: {components: {}, x: 6, y: 64, z: 6, id: \"minecraft:decorated_pot\"}"
+    },
+    {
+      "command": "setblock 6 64 6 decorated_pot{sherds:[{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"side\"}},{},{},{}]}",
+      "result": "Could not set the block"
+    },
+    {
+      "command": "data get block 6 64 6",
+      "result": "6, 64, 6 has the following block data: {components: {}, x: 6, y: 64, z: 6, id: \"minecraft:decorated_pot\"}"
+    },
+    {
+      "command": "setblock 6 64 6 air destroy",
+      "result": "Changed the block at 6, 64, 6"
+    },
+    {
+      "command": "data get entity @e[type=item,x=6,y=64,z=6,distance=..3,limit=1]",
+      "result": "Decorated Pot has the following entity data: {Motion: [-0.09298730407134428d, 0.2d, -0.04241805632659317d], Health: 5s, Invulnerable: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, PortalCooldown: 0, Rotation: [212.2142f, 0.0f], Item: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}, Pos: [6.601077852072993d, 64.46168704293012d, 6.648622690729472d], PickupDelay: 10s, Fire: 0s, UUID: [I; -34998730, 152653269, -1544020779, 545773936], Age: 0s}"
+    },
+    {
+      "command": "summon evoker 5 64 5 {Tags:[\"owner\"],NoAI:1b,UUID:[I;1,2,3,4]}",
+      "result": "Summoned new Evoker"
+    },
+    {
+      "command": "summon vex 5 65 5 {Tags:[\"owned\"],NoAI:1b,Owner:[I;1,2,3,4]}",
+      "result": "Summoned new Vex"
+    },
+    {
+      "command": "execute as @e[tag=owned] on owner run data get entity @s id",
+      "result": ""
+    },
+    {
+      "command": "advancement revoke McsaProbe only minecraft:story/root",
+      "result": "Couldn't revoke advancement [Minecraft] from McsaProbe as they don't have it"
+    },
+    {
+      "command": "advancement grant McsaProbe only minecraft:story/root",
+      "result": "Granted the advancement [Minecraft] to McsaProbe"
+    },
+    {
+      "command": "advancement grant McsaProbe only minecraft:story/root",
+      "result": "Couldn't grant advancement [Minecraft] to McsaProbe as they already have it"
+    },
+    {
+      "command": "advancement revoke McsaProbe only minecraft:story/root",
+      "result": "Revoked the advancement [Minecraft] from McsaProbe"
+    },
+    {
+      "command": "advancement revoke McsaProbe only minecraft:story/root",
+      "result": "Couldn't revoke advancement [Minecraft] from McsaProbe as they don't have it"
+    },
+    {
+      "command": "kill @e[tag=dim]",
+      "result": "No entity was found"
+    },
+    {
+      "command": "summon hoglin 40.5 64 40.5 {Tags:[\"dim\"],Age:-24000,IsBaby:1b,NoAI:1b}",
+      "result": "Summoned new Hoglin"
+    },
+    {
+      "command": "execute positioned 41.5 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 41.0 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.75 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.53125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5078125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50390625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.501953125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5009765625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50048828125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.500244140625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5001220703125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50006103515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 65.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.5 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.25 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.03125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.015625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0078125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00390625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.001953125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0009765625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00048828125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.000244140625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0001220703125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00006103515625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "kill @e[tag=dim]",
+      "result": "Killed Hoglin"
+    },
+    {
+      "command": "summon zoglin 40.5 64 40.5 {Tags:[\"dim\"],Age:-24000,IsBaby:1b,NoAI:1b}",
+      "result": "Summoned new Zoglin"
+    },
+    {
+      "command": "execute positioned 41.5 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 41.0 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.75 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.53125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5078125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50390625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.501953125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5009765625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50048828125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.500244140625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5001220703125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50006103515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 65.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.5 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.25 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.03125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.015625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0078125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00390625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.001953125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0009765625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00048828125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.000244140625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0001220703125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00006103515625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "kill @e[tag=dim]",
+      "result": "Killed Zoglin"
+    },
+    {
+      "command": "summon strider 40.5 64 40.5 {Tags:[\"dim\"],Age:-24000,IsBaby:1b,NoAI:1b}",
+      "result": "Summoned new Strider"
+    },
+    {
+      "command": "execute positioned 41.5 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 41.0 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.75 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.53125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5078125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50390625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.501953125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5009765625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50048828125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.500244140625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5001220703125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50006103515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 65.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.5 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.25 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.03125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.015625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0078125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00390625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.001953125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0009765625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00048828125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.000244140625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0001220703125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00006103515625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "kill @e[tag=dim]",
+      "result": "Killed Strider"
+    },
+    {
+      "command": "summon zombie 40.5 64 40.5 {Tags:[\"dim\"],Age:-24000,IsBaby:1b,NoAI:1b}",
+      "result": "Summoned new Zombie"
+    },
+    {
+      "command": "execute positioned 41.5 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 41.0 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.75 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.53125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5078125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50390625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.501953125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5009765625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50048828125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.500244140625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5001220703125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50006103515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 65.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.5 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.25 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.03125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.015625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0078125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00390625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.001953125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0009765625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00048828125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.000244140625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0001220703125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00006103515625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "kill @e[tag=dim]",
+      "result": "Killed Zombie"
+    },
+    {
+      "command": "summon piglin 40.5 64 40.5 {Tags:[\"dim\"],Age:-24000,IsBaby:1b,NoAI:1b}",
+      "result": "Summoned new Piglin"
+    },
+    {
+      "command": "execute positioned 41.5 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 41.0 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.75 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.53125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5078125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50390625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.501953125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5009765625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50048828125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.500244140625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5001220703125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50006103515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 65.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.5 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.25 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.03125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.015625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0078125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00390625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.001953125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0009765625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00048828125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.000244140625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0001220703125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00006103515625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "kill @e[tag=dim]",
+      "result": "Killed Piglin"
+    },
+    {
+      "command": "summon chicken 40.5 64 40.5 {Tags:[\"dim\"],Age:-24000,IsBaby:1b,NoAI:1b}",
+      "result": "Summoned new Chicken"
+    },
+    {
+      "command": "execute positioned 41.5 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 41.0 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.75 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.53125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5078125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50390625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.501953125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5009765625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50048828125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.500244140625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5001220703125 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.50006103515625 64.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 65.0 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.5 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.25 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.03125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.015625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0078125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00390625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.001953125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0009765625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00048828125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.000244140625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.0001220703125 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "execute positioned 40.5 64.00006103515625 40.5 if entity @e[tag=dim,dx=0,dy=0,dz=0] run say DIM_HIT",
+      "result": ""
+    },
+    {
+      "command": "time set noon",
+      "result": "Set minecraft:overworld to time marker minecraft:noon"
+    },
+    {
+      "command": "summon zombie 7 64 7 {Tags:[\"sunwear\"],NoAI:1b,equipment:{head:{id:\"minecraft:iron_helmet\",components:{\"minecraft:unbreakable\":{}}}}}",
+      "result": "Summoned new Zombie"
+    },
+    {
+      "command": "tick step 400",
+      "result": "Stepping 400 tick(s)"
+    },
+    {
+      "command": "data get entity @e[tag=sunwear,limit=1] equipment.head",
+      "result": "Zombie has the following entity data: {components: {\"minecraft:unbreakable\": {}}, count: 1, id: \"minecraft:iron_helmet\"}"
+    },
+    {
+      "command": "tick unfreeze",
+      "result": "The game is running normally"
+    },
+    {
+      "command": "gamemode spectator McsaProbe",
+      "result": "Set McsaProbe's game mode to Spectator Mode"
+    },
+    {
+      "command": "execute in minecraft:overworld run tp McsaProbe 0.5 64 0.5",
+      "result": "Teleported McsaProbe to 0.500000, 64.000000, 0.500000"
+    },
+    {
+      "command": "execute in minecraft:overworld run setblock 0 64 1 nether_portal",
+      "result": "Changed the block at 0, 64, 1"
+    },
+    {
+      "command": "data get entity McsaProbe Dimension",
+      "result": "McsaProbe has the following entity data: \"minecraft:overworld\""
+    },
+    {
+      "command": "data get entity McsaProbe Pos",
+      "result": "McsaProbe has the following entity data: [0.5d, 64.0d, 1.5d]"
+    },
+    {
+      "command": "execute in minecraft:overworld run setblock 0 64 1 air",
+      "result": "Changed the block at 0, 64, 1"
+    },
+    {
+      "command": "execute in minecraft:overworld run tp McsaProbe 0.5 64 0.5",
+      "result": "Teleported McsaProbe to 0.500000, 64.000000, 0.500000"
+    },
+    {
+      "command": "execute in minecraft:overworld run setblock 0 64 1 end_portal",
+      "result": "Changed the block at 0, 64, 1"
+    },
+    {
+      "command": "data get entity McsaProbe Dimension",
+      "result": "McsaProbe has the following entity data: \"minecraft:overworld\""
+    },
+    {
+      "command": "data get entity McsaProbe Pos",
+      "result": "McsaProbe has the following entity data: [0.5d, 64.0d, 1.5d]"
+    },
+    {
+      "command": "execute in minecraft:overworld run setblock 0 64 1 air",
+      "result": "Changed the block at 0, 64, 1"
+    },
+    {
+      "command": "execute in minecraft:overworld run tp McsaProbe 0.5 64 0.5",
+      "result": "Teleported McsaProbe to 0.500000, 64.000000, 0.500000"
+    },
+    {
+      "command": "execute in minecraft:overworld run setblock 0 64 1 end_gateway{Age:201L,ExactTeleport:1b,exit_portal:[I;8,65,8]}",
+      "result": "Changed the block at 0, 64, 1"
+    },
+    {
+      "command": "data get entity McsaProbe Dimension",
+      "result": "McsaProbe has the following entity data: \"minecraft:overworld\""
+    },
+    {
+      "command": "data get entity McsaProbe Pos",
+      "result": "McsaProbe has the following entity data: [0.5d, 64.0d, 1.5d]"
+    },
+    {
+      "command": "execute in minecraft:overworld run setblock 0 64 1 air",
+      "result": "Changed the block at 0, 64, 1"
+    }
+  ],
+  "cases": [
+    {
+      "label": "iron_hoe-shieldTrue-sneakFalse",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_hoe-shieldTrue-sneakTrue",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_hoe-shieldFalse-sneakFalse",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_hoe-shieldFalse-sneakTrue",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_shovel-shieldTrue-sneakFalse",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_shovel-shieldTrue-sneakTrue",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_shovel-shieldFalse-sneakFalse",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "iron_shovel-shieldFalse-sneakTrue",
+      "result": "",
+      "expected": "RULE_OK",
+      "passed": false
+    },
+    {
+      "label": "color-dark_purple",
+      "result": "Updated the color for team [rules] to dark_purple",
+      "passed": true
+    },
+    {
+      "label": "color-darkpurple",
+      "result": "Unknown color 'darkpurple'...darkpurple<--[HERE]",
+      "passed": true
+    },
+    {
+      "label": "color-DarkPurple",
+      "result": "Unknown color 'DarkPurple'...DarkPurple<--[HERE]",
+      "passed": true
+    },
+    {
+      "label": "knockback-min",
+      "result": "The value of attribute Knockback Resistance for entity McsaProbe is -2.0",
+      "expected": "-2",
+      "passed": true
+    },
+    {
+      "label": "bed-bounce",
+      "result": "Armor Stand has the following entity data: [0.0d, 0.6569306967408772d, 0.0d]",
+      "expected": "0.6566",
+      "passed": false
+    },
+    {
+      "label": "riding-enderman-projectile",
+      "result": "Enderman has the following entity data: 38.0f",
+      "expected": "38.0",
+      "passed": true
+    },
+    {
+      "label": "vex-owner",
+      "result": "",
+      "expected": "evoker",
+      "passed": false
+    },
+    {
+      "label": "sun-unbreakable",
+      "result": "Zombie has the following entity data: {components: {\"minecraft:unbreakable\": {}}, count: 1, id: \"minecraft:iron_helmet\"}",
+      "expected": "unbreakable",
+      "passed": true
+    },
+    {
+      "label": "spectator-nether_portal",
+      "result": "McsaProbe has the following entity data: \"minecraft:overworld\"",
+      "pos": "McsaProbe has the following entity data: [0.5d, 64.0d, 1.5d]"
+    },
+    {
+      "label": "spectator-end_portal",
+      "result": "McsaProbe has the following entity data: \"minecraft:overworld\"",
+      "pos": "McsaProbe has the following entity data: [0.5d, 64.0d, 1.5d]"
+    },
+    {
+      "label": "spectator-end_gateway",
+      "result": "McsaProbe has the following entity data: \"minecraft:overworld\"",
+      "pos": "McsaProbe has the following entity data: [0.5d, 64.0d, 1.5d]"
+    }
+  ],
+  "pid": 67,
+  "dimensions": {
+    "hoglin": [
+      [
+        0.0,
+        6.103515625e-05
+      ],
+      [
+        0.0,
+        6.103515625e-05
+      ]
+    ],
+    "zoglin": [
+      [
+        0.0,
+        6.103515625e-05
+      ],
+      [
+        0.0,
+        6.103515625e-05
+      ]
+    ],
+    "strider": [
+      [
+        0.0,
+        6.103515625e-05
+      ],
+      [
+        0.0,
+        6.103515625e-05
+      ]
+    ],
+    "zombie": [
+      [
+        0.0,
+        6.103515625e-05
+      ],
+      [
+        0.0,
+        6.103515625e-05
+      ]
+    ],
+    "piglin": [
+      [
+        0.0,
+        6.103515625e-05
+      ],
+      [
+        0.0,
+        6.103515625e-05
+      ]
+    ],
+    "chicken": [
+      [
+        0.0,
+        6.103515625e-05
+      ],
+      [
+        0.0,
+        6.103515625e-05
+      ]
+    ]
+  },
+  "exit_code": 143,
+  "log_evidence": {
+    "shield_RULE_OK_count": 8,
+    "dimension_hits": 157,
+    "limitations": [
+      "execute run say returns empty RCON response; dimensions cannot be inferred from the recorded responses",
+      "bed motion is 0.6569306967408772, not the old expected substring",
+      "spectator portal travel was not observed; explicit exit position and movement timing remain unproven",
+      "pot side compound SNBT was ignored by official 26.3 in this command; default empty pot was observed"
+    ],
+    "server_stopped": true,
+    "shield_lines": [
+      "[08:05:43] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:44] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:45] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:46] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:46] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:47] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:48] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK",
+      "[08:05:49] [Server thread/INFO]: [Not Secure] [Rcon] RULE_OK"
+    ]
+  },
+  "properties": {
+    "server-port": 26174,
+    "rcon.port": 26175,
+    "white-list": false,
+    "enforce-whitelist": false
+  },
+  "verified_checks": [
+    "color-dark_purple",
+    "color-darkpurple",
+    "color-DarkPurple",
+    "knockback-min",
+    "riding-enderman-projectile",
+    "sun-unbreakable",
+    "iron_hoe-shieldTrue-sneakFalse",
+    "iron_hoe-shieldTrue-sneakTrue",
+    "iron_hoe-shieldFalse-sneakFalse",
+    "iron_hoe-shieldFalse-sneakTrue",
+    "iron_shovel-shieldTrue-sneakFalse",
+    "iron_shovel-shieldTrue-sneakTrue",
+    "iron_shovel-shieldFalse-sneakFalse",
+    "iron_shovel-shieldFalse-sneakTrue",
+    "bed-motion-numeric",
+    "advancement-transition-0",
+    "advancement-transition-1",
+    "advancement-transition-2",
+    "advancement-transition-3",
+    "advancement-transition-4",
+    "empty-default-pot"
+  ],
+  "verified_count": 21
+}

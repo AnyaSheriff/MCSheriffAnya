@@ -1,0 +1,503 @@
+{
+  "owner_click": "SHIFT-click, mode 1",
+  "owner_item_loss_reproduced": false,
+  "owner_fabric_viafabricplus": "[проверить]",
+  "rust": {
+    "head": "99103075dfcd943d74c5ab733cd9a6b1e27cca3f",
+    "test": {
+      "command": "CARGO_BUILD_JOBS=4 flock /home/lenox/.cache/mcsheriffanya/gen-audit-263/.cargo.lock cargo test --release --workspace",
+      "exit_code": 0,
+      "passed": 3411,
+      "ignored": 111,
+      "failed": 0,
+      "new_regressions": 13,
+      "log_sha256": "da8d30231e3fd21587345c30249a87f06593a99d91e2b8f49f3c21ceac695326"
+    },
+    "source_sha256": {
+      "src/network/play.rs": "d79ab1589bb5b7dde55ae4c660665714c2ea53fdf3756d03c241be634c63d1b2",
+      "src/window.rs": "c56e1c3e2f5649701bf703620e92518835ca794e98bfa176db2386c2a8287177",
+      "src/network/play/shulker_hotbar_tests.rs": "70bbe799243d03994ea32400bb53e091cc5fabe435edae60e293a77a190b3696"
+    },
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "clippy": {
+      "command": "CARGO_BUILD_JOBS=4 flock /home/lenox/.cache/mcsheriffanya/gen-audit-263/.cargo.lock cargo clippy --release --all-targets --workspace -- -D warnings",
+      "exit_code": 0,
+      "log_sha256": "c433243c98b0b78cf4ca2e280a393254d3a4cf9ce52efcf947b42c05f4a41ec4"
+    },
+    "baseline": {
+      "head": "99103075dfcd943d74c5ab733cd9a6b1e27cca3f",
+      "binary_sha256": "c22304573fbe132f5359fecf340c5203360487da21c8d1d553f54bd56282ae0f",
+      "source_sha256": {
+        "src/network/play.rs": "9a51b285355077e724a2f1fffdada2c3550a14e13fa9066338f0b512a7544936",
+        "src/window.rs": "47443fd5956c7220145f4c5220b44c4d0cc551a85b0799840ebfb1b647349fb7"
+      },
+      "cargo_lock_sha256": "7d4ed14317f114de8174b54dfc4a448aa1adc11e481b32e93efd24c6bbebf444",
+      "cache_reuse_rejected": true,
+      "forced_rebuild_exit_code": 0
+    }
+  },
+  "comparisons": {
+    "final-777.json": {
+      "cases": 172,
+      "passed": 172,
+      "matching_official": 172,
+      "relogin_pass": true,
+      "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+    },
+    "shift-final-777.json": {
+      "cases": 34,
+      "passed": 34,
+      "matching_official": 34,
+      "relogin_pass": true,
+      "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+    },
+    "ground-final-777.json": {
+      "cases": 6,
+      "passed": 6,
+      "matching_official": 6,
+      "relogin_pass": true,
+      "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+    },
+    "final-775.json": {
+      "cases": 172,
+      "passed": 172,
+      "matching_official": 172,
+      "relogin_pass": true,
+      "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+    },
+    "shift-final-775.json": {
+      "cases": 34,
+      "passed": 34,
+      "matching_official": 34,
+      "relogin_pass": true,
+      "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+    },
+    "ground-final-775.json": {
+      "cases": 6,
+      "passed": 6,
+      "matching_official": 6,
+      "relogin_pass": true,
+      "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+    }
+  },
+  "head_shift": {
+    "cases": 34,
+    "authoritative_item_snapshots_correct": 34,
+    "missing_stale_state_full_sync": 6,
+    "head": "99103075dfcd943d74c5ab733cd9a6b1e27cca3f",
+    "binary_sha256": "c22304573fbe132f5359fecf340c5203360487da21c8d1d553f54bd56282ae0f"
+  },
+  "via_final": [
+    {
+      "scenario": "shulker-hotbar-quick-move",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        29,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-hotbar-drag-left",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        25,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-hotbar-drag-right",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        27,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-open",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        24,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-break",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        79,
+        0,
+        9,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-stand",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        51,
+        0,
+        0,
+        0
+      ],
+      "warnings": [
+        "Внимание: у оригинала «подбор опыта роботом»: 0 шт., вне [1, 9]",
+        "Внимание: у нас «подбор опыта роботом»: 0 шт., вне [1, 9] — без допуска"
+      ]
+    },
+    {
+      "scenario": "shulker-ai",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        17,
+        0,
+        28,
+        15
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "chest-open",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        26,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "chest-slots",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        40,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "bundle-chest-select",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "counts": [
+        51,
+        0,
+        0,
+        1
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "craft-inventory-planks",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        12,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "ender-chest-open",
+      "repeat": 0,
+      "exits": {
+        "official": 0,
+        "ours": 0
+      },
+      "status": "match",
+      "counts": [
+        35,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    }
+  ],
+  "via_head": [
+    {
+      "scenario": "shulker-hotbar-quick-move",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "fb7e8e94ebc0a6db867b74572c312e65b77bf8ead24a429c3a944c1c24e43f3c",
+      "counts": [
+        29,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-hotbar-drag-left",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "9e039adac1c1efaff0c4bc753c0d9f0cafe7069b39a6859bd32cf6fc23a44eb0",
+      "counts": [
+        21,
+        0,
+        4,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-hotbar-drag-right",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "bf747f0a0681fd05d837dea0fbb9960b2cf77b953f5f68605911c687c3d48aa9",
+      "counts": [
+        21,
+        0,
+        6,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-open",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "1e6a9a5aa56301aa88b6d3cdb6f7e66600a4af5e658ab76767cc9b206005cdc4",
+      "counts": [
+        24,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-break",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "8b283bbcf4dd9b60a948ca59750b238e0ff7c76d5cb7d9c88701b0cd8ff282a2",
+      "counts": [
+        79,
+        0,
+        9,
+        3
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "shulker-stand",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "758b1007554fe8584f6bd6793ab193e07e1ccd4c551555cd6de2d9309301f1f1",
+      "counts": [
+        48,
+        0,
+        3,
+        0
+      ],
+      "warnings": [
+        "Внимание: у оригинала «подбор опыта роботом»: 0 шт., вне [1, 9]",
+        "Внимание: у нас «подбор опыта роботом»: 0 шт., вне [1, 9] — без допуска"
+      ]
+    },
+    {
+      "scenario": "shulker-ai",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "0336b1bdfbbfcc6ff0399fb3b7f312c9c5456531fc7cfd5656777393723ee037",
+      "counts": [
+        16,
+        1,
+        28,
+        13
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "chest-open",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "d0ba4a15f4a72be091a88609cca4f5502bf6600b127945e46098c2eecff7beef",
+      "counts": [
+        26,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "chest-slots",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "3f4ac155940c803347ff972fcb53ff3bf3cc4183fc0f50182704ca5d2badafb6",
+      "counts": [
+        40,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "bundle-chest-select",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "mismatch-open",
+      "official_sha256": "ddbe912db1a3f0aa7211257bd34b6adff0f4542ca67a0ee9436b0b121c8a0b76",
+      "counts": [
+        51,
+        0,
+        0,
+        1
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "craft-inventory-planks",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "048cb7c5f6dff9aa3a775aef5a9d1397501015cfc0db70322eb8417ce094c784",
+      "counts": [
+        12,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    },
+    {
+      "scenario": "ender-chest-open",
+      "repeat": 0,
+      "exits": {
+        "ours": 0
+      },
+      "status": "match",
+      "official_sha256": "29a2812f2b9052c1efe59778553e5fd939bcf93eefff448871df74a9a4e89359",
+      "counts": [
+        35,
+        0,
+        0,
+        0
+      ],
+      "warnings": []
+    }
+  ],
+  "via_final_exact": 8,
+  "via_head_exact": 6,
+  "existing_probes": {
+    "775": {
+      "inventory": 12,
+      "container": 5,
+      "exit_code": 0
+    },
+    "777": {
+      "inventory": 12,
+      "container": 5,
+      "exit_code": 0
+    }
+  },
+  "cleanup": {
+    "test_ports_free": true,
+    "tmp_removed": true,
+    "no_commit": true
+  }
+}

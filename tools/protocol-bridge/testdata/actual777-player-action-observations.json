@@ -1,0 +1,218 @@
+{
+  "protocol": 777,
+  "statuses": {
+    "start": 0,
+    "finish": 3,
+    "cancel": 2,
+    "drop_one": 5,
+    "drop_stack": 4,
+    "swap": 7
+  },
+  "source": "/home/lenox/.local/share/mcsa-handoff/verification-actual777-actions-04/result.json",
+  "source_sha256": "51ec98869afd72c16b4003044288cc71db71ba5985b17f72497041f1fcff12cf",
+  "server_log_sha256": "c5382866311582fa8875ff8bf6a551102139a97b8e99416cf04ef5d5dc00f6dd",
+  "visual_review_sha256": "5b1defa32ff9c54a66e825ac37907c0079df8d78a00081f8cd29471cadb17e6e",
+  "source_result": "PASS-packet-evidence-visual-review-pending",
+  "visual_review_status": "PASS",
+  "previous_start_finish": {
+    "fixture": "actual777-dig-observations.json",
+    "fixture_sha256": "bde1b9c65160703d9237dbec905a068d94971e691dc2d3d6a1537a0c44fea03a",
+    "source_sha256": "2c9622a8ec5740665f4018175f54d8cf47d2ca88e6833b42f700d1bb6f151d21"
+  },
+  "native775_swap": {
+    "source": "/home/lenox/.local/share/mcsa-handoff/verification-actions775-swap-01/result.json",
+    "source_sha256": "11890cb9649a2b62b445d03af62fce187084d75649115d402c2a4e9c8ba31069",
+    "status": 6,
+    "mainhand": {
+      "item": 909,
+      "count": 5
+    },
+    "offhand": {
+      "item": 905,
+      "count": 3
+    }
+  },
+  "scope": "Four actual official777 GUI cases; exact server hand count/id predicates plus selected drops/retained block. No release-use/jab enum inference.",
+  "observations": [
+    {
+      "case": "cancel",
+      "actions": [
+        {
+          "status": 0,
+          "target": [
+            2,
+            65,
+            0
+          ],
+          "face": 4,
+          "sequence": 1,
+          "payload_hex": "0000000080000000410401",
+          "elapsed": 47.8557547370001
+        },
+        {
+          "status": 2,
+          "target": [
+            2,
+            65,
+            0
+          ],
+          "face": 0,
+          "sequence": 0,
+          "payload_hex": "0200000080000000410000",
+          "elapsed": 48.09845791199996
+        }
+      ],
+      "server_hands": {
+        "mainhand": null,
+        "offhand": null
+      },
+      "last_owner_slot_echo": {
+        "mainhand": null,
+        "offhand": null
+      },
+      "positive_console_predicates": [
+        "execute unless data entity McsaProbe SelectedItem run say MCSA_ACTION_cancel_AFTER_mainhand",
+        "execute unless data entity McsaProbe equipment.offhand run say MCSA_ACTION_cancel_AFTER_offhand"
+      ],
+      "drops": [],
+      "target_retained": true,
+      "acks": [
+        1,
+        0
+      ]
+    },
+    {
+      "case": "drop-one",
+      "actions": [
+        {
+          "status": 5,
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "face": 0,
+          "sequence": 0,
+          "payload_hex": "0500000000000000000000",
+          "elapsed": 66.26588712400007
+        }
+      ],
+      "server_hands": {
+        "mainhand": {
+          "item": 1,
+          "count": 6
+        },
+        "offhand": null
+      },
+      "last_owner_slot_echo": {
+        "mainhand": {
+          "item": 1,
+          "count": 7
+        },
+        "offhand": null
+      },
+      "positive_console_predicates": [
+        "execute if data entity McsaProbe SelectedItem{count:6,id:\"minecraft:stone\"} run say MCSA_ACTION_drop-one_AFTER_mainhand",
+        "execute unless data entity McsaProbe equipment.offhand run say MCSA_ACTION_drop-one_AFTER_offhand"
+      ],
+      "drops": [
+        {
+          "entity": 2,
+          "slot": {
+            "item": 1,
+            "count": 1
+          }
+        }
+      ],
+      "target_retained": false,
+      "acks": []
+    },
+    {
+      "case": "drop-stack",
+      "actions": [
+        {
+          "status": 4,
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "face": 0,
+          "sequence": 0,
+          "payload_hex": "0400000000000000000000",
+          "elapsed": 85.94442808099984
+        }
+      ],
+      "server_hands": {
+        "mainhand": null,
+        "offhand": null
+      },
+      "last_owner_slot_echo": {
+        "mainhand": {
+          "item": 62,
+          "count": 11
+        },
+        "offhand": null
+      },
+      "positive_console_predicates": [
+        "execute unless data entity McsaProbe SelectedItem run say MCSA_ACTION_drop-stack_AFTER_mainhand",
+        "execute unless data entity McsaProbe equipment.offhand run say MCSA_ACTION_drop-stack_AFTER_offhand"
+      ],
+      "drops": [
+        {
+          "entity": 3,
+          "slot": {
+            "item": 62,
+            "count": 11
+          }
+        }
+      ],
+      "target_retained": false,
+      "acks": []
+    },
+    {
+      "case": "swap",
+      "actions": [
+        {
+          "status": 7,
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "face": 0,
+          "sequence": 0,
+          "payload_hex": "0700000000000000000000",
+          "elapsed": 101.94299433800006
+        }
+      ],
+      "server_hands": {
+        "mainhand": {
+          "item": 1022,
+          "count": 5
+        },
+        "offhand": {
+          "item": 1018,
+          "count": 3
+        }
+      },
+      "last_owner_slot_echo": {
+        "mainhand": {
+          "item": 1022,
+          "count": 5
+        },
+        "offhand": {
+          "item": 1018,
+          "count": 3
+        }
+      },
+      "positive_console_predicates": [
+        "execute if data entity McsaProbe SelectedItem{count:5,id:\"minecraft:gold_ingot\"} run say MCSA_ACTION_swap_AFTER_mainhand",
+        "execute if data entity McsaProbe equipment.offhand{count:3,id:\"minecraft:iron_ingot\"} run say MCSA_ACTION_swap_AFTER_offhand"
+      ],
+      "drops": [],
+      "target_retained": false,
+      "acks": []
+    }
+  ]
+}

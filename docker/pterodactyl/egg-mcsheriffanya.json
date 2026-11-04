@@ -7,7 +7,7 @@
     "exported_at": "2026-10-16T00:00:00+00:00",
     "name": "MCSheriffAnya",
     "author": "AnyaSheriff@users.noreply.github.com",
-    "description": "Minecraft-compatible server written in Rust (MIT, alpha). Java 26.1.2 / protocol 775; partial Bedrock 26.10–26.13 / protocol 944. Binary is included in the panel image. Allocate a UDP port for Bedrock or set BEDROCK_PORT=0. gamemode in server.properties is not implemented; use console commands.",
+    "description": "Minecraft-compatible server written in Rust (MIT, alpha). Java 26.3 / protocol 777; partial Bedrock 26.10–26.13 / protocol 944. Binary is included in the panel image. Allocate a UDP port for Bedrock or set BEDROCK_PORT=0. gamemode in server.properties is not implemented; use console commands.",
     "features": [],
     "docker_images": {
         "MCSheriffAnya (panel)": "sheriffanya/mcsa:panel"

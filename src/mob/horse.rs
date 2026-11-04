@@ -313,7 +313,12 @@ pub fn write(mob: &Mob, out: &mut Vec<u8>) {
     }
 }
 
+#[cfg(test)]
 pub fn read(mob: &mut Mob, bytes: &mut &[u8]) -> Option<()> {
+    read_with_legacy_metadata(mob, bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(mob: &mut Mob, bytes: &mut &[u8], legacy_metadata: bool) -> Option<()> {
     mob.tame = tame::read(bytes)?;
     let mut take = |count: usize| { let (head, rest) = bytes.split_at_checked(count)?; *bytes = rest; Some(head) };
     let health = f32::from_be_bytes(take(4)?.try_into().ok()?);
@@ -334,10 +339,8 @@ pub fn read(mob: &mut Mob, bytes: &mut &[u8]) -> Option<()> {
         if take(1)?[0] == 0 { continue; }
         let stored = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let extras = Stack::read_extras(stored, &mut take)?;
-        let mut s = Stack::from_stored(stored, count);
-        if let Some(extras) = extras { s = s.with_extras(extras); }
-        *slot = (count > 0).then_some(s);
+        let extras = Stack::read_extras_strict_with_legacy_metadata(stored, &mut take, legacy_metadata)?;
+        *slot = Some(Stack::from_stored_strict(stored, count, extras)?);
     }
     Some(())
 }

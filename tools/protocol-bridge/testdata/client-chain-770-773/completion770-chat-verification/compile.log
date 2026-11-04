@@ -1,0 +1,87 @@
+    Updating crates.io index
+     Locking 322 packages to latest Rust 1.98.1 compatible versions
+      Adding aes v0.8.4 (available: v0.9.3)
+      Adding argon2 v0.5.3 (available: v0.6.0)
+      Adding cfb8 v0.8.1 (available: v0.9.1)
+      Adding cranelift-bforest v0.136.2 (available: v0.136.4)
+      Adding cranelift-bitset v0.136.2 (available: v0.136.4)
+      Adding cranelift-codegen v0.136.2 (available: v0.136.4)
+      Adding cranelift-codegen-meta v0.136.2 (available: v0.136.4)
+      Adding cranelift-entity v0.136.2 (available: v0.136.4)
+      Adding cranelift-frontend v0.136.2 (available: v0.136.4)
+      Adding cranelift-isle v0.136.2 (available: v0.136.4)
+      Adding cranelift-native v0.136.2 (available: v0.136.4)
+      Adding generic-array v0.14.7 (available: v0.14.9)
+      Adding hmac v0.12.1 (available: v0.13.0)
+      Adding js-sys v0.3.81 (available: v0.3.106)
+      Adding md-5 v0.10.6 (available: v0.11.0)
+      Adding png v0.17.16 (available: v0.18.1)
+      Adding pulley-interpreter v49.0.2 (available: v49.0.4)
+      Adding pulley-macros v49.0.2 (available: v49.0.4)
+      Adding sha1 v0.10.7 (available: v0.11.0)
+      Adding sha2 v0.10.9 (available: v0.11.1)
+      Adding toml v0.8.23 (available: v1.1.8+spec-1.1.0)
+      Adding wasm-bindgen v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-futures v0.4.54 (available: v0.4.79)
+      Adding wasm-bindgen-macro v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-macro-support v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-shared v0.2.104 (available: v0.2.129)
+      Adding wasmtime v49.0.2 (available: v49.0.4)
+      Adding wasmtime-environ v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-component-macro v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-component-util v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-core v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-cranelift v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-fiber v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-jit-debug v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-jit-icache-coherence v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-unwinder v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-versioned-export-macros v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-wit-bindgen v49.0.2 (available: v49.0.4)
+      Adding wasmtime-wasi v49.0.2 (available: v49.0.4)
+      Adding wasmtime-wasi-io v49.0.2 (available: v49.0.4)
+      Adding web-sys v0.3.81 (available: v0.3.106)
+      Adding zstd v0.13.3 (available: v0.14.3)
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv15/tools/seedmap)
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv15/tools/protocol-bridge)
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv15)
+error[E0599]: no associated function or constant named `in_memory_with_catalog` found for struct `world::World` in the current scope
+    --> src/network/play/auth_limbo.rs:18:35
+     |
+  18 |     let world = Mutex::new(World::in_memory_with_catalog(shared.catalog()));
+     |                                   ^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `world::World`
+     |
+    ::: src/world/mod.rs:1266:1
+     |
+1266 | pub struct World {
+     | ---------------- associated function or constant `in_memory_with_catalog` not found for this struct
+     |
+note: if you're trying to build a new `world::World` consider using one of the following associated functions:
+      world::World::open
+      world::World::open_with_catalog
+    --> src/world/mod.rs:1671:5
+     |
+1671 | /     pub fn open(
+1672 | |         directory: impl AsRef<Path>,
+1673 | |         wanted_seed: Option<i64>,
+1674 | |         wanted_kind: WorldKind,
+1675 | |     ) -> io::Result<Self> {
+     | |_________________________^
+...
+1681 | /     pub fn open_with_catalog(
+1682 | |         directory: impl AsRef<Path>, wanted_seed: Option<i64>, wanted_kind: WorldKind,
+1683 | |         catalog: crate::gameplay_catalog::Catalog,
+1684 | |     ) -> io::Result<Self> {
+     | |_________________________^
+help: there is an associated function `open_with_catalog` with a similar name
+    --> src/world/mod.rs:1681:5
+     |
+1681 | /     pub fn open_with_catalog(
+1682 | |         directory: impl AsRef<Path>, wanted_seed: Option<i64>, wanted_kind: WorldKind,
+1683 | |         catalog: crate::gameplay_catalog::Catalog,
+1684 | |     ) -> io::Result<Self> {
+     | |_________________________^
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `mcsheriffanya` (bin "mcsheriffanya") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

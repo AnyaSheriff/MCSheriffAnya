@@ -1,0 +1,344 @@
+{
+  "old": {
+    "version": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "particles": [
+      {
+        "case": "cloud",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000704"
+      },
+      {
+        "case": "block",
+        "command": "particle block{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007011b"
+      },
+      {
+        "case": "block_marker",
+        "command": "particle block_marker{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007021b"
+      },
+      {
+        "case": "falling_dust",
+        "command": "particle falling_dust{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000071d1b"
+      },
+      {
+        "case": "dust_pillar",
+        "command": "particle dust_pillar{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000076f1b"
+      },
+      {
+        "case": "block_crumble",
+        "command": "particle block_crumble{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007731b"
+      },
+      {
+        "case": "dust",
+        "command": "particle dust{color:[1f,0.5f,0.25f],scale:1.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070effff7f3f3fc00000"
+      },
+      {
+        "case": "dust_color_transition",
+        "command": "particle dust_color_transition{from_color:[1f,0f,0f],to_color:[0f,0f,1f],scale:1.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070fffff0000ff0000ff3fc00000"
+      },
+      {
+        "case": "entity_effect",
+        "command": "particle entity_effect{color:[1f,0.5f,0.25f,1f]} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000715ffff7f3f"
+      },
+      {
+        "case": "item",
+        "command": "particle item{item:{id:\"minecraft:red_wool\",count:5}} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072fe301050000"
+      },
+      {
+        "case": "item_damage",
+        "command": "particle item{item:{id:\"minecraft:diamond_sword\",count:1,components:{\"minecraft:damage\":7}}} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072fa9070101000307"
+      },
+      {
+        "case": "sculk_charge",
+        "command": "particle sculk_charge{roll:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007263f000000"
+      },
+      {
+        "case": "shriek",
+        "command": "particle shriek{delay:7} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000076907"
+      },
+      {
+        "case": "vibration_block",
+        "command": "particle vibration{destination:{type:\"block\",pos:[2,80,2]},arrival_in_ticks:10} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007300000000080000020500a"
+      },
+      {
+        "case": "trail",
+        "command": "particle trail{target:[2d,80d,2d],color:16711680,duration:10} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000073140000000000000004054000000000000400000000000000000ff00000a"
+      },
+      {
+        "case": "tinted_leaves",
+        "command": "particle tinted_leaves{color:16711680} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072400ff0000"
+      },
+      {
+        "case": "dragon_breath",
+        "command": "particle dragon_breath{power:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007083f000000"
+      },
+      {
+        "case": "effect",
+        "command": "particle effect{color:16711680,power:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000071000ff00003f000000"
+      },
+      {
+        "case": "instant_effect",
+        "command": "particle instant_effect{color:16711680,power:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072e00ff00003f000000"
+      },
+      {
+        "case": "flash",
+        "command": "particle flash{color:[1f,0.5f,0.25f,1f]} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072affff7f3f"
+      },
+      {
+        "case": "cloud_zero",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 0 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000004"
+      },
+      {
+        "case": "cloud_one",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 1 force McsaProbe",
+        "name": "world_particles",
+        "body": "2f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000104"
+      },
+      {
+        "case": "cloud_normal",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 7 normal McsaProbe",
+        "name": "world_particles",
+        "body": "2f00003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000704"
+      }
+    ],
+    "metadata": [
+      {
+        "type": "area_effect_cloud",
+        "id": 2,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "63020803400000000a1015ff385dc6ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "63020803400000000a1015ff385dc6ff"
+          }
+        ]
+      },
+      {
+        "type": "cow",
+        "id": 3,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "63030a110215ffffc70015ff33ebffff"
+          }
+        ]
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "version": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "particles": [
+      {
+        "case": "cloud",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "300b01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "block",
+        "command": "particle block{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30011c01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "block_marker",
+        "command": "particle block_marker{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30021c01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "falling_dust",
+        "command": "particle falling_dust{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30241c01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "dust_pillar",
+        "command": "particle dust_pillar{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30791c01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "block_crumble",
+        "command": "particle block_crumble{block_state:\"minecraft:bamboo_planks\"} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "307d1c01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "dust",
+        "command": "particle dust{color:[1f,0.5f,0.25f],scale:1.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "3015ffff7f3f3fc0000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "dust_color_transition",
+        "command": "particle dust_color_transition{from_color:[1f,0f,0f],to_color:[0f,0f,1f],scale:1.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "3016ffff0000ff0000ff3fc0000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "entity_effect",
+        "command": "particle entity_effect{color:[1f,0.5f,0.25f,1f]} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "301cffff7f3f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "item",
+        "command": "particle item{item:{id:\"minecraft:red_wool\",count:5}} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "3039880205000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "item_damage",
+        "command": "particle item{item:{id:\"minecraft:diamond_sword\",count:1,components:{\"minecraft:damage\":7}}} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30399a08010100030701003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "sculk_charge",
+        "command": "particle sculk_charge{roll:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30303f00000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "shriek",
+        "command": "particle shriek{delay:7} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "30730701003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "vibration_block",
+        "command": "particle vibration{destination:{type:\"block\",pos:[2,80,2]},arrival_in_ticks:10} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "303a0000000080000020500a01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "trail",
+        "command": "particle trail{target:[2d,80d,2d],color:16711680,duration:10} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "303b40000000000000004054000000000000400000000000000000ff00000a01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "tinted_leaves",
+        "command": "particle tinted_leaves{color:16711680} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "302e00ff000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "dragon_breath",
+        "command": "particle dragon_breath{power:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "300f3f00000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "effect",
+        "command": "particle effect{color:16711680,power:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "301700ff00003f00000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "instant_effect",
+        "command": "particle instant_effect{color:16711680,power:0.5f} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "303800ff00003f00000001003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "flash",
+        "command": "particle flash{color:[1f,0.5f,0.25f,1f]} 1 81 2 0.25 0.5 0.75 0.125 7 force McsaProbe",
+        "name": "world_particles",
+        "body": "3034ffff7f3f01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      },
+      {
+        "case": "cloud_zero",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 0 force McsaProbe",
+        "name": "world_particles",
+        "body": "300b01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000000"
+      },
+      {
+        "case": "cloud_one",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 1 force McsaProbe",
+        "name": "world_particles",
+        "body": "300b01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000100"
+      },
+      {
+        "case": "cloud_normal",
+        "command": "particle cloud 1 81 2 0.25 0.5 0.75 0.125 7 normal McsaProbe",
+        "name": "world_particles",
+        "body": "300b00003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000003e0000003e0000000700"
+      }
+    ],
+    "metadata": [
+      {
+        "type": "area_effect_cloud",
+        "id": 2,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "65020803400000000a101cff385dc6ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "65020803400000000a101cff385dc6ff"
+          }
+        ]
+      },
+      {
+        "type": "cow",
+        "id": 3,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "65030a11021cff33ebff1cffffc700ff"
+          }
+        ]
+      }
+    ],
+    "exit_code": 0
+  }
+}

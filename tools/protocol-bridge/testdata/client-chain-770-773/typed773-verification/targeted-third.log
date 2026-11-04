@@ -1,0 +1,15 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv10/tools/protocol-bridge)
+    Finished `release` profile [optimized] target(s) in 8.12s
+     Running unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-484fd9e2a0621407)
+
+running 7 tests
+test client_773::tests::changed_anger_semantics_are_refused_in_both_directions ... ok
+test client_773::tests::inventory_slots_map_real_component_ids_and_bound_each_envelope ... ok
+test client_773::tests::predictions_remap_component_ids_and_reject_invalid_clicks ... ok
+test client_773::tests::unsupported_content_and_routes_still_fail_closed ... ok
+test client_773::tests::recipes_and_item_particles_use_count_first_nested_templates ... ok
+test client_773::tests::metadata_uses_separate_layouts_and_serializer_ids ... ok
+test client_773::tests::nested_official_fixture_items_preserve_canonical_stacks ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 242 filtered out; finished in 0.00s
+

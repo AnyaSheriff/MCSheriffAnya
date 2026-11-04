@@ -1,0 +1,57 @@
+{
+  "name": "attr-respawn-odd-probe",
+  "about": "[проверить] Probe: does respawn restart the 26.3 two-tick attribute phase? Kill at +5, respawn at +21, durability-only sword replacements at alternating parities.",
+  "exclusive": true,
+  "manual_respawn": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamerule keep_inventory false",
+    "fill $(-2,-1,-2) $(7,-1,7) stone",
+    "fill $(-2,0,-2) $(7,6,7) air",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,3.5)",
+    "gamemode survival $(bot)",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "cmd": "kill $(bot)"
+    },
+    {
+      "after": 21,
+      "respawn": true
+    },
+    {
+      "after": 40,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=1]"
+    },
+    {
+      "after": 51,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=2]"
+    },
+    {
+      "after": 62,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=3]"
+    },
+    {
+      "after": 73,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=4]"
+    },
+    {
+      "after": 84,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=5]"
+    },
+    {
+      "after": 95,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=6]"
+    }
+  ],
+  "record_ticks": 110
+}

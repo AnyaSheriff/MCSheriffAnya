@@ -1,0 +1,77 @@
+[
+  {
+    "name": "774-gui775-v2",
+    "exit": 0,
+    "seconds": 65.34
+  },
+  {
+    "name": "774-gui777",
+    "exit": 0,
+    "seconds": 64.12
+  },
+  {
+    "name": "776-gui775",
+    "exit": 0,
+    "seconds": 64.51
+  },
+  {
+    "name": "776-gui777",
+    "exit": 0,
+    "seconds": 64.64
+  },
+  {
+    "name": "774-gameplay775",
+    "exit": 0,
+    "seconds": 32.13
+  },
+  {
+    "name": "774-gameplay777",
+    "exit": 0,
+    "seconds": 46.92
+  },
+  {
+    "name": "776-gameplay775",
+    "exit": 0,
+    "seconds": 32.65
+  },
+  {
+    "name": "776-gameplay777",
+    "exit": 0,
+    "seconds": 46.74
+  },
+  {
+    "name": "774-dimensions777",
+    "exit": 0,
+    "seconds": 32.32
+  },
+  {
+    "name": "776-dimensions775",
+    "exit": 0,
+    "seconds": 17.35
+  },
+  {
+    "name": "776-dimensions777",
+    "exit": 0,
+    "seconds": 31.97
+  },
+  {
+    "name": "774-password775",
+    "exit": 0,
+    "seconds": 3.1
+  },
+  {
+    "name": "774-password777",
+    "exit": 0,
+    "seconds": 8.44
+  },
+  {
+    "name": "776-password775",
+    "exit": 0,
+    "seconds": 2.86
+  },
+  {
+    "name": "776-password777",
+    "exit": 0,
+    "seconds": 8.36
+  }
+]

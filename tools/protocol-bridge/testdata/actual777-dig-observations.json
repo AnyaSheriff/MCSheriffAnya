@@ -1,0 +1,101 @@
+{
+  "source": "/home/lenox/.local/share/mcsa-handoff/verification-primary263-actual-dig-01/result.json",
+  "source_sha256": "2c9622a8ec5740665f4018175f54d8cf47d2ca88e6833b42f700d1bb6f151d21",
+  "protocol": 777,
+  "observations": [
+    {
+      "case": "stone",
+      "dig": [
+        {
+          "status": 0,
+          "target": [
+            2,
+            65,
+            0
+          ],
+          "face": 4,
+          "sequence": 1,
+          "payload_hex": "0000000080000000410401",
+          "elapsed": 71.31101950300217,
+          "tick_end_count": 900
+        },
+        {
+          "status": 3,
+          "target": [
+            2,
+            65,
+            0
+          ],
+          "face": 4,
+          "sequence": 2,
+          "payload_hex": "0300000080000000410402",
+          "elapsed": 71.55734332300199,
+          "tick_end_count": 905
+        }
+      ],
+      "elapsed_seconds": 0.2463238199998159,
+      "tick_end_delta": 5,
+      "air": true,
+      "drops": [
+        {
+          "item": 62,
+          "count": 1
+        }
+      ],
+      "tool_updates": [
+        {
+          "item": 1052,
+          "count": 1,
+          "damage": 1
+        }
+      ]
+    },
+    {
+      "case": "slab",
+      "dig": [
+        {
+          "status": 0,
+          "target": [
+            2,
+            65,
+            0
+          ],
+          "face": 1,
+          "sequence": 3,
+          "payload_hex": "0000000080000000410103",
+          "elapsed": 144.38386561900188,
+          "tick_end_count": 2361
+        },
+        {
+          "status": 3,
+          "target": [
+            2,
+            65,
+            0
+          ],
+          "face": 1,
+          "sequence": 4,
+          "payload_hex": "0300000080000000410104",
+          "elapsed": 144.8122996029997,
+          "tick_end_count": 2370
+        }
+      ],
+      "elapsed_seconds": 0.4284339839978202,
+      "tick_end_delta": 9,
+      "air": true,
+      "drops": [
+        {
+          "item": 721,
+          "count": 1
+        }
+      ],
+      "tool_updates": [
+        {
+          "item": 1052,
+          "count": 1,
+          "damage": 1
+        }
+      ]
+    }
+  ]
+}

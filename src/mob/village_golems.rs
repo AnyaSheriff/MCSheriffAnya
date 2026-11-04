@@ -100,7 +100,7 @@ pub fn step(mobs: &mut [Mob], view: &dyn View, now: i64, day: i64, rng: &mut Rng
             let (x,y,z) = m.cell();
             'bed: for bx in x-1..=x+1 { for by in y-1..=y { for bz in z-1..=z+1 {
                 let state = view.block(bx,by,bz);
-                if blocks::block_at_state(state).is_some_and(|n| n.ends_with("_bed"))
+                if blocks::block_at_state(state).is_some_and(|n| n.ends_with("_bed") && n != "straw_bed")
                     && blocks::orientation_of(state).and_then(|o| o.value(state,"part")) == Some("head")
                     && !claimed.contains(&(bx,by,bz))
                 {

@@ -1,0 +1,2394 @@
+{
+  "scope": "Selected pinned JSON metadata only; preparation, not gameplay observation/proof. No canonical IDs allocated.",
+  "source_sha256": {
+    "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+    "items.json": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e"
+  },
+  "entries": [
+    {
+      "name": "white_concrete_slab",
+      "block777": {
+        "id": 800,
+        "minStateId": 18307,
+        "maxStateId": 18312,
+        "defaultState": 18310,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          721
+        ]
+      },
+      "item777": {
+        "id": 721,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18307,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18308,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18309,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18310,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18311,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18312,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "white_concrete",
+        "item775": 615,
+        "item777": 689,
+        "block777": 768
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "orange_concrete_slab",
+      "block777": {
+        "id": 801,
+        "minStateId": 18313,
+        "maxStateId": 18318,
+        "defaultState": 18316,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          722
+        ]
+      },
+      "item777": {
+        "id": 722,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18313,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18314,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18315,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18316,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18317,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18318,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "orange_concrete",
+        "item775": 616,
+        "item777": 690,
+        "block777": 769
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "magenta_concrete_slab",
+      "block777": {
+        "id": 802,
+        "minStateId": 18319,
+        "maxStateId": 18324,
+        "defaultState": 18322,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          723
+        ]
+      },
+      "item777": {
+        "id": 723,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18319,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18320,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18321,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18322,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18323,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18324,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "magenta_concrete",
+        "item775": 617,
+        "item777": 691,
+        "block777": 770
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "light_blue_concrete_slab",
+      "block777": {
+        "id": 803,
+        "minStateId": 18325,
+        "maxStateId": 18330,
+        "defaultState": 18328,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          724
+        ]
+      },
+      "item777": {
+        "id": 724,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18325,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18326,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18327,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18328,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18329,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18330,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "light_blue_concrete",
+        "item775": 618,
+        "item777": 692,
+        "block777": 771
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "yellow_concrete_slab",
+      "block777": {
+        "id": 804,
+        "minStateId": 18331,
+        "maxStateId": 18336,
+        "defaultState": 18334,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          725
+        ]
+      },
+      "item777": {
+        "id": 725,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18331,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18332,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18333,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18334,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18335,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18336,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "yellow_concrete",
+        "item775": 619,
+        "item777": 693,
+        "block777": 772
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "lime_concrete_slab",
+      "block777": {
+        "id": 805,
+        "minStateId": 18337,
+        "maxStateId": 18342,
+        "defaultState": 18340,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          726
+        ]
+      },
+      "item777": {
+        "id": 726,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18337,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18338,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18339,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18340,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18341,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18342,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "lime_concrete",
+        "item775": 620,
+        "item777": 694,
+        "block777": 773
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "pink_concrete_slab",
+      "block777": {
+        "id": 806,
+        "minStateId": 18343,
+        "maxStateId": 18348,
+        "defaultState": 18346,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          727
+        ]
+      },
+      "item777": {
+        "id": 727,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18343,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18344,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18345,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18346,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18347,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18348,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "pink_concrete",
+        "item775": 621,
+        "item777": 695,
+        "block777": 774
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "gray_concrete_slab",
+      "block777": {
+        "id": 807,
+        "minStateId": 18349,
+        "maxStateId": 18354,
+        "defaultState": 18352,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          728
+        ]
+      },
+      "item777": {
+        "id": 728,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18349,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18350,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18351,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18352,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18353,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18354,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "gray_concrete",
+        "item775": 622,
+        "item777": 696,
+        "block777": 775
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "light_gray_concrete_slab",
+      "block777": {
+        "id": 808,
+        "minStateId": 18355,
+        "maxStateId": 18360,
+        "defaultState": 18358,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          729
+        ]
+      },
+      "item777": {
+        "id": 729,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18355,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18356,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18357,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18358,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18359,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18360,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "light_gray_concrete",
+        "item775": 623,
+        "item777": 697,
+        "block777": 776
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "cyan_concrete_slab",
+      "block777": {
+        "id": 809,
+        "minStateId": 18361,
+        "maxStateId": 18366,
+        "defaultState": 18364,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          730
+        ]
+      },
+      "item777": {
+        "id": 730,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18361,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18362,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18363,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18364,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18365,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18366,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "cyan_concrete",
+        "item775": 624,
+        "item777": 698,
+        "block777": 777
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "purple_concrete_slab",
+      "block777": {
+        "id": 810,
+        "minStateId": 18367,
+        "maxStateId": 18372,
+        "defaultState": 18370,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          731
+        ]
+      },
+      "item777": {
+        "id": 731,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18367,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18368,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18369,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18370,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18371,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18372,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "purple_concrete",
+        "item775": 625,
+        "item777": 699,
+        "block777": 778
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "blue_concrete_slab",
+      "block777": {
+        "id": 811,
+        "minStateId": 18373,
+        "maxStateId": 18378,
+        "defaultState": 18376,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          732
+        ]
+      },
+      "item777": {
+        "id": 732,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18373,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18374,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18375,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18376,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18377,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18378,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "blue_concrete",
+        "item775": 626,
+        "item777": 700,
+        "block777": 779
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "brown_concrete_slab",
+      "block777": {
+        "id": 812,
+        "minStateId": 18379,
+        "maxStateId": 18384,
+        "defaultState": 18382,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          733
+        ]
+      },
+      "item777": {
+        "id": 733,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18379,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18380,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18381,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18382,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18383,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18384,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "brown_concrete",
+        "item775": 627,
+        "item777": 701,
+        "block777": 780
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "green_concrete_slab",
+      "block777": {
+        "id": 813,
+        "minStateId": 18385,
+        "maxStateId": 18390,
+        "defaultState": 18388,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          734
+        ]
+      },
+      "item777": {
+        "id": 734,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18385,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18386,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18387,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18388,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18389,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18390,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "green_concrete",
+        "item775": 628,
+        "item777": 702,
+        "block777": 781
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "red_concrete_slab",
+      "block777": {
+        "id": 814,
+        "minStateId": 18391,
+        "maxStateId": 18396,
+        "defaultState": 18394,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          735
+        ]
+      },
+      "item777": {
+        "id": 735,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18391,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18392,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18393,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18394,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18395,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18396,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "red_concrete",
+        "item775": 629,
+        "item777": 703,
+        "block777": 782
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "black_concrete_slab",
+      "block777": {
+        "id": 815,
+        "minStateId": 18397,
+        "maxStateId": 18402,
+        "defaultState": 18400,
+        "hardness": 1.8,
+        "resistance": 1.8,
+        "material": "mineable/pickaxe",
+        "harvestTools": {
+          "1027": true,
+          "1032": true,
+          "1037": true,
+          "1042": true,
+          "1047": true,
+          "1052": true,
+          "1057": true
+        },
+        "emitLight": 0,
+        "filterLight": 0,
+        "stackSize": 64,
+        "diggable": true,
+        "transparent": false,
+        "boundingBox": "block",
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          736
+        ]
+      },
+      "item777": {
+        "id": 736,
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 18397,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18398,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18399,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18400,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 18401,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 18402,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "concrete_input": {
+        "name": "black_concrete",
+        "item775": 630,
+        "item777": 704,
+        "block777": 783
+      },
+      "harvest_tools_paired": [
+        {
+          "id777": 1027,
+          "name": "wooden_pickaxe",
+          "id775": 914,
+          "enabled": true
+        },
+        {
+          "id777": 1032,
+          "name": "copper_pickaxe",
+          "id775": 919,
+          "enabled": true
+        },
+        {
+          "id777": 1037,
+          "name": "stone_pickaxe",
+          "id775": 924,
+          "enabled": true
+        },
+        {
+          "id777": 1042,
+          "name": "golden_pickaxe",
+          "id775": 929,
+          "enabled": true
+        },
+        {
+          "id777": 1047,
+          "name": "iron_pickaxe",
+          "id775": 934,
+          "enabled": true
+        },
+        {
+          "id777": 1052,
+          "name": "diamond_pickaxe",
+          "id775": 939,
+          "enabled": true
+        },
+        {
+          "id777": 1057,
+          "name": "netherite_pickaxe",
+          "id775": 944,
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "property_differences_vs_white": []
+}

@@ -97,7 +97,8 @@ async fn configuration_dialog_gate_success_and_three_failures() {
         }
         let identity = auth.identity("Alice", None);
         let ops = Mutex::new(crate::ops::Ops::open(&path(if registered { "ops-login" } else { "ops-register" })));
-        let (mut server, mut client) = tokio::io::duplex(8192);
+        let (server, mut client) = tokio::io::duplex(8192);
+        let mut server = crate::network::connection::CryptoStream::new(server);
         let serving = dialog::authenticate(&mut server, &auth, &identity, ip(), &ops, None, tokio::time::Instant::now() + std::time::Duration::from_secs(90));
         let joining = async {
             assert_eq!(packet::read_packet(&mut client).await.unwrap().id, dialog::SHOW);
@@ -116,11 +117,37 @@ async fn configuration_dialog_gate_success_and_three_failures() {
     }
 }
 
+#[tokio::test]
+async fn modern_configuration_dialog_preserves_the_password_gate() {
+    let auth = service("modern-flow-register");
+    let identity = auth.identity("Alice", None);
+    let ops = Mutex::new(crate::ops::Ops::open(&path("ops-modern-register")));
+    let (server, client) = tokio::io::duplex(8192);
+    let mut server = crate::network::connection::CryptoStream::new(server);
+    let mut client = crate::network::connection::CryptoStream::new(client);
+    server.protocol = Some(mcsa_protocol::Negotiated {
+        client: mcsa_protocol::JavaVersion::V26_3, native: mcsa_protocol::wire::INTERNAL,
+    });
+    server.enable_encryption(&[73; 16]); client.enable_encryption(&[73; 16]);
+    let serving = dialog::authenticate(&mut server, &auth, &identity, ip(), &ops, None,
+        tokio::time::Instant::now() + std::time::Duration::from_secs(90));
+    let joining = async {
+        assert_eq!(packet::read_packet(&mut client).await.unwrap().id, 0x13);
+        assert!(!auth.identity("Alice", None).registered);
+        click(&mut client, "mcsheriffanya:register", "correct", true).await;
+        assert_eq!(packet::read_packet(&mut client).await.unwrap().id, 0x12);
+    };
+    let (result, _) = tokio::join!(serving, joining);
+    assert!(result.unwrap());
+    assert!(auth.identity("Alice", None).registered);
+}
+
 #[tokio::test(start_paused = true)]
 async fn configuration_timeout_is_total() {
     let auth = service("timeout"); let identity = auth.identity("Alice", None);
     let ops = Mutex::new(crate::ops::Ops::open(&path("ops-timeout")));
-    let (mut server, mut client) = tokio::io::duplex(8192);
+    let (server, mut client) = tokio::io::duplex(8192);
+        let mut server = crate::network::connection::CryptoStream::new(server);
     let serving = dialog::authenticate(&mut server, &auth, &identity, ip(), &ops, None, tokio::time::Instant::now() + std::time::Duration::from_secs(90));
     let joining = async {
         assert_eq!(packet::read_packet(&mut client).await.unwrap().id, dialog::SHOW);
@@ -207,7 +234,8 @@ async fn configuration_success_existing_account_exit_and_early_finish() {
         let identity = auth.identity("Alice", None);
         assert_eq!(identity.uuid, [9; 16]);
         let ops = Mutex::new(crate::ops::Ops::open(&path(&format!("ops-{action}"))));
-        let (mut server, mut client) = tokio::io::duplex(8192);
+        let (server, mut client) = tokio::io::duplex(8192);
+        let mut server = crate::network::connection::CryptoStream::new(server);
         let serving = dialog::authenticate(&mut server, &auth, &identity, ip(), &ops, None,
             tokio::time::Instant::now() + std::time::Duration::from_secs(90));
         let joining = async {
@@ -260,7 +288,7 @@ fn console_commands_password_change_and_session_requirement() {
     assert!(list.contains("1")); assert!(list.contains("SheriffAnya")); assert!(!list.contains("new pass"));
     assert_eq!(run("auth unregister sheriffanya", &Source::Console, &shared).reply, "Готово");
     assert!(!auth.identity("SheriffAnya", None).registered);
-    for line in ["auth setpassword A secret", " /changepassword a b", "changepassword", "/login secret", "register secret secret"] { assert!(sensitive_command(line)); }
+    for line in ["auth setpassword A secret", " /changepassword a b", "changepassword", "/login secret", "register secret secret", " /LoGiN secret", "/REGISTER secret secret", "AUTH setpassword A secret"] { assert!(sensitive_command(line)); }
     assert!(!sensitive_command("say auth"));
 }
 
@@ -289,7 +317,8 @@ async fn login_success_uuid_and_configuration_finish_are_password_gated() {
     auth.submit(&auth.identity("Alice", Some([42; 16])), ip(), "correct", Some("correct"), true).unwrap();
     let id = auth.identity("Alice", None);
     let ops = Mutex::new(crate::ops::Ops::open(&path("login-config-ops")));
-    let (mut server, mut client) = tokio::io::duplex(8192);
+    let (server, mut client) = tokio::io::duplex(8192);
+        let mut server = crate::network::connection::CryptoStream::new(server);
     let serving = async {
         send_login_success(&mut server, &id.name, &id.uuid, None, -1).await.unwrap();
         assert_eq!(packet::read_packet(&mut server).await.unwrap().id, 3);
@@ -374,4 +403,13 @@ fn changepassword_and_setpassword_use_new_scheme() {
     auth.submit(&identity,ip(),"correct",None,true).unwrap();
     assert!(auth.state.lock().unwrap().db.accounts["alice"].protected.is_some());
     let _=std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn clients_without_dialogs_select_chat_login() {
+    use mcsa_protocol::JavaVersion as V;
+    for version in [V::V1_12_2, V::V1_21_5] { assert!(needs_chat_login(version)); }
+    for version in [V::V1_21_6, V::V1_21_8, V::V1_21_9, V::V1_21_11, V::V26_1_2, V::V26_2, V::V26_3] {
+        assert!(!needs_chat_login(version));
+    }
 }

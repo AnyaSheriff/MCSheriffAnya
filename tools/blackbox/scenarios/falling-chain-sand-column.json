@@ -1,0 +1,21 @@
+{
+  "name": "falling-chain-sand-column",
+  "about": "Цепочка падения: sand, column; заливка strict без обновлений, затем сломать один блок.",
+  "blocks": [],
+  "setup": [
+    "fill $(0,1,0) $(0,7,0) minecraft:sand strict",
+    "tp $(bot) $(0.5,3,3.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "dig": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 65
+}

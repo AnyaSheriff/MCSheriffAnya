@@ -35,8 +35,8 @@ pub struct Progress {
 }
 
 impl Progress {
-    pub fn load(uuid: &[u8; 16]) -> Self {
-        Progress { stats: Stats::load(uuid), adv: AdvState::load(uuid), recipes: crate::recipe_book::Book::load(uuid), stats_requested: false, ticks: 0 }
+    pub fn load_for_catalog(uuid: &[u8; 16], catalog: crate::gameplay_catalog::Catalog) -> Self {
+        Progress { stats: Stats::load(uuid), adv: AdvState::load(uuid), recipes: crate::recipe_book::Book::load_for_catalog(uuid, catalog), stats_requested: false, ticks: 0 }
     }
 
     pub fn save(&mut self, uuid: &[u8; 16]) {

@@ -93,8 +93,19 @@ pub fn fits(biome: super::terrain::Biome) -> bool {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Поставленный кусок: образец, положение, угол рамки в мире.
 #[derive(Clone, Copy, Debug)]
@@ -132,12 +143,12 @@ fn turned_box(library: &Library, entry: &Entry, turns: u8) -> ((i32, i32), (i32,
 }
 
 pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Arc<Site>> {
-    type Sites = Mutex<HashMap<(i64, bool, i32, i32), Option<Arc<Site>>>>;
+    type Sites = Mutex<HashMap<(i64, u8, i32, i32), Option<Arc<Site>>>>;
     static CACHE: OnceLock<Sites> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -145,10 +156,10 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let library = library();
-    let found = (fits(terrain.column_in(x + 8, z + 8, None).biome) && !library.layouts.is_empty()).then(|| {
+    let found = (fits(template::jigsaw_surface_biome(terrain, chunk_x, chunk_z)) && !library.layouts.is_empty()).then(|| {
         let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x7A11);
         let layout = &library.layouts[(dice % library.layouts.len() as u64) as usize];
         let turns = ((dice >> 16) % 4) as u8;
@@ -193,7 +204,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
     for region_x in (chunk_x - REACH_CHUNKS).div_euclid(SPACING)..=(chunk_x + REACH_CHUNKS).div_euclid(SPACING) {
         for region_z in (chunk_z - REACH_CHUNKS).div_euclid(SPACING)..=(chunk_z + REACH_CHUNKS).div_euclid(SPACING) {
-            let (x, z) = attempt(seed, region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > REACH_CHUNKS || (z - chunk_z).abs() > REACH_CHUNKS {
                 continue;

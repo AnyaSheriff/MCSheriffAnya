@@ -135,6 +135,8 @@ fn age_once(world: &mut World, (x, y, z): Pos) -> bool {
     } else {
         let next = if world.is_nether() { AIR } else { fluids::state_of(fluids::Kind::Water, fluids::SOURCE) };
         world.set_block(x, y, z, next);
+        // [проверить] Вики не уточняет частоту и подмороженный вариант льда.
+        if world.catalog().changed_rules() { redstone::game_event(world, (x, y, z), redstone::FREQ_DESTROY); }
         true
     }
 }

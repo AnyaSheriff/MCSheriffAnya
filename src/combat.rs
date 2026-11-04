@@ -70,13 +70,20 @@ pub fn outcome_breached(view: &CombatView, damage: f32, source: Source, now: u64
     Outcome::Taken(taken)
 }
 
+/// Кинетическое попадание копья: стадии отдельно разрешают толчок и сброс седока.
+#[derive(Clone, Copy, Debug)]
+pub struct Kinetic { pub knockback: bool, pub dismount: bool }
+
 /// Удар по игроку, который нападающий отдаёт жертве через журнал мира
 /// (`WorldEvent::PlayerStrike`): щит, броню, отдачу и износ считает
 /// подключение жертвы — у него её инвентарь и состояние.
 #[derive(Clone, Debug)]
 pub struct PlayerStrike {
+    pub kinetic: Option<Kinetic>,
     pub victim: i32,
     pub attacker: i32,
+    /// Прямая сущность снаряда; виновник и кредит остаются у attacker.
+    pub projectile: Option<i32>,
     pub attacker_uuid: [u8; 16],
     pub attacker_name: String,
     /// Где стоял нападающий и куда смотрел (градусы).
@@ -318,7 +325,7 @@ pub fn impaling_bonus(data: &Data, kind: &str) -> f32 {
 
 /// Вики, Shield: магия, падение, огонь окружения, молния и шипы обходят щит.
 pub fn shield_blocks(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro
+    matches!(source, Source::Spear | Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro
         | Source::Arrow | Source::Trident | Source::Thrown | Source::Fireball | Source::LargeFireball | Source::WitherSkull
         | Source::WindCharge | Source::Fireworks | Source::Explosion | Source::PlayerExplosion | Source::Thorns)
 }
@@ -632,7 +639,8 @@ pub fn death_drops(inventory: &mut Inventory, keep: bool) -> Vec<Stack> {
 /// вдвое гасится и растёт на силу, но не выше 0,4. Стойкость (0…1) ослабляет
 /// силу: `сила · (1 − стойкость)`.
 pub fn knockback_velocity(velocity: (f64, f64, f64), dir: (f64, f64), strength: f64, resistance: f64, on_ground: bool) -> (f64, f64, f64) {
-    let strength = strength * (1.0 - resistance.clamp(0.0, 1.0));
+    // Отрицательное значение допускает только каталог 26.3 при расчёте атрибута.
+    let strength = strength * (1.0 - resistance.clamp(-2.0, 1.0));
 
     if strength <= 0.0 {
         return velocity;

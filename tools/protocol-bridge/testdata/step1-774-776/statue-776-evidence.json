@@ -1,0 +1,13 @@
+{
+  "source": "tools/blackbox/reports/golem-statue-2026-10-02-0835.md",
+  "source_sha256": "11d87985a9de7bd497b0ed652374da49d167c3efb06ee02e5105d67e4d7f0a78",
+  "observed_original775_type": 48,
+  "observed_original775_data": "empty compound",
+  "776_type": 47,
+  "basis": [
+    "existing original775 observation",
+    "bed block entity removed in26.2: https://minecraft.wiki/w/Java_Edition_26.2",
+    "actual776 initial chunks, translated update, and four GUI pose changes on both primaries"
+  ],
+  "scope": "776 type47 is a tested adjacent mapping; no new official776 server trace is claimed."
+}

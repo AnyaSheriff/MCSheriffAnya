@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "method": "Standing tree bases on soil, nearest canopy colour; complete independent windows; only generated regions read",
+  "official": {
+    "bases": {
+      "poplar_log": 290,
+      "spruce_log": 14,
+      "cherry_log": 2,
+      "oak_log": 3
+    },
+    "poplar_tree_colours": {
+      "red_poplar_leaves": 103,
+      "orange_poplar_leaves": 131,
+      "yellow_poplar_leaves": 56
+    },
+    "isolated_spruce_litter": [],
+    "isolation_radius": 12,
+    "chunks_requested": 324,
+    "chunks_read": 324,
+    "level": {
+      "seed": 1792932773345722119,
+      "spawn": [
+        16,
+        -48
+      ],
+      "version": {
+        "Snapshot": 0,
+        "Series": "main",
+        "Id": 5023,
+        "Name": "26.3"
+      },
+      "data_version": 5023
+    }
+  },
+  "ours_before_final": {
+    "bases": {
+      "poplar_log": 697,
+      "spruce_log": 25,
+      "oak_log": 71,
+      "cherry_log": 29,
+      "birch_log": 2
+    },
+    "poplar_tree_colours": {
+      "orange_poplar_leaves": 342,
+      "red_poplar_leaves": 223,
+      "yellow_poplar_leaves": 132
+    },
+    "isolated_spruce_litter": [],
+    "isolation_radius": 12,
+    "chunks_requested": 648,
+    "chunks_read": 648,
+    "level": {
+      "seed": 1792932773345722119,
+      "spawn": [
+        16,
+        -48
+      ],
+      "version": "MCSA custom level.dat"
+    }
+  },
+  "official_plan": {
+    "seed": 1792932773345722119,
+    "windows": {
+      "overworld": [
+        [
+          -332,
+          -598,
+          -324,
+          -590
+        ],
+        [
+          -304,
+          488,
+          -296,
+          496
+        ],
+        [
+          452,
+          -570,
+          460,
+          -562
+        ],
+        [
+          614,
+          596,
+          622,
+          604
+        ]
+      ],
+      "the_nether": [],
+      "the_end": []
+    },
+    "method": "Four independent locate biome dappled_forest queries from positions +/-8192; saved after generation with zero random ticks."
+  },
+  "reference": {
+    "file": "vegetation-v2-reference/biome-dappled_forest.json",
+    "sha256": "2a8848f07a711d20676f878bdd587d5609fba86fd0f1aecabe7e29d64b634d58"
+  },
+  "unverified": [
+    "No spruce passed the 12-block isolation filter. An empty list does not establish absent litter or its geometry.",
+    "Existing spruce litter mask is retained; exact natural spruce litter geometry is unverified."
+  ],
+  "ours_after": {
+    "bases": {
+      "poplar_log": 697,
+      "spruce_log": 25,
+      "oak_log": 71,
+      "cherry_log": 29,
+      "birch_log": 2
+    },
+    "poplar_tree_colours": {
+      "orange_poplar_leaves": 342,
+      "red_poplar_leaves": 223,
+      "yellow_poplar_leaves": 132
+    },
+    "isolated_spruce_litter": [],
+    "isolation_radius": 12,
+    "chunks_requested": 648,
+    "chunks_read": 648,
+    "level": {
+      "seed": 1792932773345722119,
+      "spawn": [
+        16,
+        -48
+      ],
+      "version": "MCSA custom level.dat"
+    }
+  }
+}

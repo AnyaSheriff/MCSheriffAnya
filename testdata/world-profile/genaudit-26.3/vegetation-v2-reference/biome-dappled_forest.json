@@ -1,0 +1,729 @@
+{
+  "vanilla_level": {
+    "seed": 1792932773345722119,
+    "spawn": [
+      16,
+      -48
+    ],
+    "version": {
+      "Snapshot": 0,
+      "Series": "main",
+      "Id": 5023,
+      "Name": "26.3"
+    },
+    "data_version": 5023
+  },
+  "statistics": {
+    "vanilla": {
+      "dimensions": {
+        "overworld": {
+          "chunks": 324,
+          "chunk_sha256": "020344cab95eaf0bbea150dfed53b58ff00eb8e5a8f0ce462a848ff211ee9761",
+          "files": [
+            [
+              "r.-1.-1.mca",
+              "b7c3658b1cce28bad1f4621766ea121b262bf095ea16d08547b6330f4bb0ba4b"
+            ],
+            [
+              "r.-1.0.mca",
+              "63744d70504a80f2136d89b3155c3e0942543c4ca798eabca71741c5f1d497ab"
+            ],
+            [
+              "r.-10.-19.mca",
+              "083246459820c857e527268d398384b8c489c7608bb656bd442ea07fac3e3b6a"
+            ],
+            [
+              "r.-10.-20.mca",
+              "ab68bcc392e1fd3f853fe9a6e7b463ce8ea691609faf968b56ed928070a0f148"
+            ],
+            [
+              "r.-10.14.mca",
+              "ac93ad21bed31254d527a855885d8b79e64f9057c1a480e0432eaefbc746c269"
+            ],
+            [
+              "r.-10.15.mca",
+              "1615e39e2b385d14d5c31c0b97bb8a253fff627087d02dcff94e04508adc80ef"
+            ],
+            [
+              "r.-11.-19.mca",
+              "697cdef9632c45a268e721328924746599653a84736e411cd3129d7512a72a01"
+            ],
+            [
+              "r.-11.-20.mca",
+              "88a1c685a9625b0080da3d1fbed29cf13341fe6ee5e868110da8ffafdd31bbdc"
+            ],
+            [
+              "r.-9.14.mca",
+              "334e6f8f484b1738da4525e148dec74583094450c45982df011b592ccdaa167b"
+            ],
+            [
+              "r.-9.15.mca",
+              "341a2909517682885d4a9c55f4af14be3d191e962465a06bb438fa38886bd3ac"
+            ],
+            [
+              "r.0.-1.mca",
+              "59fbbae34cbd103fbd7490fb379acda0b01bdd748d59b2c7f3d612d8abd12177"
+            ],
+            [
+              "r.0.0.mca",
+              "42276dae882e015f5abf1485e74dbed91304e77d52aa7ae821600bb19141843c"
+            ],
+            [
+              "r.13.-18.mca",
+              "f716a8d529dba0d56bc39420153e5245dee7c8c3337dd3d21ddffcb472948930"
+            ],
+            [
+              "r.13.-19.mca",
+              "60ce5e2c41bf4109a569ce240f887c029ea6a2376dc3ed99a77a751070363438"
+            ],
+            [
+              "r.14.-18.mca",
+              "f89999301f745f85d390d4ae873a6ec3a48074ba9417e98a92a95b9d41c7c025"
+            ],
+            [
+              "r.14.-19.mca",
+              "15782c624fc8dd627512071610b27374d3eafec4480b5a0721f033c713ff292e"
+            ],
+            [
+              "r.18.18.mca",
+              "77ffd50740fc18e563cf05e7e1c6d524a265f1fb4149e81f058802d9b03266a5"
+            ],
+            [
+              "r.18.19.mca",
+              "0e3661b5061b1b4cc3f67bec570909b5b6d0d4057d8acac3f575d0ea33455117"
+            ],
+            [
+              "r.19.18.mca",
+              "cb6e9ec89d37a0bae88ad67ac3a52ca658b5606aec44c53db078491df3750f25"
+            ],
+            [
+              "r.19.19.mca",
+              "136b337594313b3a77dc3294525a174db0e0d2b1586440b4a29e2af560da8390"
+            ],
+            [
+              "r.7.7.mca",
+              "800917ee069a4da25805585b91b37615af92d58de2302ee29e31b0afb116ae28"
+            ],
+            [
+              "r.7.8.mca",
+              "5954d9d8338031b7076462a1e8b46c9ee95b34bd905cc2b44f15e5c1a86a2bbc"
+            ],
+            [
+              "r.8.7.mca",
+              "0537ecbdacaf4a6a9e18aed90aa5963b1824d8b7ea08ca956cb8bb19d35c2948"
+            ],
+            [
+              "r.8.8.mca",
+              "3872d58f9d50bcda3c0acc4cc6e1d1c2a72112e489629284626dc9c452b20813"
+            ],
+            [
+              "r.9.7.mca",
+              "8b4f2ca9eba900da3fd8496630db8d10cf2ee85904c5a91e3368db3e7791afe5"
+            ],
+            [
+              "r.9.8.mca",
+              "aa6e28e8e5d0e20057b282f03afe001a2f70ccfc2049718e336f604a251e605a"
+            ]
+          ],
+          "biomes_3d": {
+            "dripstone_caves": 13975,
+            "plains": 168116,
+            "river": 47150,
+            "dappled_forest": 187523,
+            "beach": 29376,
+            "stony_shore": 1152,
+            "deep_dark": 313,
+            "cherry_grove": 2487,
+            "snowy_plains": 16660,
+            "sunflower_plains": 30912
+          },
+          "features_by_biome": {
+            "dripstone_caves": {
+              "dripstone_block": 16416,
+              "pointed_dripstone": 4099,
+              "mossy_cobblestone": 1,
+              "amethyst_block": 983,
+              "budding_amethyst": 92,
+              "oak_log": 2
+            },
+            "plains": {
+              "dandelion": 83,
+              "short_grass": 5404,
+              "azure_bluet": 14,
+              "oxeye_daisy": 6,
+              "seagrass": 6,
+              "sugar_cane": 4,
+              "tall_grass": 966,
+              "dripstone_block": 2951,
+              "pointed_dripstone": 441,
+              "tall_seagrass": 2,
+              "mossy_cobblestone": 62,
+              "cornflower": 9,
+              "poppy": 11,
+              "bush": 76,
+              "leaf_litter": 226,
+              "yellow_poplar_leaves": 185,
+              "red_poplar_leaves": 1075,
+              "orange_poplar_leaves": 970,
+              "poplar_log": 61,
+              "amethyst_block": 1359,
+              "budding_amethyst": 118,
+              "spawner": 2,
+              "brown_mushroom": 1,
+              "pumpkin": 15,
+              "shelf_mushroom": 6,
+              "oak_log": 15,
+              "red_shrub": 2,
+              "snow": 7
+            },
+            "river": {
+              "seagrass": 689,
+              "tall_seagrass": 958,
+              "dripstone_block": 356,
+              "pointed_dripstone": 75,
+              "short_grass": 42,
+              "tall_grass": 2,
+              "leaf_litter": 12,
+              "orange_poplar_leaves": 95,
+              "poplar_log": 3,
+              "shelf_mushroom": 1,
+              "red_poplar_leaves": 27,
+              "yellow_poplar_leaves": 95,
+              "firefly_bush": 2,
+              "bush": 1
+            },
+            "dappled_forest": {
+              "poplar_log": 4495,
+              "short_grass": 1161,
+              "leaf_litter": 6749,
+              "orange_poplar_leaves": 28768,
+              "red_shrub": 122,
+              "tall_seagrass": 8,
+              "brown_mushroom": 32,
+              "red_poplar_leaves": 21102,
+              "shelf_mushroom": 196,
+              "dripstone_block": 817,
+              "pointed_dripstone": 194,
+              "yellow_poplar_leaves": 11942,
+              "spruce_leaves": 907,
+              "spruce_log": 89,
+              "azure_bluet": 1,
+              "dandelion": 4,
+              "oxeye_daisy": 1,
+              "amethyst_block": 2773,
+              "budding_amethyst": 273,
+              "mossy_cobblestone": 147,
+              "tall_grass": 16,
+              "pink_petals": 17,
+              "spawner": 3,
+              "cherry_leaves": 88,
+              "sunflower": 2
+            },
+            "beach": {
+              "short_grass": 10,
+              "seagrass": 7,
+              "tall_seagrass": 16,
+              "leaf_litter": 5,
+              "red_poplar_leaves": 35
+            },
+            "stony_shore": {
+              "red_poplar_leaves": 1
+            },
+            "cherry_grove": {
+              "amethyst_block": 2,
+              "cherry_leaves": 107,
+              "short_grass": 76,
+              "tall_grass": 16,
+              "cherry_log": 13,
+              "leaf_litter": 20,
+              "orange_poplar_leaves": 1,
+              "pink_petals": 142,
+              "red_poplar_leaves": 96,
+              "spruce_leaves": 2
+            },
+            "snowy_plains": {
+              "short_grass": 59,
+              "snow": 2523,
+              "tall_grass": 6,
+              "amethyst_block": 189,
+              "budding_amethyst": 15,
+              "spruce_leaves": 19,
+              "ice": 107,
+              "firefly_bush": 2,
+              "mossy_cobblestone": 50,
+              "spawner": 1,
+              "pumpkin": 5
+            },
+            "sunflower_plains": {
+              "oak_log": 42,
+              "short_grass": 899,
+              "sunflower": 158,
+              "tall_grass": 120,
+              "oak_leaves": 244,
+              "leaf_litter": 41,
+              "orange_poplar_leaves": 380,
+              "poplar_log": 8,
+              "amethyst_block": 611,
+              "budding_amethyst": 51,
+              "azure_bluet": 1,
+              "cornflower": 3,
+              "dandelion": 12,
+              "seagrass": 3,
+              "red_poplar_leaves": 8,
+              "yellow_poplar_leaves": 51
+            }
+          },
+          "kelp_height_histogram": {},
+          "height_by_biome": {
+            "plains": {
+              "62": 1479,
+              "63": 3050,
+              "60": 226,
+              "61": 437,
+              "55": 67,
+              "57": 203,
+              "58": 146,
+              "59": 195,
+              "64": 1383,
+              "65": 1787,
+              "66": 1539,
+              "67": 1521,
+              "68": 1649,
+              "69": 1505,
+              "70": 1194,
+              "71": 1788,
+              "72": 1401,
+              "73": 1028,
+              "56": 93,
+              "37": 22,
+              "38": 16,
+              "39": 8,
+              "44": 7,
+              "45": 6,
+              "46": 10,
+              "47": 16,
+              "48": 10,
+              "49": 27,
+              "50": 24,
+              "51": 35,
+              "52": 49,
+              "53": 57,
+              "54": 54,
+              "36": 35,
+              "40": 7,
+              "34": 16,
+              "35": 24,
+              "33": 1,
+              "74": 867,
+              "75": 626,
+              "76": 549,
+              "77": 626,
+              "78": 710,
+              "79": 1349,
+              "42": 3,
+              "80": 434,
+              "41": 2,
+              "43": 3,
+              "81": 374,
+              "82": 294,
+              "83": 272,
+              "84": 264,
+              "85": 447,
+              "86": 638,
+              "87": 343,
+              "88": 166,
+              "89": 135,
+              "90": 119,
+              "91": 117,
+              "92": 3
+            },
+            "river": {
+              "51": 278,
+              "52": 475,
+              "53": 622,
+              "54": 740,
+              "55": 771,
+              "56": 466,
+              "57": 514,
+              "58": 488,
+              "59": 514,
+              "60": 400,
+              "61": 399,
+              "62": 293,
+              "50": 228,
+              "41": 60,
+              "42": 54,
+              "43": 18,
+              "44": 45,
+              "45": 84,
+              "46": 107,
+              "48": 185,
+              "49": 197,
+              "33": 31,
+              "34": 44,
+              "35": 34,
+              "36": 33,
+              "37": 12,
+              "38": 15,
+              "39": 33,
+              "40": 17,
+              "47": 189,
+              "28": 12,
+              "29": 14,
+              "30": 15,
+              "31": 30,
+              "32": 20,
+              "63": 279,
+              "64": 153,
+              "65": 112,
+              "66": 77,
+              "67": 41,
+              "68": 27,
+              "69": 13,
+              "70": 3,
+              "71": 2
+            },
+            "dappled_forest": {
+              "58": 91,
+              "59": 136,
+              "60": 219,
+              "61": 295,
+              "62": 460,
+              "63": 1853,
+              "56": 69,
+              "57": 92,
+              "44": 24,
+              "46": 35,
+              "48": 72,
+              "49": 58,
+              "51": 37,
+              "52": 42,
+              "53": 36,
+              "54": 46,
+              "55": 40,
+              "64": 1708,
+              "42": 29,
+              "43": 17,
+              "47": 78,
+              "65": 2702,
+              "66": 2497,
+              "67": 2053,
+              "35": 23,
+              "36": 25,
+              "37": 27,
+              "38": 21,
+              "39": 18,
+              "40": 18,
+              "68": 2595,
+              "69": 3182,
+              "70": 3038,
+              "71": 2591,
+              "72": 1258,
+              "73": 735,
+              "74": 801,
+              "75": 724,
+              "41": 14,
+              "45": 17,
+              "50": 50,
+              "33": 11,
+              "30": 2,
+              "31": 11,
+              "32": 10,
+              "34": 13,
+              "76": 559,
+              "77": 811,
+              "78": 694,
+              "79": 466,
+              "80": 132,
+              "81": 146,
+              "82": 152,
+              "83": 263,
+              "84": 205,
+              "85": 322,
+              "86": 147,
+              "87": 4,
+              "18": 7,
+              "-2": 3,
+              "-1": 4,
+              "0": 2,
+              "1": 3,
+              "2": 3,
+              "3": 5,
+              "4": 4,
+              "5": 4,
+              "7": 5,
+              "9": 6,
+              "11": 7,
+              "13": 4,
+              "14": 7,
+              "16": 9,
+              "19": 2,
+              "20": 5,
+              "21": 3,
+              "22": 3,
+              "23": 2,
+              "24": 1,
+              "26": 1,
+              "6": 4,
+              "8": 4,
+              "10": 3,
+              "12": 3,
+              "15": 2,
+              "17": 1
+            },
+            "dripstone_caves": {
+              "14": 2,
+              "13": 2,
+              "15": 2,
+              "16": 1
+            },
+            "beach": {
+              "63": 611,
+              "60": 243,
+              "61": 316,
+              "62": 338,
+              "64": 194,
+              "47": 18,
+              "48": 39,
+              "49": 108,
+              "50": 183,
+              "51": 182,
+              "52": 156,
+              "53": 182,
+              "54": 281,
+              "55": 532,
+              "56": 298,
+              "57": 309,
+              "58": 292,
+              "59": 232,
+              "65": 156,
+              "66": 154,
+              "67": 34,
+              "68": 16,
+              "69": 22
+            },
+            "stony_shore": {
+              "64": 40,
+              "65": 55,
+              "66": 10,
+              "45": 2,
+              "46": 8,
+              "55": 1,
+              "56": 3,
+              "57": 3,
+              "58": 9,
+              "59": 10,
+              "60": 2,
+              "61": 1,
+              "62": 8,
+              "68": 7,
+              "69": 9,
+              "63": 24
+            },
+            "cherry_grove": {
+              "84": 3,
+              "85": 55,
+              "86": 111,
+              "87": 76,
+              "88": 24,
+              "89": 24,
+              "90": 21,
+              "91": 27,
+              "92": 36,
+              "93": 52,
+              "94": 3
+            },
+            "snowy_plains": {
+              "77": 126,
+              "78": 333,
+              "82": 173,
+              "83": 171,
+              "84": 264,
+              "79": 198,
+              "80": 113,
+              "81": 143,
+              "85": 227,
+              "86": 284,
+              "87": 194,
+              "88": 19,
+              "89": 3,
+              "51": 2,
+              "52": 2,
+              "53": 1,
+              "54": 1,
+              "56": 2,
+              "61": 3,
+              "62": 134,
+              "74": 31,
+              "75": 38,
+              "76": 87,
+              "63": 28,
+              "64": 12,
+              "65": 15,
+              "66": 19,
+              "67": 22,
+              "68": 20,
+              "69": 21,
+              "70": 34,
+              "71": 28,
+              "72": 17,
+              "73": 19
+            },
+            "sunflower_plains": {
+              "64": 223,
+              "65": 158,
+              "66": 170,
+              "67": 166,
+              "68": 236,
+              "69": 214,
+              "70": 335,
+              "71": 419,
+              "72": 195,
+              "62": 1378,
+              "63": 824,
+              "61": 513,
+              "57": 11,
+              "58": 15,
+              "59": 33,
+              "60": 248,
+              "53": 2,
+              "54": 3,
+              "55": 1,
+              "56": 8
+            }
+          },
+          "surface_blocks_by_biome": {
+            "plains": {
+              "grass_block": 27450,
+              "dirt": 696,
+              "sand": 508,
+              "clay": 33,
+              "gravel": 209,
+              "granite": 13,
+              "stone": 425,
+              "andesite": 24,
+              "diorite": 64,
+              "coarse_dirt": 26,
+              "coal_ore": 3,
+              "sandstone": 1,
+              "iron_ore": 1,
+              "copper_ore": 3
+            },
+            "river": {
+              "dirt": 2155,
+              "gravel": 2646,
+              "sand": 1760,
+              "grass_block": 910,
+              "clay": 106,
+              "stone": 509,
+              "andesite": 34,
+              "coal_ore": 1,
+              "diorite": 8,
+              "granite": 6,
+              "coarse_dirt": 3,
+              "copper_ore": 3,
+              "sandstone": 1,
+              "lapis_ore": 2
+            },
+            "dappled_forest": {
+              "dirt": 845,
+              "sand": 264,
+              "clay": 36,
+              "coarse_dirt": 2542,
+              "grass_block": 27324,
+              "gravel": 132,
+              "stone": 569,
+              "diorite": 72,
+              "iron_ore": 4,
+              "andesite": 20,
+              "copper_ore": 8,
+              "granite": 32,
+              "deepslate": 21,
+              "coal_ore": 8,
+              "deepslate_redstone_ore": 1,
+              "sandstone": 3
+            },
+            "dripstone_caves": {
+              "andesite": 4,
+              "dirt": 1,
+              "stone": 2
+            },
+            "beach": {
+              "grass_block": 68,
+              "sand": 3765,
+              "gravel": 1014,
+              "dirt": 10,
+              "sandstone": 18,
+              "stone": 15,
+              "granite": 2,
+              "clay": 4
+            },
+            "stony_shore": {
+              "stone": 128,
+              "sand": 20,
+              "andesite": 14,
+              "grass_block": 17,
+              "gravel": 7,
+              "dirt": 6
+            },
+            "cherry_grove": {
+              "grass_block": 424,
+              "dirt": 2,
+              "coarse_dirt": 6
+            },
+            "snowy_plains": {
+              "grass_block": 2662,
+              "dirt": 3,
+              "gravel": 5,
+              "ice": 107,
+              "sand": 7
+            },
+            "sunflower_plains": {
+              "grass_block": 4208,
+              "coarse_dirt": 6,
+              "dirt": 355,
+              "clay": 25,
+              "gravel": 43,
+              "sand": 515
+            }
+          }
+        }
+      }
+    }
+  },
+  "plan": {
+    "seed": 1792932773345722119,
+    "windows": {
+      "overworld": [
+        [
+          -332,
+          -598,
+          -324,
+          -590
+        ],
+        [
+          -304,
+          488,
+          -296,
+          496
+        ],
+        [
+          452,
+          -570,
+          460,
+          -562
+        ],
+        [
+          614,
+          596,
+          622,
+          604
+        ]
+      ],
+      "the_nether": [],
+      "the_end": []
+    },
+    "method": "Four independent locate biome dappled_forest queries from positions +/-8192; saved after generation with zero random ticks."
+  },
+  "source": "Fresh official four-patch dappled_forest census with console-confirmed seed; read-only saved regions."
+}

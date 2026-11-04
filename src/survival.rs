@@ -306,6 +306,8 @@ pub fn landing_multiplier(name: &str) -> f32 {
         "hay_block" | "honey_block" => 0.2,
         // Слизь подкидывает вместо удара, если не красться.
         "slime_block" => 0.0,
+        // Соломенная кровать не подпрыгивает и урон от падения не смягчает (вики, Straw Bed).
+        "straw_bed" => 1.0,
         name if name.ends_with("_bed") => 0.5,
         _ => 1.0,
     }
@@ -1093,6 +1095,12 @@ pub struct Vitals {
     /// Защита после Wind Burst: pvp-mace-wind-burst, падение с 9 блоков
     /// без урона. [проверить] Предел защиты ветра вне записанной траектории.
     pub smash_forgives: bool,
+    /// Подброшен взрывом ветра: путь вниз до начала подъёма прощается.
+    /// Вики, Fall damage: «Being hit by a wind charge resets an entity's
+    /// fall distance». Чёрный ящик 26.3, pvp-mace-wind-burst: шаг вниз,
+    /// пришедший после удара до подброса, у оригинала не попадает в высоту
+    /// приземления (частиц 90, у нас было 100).
+    pub wind_lift: bool,
 
     /// Высота падения до последнего шага приземления (для частиц), 0 — не
     /// приземлялся в этом шаге.
@@ -1229,6 +1237,7 @@ impl Vitals {
             fall: 0.0,
             smash_landing: false,
             smash_forgives: false,
+            wind_lift: false,
             landed_from: 0.0,
             landed_total: 0.0,
             dead: false,
@@ -1284,6 +1293,27 @@ impl Vitals {
             xp_seed: saved.xp_seed,
             ..Self::new()
         }
+    }
+
+    /// Снимок без временных сетевых очередей и повторного применения выдачи.
+    pub fn saved_effects(&self) -> crate::playerdata::SavedEffects {
+        crate::playerdata::SavedEffects { active: self.effects.clone(), hidden: self.hidden_effects.clone(), absorption: self.absorption }
+    }
+
+    pub fn restore_effects(&mut self, saved: &crate::playerdata::SavedEffects) {
+        self.effects.clone_from(&saved.active);
+        self.hidden_effects.clone_from(&saved.hidden);
+        self.absorption = saved.absorption;
+    }
+
+    /// Лимиты атрибутов адаптер пересчитает после восстановления эффектов.
+    pub fn restored_with_effects(saved: &crate::playerdata::SavedVitals, effects: &crate::playerdata::SavedEffects) -> Self {
+        let mut vit = Self::restored(saved);
+        if saved.health > 0.0 {
+            vit.health = saved.health;
+            vit.restore_effects(effects);
+        }
+        vit
     }
 
     /// Удар. `immune` — игрок неуязвим по режиму (творческий, наблюдатель).
@@ -1671,8 +1701,13 @@ impl Vitals {
             self.fall = 0.0;
             self.smash_landing = false;
             self.smash_forgives = false;
+            self.wind_lift = false;
 
             return None;
+        }
+
+        if dy > 0.0 && std::mem::take(&mut self.wind_lift) {
+            self.fall = 0.0;
         }
 
         let before = self.fall;
@@ -1692,6 +1727,7 @@ impl Vitals {
         self.landed_from = before;
         self.landed_total = distance;
         self.smash_landing = false;
+        self.wind_lift = false;
 
         if std::mem::take(&mut self.smash_forgives) {
             return None;
@@ -1757,14 +1793,19 @@ impl Vitals {
         .max(0);
     }
 
-    /// Возрождение: всё заново.
+    /// Возрождение без сохранения опыта.
+    #[cfg(test)]
     pub fn respawned(&mut self) {
-        let effects = std::mem::take(&mut self.effects);
+        self.respawned_with_keep_inventory(false);
+    }
+
+    /// Правило keep_inventory сохраняет опыт; здоровье, еда и эффекты сбрасываются.
+    pub fn respawned_with_keep_inventory(&mut self, keep_inventory: bool) {
+        let (xp, xp_total) = if keep_inventory { (self.xp, self.xp_total) } else { (0, 0) };
         let xp_seed = self.xp_seed;
 
         // Семя зачарования переживает смерть [проверить].
-        *self = Self { xp_seed, ..Self::new() };
-        drop(effects);
+        *self = Self { xp, xp_total, xp_seed, ..Self::new() };
     }
 }
 
@@ -1921,6 +1962,22 @@ mod tests {
         assert_eq!(v.land(0.0, true, false, 1.0), Some(5.0));
         // после приземления счёт с нуля
         assert_eq!(v.land(-0.1, true, false, 1.0), None);
+    }
+
+    #[test]
+    fn a_wind_lift_drops_the_fall_gathered_before_rising() {
+        // pvp-mace-wind-burst: шаг вниз после удара до подброса не входит в
+        // высоту приземления — частиц 90 (9,65 блока), а не 100.
+        let mut v = Vitals::new();
+
+        v.wind_lift = true;
+        assert_eq!(v.land_java(-0.585, false, false, 1.0), None);
+        assert_eq!(v.land_java(1.2, false, false, 1.0), None);
+        assert!(!v.wind_lift);
+        assert_eq!(v.fall, 0.0);
+        let _ = v.land_java(-9.65, false, false, 1.0);
+        let _ = v.land_java(-0.4, true, false, 1.0);
+        assert_eq!(landing_particles(v.landed_from as f32), 90);
     }
 
     #[test]

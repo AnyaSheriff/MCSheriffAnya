@@ -1,0 +1,2006 @@
+{
+  "summary": {
+    "checks": [
+      [
+        "owner",
+        "before",
+        "border",
+        0.95755,
+        "PASS"
+      ],
+      [
+        "owner",
+        "before",
+        "interior",
+        0.992463,
+        "PASS"
+      ],
+      [
+        "owner",
+        "verified-after",
+        "border",
+        1.046276,
+        "PASS"
+      ],
+      [
+        "owner",
+        "verified-after",
+        "interior",
+        1.046126,
+        "PASS"
+      ],
+      [
+        "owner",
+        "vanilla",
+        "border",
+        1.162657,
+        "PASS"
+      ],
+      [
+        "owner",
+        "vanilla",
+        "interior",
+        1.100904,
+        "PASS"
+      ],
+      [
+        "second",
+        "before",
+        "border",
+        1.114261,
+        "PASS"
+      ],
+      [
+        "second",
+        "before",
+        "interior",
+        1.148918,
+        "PASS"
+      ],
+      [
+        "second",
+        "verified-after",
+        "border",
+        1.149982,
+        "PASS"
+      ],
+      [
+        "second",
+        "verified-after",
+        "interior",
+        1.162519,
+        "PASS"
+      ],
+      [
+        "second",
+        "vanilla",
+        "border",
+        0.88726,
+        "PASS"
+      ],
+      [
+        "second",
+        "vanilla",
+        "interior",
+        0.948537,
+        "PASS"
+      ]
+    ],
+    "border_summary": [
+      {
+        "seed": "owner",
+        "stage": "before",
+        "zone": "all",
+        "location": "border",
+        "kind": "all",
+        "denominator": 86784,
+        "jump_ge16_count": 831,
+        "share": 0.00957549778761062
+      },
+      {
+        "seed": "owner",
+        "stage": "before",
+        "zone": "gap",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9224,
+        "jump_ge16_count": 0,
+        "share": 0.0
+      },
+      {
+        "seed": "owner",
+        "stage": "before",
+        "zone": "main",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9976,
+        "jump_ge16_count": 142,
+        "share": 0.014234161988773055
+      },
+      {
+        "seed": "owner",
+        "stage": "before",
+        "zone": "outer",
+        "location": "border",
+        "kind": "all",
+        "denominator": 67584,
+        "jump_ge16_count": 689,
+        "share": 0.010194720643939394
+      },
+      {
+        "seed": "owner",
+        "stage": "verified-after",
+        "zone": "all",
+        "location": "border",
+        "kind": "all",
+        "denominator": 86784,
+        "jump_ge16_count": 908,
+        "share": 0.010462758112094395
+      },
+      {
+        "seed": "owner",
+        "stage": "verified-after",
+        "zone": "gap",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9224,
+        "jump_ge16_count": 0,
+        "share": 0.0
+      },
+      {
+        "seed": "owner",
+        "stage": "verified-after",
+        "zone": "main",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9976,
+        "jump_ge16_count": 181,
+        "share": 0.01814354450681636
+      },
+      {
+        "seed": "owner",
+        "stage": "verified-after",
+        "zone": "outer",
+        "location": "border",
+        "kind": "all",
+        "denominator": 67584,
+        "jump_ge16_count": 727,
+        "share": 0.010756983901515152
+      },
+      {
+        "seed": "owner",
+        "stage": "vanilla",
+        "zone": "all",
+        "location": "border",
+        "kind": "all",
+        "denominator": 86784,
+        "jump_ge16_count": 1009,
+        "share": 0.011626567109144543
+      },
+      {
+        "seed": "owner",
+        "stage": "vanilla",
+        "zone": "gap",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9224,
+        "jump_ge16_count": 0,
+        "share": 0.0
+      },
+      {
+        "seed": "owner",
+        "stage": "vanilla",
+        "zone": "main",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9976,
+        "jump_ge16_count": 144,
+        "share": 0.014434643143544507
+      },
+      {
+        "seed": "owner",
+        "stage": "vanilla",
+        "zone": "outer",
+        "location": "border",
+        "kind": "all",
+        "denominator": 67584,
+        "jump_ge16_count": 865,
+        "share": 0.01279888731060606
+      },
+      {
+        "seed": "second",
+        "stage": "before",
+        "zone": "all",
+        "location": "border",
+        "kind": "all",
+        "denominator": 86784,
+        "jump_ge16_count": 967,
+        "share": 0.011142606932153392
+      },
+      {
+        "seed": "second",
+        "stage": "before",
+        "zone": "gap",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9224,
+        "jump_ge16_count": 0,
+        "share": 0.0
+      },
+      {
+        "seed": "second",
+        "stage": "before",
+        "zone": "main",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9976,
+        "jump_ge16_count": 217,
+        "share": 0.021752205292702487
+      },
+      {
+        "seed": "second",
+        "stage": "before",
+        "zone": "outer",
+        "location": "border",
+        "kind": "all",
+        "denominator": 67584,
+        "jump_ge16_count": 750,
+        "share": 0.011097301136363636
+      },
+      {
+        "seed": "second",
+        "stage": "verified-after",
+        "zone": "all",
+        "location": "border",
+        "kind": "all",
+        "denominator": 86784,
+        "jump_ge16_count": 998,
+        "share": 0.011499815634218289
+      },
+      {
+        "seed": "second",
+        "stage": "verified-after",
+        "zone": "gap",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9224,
+        "jump_ge16_count": 0,
+        "share": 0.0
+      },
+      {
+        "seed": "second",
+        "stage": "verified-after",
+        "zone": "main",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9976,
+        "jump_ge16_count": 197,
+        "share": 0.019747393744987973
+      },
+      {
+        "seed": "second",
+        "stage": "verified-after",
+        "zone": "outer",
+        "location": "border",
+        "kind": "all",
+        "denominator": 67584,
+        "jump_ge16_count": 801,
+        "share": 0.011851917613636364
+      },
+      {
+        "seed": "second",
+        "stage": "vanilla",
+        "zone": "all",
+        "location": "border",
+        "kind": "all",
+        "denominator": 86784,
+        "jump_ge16_count": 770,
+        "share": 0.008872603244837757
+      },
+      {
+        "seed": "second",
+        "stage": "vanilla",
+        "zone": "gap",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9224,
+        "jump_ge16_count": 0,
+        "share": 0.0
+      },
+      {
+        "seed": "second",
+        "stage": "vanilla",
+        "zone": "main",
+        "location": "border",
+        "kind": "all",
+        "denominator": 9976,
+        "jump_ge16_count": 80,
+        "share": 0.00801924619085806
+      },
+      {
+        "seed": "second",
+        "stage": "vanilla",
+        "zone": "outer",
+        "location": "border",
+        "kind": "all",
+        "denominator": 67584,
+        "jump_ge16_count": 690,
+        "share": 0.010209517045454546
+      }
+    ],
+    "source_sha256": {
+      "tools/measure/genaudit_263_end_edges.py": "68d8038b79a28547a6be708d683f52887d79450ce0101fcb76936b133ba6f932",
+      "tools/measure/test_genaudit_263_end_edges.py": "37491b45ad3cb6f549179a170009b3750010d501b6cf9107cbe626eb2c53fe86"
+    },
+    "limitations": [
+      "Только сохранённые E3 before/verified-after и official worlds; не новый runtime/CI прогон.",
+      "Радиальные зоны main<=160,outer>=945 по середине ребра; план задаёт исходные координатные окна.",
+      "Нет абляции внешнего шума против мелких островков; причинность отдельных изменений ещё не доказана.",
+      "Число на границе не доказывает шов чанков; void=-1 участвует."
+    ]
+  },
+  "reports": {
+    "owner-before": {
+      "chunks": 2803,
+      "requested": 2803,
+      "missing_chunks": [],
+      "rows": [
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "all",
+          "denominator": 86784,
+          "jump_ge16_count": 831,
+          "share": 0.00957549778761062
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 37529,
+          "jump_ge16_count": 21,
+          "share": 0.0005595672679794292
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 810,
+          "jump_ge16_count": 810,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 48445,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1345440,
+          "jump_ge16_count": 13353,
+          "share": 0.009924634320371032
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 579651,
+          "jump_ge16_count": 272,
+          "share": 0.0004692478750144483
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 13081,
+          "jump_ge16_count": 13081,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 752708,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9976,
+          "jump_ge16_count": 142,
+          "share": 0.014234161988773055
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4102,
+          "jump_ge16_count": 21,
+          "share": 0.005119453924914676
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 121,
+          "jump_ge16_count": 121,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 5753,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 150848,
+          "jump_ge16_count": 2289,
+          "share": 0.015174215103945694
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 60333,
+          "jump_ge16_count": 272,
+          "share": 0.004508312200619893
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2017,
+          "jump_ge16_count": 2017,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 88498,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "all",
+          "denominator": 67584,
+          "jump_ge16_count": 689,
+          "share": 0.010194720643939394
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 33427,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 689,
+          "jump_ge16_count": 689,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 33468,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1045440,
+          "jump_ge16_count": 11064,
+          "share": 0.010583103764921947
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 519318,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11064,
+          "jump_ge16_count": 11064,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 515058,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        }
+      ],
+      "regions": {
+        "r.-1.-1.mcs": "59a315bfc2cba7259e4896d3d79f8361dade1c9c3bc322b0aa9181a177c9506f",
+        "r.-1.0.mcs": "f5a105bfd965433dbfac1c65a691f47482027eb6c521aca50a4d7bc82c595f44",
+        "r.-4.3.mcs": "43a461f221cb3c29015e15794cb2802d836f66f976a99797e1a3cfc7d74a2670",
+        "r.-4.4.mcs": "32946882afb37b951d2ff7227779ebe0b776012365a77024aa823aafefdd8432",
+        "r.-5.3.mcs": "dd63ac0fb4e41f6deb7c1101f5ae459782700d48c09834d95d72dda5a21ab7a2",
+        "r.-5.4.mcs": "418ba3244a53a3e536bb66004414ecdc9153f49cb672b61460cfd2d88c89e062",
+        "r.0.-1.mcs": "36ab941a0bba270a400ec7f4166aa850933feb283660e4d371956162f864bfa4",
+        "r.0.0.mcs": "3a62cb1650bd4def230a1559d0d144523ee89ed2096e043ec0465972181c8cb5",
+        "r.3.3.mcs": "6b881f37801c9dabaf28c7e598d26a55488e64b68ad8f2c5bf004f004bbfa2cb",
+        "r.3.4.mcs": "589b5783c273cfa9baa5b044cb762849e14bd47bfa01d7f647bfb61f60a83d7d",
+        "r.4.3.mcs": "cf30706c39d7cdb1d52ad7be1e087ad4353269464cf47b9bf66fd0730127f452",
+        "r.4.4.mcs": "02bf1304bf8520fc00461b9dd74192ef5345ee3004bea8ce92ac557c6e72d99b"
+      }
+    },
+    "owner-verified-after": {
+      "chunks": 2803,
+      "requested": 2803,
+      "missing_chunks": [],
+      "rows": [
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "all",
+          "denominator": 86784,
+          "jump_ge16_count": 908,
+          "share": 0.010462758112094395
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 38821,
+          "jump_ge16_count": 21,
+          "share": 0.00054094433425208
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 887,
+          "jump_ge16_count": 887,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 47076,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1345440,
+          "jump_ge16_count": 14075,
+          "share": 0.010461261743370198
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 600822,
+          "jump_ge16_count": 310,
+          "share": 0.0005159598017382852
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 13765,
+          "jump_ge16_count": 13765,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 730853,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9976,
+          "jump_ge16_count": 181,
+          "share": 0.01814354450681636
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4776,
+          "jump_ge16_count": 21,
+          "share": 0.0043969849246231155
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 160,
+          "jump_ge16_count": 160,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 5040,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 150848,
+          "jump_ge16_count": 2890,
+          "share": 0.01915835808230802
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71445,
+          "jump_ge16_count": 272,
+          "share": 0.003807124361396879
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2618,
+          "jump_ge16_count": 2618,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 76785,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "all",
+          "denominator": 67584,
+          "jump_ge16_count": 727,
+          "share": 0.010756983901515152
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 34045,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 727,
+          "jump_ge16_count": 727,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 32812,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1045440,
+          "jump_ge16_count": 11185,
+          "share": 0.010698844505662688
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 529377,
+          "jump_ge16_count": 38,
+          "share": 7.178249149471927e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11147,
+          "jump_ge16_count": 11147,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 504916,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        }
+      ],
+      "regions": {
+        "r.-1.-1.mcs": "0cad621c566170573d52479d222e591ab5c84d7a9072e1790b8daf60d9a1507a",
+        "r.-1.0.mcs": "582203105de29340e9ca7ebb1aae07a142b083ba4bdc0c01d98fa61be2ac899d",
+        "r.-4.3.mcs": "d977d48d688109d33aac25f88951f0659a3c46ce01fbbdce221ae3a24bcc3cb7",
+        "r.-4.4.mcs": "ae0df0c762b000f47a61f3795ce1b504a20786a45227deb01229f04f105935b9",
+        "r.-5.3.mcs": "330644bd59675307445532de2bcb9ba734f6c87441e558038f543c2310665c39",
+        "r.-5.4.mcs": "1ec1d000b03c98131beafb5472bee38ce75388313fba7613dc86c88c652c54db",
+        "r.0.-1.mcs": "7d61e344ff64909155f18d41a605fd491b8d77d80c7e97e95529c2705d5ad41c",
+        "r.0.0.mcs": "b4bc8ea39307e759e7ea18f04c406aa6891d7d8090aa4672b5c682d912f77944",
+        "r.3.3.mcs": "59217ed1526e11a356b4c6513fcbfe2887e51c02faf293b9493b9694d545c56a",
+        "r.3.4.mcs": "765367acf1599235f5c59f49a08de5ef38275f6c7dc4ba1660e94dad84748679",
+        "r.4.3.mcs": "6aea7b4c471a891457b5e9b3e81beab6d6724445f6fa6446841eceafe0187746",
+        "r.4.4.mcs": "dbcde88a31f7ea441128a551933ed2f3e359ee29e1edc8b8b3deb60759008758"
+      }
+    },
+    "owner-vanilla": {
+      "chunks": 2803,
+      "requested": 2803,
+      "missing_chunks": [],
+      "rows": [
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "all",
+          "denominator": 86784,
+          "jump_ge16_count": 1009,
+          "share": 0.011626567109144543
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 38669,
+          "jump_ge16_count": 115,
+          "share": 0.002973958468023481
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 894,
+          "jump_ge16_count": 894,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 47221,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1345440,
+          "jump_ge16_count": 14812,
+          "share": 0.01100903793554525
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 593875,
+          "jump_ge16_count": 1366,
+          "share": 0.002300147337402652
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 13446,
+          "jump_ge16_count": 13446,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 738119,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9976,
+          "jump_ge16_count": 144,
+          "share": 0.014434643143544507
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 5619,
+          "jump_ge16_count": 24,
+          "share": 0.004271222637479978
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 120,
+          "jump_ge16_count": 120,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 4237,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 150848,
+          "jump_ge16_count": 1864,
+          "share": 0.01235680950360628
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 83406,
+          "jump_ge16_count": 382,
+          "share": 0.004580006234563461
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 1482,
+          "jump_ge16_count": 1482,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 65960,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "all",
+          "denominator": 67584,
+          "jump_ge16_count": 865,
+          "share": 0.01279888731060606
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 33050,
+          "jump_ge16_count": 91,
+          "share": 0.002753403933434191
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 774,
+          "jump_ge16_count": 774,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 33760,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1045440,
+          "jump_ge16_count": 12948,
+          "share": 0.012385215794306704
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 510469,
+          "jump_ge16_count": 984,
+          "share": 0.001927639092677518
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11964,
+          "jump_ge16_count": 11964,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 523007,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        }
+      ],
+      "regions": {
+        "r.-1.-1.mca": "ebdfbd05426e26d72151537c74ffb4cbf7b22e57dcdd634e9d1dfef78716ba82",
+        "r.-1.0.mca": "cca89becc539135cb9724111046f57a62ffd10a14251ede52168ec0fd2884efc",
+        "r.-4.3.mca": "2b81ea9235b99fec5db4b5b7b061fe05921e53b940a1d566a32905b1f288a979",
+        "r.-4.4.mca": "a20c39c9e9037772212367514cca7de284eb154313d77fdfc7876f0726e68ed7",
+        "r.-5.3.mca": "f28bd189fe6f798950d888470e55e1158beb5821b31f2d682b4161d5ffb8cd47",
+        "r.-5.4.mca": "240be75f8c1161f42515b776995d79208b386002a79279f197ddd8dd7d776cee",
+        "r.0.-1.mca": "68a367538581b252a97de32361b77dc15f1418226414fd5b96f4cde1bf1e2b02",
+        "r.0.0.mca": "a60aaa0df9283eb8ff6124c7a14aa22ed8f4de86d0d53099d202ce3e30193eb6",
+        "r.3.3.mca": "ca6e74f1f68bdb59a8b1084dfa257e1e8279e8d750d5578f6e7a7f3589a422ee",
+        "r.3.4.mca": "bb00b6acd75ab8ac67d08333697c78777d16494d061a05557eb07d4ec6635285",
+        "r.4.3.mca": "4307373b55abc178b3243617990283e3c5bbd0cbd13e637fa41d1f052b626df8",
+        "r.4.4.mca": "873e3b00804eea2a23c22d46238af1cb361a104ab23d1056645405c8f3fa23e7"
+      }
+    },
+    "second-before": {
+      "chunks": 2803,
+      "requested": 2803,
+      "missing_chunks": [],
+      "rows": [
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "all",
+          "denominator": 86784,
+          "jump_ge16_count": 967,
+          "share": 0.011142606932153392
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 35815,
+          "jump_ge16_count": 13,
+          "share": 0.0003629764065335753
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 954,
+          "jump_ge16_count": 954,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 50015,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1345440,
+          "jump_ge16_count": 15458,
+          "share": 0.01148917826138661
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 557290,
+          "jump_ge16_count": 263,
+          "share": 0.0004719266450142655
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 15195,
+          "jump_ge16_count": 15195,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 772955,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9976,
+          "jump_ge16_count": 217,
+          "share": 0.021752205292702487
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 3961,
+          "jump_ge16_count": 13,
+          "share": 0.003281999495077001
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 204,
+          "jump_ge16_count": 204,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 5811,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 150848,
+          "jump_ge16_count": 2791,
+          "share": 0.018502068307170133
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 60019,
+          "jump_ge16_count": 263,
+          "share": 0.004381945717189557
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2528,
+          "jump_ge16_count": 2528,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 88301,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "all",
+          "denominator": 67584,
+          "jump_ge16_count": 750,
+          "share": 0.011097301136363636
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 31854,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 750,
+          "jump_ge16_count": 750,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 34980,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1045440,
+          "jump_ge16_count": 12667,
+          "share": 0.0121164294459749
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 497271,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 12667,
+          "jump_ge16_count": 12667,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 535502,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        }
+      ],
+      "regions": {
+        "r.-1.-1.mcs": "662eca9cd953cb1a72aad17634449fc825b30dec6ea66b78244cbc118acbae97",
+        "r.-1.0.mcs": "551e0e203e55de1569ea310c094a02edce9a8720edcb6dbac822d81d232aebf8",
+        "r.-4.3.mcs": "00f6b4f2204098be420f6f66abe9d8267f5caf53352158c1c56f86e7eb297f86",
+        "r.-4.4.mcs": "570a231186465b4a02e73ccdb14329ab7f1874b03f623a708f90b9785c1253e1",
+        "r.-5.3.mcs": "dd7b96237e2a8db4f552800b716420f0659c6577a6148c5fc7919cf872b4954d",
+        "r.-5.4.mcs": "36c931874fe518a6a756d9ce93dd3196009ce7135419aa619bf25549148530b3",
+        "r.0.-1.mcs": "288a8c895a788ab3a3e5f8a8108d000c871ee7790d5c462201b345de17ea923e",
+        "r.0.0.mcs": "be8a8b540202fd24cfb80ade5604813c4ea694907043823c077a6f616002323f",
+        "r.3.3.mcs": "f322296cbe7c3f3e8318c5228830e295daaa866009e579cb59e8d5d1fc603cf4",
+        "r.3.4.mcs": "514ac55e953911653ec581b85ffbe42cf48263b8056138b4b5e52d2267d7274c",
+        "r.4.3.mcs": "2ae9d6728c868ea666c50cef4b8b509fd6e7953637b63cbe97742e99dc72bbeb",
+        "r.4.4.mcs": "7c13ed9b60d996e66dea254b86c6a87efe86998bbcab8ae1598b91972391b466"
+      }
+    },
+    "second-verified-after": {
+      "chunks": 2803,
+      "requested": 2803,
+      "missing_chunks": [],
+      "rows": [
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "all",
+          "denominator": 86784,
+          "jump_ge16_count": 998,
+          "share": 0.011499815634218289
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 37227,
+          "jump_ge16_count": 20,
+          "share": 0.000537244473097483
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 978,
+          "jump_ge16_count": 978,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 48579,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1345440,
+          "jump_ge16_count": 15641,
+          "share": 0.011625193245332382
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 578672,
+          "jump_ge16_count": 306,
+          "share": 0.0005287969696131833
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 15335,
+          "jump_ge16_count": 15335,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 751433,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9976,
+          "jump_ge16_count": 197,
+          "share": 0.019747393744987973
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4748,
+          "jump_ge16_count": 13,
+          "share": 0.002737994945240101
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 184,
+          "jump_ge16_count": 184,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 5044,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 150848,
+          "jump_ge16_count": 3115,
+          "share": 0.020649925753075945
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 71276,
+          "jump_ge16_count": 263,
+          "share": 0.0036898815870699815
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 2852,
+          "jump_ge16_count": 2852,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 76720,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "all",
+          "denominator": 67584,
+          "jump_ge16_count": 801,
+          "share": 0.011851917613636364
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 32479,
+          "jump_ge16_count": 7,
+          "share": 0.00021552387696665537
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 794,
+          "jump_ge16_count": 794,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 34311,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1045440,
+          "jump_ge16_count": 12526,
+          "share": 0.011981558004285277
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 507396,
+          "jump_ge16_count": 43,
+          "share": 8.474643079567045e-05
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 12483,
+          "jump_ge16_count": 12483,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 525561,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        }
+      ],
+      "regions": {
+        "r.-1.-1.mcs": "fff3010807ae859151f578c04c15c21031e1c37bcb7ae292f04d76c42e67983b",
+        "r.-1.0.mcs": "9273c845c15dc1207ef28afc7209378a6458e1b4f01187362ded2b8a18eee6a7",
+        "r.-4.3.mcs": "230cf4158ae775524c30950af43cd848447dc81d4bdd498dc3341175a633c564",
+        "r.-4.4.mcs": "e0601379bb5070f18266d6f3fde42cef2200d3e388e81cd9479288d7e05daf82",
+        "r.-5.3.mcs": "4e0ae35ed6c45c3a5b13a45f6fb951bdee2fb05570fa90f7264dc33eadfee480",
+        "r.-5.4.mcs": "3f883aaad3020af300faa482dde11436dfd81d1a3e50e7f4266c30c96a61c411",
+        "r.0.-1.mcs": "e6cd4937c03c4579974d491b209d65e5274fee0463d54830f95b6b9e73fa4a62",
+        "r.0.0.mcs": "3ba2e971a67b3a00c36f70fd11fcbdb50b8d8413788100f027e6f8ec61007c8e",
+        "r.3.3.mcs": "dd5f52696db6f50ac81f34a2e89ca1619d65f77c2ca9eff373ae5127de09a4e7",
+        "r.3.4.mcs": "e8974a77322a19e9e66e7d570f0a68c0065da234193653c2fd8d8ad80aece2eb",
+        "r.4.3.mcs": "dfc7b057571fbb5deafd973fc4cd2d7e06e9f27d74f7c4cd905b1707c01bcec0",
+        "r.4.4.mcs": "514e7360daaab42d63381f89d0652d3a6910ad190e52ded86e64913a09751b6a"
+      }
+    },
+    "second-vanilla": {
+      "chunks": 2803,
+      "requested": 2803,
+      "missing_chunks": [],
+      "rows": [
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "all",
+          "denominator": 86784,
+          "jump_ge16_count": 770,
+          "share": 0.008872603244837757
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 38543,
+          "jump_ge16_count": 67,
+          "share": 0.0017383182419635212
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 703,
+          "jump_ge16_count": 703,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 47538,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1345440,
+          "jump_ge16_count": 12762,
+          "share": 0.009485372814841242
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 591653,
+          "jump_ge16_count": 1127,
+          "share": 0.0019048327313475972
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 11635,
+          "jump_ge16_count": 11635,
+          "share": 1.0
+        },
+        {
+          "zone": "all",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 742152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 9224,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 0,
+          "jump_ge16_count": 0,
+          "share": null
+        },
+        {
+          "zone": "gap",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 149152,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "all",
+          "denominator": 9976,
+          "jump_ge16_count": 80,
+          "share": 0.00801924619085806
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 4078,
+          "jump_ge16_count": 13,
+          "share": 0.0031878371750858263
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 67,
+          "jump_ge16_count": 67,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 5831,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 150848,
+          "jump_ge16_count": 1303,
+          "share": 0.008637834111158251
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 61182,
+          "jump_ge16_count": 366,
+          "share": 0.005982151613219575
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 937,
+          "jump_ge16_count": 937,
+          "share": 1.0
+        },
+        {
+          "zone": "main",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 88729,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "all",
+          "denominator": 67584,
+          "jump_ge16_count": 690,
+          "share": 0.010209517045454546
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_land",
+          "denominator": 34465,
+          "jump_ge16_count": 54,
+          "share": 0.0015668069055563615
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "land_void",
+          "denominator": 636,
+          "jump_ge16_count": 636,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "border",
+          "kind": "void_void",
+          "denominator": 32483,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "all",
+          "denominator": 1045440,
+          "jump_ge16_count": 11459,
+          "share": 0.010960935108662381
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_land",
+          "denominator": 530471,
+          "jump_ge16_count": 761,
+          "share": 0.0014345741803039186
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "land_void",
+          "denominator": 10698,
+          "jump_ge16_count": 10698,
+          "share": 1.0
+        },
+        {
+          "zone": "outer",
+          "location": "interior",
+          "kind": "void_void",
+          "denominator": 504271,
+          "jump_ge16_count": 0,
+          "share": 0.0
+        }
+      ],
+      "regions": {
+        "r.-1.-1.mca": "1534a65796bd2c5382e1bef3299cb3e1baf4007614f41bced5e098b7cea30c1e",
+        "r.-1.0.mca": "c5b9a0fac37c90d45405784e69f32e15b6da43351d8c64a98546c18ea4661a22",
+        "r.-4.3.mca": "0162cf6025261d6afba5169241cab866f30d5988130a9da2e4268b852a928a17",
+        "r.-4.4.mca": "9d498585705abd59a123e0cdacc4f3b9d31bd6c791c8b3b5bc0ad68ab06bf708",
+        "r.-5.3.mca": "679c6911ee0575a56d1bd92bcb8e3e5e224c9ed76ce3c3950d90133f57742d2f",
+        "r.-5.4.mca": "7bcbaf93bfc5229e52937943ffc41737e8edf3fe2ea3f472d03ed75f41dc9ed6",
+        "r.0.-1.mca": "882ea51f2035e3a86982a66d2bf6ba6b970dd75fb5f7867cbecebb6f7075fd3c",
+        "r.0.0.mca": "2312abe047e8ee3e673f1f63ad2e3c15828dbacd95eee9ec5ed9c5337fd8e92d",
+        "r.3.3.mca": "096b5560fcce4310829bda21d317e624c1a99ace491e453963e7ce22c9247672",
+        "r.3.4.mca": "a8f496554738432f1d11ddba8d61dc274639cfca459b61ea8dd78aa313ceeec7",
+        "r.4.3.mca": "dc51d767e97debbcff17e015ae02ca1fc5bd6b9273dc9e08c71f33e2c2ad95d7",
+        "r.4.4.mca": "dc53c6996747c5c145c5c50975ff4d60064f1065091c944d139918a30635339c"
+      }
+    }
+  }
+}

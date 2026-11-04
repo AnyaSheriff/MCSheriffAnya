@@ -1,0 +1,924 @@
+{
+  "old": {
+    "version": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "variants": [
+      {
+        "type": "desert",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 2,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6302090341a000000f00011312000502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6302090341a000000f00011312000502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "jungle",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 3,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6303090341a000000f00011312010502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6303090341a000000f00011312010502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 4,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6304090341a000000f00011312020502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6304090341a000000f00011312020502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "savanna",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 5,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6305090341a000000f00011312030502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6305090341a000000f00011312030502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "snow",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 6,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6306090341a000000f00011312040502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6306090341a000000f00011312040502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "swamp",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 7,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6307090341a000000f00011312050502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6307090341a000000f00011312050502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "taiga",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 8,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6308090341a000000f00011312060502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6308090341a000000f00011312060502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "none",
+        "level": 3,
+        "entity": 9,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6309090341a000000f00011312020003140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6309090341a000000f00011312020003140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "armorer",
+        "level": 3,
+        "entity": 10,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "630a090341a000000f00011312020103140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630a090341a000000f00011312020103140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "butcher",
+        "level": 3,
+        "entity": 11,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "630b090341a000000f00011312020203140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630b090341a000000f00011312020203140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "cartographer",
+        "level": 3,
+        "entity": 12,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "630c090341a000000f00011312020303140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630c090341a000000f00011312020303140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "cleric",
+        "level": 3,
+        "entity": 13,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "630d090341a000000f00011312020403140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630d090341a000000f00011312020403140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 3,
+        "entity": 14,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "630e090341a000000f00011312020503140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630e090341a000000f00011312020503140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "fisherman",
+        "level": 3,
+        "entity": 15,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "630f090341a000000f00011312020603140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "630f090341a000000f00011312020603140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "fletcher",
+        "level": 3,
+        "entity": 16,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6310090341a000000f00011312020703140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6310090341a000000f00011312020703140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "leatherworker",
+        "level": 3,
+        "entity": 17,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6311090341a000000f00011312020803140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6311090341a000000f00011312020803140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "librarian",
+        "level": 3,
+        "entity": 18,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6312090341a000000f00011312020903140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6312090341a000000f00011312020903140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "mason",
+        "level": 3,
+        "entity": 19,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6313090341a000000f00011312020a03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6313090341a000000f00011312020a03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "nitwit",
+        "level": 3,
+        "entity": 20,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6314090341a000000f00011312020b03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6314090341a000000f00011312020b03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "shepherd",
+        "level": 3,
+        "entity": 21,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6315090341a000000f00011312020c03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6315090341a000000f00011312020c03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "toolsmith",
+        "level": 3,
+        "entity": 22,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6316090341a000000f00011312020d03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6316090341a000000f00011312020d03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "weaponsmith",
+        "level": 3,
+        "entity": 23,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6317090341a000000f00011312020e03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6317090341a000000f00011312020e03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 1,
+        "entity": 24,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6318090341a000000f00011312020501140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6318090341a000000f00011312020501140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 4,
+        "entity": 25,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6319090341a000000f00011312020504140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6319090341a000000f00011312020504140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 5,
+        "entity": 26,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "631a090341a000000f00011312020505140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "631a090341a000000f00011312020505140801ff"
+          }
+        ]
+      }
+    ],
+    "trades": [
+      {
+        "name": "basic",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3b01130a080009696e73657274696f6e002462323835316663342d643336622d343266322d383733332d6233316135653639306634340a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b00047575696400000004b2851fc4d36b42f28733b31a5e690f44000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "340101b907140001840700000000000000000000001000000002000000003d4ccccd0000000002000101"
+          }
+        ]
+      },
+      {
+        "name": "two_inputs",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3b02130a080009696e73657274696f6e002431373037333434652d656435642d346464342d386464352d3861383231333937623133320a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b000475756964000000041707344eed5d4dd48dd58a821397b132000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "3402018407050001a90701000303018608010000000000020000000800000005000000003e4ccccd0000000202000101"
+          }
+        ]
+      },
+      {
+        "name": "components",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3b03130a080009696e73657274696f6e002439333263343266642d663536342d343363642d393530372d6134303065393961393065310a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b00047575696400000004932c42fdf56443cd9507a400e99a90e1000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "340301e208010133010d00000001c6090100370553746f72790004416c6578000108000a466972737420706167650000000000000000000000100000000300000000000000000000000002000101"
+          }
+        ]
+      },
+      {
+        "name": "disabled",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3b04130a080009696e73657274696f6e002464636563313933312d663263362d346439632d386162352d3832313237626438306164360a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b00047575696400000004dcec1931f2c64d9c8ab582127bd80ad6000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "3404018407010005e3010000000100000010000000100000000100000000000000000000000002000101"
+          }
+        ]
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "version": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "variants": [
+      {
+        "type": "desert",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 2,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6502090341a000000f00011312000502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6502090341a000000f00011312000502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "jungle",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 3,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6503090341a000000f00011312010502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6503090341a000000f00011312010502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 4,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6504090341a000000f00011312020502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6504090341a000000f00011312020502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "savanna",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 5,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6505090341a000000f00011312030502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6505090341a000000f00011312030502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "snow",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 6,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6506090341a000000f00011312040502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6506090341a000000f00011312040502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "swamp",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 7,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6507090341a000000f00011312050502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6507090341a000000f00011312050502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "taiga",
+        "profession": "farmer",
+        "level": 2,
+        "entity": 8,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6508090341a000000f00011312060502140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6508090341a000000f00011312060502140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "none",
+        "level": 3,
+        "entity": 9,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6509090341a000000f00011312020003140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6509090341a000000f00011312020003140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "armorer",
+        "level": 3,
+        "entity": 10,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "650a090341a000000f00011312020103140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650a090341a000000f00011312020103140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "butcher",
+        "level": 3,
+        "entity": 11,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "650b090341a000000f00011312020203140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650b090341a000000f00011312020203140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "cartographer",
+        "level": 3,
+        "entity": 12,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "650c090341a000000f00011312020303140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650c090341a000000f00011312020303140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "cleric",
+        "level": 3,
+        "entity": 13,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "650d090341a000000f00011312020403140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650d090341a000000f00011312020403140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 3,
+        "entity": 14,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "650e090341a000000f00011312020503140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650e090341a000000f00011312020503140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "fisherman",
+        "level": 3,
+        "entity": 15,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "650f090341a000000f00011312020603140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "650f090341a000000f00011312020603140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "fletcher",
+        "level": 3,
+        "entity": 16,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6510090341a000000f00011312020703140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6510090341a000000f00011312020703140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "leatherworker",
+        "level": 3,
+        "entity": 17,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6511090341a000000f00011312020803140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6511090341a000000f00011312020803140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "librarian",
+        "level": 3,
+        "entity": 18,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6512090341a000000f00011312020903140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6512090341a000000f00011312020903140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "mason",
+        "level": 3,
+        "entity": 19,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6513090341a000000f00011312020a03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6513090341a000000f00011312020a03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "nitwit",
+        "level": 3,
+        "entity": 20,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6514090341a000000f00011312020b03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6514090341a000000f00011312020b03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "shepherd",
+        "level": 3,
+        "entity": 21,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6515090341a000000f00011312020c03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6515090341a000000f00011312020c03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "toolsmith",
+        "level": 3,
+        "entity": 22,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6516090341a000000f00011312020d03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6516090341a000000f00011312020d03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "weaponsmith",
+        "level": 3,
+        "entity": 23,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6517090341a000000f00011312020e03140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6517090341a000000f00011312020e03140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 1,
+        "entity": 24,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6518090341a000000f00011312020501140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6518090341a000000f00011312020501140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 4,
+        "entity": 25,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "6519090341a000000f00011312020504140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "6519090341a000000f00011312020504140801ff"
+          }
+        ]
+      },
+      {
+        "type": "plains",
+        "profession": "farmer",
+        "level": 5,
+        "entity": 26,
+        "packets": [
+          {
+            "name": "entity_metadata",
+            "body": "651a090341a000000f00011312020505140801ff"
+          },
+          {
+            "name": "entity_metadata",
+            "body": "651a090341a000000f00011312020505140801ff"
+          }
+        ]
+      }
+    ],
+    "trades": [
+      {
+        "name": "basic",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3c01130a080009696e73657274696f6e002439616237376637312d323862372d346437622d626164332d3034633465646639396439640a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b000475756964000000049ab77f7128b74d7bbad304c4edf99d9d000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "350101aa08140001f50700000000000000000000001000000002000000003d4ccccd0000000002000101"
+          }
+        ]
+      },
+      {
+        "name": "two_inputs",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3c02130a080009696e73657274696f6e002438336333383836372d356235372d343834662d623864372d6463616365666336653662630a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b0004757569640000000483c388675b57484fb8d7dcacefc6e6bc000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "350201f5070500019a080100030301fa08010000000000020000000800000005000000003e4ccccd0000000202000101"
+          }
+        ]
+      },
+      {
+        "name": "components",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3c03130a080009696e73657274696f6e002430393166356230642d623033312d343364312d393531622d3835613630336336643231310a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b00047575696400000004091f5b0db03143d1951b85a603c6d211000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "350301f709010135010d00000001dc0a0100390553746f72790004416c6578000108000a466972737420706167650000000000000000000000100000000300000000000000000000000002000101"
+          }
+        ]
+      },
+      {
+        "name": "disabled",
+        "packets": [
+          {
+            "name": "open_window",
+            "body": "3c04130a080009696e73657274696f6e002461613431643631622d623933622d346636622d383664352d3838303537396530643033370a000b686f7665725f6576656e740a00046e616d650800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200080006616374696f6e000b73686f775f656e74697479080002696400126d696e6563726166743a76696c6c616765720b00047575696400000004aa41d61bb93b4f6b86d5880579e0d037000800097472616e736c6174650020656e746974792e6d696e6563726166742e76696c6c616765722e6661726d657200"
+          },
+          {
+            "name": "trade_list",
+            "body": "350401f50701000588020000000100000010000000100000000100000000000000000000000002000101"
+          }
+        ]
+      }
+    ],
+    "exit_code": 0
+  }
+}

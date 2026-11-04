@@ -1,0 +1,875 @@
+{
+  "source": "Official 26.3 black-box /place feature rooted_azalea_tree probes in fresh flat worlds; no game archives or definitions inspected. Server port 26183, max heap 2 GiB, stopped. Cells are measured from saved regions.",
+  "probe": {
+    "air": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 8,
+      "attempts": 8,
+      "rooted_dirt": [
+        735,
+        731,
+        705,
+        736,
+        724,
+        714,
+        720,
+        722
+      ]
+    },
+    "short_grass": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 8,
+      "attempts": 8,
+      "rooted_dirt": [
+        739,
+        725,
+        729,
+        742,
+        732,
+        701,
+        720,
+        718
+      ]
+    },
+    "bamboo": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 0,
+      "attempts": 8,
+      "rooted_dirt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "tall_grass": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 0,
+      "attempts": 4,
+      "rooted_dirt": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "single_bamboo": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 0,
+      "attempts": 4,
+      "rooted_dirt": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "leaf": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        720,
+        729,
+        741,
+        731
+      ]
+    },
+    "fern": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        730,
+        735,
+        726,
+        730
+      ]
+    },
+    "height118": {
+      "origin_y": 20,
+      "ground_y": 118,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        1193,
+        1211,
+        1211,
+        1213
+      ]
+    },
+    "height119": {
+      "origin_y": 20,
+      "ground_y": 119,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        1231,
+        1209,
+        1245,
+        1244
+      ]
+    },
+    "height120": {
+      "origin_y": 20,
+      "ground_y": 120,
+      "trees": 0,
+      "attempts": 4,
+      "rooted_dirt": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "stone": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 0,
+      "attempts": 4,
+      "rooted_dirt": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "clay": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 0,
+      "attempts": 4,
+      "rooted_dirt": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "sand": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        743,
+        731,
+        715,
+        730
+      ]
+    },
+    "snow": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        717,
+        707,
+        749,
+        719
+      ]
+    },
+    "terracotta": {
+      "origin_y": 20,
+      "ground_y": 80,
+      "trees": 4,
+      "attempts": 4,
+      "rooted_dirt": [
+        749,
+        743,
+        719,
+        730
+      ]
+    }
+  },
+  "natural": {
+    "owner": [
+      {
+        "blocks": 475,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          38
+        ],
+        "mean_blocks_per_layer": 12.179487179487179
+      },
+      {
+        "blocks": 414,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          35
+        ],
+        "mean_blocks_per_layer": 11.5
+      },
+      {
+        "blocks": 704,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          60
+        ],
+        "mean_blocks_per_layer": 11.540983606557377
+      },
+      {
+        "blocks": 411,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          64
+        ],
+        "mean_blocks_per_layer": 8.934782608695652
+      },
+      {
+        "blocks": 846,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          69
+        ],
+        "mean_blocks_per_layer": 12.085714285714285
+      },
+      {
+        "blocks": 766,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          63
+        ],
+        "mean_blocks_per_layer": 11.96875
+      },
+      {
+        "blocks": 625,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          50
+        ],
+        "mean_blocks_per_layer": 12.254901960784315
+      },
+      {
+        "blocks": 469,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          63
+        ],
+        "mean_blocks_per_layer": 12.025641025641026
+      },
+      {
+        "blocks": 539,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          59
+        ],
+        "mean_blocks_per_layer": 10.78
+      },
+      {
+        "blocks": 459,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          38
+        ],
+        "mean_blocks_per_layer": 11.76923076923077
+      },
+      {
+        "blocks": 1028,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          83
+        ],
+        "mean_blocks_per_layer": 12.238095238095237
+      },
+      {
+        "blocks": 791,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          65
+        ],
+        "mean_blocks_per_layer": 11.984848484848484
+      },
+      {
+        "blocks": 630,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          51
+        ],
+        "mean_blocks_per_layer": 12.115384615384615
+      },
+      {
+        "blocks": 788,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          69
+        ],
+        "mean_blocks_per_layer": 11.420289855072463
+      }
+    ],
+    "second": [
+      {
+        "blocks": 606,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          62
+        ],
+        "mean_blocks_per_layer": 12.36734693877551
+      },
+      {
+        "blocks": 644,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          65
+        ],
+        "mean_blocks_per_layer": 11.925925925925926
+      },
+      {
+        "blocks": 519,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          58
+        ],
+        "mean_blocks_per_layer": 11.282608695652174
+      },
+      {
+        "blocks": 671,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          70
+        ],
+        "mean_blocks_per_layer": 11.372881355932204
+      },
+      {
+        "blocks": 757,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          68
+        ],
+        "mean_blocks_per_layer": 10.971014492753623
+      },
+      {
+        "blocks": 514,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          68
+        ],
+        "mean_blocks_per_layer": 8.290322580645162
+      },
+      {
+        "blocks": 236,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          65
+        ],
+        "mean_blocks_per_layer": 6.378378378378378
+      },
+      {
+        "blocks": 758,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          71
+        ],
+        "mean_blocks_per_layer": 11.661538461538461
+      },
+      {
+        "blocks": 490,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          89
+        ],
+        "mean_blocks_per_layer": 11.136363636363637
+      },
+      {
+        "blocks": 783,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          70
+        ],
+        "mean_blocks_per_layer": 12.629032258064516
+      },
+      {
+        "blocks": 874,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          92
+        ],
+        "mean_blocks_per_layer": 10.53012048192771
+      },
+      {
+        "blocks": 725,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          59
+        ],
+        "mean_blocks_per_layer": 12.083333333333334
+      },
+      {
+        "blocks": 750,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          60
+        ],
+        "mean_blocks_per_layer": 12.295081967213115
+      },
+      {
+        "blocks": 548,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          54
+        ],
+        "mean_blocks_per_layer": 11.91304347826087
+      },
+      {
+        "blocks": 727,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          61
+        ],
+        "mean_blocks_per_layer": 11.725806451612904
+      },
+      {
+        "blocks": 449,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          37
+        ],
+        "mean_blocks_per_layer": 11.81578947368421
+      },
+      {
+        "blocks": 455,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          38
+        ],
+        "mean_blocks_per_layer": 11.666666666666666
+      },
+      {
+        "blocks": 876,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          78
+        ],
+        "mean_blocks_per_layer": 11.23076923076923
+      },
+      {
+        "blocks": 690,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          66
+        ],
+        "mean_blocks_per_layer": 10.298507462686567
+      },
+      {
+        "blocks": 429,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          35
+        ],
+        "mean_blocks_per_layer": 11.916666666666666
+      },
+      {
+        "blocks": 189,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          33
+        ],
+        "mean_blocks_per_layer": 5.90625
+      },
+      {
+        "blocks": 769,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          63
+        ],
+        "mean_blocks_per_layer": 12.015625
+      },
+      {
+        "blocks": 645,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          53
+        ],
+        "mean_blocks_per_layer": 11.944444444444445
+      },
+      {
+        "blocks": 761,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          66
+        ],
+        "mean_blocks_per_layer": 11.35820895522388
+      },
+      {
+        "blocks": 915,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          75
+        ],
+        "mean_blocks_per_layer": 12.039473684210526
+      },
+      {
+        "blocks": 622,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          50
+        ],
+        "mean_blocks_per_layer": 12.196078431372548
+      },
+      {
+        "blocks": 771,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          65
+        ],
+        "mean_blocks_per_layer": 11.681818181818182
+      },
+      {
+        "blocks": 809,
+        "dx": [
+          -2,
+          2
+        ],
+        "dz": [
+          -2,
+          2
+        ],
+        "depth": [
+          0,
+          65
+        ],
+        "mean_blocks_per_layer": 12.257575757575758
+      }
+    ]
+  }
+}

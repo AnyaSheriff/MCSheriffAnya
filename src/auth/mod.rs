@@ -49,7 +49,6 @@ pub struct Service {
     state: Mutex<State>,
     operation: Mutex<()>,
     pepper: hash::Pepper,
-    pub premium: premium::Detector,
 }
 
 #[derive(Clone)]
@@ -71,7 +70,7 @@ impl Service {
         let pepper = hash::Pepper::open(secret, !db.accounts.values().any(|a| a.protected.is_some()))?;
         // Создание файла проверяет доступность записи до первого подключения.
         store.save(&db)?;
-        Ok(Self { state: Mutex::new(State { store, db, limits: Limits::default(), sessions: HashMap::new() }), operation:Mutex::new(()), pepper, premium: premium::Detector::default() })
+        Ok(Self { state: Mutex::new(State { store, db, limits: Limits::default(), sessions: HashMap::new() }), operation:Mutex::new(()), pepper })
     }
     pub fn identity(&self, name: &str, verified_uuid: Option<[u8; 16]>) -> Identity {
         let state = self.state.lock().expect("auth");
@@ -172,8 +171,12 @@ impl Drop for Session {
     }
 }
 
+// До появления dialogs все переведённые клиенты используют отдельный Play-барьер.
+pub fn needs_chat_login(version: mcsa_protocol::JavaVersion) -> bool { version.protocol() < 771 }
+
 pub fn sensitive_command(command: &str) -> bool {
-    matches!(command.trim_start().trim_start_matches('/').split_whitespace().next(), Some("auth" | "changepassword" | "login" | "register"))
+    command.trim_start().trim_start_matches('/').split_whitespace().next()
+        .is_some_and(|name| ["auth", "changepassword", "register", "login"].iter().any(|s| name.eq_ignore_ascii_case(s)))
 }
 
 pub fn command(command: &str, source: &crate::commands::Source, shared: &crate::shared::Shared) -> Option<crate::commands::Answer> {

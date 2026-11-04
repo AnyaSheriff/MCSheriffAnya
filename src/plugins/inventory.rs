@@ -114,8 +114,8 @@ impl PluginCtx {
     pub(super) fn inventory_stack(&mut self, item: Option<inventory::Item>) -> Result<Option<Stack>, String> {
         let stack = match item {
             Some(item) => {
-                let number = crate::blocks::item_named(&item.kind).ok_or("неизвестный предмет")?;
-                if item.kind == "air" || item.count == 0 || item.count > crate::blocks::stack_size(number) as u32 { return Err("неверное количество предметов".into()); }
+                let number = self.shared.catalog().item_named(&item.kind).map_err(|_| "неизвестный предмет")?.ok_or("неизвестный предмет")?;
+                if item.kind == "air" || item.count == 0 || item.count > self.shared.catalog().stack_size(number).map_err(|_| "неизвестный предмет")? as u32 { return Err("неверное количество предметов".into()); }
                 let original = self.native_items.restore(&item.metadata)?;
                 let mut data = original.map(|stack| stack.extras()).unwrap_or_default();
                 apply_metadata(&mut data, &item.metadata)?;
@@ -127,7 +127,7 @@ impl PluginCtx {
         Ok(stack)
     }
     pub(super) fn inventory_items(&mut self, slots: &[Option<Stack>]) -> Vec<Option<inventory::Item>> {
-        slots.iter().map(|slot| slot.and_then(|stack| crate::blocks::item_name(stack.item).map(|name| {
+        slots.iter().map(|slot| slot.and_then(|stack| self.shared.catalog().name(crate::gameplay_catalog::Kind::Item, stack.item).ok().map(|name| {
             let token = self.native_items.remember(stack);
             inventory::Item { kind: name.into(), count: stack.count as u32, metadata: metadata(stack, Some(token)) }
         }))).collect()
@@ -201,7 +201,7 @@ impl inventory::Host for PluginCtx {
     fn snapshot(&mut self, text: String) -> Result<Vec<Option<inventory::Item>>, String> {
         let uuid = parse_uuid(&text).ok_or("неверный UUID")?;
         let slots = self.shared.players.lock().expect("игроки").ui.info.get(&uuid).ok_or("нет снимка игрока")?.inventory.clone();
-        Ok(slots.iter().map(|slot| slot.and_then(|stack| crate::blocks::item_name(stack.item).map(|name| {
+        Ok(slots.iter().map(|slot| slot.and_then(|stack| self.shared.catalog().name(crate::gameplay_catalog::Kind::Item, stack.item).ok().map(|name| {
             let token = self.native_items.remember(stack);
             inventory::Item { kind: name.into(), count: stack.count as u32, metadata: metadata(stack, Some(token)) }
         }))).collect())

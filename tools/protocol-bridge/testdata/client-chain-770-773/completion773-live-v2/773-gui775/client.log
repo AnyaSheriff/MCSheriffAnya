@@ -1,0 +1,1906 @@
+NOTE: Picked up JDK_JAVA_OPTIONS: -Dorg.lwjgl.glfw.libname=/tmp/s26-mv11-gui/usr/lib/x86_64-linux-gnu/libglfw.so.3.4
+[19:56:53] [main/WARN]: Failed retrieving storage space for org.lwjgl.system.SharedLibraryExtractPath
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-xj05buhk/client/natives/lwjgl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403) ~[?:?]
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375) ~[?:?]
+	at ae.b(SourceFile:174) [client.jar:?]
+	at ae.a(SourceFile:161) [client.jar:?]
+	at ae.b(SourceFile:154) [client.jar:?]
+	at ae.a(SourceFile:94) [client.jar:?]
+	at ae.a(SourceFile:89) [client.jar:?]
+	at ae.f(SourceFile:58) [client.jar:?]
+	at ae.a(SourceFile:94) [client.jar:?]
+	at ae.<init>(SourceFile:58) [client.jar:?]
+	at p.<init>(SourceFile:35) [client.jar:?]
+	at p.g(SourceFile:234) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:130) [client.jar:?]
+[19:56:53] [main/WARN]: Failed retrieving storage space for io.netty.native.workdir
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-xj05buhk/client/natives/netty
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403) ~[?:?]
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375) ~[?:?]
+	at ae.b(SourceFile:174) [client.jar:?]
+	at ae.a(SourceFile:161) [client.jar:?]
+	at ae.b(SourceFile:155) [client.jar:?]
+	at ae.a(SourceFile:94) [client.jar:?]
+	at ae.a(SourceFile:89) [client.jar:?]
+	at ae.f(SourceFile:58) [client.jar:?]
+	at ae.a(SourceFile:94) [client.jar:?]
+	at ae.<init>(SourceFile:58) [client.jar:?]
+	at p.<init>(SourceFile:35) [client.jar:?]
+	at p.g(SourceFile:234) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:130) [client.jar:?]
+[19:56:53] [Datafixer Bootstrap/INFO]: 278 Datafixer optimizations took 318 milliseconds
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.10/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[19:56:56] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[19:56:56] [Render thread/INFO]: Setting user: McsaProbe
+[19:56:56] [Render thread/INFO]: Backend library: LWJGL version 3.3.3+5
+Failed to create /home/lenox/.cache/mesa_shader_cache for shader cache (Read-only file system)---disabling.
+[19:56:57] [Render thread/INFO]: [STDERR]: [LWJGL] [ThreadLocalUtil] Unsupported JNI version detected, this may result in a crash. Please inform LWJGL developers.
+[19:56:57] [Download-2/ERROR]: Failed to fetch user properties
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:59) ~[authlib-7.0.61.jar:?]
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:150) ~[authlib-7.0.61.jar:?]
+	at fzz.bL(SourceFile:465) [client.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614) [?:?]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103) ~[authlib-7.0.61.jar:?]
+	at com.mojang.authlib.minecraft.client.MinecraftClient.get(MinecraftClient.java:56) ~[authlib-7.0.61.jar:?]
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:121) ~[authlib-7.0.61.jar:?]
+	... 5 more
+[19:56:57] [Render thread/INFO]: Using optional rendering extensions: GL_ARB_buffer_storage, GL_KHR_debug, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access
+[19:56:57] [Render thread/INFO]: Reloading ResourceManager: vanilla
+[19:56:57] [Worker-Main-4/INFO]: Found unifont_all_no_pua-16.0.03.hex, loading
+[19:56:57] [Worker-Main-3/INFO]: Found unifont_pua-16.0.03.hex, loading
+[19:56:57] [Worker-Main-8/INFO]: Found unifont_jp_patch-16.0.03.hex, loading
+[19:56:57] [Download-1/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[19:56:57] [Download-1/ERROR]: Failed to fetch Realms feature flags
+fwt: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+	at fun.a(SourceFile:536) ~[client.jar:?]
+	at fun.o(SourceFile:189) [client.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614) [?:?]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+[19:56:59] [Render thread/INFO]: OpenAL initialized on device No Output
+[19:56:59] [Render thread/INFO]: Sound engine started
+[19:56:59] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 128x64x0 minecraft:textures/atlas/decorated_pot.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 2048x1024x0 minecraft:textures/atlas/armor_trims.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/shield_patterns.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/chest.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/banner_patterns.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/beds.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 256x256x0 minecraft:textures/atlas/signs.png-atlas
+[19:56:59] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/shulker_boxes.png-atlas
+[19:56:59] [Render thread/INFO]: Connecting to 127.0.0.1, 26034
+[19:56:59] [Download-1/ERROR]: Failed to retrieve profile key pair
+com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103) ~[authlib-7.0.61.jar:?]
+	at com.mojang.authlib.minecraft.client.MinecraftClient.post(MinecraftClient.java:64) ~[authlib-7.0.61.jar:?]
+	at com.mojang.authlib.yggdrasil.YggdrasilUserApiService.getKeyPair(YggdrasilUserApiService.java:61) ~[authlib-7.0.61.jar:?]
+	at gzd.a(SourceFile:129) ~[client.jar:?]
+	at gzd.b(SourceFile:77) [client.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614) [?:?]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+[19:57:01] [Render thread/ERROR]: Registry loading errors:
+> Errors in registry minecraft:dimension_type:
+>> Errors in element minecraft:overworld:
+java.lang.IllegalStateException: Failed to parse value {ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key has_raids in MapLike[{ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]}]; No key piglin_safe in MapLike[{ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]}]; No key respawn_anchor_works in MapLike[{ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]}]; No key bed_works in MapLike[{ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]}]; No key natural in MapLike[{ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]}]; No key ultrawarm in MapLike[{ambient_light:0.0f,attributes:{"minecraft:visual/cloud_color":"#ccffffff","minecraft:visual/cloud_height":192.33f,"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff"},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:overworld",has_ceiling:0b,has_ender_dragon_fight:0b,has_fixed_time:0b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_overworld",logical_height:384,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:7,skybox:"overworld",timelines:["minecraft:day","minecraft:moon"]}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:the_end:
+java.lang.IllegalStateException: Failed to parse value {ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key has_raids in MapLike[{ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"}]; No key piglin_safe in MapLike[{ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"}]; No key respawn_anchor_works in MapLike[{ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"}]; No key bed_works in MapLike[{ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"}]; No key natural in MapLike[{ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"}]; No key ultrawarm in MapLike[{ambient_light:0.25f,attributes:{},cardinal_light:"default",coordinate_scale:1.0d,default_clock:"minecraft:the_end",has_ceiling:0b,has_ender_dragon_fight:1b,has_fixed_time:1b,has_skylight:1b,height:384,infiniburn:"#minecraft:infiniburn_end",logical_height:256,min_y:-64,monster_spawn_block_light_limit:0,monster_spawn_light_level:15,skybox:"end"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:the_nether:
+java.lang.IllegalStateException: Failed to parse value {ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key has_raids in MapLike[{ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"}]; No key piglin_safe in MapLike[{ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"}]; No key respawn_anchor_works in MapLike[{ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"}]; No key bed_works in MapLike[{ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"}]; No key natural in MapLike[{ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"}]; No key ultrawarm in MapLike[{ambient_light:0.1f,attributes:{"minecraft:visual/fog_color":"#330808"},cardinal_light:"nether",coordinate_scale:8.0d,has_ceiling:1b,has_ender_dragon_fight:0b,has_fixed_time:1b,has_skylight:0b,height:384,infiniburn:"#minecraft:infiniburn_nether",logical_height:128,min_y:-64,monster_spawn_block_light_limit:15,monster_spawn_light_level:7,skybox:"none"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+> Errors in registry minecraft:worldgen/biome:
+>> Errors in element mcsheriffanya:autumn_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#79a6ff"},carvers:[],downfall:0.8f,effects:{dry_foliage_color:"#a4532b",foliage_color:"#d9822b",grass_color:"#b9a24f",water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; Not a number; No key sky_color in MapLike[{dry_foliage_color:"#a4532b",foliage_color:"#d9822b",grass_color:"#b9a24f",water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{dry_foliage_color:"#a4532b",foliage_color:"#d9822b",grass_color:"#b9a24f",water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{dry_foliage_color:"#a4532b",foliage_color:"#d9822b",grass_color:"#b9a24f",water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:badlands:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; No key sky_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:bamboo_jungle:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#77a8ff"},carvers:[],downfall:0.9f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.95f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:basalt_deltas:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/ambient_particles":[{particle:{type:"minecraft:white_ash"},probability:0.118093334f}],"minecraft:visual/fog_color":"#685f70"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:beach:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#78a7ff"},carvers:[],downfall:0.4f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:birch_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7aa5ff"},carvers:[],downfall:0.6f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.6f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:cherry_grove:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff","minecraft:visual/water_fog_color":"#5db7ef"},carvers:[],downfall:0.8f,effects:{foliage_color:"#b6db61",grass_color:"#b6db61",water_color:"#5db7ef"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; No key sky_color in MapLike[{foliage_color:"#b6db61",grass_color:"#b6db61",water_color:"#5db7ef"}]; No key water_fog_color in MapLike[{foliage_color:"#b6db61",grass_color:"#b6db61",water_color:"#5db7ef"}]; Not a number; No key fog_color in MapLike[{foliage_color:"#b6db61",grass_color:"#b6db61",water_color:"#5db7ef"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:cold_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3d57d6"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3d57d6"}]; No key water_fog_color in MapLike[{water_color:"#3d57d6"}]; Not a number; No key fog_color in MapLike[{water_color:"#3d57d6"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:crimson_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/ambient_particles":[{particle:{type:"minecraft:crimson_spore"},probability:0.025f}],"minecraft:visual/fog_color":"#330303"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:dark_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#79a6ff"},carvers:[],downfall:0.8f,effects:{dry_foliage_color:"#7b5334",grass_color_modifier:"dark_forest",water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; No key sky_color in MapLike[{dry_foliage_color:"#7b5334",grass_color_modifier:"dark_forest",water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{dry_foliage_color:"#7b5334",grass_color_modifier:"dark_forest",water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{dry_foliage_color:"#7b5334",grass_color_modifier:"dark_forest",water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:deep_cold_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3d57d6"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3d57d6"}]; No key water_fog_color in MapLike[{water_color:"#3d57d6"}]; Not a number; No key fog_color in MapLike[{water_color:"#3d57d6"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:deep_dark:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#78a7ff"},carvers:[],downfall:0.4f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:deep_frozen_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3938c9"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f,temperature_modifier:"frozen"} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3938c9"}]; No key water_fog_color in MapLike[{water_color:"#3938c9"}]; Not a number; No key fog_color in MapLike[{water_color:"#3938c9"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:deep_lukewarm_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff","minecraft:visual/water_fog_color":"#041633"},carvers:[],downfall:0.5f,effects:{water_color:"#45adf2"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#45adf2"}]; No key water_fog_color in MapLike[{water_color:"#45adf2"}]; Not a number; No key fog_color in MapLike[{water_color:"#45adf2"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:deep_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:desert:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:dripstone_caves:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#78a7ff"},carvers:[],downfall:0.4f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:end_barrens:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#181318","minecraft:visual/sky_color":"#000000","minecraft:visual/water_fog_color":"#050533"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:end_highlands:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#181318","minecraft:visual/sky_color":"#000000","minecraft:visual/water_fog_color":"#050533"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:end_midlands:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#181318","minecraft:visual/sky_color":"#000000","minecraft:visual/water_fog_color":"#050533"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:eroded_badlands:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; No key sky_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:flower_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#79a6ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#79a6ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:frozen_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7fa1ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3938c9"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.0f,temperature_modifier:"frozen"} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3938c9"}]; No key water_fog_color in MapLike[{water_color:"#3938c9"}]; Not a number; No key fog_color in MapLike[{water_color:"#3938c9"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:frozen_peaks:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#859dff"},carvers:[],downfall:0.9f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:-0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:frozen_river:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7fa1ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3938c9"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3938c9"}]; No key water_fog_color in MapLike[{water_color:"#3938c9"}]; Not a number; No key fog_color in MapLike[{water_color:"#3938c9"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:grove:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#81a0ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:-0.2f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:ice_spikes:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7fa1ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:jagged_peaks:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#859dff"},carvers:[],downfall:0.9f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:-0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:jungle:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#77a8ff"},carvers:[],downfall:0.9f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.95f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:lukewarm_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff","minecraft:visual/water_fog_color":"#041633"},carvers:[],downfall:0.5f,effects:{water_color:"#45adf2"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#45adf2"}]; No key water_fog_color in MapLike[{water_color:"#45adf2"}]; Not a number; No key fog_color in MapLike[{water_color:"#45adf2"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:lush_caves:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:mangrove_swamp:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#c0d8ff","minecraft:visual/sky_color":"#78a7ff","minecraft:visual/water_fog_color":"#4d7a60","minecraft:visual/water_fog_end_distance":{argument:0.85f,modifier:"multiply"}},carvers:[],downfall:0.9f,effects:{dry_foliage_color:"#7b5334",foliage_color:"#8db127",grass_color_modifier:"swamp",water_color:"#3a7a6a"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; No key sky_color in MapLike[{dry_foliage_color:"#7b5334",foliage_color:"#8db127",grass_color_modifier:"swamp",water_color:"#3a7a6a"}]; No key water_fog_color in MapLike[{dry_foliage_color:"#7b5334",foliage_color:"#8db127",grass_color_modifier:"swamp",water_color:"#3a7a6a"}]; Not a number; No key fog_color in MapLike[{dry_foliage_color:"#7b5334",foliage_color:"#8db127",grass_color_modifier:"swamp",water_color:"#3a7a6a"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:meadow:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.8f,effects:{water_color:"#0e4ecf"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#0e4ecf"}]; No key water_fog_color in MapLike[{water_color:"#0e4ecf"}]; Not a number; No key fog_color in MapLike[{water_color:"#0e4ecf"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:mushroom_fields:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#77a8ff"},carvers:[],downfall:1.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.9f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:nether_wastes:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#330808"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:old_growth_birch_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7aa5ff"},carvers:[],downfall:0.6f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.6f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:old_growth_pine_taiga:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ca3ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.3f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:old_growth_spruce_taiga:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7da3ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.25f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:pale_garden:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#817770","minecraft:visual/sky_color":"#b9b9b9","minecraft:visual/water_fog_color":"#556980"},carvers:[],downfall:0.8f,effects:{dry_foliage_color:"#a0a69c",foliage_color:"#878d76",grass_color:"#778272",water_color:"#76889d"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.7f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; Not a number; No key sky_color in MapLike[{dry_foliage_color:"#a0a69c",foliage_color:"#878d76",grass_color:"#778272",water_color:"#76889d"}]; No key water_fog_color in MapLike[{dry_foliage_color:"#a0a69c",foliage_color:"#878d76",grass_color:"#778272",water_color:"#76889d"}]; Not a number; No key fog_color in MapLike[{dry_foliage_color:"#a0a69c",foliage_color:"#878d76",grass_color:"#778272",water_color:"#76889d"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:plains:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#78a7ff"},carvers:[],downfall:0.4f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:river:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:savanna:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:savanna_plateau:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:small_end_islands:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#181318","minecraft:visual/sky_color":"#000000","minecraft:visual/water_fog_color":"#050533"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:snowy_beach:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7fa1ff"},carvers:[],downfall:0.3f,effects:{water_color:"#3d57d6"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.05f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3d57d6"}]; No key water_fog_color in MapLike[{water_color:"#3d57d6"}]; Not a number; No key fog_color in MapLike[{water_color:"#3d57d6"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:snowy_plains:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7fa1ff"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:snowy_slopes:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#829fff"},carvers:[],downfall:0.9f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:-0.3f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:snowy_taiga:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#839eff"},carvers:[],downfall:0.4f,effects:{water_color:"#3d57d6"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:-0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3d57d6"}]; No key water_fog_color in MapLike[{water_color:"#3d57d6"}]; Not a number; No key fog_color in MapLike[{water_color:"#3d57d6"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:soul_sand_valley:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/ambient_particles":[{particle:{type:"minecraft:ash"},probability:0.00625f}],"minecraft:visual/fog_color":"#1b4745"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:sparse_jungle:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#77a8ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.95f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:stony_peaks:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#76a8ff"},carvers:[],downfall:0.3f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:1.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:stony_shore:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7da2ff"},carvers:[],downfall:0.3f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.2f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:sunflower_plains:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#78a7ff"},carvers:[],downfall:0.4f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:swamp:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#78a7ff","minecraft:visual/water_fog_color":"#232317","minecraft:visual/water_fog_end_distance":{argument:0.85f,modifier:"multiply"}},carvers:[],downfall:0.9f,effects:{dry_foliage_color:"#7b5334",foliage_color:"#6a7039",grass_color_modifier:"swamp",water_color:"#617b64"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.8f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; No key sky_color in MapLike[{dry_foliage_color:"#7b5334",foliage_color:"#6a7039",grass_color_modifier:"swamp",water_color:"#617b64"}]; No key water_fog_color in MapLike[{dry_foliage_color:"#7b5334",foliage_color:"#6a7039",grass_color_modifier:"swamp",water_color:"#617b64"}]; Not a number; No key fog_color in MapLike[{dry_foliage_color:"#7b5334",foliage_color:"#6a7039",grass_color_modifier:"swamp",water_color:"#617b64"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:taiga:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7da3ff"},carvers:[],downfall:0.8f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.25f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:the_end:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/fog_color":"#181318","minecraft:visual/sky_color":"#000000","minecraft:visual/water_fog_color":"#050533"},carvers:[],downfall:0.5f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:warm_ocean:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7ba4ff","minecraft:visual/water_fog_color":"#041f33"},carvers:[],downfall:0.5f,effects:{water_color:"#43d5ee"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.5f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#43d5ee"}]; No key water_fog_color in MapLike[{water_color:"#43d5ee"}]; Not a number; No key fog_color in MapLike[{water_color:"#43d5ee"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:warped_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/ambient_particles":[{particle:{type:"minecraft:warped_spore"},probability:0.01428f}],"minecraft:visual/fog_color":"#1a051a"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:windswept_forest:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7da2ff"},carvers:[],downfall:0.3f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.2f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:windswept_gravelly_hills:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7da2ff"},carvers:[],downfall:0.3f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.2f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:windswept_hills:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#7da2ff"},carvers:[],downfall:0.3f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:1b,spawn_costs:{},spawners:{},temperature:0.2f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:windswept_savanna:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: No key sky_color in MapLike[{water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+>> Errors in element minecraft:wooded_badlands:
+java.lang.IllegalStateException: Failed to parse value {attributes:{"minecraft:visual/sky_color":"#6eb1ff"},carvers:[],downfall:0.0f,effects:{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"},features:[],has_precipitation:0b,spawn_costs:{},spawners:{},temperature:2.0f} from server
+	at ame.a(SourceFile:348)
+	at ame$a.a(SourceFile:121)
+	at ame.a(SourceFile:203)
+	at ame.a(SourceFile:212)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at ame.a(SourceFile:212)
+	at ame.a(SourceFile:203)
+	at haa.a(SourceFile:95)
+	at haa.a(SourceFile:146)
+	at gzj.a(SourceFile:151)
+	at gzj.a(SourceFile:119)
+	at gzj.a(SourceFile:151)
+	at abz.a(SourceFile:22)
+	at abz.a(SourceFile:8)
+	at xb$a.a(SourceFile:55)
+	at xb.b(SourceFile:38)
+	at fzz.c(SourceFile:1338)
+	at fzz.j(SourceFile:969)
+	at net.minecraft.client.main.Main.main(SourceFile:250)
+Caused by: java.lang.IllegalStateException: Not a number; Not a number; No key sky_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]; No key water_fog_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]; Not a number; No key fog_color in MapLike[{foliage_color:"#9e814d",grass_color:"#90814d",water_color:"#3f76e4"}]
+	at com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287)
+	at com.mojang.serialization.DataResult.getOrThrow(DataResult.java:81)
+	at ame.a(SourceFile:345)
+	... 18 more
+
+[19:57:01] [Render thread/ERROR]: Failed to handle packet abz@2f6bf880, disconnecting
+aa: Registry Loading
+	at haa.a(SourceFile:99) ~[client.jar:?]
+	at haa.a(SourceFile:146) ~[client.jar:?]
+	at gzj.a(SourceFile:151) ~[client.jar:?]
+	at gzj.a(SourceFile:119) ~[client.jar:?]
+	at gzj.a(SourceFile:151) ~[client.jar:?]
+	at abz.a(SourceFile:22) ~[client.jar:?]
+	at abz.a(SourceFile:8) ~[client.jar:?]
+	at xb$a.a(SourceFile:55) [client.jar:?]
+	at xb.b(SourceFile:38) [client.jar:?]
+	at fzz.c(SourceFile:1338) [client.jar:?]
+	at fzz.j(SourceFile:969) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:250) [client.jar:?]
+Caused by: java.lang.IllegalStateException: Failed to load registries due to errors
+	at ame.c(SourceFile:280) ~[client.jar:?]
+	at ame.a(SourceFile:261) ~[client.jar:?]
+	at ame.a(SourceFile:228) ~[client.jar:?]
+	at ame.a(SourceFile:203) ~[client.jar:?]
+	at haa.a(SourceFile:95) ~[client.jar:?]
+	... 11 more
+X connection to :99 broken (explicit kill or server shutdown).

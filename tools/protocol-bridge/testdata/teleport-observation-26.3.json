@@ -1,0 +1,92 @@
+{
+  "source_commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+  "cases": [
+    {
+      "case": "matching",
+      "position_after_ack": [
+        10.5,
+        81.0,
+        10.5
+      ],
+      "rotation_after_ack": [
+        30.0,
+        0.0
+      ],
+      "position_after_move": [
+        10.25,
+        81.0,
+        10.0
+      ],
+      "rotation_after_move": [
+        45.0,
+        0.0
+      ]
+    },
+    {
+      "case": "wrong-id",
+      "position_after_ack": [
+        10.5,
+        81.0,
+        10.5
+      ],
+      "rotation_after_ack": [
+        30.0,
+        0.0
+      ],
+      "position_after_move": [
+        10.5,
+        81.0,
+        10.5
+      ],
+      "rotation_after_move": [
+        45.0,
+        0.0
+      ]
+    },
+    {
+      "case": "different-position",
+      "position_after_ack": [
+        17.5,
+        81.0,
+        10.5
+      ],
+      "rotation_after_ack": [
+        30.0,
+        0.0
+      ],
+      "position_after_move": [
+        10.25,
+        81.0,
+        10.0
+      ],
+      "rotation_after_move": [
+        45.0,
+        0.0
+      ]
+    },
+    {
+      "case": "different-yaw",
+      "position_after_ack": [
+        10.5,
+        81.0,
+        10.5
+      ],
+      "rotation_after_ack": [
+        47.0,
+        0.0
+      ],
+      "position_after_move": [
+        10.25,
+        81.0,
+        10.0
+      ],
+      "rotation_after_move": [
+        45.0,
+        0.0
+      ]
+    }
+  ],
+  "play_login_hex": "32000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657202020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000",
+  "initial_confirmation_hex": "01c023000000000000c04e000000000000bff80000000000000000000000000000",
+  "server_exit": 0
+}

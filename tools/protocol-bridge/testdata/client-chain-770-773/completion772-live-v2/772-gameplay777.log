@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/probe_step1_gameplay_776.py", line 363, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/probe_step1_gameplay_776.py", line 248, in main
+    command('tp McsaProbe 0.5 65 0.5')
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/probe_step1_gameplay_776.py", line 184, in command
+    client.pump(5, lambda _: token in client.markers)
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge/probe_gameplay.py", line 117, in pump
+    raise TimeoutError('expected packet not received; last names: ' + str([r['name'] for r in self.records[start:]][-12:]))
+TimeoutError: expected packet not received; last names: ['map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk', 'map_chunk']

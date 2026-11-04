@@ -1,0 +1,470 @@
+{
+  "old": {
+    "protocol": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "cases": [
+      {
+        "name": "minecraft:armor",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:armor\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001000a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:armor_toughness",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:armor_toughness\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001010a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:attack_damage",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001020a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:attack_knockback",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_knockback\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001030a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:attack_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001040a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:block_break_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:block_break_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001050a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:block_interaction_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:block_interaction_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001060a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:burning_time",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:burning_time\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001070a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:camera_distance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:camera_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001080a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:entity_interaction_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:entity_interaction_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010010a0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:explosion_knockback_resistance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:explosion_knockback_resistance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001090a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:fall_damage_multiplier",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:fall_damage_multiplier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010010b0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:flying_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:flying_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010010c0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:follow_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:follow_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010010d0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:gravity",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:gravity\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010010e0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:jump_strength",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:jump_strength\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010010f0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:knockback_resistance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:knockback_resistance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001100a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:luck",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:luck\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001110a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:max_absorption",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:max_absorption\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001120a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:max_health",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:max_health\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001130a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:mining_efficiency",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:mining_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001140a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:movement_efficiency",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001150a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:movement_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001160a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:oxygen_bonus",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:oxygen_bonus\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001170a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:safe_fall_distance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:safe_fall_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001180a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:scale",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:scale\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001190a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:sneaking_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:sneaking_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010011a0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:spawn_reinforcements",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:spawn_reinforcements\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010011b0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:step_height",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:step_height\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010011c0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:submerged_mining_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:submerged_mining_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010011d0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:sweeping_damage_ratio",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:sweeping_damage_ratio\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010011e0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:tempt_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:tempt_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b307010010011f0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:water_movement_efficiency",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:water_movement_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001200a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:waypoint_receive_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:waypoint_receive_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001220a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:waypoint_transmit_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:waypoint_transmit_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001210a6d6373613a70726f62653ff0000000000000000100"
+      }
+    ],
+    "attribute_suggestions": [
+      "minecraft:armor",
+      "minecraft:armor_toughness",
+      "minecraft:attack_damage",
+      "minecraft:attack_knockback",
+      "minecraft:attack_speed",
+      "minecraft:block_break_speed",
+      "minecraft:block_interaction_range",
+      "minecraft:burning_time",
+      "minecraft:camera_distance",
+      "minecraft:entity_interaction_range",
+      "minecraft:explosion_knockback_resistance",
+      "minecraft:fall_damage_multiplier",
+      "minecraft:flying_speed",
+      "minecraft:follow_range",
+      "minecraft:gravity",
+      "minecraft:jump_strength",
+      "minecraft:knockback_resistance",
+      "minecraft:luck",
+      "minecraft:max_absorption",
+      "minecraft:max_health",
+      "minecraft:mining_efficiency",
+      "minecraft:movement_efficiency",
+      "minecraft:movement_speed",
+      "minecraft:oxygen_bonus",
+      "minecraft:safe_fall_distance",
+      "minecraft:scale",
+      "minecraft:sneaking_speed",
+      "minecraft:spawn_reinforcements",
+      "minecraft:step_height",
+      "minecraft:submerged_mining_speed",
+      "minecraft:sweeping_damage_ratio",
+      "minecraft:tempt_range",
+      "minecraft:water_movement_efficiency",
+      "minecraft:waypoint_receive_range",
+      "minecraft:waypoint_transmit_range"
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "protocol": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "cases": [
+      {
+        "name": "minecraft:air_drag_modifier",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:air_drag_modifier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001000a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:armor",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:armor\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001010a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:armor_toughness",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:armor_toughness\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001020a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:attack_damage",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001030a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:attack_knockback",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_knockback\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001040a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:attack_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001050a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:below_name_distance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:below_name_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001060a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:block_break_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:block_break_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001070a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:block_interaction_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:block_interaction_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001080a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:bounciness",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:bounciness\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001090a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:burning_time",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:burning_time\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010010a0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:camera_distance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:camera_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010010b0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:entity_interaction_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:entity_interaction_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010010d0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:explosion_knockback_resistance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:explosion_knockback_resistance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010010c0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:fall_damage_multiplier",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:fall_damage_multiplier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010010e0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:flying_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:flying_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010010f0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:follow_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:follow_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001100a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:friction_modifier",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:friction_modifier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001110a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:gravity",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:gravity\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001120a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:jump_strength",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:jump_strength\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001130a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:knockback_resistance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:knockback_resistance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001140a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:luck",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:luck\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001150a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:max_absorption",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:max_absorption\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001160a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:max_health",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:max_health\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001170a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:mining_efficiency",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:mining_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001180a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:movement_efficiency",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001190a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:movement_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010011a0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:name_tag_distance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:name_tag_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010011b0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:oxygen_bonus",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:oxygen_bonus\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010011c0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:safe_fall_distance",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:safe_fall_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010011d0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:scale",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:scale\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010011e0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:sneaking_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:sneaking_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a408010010011f0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:spawn_reinforcements",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:spawn_reinforcements\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001200a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:step_height",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:step_height\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001210a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:submerged_mining_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:submerged_mining_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001220a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:sweeping_damage_ratio",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:sweeping_damage_ratio\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001230a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:tempt_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:tempt_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001240a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:water_movement_efficiency",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:water_movement_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001250a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:waypoint_receive_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:waypoint_receive_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001270a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "name": "minecraft:waypoint_transmit_range",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:waypoint_transmit_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001260a6d6373613a70726f62653ff0000000000000000100"
+      }
+    ],
+    "attribute_suggestions": [
+      "minecraft:air_drag_modifier",
+      "minecraft:armor",
+      "minecraft:armor_toughness",
+      "minecraft:attack_damage",
+      "minecraft:attack_knockback",
+      "minecraft:attack_speed",
+      "minecraft:below_name_distance",
+      "minecraft:block_break_speed",
+      "minecraft:block_interaction_range",
+      "minecraft:bounciness",
+      "minecraft:burning_time",
+      "minecraft:camera_distance",
+      "minecraft:entity_interaction_range",
+      "minecraft:explosion_knockback_resistance",
+      "minecraft:fall_damage_multiplier",
+      "minecraft:flying_speed",
+      "minecraft:follow_range",
+      "minecraft:friction_modifier",
+      "minecraft:gravity",
+      "minecraft:jump_strength",
+      "minecraft:knockback_resistance",
+      "minecraft:luck",
+      "minecraft:max_absorption",
+      "minecraft:max_health",
+      "minecraft:mining_efficiency",
+      "minecraft:movement_efficiency",
+      "minecraft:movement_speed",
+      "minecraft:name_tag_distance",
+      "minecraft:oxygen_bonus",
+      "minecraft:safe_fall_distance",
+      "minecraft:scale",
+      "minecraft:sneaking_speed",
+      "minecraft:spawn_reinforcements",
+      "minecraft:step_height",
+      "minecraft:submerged_mining_speed",
+      "minecraft:sweeping_damage_ratio",
+      "minecraft:tempt_range",
+      "minecraft:water_movement_efficiency",
+      "minecraft:waypoint_receive_range",
+      "minecraft:waypoint_transmit_range"
+    ],
+    "exit_code": 0
+  }
+}

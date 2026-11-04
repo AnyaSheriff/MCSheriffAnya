@@ -6,7 +6,7 @@
 
 A Minecraft-compatible game server written from scratch in Rust.
 
-[![Java Edition 26.1.2](https://img.shields.io/badge/Java_Edition-26.1.2-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#what-works)
+[![Java Edition 26.3](https://img.shields.io/badge/Java_Edition-26.3-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#what-works)
 [![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock_26.10–26.13-partial-F28C28?style=for-the-badge&logo=xbox&logoColor=white)](#status)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![MIT](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)](LICENSE)
@@ -29,10 +29,10 @@ server from the outside. It contains no code from Mojang, Paper, Spigot,
 Fabric, Forge or any other server core. MCSheriffAnya is not affiliated with or
 endorsed by Mojang or Microsoft.
 
-- **Client version:** Java Edition 26.1.2 (protocol 775). Older clients work
-  through ViaFabricPlus and similar tools. Player IDs are generated offline from
-  nicknames (UUID v3 "OfflinePlayer:<name>"), old player data is migrated
-  automatically.
+- **Primary version:** Java Edition 26.3 (protocol 777). Older clients work
+  through selected native compatibility routes or client-side tools such as ViaFabricPlus; full support for every older version is not claimed. Player IDs are generated offline from
+  nicknames (UUID v3 "OfflinePlayer:<name>"). Importing an old main world and
+  its player data requires the explicit source-format command below.
 - **Bedrock support:** Bedrock Edition 26.10–26.13 join the core directly with
   native account verification and cross-play features.
 - **Stack:** Rust (edition 2024), Tokio, Serde, TOML.
@@ -71,8 +71,8 @@ endorsed by Mojang or Microsoft.
 - Redstone: wire, torches, repeaters, comparators, levers, buttons, pressure
   plates, observers, copper bulbs, lamps, doors, trapdoors, fence gates,
   pistons and sticky pistons with real two-tick movement and client-side
-  animation. Timings are verified against the official server tick by tick
-  (see below).
+  animation. Selected timing scenarios are compared with the official server
+  tick by tick; this does not establish parity for every circuit (see below).
 - Day and night with sun, moon phases and sky colour; time is kept across
   restarts.
 - Operators (`ops.json`), commands with permission levels and tab hints:
@@ -152,27 +152,27 @@ endorsed by Mojang or Microsoft.
   statistically measured random distributions still have known differences
   or require further verification.
 
-Not there yet: Java plugins, multiple protocol versions, ender chests, shulker
-boxes, packet compression. See the full list below.
+Full compatibility is still incomplete. See the status table and the version
+compatibility notes below.
 
 ## Status
 
 ✅ works · 🟡 partial · ❌ not yet
 
-**Java Edition 26.1.2** — verified tick by tick against the official server
-with the black box (about 300 scenarios).
+**The primary version is Java Edition 26.3.** Full parity remains under
+verification. Earlier tick-by-tick 26.1.2 results do not establish full 26.3 parity.
 
 | Area | State | Notes |
 | --- | --- | --- |
 | World generation | ✅ | Overworld, Nether, End with the dragon fight, strongholds, villages, end cities |
-| Redstone | ✅ | All components, pistons, containers, comparators |
+| Redstone | Implemented; verification ongoing | Core components, pistons, containers and comparators; edge cases and 26.3 interactions remain under verification |
 | Combat and PvP | ✅ | Melee, sweep, crits, shields, bow, crossbow, trident, mace |
 | Survival | ✅ | Hunger, XP, potions, beds, respawn anchor, farming, furnaces, brewing, enchanting, anvil, grindstone, smithing table, villagers and trading |
 | Mobs | ✅ | |
 | Commands | ✅ | Vanilla commands, command blocks, datapack functions, scoreboards |
 | Weather | ✅ | |
 | Known differences | 🟡 | Enderman stare, shulker bullets, riptide side effects, mace wind burst particles |
-| Plugins | 🟡 | WebAssembly plugins and modules, hot `/plugman`, API `mcsa:api` (WIT) — [docs/plugins.md](docs/plugins.md). Java API (TeaVM, Jar2WASM) planned |
+| Plugins | 🟡 | WebAssembly plugins and modules, hot `/plugman`, API `mcsa:api` (WIT) — [docs/plugins.md](docs/plugins.md). Java plugin translation via TeaVM/Jar2WASM is available for a supported API subset; new 26.3 Material coverage is partial, with no full Paper/Bukkit compatibility |
 | Multiple protocol versions | ❌ | Planned |
 | Ender chests, shulker boxes | ❌ | |
 | Packet compression | ❌ | |
@@ -222,7 +222,26 @@ binary, use `cargo build --release`; to omit the plugin host, use
 
 Run it from a terminal if you want to type console commands. The first start
 creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
-26.1.2 client to `localhost:25565`.
+26.3 client to `localhost:25565`.
+
+A new installation starts without questions using `java-version=26.3`. Anonymous
+error reports are enabled, with a notice on the first start. Disable them with
+`send-error-reports=false` in `config/mcsa.properties`; an existing `false` is
+preserved.
+
+Old 26.1.2 worlds are never upgraded automatically. Stop the server and choose
+its source format explicitly:
+
+- World from the former `main` (26.1.2):
+  `./target/debug/mcsheriffanya --upgrade-world-26.3 --from-main-26.1.2 /path/to/world`.
+- World from the migration branch's earlier 775 profile:
+  `./target/debug/mcsheriffanya --upgrade-world-26.3 /path/to/world`.
+
+The importer validates the source, creates a verified backup, converts region and
+player data in a separate candidate, and activates it only after checks. The
+original data remains in the backup. Do not guess the format or edit the manifest
+to bypass rejection. Set `java-version=26.3` after a successful import. Release
+builds and Docker use the same arguments with their corresponding binary.
 
 ## Docker
 
@@ -269,6 +288,14 @@ locked release build. Tag pushes (`v*`) publish the version without `v` and
 
 ## Configuration
 
+ViaProxy settings use `viaproxy-memory=512M` by default. With `viaproxy=true`,
+the minimum is **320M**; the core refuses smaller or invalid values at startup.
+The pinned ViaProxy release has not been verified with the primary 26.3 server.
+`viaproxy=true` therefore fails with an explanation before starting the proxy or
+changing the backend address. Keep `viaproxy=false` and connect directly. Native
+compatibility covers selected older client versions; full 1.12.2 play is not
+claimed. See [version compatibility](docs/java-multiversion.md).
+
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
 - `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far[...]
@@ -283,9 +310,12 @@ a lever like a player would, records every block change, block action and
 sound with its tick, and diffs the two recordings. The official server is
 only *run* and observed over the network; its jar is never opened. The bot can
 record both servers at once (`--parallel`). The whole suite is about 300
-scenarios. Redstone alone is 137 of them (pistons with slime, honey and flying
-machines, containers, rails and minecarts, TNT and lightning, sculk, the
-crafter, fluids; all 137 match the original tick for tick in full. Where vanilla itself is random
+scenarios. The previously recorded 26.1.2 redstone suite contains 137 scenarios
+(pistons with slime, honey and flying machines, containers, rails and minecarts,
+TNT and lightning, sculk, the crafter and fluids). These are bounded comparisons,
+not proof of every possible circuit or complete 26.3 behavior. The current
+migration also has unverified edge cases; historical results are not a fresh
+run against the current binary. Where vanilla itself is random
 (blast spread, fuse from an explosion, particle colours), the scenario says so
 in a `random` rule backed by a wiki quote or vanilla-against-vanilla
 recordings, and everything else is still compared exactly. See `tools/blackbox/README.md`.

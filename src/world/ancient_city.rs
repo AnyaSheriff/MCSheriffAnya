@@ -53,8 +53,19 @@ fn library() -> &'static [Template] {
 
 /// Чанк попытки в области: ровный сдвиг 0…15.
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Какой из снятых городов и на сколько четвертей повёрнут.
 fn pick(seed: i64, chunk_x: i32, chunk_z: i32) -> (usize, u8) {
@@ -65,21 +76,25 @@ fn pick(seed: i64, chunk_x: i32, chunk_z: i32) -> (usize, u8) {
 
 /// Стоит ли город в этой области: чанк старта.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
-    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<(i32, i32)>>>;
+    type Starts = Mutex<HashMap<(i64, u8, i32, i32), Option<(i32, i32)>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
 
-    let (chunk_x, chunk_z) = attempt(terrain.seed(), region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let column = terrain.column_at(chunk_x * 16 + 8, chunk_z * 16 + 8);
-    let dark = super::cave_biomes::biome_at(&column, FLOOR).is_some_and(|biome| biome == super::terrain::Biome::DeepDark);
+    // minecraft.wiki/w/Ancient_City: «generate in the deep dark». Высота
+    // пола не равна высоте проверки начала; контрольные регионы 26.3:
+    // у отвергнутого кандидата на −51 deep_dark, а на −27 уже plains.
+    let biome_y = if terrain.generation_profile() & 2 != 0 { -27 } else { FLOOR };
+    let dark = super::cave_biomes::biome_at(&column, biome_y).is_some_and(|biome| biome == super::terrain::Biome::DeepDark);
     let found = (dark && !library().is_empty()).then_some((chunk_x, chunk_z));
 
     #[cfg(not(seedmap_core))]
@@ -123,7 +138,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
     for region_x in (chunk_x - REACH).div_euclid(SPACING)..=(chunk_x + REACH).div_euclid(SPACING) {
         for region_z in (chunk_z - REACH).div_euclid(SPACING)..=(chunk_z + REACH).div_euclid(SPACING) {
-            let (x, z) = attempt(terrain.seed(), region_x, region_z);
+            let (x, z) = attempt_for(terrain, region_x, region_z);
 
             if (x - chunk_x).abs() > REACH || (z - chunk_z).abs() > REACH {
                 continue;
@@ -157,14 +172,14 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
     for (start_x, start_z) in near(terrain, chunk_x, chunk_z) {
         if let Some(placed) = Placed::new(terrain.seed(), start_x, start_z) {
-            paint(terrain.seed(), &placed, chunk_x, chunk_z, chunk);
+            paint(terrain.seed(), &placed, chunk_x, chunk_z, chunk, terrain.preview());
         }
     }
 }
 
 /// Блоки и сундуки города в чанке (chunk_x, chunk_z).
 #[cfg(not(seedmap_core))]
-fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut super::Chunk) {
+fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut super::Chunk, split_loot: bool) {
     let template = placed.template;
     let states = &template.states[usize::from(placed.turns % 4)];
 
@@ -195,7 +210,12 @@ fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut sup
         let mut dice = crate::loot::Dice::new(template::roll(seed, x, z, 0xAC17 ^ (wy as u64)));
         let mut chest = crate::containers::Container::new(crate::containers::Kind::Chest);
 
-        chest.slots = crate::loot::fill(table(data), chest.slots.len(), &mut dice);
+        // Прежний профиль сохраняет старую раскладку и последовательность RNG.
+        chest.slots = if split_loot {
+            crate::loot::fill_split_stacks(table(data), chest.slots.len(), &mut dice)
+        } else {
+            crate::loot::fill(table(data), chest.slots.len(), &mut dice)
+        };
         chunk.put_generated_container(x - chunk_x * 16, wy, z - chunk_z * 16, chest);
     }
 }
@@ -385,4 +405,20 @@ pub(super) fn audit_box(seed: i64, cx: i32, cz: i32) -> serde_json::Value {
     let b = p.to_world(p.template.width-1,p.template.depth-1);
     let y = p.template.bottom;
     serde_json::json!({"name":"whole_snapshot","rotation":p.turns,"box":[a.0.min(b.0),y,a.1.min(b.1),a.0.max(b.0),y+p.template.height-1,a.1.max(b.1)]})
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn city_biome_is_checked_above_the_floor() {
+    use super::terrain::{Terrain, Style};
+    let t = Terrain::new(100_554_032_945_340, Style::Vanilla).with_preview(true);
+    let c = t.column_at(-11 * 16 + 8, -87 * 16 + 8);
+    assert_eq!(super::cave_biomes::biome_at(&c, FLOOR), Some(super::terrain::Biome::DeepDark));
+    assert_ne!(super::cave_biomes::biome_at(&c, -27), Some(super::terrain::Biome::DeepDark));
+    assert!(start_in(&t, (-11i32).div_euclid(SPACING), (-87i32).div_euclid(SPACING)).is_none());
+    for (seed, x, z) in [(1_792_932_773_345_722_119, -347i32, -57i32),
+        (1_792_932_773_345_722_119,145,97), (1_792_939_653_127_071_019,-250,-155)] {
+        let t = Terrain::new(seed,Style::Vanilla).with_preview(true);
+        assert_eq!(start_in(&t,x.div_euclid(SPACING),z.div_euclid(SPACING)),Some((x,z)));
+    }
 }

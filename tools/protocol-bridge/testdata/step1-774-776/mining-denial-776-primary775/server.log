@@ -1,0 +1,32 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[15:08:26] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[15:08:26] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[15:08:26] [Server thread/INFO]: McsaProbe[/127.0.0.1:49942 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[15:08:26] [Server thread/INFO]: McsaProbe зашёл на сервер
+[15:08:26] [Server thread/INFO]: Правило spawn_mobs: false
+[15:08:26] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[15:08:27] [Server thread/INFO]: Заполнено блоков: 90
+[15:08:27] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[15:08:27] [Server thread/INFO]: Заполнено блоков: 0
+[15:08:27] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[15:08:27] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[15:08:27] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[15:08:28] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[15:08:28] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[15:08:28] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[15:08:28] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[15:08:28] [Server thread/INFO]: Правило natural_health_regeneration: false
+[15:08:28] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[15:08:29] [Server thread/INFO]: Changed the block at 2, 65, 0
+[15:08:29] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+MCSA play probe failure: Перевод Java-пакета: PayloadUnavailable("block_dig")
+[15:08:29] [Server thread/INFO]: McsaProbe потерял соединение: invalid data
+[15:08:29] [Server thread/INFO]: Останавливаю сервер
+[15:08:29] [Server thread/INFO]: McsaProbe вышел
+[15:08:29] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2988 filtered out; finished in 4.09s
+

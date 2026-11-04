@@ -6,8 +6,8 @@
 // континентальность задаёт основной уровень, эрозия — размах, гребни и
 // долины — рельеф поверх.
 //
-// Шумы у нас свои, поэтому по семени мы с оригиналом не совпадаем и не
-// стремимся: повторяем устройство, а не числа.
+// Старые профили сохраняют свои шумы. В 26.3 фазы климата проверены
+// переписью сохранённых регионов; модель плотности рельефа остаётся своей.
 //
 // Всё считается от семени мира и от координат: у чанка нет соседей, к которым
 // надо обращаться, поэтому любой кусок мира можно сложить в любом порядке и
@@ -115,6 +115,9 @@ pub enum Biome {
     EndMidlands,
     EndHighlands,
     EndBarrens,
+    // Только профиль Preview26_3 (`Biome::PREVIEW`): номера — после Энда.
+    DappledForest,
+    SulfurCaves,
 }
 
 impl Biome {
@@ -188,6 +191,11 @@ impl Biome {
         Biome::SoulSandValley,
         Biome::BasaltDeltas,
     ];
+
+    /// Биомы 26.2/26.3 (пятнистый лес и серные пещеры): в реестре идут после
+    /// Энда, поэтому номера остальных не сдвигаются. Генерируются только при
+    /// `Terrain::with_preview`.
+    pub const PREVIEW: [Biome; 2] = [Biome::DappledForest, Biome::SulfurCaves];
 
     /// Биомы Энда по порядку их номеров: в реестре они идут после биомов
     /// Незера.
@@ -266,6 +274,8 @@ impl Biome {
             Biome::EndMidlands => "end_midlands",
             Biome::EndHighlands => "end_highlands",
             Biome::EndBarrens => "end_barrens",
+            Biome::DappledForest => "dappled_forest",
+            Biome::SulfurCaves => "sulfur_caves",
         }
     }
 
@@ -280,14 +290,32 @@ impl Biome {
             return (Biome::ALL.len() + CUSTOM_BIOMES.len() + at) as i32;
         }
 
+        if let Some(at) = Biome::PREVIEW.iter().position(|biome| *biome == self) {
+            return (Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len() + at) as i32;
+        }
+
         let at = Biome::END
             .iter()
             .position(|biome| *biome == self)
-            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL, NETHER и END", self));
+            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL, NETHER, END и PREVIEW", self));
 
         (Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + at) as i32
     }
 
+
+    /// Биом по короткому имени; биомы 26.3 (`PREVIEW`) известны только в профиле Preview26_3.
+    pub fn by_name(name: &str, preview: bool) -> Option<Biome> {
+        Biome::ALL.iter().chain(if preview { Biome::PREVIEW.iter() } else { [].iter() }).find(|biome| biome.name() == name).copied()
+    }
+
+    /// Биом по номеру в реестре: оригинальные (`ALL`) и биомы 26.3 (`PREVIEW`).
+    /// Незер, Энд и свои биомы здесь None, как и раньше.
+    pub fn by_number(number: usize) -> Option<Biome> {
+        Biome::ALL.get(number).copied().or_else(|| {
+            let first = Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len();
+            number.checked_sub(first).and_then(|at| Biome::PREVIEW.get(at)).copied()
+        })
+    }
 
     /// Основная температура и влажность биома — те же числа, что в игре
     /// (вики, «Biome» → List of biome climates). По ним клиент выбирает цвет
@@ -348,6 +376,9 @@ impl Biome {
         "lush_caves" => (0.5, 0.5),
         "dripstone_caves" => (0.8, 0.4),
         "deep_dark" => (0.8, 0.4),
+        // 26.3/26.2: вики, Dappled Forest и Sulfur Caves.
+        "dappled_forest" => (0.6, 0.6),
+        "sulfur_caves" => (0.8, 0.4),
         "nether_wastes" | "crimson_forest" | "warped_forest" | "soul_sand_valley" | "basalt_deltas" => (2.0, 0.0),
         "the_end" | "small_end_islands" | "end_midlands" | "end_highlands" | "end_barrens" => (0.5, 0.5),
             _ => (0.8, 0.4),
@@ -508,8 +539,13 @@ pub enum Land {
 pub struct Column {
     /// Высота последнего непустого блока.
     pub height: i32,
+    /// Основание добавленного столба терракоты; исходные плотность и пещеры
+    /// ниже него сохраняются. У обычного столбца дополнительной части нет.
+    pub hoodoo_base: Option<i32>,
     pub biome: Biome,
     pub climate: Climate,
+    /// Именованные октавы 26.3: пещерам не нужны поправки старого климата.
+    pub climate_263: bool,
     /// Крутой склон: у соседа с одной стороны земля на четыре блока и
     /// больше выше, чем с другой. Там вместо травы камень. Решает чанк —
     /// ему видны соседние столбцы.
@@ -521,6 +557,7 @@ impl Column {
     pub fn flat(height: i32) -> Column {
         Column {
             height,
+            hoodoo_base: None,
             biome: Biome::Plains,
             climate: Climate {
                 continent: 0.0,
@@ -530,6 +567,7 @@ impl Column {
                 humidity: 0.0,
             },
             steep: false,
+            climate_263: false,
         }
     }
 }
@@ -631,6 +669,7 @@ pub struct CaveGrid {
     y0: i32,
     layers: i32,
     nodes: Vec<[f64; 3]>,
+    preview: bool,
 }
 
 impl CaveGrid {
@@ -639,6 +678,18 @@ impl CaveGrid {
     /// `depth` — сколько камня над местом: у самой поверхности залы
     /// сходят на нет, остаются только узкие ходы.
     pub fn hollow(&self, x: i32, y: i32, z: i32, depth: i32) -> bool {
+        hollow_by(self.values(x, y, z), y, depth, self.preview)
+    }
+
+    /// Вики, World generation: полости взаимодействуют с плотностью склона.
+    /// У опыта A6 прежний независимый порог выедал тело гор после роутера.
+    fn hollow_protected(&self, x: i32, y: i32, z: i32, depth: i32, protection: f64) -> bool {
+        let mut values = self.values(x, y, z);
+        values[2] -= protection;
+        hollow_by(values, y, depth, self.preview)
+    }
+
+    fn values(&self, x: i32, y: i32, z: i32) -> [f64; 3] {
         let (cx, cz) = ((x - self.x0) / CELL_WIDTH, (z - self.z0) / CELL_WIDTH);
         let layer = (y - self.y0) / CELL_HEIGHT;
         let tx = ((x - self.x0) % CELL_WIDTH) as f64 / CELL_WIDTH as f64;
@@ -667,7 +718,7 @@ impl CaveGrid {
             *value = lerp(bottom, top, ty);
         }
 
-        hollow_by(values, y, depth)
+        values
     }
 }
 
@@ -675,14 +726,17 @@ impl CaveGrid {
 ///
 /// Ходы — там, где оба шума ходов близки к нулю: так пустота тянется
 /// ниточкой по линии их пересечения. Полости — где шум полостей выше порога.
-fn hollow_by([along, across, room]: [f64; 3], y: i32, depth: i32) -> bool {
+fn hollow_by([along, across, room]: [f64; 3], y: i32, depth: i32, preview: bool) -> bool {
     let fy = y as f64;
 
     // У самого дна пещеры сходят на нет: по замерам оригинала ниже −54
     // пустот в семь раз меньше, чем было у нас, и лава там — лужи на
     // дне редких пещер, а не сплошное море.
-    let floor = smooth_step((fy + 65.0) / 20.0);
-    let width = 0.09 * (0.3 + 0.7 * floor) * (1.0 - 0.45 * smooth_step((fy - 45.0) / 30.0));
+    let floor = smooth_step((fy + 65.0) / if preview { 24.0 } else { 20.0 });
+    // Сужение ходов не должно убирать лавовые лужи у дна: там их площадь
+    // измеряется отдельно от сухих полостей выше −55.
+    let width = if preview { 0.075 + 0.04 * (1.0 - smooth_step((fy + 55.0) / 4.0)) } else { 0.09 };
+    let width = width * (0.3 + 0.7 * floor) * (1.0 - 0.45 * smooth_step((fy - 45.0) / 30.0));
 
     if along.abs() < width && across.abs() < width {
         return true;
@@ -703,10 +757,16 @@ fn hollow_by([along, across, room]: [f64; 3], y: i32, depth: i32) -> bool {
     // чем в равнинной земле: нависаний там почти каждый пятый столбец.
     let peaks = smooth_step((fy - 75.0) / 45.0);
 
-    // Ниже −10 у оригинала пустот чуть больше, чем даёт одна глубина.
-    let below = smooth_step((-10.0 - fy) / 20.0);
+    // Добавка у перехода к сланцу не должна распространяться до дна:
+    // иначе избыток залов около −48 сопровождается их нехваткой около −16.
+    let below = if preview {
+        0.08 * smooth_step((fy + 32.0) / 16.0) * (1.0 - smooth_step((fy + 8.0) / 8.0))
+    } else {
+        0.03 * smooth_step((-10.0 - fy) / 20.0)
+    };
 
-    room > 0.405 - 0.08 * deep - 0.2 * shallow - 0.2 * peaks - 0.03 * below + 0.3 * (1.0 - floor) + 0.2 * roof
+    let shallow_weight = if preview { 0.14 } else { 0.2 };
+    room > 0.405 - 0.08 * deep - shallow_weight * shallow - 0.2 * peaks - below + 0.3 * (1.0 - floor) + 0.2 * roof
 }
 
 /// Какой рельеф складывать: как у оригинала или наш плавный.
@@ -743,6 +803,11 @@ pub fn biome_registry_size() -> usize {
     Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len()
 }
 
+/// То же в профиле Preview26_3: после Энда идут биомы 26.3 (`Biome::PREVIEW`).
+pub fn biome_registry_size_preview() -> usize {
+    biome_registry_size() + Biome::PREVIEW.len()
+}
+
 /// Включены ли редкие осенние пятна в обычном лесу (`autumn-forests`
 /// в config/mcsa.properties). Выключено — мир как у оригинала; проверки
 /// гоняются с выключенным.
@@ -751,6 +816,16 @@ pub static AUTUMN_FORESTS: std::sync::atomic::AtomicBool = std::sync::atomic::At
 /// Розоватая трава и чуть больше лепестков в вишнёвых рощах
 /// (`pink-cherry-groves`).
 pub static PINK_CHERRY_GROVES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Серные пещеры: масштаб пятен по горизонтали и вертикали, порог шума, поправка к порогу у краёв
+/// промежутка глубин, границы климата и глубины в блоках.
+const SULFUR_SCALE: (f64, f64) = (28.0, 14.0);
+const SULFUR_THRESHOLD: f64 = 0.21;
+const SULFUR_EDGE: f64 = 0.1;
+const SULFUR_EROSION: f64 = 0.45;
+const SULFUR_WEIRDNESS: f64 = 0.3;
+const SULFUR_CONTINENT: (f64, f64) = (-0.45, 0.3);
+const SULFUR_DEPTH: (i32, i32) = (32, 112);
 
 /// Насколько плато поднято над обычной сушей.
 const PLATEAU: f64 = 42.0;
@@ -763,6 +838,10 @@ const RIVER_BANK: f64 = 300.0;
 
 /// Рельеф мира: набор шумов от одного семени.
 pub struct Terrain {
+    /// Опыт A6: включается только MCSA_A6_DENSITY=1, приёмка не пройдена [проверить].
+    density_router: Option<Box<terrain_density::Router>>,
+    /// Фазы климата 26.3; старые профили оставляют прежние шумы.
+    climate_fields: Option<Box<climate_noise::ClimateFields>>,
     continent: Noise,
     erosion: Noise,
     weirdness: Noise,
@@ -787,6 +866,11 @@ pub struct Terrain {
     /// Полосы терракоты бесплодных земель: какая терракота на какой высоте
     /// (по кругу через 192 блока), своя раскладка у каждого мира.
     bands: [&'static str; 192],
+    /// Профиль Preview26_3: пятнистый лес, серные пещеры, лагеря. У мира 26.1.2
+    /// выключено, и его генерация остаётся прежней.
+    preview: bool,
+    /// Серные пещеры 26.2: пятна биома и распределение серы и киновари.
+    sulfur: Noise,
 }
 
 #[cfg(test)]
@@ -794,12 +878,18 @@ pub struct Terrain {
 mod census;
 #[path = "biome_distribution.rs"]
 mod distribution;
+#[path = "climate_noise.rs"]
+mod climate_noise;
+#[path = "terrain_density.rs"]
+mod terrain_density;
 
 impl Terrain {
     /// Заводит рельеф от семени мира. Каждому шуму достаётся своё семя, иначе
     /// климат и рельеф повторяли бы друг друга.
     pub fn new(seed: i64, style: Style) -> Terrain {
         Terrain {
+            density_router: None,
+            climate_fields: None,
             continent: Noise::new(seed),
             erosion: Noise::new(seed ^ 0x51_7C_C1_B7),
             weirdness: Noise::new(seed ^ 0x27_22_0A_95),
@@ -816,7 +906,77 @@ impl Terrain {
             style,
             seed,
             bands: terracotta_bands(seed),
+            preview: false,
+            sulfur: Noise::new(seed ^ 0x5C_1F_0A_77),
         }
+    }
+
+    /// Включает генерацию 26.2/26.3 (только профиль Preview26_3).
+    pub fn with_preview(mut self, preview: bool) -> Terrain {
+        self.preview = preview;
+        self.density_router = (preview && self.style == Style::Vanilla
+            && std::env::var("MCSA_A6_DENSITY").is_ok_and(|v| v == "1"))
+            .then(|| Box::new(terrain_density::Router::new(self.seed)));
+        self.climate_fields = (preview && self.style == Style::Vanilla).then(|| Box::new(climate_noise::ClimateFields::new(self.seed)));
+        self.bands = if preview { preview_terracotta_bands(self.seed) } else { terracotta_bands(self.seed) };
+        self
+    }
+
+    /// Шум серных пещер для пятен (`part` 0) и для выбора между серой и киноварью (`part` 1).
+    pub fn sulfur_noise(&self, part: u32, x: i32, y: i32, z: i32) -> f64 {
+        let (x, y, z) = (f64::from(x), f64::from(y), f64::from(z));
+        if part == 0 {
+            self.sulfur.octaves3(x / SULFUR_SCALE.0, y / SULFUR_SCALE.1, z / SULFUR_SCALE.0, 2)
+        } else {
+            self.sulfur.octaves3(x / 14.0 + 311.0, y / 7.0 + 97.0, z / 14.0 - 173.0, 2)
+        }
+    }
+
+    /// Серная пещера в клетке 4×4×4 с серединой (x, y, z) под столбцом `column`.
+    /// В климате 26.3 выбирается общим расстоянием до интервалов биомов;
+    /// перечисленные ниже шумовые пороги сохранены для старого климата.
+    /// Вики, Sulfur Caves: на глубине пышных и капельниковых пещер, низкая странность,
+    /// высокая эрозия, умеренная континентальность, мелкие разорванные пятна.
+    /// Пороги подобраны по переписи официального 26.3 (tools/measure/census_263.py):
+    /// доля клеток 0,0016, глубина 32–112 блоков (пик 64–80), над ровной сушей и берегом.
+    pub fn sulfur_cell(&self, column: &Column, x: i32, y: i32, z: i32) -> bool {
+        if !self.preview {
+            return false;
+        }
+
+        if column.climate_263 {
+            return super::cave_biomes::cave_biome_263(&column.climate, f64::from(column.height - y) / 128.0)
+                == Some(Biome::SulfurCaves);
+        }
+
+        let depth = column.height - y;
+        let climate = &column.climate;
+
+        if !(SULFUR_DEPTH.0..=SULFUR_DEPTH.1).contains(&depth)
+            || climate.erosion < SULFUR_EROSION
+            || climate.weirdness.abs() > SULFUR_WEIRDNESS
+            || !(SULFUR_CONTINENT.0..=SULFUR_CONTINENT.1).contains(&climate.continent)
+        {
+            return false;
+        }
+
+        // Глубже и мельче середины пятно реже: пик 64–80 блоков.
+        let lean = ((depth as f64 - 72.0).abs() / 40.0).min(1.0) * SULFUR_EDGE;
+
+        self.sulfur_noise(0, x, y, z) > SULFUR_THRESHOLD + lean
+    }
+
+    /// Генерируется ли содержимое 26.2/26.3.
+    pub fn preview(&self) -> bool {
+        self.preview
+    }
+
+    /// Ключ кэшей генерации: профиль влияет на высоту и декорации даже
+    /// при одинаковом семени. Стиль занимает младший бит, 26.3 — следующий,
+    /// опытная плотность A6 — третий.
+    pub fn generation_profile(&self) -> u8 {
+        u8::from(self.style == Style::Vanilla) | (u8::from(self.preview) << 1)
+            | (u8::from(self.density_router.is_some()) << 2)
     }
 
     /// Семя мира, от которого заведены шумы.
@@ -848,6 +1008,7 @@ impl Terrain {
     }
 
     fn raw_climate_at(&self, x: i32, z: i32) -> Climate {
+        if let Some(fields) = &self.climate_fields { return fields.at(x, z); }
         // Температура и влажность решают только биом, а биом у оригинала
         // один на клетку 4×4: берём их в середине клетки. Так граница биома
         // — и край льда на воде — идёт ломаной по клеткам, а не дугой.
@@ -864,8 +1025,18 @@ impl Terrain {
             Style::Smooth => 0.0,
         };
 
-        let raw_continent = self.continent.octaves(x / 2400.0 + off, z / 2400.0 + off, 4);
+        // https://minecraft.wiki/w/World_generation: «Continentalness».
+        // Моря прежней модели были слишком широкими: медиана расстояния
+        // до суши в тёплом море доходила до 367 блоков против 82 у оригинала.
+        // Меняется длина волны, а не квантили доли моря [проверить: дальние окна].
+        let continent_scale = if self.preview && self.style == Style::Vanilla { 1200.0 } else { 2400.0 };
+        let raw_continent = self.continent.octaves(x / continent_scale + off, z / continent_scale + off, 4);
         let continent = match self.style {
+            Style::Vanilla if self.preview && raw_continent * 1.8 - 0.12 < -1.0 => {
+                // https://minecraft.wiki/w/World_generation: «Mushroom fields».
+                // Диапазон -1,2…-1,05 был недостижим из-за обрезки на -1.
+                (raw_continent * 1.8 - 0.12).max(-1.2)
+            }
             Style::Vanilla => measured_continent(raw_continent),
             Style::Smooth => stretch(raw_continent, 2.4, 0.42),
         };
@@ -959,10 +1130,50 @@ impl Terrain {
         }
     }
 
+    /// Вики, Eroded Badlands: «only generate at lower elevations».
+    /// Отдельный покров из крутых столбов, а не ещё одна плавная волна
+    /// рельефа. Сетка источников мировая: порядок чанков на форму не влияет.
+    /// [проверить] распределение форм за пределами измеренных участков.
+    fn hoodoo_top(&self, x: i32, z: i32, base: i32) -> i32 {
+        if !(SEA - 1..112).contains(&base) {
+            return base;
+        }
+        let fade = 1.0 - smooth_step((f64::from(base) - 80.0) / 32.0);
+        let (cx, cz) = (x.div_euclid(20), z.div_euclid(20));
+        let mut top = base;
+        for sx in cx - 1..=cx + 1 {
+            for sz in cz - 1..=cz + 1 {
+                let mut random = Random::new(self.seed ^ cell_seed((sx, 0, sz)) ^ 0x484F_4F44_4F4F);
+                if !random.next().is_multiple_of(3) {
+                    continue;
+                }
+                let px = sx * 20 + 4 + (random.next() % 12) as i32;
+                let pz = sz * 20 + 4 + (random.next() % 12) as i32;
+                let rx = 2.0 + (random.next() % 5) as f64;
+                let rz = 2.0 + (random.next() % 5) as f64;
+                let r2 = (f64::from(x - px) / rx).powi(2) + (f64::from(z - pz) / rz).powi(2);
+                if r2 >= 1.0 {
+                    continue;
+                }
+                let height = 12.0 + (random.next() % 37) as f64;
+                let rise = (height * fade * (1.0 - r2 * r2).sqrt()).floor() as i32;
+                top = top.max(base + rise);
+            }
+        }
+        top
+    }
+
+    /// Вики, Terrain features: «192 layers», «at most 7 blocks».
+    /// Одна раскладка на весь мир, одинаковый сдвиг всех полос столбца.
+    fn terracotta_band(&self, x: i32, y: i32, z: i32) -> &'static str {
+        let shift = (self.detail.octaves(x as f64 / 60.0, z as f64 / 60.0 + 500.0, 2) * 6.0) as i32;
+        self.bands[(y + shift).rem_euclid(192) as usize]
+    }
+
     /// Столбец, когда сетка плотности уже построена (или не нужна).
     pub fn column_in(&self, x: i32, z: i32, grid: Option<&ReliefGrid>) -> Column {
         let climate = self.climate_at(x, z);
-        let height = match grid {
+        let base_height = match grid {
             Some(grid) => grid.top(x, z),
             None => self.smooth_height(&climate, x, z),
         };
@@ -972,11 +1183,16 @@ impl Terrain {
         // одних столбцов, а цвета у клиента — по границе клеток, и на стыке
         // биомов выходили бы кривые куски.
         let biome = self.biome_with_climate(&climate, x, z);
+        let height = if self.preview && biome == Biome::ErodedBadlands {
+            self.hoodoo_top(x, z, base_height)
+        } else { base_height };
 
         Column {
             height,
+            hoodoo_base: (height > base_height).then_some(base_height),
             biome,
             climate,
+            climate_263: self.climate_fields.is_some(),
             steep: false,
         }
     }
@@ -994,8 +1210,16 @@ impl Terrain {
     pub fn surface_temperature_at(&self, x: i32, z: i32) -> f64 {
         let (x,z) = ((x & !3)+2,(z & !3)+2);
         let c = self.biome_input(&self.climate_at(x,z),x,z);
-        if self.style == Style::Vanilla { distribution::mapped(&c,&distribution::CALIBRATED).temperature }
-        else { c.temperature }
+        self.biome_climate(&c).temperature
+    }
+
+    // Вики, World generation: «Temperature» задаёт одну шкалу для мелкого
+    // и глубокого моря. Раздельная подгонка площадей создавала тёплые языки
+    // только из-за перехода глубины при неизменной температуре.
+    // [проверить] доли холодных поясов за пределами измеренных окон 26.3.
+    fn biome_climate(&self, climate: &Climate) -> Climate {
+        if self.style != Style::Vanilla || self.preview { return *climate; }
+        distribution::mapped(climate, &distribution::CALIBRATED)
     }
 
     fn biome_with_climate(&self, climate: &Climate, x: i32, z: i32) -> Biome {
@@ -1015,11 +1239,17 @@ impl Terrain {
     /// если у неё меньше двух горных соседей, берёт биом соседа.
     fn cell_biome(&self, climate: &Climate, middle_x: i32, middle_z: i32) -> Biome {
         let input = self.biome_input(climate, middle_x, middle_z);
-        let adjusted = if self.style == Style::Vanilla {
-            distribution::mapped(&input, &distribution::CALIBRATED)
-        } else { input };
+        let adjusted = self.biome_climate(&input);
         let climate = &adjusted;
-        let biome = biome_of(climate);
+        let mut biome = biome_of(climate);
+
+        // 26.3: пятнистый лес на месте равнин в умеренно холодном и очень сухом
+        // климате при положительной странности. Вики, Dappled Forest:
+        // https://minecraft.wiki/w/Dappled_Forest — «positive weirdness».
+        // Прежний порог 0,4 исключал значительную часть подходящего климата.
+        if self.preview && biome == Biome::Plains && dappled_climate(climate) {
+            biome = Biome::DappledForest;
+        }
 
         if !matches!(biome, Biome::SnowySlopes | Biome::Grove) || climate.temperature_level() == 0 {
             return biome;
@@ -1034,9 +1264,7 @@ impl Terrain {
         for (dx, dz) in [(4, 0), (-4, 0), (0, 4), (0, -4)] {
             let near_climate = self.climate_at(middle_x + dx, middle_z + dz);
             let near_climate = self.biome_input(&near_climate, middle_x + dx, middle_z + dz);
-            let near_climate = if self.style == Style::Vanilla {
-                distribution::mapped(&near_climate, &distribution::CALIBRATED)
-            } else { near_climate };
+            let near_climate = self.biome_climate(&near_climate);
             let near = biome_of(&near_climate);
 
             if mountain(near) {
@@ -1057,9 +1285,14 @@ impl Terrain {
     // Вики, World generation, «horizontal coordinates». Это собственная
     // модель, не алгоритм оригинала [проверить: вид границ на местности].
     fn biome_input(&self, climate: &Climate, x: i32, z: i32) -> Climate {
-        if self.style != Style::Vanilla { return *climate; }
-        let dx = self.detail.octaves(f64::from(x)/12.0+0.37, f64::from(z)/12.0+0.37, 2)*10.0;
-        let dz = self.detail.octaves(f64::from(x)/12.0+183.37, f64::from(z)/12.0-97.37, 2)*10.0;
+        if self.style != Style::Vanilla || self.preview { return *climate; }
+        // https://minecraft.wiki/w/World_generation: «horizontal coordinates».
+        // Искривление медленнее биомной клетки: прежние 12 блоков
+        // перебрасывали соседей через порог и дробили пустыню на 16 м².
+        // Старые миры сохраняют прежнюю геометрию; масштаб 26.3 — наш.
+        let scale = if self.preview { 96.0 } else { 12.0 };
+        let dx = self.detail.octaves(f64::from(x)/scale+0.37, f64::from(z)/scale+0.37, 2)*10.0;
+        let dz = self.detail.octaves(f64::from(x)/scale+183.37, f64::from(z)/scale-97.37, 2)*10.0;
         self.climate_at(x+dx.round() as i32,z+dz.round() as i32)
     }
 
@@ -1072,6 +1305,9 @@ impl Terrain {
         y: i32,
         z: i32,
     ) -> bool {
+        if column.hoodoo_base.is_some_and(|base| y > base && y <= column.height) {
+            return true;
+        }
         match grid {
             Some(grid) => grid.solid(x, y, z),
             None => y <= column.height,
@@ -1088,6 +1324,10 @@ impl Terrain {
         let z0 = z_from.div_euclid(CELL_WIDTH) * CELL_WIDTH;
         let across_x = (x_to.div_euclid(CELL_WIDTH) * CELL_WIDTH - x0) / CELL_WIDTH + 2;
         let across_z = (z_to.div_euclid(CELL_WIDTH) * CELL_WIDTH - z0) / CELL_WIDTH + 2;
+
+        if let Some(router) = &self.density_router {
+            return router.grid(x0, z0, across_x, across_z, |x, z| self.climate_at(x, z));
+        }
 
         let mut reliefs = Vec::with_capacity((across_x * across_z) as usize);
 
@@ -1141,7 +1381,12 @@ impl Terrain {
     /// Выше `cap` камня нет: там русло реки или толща океана.
     fn density(&self, relief: &Relief, x: i32, y: i32, z: i32) -> f64 {
         let (fx, fy, fz) = (x as f64, y as f64, z as f64);
-        let shake = self.relief.octaves3(fx / 56.0, fy / 24.0, fz / 56.0, 3) * 1.7;
+        // У 26.3 растягиваем вертикальную волну: при периоде 24 её
+        // производная почти отменяла «-fy», и верх перескакивал на 18 блоков
+        // за один столбец (1117,-477 → 1117,-476). Сетка и границы чанков
+        // здесь ни при чём. Вики, Noise: «3D noise»; масштаб наш, не оригинала.
+        let vertical_scale = if self.preview { 48.0 } else { 24.0 };
+        let shake = self.relief.octaves3(fx / 56.0, fy / vertical_scale, fz / 56.0, 3) * 1.7;
         let mut density = relief.surface - fy + relief.wobble * shake;
 
         if relief.rugged > 0.0 {
@@ -1160,6 +1405,13 @@ impl Terrain {
     /// почти никакая у воды: поэтому скалы в горах, а берега ровные.
     fn relief_at(&self, climate: &Climate, x: i32, z: i32) -> Relief {
         let (fx, fz) = (x as f64, z as f64);
+        // https://minecraft.wiki/w/World_generation: «Erosion».
+        // Масштаб реакции высоты отделён от исходного климата биомов:
+        // прежняя поправка сжимала частые холмы и усиливала хвост повторно.
+        let shaped = if self.preview {
+            Climate { erosion: (climate.erosion * 1.8).clamp(-1.0, 1.0), ..*climate }
+        } else { *climate };
+        let geometry = &shaped;
 
         let base = spline(
             &[
@@ -1178,7 +1430,10 @@ impl Terrain {
             climate.continent,
         );
 
-        let spread = spline(
+        let spread_points = if self.preview {
+            &[(-1.0,84.0),(-0.78,80.0),(-0.375,56.0),(-0.2225,44.0),
+                (0.05,30.0),(0.45,10.0),(0.55,4.0),(1.0,2.0)]
+        } else {
             &[
                 (-1.0, 84.0),
                 (-0.78, 80.0),
@@ -1188,9 +1443,9 @@ impl Terrain {
                 (0.45, 7.0),
                 (0.55, 4.0),
                 (1.0, 2.0),
-            ],
-            climate.erosion,
-        );
+            ]
+        };
+        let spread = spline(spread_points, geometry.erosion);
 
         let ridges = spline(
             &[
@@ -1238,7 +1493,7 @@ impl Terrain {
         // пар у ветреных холмов против долей процента у равнин).
         let shattered = (1.0 - ((climate.erosion - 0.5) / 0.12).powi(2)).max(0.0) * far_inland;
 
-        ground += 16.0 * shattered * (0.4 + 0.6 * ridges.max(0.0));
+        ground += (if self.preview && climate.weirdness > 0.0 { 52.0 } else { 16.0 }) * shattered * (0.4 + 0.6 * ridges.max(0.0));
 
         // Плато: дальняя от моря суша при невысокой эрозии, не в долине.
         // По таблице биомов здесь луга, вишнёвые рощи, плоскогорья саванны и
@@ -1254,17 +1509,28 @@ impl Terrain {
         // В горах земля и так поднята — там плато почти не добавляется.
         ground += PLATEAU * plateau * (1.0 - 0.7 * mountains);
 
+        if self.preview { ground -= 2.0; }
+        let sea_floor = if self.preview { sea_floor - 2.0 } else { sea_floor };
         let mut surface = sea_floor + (ground - sea_floor) * land;
 
         // Насколько место далеко от воды: у берега раскачка стихает, иначе
         // из воды торчали бы одинокие блоки.
         let inland = smooth_step((surface - SEA as f64) / 6.0);
         let hills = smooth_step((spread - 8.0) / 20.0) * (1.0 - mountains);
-        let wobble = 1.5 + (3.5 + 14.0 * hills + 14.0 * mountains + 6.0 * shattered) * inland * land;
+        let hill_wave = if self.preview { 8.0 } else { 14.0 };
+        let wobble = 1.5 + (3.5 + hill_wave * hills + 14.0 * mountains + 6.0 * shattered) * inland * land;
         // У подножий гор оригинал обрывист: ниже ~100 в горных местах почти
         // каждый четвёртый столбец — ступенька (замер terrain-measured-2).
         let foot = mountains * (1.0 - smooth_step((surface - 95.0) / 30.0));
-        let rugged = (30.0 * shattered + MOUNTAIN_FOOT * foot) * inland * land;
+        // https://minecraft.wiki/w/World_generation: «shattered».
+        // Положительная W в поясе E=5 меняет размах объёмной плотности,
+        // а не только поднимает весь массив. Хвост максимумов [проверить].
+        let broken = if self.preview {
+            30.0 + (80.0 + 40.0 * climate.continent.clamp(0.0,1.0)) * smooth_step(climate.weirdness / 0.1)
+                * smooth_step((climate.erosion - 0.43) / 0.02)
+                * (1.0 - smooth_step((climate.erosion - 0.55) / 0.02))
+        } else { 30.0 };
+        let rugged = (broken * shattered + MOUNTAIN_FOOT * foot) * inland * land;
 
         // Болота и мангры: по таблице биомов это самая ровная суша (эрозия
         // выше 0.55) в низинах в тепле. Земля там лежит вровень с водой и
@@ -1307,10 +1573,20 @@ impl Terrain {
             cap = cap.min(river + (1.0 - valley) * 60.0);
         }
 
+        // https://minecraft.wiki/w/Mushroom_Fields: «islands surrounded by deep oceans».
+        // Отдельный низкий остров: иначе доступный биом остался бы на дне
+        // под водой. Переход непрерывен ещё внутри глубокого моря.
+        // Частоту и размеры островов на большой выборке 26.3 [проверить].
+        let island = if self.preview { smooth_step((-climate.continent - 1.0) / 0.1) } else { 0.0 };
+        if island > 0.0 {
+            let island_height = 78.0 + self.detail.octaves(fx/120.0+17.0,fz/120.0-31.0,2)*5.0;
+            surface += (island_height-surface)*island;
+            cap += (island_height+12.0-cap).max(0.0)*island;
+        }
         Relief {
             surface,
-            wobble,
-            rugged,
+            wobble: wobble*(1.0-0.75*island),
+            rugged: rugged*(1.0-island),
             cap,
         }
     }
@@ -1449,11 +1725,26 @@ impl Terrain {
             return AIR;
         }
 
+        // Вики, Eroded Badlands: «narrow spires». Добавленный столб состоит
+        // из терракоты целиком; пещерный шум не вырезает его середину.
+        if column.hoodoo_base.is_some_and(|base| y > base) {
+            return named(self.terracotta_band(x, y, z));
+        }
+
+        // Прибавка сверху не делает прежнюю поверхность глубиной пещеры:
+        // иначе шум мог вырезать опору только что добавленного столба.
+        let run_top = column.hoodoo_base.map_or(run_top, |base| run_top.min(base));
         let depth = run_top - y;
 
         // Пещеры проедают камень, но не подходят к самой поверхности и не
         // трогают дно мира.
-        if depth > CAVE_ROOF && y > BOTTOM + 5 && caves.hollow(x, y, z, depth) {
+        let hollow = || {
+            if self.density_router.is_some() {
+                caves.hollow_protected(x, y, z, depth,
+                    terrain_density::cave_surface_protection(&column.climate, y, depth))
+            } else { caves.hollow(x, y, z, depth) }
+        };
+        if depth > CAVE_ROOF && y > BOTTOM + 5 && hollow() {
             return match self.aquifer_at(x, y, z) {
                 Fluid::Air => AIR,
                 Fluid::Water => common().water,
@@ -1502,11 +1793,11 @@ impl Terrain {
         // в них попадает, — сотни: биом клетки запоминаем, чтобы не считать
         // климат заново. Кэш свой у потока и сбрасывается, когда разрастётся.
         thread_local! {
-            static CELLS: std::cell::RefCell<std::collections::HashMap<(i64, i32, i32), Biome>> =
+            static CELLS: std::cell::RefCell<std::collections::HashMap<(i64, u8, i32, i32), Biome>> =
                 std::cell::RefCell::new(std::collections::HashMap::new());
         }
 
-        let key = (self.seed ^ ((self.style == Style::Smooth) as i64), to_x >> 2, to_z >> 2);
+        let key = (self.seed, self.generation_profile(), to_x >> 2, to_z >> 2);
 
         CELLS.with_borrow_mut(|cells| {
             if let Some(biome) = cells.get(&key) {
@@ -1569,14 +1860,24 @@ impl Terrain {
     /// в несколько раз дороже, а пещеры от этого не меняются.
     fn cave_noise(&self, x: i32, y: i32, z: i32) -> [f64; 3] {
         let (fx, fy, fz) = (x as f64, y as f64, z as f64);
+        // Вики, Cave: «hollowness», «thickness» — независимые параметры.
+        // https://minecraft.wiki/w/Cave#Noise_caves
+        // Масштаб старой геометрии сливал ходы и залы: p95 объёма чанковой
+        // компоненты 3825 против 1755 в переписи 26.3. Калибровка своей
+        // формы [проверить]: координаты пещер оригинала не воспроизводятся.
+        let (tunnel_xz, tunnel_y, room_xz, room_y) = if self.preview {
+            (80.0, 54.0, 38.0, 27.0)
+        } else {
+            (140.0, 90.0, 70.0, 45.0)
+        };
 
         // У каждого шума свой дробный сдвиг: шум Перлина равен нулю в целых
         // узлах, и без сдвига оба шума ходов обнулялись бы в одних точках —
         // через каждые 140 блоков по решётке шёл бы гарантированный ход.
         [
-            self.tunnels.at3(fx / 140.0 + 0.371, fy / 90.0 + 0.613, fz / 140.0 + 0.127),
-            self.tunnels_across.at3(fx / 140.0 + 0.719, fy / 90.0 + 0.293, fz / 140.0 + 0.537),
-            self.caves.octaves3(fx / 70.0 + 0.211, fy / 45.0 + 0.457, fz / 70.0 + 0.883, 2),
+            self.tunnels.at3(fx / tunnel_xz + 0.371, fy / tunnel_y + 0.613, fz / tunnel_xz + 0.127),
+            self.tunnels_across.at3(fx / tunnel_xz + 0.719, fy / tunnel_y + 0.293, fz / tunnel_xz + 0.537),
+            self.caves.octaves3(fx / room_xz + 0.211, fy / room_y + 0.457, fz / room_xz + 0.883, 2),
         ]
     }
 
@@ -1609,6 +1910,7 @@ impl Terrain {
             y0,
             layers,
             nodes,
+            preview: self.preview,
         }
     }
 
@@ -1711,7 +2013,7 @@ impl Terrain {
             static FILLS: std::cell::RefCell<FillCache> = std::cell::RefCell::new(FillCache::new());
         }
 
-        let key = (self.seed, self.style == Style::Vanilla, cell);
+        let key = (self.seed, self.generation_profile(), cell);
 
         if let Some(fill) = FILLS.with(|fills| fills.borrow().get(&key).copied()) {
             return fill;
@@ -1738,11 +2040,11 @@ impl Terrain {
     /// Тоже запоминается: соседние клетки спрашивают одни и те же чанки.
     fn rough_surface(&self, chunk_x: i32, chunk_z: i32) -> i32 {
         thread_local! {
-            static SURFACES: std::cell::RefCell<std::collections::HashMap<(i64, bool, i32, i32), i32>> =
+            static SURFACES: std::cell::RefCell<std::collections::HashMap<(i64, u8, i32, i32), i32>> =
                 std::cell::RefCell::new(std::collections::HashMap::new());
         }
 
-        let key = (self.seed, self.style == Style::Vanilla, chunk_x, chunk_z);
+        let key = (self.seed, self.generation_profile(), chunk_x, chunk_z);
 
         if let Some(surface) = SURFACES.with(|surfaces| surfaces.borrow().get(&key).copied()) {
             return surface;
@@ -1750,14 +2052,16 @@ impl Terrain {
 
         let (x, z) = (chunk_x * 16 + 8, chunk_z * 16 + 8);
         let climate = self.climate_at(x, z);
-        let surface = match self.style {
+        let surface = if let Some(router) = &self.density_router {
+            router.chunk_surface_level(&climate, x, z)
+        } else { match self.style {
             Style::Vanilla => {
                 let relief = self.relief_at(&climate, x, z);
 
                 relief.surface.min(relief.cap).floor() as i32
             }
             Style::Smooth => self.smooth_height(&climate, x, z),
-        };
+        } };
 
         SURFACES.with(|surfaces| {
             let mut surfaces = surfaces.borrow_mut();
@@ -1811,7 +2115,9 @@ impl Terrain {
         // четверть пещер, глубже — считанные проценты. Четверть — вместе с
         // клетками у моря: порог выше нуля поднят, когда они появились.
         let threshold = if middle >= 0 {
-            0.08
+            // В 26.3 залитые полости Y 0…23 иначе оказываются вдвое реже
+            // переписи. Верхние водоносные клетки и морская вода не меняются.
+            if self.preview && middle < 24 { -0.06 } else { 0.08 }
         } else if middle >= -40 {
             0.33
         } else {
@@ -1937,7 +2243,8 @@ impl Terrain {
                         // что оказалось ниже дна, просто не ложится.
                         let in_world = |by: i32| (BOTTOM..crate::world::MIN_Y + crate::world::WORLD_HEIGHT).contains(&by);
 
-                        match Lump::new(seed, (x, y, z), placement.size) {
+                        let partial_ore = self.preview && placement.has_deep;
+                        match Lump::new(seed, (x, y, z), placement.size, partial_ore) {
                             // Крупное гнездо проверяется поблочно, и чанк
                             // перебирает только свою часть его объёма.
                             Some(lump) => {
@@ -1956,7 +2263,7 @@ impl Terrain {
                                 }
                             }
                             None => {
-                                for (bx, by, bz) in blob(seed, (x, y, z), placement.size) {
+                                for (bx, by, bz) in blob(seed, (x, y, z), placement.size, partial_ore) {
                                     if inside(bx, bz) && in_world(by) {
                                         found.push((bx, by, bz, placement));
                                     }
@@ -2151,6 +2458,13 @@ fn biome_of(climate: &Climate) -> Biome {
         },
         _ => middle(t, h, w),
     }
+}
+
+const DAPPLED_WEIRDNESS: f64 = 0.0;
+
+/// Климат пятнистого леса 26.3 (замер официального мира, tools/measure/census_263.py).
+fn dappled_climate(climate: &Climate) -> bool {
+    climate.weirdness > DAPPLED_WEIRDNESS && climate.temperature_level() == 1 && climate.humidity_level() == 0
 }
 
 /// Склоны: заснеженные при сухости, роща при влаге.
@@ -2387,16 +2701,17 @@ struct Lump {
 impl Lump {
     /// Ком для гнезда этого размера; `None` — гнездо мелкое, ему хватает
     /// обычного роста от точки.
-    fn new(seed: u64, start: (i32, i32, i32), size: u32) -> Option<Lump> {
+    fn new(seed: u64, start: (i32, i32, i32), size: u32, partial_ore: bool) -> Option<Lump> {
         let most = blob_blocks(size);
 
         if most < 24 {
             return None;
         }
 
-        // Число блоков — как у `blob`: от половины до наибольшего.
+        // Число блоков — как у `blob`; крупные рудные гнёзда 26.3 могут
+        // набирать лишь четверть максимума, каменные пятна сохраняют форму.
         let mut random = Random::new(seed as i64);
-        let (from, to) = (most / 2, most);
+        let (from, to) = (most / if partial_ore { 4 } else { 2 }, most);
         let count = (from + (random.next() % (to - from + 1) as u64) as u32) as f64;
 
         // Отрезок в случайную сторону, длиной около размера кома.
@@ -2489,10 +2804,10 @@ impl Lump {
 ///
 /// Гнездо растёт от начальной точки: каждый следующий блок прирастает
 /// к одному из уже положенных с какой-нибудь стороны. Так получается
-/// плотный неровный ком, а не шар и не змейка. Число блоков — от половины
-/// до наибольшего для этого размера по таблице вики: гнёзда в игре редко
-/// добирают до наибольшего. От начала гнездо не уходит дальше своего охвата.
-fn blob(seed: u64, start: (i32, i32, i32), size: u32) -> Vec<(i32, i32, i32)> {
+/// плотный неровный ком, а не шар и не змейка. Верхний предел — по таблице
+/// вики; степень заполнения своей формы калибруется отдельно.
+/// От начала гнездо не уходит дальше своего охвата.
+fn blob(seed: u64, start: (i32, i32, i32), size: u32, partial_ore: bool) -> Vec<(i32, i32, i32)> {
     let most = blob_blocks(size);
 
     if most == 0 {
@@ -2501,12 +2816,18 @@ fn blob(seed: u64, start: (i32, i32, i32), size: u32) -> Vec<(i32, i32, i32)> {
 
     let mut random = Random::new(seed as i64);
 
-    // Сколько блоков набирает гнездо. Крупные у оригинала добирают от
-    // половины до наибольшего; мелкие (размер до 9) — заметно меньше: по
-    // замерам ванильного мира руды размером до 9 у нас выходило в полтора
-    // раза больше, а уголь и медь сходились.
+    // Прежняя граница давала скачок среднего объёма с 6 до 12 блоков
+    // между размерами 9 и 10. После исправления пустот это завышает медь
+    // и уголь: крупные рудные гнёзда тоже должны бывать частичными.
+    // Вики: «ellipsoidal cluster of blocks» — https://minecraft.wiki/w/Ore_(feature)
+    // Форма своя [проверить на других семенах]; число попыток и максимум
+    // из таблицы не меняются. Старый профиль сохраняет прежнюю границу.
     let (from, to) = if size <= 9 {
-        (most * 3 / 10, most * 7 / 10)
+        // Нижняя граница 30 % округляется вверх: округление вниз давало
+        // для размера 4 среднее 2 вместо 2,5 блока, для размера 9 — 6 вместо 6,5.
+        (if partial_ore { (most * 3).div_ceil(10) } else { most * 3 / 10 }, most * 7 / 10)
+    } else if partial_ore {
+        (most / 4, most)
     } else {
         (most / 2, most)
     };
@@ -2762,6 +3083,10 @@ impl Terrain {
         let height = column.height;
         let under_water = height < SEA;
         let patch = || self.detail.octaves(x as f64 / 9.0 + 131.0, z as f64 / 9.0 - 77.0, 2);
+        // Материал и толщина покрова — разные поля: отбор песчаных пятен
+        // не должен одновременно отбирать только толстые слои песка.
+        let beach_depth = || patch_share(self.detail.octaves(
+            x as f64 / 16.0 + 731.0, z as f64 / 16.0 - 419.0, 2));
 
         // Под водой трава не растёт. Доли и толщина слоёв дна — по переписи
         // мира оригинала (`tools/measure/seabed_census.py`): у моря гравий
@@ -2771,8 +3096,9 @@ impl Terrain {
         // шум у всех биомов, поэтому на стыке реки с морем пятна не
         // обрываются, а меняется лишь их доля.
         if under_water {
-            // Глубже четырёх блоков дна — всегда камень: шум незачем считать.
-            if depth > 3 {
+            // У обычного дна глубже четырёх блоков уже камень. У пляжа
+            // песчаник продолжается ниже: ранний выход не должен его стирать.
+            if depth > 3 && !(self.preview && matches!(biome, Biome::Beach | Biome::SnowyBeach) && depth <= 8) {
                 return None;
             }
 
@@ -2793,6 +3119,7 @@ impl Terrain {
                 Biome::LukewarmOcean | Biome::DeepLukewarmOcean | Biome::WarmOcean => (0.02, 0.02, 0.01, 0.90, 1),
                 Biome::River | Biome::FrozenRiver => (0.02, 0.39, 0.02, 0.26, 2),
                 Biome::Swamp => (0.04, 0.13, 0.05, 0.01, 2),
+                Biome::Beach | Biome::SnowyBeach if self.preview => (0.03, 0.20, 0.0, 0.77, 4),
                 Biome::Beach | Biome::SnowyBeach | Biome::Desert => (0.03, 0.28, 0.0, 0.69, 4),
                 _ => (0.10, 0.18, 0.02, 0.28, 2),
             };
@@ -2811,7 +3138,16 @@ impl Terrain {
                     // В трети пятен песок на слой толще; у морей он всюду
                     // в один слой.
                     let thicker = sand_depth > 1 && (spot - bare - gravel - clay) / sand < 0.33;
-                    let thick = sand_depth + thicker as i32;
+                    // https://minecraft.wiki/w/Beach: «sandstone».
+                    // Песок не обязан занимать пять слоёв: подводная часть
+                    // того же пляжа также переходит в песчаник, не в камень.
+                    let (thick, bottom) = if self.preview && matches!(biome, Biome::Beach | Biome::SnowyBeach) {
+                        let quantile = beach_depth();
+                        (beach_sand_depth(quantile), beach_base_depth(quantile))
+                    } else { (sand_depth + thicker as i32, i32::MAX) };
+                    if depth >= bottom {
+                        return None;
+                    }
 
                     match depth {
                         _ if depth < thick => Some("sand"),
@@ -2820,13 +3156,14 @@ impl Terrain {
                         _ => Some("dirt"),
                     }
                 }
-                _ => Some("dirt"),
+                _ => (depth <= 3).then_some("dirt"),
             };
         }
 
         // Крутой склон в горах оголён до камня — так у оригинала горы каменные
         // по склонам и зелёные или снежные на полках.
-        if column.steep && biome.bares_steep_slopes() {
+        if column.steep && biome.bares_steep_slopes()
+            && !(self.preview && matches!(biome, Biome::Meadow | Biome::CherryGrove)) {
             return None;
         }
 
@@ -2836,6 +3173,32 @@ impl Terrain {
         let grass = if depth == 0 && snowy() { "grass_block[snowy=true]" } else { "grass_block" };
 
         match biome {
+            // https://minecraft.wiki/w/Meadow: «elevated grassy biome».
+            // Высота сама по себе не снимает дёрн. Толщина почвы меняется
+            // плавно: постоянные три слоя давали 96% земли на глубине −3.
+            // Масштаб своего шума, точную форму пятен [проверить].
+            Biome::Meadow | Biome::CherryGrove if self.preview => {
+                let (mean, amplitude, scale, deepest) = if biome == Biome::Meadow {
+                    (2.9, 4.5, 16.0, 3.0)
+                } else { (2.75, 2.5, 16.0, 4.0) };
+                let soil = (mean + self.detail.octaves(
+                    x as f64 / scale + 731.0, z as f64 / scale - 419.0, 2) * amplitude)
+                    .floor().clamp(1.0, deepest) as i32;
+                match depth {
+                    0 => Some(grass),
+                    _ if depth <= soil => Some("dirt"),
+                    _ => None,
+                }
+            }
+            Biome::Beach | Biome::SnowyBeach if self.preview => {
+                let quantile = beach_depth();
+                let sand = beach_sand_depth(quantile);
+                match depth {
+                    _ if depth < sand => Some("sand"),
+                    _ if depth < beach_base_depth(quantile) => Some("sandstone"),
+                    _ => None,
+                }
+            }
             Biome::Desert | Biome::Beach => match depth {
                 0..=4 => Some("sand"),
                 5..=8 => Some("sandstone"),
@@ -2857,10 +3220,19 @@ impl Terrain {
                     return Some("red_sand");
                 }
 
-                if depth <= 12 {
-                    let wobble = (self.detail.octaves(x as f64 / 60.0, z as f64 / 60.0 + 500.0, 2) * 6.0) as i32;
-
-                    return Some(self.bands[(y + wobble).rem_euclid(192) as usize]);
+                // У сохранённого 26.3 толщина меняется между столбцами,
+                // а прежний срез везде обрывал полосы ровно через 13 блоков.
+                // Своя плавная модель покрытия; не параметры оригинала.
+                let clay_depth = if self.preview {
+                    15 + (self.detail.octaves(x as f64 / 48.0 + 21.37,
+                        z as f64 / 48.0 - 43.71, 2) * 14.0).round() as i32
+                } else { 12 };
+                if depth <= clay_depth {
+                    // Вики, Badlands: «orange terracotta under it extending to Y=63».
+                    if self.preview && height < 74 && y > SEA {
+                        return Some("orange_terracotta");
+                    }
+                    return Some(self.terracotta_band(x, y, z));
                 }
 
                 None
@@ -2914,6 +3286,13 @@ impl Terrain {
                 1..=3 => Some("dirt"),
                 _ => None,
             },
+            // Пятнистый лес 26.3: на траве пятна грубой земли (замер: 2,7 % столбцов
+            // против 24,5 % травы, около десятой части земли).
+            Biome::DappledForest => match depth {
+                0 => Some(if patch_share(patch()) > 0.9 && !snowy() { "coarse_dirt" } else { grass }),
+                1..=3 => Some("dirt"),
+                _ => None,
+            },
             Biome::MangroveSwamp => match depth {
                 0..=3 => Some("mud"),
                 _ => None,
@@ -2921,7 +3300,10 @@ impl Terrain {
             // Высокие кряжи оголяются: на них держится только камень.
             // Глубже земли — камень; снег незачем проверять для каждого блока.
             _ if depth > 3 => None,
-            _ if height > SEA + 50 && !snowy() => None,
+            // Вики, World generation: «first few layers are dirt».
+            // Сам Y не оголяет лес: этот старый срез снимал почву у соседей
+            // вишнёвой рощи после подъёма поверхности. По умолчанию прежний.
+            _ if self.density_router.is_none() && height > SEA + 50 && !snowy() => None,
             _ => match depth {
                 0 => Some(grass),
                 1..=3 => Some("dirt"),
@@ -2929,6 +3311,18 @@ impl Terrain {
             },
         }
     }
+}
+
+// Глубина песчаного покрова: квантиль пятна общий для всего столбца.
+// Частоты — измерение сохранённых пляжей 26.3, не параметры оригинала.
+fn beach_sand_depth(quantile: f64) -> i32 {
+    if quantile < 0.1 { 2 } else if quantile < 0.5 { 3 } else if quantile < 0.9 { 4 } else { 5 }
+}
+
+// Тонкая часть покрова заканчивается раньше: постоянные четыре слоя
+// песчаника под песком завышали его долю на глубине −5.
+fn beach_base_depth(quantile: f64) -> i32 {
+    if quantile < 0.08 { 4 } else if quantile < 0.25 { 5 } else { beach_sand_depth(quantile) + 3 }
 }
 
 /// Раскладка полос терракоты для мира: 192 слоя обычной терракоты, по
@@ -2959,6 +3353,35 @@ fn terracotta_bands(seed: i64) -> [&'static str; 192] {
     bands
 }
 
+/// Своя раскладка 26.3 по частоте смены цветов в сохранённых столбцах.
+/// Оранжевые отметки разделены промежутками: случайные повторные попадания
+/// прежнего варианта оставляли слишком длинные одноцветные полосы.
+/// Белые полосы обрамлены серыми, как в измеренных вертикальных срезах.
+fn preview_terracotta_bands(seed: i64) -> [&'static str; 192] {
+    let mut bands = ["terracotta"; 192];
+    let mut random = Random::new(seed ^ 0x7E44_AC07_7A00);
+    let mut layer = (random.next() % 3) as usize;
+    while layer < bands.len() {
+        bands[layer] = "orange_terracotta";
+        layer += 2 + (random.next() % 3) as usize;
+    }
+    for color in ["yellow_terracotta", "brown_terracotta", "red_terracotta"] {
+        for _ in 0..8 {
+            let start = (random.next() % 192) as usize;
+            let width = 1 + (random.next() % 3) as usize;
+            for layer in start..start + width { bands[layer % 192] = color; }
+        }
+    }
+    for _ in 0..5 {
+        let start = (random.next() % 192) as usize;
+        let width = 1 + (random.next() % 2) as usize;
+        bands[(start + 191) % 192] = "light_gray_terracotta";
+        for layer in start..start + width { bands[layer % 192] = "white_terracotta"; }
+        bands[(start + width) % 192] = "light_gray_terracotta";
+    }
+    bands
+}
+
 /// Чем заполнено место пещеры.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Fluid {
@@ -2969,9 +3392,9 @@ enum Fluid {
     Barrier,
 }
 
-/// Запомненные клетки водоёмов: (семя, «Обычный» ли мир, клетка) →
+/// Запомненные клетки водоёмов: (семя, профиль генерации, клетка) →
 /// уровень и род жидкости.
-type FillCache = std::collections::HashMap<(i64, bool, (i32, i32, i32)), Option<(i32, Fluid)>>;
+type FillCache = std::collections::HashMap<(i64, u8, (i32, i32, i32)), Option<(i32, Fluid)>>;
 
 /// Своё число клетки водоёмов.
 fn cell_seed((x, y, z): (i32, i32, i32)) -> i64 {
@@ -3110,6 +3533,364 @@ fn named(name: &str) -> i32 {
 mod tests {
     use super::*;
 
+    /// Независимый контроль формы в готовых чанках: биомы и природный верх,
+    /// а не совпадение координат с оригиналом. Границы — перепись регионов,
+    /// допуск высоты прежний, пять блоков. Пока корень A5 не исправлен,
+    /// этот воспроизводитель должен явно оставаться незакрытым [проверить].
+    #[test]
+    #[ignore = "A5: полки и профили гор пока вне допуска переписи [проверить]"]
+    fn preview_a5_high_terrain_profiles_match_saved_regions() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a5/regression-plan.json")).unwrap();
+        let generator = crate::world::Generator::Normal(
+            Terrain::new(fixture["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true));
+        let natural = |name: &str| {
+            matches!(name, "grass_block" | "dirt" | "coarse_dirt" | "rooted_dirt" | "podzol" | "mycelium"
+                | "mud" | "clay" | "sand" | "red_sand" | "sandstone" | "red_sandstone" | "gravel"
+                | "stone" | "granite" | "diorite" | "andesite" | "deepslate" | "tuff" | "calcite"
+                | "terracotta" | "snow_block" | "powder_snow" | "ice" | "packed_ice" | "blue_ice"
+                | "moss_block" | "pale_moss_block" | "netherrack" | "soul_sand" | "soul_soil"
+                | "basalt" | "blackstone" | "end_stone" | "bedrock" | "obsidian" | "sulfur" | "cinnabar")
+                || name.ends_with("_ore") || name.ends_with("_terracotta") || name.starts_with("raw_")
+        };
+        let mut failures = Vec::new();
+        for case in fixture["cases"].as_array().unwrap() {
+            let biome = Biome::by_name(case["biome"].as_str().unwrap(), true).unwrap();
+            let mut heights = Vec::new();
+            for window in case["windows"].as_array().unwrap() {
+                let [x0, z0, x1, z1] = std::array::from_fn(|i| window[i].as_i64().unwrap() as i32);
+                for cx in x0..=x1 { for cz in z0..=z1 {
+                    let chunk = crate::world::Chunk::generated(&generator, cx, cz);
+                    for x in 0..16 { for z in 0..16 {
+                        let top = (BOTTOM..BOTTOM + crate::world::WORLD_HEIGHT).rev().find(|&y| {
+                            crate::blocks::block_at_state(chunk.block(x, y, z)).is_some_and(natural)
+                        }).unwrap();
+                        if chunk.biome(x, top, z) == biome.number() as u16 { heights.push(top); }
+                    } }
+                } }
+            }
+            assert!(heights.len() >= case["minimum_columns"].as_u64().unwrap() as usize,
+                "{}: недостаточная выборка {}", biome.name(), heights.len());
+            heights.sort_unstable();
+            let maximum = *heights.last().unwrap();
+            let median = f64::from(heights[(heights.len()-1)/2] + heights[heights.len()/2]) / 2.0;
+            println!("{}: {} столбцов, медиана {median}, максимум {maximum}", biome.name(), heights.len());
+            if case["maximum_height"].as_i64().is_some_and(|limit| i64::from(maximum) > limit)
+                || case["median_height_min"].as_f64().is_some_and(|limit| median < limit)
+                || case["median_height_max"].as_f64().is_some_and(|limit| median > limit) {
+                failures.push(format!("{}: медиана {median}, максимум {maximum}", biome.name()));
+            }
+        }
+        assert!(failures.is_empty(), "A5 [проверить]: {}", failures.join("; "));
+    }
+
+    /// Регрессии переписи: считаем готовые блоки в своём биоме, а не
+    /// совпадение координат с оригиналом. Малые окна имеют широкий допуск;
+    /// строгие пять процентных пунктов проверяются полной переписью.
+    #[test]
+    fn preview_a3_surface_regressions_in_generated_chunks() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a3/regression-plan.json")).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let terrain = Terrain::new(case["seed"].as_i64().unwrap(), Style::Vanilla).with_preview(true);
+            let biome = Biome::by_name(case["biome"].as_str().unwrap(), true).unwrap();
+            let depth = case["depth"].as_i64().unwrap() as i32;
+            let (cx, cz) = (case["centre_chunk"][0].as_i64().unwrap() as i32,
+                case["centre_chunk"][1].as_i64().unwrap() as i32);
+            let radius = case["radius"].as_i64().unwrap() as i32;
+            let generator = crate::world::Generator::Normal(terrain);
+            let crate::world::Generator::Normal(terrain) = &generator else { unreachable!() };
+            let (mut matching, mut total) = (0, 0);
+            for cx in cx-radius..=cx+radius { for cz in cz-radius..=cz+radius {
+                let grid = terrain.relief_grid(cx*16-1, cz*16-1, cx*16+16, cz*16+16);
+                let chunk = crate::world::Chunk::generated(&generator, cx, cz);
+                for x in 0..16 { for z in 0..16 {
+                    let column = terrain.column_in(cx*16+x, cz*16+z, Some(&grid));
+                    if chunk.biome(x, column.height, z) != biome.number() as u16 { continue; }
+                    total += 1;
+                    matching += usize::from(crate::blocks::block_at_state(
+                        chunk.block(x, column.height-depth, z)) == case["block"].as_str());
+                } }
+            } }
+            assert!(total >= 64, "{}: недостаточная выборка {total}", biome.name());
+            let percent = matching as f64 * 100.0 / total as f64;
+            assert!((case["minimum_percent"].as_f64().unwrap()..=case["maximum_percent"].as_f64().unwrap()).contains(&percent),
+                "{} -{depth}: {matching}/{total} = {percent}%", biome.name());
+        }
+    }
+
+    /// Сохранённые чанки трёх семян: до исправления потоков состав этих
+    /// клеток не совпадал. Допуск — одна клетка на границе, а не блоки мира.
+    #[test]
+    fn preview_named_climate_streams_reach_generated_chunk_biomes() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a-phase.json")).unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let terrain = Terrain::new(case["seed"].as_i64().unwrap(),Style::Vanilla).with_preview(true);
+            let generator = crate::world::Generator::Normal(terrain);
+            let (cx,cz) = (case["chunk"][0].as_i64().unwrap() as i32,case["chunk"][1].as_i64().unwrap() as i32);
+            let chunk = crate::world::Chunk::generated(&generator,cx,cz);
+            let mut counts = std::collections::BTreeMap::<&str,i64>::new();
+            for z in (2..16).step_by(4) { for x in (2..16).step_by(4) {
+                let id = chunk.biome(x,case["sample_y"].as_i64().unwrap() as i32,z);
+                let biome = Biome::ALL.iter().chain(Biome::PREVIEW.iter())
+                    .find(|biome|biome.number() as u16==id).unwrap();
+                *counts.entry(biome.name()).or_default() += 1;
+            } }
+            for (biome,count) in &counts {
+                let reference = case["quart_biomes"][*biome].as_i64().unwrap_or(0);
+                assert!((count-reference).abs() <= 1,"{} {cx}/{cz}: {biome} {count}/{reference}",case["label"]);
+            }
+            for (biome,count) in case["quart_biomes"].as_object().unwrap() {
+                assert!((counts.get(biome.as_str()).copied().unwrap_or(0)-count.as_i64().unwrap()).abs() <= 1);
+            }
+        }
+    }
+
+    /// Доли считаются по двум квадратам вместе: перестановка биомов не
+    /// превращает несовпадение координат в ошибку состава мира.
+    #[test]
+    fn preview_common_biome_shares_follow_region_census() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
+        let mut counts = std::collections::BTreeMap::<&str,usize>::new();
+        let mut total = 0;
+        for (seed,x0,z0) in [(1_792_932_773_345_722_119,-2064,-1440),(100_554_032_945_340,-1072,-1568)] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            for z in (z0..z0+3088).step_by(16) { for x in (x0..x0+3088).step_by(16) {
+                *counts.entry(terrain.biome_at(x+2,z+2).name()).or_default() += 1;
+                total += 1;
+            } }
+        }
+        for (name,value) in reference["pooled_reference_surface_percent"].as_object().unwrap() {
+            let measured = *counts.get(name.as_str()).unwrap_or(&0) as f64 * 100.0 / total as f64;
+            assert!((measured-value.as_f64().unwrap()).abs() <= 1.0,"{name}: {measured}, оригинал {value}");
+        }
+    }
+
+    /// Незатронутые рамкой пятна: на втором семени прежняя поправка
+    /// давала 4456 м² вместо 64. Один общий порог не ловил эту регрессию.
+    #[test]
+    fn preview_desert_patches_are_not_single_cell_boundary_noise() {
+        for (seed,x0,z0,reference) in [
+            (1_792_932_773_345_722_119,-2064,-1440,5024.0_f64),
+            (100_554_032_945_340,-1072,-1568,64.0_f64),
+        ] {
+        let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+        let side = 3088/4;
+        let mut desert = vec![false;side*side];
+        for z in 0..side { for x in 0..side {
+            desert[z*side+x] = terrain.biome_at(x0+x as i32*4+2,z0+z as i32*4+2) == Biome::Desert;
+        } }
+        let mut areas = Vec::new();
+        for start in 0..desert.len() {
+            if !desert[start] { continue; }
+            desert[start] = false;
+            let mut stack = vec![start]; let mut area = 0; let mut edge = false;
+            while let Some(at) = stack.pop() {
+                area += 16;
+                let (x,z) = (at%side,at/side);
+                edge |= x==0 || z==0 || x+1==side || z+1==side;
+                for next in [(x>0).then(||at-1),(x+1<side).then_some(at+1),
+                    (z>0).then(||at-side),(z+1<side).then_some(at+side)].into_iter().flatten() {
+                    if desert[next] { desert[next] = false; stack.push(next); }
+                }
+            }
+            if !edge { areas.push(area); }
+        }
+        areas.sort_unstable();
+        assert!(areas.len()>=5);
+        let median = f64::from(areas[(areas.len()-1)/2]+areas[areas.len()/2])/2.0;
+        assert!((median-reference).abs() <= 64.0,"семя {seed}: {median}, оригинал {reference}");
+        }
+    }
+
+    /// Совместные квантили двух семян, настоящая сетка плотности чанков.
+    #[test]
+    fn preview_relief_has_low_common_hills_and_a_high_peak_tail() {
+        let mut heights = Vec::new();
+        for (seed,x0,z0) in [(1_792_932_773_345_722_119,-2064,-1440),(100_554_032_945_340,-1072,-1568)] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            for z in (z0..z0+3088).step_by(128) { for x in (x0..x0+3088).step_by(128) {
+                let grid = terrain.relief_grid(x,z,x+15,z+15);
+                for dz in (0..16).step_by(4) { for dx in (0..16).step_by(4) {
+                    heights.push(terrain.column_in(x+dx,z+dz,Some(&grid)).height);
+                } }
+            } }
+        }
+        heights.sort_unstable();
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
+        let p95 = heights[(heights.len()-1)*95/100];
+        assert!((p95-reference["reference_height_pooled"]["95"].as_i64().unwrap() as i32).abs() <= 5,"p95={p95}");
+        assert!(*heights.last().unwrap() >= 140,"потерян хвост высоких пиков");
+    }
+
+    /// На третьем семени здесь обычное море, а не тёплое. Точные
+    /// расстояния с шагом 4 и допуск 16 считает отдельная перепись.
+    #[test]
+    fn preview_warm_oceans_are_not_hundreds_of_blocks_wide_on_every_seed() {
+        for (seed,x0,z0) in [(1_792_932_773_345_722_119,-2064,-1440),(100_554_032_945_340,-1072,-1568),(20_261_025,-1072,-1568)] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            let mut land = Vec::new(); let mut warm = Vec::new();
+            for z in (z0..z0+3088).step_by(32) { for x in (x0..x0+3088).step_by(32) {
+                let biome = terrain.biome_at(x+2,z+2);
+                if !biome.is_ocean() { land.push((x,z)); }
+                if biome == Biome::WarmOcean || (seed == 20_261_025 && biome == Biome::Ocean) { warm.push((x,z)); }
+            } }
+            let mut distances = Vec::new();
+            for (x,z) in warm {
+                let squared = land.iter().map(|&(lx,lz)| (lx-x).pow(2)+(lz-z).pow(2)).min().unwrap();
+                let edge = (x-x0+16).min(z-z0+16).min(x0+3088-x).min(z0+3088-z);
+                if squared < edge*edge { distances.push(squared); }
+            }
+            distances.sort_unstable();
+            assert!(distances.len()>50);
+            assert!(distances[distances.len()/2] <= 200*200,"семя {seed}: море слишком широкое");
+        }
+    }
+
+    /// Проверяется сохранённый результат генератора, а не только классификатор.
+    #[test]
+    fn preview_dappled_chunk_contains_biome_and_poplar_logs() {
+        let reference: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a.json")).unwrap();
+        let sample = &reference["dappled_chunk"];
+        let (cx,cz) = (sample["x"].as_i64().unwrap() as i32,sample["z"].as_i64().unwrap() as i32);
+        let terrain = Terrain::new(sample["seed"].as_i64().unwrap(),Style::Vanilla).with_preview(true);
+        let generator = crate::world::Generator::Normal(terrain);
+        let chunk = crate::world::Chunk::generated(&generator,cx,cz);
+        let mut cells = 0; let mut logs = 0;
+        for z in (2..16).step_by(4) { for x in (2..16).step_by(4) {
+            cells += usize::from(chunk.biome(x,80,z) == Biome::DappledForest.number() as u16);
+        } }
+        for z in 0..16 { for x in 0..16 { for y in 62..180 {
+            logs += usize::from(crate::blocks::block_at_state(chunk.block(x,y,z)) == Some("poplar_log"));
+        } } }
+        assert_eq!(cells,16);
+        assert!(logs>0,"пятнистый лес без тополей");
+    }
+
+    #[test]
+    fn preview_dappled_accepts_the_entire_positive_weirdness_band() {
+        for weirdness in [-0.1,0.0,0.01,0.2,0.39,0.6] {
+            let climate = Climate { continent:0.2,temperature:-0.3,humidity:-0.5,erosion:0.7,weirdness };
+            assert_eq!(dappled_climate(&climate),weirdness>0.0);
+        }
+    }
+
+    /// До исправления климата биом был вообще недостижим; проверяем
+    /// настоящий чанк и сушу с мицелием, а не ручной Climate ниже порога.
+    #[test]
+    fn preview_mushroom_island_reaches_generated_chunks() {
+        let sample: serde_json::Value = serde_json::from_str(include_str!(
+            "../../testdata/world-profile/genaudit-26.3/batch-a-mushroom.json")).unwrap();
+        let seed = sample["seed"].as_i64().unwrap();
+        let (cx,cz) = (sample["chunk"][0].as_i64().unwrap() as i32,sample["chunk"][1].as_i64().unwrap() as i32);
+        let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+        let old = Terrain::new(seed,Style::Vanilla);
+        assert_ne!(old.biome_at(cx*16+8,cz*16+8),Biome::MushroomFields);
+        let grid = terrain.relief_grid(cx*16,cz*16,cx*16+15,cz*16+15);
+        let columns: Vec<_> = (0..16).flat_map(|z|(0..16).map(move |x|(x,z))).map(|(x,z)|
+            (x,z,terrain.column_in(cx*16+x,cz*16+z,Some(&grid)))).collect();
+        let generator = crate::world::Generator::Normal(terrain);
+        let chunk = crate::world::Chunk::generated(&generator,cx,cz);
+        let mut mushroom = 0; let mut dry_mycelium = 0;
+        for (x,z,col) in columns {
+            if col.biome != Biome::MushroomFields { continue; }
+            mushroom += 1;
+            if col.height >= SEA && crate::blocks::block_at_state(chunk.block(x,col.height,z)) == Some("mycelium") {
+                dry_mycelium += 1;
+            }
+        }
+        assert!(mushroom>64,"остров не появился");
+        assert!(dry_mycelium>16,"остров остался под водой");
+    }
+
+    #[test]
+    fn preview_mushroom_shore_keeps_mycelium_above_water() {
+        let terrain = Terrain::new(42,Style::Vanilla).with_preview(true);
+        for height in [50,61,62,68] {
+            let column = Column { biome:Biome::MushroomFields,..Column::flat(height) };
+            if height < SEA {
+                assert_ne!(terrain.surface(&column,0,height,0,0),Some("mycelium"));
+            } else {
+                assert_eq!(terrain.surface(&column,0,height,0,0),Some("mycelium"));
+            }
+        }
+    }
+
+    /// Свежие сохранённые чанки для независимой переписи; миры вне репозитория.
+    #[test]
+    #[ignore]
+    fn export_batch_a_263_chunks() {
+        let plan: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
+            std::env::var("BATCH_A_PLAN").expect("BATCH_A_PLAN")).unwrap()).unwrap();
+        for sample in plan["samples"].as_array().unwrap() {
+            let seed = sample["seed"].as_i64().unwrap();
+            let root = std::path::Path::new(sample["output"].as_str().unwrap());
+            let region = root.join("region");
+            assert!(!root.join("level.dat").exists(),"нужен свежий каталог");
+            std::fs::create_dir_all(&region).unwrap();
+            let terrain = Terrain::new(seed, Style::Vanilla).with_preview(true);
+            let spawn = crate::world::spawn_search::find_preview(|x,z| terrain.column_at(x,z));
+            std::fs::write(root.join("level.dat"), format!("seed={seed}\nspawn={} {} {}\n", spawn.0,spawn.1,spawn.2)).unwrap();
+            let generator = crate::world::Generator::Normal(terrain);
+            for pair in sample["chunks"].as_array().unwrap() {
+                let (x,z) = (pair[0].as_i64().unwrap() as i32,pair[1].as_i64().unwrap() as i32);
+                let chunk = crate::world::Chunk::generated(&generator,x,z);
+                crate::world::region::write(&region,x,z,&chunk.to_bytes()).unwrap();
+            }
+            println!("{}: {} чанков",seed,sample["chunks"].as_array().unwrap().len());
+        }
+    }
+
+    /// Глубина выбирает вариант моря, а не другой температурный пояс.
+    #[test]
+    fn preview_ocean_temperature_bands_are_shared_across_depths() {
+        let terrain = Terrain::new(42, Style::Vanilla).with_preview(true);
+        for i in -100..=100 {
+            let shallow = Climate { continent: -0.3, temperature: f64::from(i) / 100.0,
+                humidity: 0.0, erosion: 0.0, weirdness: 0.0 };
+            let deep = Climate { continent: -0.6, ..shallow };
+            let a = terrain.biome_climate(&shallow);
+            let b = terrain.biome_climate(&deep);
+            assert_eq!(a.temperature, b.temperature);
+            assert_eq!(biome_of(&a) == Biome::WarmOcean, biome_of(&b) == Biome::WarmOcean);
+        }
+    }
+
+    /// Высокое плато не покрывается новыми столбами; они только в низинах.
+    #[test]
+    fn hoodoo_relief_is_lowland_only_and_seeded_in_world_coordinates() {
+        let a = Terrain::new(42, Style::Vanilla).with_preview(true);
+        let b = Terrain::new(43, Style::Vanilla).with_preview(true);
+        let mut raised = 0; let mut different = 0;
+        for x in -40..40 { for z in -40..40 {
+            let h = a.hoodoo_top(x, z, 70);
+            assert!((70..=118).contains(&h));
+            raised += usize::from(h > 82);
+            different += usize::from(h != b.hoodoo_top(x, z, 70));
+            for base in [50, 112, 180] { assert_eq!(a.hoodoo_top(x, z, base), base); }
+        } }
+        assert!(raised > 0 && different > 0, "поднято {raised}, отличается {different}");
+    }
+
+    /// Срез 70→63 повторяет измеренные низины: песок, затем оранжевая глина.
+    #[test]
+    fn preview_badlands_low_floor_is_orange_below_red_sand() {
+        let terrain = Terrain::new(42, Style::Vanilla).with_preview(true);
+        for biome in [Biome::Badlands, Biome::ErodedBadlands, Biome::WoodedBadlands] {
+            let column = Column { biome, ..Column::flat(70) };
+            assert_eq!(terrain.surface(&column, 0, 70, 0, 0), Some("red_sand"));
+            for y in 63..70 {
+                assert_eq!(terrain.surface(&column, 0, y, 0, 70-y), Some("orange_terracotta"));
+            }
+        }
+        let reset = Terrain::new(42, Style::Vanilla).with_preview(true).with_preview(false);
+        assert_eq!(reset.bands, Terrain::new(42, Style::Vanilla).bands);
+    }
+
     /// Поверхность любого биома на любой глубине и высоте — существующий
     /// блок: в проверочных чанках попадаются не все биомы, а неизвестное
     /// имя уронило бы генерацию.
@@ -3193,6 +3974,31 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Профили не делят кэш аквиферов, даже при чередовании генераторов.
+    #[test]
+    fn aquifer_cache_distinguishes_generation_profiles() {
+        let legacy = Terrain::new(100_554_032_945_340, Style::Vanilla);
+        let preview = Terrain::new(100_554_032_945_340, Style::Vanilla).with_preview(true);
+        let mut differences = 0;
+
+        for x in -8..8 {
+            for z in -8..8 {
+                for y in 0..2 {
+                    let cell = (x, y, z);
+                    let old = legacy.decide_fill(cell);
+                    let new = preview.decide_fill(cell);
+                    differences += usize::from(old != new);
+
+                    for (terrain, expected) in [(&legacy, old), (&preview, new), (&legacy, old), (&preview, new)] {
+                        assert_eq!(terrain.aquifer_fill(cell), expected);
+                    }
+                }
+            }
+        }
+
+        assert!(differences > 0, "выборка должна различать правила профилей");
     }
 
     /// Мир повторяется: одно семя — один и тот же рельеф.
@@ -3428,7 +4234,7 @@ mod tests {
             let most = blob_blocks(size) as usize;
 
             for seed in 0..20 {
-                let blocks = blob(seed, (0, 0, 0), size);
+                let blocks = blob(seed, (0, 0, 0), size, false);
 
                 assert!(
                     blocks.len() <= most,
@@ -3467,6 +4273,12 @@ mod tests {
         for (i, biome) in Biome::END.iter().enumerate() {
             assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + i);
         }
+        // Биомы 26.3 — после Энда: прежние номера не сдвинулись.
+        for (i, biome) in Biome::PREVIEW.iter().enumerate() {
+            assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len() + i);
+        }
+        assert_eq!(Biome::EndBarrens.number() as usize + 1, Biome::DappledForest.number() as usize);
+        assert_eq!(Biome::SulfurCaves.number() as usize + 1, biome_registry_size_preview());
         assert_eq!(Biome::EndBarrens.number() as usize + 1, biome_registry_size());
 
         let mut names: Vec<&str> = Biome::ALL.iter().chain(&Biome::NETHER).chain(&Biome::END).map(|biome| biome.name()).collect();

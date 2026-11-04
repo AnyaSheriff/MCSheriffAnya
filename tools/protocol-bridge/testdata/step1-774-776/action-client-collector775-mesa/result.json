@@ -1,0 +1,892 @@
+{
+  "status": "failed",
+  "primary": 775,
+  "protocol": 776,
+  "collect_only": true,
+  "runner_sha256": "7f2bc7edb0e44f48ef3047e9ace8e2bc42b6a6ab72d1f6bc9d46ffed6b2a12df",
+  "binary_sha256": "02292beb120f7c136c42d5bd9c24098fa3c011de6af8522602cb5cbc04cc3a9f",
+  "packets": [
+    {
+      "direction": "toClient",
+      "name": "position",
+      "stage": "login",
+      "hex": "013fe000000000000040500000000000003fe00000000000000000000000000000000000000000000000000000000000000000000041f0000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "login",
+      "hex": "010000000614000f2a0110007fff"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "login",
+      "hex": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "0800264d63736150726f626520d0b7d0b0d188d191d0bb20d0bdd0b020d181d0b5d180d0b2d0b5d18000"
+    },
+    {
+      "direction": "toServer",
+      "name": "player_loaded",
+      "stage": "login",
+      "hex": ""
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ff5f6fd1eb8523fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404fe21858af5fd53fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404fc4966cf437a03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f9da2926170e43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f6d6d24c522a83fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f34258854d95e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ef1fa2ea1476e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ea7189b709b2e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404e53ad697ffc1c3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404df7e44f2cae8f3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404d93e823055a873fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404d27e2e043efcd3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404cb3fdab309f203fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404c3860d56e5dc23fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404bb533e23166643fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404b2a9d8a6028253fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404a98c3c09f12133fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004049ffcbb547a7653fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040495fd9da4b46833fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004048b911e7020ad03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040480b96dbe62f0b3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004047578b063c54233fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040469d1003a90e4d3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004045dc46c5b418423fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004045154f95398a943fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004044484a15c973313fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004043755548f627503fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040429c8f9191a8383fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004041be16b6da71843fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004040da07e79805e03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403fe0ff7a4f1ad03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403e03347cf1ae973fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403c1ae5c5f81d2c3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403a28492b00e0ff3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040382b936e08a1fd3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403624f842ed71c43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403414aa54d5ce4b3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004031fadb4b7bfb8d3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402faf77a0bc83a03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402b56f727a936a13fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004026ec92a418b2b43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402270a5afd48c213fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000401bc7141f4f16483fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040128b2f797dd9b43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040025c93b76e77243fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3100"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3200"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3300"
+    },
+    {
+      "direction": "toClient",
+      "name": "position",
+      "stage": "login",
+      "hex": "023fe000000000000040500000000000003fe0000000000000000000000000000000000000000000000000000000000000c2b4000041f0000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3400"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "login",
+      "hex": "0000008000000040a91a"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3500"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "login",
+      "hex": "0002002401c1070000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "0a090004776974680a0000000208000000094d63736150726f626500090004776974680a000000010a000b686f7665725f6576656e74080006616374696f6e000973686f775f746578740a000576616c7565080005636f6c6f720005677265656e09000565787472610a0000000208000000010a000800097472616e736c6174650029616476616e63656d656e74732e73746f72792e69726f6e5f746f6f6c732e6465736372697074696f6e000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e69726f6e5f746f6f6c732e7469746c6500000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e69726f6e5f746f6f6c732e7469746c6500080005636f6c6f720005677265656e0800097472616e736c6174650014636861742e7371756172655f627261636b657473000800097472616e736c617465001a636861742e747970652e616476616e63656d656e742e7461736b0000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "cancel",
+      "hex": "0000000080000000400401",
+      "status": 0,
+      "filtered": false
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "cancel",
+      "hex": "0100000080000000400000",
+      "status": 1,
+      "filtered": true
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "cancel",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3600"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "cancel",
+      "hex": "000000800000004000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "cancel",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-one-setup",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3700"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-one-setup",
+      "hex": "0003002407010000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-one-setup",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3800"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-one-setup",
+      "hex": "0004002d05a8070000"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "drop-one",
+      "hex": "0400000000000000000000",
+      "status": 4,
+      "filtered": true
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "drop-one",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "08001e5b5365727665725d204d4353415f414354494f4e5f424152524945525f3900"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-stack-setup",
+      "hex": "000500240b3e0000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "0a090004776974680a0000000208000000094d63736150726f626500090004776974680a000000010a000b686f7665725f6576656e74080006616374696f6e000973686f775f746578740a000576616c7565080005636f6c6f720005677265656e09000565787472610a0000000208000000010a000800097472616e736c6174650029616476616e63656d656e74732e73746f72792e6d696e655f73746f6e652e6465736372697074696f6e000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e6d696e655f73746f6e652e7469746c6500000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e6d696e655f73746f6e652e7469746c6500080005636f6c6f720005677265656e0800097472616e736c6174650014636861742e7371756172655f627261636b657473000800097472616e736c617465001a636861742e747970652e616476616e63656d656e742e7461736b0000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "drop-stack-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f313000"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "drop-stack-setup",
+      "hex": "0006002d05a8070000"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "drop-stack",
+      "hex": "0400000000000000000000",
+      "status": 4,
+      "filtered": true
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "drop-stack",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f313100"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "swap-setup",
+      "hex": "0007002403a4070000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "0a090004776974680a0000000208000000094d63736150726f626500090004776974680a000000010a000b686f7665725f6576656e74080006616374696f6e000973686f775f746578740a000576616c7565080005636f6c6f720005677265656e09000565787472610a0000000208000000010a000800097472616e736c6174650029616476616e63656d656e74732e73746f72792e736d656c745f69726f6e2e6465736372697074696f6e000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e736d656c745f69726f6e2e7469746c6500000800097472616e736c6174650023616476616e63656d656e74732e73746f72792e736d656c745f69726f6e2e7469746c6500080005636f6c6f720005677265656e0800097472616e736c6174650014636861742e7371756172655f627261636b657473000800097472616e736c617465001a636861742e747970652e616476616e63656d656e742e7461736b0000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "swap-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f313200"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "swap-setup",
+      "hex": "0008002d05a8070000"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "swap",
+      "hex": "0600000000000000000000",
+      "status": 6,
+      "filtered": true
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "swap",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "release-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f313300"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "release-setup",
+      "hex": "00090024019a070000"
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "release-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f313400"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "release-setup",
+      "hex": "000a0025089b070000"
+    },
+    {
+      "direction": "toClient",
+      "name": "spawn_entity",
+      "stage": "release-setup",
+      "hex": "0818e12b41db5bfdf7000000086974656d473fe00000000000004050547ae147ae143fe0000000000000f9847ffef33200000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release-setup",
+      "hex": "080807019b070000ff"
+    },
+    {
+      "direction": "toServer",
+      "name": "use_item",
+      "stage": "release",
+      "hex": "0003c2b4000041f00000"
+    },
+    {
+      "direction": "toServer",
+      "name": "use_item",
+      "stage": "release",
+      "hex": "0105c2b4000041f00000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000003f01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000004000"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000003f01"
+    },
+    {
+      "direction": "toClient",
+      "name": "block_change",
+      "stage": "release",
+      "hex": "000000c00000004000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "release",
+      "hex": "01080001ff"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "release",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "release",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "block_dig",
+      "stage": "release",
+      "hex": "0500000000000000000000",
+      "status": 5,
+      "filtered": true
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "jab-setup",
+      "hex": "08001f5b5365727665725d204d4353415f414354494f4e5f424152524945525f313500"
+    },
+    {
+      "direction": "toClient",
+      "name": "set_slot",
+      "stage": "jab-setup",
+      "hex": "000b002401b10a0000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "jab",
+      "hex": "3fe000000000000040500000000000003fe000000000000001"
+    }
+  ],
+  "commands": [
+    "gamemode survival McsaProbe",
+    "fill -3 63 -3 4 63 3 stone",
+    "tp McsaProbe 0.5 64 0.5 -90 30",
+    "setblock 2 64 0 obsidian",
+    "item replace entity McsaProbe weapon.mainhand with iron_pickaxe",
+    "setblock 2 64 0 air",
+    "item replace entity McsaProbe weapon.mainhand with stone 7",
+    "item replace entity McsaProbe weapon.offhand with gold_ingot 5",
+    "item replace entity McsaProbe weapon.mainhand with cobblestone 11",
+    "item replace entity McsaProbe weapon.offhand with gold_ingot 5",
+    "item replace entity McsaProbe weapon.mainhand with iron_ingot 3",
+    "item replace entity McsaProbe weapon.offhand with gold_ingot 5",
+    "item replace entity McsaProbe weapon.mainhand with bow",
+    "give McsaProbe arrow 8",
+    "item replace entity McsaProbe weapon.mainhand with iron_spear"
+  ],
+  "checks": [
+    {
+      "case": "cancel",
+      "statuses": [
+        0,
+        1
+      ]
+    },
+    {
+      "case": "drop-one",
+      "statuses": [
+        4
+      ]
+    },
+    {
+      "case": "drop-stack",
+      "statuses": [
+        4
+      ]
+    },
+    {
+      "case": "swap",
+      "statuses": [
+        6
+      ]
+    },
+    {
+      "case": "release",
+      "statuses": [
+        5
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "ready-cancel.png",
+      "sha256": "3fd079cc077f8f3b13e3e73c2ecd53dba093d891e640505bb0f0718dfe489617"
+    }
+  ],
+  "error": "TimeoutError('jab')",
+  "client_exit": -15,
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

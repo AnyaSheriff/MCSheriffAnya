@@ -1,0 +1,35 @@
+{
+  "source": "Local official 26.3 network observation, 2026-10-24; stone faces0/2, bed face1; no creative feedback",
+  "packets": [
+    {
+      "effect": 2019,
+      "face": 0,
+      "hex": "000007e3000113c00044dfc50000000000"
+    },
+    {
+      "effect": 2020,
+      "face": 0,
+      "hex": "000007e4000113c00044dfc50000000000"
+    },
+    {
+      "effect": 2019,
+      "face": 2,
+      "hex": "000007e3000113c00044dfc50000000200"
+    },
+    {
+      "effect": 2020,
+      "face": 2,
+      "hex": "000007e4000113c00044dfc50000000200"
+    },
+    {
+      "effect": 2019,
+      "face": 1,
+      "hex": "000007e3000113c00044dfc50000000100"
+    },
+    {
+      "effect": 2020,
+      "face": 1,
+      "hex": "000007e4000113c00044dfc50000000100"
+    }
+  ]
+}

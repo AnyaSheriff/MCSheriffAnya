@@ -1,0 +1,651 @@
+{
+ "scenario": "bundle-chest-select",
+ "host": "127.0.0.1",
+ "port": 26271,
+ "lane": 1,
+ "window": {
+  "first": 4694,
+  "last": 4874
+ },
+ "events": [
+  {
+   "tick": 4694,
+   "ms": 143,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 4694,
+   "ms": 169,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.chest.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9648799896240234
+  },
+  {
+   "tick": 4694,
+   "ms": 169,
+   "kind": "window",
+   "type": "2",
+   "title": "container.chest"
+  },
+  {
+   "tick": 4694,
+   "ms": 169,
+   "kind": "slots",
+   "items": "54:bundle×1 55:ender_pearl×10 56:stone×40"
+  },
+  {
+   "tick": 4694,
+   "ms": 170,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "chest[facing=south,type=single,waterlogged=false]"
+  },
+  {
+   "tick": 4694,
+   "ms": 170,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 4694,
+   "ms": 170,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4698,
+   "ms": 369,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4703,
+   "ms": 619,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4704,
+   "ms": 643,
+   "kind": "do",
+   "what": "window_click {\"slot\":54,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4704,
+   "ms": 669,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 54,
+   "item": "пусто"
+  },
+  {
+   "tick": 4704,
+   "ms": 670,
+   "kind": "cursor",
+   "item": "bundle×1"
+  },
+  {
+   "tick": 4708,
+   "ms": 869,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4713,
+   "ms": 1119,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4714,
+   "ms": 1142,
+   "kind": "do",
+   "what": "window_click {\"slot\":55,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4714,
+   "ms": 1169,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 55,
+   "item": "пусто"
+  },
+  {
+   "tick": 4714,
+   "ms": 1171,
+   "kind": "cursor",
+   "item": "bundle×1 {bundle_contents={\"contents\":[{\"itemId\":1116,\"itemCount\":10,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]}]}}"
+  },
+  {
+   "tick": 4718,
+   "ms": 1368,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4723,
+   "ms": 1618,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4724,
+   "ms": 1642,
+   "kind": "do",
+   "what": "window_click {\"slot\":56,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4724,
+   "ms": 1669,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 56,
+   "item": "stone×16"
+  },
+  {
+   "tick": 4724,
+   "ms": 1669,
+   "kind": "cursor",
+   "item": "bundle×1 {bundle_contents={\"contents\":[{\"itemId\":1,\"itemCount\":24,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]},{\"itemId\":1116,\"itemCount\":10,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]}]}}"
+  },
+  {
+   "tick": 4728,
+   "ms": 1869,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4733,
+   "ms": 2119,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4734,
+   "ms": 2142,
+   "kind": "do",
+   "what": "window_click {\"slot\":54,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4734,
+   "ms": 2169,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 54,
+   "item": "bundle×1 {bundle_contents={\"contents\":[{\"itemId\":1,\"itemCount\":24,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]},{\"itemId\":1116,\"itemCount\":10,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]}]}}"
+  },
+  {
+   "tick": 4738,
+   "ms": 2369,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4743,
+   "ms": 2619,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4748,
+   "ms": 2869,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4753,
+   "ms": 3119,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4754,
+   "ms": 3142,
+   "kind": "do",
+   "what": "window_click {\"slot\":54,\"button\":1,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4754,
+   "ms": 3169,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 54,
+   "item": "bundle×1 {bundle_contents={\"contents\":[{\"itemId\":1,\"itemCount\":24,\"addedComponentCount\":0,\"removedComponentCount\":0,\"components\":[],\"removeComponents\":[]}]}}"
+  },
+  {
+   "tick": 4754,
+   "ms": 3169,
+   "kind": "cursor",
+   "item": "ender_pearl×10"
+  },
+  {
+   "tick": 4758,
+   "ms": 3368,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4763,
+   "ms": 3618,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4764,
+   "ms": 3642,
+   "kind": "do",
+   "what": "window_click {\"slot\":57,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4764,
+   "ms": 3669,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 57,
+   "item": "ender_pearl×10"
+  },
+  {
+   "tick": 4768,
+   "ms": 3869,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4773,
+   "ms": 4119,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4774,
+   "ms": 4142,
+   "kind": "do",
+   "what": "window_click {\"slot\":54,\"button\":1,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4774,
+   "ms": 4169,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 54,
+   "item": "bundle×1"
+  },
+  {
+   "tick": 4774,
+   "ms": 4169,
+   "kind": "cursor",
+   "item": "stone×24"
+  },
+  {
+   "tick": 4778,
+   "ms": 4369,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4783,
+   "ms": 4619,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4784,
+   "ms": 4642,
+   "kind": "do",
+   "what": "window_click {\"slot\":58,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4784,
+   "ms": 4669,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 58,
+   "item": "stone×24"
+  },
+  {
+   "tick": 4788,
+   "ms": 4869,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4793,
+   "ms": 5118,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4794,
+   "ms": 5143,
+   "kind": "do",
+   "what": "window_click {\"slot\":57,\"button\":0,\"mode\":0}",
+   "phase": 0.02
+  },
+  {
+   "tick": 4794,
+   "ms": 5169,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 57,
+   "item": "пусто"
+  },
+  {
+   "tick": 4794,
+   "ms": 5169,
+   "kind": "cursor",
+   "item": "ender_pearl×10"
+  },
+  {
+   "tick": 4798,
+   "ms": 5368,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4803,
+   "ms": 5618,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4804,
+   "ms": 5642,
+   "kind": "do",
+   "what": "window_click {\"slot\":56,\"button\":0,\"mode\":0}",
+   "phase": 0
+  },
+  {
+   "tick": 4804,
+   "ms": 5669,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 56,
+   "item": "ender_pearl×10"
+  },
+  {
+   "tick": 4804,
+   "ms": 5669,
+   "kind": "cursor",
+   "item": "stone×16"
+  },
+  {
+   "tick": 4808,
+   "ms": 5869,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4813,
+   "ms": 6119,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "chest"
+  },
+  {
+   "tick": 4814,
+   "ms": 6142,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 4814,
+   "ms": 6170,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.chest.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.982189953327179
+  },
+  {
+   "tick": 4814,
+   "ms": 6170,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 4814,
+   "ms": 6170,
+   "kind": "cursor",
+   "item": "пусто"
+  },
+  {
+   "tick": 4818,
+   "ms": 6369,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "chest"
+  },
+  {
+   "tick": 4824,
+   "ms": 6642,
+   "kind": "do",
+   "what": "use_item",
+   "phase": 0
+  },
+  {
+   "tick": 4824,
+   "ms": 6669,
+   "kind": "sv",
+   "text": "Metadata 8=1"
+  }
+ ]
+}

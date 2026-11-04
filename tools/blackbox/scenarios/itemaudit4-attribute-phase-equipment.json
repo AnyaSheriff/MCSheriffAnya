@@ -1,5 +1,6 @@
 {
   "name": "itemaudit4-attribute-phase-equipment",
+  "attr_phase": true,
   "about": "[проверить] Two-player 26.1.2 tracker phase follow-up. Durability-only item replacements and game-mode range changes at odd/even intervals. Compare per-player attribute parity across both kinds of change and across repeated fresh connections before changing production scheduling. No mobs or random loot. Existing phase recording proves a period of two but does not identify its origin.",
   "second": true,
   "exclusive": true,

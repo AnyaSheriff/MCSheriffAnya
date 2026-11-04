@@ -1,0 +1,40 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv8/tools/protocol-bridge)
+error[E0277]: can't compare `std::borrow::Cow<'_, [u8]>` with `[{integer}; 13]`
+   --> tools/protocol-bridge/src/client_774.rs:113:9
+    |
+113 |         assert_eq!(result,[61,0,0,1,2,1,3,2,1,0,0,2,2]);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no implementation for `std::borrow::Cow<'_, [u8]> == [{integer}; 13]`
+    |
+    = help: the trait `PartialEq<[{integer}; 13]>` is not implemented for `std::borrow::Cow<'_, [u8]>`
+    = help: the following other types implement trait `PartialEq<Rhs>`:
+              `std::borrow::Cow<'_, B>` implements `PartialEq<std::borrow::Cow<'_, C>>`
+              `std::borrow::Cow<'_, ByteStr>` implements `PartialEq<&ByteStr>`
+              `std::borrow::Cow<'_, ByteStr>` implements `PartialEq<ByteString>`
+              `std::borrow::Cow<'_, CStr>` implements `PartialEq<&CStr>`
+              `std::borrow::Cow<'_, CStr>` implements `PartialEq<CStr>`
+              `std::borrow::Cow<'_, CStr>` implements `PartialEq<CString>`
+              `std::borrow::Cow<'_, OsStr>` implements `PartialEq<&OsStr>`
+              `std::borrow::Cow<'_, OsStr>` implements `PartialEq<&Path>`
+            and 20 others
+
+error[E0277]: can't compare `std::borrow::Cow<'_, [u8]>` with `[{integer}; 17]`
+   --> tools/protocol-bridge/src/client_774.rs:117:9
+    |
+117 |         assert_eq!(result,[61,0,0,1,7,2,2,1,2,2,3,2,1,0,0,2,2]);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no implementation for `std::borrow::Cow<'_, [u8]> == [{integer}; 17]`
+    |
+    = help: the trait `PartialEq<[{integer}; 17]>` is not implemented for `std::borrow::Cow<'_, [u8]>`
+    = help: the following other types implement trait `PartialEq<Rhs>`:
+              `std::borrow::Cow<'_, B>` implements `PartialEq<std::borrow::Cow<'_, C>>`
+              `std::borrow::Cow<'_, ByteStr>` implements `PartialEq<&ByteStr>`
+              `std::borrow::Cow<'_, ByteStr>` implements `PartialEq<ByteString>`
+              `std::borrow::Cow<'_, CStr>` implements `PartialEq<&CStr>`
+              `std::borrow::Cow<'_, CStr>` implements `PartialEq<CStr>`
+              `std::borrow::Cow<'_, CStr>` implements `PartialEq<CString>`
+              `std::borrow::Cow<'_, OsStr>` implements `PartialEq<&OsStr>`
+              `std::borrow::Cow<'_, OsStr>` implements `PartialEq<&Path>`
+            and 20 others
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `mcsa-protocol` (lib test) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

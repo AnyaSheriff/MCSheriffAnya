@@ -1,0 +1,18 @@
+{
+  "777": {
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "op4_nodes": 2399,
+    "op4_sha256": "9c7d32f5edb669b7b0e61f8efc42c6d4729f3533f14687d36a8cbea632a2894d",
+    "nonop_sha256": "78c731784e6e834ab506f1e173d9e343b1e0cf56c73250225c4dc5adad3a48a8",
+    "transport": "ordinary login and command_suggestions; copied local server; stdin DEVNULL; ports 26131/26132",
+    "supplementary_capture_semantic_tree_mismatches": 0,
+    "supplementary_capture_node_order_differs": true
+  },
+  "775": {
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "op4_nodes": 2016,
+    "op4_sha256": "59c5a28f45d9e2c8ed7e4aad639d6ed24bc645e4358d6aae626388cfe7bcbcf0",
+    "nonop_sha256": "78c731784e6e834ab506f1e173d9e343b1e0cf56c73250225c4dc5adad3a48a8",
+    "transport": "ordinary login and command_suggestions; copied local server; stdin DEVNULL; ports 26131/26132"
+  }
+}

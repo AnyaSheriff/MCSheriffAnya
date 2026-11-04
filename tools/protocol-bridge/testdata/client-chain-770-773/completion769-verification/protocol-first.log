@@ -1,0 +1,43 @@
+    Blocking waiting for file lock on build directory
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge)
+warning: unused imports: `Context` and `entities::Tracker`
+ --> tools/protocol-bridge/src/client_769_tests.rs:2:107
+  |
+2 | use crate::{JavaVersion as V, items, content::{ContentCodec,IdSpace}, ids::RegistryKind as K, wire::{self,Context}, entities::Tracker};
+  |                                                                                                           ^^^^^^^   ^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `BASE` is never used
+ --> tools/protocol-bridge/src/client_769_tests.rs:4:7
+  |
+4 | const BASE:V=V::V26_1_2;
+  |       ^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `packet` is never used
+ --> tools/protocol-bridge/src/client_769_tests.rs:5:4
+  |
+5 | fn packet(name:&str,payload:&[u8])->Vec<u8>{
+  |    ^^^^^^
+
+warning: `mcsa-protocol` (lib test) generated 3 warnings (run `cargo fix --lib -p mcsa-protocol --tests` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 1m 24s
+     Running unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-484fd9e2a0621407)
+
+running 1 test
+
+thread 'client_769::tests::all_canonical_content_has_explicit_769_views_without_changing_ids' (104) panicked at tools/protocol-bridge/src/client_769_tests.rs:15:13:
+BlockState/3889
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test client_769::tests::all_canonical_content_has_explicit_769_views_without_changing_ids ... FAILED
+
+failures:
+
+failures:
+    client_769::tests::all_canonical_content_has_explicit_769_views_without_changing_ids
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 286 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p mcsa-protocol --lib`

@@ -1,0 +1,1032 @@
+{
+ "scenario": "shulker-break",
+ "host": "127.0.0.1",
+ "port": 26271,
+ "lane": 1,
+ "window": {
+  "first": 2336,
+  "last": 2506
+ },
+ "events": [
+  {
+   "tick": 2336,
+   "ms": 148,
+   "kind": "do",
+   "what": "dig 0,0,0 0",
+   "phase": 0
+  },
+  {
+   "tick": 2336,
+   "ms": 174,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2337,
+   "ms": 224,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2338,
+   "ms": 274,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2339,
+   "ms": 323,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2340,
+   "ms": 373,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2341,
+   "ms": 424,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2342,
+   "ms": 474,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2343,
+   "ms": 524,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2344,
+   "ms": 574,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2345,
+   "ms": 623,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2346,
+   "ms": 673,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2347,
+   "ms": 724,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2348,
+   "ms": 774,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2349,
+   "ms": 824,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2350,
+   "ms": 874,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2351,
+   "ms": 924,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2352,
+   "ms": 973,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2353,
+   "ms": 1023,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2354,
+   "ms": 1074,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2355,
+   "ms": 1124,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2356,
+   "ms": 1174,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2357,
+   "ms": 1224,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2358,
+   "ms": 1274,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2359,
+   "ms": 1323,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2360,
+   "ms": 1373,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2361,
+   "ms": 1424,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2362,
+   "ms": 1474,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2363,
+   "ms": 1524,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2364,
+   "ms": 1574,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2365,
+   "ms": 1623,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2366,
+   "ms": 1673,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2367,
+   "ms": 1724,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2368,
+   "ms": 1774,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2369,
+   "ms": 1824,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2370,
+   "ms": 1874,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2371,
+   "ms": 1923,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2372,
+   "ms": 1973,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2373,
+   "ms": 2023,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2374,
+   "ms": 2074,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2375,
+   "ms": 2124,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2376,
+   "ms": 2174,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2377,
+   "ms": 2223,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2378,
+   "ms": 2273,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2379,
+   "ms": 2324,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2380,
+   "ms": 2374,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2381,
+   "ms": 2424,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2382,
+   "ms": 2474,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2383,
+   "ms": 2523,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2384,
+   "ms": 2573,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2385,
+   "ms": 2623,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2386,
+   "ms": 2674,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2387,
+   "ms": 2724,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2388,
+   "ms": 2774,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2389,
+   "ms": 2824,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2390,
+   "ms": 2873,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2391,
+   "ms": 2923,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2392,
+   "ms": 2974,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2393,
+   "ms": 3024,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2394,
+   "ms": 3074,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2395,
+   "ms": 3124,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2396,
+   "ms": 3173,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2397,
+   "ms": 3223,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2398,
+   "ms": 3274,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2399,
+   "ms": 3324,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2400,
+   "ms": 3374,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2401,
+   "ms": 3424,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2402,
+   "ms": 3473,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2403,
+   "ms": 3524,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2404,
+   "ms": 3574,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2405,
+   "ms": 3624,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2406,
+   "ms": 3674,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2407,
+   "ms": 3724,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2408,
+   "ms": 3773,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2409,
+   "ms": 3824,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2410,
+   "ms": 3874,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2411,
+   "ms": 3898,
+   "kind": "do",
+   "what": "dig 0,0,0 2",
+   "phase": 0
+  },
+  {
+   "tick": 2411,
+   "ms": 3925,
+   "kind": "spawn",
+   "at": [
+    0.61,
+    0.25,
+    0.4
+   ],
+   "type": "item",
+   "data": 0,
+   "id": 36,
+   "velocity": {
+    "x": 0,
+    "y": 0.2000244155527071,
+    "z": 0
+   }
+  },
+  {
+   "tick": 2411,
+   "ms": 3926,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2411,
+   "ms": 3926,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 2456,
+   "ms": 6149,
+   "kind": "do",
+   "what": "click 0,-1,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 2456,
+   "ms": 6174,
+   "kind": "block",
+   "at": [
+    0,
+    -1,
+    0
+   ],
+   "state": "stone"
+  },
+  {
+   "tick": 2456,
+   "ms": 6174,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 2466,
+   "ms": 6899,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 2471,
+   "ms": 6924,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 2471,
+   "ms": 6924,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 2476,
+   "ms": 8823,
+   "kind": "do",
+   "what": "close",
+   "phase": 0.5
+  }
+ ]
+}

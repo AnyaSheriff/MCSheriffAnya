@@ -1,0 +1,302 @@
+{
+  "status": "partial; all four public admission cells remain closed",
+  "checks": {
+    "rust": {
+      "passed": 2910,
+      "ignored": 82,
+      "log_sha256": "18ef13d446d9ffa506e2ff605485f53a2e0a6aa6e2a87a323b12936a8f890652"
+    },
+    "protocol": {
+      "passed": 203,
+      "ignored": 5,
+      "log_sha256": "507f0c96f0fc8dc53157a77c84929f28c80ffc866467de91ca1d6ed840eae8db"
+    },
+    "python": {
+      "passed": 216,
+      "log_sha256": "bc7ac4a009025b2ba2f8c702858d2835bb7cb03587dbb6763498175cdc95f05f"
+    },
+    "clippy": {
+      "status": "pass",
+      "log_sha256": "7b1e4d43263351da4e16713b4bd461a8752f742437b5e87a47c5af424217fece"
+    },
+    "build": {
+      "status": "pass",
+      "log_sha256": "c5dbc412e9611b431cd22328fe093ced7992022917d73c795cc1b09785be36f8"
+    }
+  },
+  "admission_checks": 8,
+  "primary_client_matrix": {
+    "775": {
+      "774": {
+        "public_admission": "closed",
+        "full_checklist_passed": false,
+        "blockers": [
+          "full774 Play codecs not implemented",
+          "all774 gameplay unproven",
+          "dimensions/recipes, persistence and authentication unproven"
+        ]
+      },
+      "776": {
+        "public_admission": "closed",
+        "full_checklist_passed": false,
+        "blockers": [
+          "mining enums776 unverified and guarded",
+          "block-entity ID/NBT translation776 missing; chest-area relog fails",
+          "dimensions and recipes unproven",
+          "persistent-world restart unproven",
+          "AuthMe/online-mode unproven",
+          "full entity layouts and graphical review unproven"
+        ],
+        "recorded_evidence": [
+          "private login/configuration/chunks and plain inventory",
+          "dynamic torch light14→0 with masks/arrays",
+          "chest-free relog preserves3 diamonds",
+          "mixed777 player packets and PvP20→19 in both directions",
+          "survival stone placement/consumption",
+          "death/respawn and teleport ACK",
+          "inventory pickup/deposit and chest open/click/close/reopen/withdraw/close"
+        ]
+      }
+    },
+    "777": {
+      "774": {
+        "public_admission": "closed",
+        "full_checklist_passed": false,
+        "blockers": [
+          "full774 Play codecs not implemented",
+          "all774 gameplay unproven",
+          "dimensions/recipes, persistence and authentication unproven"
+        ]
+      },
+      "776": {
+        "public_admission": "closed",
+        "full_checklist_passed": false,
+        "blockers": [
+          "mining enums776 unverified and guarded",
+          "block-entity ID/NBT translation776 missing; chest-area relog fails",
+          "dimensions and recipes unproven",
+          "persistent-world restart unproven",
+          "AuthMe/online-mode unproven",
+          "full entity layouts and graphical review unproven"
+        ],
+        "recorded_evidence": [
+          "private login/configuration/chunks and plain inventory",
+          "dynamic torch light14→0 with masks/arrays",
+          "chest-free relog preserves3 diamonds",
+          "mixed777 player packets and PvP20→19 in both directions",
+          "survival stone placement/consumption",
+          "death/respawn and teleport ACK",
+          "inventory pickup/deposit and chest open/click/close/reopen/withdraw/close"
+        ]
+      }
+    }
+  },
+  "scenarios": {
+    "dynamic-light-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": null,
+      "status": "failed",
+      "checks": [],
+      "error": "UnboundLocalError: cannot access local variable 'io' where it is not associated with a value",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "32a61db5648586c1d3ddce792aeae21d9a87555b5f3714734078df5a3c39d0f7",
+      "runner_sha256": "064ceb48afdf9a078e2b847ce5f6693250c2884a692f492802aaa7d2a74c7268"
+    },
+    "dynamic-light-776-primary777": {
+      "primary": 777,
+      "client": 776,
+      "peer": null,
+      "status": "failed",
+      "checks": [],
+      "error": "EOFError: missing VarInt",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "2c2f4ebb3d1a39daffc2647aaf36b704b3e1a148661dd74caacd4b4b34112c1e",
+      "runner_sha256": "f2731dddb3b44b0267e04e171fc8eb61440ed7c0db609112892dc0252efe23cb"
+    },
+    "dynamic-light-v2-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": null,
+      "status": "pass",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "relogin-preserves-authoritative-inventory",
+        "dynamic-light-update-torch14-removal0-masks-arrays"
+      ],
+      "error": null,
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "c339d53c3c8681544b1e9c19823f417241952ed43108945a9eb70bffb79d7614",
+      "runner_sha256": "f2731dddb3b44b0267e04e171fc8eb61440ed7c0db609112892dc0252efe23cb"
+    },
+    "gameplay-776-primary777": {
+      "primary": 777,
+      "client": 776,
+      "peer": 777,
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close"
+      ],
+      "error": "EOFError: missing VarInt",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "207558170bedd7ada89302ad1bb668703e06deb831e32985e27e855d9399e794",
+      "runner_sha256": "cdfa85b83f41278114ac0c1045746492880212be2cd8bfcef1fb5a05a2d13c38"
+    },
+    "gameplay-v2-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": 775,
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed775-player-spawns-metadata-movement",
+        "mixed775-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close"
+      ],
+      "error": "EOFError: missing VarInt",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "c339d53c3c8681544b1e9c19823f417241952ed43108945a9eb70bffb79d7614",
+      "runner_sha256": "753534af2fb8315bd35736066172d9c9436b8d9a6d0a0cce4d63c25da7e54d6f"
+    },
+    "light-v2-776-primary777": {
+      "primary": 777,
+      "client": 776,
+      "peer": null,
+      "status": "pass",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "relogin-preserves-authoritative-inventory",
+        "dynamic-light-update-torch14-removal0-masks-arrays"
+      ],
+      "error": null,
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "207558170bedd7ada89302ad1bb668703e06deb831e32985e27e855d9399e794",
+      "runner_sha256": "f2731dddb3b44b0267e04e171fc8eb61440ed7c0db609112892dc0252efe23cb"
+    },
+    "mining-denial-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": null,
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory"
+      ],
+      "error": "ConnectionResetError: [Errno 104] Connection reset by peer",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "207558170bedd7ada89302ad1bb668703e06deb831e32985e27e855d9399e794",
+      "runner_sha256": "30e347698379963a2b9057613fc8190e94c75e0e2a0607f32312ff16a6ab920d"
+    },
+    "mixed777-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": 777,
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory"
+      ],
+      "error": "AssertionError: ",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "c339d53c3c8681544b1e9c19823f417241952ed43108945a9eb70bffb79d7614",
+      "runner_sha256": "f2731dddb3b44b0267e04e171fc8eb61440ed7c0db609112892dc0252efe23cb"
+    },
+    "mixed777-v2-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": 777,
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory"
+      ],
+      "error": "AssertionError: [[1, 159]]",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "207558170bedd7ada89302ad1bb668703e06deb831e32985e27e855d9399e794",
+      "runner_sha256": "f2731dddb3b44b0267e04e171fc8eb61440ed7c0db609112892dc0252efe23cb"
+    },
+    "mixed777-v3-776-primary775": {
+      "primary": 775,
+      "client": 776,
+      "peer": 777,
+      "status": "failed",
+      "checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed777-player-spawns-metadata-movement",
+        "mixed777-pvp-both-directions-health-decreases",
+        "survival-placement-state-and-consumption",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit",
+        "chest-open-deposit-close-reopen-withdraw-close"
+      ],
+      "error": "EOFError: missing VarInt",
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "binary_sha256": "207558170bedd7ada89302ad1bb668703e06deb831e32985e27e855d9399e794",
+      "runner_sha256": "cdfa85b83f41278114ac0c1045746492880212be2cd8bfcef1fb5a05a2d13c38"
+    }
+  },
+  "artifacts_sha256": {
+    "dynamic-light-776-primary775/result.json": "4f88d379c4b74cf53a97f7d8c25cf06e31153dff38d6b86965d8db9f7fd90804",
+    "dynamic-light-776-primary775/server.log": "6fd5ea11c4d824f1bed3086d24487cac55c4f65e38b9f778e8763d350b4b0b65",
+    "dynamic-light-776-primary777/result.json": "e1d8a7b2fcffc496458d52a2c5cd3aecfa47a88af8527fad54f0e6fa98e59f1f",
+    "dynamic-light-776-primary777/server.log": "0bb6a16b76e52ef1d5923ac175e70154465a2e9d79c1ae317770e209e77f8c79",
+    "dynamic-light-v2-776-primary775/result.json": "cfc99f3a06ce0b5983246c1cfdddcf83cfd49826c6ddfe58edafe81b909a4e8f",
+    "dynamic-light-v2-776-primary775/server.log": "2a42b5fca53779c6109f5ea495c98d32e2f91b88341875168b060672ca18f134",
+    "gameplay-776-primary777/result.json": "a738bbbfea03624e8bfd602a5c9b3e19f954953663a1bf6bb0839a845094afc2",
+    "gameplay-776-primary777/server.log": "b6cbe60044990aaa098df2d736ad1d7acac6c0683421906743e8f6ec25f85668",
+    "gameplay-v2-776-primary775/result.json": "50afe1f95137759a8bdae6b5e139b3e975d0c0feb947b6e00049d37aea8ef695",
+    "gameplay-v2-776-primary775/server.log": "fbb753a8da3335910c754610246e34adcd0f041c1b84ce812637d293416677f7",
+    "light-v2-776-primary777/result.json": "df9c10cb7dadef26cbeaa769e29f5b0ff7936129df62cd38b5f48b06fdfdadf7",
+    "light-v2-776-primary777/server.log": "15e9e6f3824e7825877e0ecc1e7cddf92f0e40b4f7c8d2386db4b9c9e7399e61",
+    "mining-denial-776-primary775/result.json": "bc43327c542fb90bfd0ffcf3c49846d51127d0570396313df2d9799d2f13dff2",
+    "mining-denial-776-primary775/server.log": "d3f3280b1601d811aabd1ea208981dcf91ce3975f27255eaf201d58653a00078",
+    "mixed777-776-primary775/result.json": "84c509f20e260d6b05bafb6c98393cb5af640bda202e8b418e5a5e8fa6c94745",
+    "mixed777-776-primary775/server.log": "d47e70f8994c583c24e3cc86b3bb62bdd9b8272272f7d93e7269d11f66775671",
+    "mixed777-v2-776-primary775/result.json": "2f46a680845595b13190157880336ba364636ae99c6bd8339fec91548388dac9",
+    "mixed777-v2-776-primary775/server.log": "eb075e3395f330b67e51507f62fc19827f234eb7e3114aa934766f7ebe4fcf29",
+    "mixed777-v3-776-primary775/result.json": "f9c45d290924d3b8e3f3ae9d5f0e1d633e2db35991266f2539fadc4b3a8b6efe",
+    "mixed777-v3-776-primary775/server.log": "7a64d7af74ab79c816b7040d0d287dfe0b7834943486e3e1256b2f8b0172832f",
+    "admission-followup.json": "fe7bac17c2a3359dceec7d1344843bd78b3cea99b140116c660aa652f16e8bfe"
+  },
+  "final_source_sha256": {
+    "src/main.rs": "33cdced00f74ca13fee9a0871cd6e7dd75954b4e4ce5faa4a3fae03b41415153",
+    "src/network/gameplay_probe.rs": "09318cf565496d0dedca8bac0c605bd3df14d4db984caf883021c6d6bce283ca",
+    "src/network/packet.rs": "34c59e9eb0c45a85f937e5ebca67473d10504b9cd358d8e98b6c2072e98b2948",
+    "src/network/play.rs": "cd85871c0e627125d55a9fe646d43b7d7239e77463f46d51a66e01cd6203cfeb",
+    "src/network/play/chunk_compat_tests.rs": "a2e8bfa137499d3c5a2fc7aa055c592e6703d1121843594cf1da0eb77f27659a",
+    "tools/protocol-bridge/src/chunk.rs": "bf292d77dfe046c566e1d585b351938ad7f980cee29e0f49fe791631945dae65",
+    "tools/protocol-bridge/src/wire.rs": "5c4ca7c4ed9fef7787f091564c804044c3ea838ac2172c8a269bc65de8eddbc0",
+    "tools/protocol-bridge/probe_step1_gameplay_776.py": "4ee9f0e32902b37319dad33fca1723a0483dfc2da6c12e78ffbcfe1a1bc14751",
+    "tools/protocol-bridge/test_step1_gameplay.py": "70fe74d48d59a704d56c6dd63a5c0557d9e1eff393e482f798861019982561eb"
+  },
+  "production_binary_sha256": "fd497becce506d19203e1ed92b5c7615b73c9b9895f72386376021b74e6a59e8",
+  "ports_verified_closed": [
+    26028,
+    26192,
+    26193
+  ],
+  "new_official_server_runs": 0,
+  "committed": false,
+  "notes": [
+    "All earlier evidence was preserved; individual completed checks do not make a failed full scenario pass.",
+    "Each trace retains its own binary and runner hash; final source hashes are a separate snapshot.",
+    "The latest Rust source-only difference from recorded gameplay fixtures removes identity i32 conversions; a later comment corrects fixture scope.",
+    "Final public admission probe used the release production binary on26192/26193; no25565 listener."
+  ]
+}

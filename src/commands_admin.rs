@@ -1197,6 +1197,11 @@ pub(crate) fn saving_enabled() -> bool {
     admin().saving
 }
 
+/// Ники для дополнения pardon: текущие блокировки, включая игроков вне сети.
+pub(crate) fn banned_names() -> Vec<String> {
+    admin().bans.iter().map(|ban| ban.name.clone()).collect()
+}
+
 /// Через сколько тактов бездействия выгонять; None — не выгонять.
 pub(crate) fn idle_limit_ticks() -> Option<u64> {
     let minutes = admin().idle_minutes;

@@ -1,0 +1,29 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge)
+    Finished `release` profile [optimized] target(s) in 6.99s
+     Running unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-484fd9e2a0621407)
+
+running 8 tests
+test expanded_776_tests::primary_777_extensions_keep_sulfur_cube_and_project_cushion_metadata_for_776 ... ok
+test expanded_776_tests::profile_776_complete_partial_properties_and_skin_patch_are_bounded ... FAILED
+test expanded_776_tests::ten_776_gui_branches_validate_full_payload_without_trusting_client_content ... ok
+test expanded_776_tests::schema_776_particle_metadata_preserves_nonempty_lists ... ok
+test expanded_776_tests::typed_776_enchanted_named_equipment_preserves_all_ten_existing_samples ... ok
+test expanded_776_tests::pinned_776_layouts_and_eleven_recorded_entity_payloads_preserve_fields ... ok
+test expanded_776_tests::typed_776_complex_slots_preserve_54_existing_cases_and_untrusted_lengths ... ok
+test expanded_776_tests::typed_776_world_particles_keep_old_envelope_and_all_23_existing_effects ... ok
+
+failures:
+
+---- expanded_776_tests::profile_776_complete_partial_properties_and_skin_patch_are_bounded stdout ----
+
+thread 'expanded_776_tests::profile_776_complete_partial_properties_and_skin_patch_are_bounded' (74) panicked at tools/protocol-bridge/src/expanded_776_tests.rs:144:43:
+called `Result::unwrap()` on an `Err` value: Truncated
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    expanded_776_tests::profile_776_complete_partial_properties_and_skin_patch_are_bounded
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 211 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p mcsa-protocol --lib`

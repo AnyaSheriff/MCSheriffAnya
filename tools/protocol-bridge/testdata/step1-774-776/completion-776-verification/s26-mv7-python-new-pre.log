@@ -1,0 +1,20 @@
+.E...
+======================================================================
+ERROR: test_final_ordinary_client_accepts_every_exported_payload_on_both_primaries (test_step1_payload_completion_776.Completion776Tests.test_final_ordinary_client_accepts_every_exported_payload_on_both_primaries)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/test_step1_payload_completion_776.py", line 56, in test_final_ordinary_client_accepts_every_exported_payload_on_both_primaries
+    report=json.loads((EVIDENCE/f'payload-actions-final{primary}/result.json').read_text())
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.pyenv/versions/3.12.6/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.pyenv/versions/3.12.6/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/testdata/step1-774-776/payload-actions-final775/result.json'
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.006s
+
+FAILED (errors=1)

@@ -1,0 +1,3937 @@
+{
+  "mapped": 896,
+  "contextual_snowy": 6,
+  "core_blocks_sha256": "573e172619f3c1ca64e15d07799ab646e1fd9ad19d759d9ceca65ac4fc7440a9",
+  "skipped": [
+    {
+      "legacy": "2:0",
+      "name": "minecraft:grass_block[snowy=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "3:2",
+      "name": "minecraft:podzol[snowy=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "17:12",
+      "name": "minecraft:oak_wood",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "17:13",
+      "name": "minecraft:spruce_wood",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "17:14",
+      "name": "minecraft:birch_wood",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "17:15",
+      "name": "minecraft:jungle_wood",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "18:0",
+      "name": "minecraft:oak_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:1",
+      "name": "minecraft:spruce_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:2",
+      "name": "minecraft:birch_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:3",
+      "name": "minecraft:jungle_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:4",
+      "name": "minecraft:oak_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:5",
+      "name": "minecraft:spruce_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:6",
+      "name": "minecraft:birch_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:7",
+      "name": "minecraft:jungle_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:8",
+      "name": "minecraft:oak_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:9",
+      "name": "minecraft:spruce_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:10",
+      "name": "minecraft:birch_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:11",
+      "name": "minecraft:jungle_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:12",
+      "name": "minecraft:oak_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:13",
+      "name": "minecraft:spruce_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:14",
+      "name": "minecraft:birch_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "18:15",
+      "name": "minecraft:jungle_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "25:0",
+      "name": "minecraft:note_block",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "26:0",
+      "name": "minecraft:red_bed[part=foot,facing=south,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:1",
+      "name": "minecraft:red_bed[part=foot,facing=west,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:2",
+      "name": "minecraft:red_bed[part=foot,facing=north,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:3",
+      "name": "minecraft:red_bed[part=foot,facing=east,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:4",
+      "name": "minecraft:red_bed[part=foot,facing=south,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:5",
+      "name": "minecraft:red_bed[part=foot,facing=west,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:6",
+      "name": "minecraft:red_bed[part=foot,facing=north,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:7",
+      "name": "minecraft:red_bed[part=foot,facing=east,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:8",
+      "name": "minecraft:red_bed[part=head,facing=south,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:9",
+      "name": "minecraft:red_bed[part=head,facing=west,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:10",
+      "name": "minecraft:red_bed[part=head,facing=north,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:11",
+      "name": "minecraft:red_bed[part=head,facing=east,occupied=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:12",
+      "name": "minecraft:red_bed[part=head,facing=south,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:13",
+      "name": "minecraft:red_bed[part=head,facing=west,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:14",
+      "name": "minecraft:red_bed[part=head,facing=north,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "26:15",
+      "name": "minecraft:red_bed[part=head,facing=east,occupied=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:0",
+      "name": "minecraft:powered_rail[shape=north_south,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:1",
+      "name": "minecraft:powered_rail[shape=east_west,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:2",
+      "name": "minecraft:powered_rail[shape=ascending_east,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:3",
+      "name": "minecraft:powered_rail[shape=ascending_west,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:4",
+      "name": "minecraft:powered_rail[shape=ascending_north,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:5",
+      "name": "minecraft:powered_rail[shape=ascending_south,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:8",
+      "name": "minecraft:powered_rail[shape=north_south,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:9",
+      "name": "minecraft:powered_rail[shape=east_west,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:10",
+      "name": "minecraft:powered_rail[shape=ascending_east,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:11",
+      "name": "minecraft:powered_rail[shape=ascending_west,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:12",
+      "name": "minecraft:powered_rail[shape=ascending_north,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "27:13",
+      "name": "minecraft:powered_rail[shape=ascending_south,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:0",
+      "name": "minecraft:detector_rail[shape=north_south,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:1",
+      "name": "minecraft:detector_rail[shape=east_west,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:2",
+      "name": "minecraft:detector_rail[shape=ascending_east,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:3",
+      "name": "minecraft:detector_rail[shape=ascending_west,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:4",
+      "name": "minecraft:detector_rail[shape=ascending_north,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:5",
+      "name": "minecraft:detector_rail[shape=ascending_south,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:8",
+      "name": "minecraft:detector_rail[shape=north_south,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:9",
+      "name": "minecraft:detector_rail[shape=east_west,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:10",
+      "name": "minecraft:detector_rail[shape=ascending_east,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:11",
+      "name": "minecraft:detector_rail[shape=ascending_west,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:12",
+      "name": "minecraft:detector_rail[shape=ascending_north,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "28:13",
+      "name": "minecraft:detector_rail[shape=ascending_south,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "31:1",
+      "name": "minecraft:grass",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:0",
+      "name": "minecraft:stone_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:1",
+      "name": "minecraft:sandstone_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:2",
+      "name": "minecraft:petrified_oak_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:3",
+      "name": "minecraft:cobblestone_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:4",
+      "name": "minecraft:brick_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:5",
+      "name": "minecraft:stone_brick_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:6",
+      "name": "minecraft:nether_brick_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:7",
+      "name": "minecraft:quartz_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:10",
+      "name": "minecraft:petrified_oak_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:11",
+      "name": "minecraft:cobblestone_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:12",
+      "name": "minecraft:brick_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:13",
+      "name": "minecraft:stone_brick_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "43:14",
+      "name": "minecraft:nether_brick_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:0",
+      "name": "minecraft:stone_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:1",
+      "name": "minecraft:sandstone_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:2",
+      "name": "minecraft:petrified_oak_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:3",
+      "name": "minecraft:cobblestone_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:4",
+      "name": "minecraft:brick_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:5",
+      "name": "minecraft:stone_brick_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:6",
+      "name": "minecraft:nether_brick_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:7",
+      "name": "minecraft:quartz_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:8",
+      "name": "minecraft:stone_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:9",
+      "name": "minecraft:sandstone_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:10",
+      "name": "minecraft:petrified_oak_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:11",
+      "name": "minecraft:cobblestone_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:12",
+      "name": "minecraft:brick_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:13",
+      "name": "minecraft:stone_brick_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:14",
+      "name": "minecraft:nether_brick_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "44:15",
+      "name": "minecraft:quartz_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "51:0",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=0]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:1",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:2",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=2]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:3",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=3]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:4",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=4]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:5",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=5]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:6",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=6]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:7",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=7]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:8",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=8]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:9",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=9]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:10",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=10]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:11",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=11]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:12",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=12]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:13",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=13]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:14",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=14]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "51:15",
+      "name": "minecraft:fire[east=false,south=false,north=false,west=false,up=false,age=15]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:0",
+      "name": "minecraft:oak_stairs[half=bottom,shape=outer_right,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:1",
+      "name": "minecraft:oak_stairs[half=bottom,shape=outer_right,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:2",
+      "name": "minecraft:oak_stairs[half=bottom,shape=outer_right,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:3",
+      "name": "minecraft:oak_stairs[half=bottom,shape=outer_right,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:4",
+      "name": "minecraft:oak_stairs[half=top,shape=outer_right,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:5",
+      "name": "minecraft:oak_stairs[half=top,shape=outer_right,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:6",
+      "name": "minecraft:oak_stairs[half=top,shape=outer_right,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "53:7",
+      "name": "minecraft:oak_stairs[half=top,shape=outer_right,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "54:2",
+      "name": "minecraft:chest[facing=north,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "54:3",
+      "name": "minecraft:chest[facing=south,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "54:4",
+      "name": "minecraft:chest[facing=west,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "54:5",
+      "name": "minecraft:chest[facing=east,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "55:0",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=0]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:1",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:2",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=2]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:3",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=3]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:4",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=4]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:5",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=5]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:6",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=6]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:7",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=7]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:8",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=8]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:9",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=9]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:10",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=10]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:11",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=11]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:12",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=12]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:13",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=13]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:14",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=14]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "55:15",
+      "name": "minecraft:redstone_wire[east=none,south=none,north=none,west=none,power=15]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "63:0",
+      "name": "minecraft:sign[rotation=0]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:1",
+      "name": "minecraft:sign[rotation=1]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:2",
+      "name": "minecraft:sign[rotation=2]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:3",
+      "name": "minecraft:sign[rotation=3]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:4",
+      "name": "minecraft:sign[rotation=4]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:5",
+      "name": "minecraft:sign[rotation=5]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:6",
+      "name": "minecraft:sign[rotation=6]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:7",
+      "name": "minecraft:sign[rotation=7]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:8",
+      "name": "minecraft:sign[rotation=8]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:9",
+      "name": "minecraft:sign[rotation=9]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:10",
+      "name": "minecraft:sign[rotation=10]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:11",
+      "name": "minecraft:sign[rotation=11]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:12",
+      "name": "minecraft:sign[rotation=12]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:13",
+      "name": "minecraft:sign[rotation=13]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:14",
+      "name": "minecraft:sign[rotation=14]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "63:15",
+      "name": "minecraft:sign[rotation=15]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "64:0",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:1",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:2",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:3",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:4",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:5",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:6",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:7",
+      "name": "minecraft:oak_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:8",
+      "name": "minecraft:oak_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:9",
+      "name": "minecraft:oak_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:10",
+      "name": "minecraft:oak_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "64:11",
+      "name": "minecraft:oak_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "65:2",
+      "name": "minecraft:ladder[facing=north]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "65:3",
+      "name": "minecraft:ladder[facing=south]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "65:4",
+      "name": "minecraft:ladder[facing=west]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "65:5",
+      "name": "minecraft:ladder[facing=east]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "66:0",
+      "name": "minecraft:rail[shape=north_south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:1",
+      "name": "minecraft:rail[shape=east_west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:2",
+      "name": "minecraft:rail[shape=ascending_east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:3",
+      "name": "minecraft:rail[shape=ascending_west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:4",
+      "name": "minecraft:rail[shape=ascending_north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:5",
+      "name": "minecraft:rail[shape=ascending_south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:6",
+      "name": "minecraft:rail[shape=south_east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:7",
+      "name": "minecraft:rail[shape=south_west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:8",
+      "name": "minecraft:rail[shape=north_west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "66:9",
+      "name": "minecraft:rail[shape=north_east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:0",
+      "name": "minecraft:cobblestone_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:1",
+      "name": "minecraft:cobblestone_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:2",
+      "name": "minecraft:cobblestone_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:3",
+      "name": "minecraft:cobblestone_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:4",
+      "name": "minecraft:cobblestone_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:5",
+      "name": "minecraft:cobblestone_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:6",
+      "name": "minecraft:cobblestone_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "67:7",
+      "name": "minecraft:cobblestone_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "68:2",
+      "name": "minecraft:wall_sign[facing=north]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "68:3",
+      "name": "minecraft:wall_sign[facing=south]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "68:4",
+      "name": "minecraft:wall_sign[facing=west]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "68:5",
+      "name": "minecraft:wall_sign[facing=east]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "71:0",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:1",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:2",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:3",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:4",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:5",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:6",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:7",
+      "name": "minecraft:iron_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:8",
+      "name": "minecraft:iron_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:9",
+      "name": "minecraft:iron_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:10",
+      "name": "minecraft:iron_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "71:11",
+      "name": "minecraft:iron_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "85:0",
+      "name": "minecraft:oak_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "96:0",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=north,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:1",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=south,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:2",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=west,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:3",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=east,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:4",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=north,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:5",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=south,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:6",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=west,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:7",
+      "name": "minecraft:oak_trapdoor[half=bottom,facing=east,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:8",
+      "name": "minecraft:oak_trapdoor[half=top,facing=north,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:9",
+      "name": "minecraft:oak_trapdoor[half=top,facing=south,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:10",
+      "name": "minecraft:oak_trapdoor[half=top,facing=west,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:11",
+      "name": "minecraft:oak_trapdoor[half=top,facing=east,open=false,powered=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:12",
+      "name": "minecraft:oak_trapdoor[half=top,facing=north,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:13",
+      "name": "minecraft:oak_trapdoor[half=top,facing=south,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:14",
+      "name": "minecraft:oak_trapdoor[half=top,facing=west,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "96:15",
+      "name": "minecraft:oak_trapdoor[half=top,facing=east,open=true,powered=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "99:0",
+      "name": "minecraft:brown_mushroom_block[north=false,east=false,south=false,west=false,up=false,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:1",
+      "name": "minecraft:brown_mushroom_block[north=true,east=false,south=false,west=true,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:2",
+      "name": "minecraft:brown_mushroom_block[north=true,east=false,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:3",
+      "name": "minecraft:brown_mushroom_block[north=true,east=true,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:4",
+      "name": "minecraft:brown_mushroom_block[north=false,east=false,south=false,west=true,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:5",
+      "name": "minecraft:brown_mushroom_block[north=false,east=false,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:6",
+      "name": "minecraft:brown_mushroom_block[north=false,east=true,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:7",
+      "name": "minecraft:brown_mushroom_block[north=false,east=false,south=true,west=true,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:8",
+      "name": "minecraft:brown_mushroom_block[north=false,east=false,south=true,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:9",
+      "name": "minecraft:brown_mushroom_block[north=false,east=true,south=true,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:10",
+      "name": "minecraft:mushroom_stem[north=true,east=true,south=true,west=true,up=false,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:14",
+      "name": "minecraft:brown_mushroom_block[north=true,east=true,south=true,west=true,up=true,down=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "99:15",
+      "name": "minecraft:mushroom_stem[north=true,east=true,south=true,west=true,up=true,down=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:0",
+      "name": "minecraft:red_mushroom_block[north=false,east=false,south=false,west=false,up=false,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:1",
+      "name": "minecraft:red_mushroom_block[north=true,east=false,south=false,west=true,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:2",
+      "name": "minecraft:red_mushroom_block[north=true,east=false,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:3",
+      "name": "minecraft:red_mushroom_block[north=true,east=true,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:4",
+      "name": "minecraft:red_mushroom_block[north=false,east=false,south=false,west=true,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:5",
+      "name": "minecraft:red_mushroom_block[north=false,east=false,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:6",
+      "name": "minecraft:red_mushroom_block[north=false,east=true,south=false,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:7",
+      "name": "minecraft:red_mushroom_block[north=false,east=false,south=true,west=true,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:8",
+      "name": "minecraft:red_mushroom_block[north=false,east=false,south=true,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:9",
+      "name": "minecraft:red_mushroom_block[north=false,east=true,south=true,west=false,up=true,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:10",
+      "name": "minecraft:mushroom_stem[north=true,east=true,south=true,west=true,up=false,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:14",
+      "name": "minecraft:red_mushroom_block[north=true,east=true,south=true,west=true,up=true,down=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "100:15",
+      "name": "minecraft:mushroom_stem[north=true,east=true,south=true,west=true,up=true,down=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "101:0",
+      "name": "minecraft:iron_bars[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "102:0",
+      "name": "minecraft:glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:0",
+      "name": "minecraft:vine[east=false,south=false,north=false,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:1",
+      "name": "minecraft:vine[east=false,south=true,north=false,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:2",
+      "name": "minecraft:vine[east=false,south=false,north=false,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:3",
+      "name": "minecraft:vine[east=false,south=true,north=false,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:4",
+      "name": "minecraft:vine[east=false,south=false,north=true,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:5",
+      "name": "minecraft:vine[east=false,south=true,north=true,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:6",
+      "name": "minecraft:vine[east=false,south=false,north=true,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:7",
+      "name": "minecraft:vine[east=false,south=true,north=true,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:8",
+      "name": "minecraft:vine[east=true,south=false,north=false,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:9",
+      "name": "minecraft:vine[east=true,south=true,north=false,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:10",
+      "name": "minecraft:vine[east=true,south=false,north=false,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:11",
+      "name": "minecraft:vine[east=true,south=true,north=false,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:12",
+      "name": "minecraft:vine[east=true,south=false,north=true,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:13",
+      "name": "minecraft:vine[east=true,south=true,north=true,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:14",
+      "name": "minecraft:vine[east=true,south=false,north=true,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "106:15",
+      "name": "minecraft:vine[east=true,south=true,north=true,west=true,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:0",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:1",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:2",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:3",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:4",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:5",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:6",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:7",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:8",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:9",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:10",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:11",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:12",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:13",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:14",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "107:15",
+      "name": "minecraft:oak_fence_gate[in_wall=false,powered=true,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:0",
+      "name": "minecraft:brick_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:1",
+      "name": "minecraft:brick_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:2",
+      "name": "minecraft:brick_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:3",
+      "name": "minecraft:brick_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:4",
+      "name": "minecraft:brick_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:5",
+      "name": "minecraft:brick_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:6",
+      "name": "minecraft:brick_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "108:7",
+      "name": "minecraft:brick_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:0",
+      "name": "minecraft:stone_brick_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:1",
+      "name": "minecraft:stone_brick_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:2",
+      "name": "minecraft:stone_brick_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:3",
+      "name": "minecraft:stone_brick_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:4",
+      "name": "minecraft:stone_brick_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:5",
+      "name": "minecraft:stone_brick_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:6",
+      "name": "minecraft:stone_brick_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "109:7",
+      "name": "minecraft:stone_brick_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "110:0",
+      "name": "minecraft:mycelium[snowy=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "113:0",
+      "name": "minecraft:nether_brick_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:0",
+      "name": "minecraft:nether_brick_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:1",
+      "name": "minecraft:nether_brick_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:2",
+      "name": "minecraft:nether_brick_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:3",
+      "name": "minecraft:nether_brick_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:4",
+      "name": "minecraft:nether_brick_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:5",
+      "name": "minecraft:nether_brick_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:6",
+      "name": "minecraft:nether_brick_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "114:7",
+      "name": "minecraft:nether_brick_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "118:0",
+      "name": "minecraft:cauldron[level=0]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "118:1",
+      "name": "minecraft:cauldron[level=1]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "118:2",
+      "name": "minecraft:cauldron[level=2]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "118:3",
+      "name": "minecraft:cauldron[level=3]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "125:0",
+      "name": "minecraft:oak_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "125:1",
+      "name": "minecraft:spruce_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "125:2",
+      "name": "minecraft:birch_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "125:3",
+      "name": "minecraft:jungle_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "125:4",
+      "name": "minecraft:acacia_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "125:5",
+      "name": "minecraft:dark_oak_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:0",
+      "name": "minecraft:oak_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:1",
+      "name": "minecraft:spruce_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:2",
+      "name": "minecraft:birch_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:3",
+      "name": "minecraft:jungle_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:4",
+      "name": "minecraft:acacia_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:5",
+      "name": "minecraft:dark_oak_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:8",
+      "name": "minecraft:oak_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:9",
+      "name": "minecraft:spruce_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:10",
+      "name": "minecraft:birch_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:11",
+      "name": "minecraft:jungle_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:12",
+      "name": "minecraft:acacia_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "126:13",
+      "name": "minecraft:dark_oak_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "128:0",
+      "name": "minecraft:sandstone_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:1",
+      "name": "minecraft:sandstone_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:2",
+      "name": "minecraft:sandstone_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:3",
+      "name": "minecraft:sandstone_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:4",
+      "name": "minecraft:sandstone_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:5",
+      "name": "minecraft:sandstone_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:6",
+      "name": "minecraft:sandstone_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "128:7",
+      "name": "minecraft:sandstone_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "130:2",
+      "name": "minecraft:ender_chest[facing=north]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "130:3",
+      "name": "minecraft:ender_chest[facing=south]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "130:4",
+      "name": "minecraft:ender_chest[facing=west]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "130:5",
+      "name": "minecraft:ender_chest[facing=east]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "132:0",
+      "name": "minecraft:tripwire[disarmed=false,east=false,powered=false,south=false,north=false,west=false,attached=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:1",
+      "name": "minecraft:tripwire[disarmed=false,east=false,powered=true,south=false,north=false,west=false,attached=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:4",
+      "name": "minecraft:tripwire[disarmed=false,east=false,powered=false,south=false,north=false,west=false,attached=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:5",
+      "name": "minecraft:tripwire[disarmed=false,east=false,powered=true,south=false,north=false,west=false,attached=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:8",
+      "name": "minecraft:tripwire[disarmed=true,east=false,powered=false,south=false,north=false,west=false,attached=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:9",
+      "name": "minecraft:tripwire[disarmed=true,east=false,powered=true,south=false,north=false,west=false,attached=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:12",
+      "name": "minecraft:tripwire[disarmed=true,east=false,powered=false,south=false,north=false,west=false,attached=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "132:13",
+      "name": "minecraft:tripwire[disarmed=true,east=false,powered=true,south=false,north=false,west=false,attached=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:0",
+      "name": "minecraft:spruce_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:1",
+      "name": "minecraft:spruce_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:2",
+      "name": "minecraft:spruce_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:3",
+      "name": "minecraft:spruce_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:4",
+      "name": "minecraft:spruce_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:5",
+      "name": "minecraft:spruce_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:6",
+      "name": "minecraft:spruce_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "134:7",
+      "name": "minecraft:spruce_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:0",
+      "name": "minecraft:birch_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:1",
+      "name": "minecraft:birch_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:2",
+      "name": "minecraft:birch_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:3",
+      "name": "minecraft:birch_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:4",
+      "name": "minecraft:birch_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:5",
+      "name": "minecraft:birch_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:6",
+      "name": "minecraft:birch_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "135:7",
+      "name": "minecraft:birch_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:0",
+      "name": "minecraft:jungle_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:1",
+      "name": "minecraft:jungle_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:2",
+      "name": "minecraft:jungle_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:3",
+      "name": "minecraft:jungle_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:4",
+      "name": "minecraft:jungle_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:5",
+      "name": "minecraft:jungle_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:6",
+      "name": "minecraft:jungle_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "136:7",
+      "name": "minecraft:jungle_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "139:0",
+      "name": "minecraft:cobblestone_wall[east=false,south=false,north=false,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "139:1",
+      "name": "minecraft:mossy_cobblestone_wall[east=false,south=false,north=false,west=false,up=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:0",
+      "name": "minecraft:flower_pot",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:1",
+      "name": "minecraft:potted_poppy",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:2",
+      "name": "minecraft:potted_dandelion",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:3",
+      "name": "minecraft:potted_oak_sapling",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:4",
+      "name": "minecraft:potted_spruce_sapling",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:5",
+      "name": "minecraft:potted_birch_sapling",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:6",
+      "name": "minecraft:potted_jungle_sapling",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:7",
+      "name": "minecraft:potted_red_mushroom",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:8",
+      "name": "minecraft:potted_brown_mushroom",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:9",
+      "name": "minecraft:potted_cactus",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:10",
+      "name": "minecraft:potted_dead_bush",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:11",
+      "name": "minecraft:potted_fern",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:12",
+      "name": "minecraft:potted_acacia_sapling",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:13",
+      "name": "minecraft:potted_dark_oak_sapling",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:14",
+      "name": "minecraft:potted_blue_orchid",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "140:15",
+      "name": "minecraft:potted_allium",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:0",
+      "name": "minecraft:skeleton_skull[rotation=0]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:1",
+      "name": "minecraft:skeleton_skull[rotation=4]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:2",
+      "name": "minecraft:skeleton_wall_skull[facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:3",
+      "name": "minecraft:skeleton_wall_skull[facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:4",
+      "name": "minecraft:skeleton_wall_skull[facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:5",
+      "name": "minecraft:skeleton_wall_skull[facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:8",
+      "name": "minecraft:skeleton_skull[rotation=8]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:9",
+      "name": "minecraft:skeleton_skull[rotation=12]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:10",
+      "name": "minecraft:skeleton_wall_skull[facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:11",
+      "name": "minecraft:skeleton_wall_skull[facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:12",
+      "name": "minecraft:skeleton_wall_skull[facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "144:13",
+      "name": "minecraft:skeleton_wall_skull[facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "146:2",
+      "name": "minecraft:trapped_chest[facing=north,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "146:3",
+      "name": "minecraft:trapped_chest[facing=south,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "146:4",
+      "name": "minecraft:trapped_chest[facing=west,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "146:5",
+      "name": "minecraft:trapped_chest[facing=east,type=single]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "155:6",
+      "name": "minecraft:quartz_pillar[axis=x]",
+      "reason": "official-command-normalizes-to-155:0"
+    },
+    {
+      "legacy": "155:10",
+      "name": "minecraft:quartz_pillar[axis=z]",
+      "reason": "official-command-normalizes-to-155:0"
+    },
+    {
+      "legacy": "156:0",
+      "name": "minecraft:quartz_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:1",
+      "name": "minecraft:quartz_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:2",
+      "name": "minecraft:quartz_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:3",
+      "name": "minecraft:quartz_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:4",
+      "name": "minecraft:quartz_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:5",
+      "name": "minecraft:quartz_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:6",
+      "name": "minecraft:quartz_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "156:7",
+      "name": "minecraft:quartz_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:0",
+      "name": "minecraft:activator_rail[shape=north_south,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:1",
+      "name": "minecraft:activator_rail[shape=east_west,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:2",
+      "name": "minecraft:activator_rail[shape=ascending_east,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:3",
+      "name": "minecraft:activator_rail[shape=ascending_west,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:4",
+      "name": "minecraft:activator_rail[shape=ascending_north,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:5",
+      "name": "minecraft:activator_rail[shape=ascending_south,powered=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:8",
+      "name": "minecraft:activator_rail[shape=north_south,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:9",
+      "name": "minecraft:activator_rail[shape=east_west,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:10",
+      "name": "minecraft:activator_rail[shape=ascending_east,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:11",
+      "name": "minecraft:activator_rail[shape=ascending_west,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:12",
+      "name": "minecraft:activator_rail[shape=ascending_north,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "157:13",
+      "name": "minecraft:activator_rail[shape=ascending_south,powered=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:0",
+      "name": "minecraft:white_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:1",
+      "name": "minecraft:orange_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:2",
+      "name": "minecraft:magenta_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:3",
+      "name": "minecraft:light_blue_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:4",
+      "name": "minecraft:yellow_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:5",
+      "name": "minecraft:lime_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:6",
+      "name": "minecraft:pink_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:7",
+      "name": "minecraft:gray_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:8",
+      "name": "minecraft:light_gray_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:9",
+      "name": "minecraft:cyan_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:10",
+      "name": "minecraft:purple_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:11",
+      "name": "minecraft:blue_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:12",
+      "name": "minecraft:brown_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:13",
+      "name": "minecraft:green_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:14",
+      "name": "minecraft:red_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "160:15",
+      "name": "minecraft:black_stained_glass_pane[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:0",
+      "name": "minecraft:acacia_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:1",
+      "name": "minecraft:dark_oak_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:4",
+      "name": "minecraft:acacia_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:5",
+      "name": "minecraft:dark_oak_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:8",
+      "name": "minecraft:acacia_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:9",
+      "name": "minecraft:dark_oak_leaves[persistent=false,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:12",
+      "name": "minecraft:acacia_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "161:13",
+      "name": "minecraft:dark_oak_leaves[persistent=true,distance=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "162:12",
+      "name": "minecraft:acacia_wood",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "162:13",
+      "name": "minecraft:dark_oak_wood",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "163:0",
+      "name": "minecraft:acacia_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:1",
+      "name": "minecraft:acacia_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:2",
+      "name": "minecraft:acacia_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:3",
+      "name": "minecraft:acacia_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:4",
+      "name": "minecraft:acacia_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:5",
+      "name": "minecraft:acacia_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:6",
+      "name": "minecraft:acacia_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "163:7",
+      "name": "minecraft:acacia_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:0",
+      "name": "minecraft:dark_oak_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:1",
+      "name": "minecraft:dark_oak_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:2",
+      "name": "minecraft:dark_oak_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:3",
+      "name": "minecraft:dark_oak_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:4",
+      "name": "minecraft:dark_oak_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:5",
+      "name": "minecraft:dark_oak_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:6",
+      "name": "minecraft:dark_oak_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "164:7",
+      "name": "minecraft:dark_oak_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "166:0",
+      "name": "minecraft:barrier",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:0",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=north,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:1",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=south,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:2",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=west,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:3",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=east,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:4",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=north,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:5",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=south,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:6",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=west,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:7",
+      "name": "minecraft:iron_trapdoor[half=bottom,facing=east,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:8",
+      "name": "minecraft:iron_trapdoor[half=top,facing=north,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:9",
+      "name": "minecraft:iron_trapdoor[half=top,facing=south,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:10",
+      "name": "minecraft:iron_trapdoor[half=top,facing=west,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:11",
+      "name": "minecraft:iron_trapdoor[half=top,facing=east,open=false]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:12",
+      "name": "minecraft:iron_trapdoor[half=top,facing=north,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:13",
+      "name": "minecraft:iron_trapdoor[half=top,facing=south,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:14",
+      "name": "minecraft:iron_trapdoor[half=top,facing=west,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "167:15",
+      "name": "minecraft:iron_trapdoor[half=top,facing=east,open=true]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "175:0",
+      "name": "minecraft:sunflower[half=lower]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:1",
+      "name": "minecraft:lilac[half=lower]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:2",
+      "name": "minecraft:tall_grass[half=lower]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:3",
+      "name": "minecraft:large_fern[half=lower]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:4",
+      "name": "minecraft:rose_bush[half=lower]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:5",
+      "name": "minecraft:peony[half=lower]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:8",
+      "name": "minecraft:sunflower[half=upper]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:9",
+      "name": "minecraft:lilac[half=upper]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:10",
+      "name": "minecraft:tall_grass[half=upper]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:11",
+      "name": "minecraft:large_fern[half=upper]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:12",
+      "name": "minecraft:rose_bush[half=upper]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "175:13",
+      "name": "minecraft:peony[half=upper]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:0",
+      "name": "minecraft:white_banner[rotation=0]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:1",
+      "name": "minecraft:white_banner[rotation=1]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:2",
+      "name": "minecraft:white_banner[rotation=2]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:3",
+      "name": "minecraft:white_banner[rotation=3]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:4",
+      "name": "minecraft:white_banner[rotation=4]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:5",
+      "name": "minecraft:white_banner[rotation=5]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:6",
+      "name": "minecraft:white_banner[rotation=6]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:7",
+      "name": "minecraft:white_banner[rotation=7]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:8",
+      "name": "minecraft:white_banner[rotation=8]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:9",
+      "name": "minecraft:white_banner[rotation=9]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:10",
+      "name": "minecraft:white_banner[rotation=10]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:11",
+      "name": "minecraft:white_banner[rotation=11]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:12",
+      "name": "minecraft:white_banner[rotation=12]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:13",
+      "name": "minecraft:white_banner[rotation=13]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:14",
+      "name": "minecraft:white_banner[rotation=14]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "176:15",
+      "name": "minecraft:white_banner[rotation=15]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "177:2",
+      "name": "minecraft:white_wall_banner[facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "177:3",
+      "name": "minecraft:white_wall_banner[facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "177:4",
+      "name": "minecraft:white_wall_banner[facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "177:5",
+      "name": "minecraft:white_wall_banner[facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:0",
+      "name": "minecraft:red_sandstone_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:1",
+      "name": "minecraft:red_sandstone_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:2",
+      "name": "minecraft:red_sandstone_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:3",
+      "name": "minecraft:red_sandstone_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:4",
+      "name": "minecraft:red_sandstone_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:5",
+      "name": "minecraft:red_sandstone_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:6",
+      "name": "minecraft:red_sandstone_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "180:7",
+      "name": "minecraft:red_sandstone_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "181:0",
+      "name": "minecraft:red_sandstone_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "182:0",
+      "name": "minecraft:red_sandstone_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "182:8",
+      "name": "minecraft:red_sandstone_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "183:0",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:1",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:2",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:3",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:4",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:5",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:6",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:7",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:8",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:9",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:10",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:11",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:12",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:13",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:14",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "183:15",
+      "name": "minecraft:spruce_fence_gate[in_wall=false,powered=true,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:0",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:1",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:2",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:3",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:4",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:5",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:6",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:7",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:8",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:9",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:10",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:11",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:12",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:13",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:14",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "184:15",
+      "name": "minecraft:birch_fence_gate[in_wall=false,powered=true,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:0",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:1",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:2",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:3",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:4",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:5",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:6",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:7",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:8",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:9",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:10",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:11",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:12",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:13",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:14",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "185:15",
+      "name": "minecraft:jungle_fence_gate[in_wall=false,powered=true,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:0",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:1",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:2",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:3",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:4",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:5",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:6",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:7",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:8",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:9",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:10",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:11",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:12",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:13",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:14",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "186:15",
+      "name": "minecraft:dark_oak_fence_gate[in_wall=false,powered=true,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:0",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:1",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:2",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:3",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:4",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:5",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:6",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:7",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:8",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:9",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:10",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:11",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:12",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:13",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:14",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "187:15",
+      "name": "minecraft:acacia_fence_gate[in_wall=false,powered=true,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "188:0",
+      "name": "minecraft:spruce_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "189:0",
+      "name": "minecraft:birch_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "190:0",
+      "name": "minecraft:jungle_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "191:0",
+      "name": "minecraft:dark_oak_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "192:0",
+      "name": "minecraft:acacia_fence[east=false,south=false,north=false,west=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:0",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:1",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:2",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:3",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:4",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:5",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:6",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:7",
+      "name": "minecraft:spruce_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:8",
+      "name": "minecraft:spruce_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:9",
+      "name": "minecraft:spruce_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:10",
+      "name": "minecraft:spruce_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "193:11",
+      "name": "minecraft:spruce_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:0",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:1",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:2",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:3",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:4",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:5",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:6",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:7",
+      "name": "minecraft:birch_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:8",
+      "name": "minecraft:birch_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:9",
+      "name": "minecraft:birch_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:10",
+      "name": "minecraft:birch_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "194:11",
+      "name": "minecraft:birch_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:0",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:1",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:2",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:3",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:4",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:5",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:6",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:7",
+      "name": "minecraft:jungle_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:8",
+      "name": "minecraft:jungle_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:9",
+      "name": "minecraft:jungle_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:10",
+      "name": "minecraft:jungle_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "195:11",
+      "name": "minecraft:jungle_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:0",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:1",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:2",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:3",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:4",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:5",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:6",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:7",
+      "name": "minecraft:acacia_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:8",
+      "name": "minecraft:acacia_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:9",
+      "name": "minecraft:acacia_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:10",
+      "name": "minecraft:acacia_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "196:11",
+      "name": "minecraft:acacia_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:0",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:1",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=south,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:2",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=west,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:3",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=north,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:4",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=east,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:5",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=south,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:6",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=west,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:7",
+      "name": "minecraft:dark_oak_door[hinge=right,half=lower,powered=false,facing=north,open=true]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:8",
+      "name": "minecraft:dark_oak_door[hinge=left,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:9",
+      "name": "minecraft:dark_oak_door[hinge=right,half=upper,powered=false,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:10",
+      "name": "minecraft:dark_oak_door[hinge=left,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "197:11",
+      "name": "minecraft:dark_oak_door[hinge=right,half=upper,powered=true,facing=east,open=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "199:0",
+      "name": "minecraft:chorus_plant[east=false,south=false,north=false,west=false,up=false,down=false]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:0",
+      "name": "minecraft:purpur_stairs[half=bottom,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:1",
+      "name": "minecraft:purpur_stairs[half=bottom,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:2",
+      "name": "minecraft:purpur_stairs[half=bottom,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:3",
+      "name": "minecraft:purpur_stairs[half=bottom,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:4",
+      "name": "minecraft:purpur_stairs[half=top,shape=straight,facing=east]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:5",
+      "name": "minecraft:purpur_stairs[half=top,shape=straight,facing=west]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:6",
+      "name": "minecraft:purpur_stairs[half=top,shape=straight,facing=south]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "203:7",
+      "name": "minecraft:purpur_stairs[half=top,shape=straight,facing=north]",
+      "reason": "requires-neighbours-or-block-entity"
+    },
+    {
+      "legacy": "204:0",
+      "name": "minecraft:purpur_slab[type=double]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "205:0",
+      "name": "minecraft:purpur_slab[type=bottom]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "205:8",
+      "name": "minecraft:purpur_slab[type=top]",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "208:0",
+      "name": "minecraft:grass_path",
+      "reason": "no-exact-modern-state"
+    },
+    {
+      "legacy": "8:0",
+      "name": "minecraft:water[level=0]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:1",
+      "name": "minecraft:water[level=1]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:2",
+      "name": "minecraft:water[level=2]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:3",
+      "name": "minecraft:water[level=3]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:4",
+      "name": "minecraft:water[level=4]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:5",
+      "name": "minecraft:water[level=5]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:6",
+      "name": "minecraft:water[level=6]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:7",
+      "name": "minecraft:water[level=7]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:8",
+      "name": "minecraft:water[level=8]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:9",
+      "name": "minecraft:water[level=9]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:10",
+      "name": "minecraft:water[level=10]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:11",
+      "name": "minecraft:water[level=11]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:12",
+      "name": "minecraft:water[level=12]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:13",
+      "name": "minecraft:water[level=13]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:14",
+      "name": "minecraft:water[level=14]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "8:15",
+      "name": "minecraft:water[level=15]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:0",
+      "name": "minecraft:water[level=0]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:1",
+      "name": "minecraft:water[level=1]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:2",
+      "name": "minecraft:water[level=2]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:3",
+      "name": "minecraft:water[level=3]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:4",
+      "name": "minecraft:water[level=4]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:5",
+      "name": "minecraft:water[level=5]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:6",
+      "name": "minecraft:water[level=6]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:7",
+      "name": "minecraft:water[level=7]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:8",
+      "name": "minecraft:water[level=8]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:9",
+      "name": "minecraft:water[level=9]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:10",
+      "name": "minecraft:water[level=10]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:11",
+      "name": "minecraft:water[level=11]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:12",
+      "name": "minecraft:water[level=12]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:13",
+      "name": "minecraft:water[level=13]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:14",
+      "name": "minecraft:water[level=14]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "9:15",
+      "name": "minecraft:water[level=15]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:0",
+      "name": "minecraft:lava[level=0]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:1",
+      "name": "minecraft:lava[level=1]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:2",
+      "name": "minecraft:lava[level=2]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:3",
+      "name": "minecraft:lava[level=3]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:4",
+      "name": "minecraft:lava[level=4]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:5",
+      "name": "minecraft:lava[level=5]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:6",
+      "name": "minecraft:lava[level=6]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:7",
+      "name": "minecraft:lava[level=7]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:8",
+      "name": "minecraft:lava[level=8]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:9",
+      "name": "minecraft:lava[level=9]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:10",
+      "name": "minecraft:lava[level=10]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:11",
+      "name": "minecraft:lava[level=11]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:12",
+      "name": "minecraft:lava[level=12]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:13",
+      "name": "minecraft:lava[level=13]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:14",
+      "name": "minecraft:lava[level=14]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "10:15",
+      "name": "minecraft:lava[level=15]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:0",
+      "name": "minecraft:lava[level=0]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:1",
+      "name": "minecraft:lava[level=1]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:2",
+      "name": "minecraft:lava[level=2]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:3",
+      "name": "minecraft:lava[level=3]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:4",
+      "name": "minecraft:lava[level=4]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:5",
+      "name": "minecraft:lava[level=5]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:6",
+      "name": "minecraft:lava[level=6]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:7",
+      "name": "minecraft:lava[level=7]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:8",
+      "name": "minecraft:lava[level=8]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:9",
+      "name": "minecraft:lava[level=9]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:10",
+      "name": "minecraft:lava[level=10]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:11",
+      "name": "minecraft:lava[level=11]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:12",
+      "name": "minecraft:lava[level=12]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:13",
+      "name": "minecraft:lava[level=13]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:14",
+      "name": "minecraft:lava[level=14]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "11:15",
+      "name": "minecraft:lava[level=15]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "31:0",
+      "name": "minecraft:dead_bush",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "32:0",
+      "name": "minecraft:dead_bush",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:0",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:1",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:2",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:3",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:4",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:5",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:6",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:7",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:8",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:9",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:10",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:11",
+      "name": "minecraft:comparator[mode=compare,powered=false,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:12",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:13",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:14",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "149:15",
+      "name": "minecraft:comparator[mode=subtract,powered=false,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:0",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:1",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:2",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:3",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:4",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:5",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:6",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:7",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:8",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:9",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:10",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:11",
+      "name": "minecraft:comparator[mode=compare,powered=true,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:12",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=south]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:13",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=west]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:14",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=north]",
+      "reason": "ambiguous-reverse-state"
+    },
+    {
+      "legacy": "150:15",
+      "name": "minecraft:comparator[mode=subtract,powered=true,facing=east]",
+      "reason": "ambiguous-reverse-state"
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+---- Minecraft Network Protocol Error Report ----
+// This time is not my fault, I promise!
+
+Time: 2026-10-23 23:23:23
+Description: Registry Loading
+
+java.lang.IllegalStateException: Failed to load registries due to errors
+	at akq.c(SourceFile:253)
+	at akq.a(SourceFile:234)
+	at akq.a(SourceFile:201)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at akq.c(SourceFile:253)
+	at akq.a(SourceFile:234)
+	at akq.a(SourceFile:201)
+
+-- Loading info --
+Details:
+	Errors: 
+		minecraft:trim_material/minecraft:lapis: Failed to parse value {asset_name:"lapis",description:{translate:"trim_material.minecraft.lapis"},ingredient:"minecraft:lapis"} from server
+Stacktrace:
+	at akq.c(SourceFile:253)
+	at akq.a(SourceFile:234)
+	at akq.a(SourceFile:201)
+	at akq.a(SourceFile:176)
+	at ggo.a(SourceFile:95)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+
+-- Received Elements and Tags --
+Details:
+	Dynamic Registries: 
+		minecraft:banner_pattern: elements=43 tags=11
+		minecraft:cat_sound_variant: elements=1 tags=0
+		minecraft:cat_variant: elements=11 tags=0
+		minecraft:chat_type: elements=7 tags=0
+		minecraft:chicken_sound_variant: elements=1 tags=0
+		minecraft:chicken_variant: elements=3 tags=0
+		minecraft:cow_sound_variant: elements=1 tags=0
+		minecraft:cow_variant: elements=1 tags=0
+		minecraft:damage_type: elements=51 tags=3
+		minecraft:dimension_type: elements=3 tags=0
+		minecraft:enchantment: elements=43 tags=0
+		minecraft:frog_variant: elements=3 tags=0
+		minecraft:instrument: elements=8 tags=0
+		minecraft:jukebox_song: elements=21 tags=0
+		minecraft:painting_variant: elements=51 tags=0
+		minecraft:pig_sound_variant: elements=1 tags=0
+		minecraft:pig_variant: elements=1 tags=0
+		minecraft:timeline: elements=2 tags=0
+		minecraft:trim_material: elements=11 tags=0
+		minecraft:trim_pattern: elements=18 tags=0
+		minecraft:wolf_sound_variant: elements=1 tags=0
+		minecraft:wolf_variant: elements=9 tags=0
+		minecraft:world_clock: elements=2 tags=0
+		minecraft:worldgen/biome: elements=65 tags=0
+		minecraft:zombie_nautilus_variant: elements=1 tags=0
+	Static Registries: 
+Stacktrace:
+	at ggo.a(SourceFile:112)
+	at ggo.a(SourceFile:98)
+	at ggo.a(SourceFile:146)
+	at gfy.a(SourceFile:117)
+	at gfy.a(SourceFile:109)
+	at gfy.a(SourceFile:117)
+	at aau.a(SourceFile:22)
+	at aau.a(SourceFile:8)
+	at yz.a(SourceFile:27)
+	at bra.d(SourceFile:164)
+	at bre.d(SourceFile:23)
+	at bra.B(SourceFile:138)
+	at bra.bA(SourceFile:123)
+	at flk.c(SourceFile:1296)
+	at flk.f(SourceFile:922)
+	at net.minecraft.client.main.Main.main(SourceFile:267)
+
+-- Incoming Packet --
+Details:
+	Type: clientbound/minecraft:finish_configuration
+	Is Terminal: true
+	Is Skippable: false
+
+-- Connection --
+Details:
+	Protocol: configuration
+	Flow: CLIENTBOUND
+	Is Local: false
+	Server type: OTHER
+	Server brand: MCSheriffAnya
+
+-- System Details --
+Details:
+	Minecraft Version: 1.21.4
+	Minecraft Version ID: 1.21.4
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 203948032 bytes (194 MiB) / 445644800 bytes (425 MiB) up to 1073741824 bytes (1024 MiB)
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 8831.77
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 4374.05
+	Space in storage for jna.tmpdir (MiB): available: 7865.52, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7865.52, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7865.52, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7865.52, total: 7952.55
+	Space in storage for workdir (MiB): available: 7865.52, total: 7952.55
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32

@@ -95,15 +95,34 @@ fn revive(vit: &mut Vitals, inventory: &mut crate::inventory::Inventory) -> Opti
 }
 
 impl Health {
+    #[cfg(test)]
     pub fn new(saved: Option<&crate::playerdata::SavedVitals>) -> Self {
-        let mut vit = saved.map(Vitals::restored).unwrap_or_default();
+        Self::new_with_effects(saved, &crate::playerdata::SavedEffects::default())
+    }
+
+    pub fn new_with_effects(saved: Option<&crate::playerdata::SavedVitals>, effects: &crate::playerdata::SavedEffects) -> Self {
+        let mut vit = saved.map(|saved| Vitals::restored_with_effects(saved, effects)).unwrap_or_default();
+        let mut attrs = crate::attributes::Attributes::player();
+        for effect in &vit.effects {
+            if let Some((attribute, id, per_level, operation)) = effect.kind.modifier() {
+                attrs.set_modifier(attribute, crate::attributes::Modifier::new(id, f64::from(per_level as f32) * f64::from(effect.amplifier + 1), operation));
+            }
+        }
+        vit.apply_limits(attrs.value(crate::attributes::MAX_HEALTH) as f32,
+            attrs.value(crate::attributes::MAX_ABSORPTION) as f32,
+            attrs.value(crate::attributes::SAFE_FALL_DISTANCE) as f32);
         if vit.xp_seed == 0 { vit.xp_seed = crate::enchanting::new_seed(0); }
         Self { vit, hits: Vec::new(), sent: None }
     }
 
     /// Возрождение: всё заново.
+    #[cfg(test)]
     pub fn respawned(&mut self) {
-        self.vit.respawned();
+        self.respawned_with_keep_inventory(false);
+    }
+
+    pub fn respawned_with_keep_inventory(&mut self, keep_inventory: bool) {
+        self.vit.respawned_with_keep_inventory(keep_inventory);
         self.hits.clear();
         self.sent = None;
     }
@@ -525,6 +544,48 @@ mod tests {
         health.hurt(100.0, Source::OutOfWorld);
         assert!(health.step(7, rules(), &mut inventory, &crate::attributes::Attributes::player()).died.is_some());
         assert!(inventory.slot(crate::inventory::OFFHAND).is_some());
+    }
+
+    #[test]
+    fn respawn_keep_inventory_retains_experience_and_resets_pending_health() {
+        for keep in [false, true] {
+            let mut health = Health::new(None);
+            // Предыдущая отправка должна забыться даже при сохранённом опыте.
+            health.tick(7, false, true, survival::NORMAL, 64.0);
+            assert!(health.sent.is_some());
+            let xp = survival::total_at_level(12) + 7;
+            health.vit.xp = xp;
+            health.vit.xp_total = 1234;
+            health.vit.give_effect(survival::EffectKind::Poison, 0, 500);
+            health.vit.dead = true;
+            health.vit.health = 0.0;
+            health.vit.food = 1;
+            health.hurt(5.0, Source::Fall);
+            health.respawned_with_keep_inventory(keep);
+            assert_eq!((health.vit.xp, health.vit.xp_total), if keep { (xp, 1234) } else { (0, 0) });
+            assert_eq!((health.vit.health, health.vit.food, health.vit.dead), (20.0, 20, false));
+            assert!(health.vit.effects.is_empty());
+            assert!(health.hits.is_empty() && health.sent.is_none());
+            // respawn(world.rs) отправляет этот же полный пакет атрибутов.
+            let packet = attributes(7, &health.vit);
+            let (id, body) = crate::bedrock::codec::packet_id(&packet).unwrap();
+            assert_eq!(id, session::UPDATE_ATTRIBUTES);
+            let mut r = crate::bedrock::codec::In::new(body);
+            assert_eq!((r.varint64(), r.varint()), (Some(7), Some(7)));
+            let mut values = std::collections::HashMap::new();
+            for _ in 0..7 {
+                r.lf32().unwrap(); r.lf32().unwrap(); let value = r.lf32().unwrap();
+                for _ in 0..3 { r.lf32().unwrap(); }
+                values.insert(r.string().unwrap(), value);
+                assert_eq!(r.varint(), Some(0));
+            }
+            assert_eq!((r.varint64(), r.remaining()), (Some(0), 0));
+            assert_eq!(values["minecraft:player.level"], if keep { 12.0 } else { 0.0 });
+            assert_eq!(values["minecraft:player.experience"], if keep { 7.0 / survival::level_size(12) as f32 } else { 0.0 });
+            let outcome = health.tick(7, false, true, survival::NORMAL, 64.0);
+            assert_eq!(health.vit.health, 20.0);
+            assert_eq!(outcome.packets, vec![packet]);
+        }
     }
 
     #[test]

@@ -1,0 +1,119 @@
+{
+  "status": "partial; admission closed for all four requested pairs",
+  "initial_baseline": {
+    "passed": 2903,
+    "failed": 1,
+    "ignored": 81,
+    "failure": "world::startup::tests::profile_263_fresh_restart_and_unsafe_transitions: inherited flock after guard drop"
+  },
+  "core_release_tests": {
+    "passed": 2909,
+    "ignored": 81
+  },
+  "protocol_release_tests": {
+    "passed": 203,
+    "ignored": 5
+  },
+  "python_tests": 213,
+  "clippy": "cargo clippy --release --all-targets -- -D warnings: pass",
+  "build": "cargo build --release: pass",
+  "scenarios": {
+    "gameplay-776-primary775": {
+      "status": "failed",
+      "completed_checks": [
+        "private-login-configuration-chunks-inventory",
+        "mixed775-player-spawns-metadata-movement"
+      ],
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "error": "AssertionError"
+    },
+    "lifecycle-776-primary775": {
+      "status": "failed",
+      "completed_checks": [
+        "private-login-configuration-chunks-inventory",
+        "survival-placement-state-and-consumption",
+        "death-respawn-health20-teleport-ack",
+        "authoritative-inventory-pickup-deposit"
+      ],
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "error": "AssertionError"
+    },
+    "relog-light-776-primary775": {
+      "status": "failed",
+      "completed_checks": [
+        "private-login-configuration-chunks-inventory",
+        "relogin-preserves-authoritative-inventory"
+      ],
+      "server_exit": 0,
+      "shutdown": "stop-and-stdin-eof",
+      "error": "AssertionError"
+    }
+  },
+  "observed_776_to_775_peer_health": [
+    20.0,
+    19.0,
+    20.0
+  ],
+  "initial_light": [
+    {
+      "chunk": [
+        -1,
+        -1
+      ],
+      "masks": [
+        1022,
+        0,
+        1,
+        67108863
+      ],
+      "torch_cell_level": 0
+    },
+    {
+      "chunk": [
+        -1,
+        -1
+      ],
+      "masks": [
+        2046,
+        0,
+        1,
+        67108863
+      ],
+      "torch_cell_level": 0
+    }
+  ],
+  "official_777_checks": 7,
+  "admission": {
+    "26.1.2": {
+      "774": "closed: full gameplay unproven",
+      "776": "closed: full gameplay unproven"
+    },
+    "26.3": {
+      "774": "closed: full gameplay unproven",
+      "776": "closed: full gameplay unproven"
+    }
+  },
+  "unproven": [
+    "all774 gameplay",
+    "both clients on primary26.3",
+    "dynamic torch lighting",
+    "776 mining action enums",
+    "containers/GUI",
+    "reverse PvP and mixed777",
+    "AuthMe/online-mode",
+    "persistent world restart for776"
+  ],
+  "artifacts": {
+    "gameplay-776-primary775/result.json": "282e8e3c5748593ed39b096f3961c2137eff0a1e321f0f9d63c5a509f5c51ba9",
+    "gameplay-776-primary775/server.log": "cd451b3f989d02b2c53ff890a55cae9452ea79bbe2d049e11250d36804c3934c",
+    "lifecycle-776-primary775/result.json": "e53385ab9ad991e10118841e97311969570169086fb1597bbff78347a407c59d",
+    "lifecycle-776-primary775/server.log": "3032793059841c5f1f72bdc36c2b320315627aef13fc169e8087933a44f360c4",
+    "official-777-continued.json": "be15ba9ec8ab006bc83aea50c5f8ffb052136985b5ada30a4a4d50ed163e5e47",
+    "official-777-continued.log": "9c80414e39f34a83458cd1cd6c096e3d039acb99935bee655cf0da49996c6ed3",
+    "relog-light-776-primary775/result.json": "7ae0bff408020808e930eb56b5f1f7be9e8ab8948497bcffb902c1d116159dae",
+    "relog-light-776-primary775/server.log": "692e7035960f00c18a2df6f406e836897d632c4cfb251efcd5f6887e2c346380",
+    "viaproxy-minimum.json": "ea9b8e626afa95bf2d239967b7f942c8e7dd02ae1f936c728950cbd1b4bd8e52"
+  }
+}

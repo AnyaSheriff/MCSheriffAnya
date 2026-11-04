@@ -19,11 +19,21 @@ use crate::network::packet::decode_varint;
 use crate::network::varint::{encode_string, encode_varint};
 use crate::snbt::{self, Value};
 
+mod custom_data;
+pub use custom_data::CustomData;
+pub(crate) mod storage_depth;
+pub(crate) mod main_import;
+#[cfg(test)]
+mod storage_depth_tests;
+
 #[path = "stackdata_potion.rs"]
 mod potion;
 #[path = "stackdata_use.rs"]
 mod use_components;
 pub use potion::PotionExtras;
+#[path = "stackdata_projectiles.rs"]
+mod projectiles;
+pub use projectiles::{ChargedProjectile, loaded as loaded_projectiles, read_body as read_charged_component};
 
 /// Номера компонентов предмета в 775 (registries.json, data_component_type).
 pub const COMPONENT_UNBREAKABLE: i32 = 4;
@@ -63,9 +73,7 @@ pub const COMPONENT_RARITY: i32 = 12;
 /// светло-серый круг, чёрная кайма). Номера — алфавитный реестр оригинала
 /// loom::PATTERNS.
 pub const OMINOUS_BANNER_LAYERS: [(i32, i32); 8] = [(23, 9), (0, 8), (32, 7), (1, 8), (36, 15), (17, 8), (3, 8), (1, 15)];
-/// Содержимое шулкер-ящика (`container`, registries.json: 75) клиенту пока
-/// не шлётся — см. `encode_components`.
-#[allow(dead_code)]
+/// Содержимое шулкер-ящика (`container`, registries.json: 75).
 pub const COMPONENT_CONTAINER: i32 = 75;
 pub const COMPONENT_BLOCK_STATE: i32 = 76;
 pub const COMPONENT_BEES: i32 = 77;
@@ -152,11 +160,15 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 /// Довески одной стопки.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Data {
-    /// Проверенные метаданные API плагинов (включая PDC); хвост файла 20.
+    /// Java custom_data: все типы NBT и исходные биты значений.
+    pub custom_data: Option<CustomData>,
+    /// Проверенные метаданные API плагинов (включая PDC); хвост файла 23.
     pub plugin_meta: Option<String>,
     /// Цвет брони и стороны горшка; метки файла 18, 19 (1–17 заняты).
     pub dyed_color: Option<i32>,
     pub pot_decorations: Option<[i32; 4]>,
+    /// Полные стопки сторон 26.3; слот 0..3, отсутствие — пустая сторона.
+    pub pot_sides: Vec<Content>,
     /// Номер заполненной карты (minecraft:map_id, protocol.json: 46).
     pub map_id: Option<i32>,
     /// Только предпросмотр у картографа: minecraft:map_post_processing (protocol.json: 48),
@@ -185,6 +197,8 @@ pub struct Data {
     /// 0 — не заряжен; с «залпом» заряжается одна, а в компоненте — три
     /// [проверить чёрным ящиком, crossbow-multishot].
     pub charged: u8,
+    /// Неоднородный список; пустой — старые поля однородного заряда.
+    pub charged_projectiles: Vec<ChargedProjectile>,
     /// Заряжены ракеты, а не стрелы (их довески; полёт 1 без взрывов —
     /// обычная ракета).
     pub charged_rocket: Option<Fireworks>,
@@ -299,6 +313,11 @@ pub fn intern(data: Data) -> Option<DataId> {
     Some(DataId(number))
 }
 
+/// Строгое чтение: неизвестный номер не превращается в пустые довески.
+pub fn try_get(id: DataId) -> Option<Data> {
+    table().lock().expect("таблица довесков захвачена другим потоком").entries.get(id.0 as usize).cloned()
+}
+
 /// Довески по номеру записи.
 pub fn get(id: DataId) -> Data {
     table().lock().expect("таблица довесков захвачена другим потоком").entries.get(id.0 as usize).cloned().unwrap_or_default()
@@ -373,6 +392,9 @@ pub fn enchantment_number(name: &str) -> Option<u16> {
 pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     let mut count = 0;
     let mut out = Vec::new();
+    if let Some(custom) = &data.custom_data {
+        out.extend(encode_varint(0)); out.extend_from_slice(custom.as_bytes()); count += 1;
+    }
     count += crate::mob::water::bucket::encode(data, &mut out);
 
     if !data.stew.is_empty() {
@@ -454,61 +476,9 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
-    if data.charged > 0
-        && let Some(rocket) = &data.charged_rocket
-        && let Some(item) = crate::blocks::item_named("firework_rocket")
-    {
-        // Ракеты: у каждой свои довески `fireworks` (если не по умолчанию),
-        // боковые «залпа» — ещё и `intangible_projectile` [проверить порядок].
+    if data.charged > 0 {
         out.extend_from_slice(&encode_varint(COMPONENT_CHARGED_PROJECTILES));
-        out.extend_from_slice(&encode_varint(i32::from(data.charged)));
-
-        let own = *rocket != Fireworks::default();
-
-        for index in 0..data.charged {
-            out.extend_from_slice(&encode_varint(item));
-            out.extend_from_slice(&encode_varint(1));
-            out.extend_from_slice(&encode_varint(i32::from(own) + i32::from(index > 0)));
-            out.extend_from_slice(&encode_varint(0));
-
-            if own {
-                out.extend_from_slice(&encode_varint(COMPONENT_FIREWORKS));
-                encode_fireworks(&mut out, rocket);
-            }
-
-            if index > 0 {
-                out.extend_from_slice(&encode_varint(COMPONENT_INTANGIBLE_PROJECTILE));
-                out.extend_from_slice(&[0x0a, 0x00]);
-            }
-        }
-
-        count += 1;
-    } else if data.charged > 0
-        && let Some(arrow) = crate::blocks::item_named("arrow")
-    {
-        // Вики, Crossbow: «any type of arrow». Сохраняем тип и довески [проверить].
-        let ammo = data.charged_arrow;
-        let arrow = ammo.map_or(arrow, |ammo| ammo.item);
-        let extras = ammo.and_then(|ammo| ammo.data).map(get).unwrap_or_default();
-        let (added, encoded) = encode_components(&extras);
-        out.extend_from_slice(&encode_varint(COMPONENT_CHARGED_PROJECTILES));
-        out.extend_from_slice(&encode_varint(i32::from(data.charged)));
-
-        // Боковые стрелы «залпа» — с пометкой «не подбирается»
-        // (`intangible_projectile`, пустой NBT) (чёрный ящик, crossbow-multishot).
-        for index in 0..data.charged {
-            out.extend_from_slice(&encode_varint(arrow));
-            out.extend_from_slice(&encode_varint(1));
-            out.extend_from_slice(&encode_varint(added + i32::from(index > 0)));
-            out.extend_from_slice(&encode_varint(0));
-            out.extend_from_slice(&encoded);
-
-            if index > 0 {
-                out.extend_from_slice(&encode_varint(COMPONENT_INTANGIBLE_PROJECTILE));
-                out.extend_from_slice(&[0x0a, 0x00]);
-            }
-        }
-
+        out.extend(projectiles::encode(data));
         count += 1;
     }
 
@@ -576,12 +546,23 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count+=1;
     }
 
-    // Содержимое шулкер-ящика (`container`) клиенту пока не шлётся: по
-    // protocol.json (26.1) это список `option<ItemStackTemplate>`, но
-    // разбор записи оригинала у mineflayer на нём падает (чёрный ящик,
-    // shulker-break), и неверный формат отключил бы клиента. Предмет
-    // показывается без подсказки о содержимом; содержимое хранит сервер.
-    // [проверить]
+    // protocol.json: option<ItemStackTemplate>, ID перед количеством.
+    // Подтверждено обычным itemreplace на 775/777: nested-item-observations.json.
+    if let Some(last) = data.contents.iter().map(|c| c.slot).max() {
+        out.extend(encode_varint(COMPONENT_CONTAINER));
+        out.extend(encode_varint(i32::from(last) + 1));
+        for slot in 0..=last {
+            if let Some(content) = data.contents.iter().find(|c| c.slot == slot) {
+                out.push(1);
+                let stack = crate::inventory::Stack::from_stored(content.item, content.count);
+                let stack = crate::inventory::Stack { data: content.data, ..stack };
+                let (n, extra) = encode_stack_components(&stack, false);
+                for value in [stack.item, content.count, n, 0] { out.extend(encode_varint(value)); }
+                out.extend(extra);
+            } else { out.push(0); }
+        }
+        count += 1;
+    }
     if let Some(level) = data.ominous {
         out.extend_from_slice(&encode_varint(COMPONENT_OMINOUS_AMPLIFIER));
         out.extend_from_slice(&encode_varint(i32::from(level)));
@@ -595,7 +576,7 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         out.extend(encode_varint(50)); out.extend(encode_varint(data.bundle.len() as i32));
         for c in &data.bundle {
             let s=crate::inventory::Stack::from_stored(c.item,c.count);
-            let (n,extra)=encode_components(&c.data.map(get).unwrap_or_default());
+            let (n,extra)=encode_stack_components(&crate::inventory::Stack {data:c.data,..s}, false);
             for v in [s.item,c.count,n,0] { out.extend(encode_varint(v)); } out.extend(extra);
         }
         count+=1;
@@ -752,19 +733,122 @@ fn skip_nbt(reader: &mut Reader<'_>, depth: usize) -> Option<()> {
     let kind = reader.take(1)?[0]; value(reader,kind,depth)
 }
 
-/// Читает один компонент, присланный клиентом (Untrusted Slot: тело
-/// известной длины), и записывает его в довески. Незнакомый пропускается.
+/// Строго читает весь compound до изменения довесков.
+pub fn read_custom_data(body: &[u8], data: &mut Data) -> bool {
+    let Some(custom) = CustomData::from_bytes(body) else { return false; };
+    data.custom_data = Some(custom);
+    true
+}
+
+/// Старый TNT с единственной служебной меткой остаётся прежней стопкой.
+/// При дополнительных полях сохраняется весь compound, включая метку.
+pub fn stack_with_components(item: i32, count: i32, mut data: Data) -> crate::inventory::Stack {
+    let tnt = if Some(item) == crate::blocks::item_named("tnt") {
+        data.custom_data.as_ref().and_then(|custom| custom.ascii_field(crate::custom_tnt::MARKER))
+            .and_then(crate::custom_tnt::by_name)
+    } else { None };
+    if let Some(kind) = tnt {
+        let marker = crate::network::nbt::Compound::new().string(crate::custom_tnt::MARKER, kind.name).encode_network();
+        if data.custom_data.as_ref().map(CustomData::as_bytes) == Some(marker.as_slice()) { data.custom_data = None; }
+        if data.name.as_deref() == Some(kind.title) { data.name = None; }
+    }
+    crate::inventory::Stack { tnt: tnt.map(|kind| kind.id), ..crate::inventory::Stack::new(item, count).with_extras(data) }
+}
+
+/// Служебная метка не должна перезаписать пользовательское поле или
+/// превратить сохраняемую стопку в компонент, который наш читатель отвергнет.
+pub(crate) fn valid_tnt_custom_data(stack: &crate::inventory::Stack, data: &Data) -> bool {
+    let Some(kind) = stack.tnt.and_then(crate::custom_tnt::by_id) else { return true; };
+    let Some(custom) = &data.custom_data else { return true; };
+    (!custom.has_field(crate::custom_tnt::MARKER) || custom.ascii_field(crate::custom_tnt::MARKER) == Some(kind.name))
+        && custom.with_ascii_field(crate::custom_tnt::MARKER,kind.name).as_bytes().len() <= u16::MAX as usize
+}
+
+/// Один custom_data и полные довески; оформление TNT добавляется отдельно.
+/// У вложенного шаблона сохраняем прежнее простое имя без описания.
+pub fn encode_stack_components(stack: &crate::inventory::Stack, decorated: bool) -> (i32, Vec<u8>) {
+    let mut data = stack.extras();
+    let kind = stack.tnt.and_then(crate::custom_tnt::by_id);
+    if let Some(kind) = kind {
+        let custom = data.custom_data.take().unwrap_or_else(|| CustomData::from_bytes(&[10,0]).expect("пустой compound"));
+        data.custom_data = Some(custom.with_ascii_field(crate::custom_tnt::MARKER, kind.name));
+    }
+    let (mut count, mut bytes) = encode_components(&data);
+    if let Some(kind) = kind {
+        if data.name.is_none() {
+            bytes.extend(encode_varint(COMPONENT_CUSTOM_NAME));
+            bytes.extend(if decorated {
+                crate::network::nbt::Compound::new().string("text",kind.title).string("color",kind.colour).boolean("italic",false).encode_network()
+            } else { crate::network::nbt::text_component(kind.title) });
+            count += 1;
+        }
+        if decorated {
+            bytes.extend(encode_varint(11)); bytes.extend(encode_varint(1));
+            bytes.extend(crate::network::nbt::Compound::new().string("text",kind.lore).string("color","gray").boolean("italic",false).encode_network());
+            count += 1;
+        }
+    }
+    (count, bytes)
+}
+
+/// Читает известный компонент; незнакомые компоненты здесь пропускаются.
+/// Для custom_data недоверенного клиента нужен строгий read_custom_data.
 pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
     let _ = read_component_cursor(kind, &mut Reader { bytes: body, at: 0, failed: false }, data, 0);
 }
 
 pub fn read_bundle_component(body: &[u8], data: &mut Data) -> bool {
     let mut reader = Reader { bytes: body, at: 0, failed: false };
-    read_component_cursor(50, &mut reader, data, 0) && reader.at == body.len()
+    let mut parsed = Data::default();
+    if !read_component_cursor(50, &mut reader, &mut parsed, 0)
+        || reader.at != body.len() || to_bytes(&parsed).len() > u16::MAX as usize { return false; }
+    data.bundle = parsed.bundle;
+    true
+}
+
+/// Неполный или неподдержанный контейнер не должен молча терять содержимое.
+pub fn read_container_component(body: &[u8], data: &mut Data) -> bool {
+    let mut reader = Reader { bytes: body, at: 0, failed: false };
+    let mut parsed = Data::default();
+    if !read_component_cursor(COMPONENT_CONTAINER, &mut reader, &mut parsed, 0)
+        || reader.at != body.len() || to_bytes(&parsed).len() > u16::MAX as usize { return false; }
+    data.contents = parsed.contents;
+    true
 }
 
 fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, depth: usize) -> bool {
     match kind {
+        0 => {
+            let Some((custom, length)) = CustomData::read_prefix(&reader.bytes[reader.at..]) else { return false; };
+            if reader.take(length).is_none() { return false; }
+            data.custom_data = Some(custom);
+        }
+        COMPONENT_CONTAINER => {
+            if depth >= 16 { return false; }
+            // Пока сохраняем и размещаем ровно 27 ячеек шалкера. Большие
+            // контейнеры отвергаются, а не обрезаются при записи в файл.
+            let Some(size) = reader.varint().filter(|n| (0..=27).contains(n)) else { return false; };
+            let mut contents = Vec::new();
+            for slot in 0..size {
+                match reader.take(1) {
+                    Some([0]) => continue,
+                    Some([1]) => {},
+                    _ => return false,
+                }
+                let (Some(item), Some(count), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false; };
+                if item == 0 || crate::blocks::item_name(item).is_none() || !(1..=127).contains(&count)
+                    || !(0..=256).contains(&added) || removed != 0 { return false; }
+                let mut extra = Data::default();
+                let mut seen = std::collections::BTreeSet::new();
+                for _ in 0..added {
+                    let Some(component) = reader.varint() else { return false; };
+                    if !seen.insert(component) || !read_component_cursor(component, reader, &mut extra, depth + 1) { return false; }
+                }
+                let stack = stack_with_components(item, count, extra);
+                contents.push(Content { slot: slot as u8, item: stack.stored_item(), count, data: stack.data });
+            }
+            data.contents = contents;
+        }
         50 => {
             if depth >= 16 { return false; }
             let Some(count) = reader.varint().filter(|n| (0..=64).contains(n)) else { return false; };
@@ -773,12 +857,16 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
                 let (Some(item), Some(count), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false; };
                 if crate::blocks::item_name(item).is_none() || !(1..=99).contains(&count) || !(0..=256).contains(&added) || !(0..=256).contains(&removed) { return false; }
                 let mut extra = Data::default();
+                let mut seen = std::collections::BTreeSet::new();
                 for _ in 0..added {
                     let Some(kind) = reader.varint() else { return false; };
-                    if !read_component_cursor(kind, reader, &mut extra, depth + 1) { return false; }
+                    if !seen.insert(kind) || !read_component_cursor(kind, reader, &mut extra, depth + 1) { return false; }
                 }
-                for _ in 0..removed { if reader.varint().is_none() { return false; } }
-                let stack = crate::inventory::Stack::new(item,count).with_extras(extra);
+                for _ in 0..removed {
+                    let Some(kind) = reader.varint() else { return false; };
+                    if !seen.insert(kind) { return false; }
+                }
+                let stack = stack_with_components(item, count, extra);
                 contents.push(Content { slot: 0, item: stack.stored_item(), count, data: stack.data });
             }
             data.bundle = contents;
@@ -842,7 +930,9 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
                 let Some(filtered)=reader.take(1) else {return false;};
                 if filtered==[1] && (if kind==54 {reader.string()} else {read_book_text(reader)}).is_none() {return false;}
             }
-            if kind == 55 && reader.take(1).is_none() { return false; }
+            if kind==55 {
+                book.resolved=match reader.take(1) {Some([0])=>false,Some([1])=>true,_=>return false};
+            }
             data.book=Some(book);
         }
         73 => { data.base_color = reader.varint().filter(|c| (0..16).contains(c)).map(|c|c as u8); }
@@ -929,55 +1019,7 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
         }
         COMPONENT_POTION_CONTENTS => { let _ = potion::read(reader, data); }
         COMPONENT_CHARGED_PROJECTILES => {
-            // Обычные стрелы без довесков или ракеты (с `fireworks`); иное —
-            // не заряжен.
-            let Some(count) = reader.varint() else { return false };
-            let arrow = crate::blocks::item_named("arrow");
-            let rocket_item = crate::blocks::item_named("firework_rocket");
-            let mut loaded = 0u8;
-            let mut rocket = None;
-            let mut ammunition = None;
-
-            for _ in 0..count.clamp(0, 3) {
-                let (Some(item), Some(_), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false };
-
-                if removed != 0 || !(Some(item) == arrow || Some(item) == rocket_item || matches!(crate::blocks::item_name(item), Some("tipped_arrow" | "spectral_arrow"))) {
-                    return false;
-                }
-
-                let mut own = Fireworks::default();
-                let mut arrow_data = Data::default();
-
-                for _ in 0..added.clamp(0, 4) {
-                    match reader.varint() {
-                        Some(COMPONENT_FIREWORKS) if Some(item) == rocket_item => match read_fireworks(reader) {
-                            Some(read) => own = read,
-                            None => return false,
-                        },
-                        Some(COMPONENT_POTION_CONTENTS) => {
-                            if potion::read(reader, &mut arrow_data).is_none() { return false; }
-                        }
-                        Some(COMPONENT_INTANGIBLE_PROJECTILE) => {
-                            if reader.take(2).is_none() {
-                                return false;
-                            }
-                        }
-                        _ => return false,
-                    }
-                }
-
-                if Some(item) == rocket_item {
-                    rocket = Some(own);
-                } else if loaded == 0 {
-                    ammunition = Some(Content { slot: 0, item, count: 1, data: intern(arrow_data) });
-                }
-
-                loaded += 1;
-            }
-
-            data.charged = loaded;
-            data.charged_arrow = ammunition.filter(|_| loaded > 0);
-            data.charged_rocket = rocket.filter(|_| loaded > 0);
+            if projectiles::read(reader, data, depth).is_none() { return false; }
         }
         COMPONENT_FIREWORK_EXPLOSION => data.explosion = read_explosion(reader),
         COMPONENT_FIREWORKS => {
@@ -996,6 +1038,15 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
 
 /// Довески в файл: износ, признак, зачарования, свои модификаторы.
 pub fn to_bytes(data: &Data) -> Vec<u8> {
+    to_bytes_with_metadata_tag(data, 23)
+}
+
+/// Только проверка канона явного импорта main; не писатель обычных сохранений.
+pub(crate) fn to_bytes_main_metadata(data: &Data) -> Vec<u8> {
+    to_bytes_with_metadata_tag(data, 20)
+}
+
+fn to_bytes_with_metadata_tag(data: &Data, metadata_tag: u8) -> Vec<u8> {
     let mut out = Vec::new();
 
     out.extend_from_slice(&data.damage.to_be_bytes());
@@ -1007,7 +1058,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || data.plugin_meta.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some() || data.plugin_meta.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -1047,7 +1098,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.pot_sides.is_empty() || !data.charged_projectiles.is_empty() || data.custom_data.is_some() || data.plugin_meta.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -1063,6 +1114,18 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         out.push(u8::from(data.name.is_some()));
         out.extend_from_slice(&(length as u16).to_be_bytes());
         out.extend_from_slice(&name.as_bytes()[..length]);
+
+        if let Some(custom) = &data.custom_data {
+            out.push(22); out.extend_from_slice(&(custom.as_bytes().len() as u32).to_be_bytes());
+            out.extend_from_slice(custom.as_bytes());
+        }
+
+        if !data.charged_projectiles.is_empty() {
+            let bytes = projectiles::encode(data);
+            out.push(20);
+            out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+            out.extend(bytes);
+        }
 
         if let Some((material, pattern)) = data.trim {
             out.extend_from_slice(&[1, material, pattern]);
@@ -1100,8 +1163,16 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&value.to_be_bytes());
             }
         }
-        if let Some(meta) = &data.plugin_meta { out.push(20); out.extend((meta.len() as u32).to_be_bytes()); out.extend(meta.as_bytes()); }
+        if let Some(meta) = &data.plugin_meta { out.push(metadata_tag); out.extend((meta.len() as u32).to_be_bytes()); out.extend(meta.as_bytes()); }
         if let Some(color) = data.dyed_color { out.push(18); out.extend(color.to_be_bytes()); }
+        if !data.pot_sides.is_empty() {
+            out.extend([21, data.pot_sides.len() as u8]);
+            for c in &data.pot_sides {
+                out.push(c.slot); out.extend(c.item.to_be_bytes());
+                let bytes = c.data.map(|id| to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
+                out.extend((bytes.len() as u32).to_be_bytes()); out.extend(bytes);
+            }
+        }
         if let Some(sides) = data.pot_decorations { out.push(19); for item in sides { out.extend(item.to_be_bytes()); } }
         if let Some(book)=&data.book {
             out.push(17); out.push(u8::from(book.title.is_some()));
@@ -1111,7 +1182,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             out.extend([16,data.bundle_selected.unwrap_or(255),data.bundle.len() as u8]);
             for c in &data.bundle {
                 out.extend(c.item.to_be_bytes()); out.extend(c.count.to_be_bytes());
-                let bytes=c.data.map(|id|to_bytes(&get(id))).unwrap_or_default();
+                let bytes=c.data.map(|id|to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
                 out.extend((bytes.len() as u32).to_be_bytes()); out.extend(bytes);
             }
         }
@@ -1124,7 +1195,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         if let Some(ammo) = data.charged_arrow {
             out.push(11);
             out.extend_from_slice(&ammo.item.to_be_bytes());
-            let extras = ammo.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+            let extras = ammo.data.map(|id| to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
             out.extend_from_slice(&(extras.len() as u32).to_be_bytes());
             out.extend_from_slice(&extras);
         }
@@ -1139,7 +1210,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&content.item.to_be_bytes());
                 out.extend_from_slice(&content.count.to_be_bytes());
 
-                let extras = content.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+                let extras = content.data.map(|id| to_bytes_with_metadata_tag(&get(id), metadata_tag)).unwrap_or_default();
 
                 out.extend_from_slice(&(extras.len() as u16).to_be_bytes());
                 out.extend_from_slice(&extras);
@@ -1218,6 +1289,13 @@ fn fireworks_from_bytes(reader: &mut Reader) -> Option<Fireworks> {
 
 /// Довески из файла; None — запись испорчена.
 pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
+    from_bytes_with_legacy_metadata(bytes, false)
+}
+
+// Явный импорт: вложенные ульи проверяются старым Mob reader, но их исходные
+// байты сохраняются до канонической сверки внешней записи.
+pub(crate) fn from_bytes_with_legacy_metadata(bytes: &[u8], legacy: bool) -> Option<Data> {
+    let _scope = storage_depth::enter()?;
     let mut reader = Reader { bytes, at: 0, failed: false };
     let damage = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
     let flags = reader.take(1)?[0];
@@ -1291,7 +1369,41 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
-                20 => { let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize; if length > 16384 { return None; } let text = String::from_utf8(reader.take(length)?.to_vec()).ok()?; let _: serde_json::Value = serde_json::from_str(&text).ok()?; data.plugin_meta = Some(text); }
+                22 => {
+                    if data.custom_data.is_some() { return None; }
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    data.custom_data = Some(CustomData::from_bytes(reader.take(length)?)?);
+                }
+                21 => {
+                    let count = reader.take(1)?[0]; if count > 4 { return None; }
+                    for _ in 0..count {
+                        let slot = reader.take(1)?[0]; if slot > 3 || data.pot_sides.iter().any(|c| c.slot == slot) { return None; }
+                        let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        let len = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                        let bytes = reader.take(len)?;
+                        let extra = if len == 0 { None } else { intern(from_bytes_with_legacy_metadata(bytes, legacy)?) };
+                        data.pot_sides.push(Content { slot, item, count: 1, data: extra });
+                    }
+                }
+                20 => {
+                    let len = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    let body = reader.take(len)?;
+                    // Старый main использовал ту же метку20 для JSON API.
+                    // Оба ограниченных парсера проверяют весь хвост; неоднозначность — отказ.
+                    let mut charged = data.clone();
+                    let projectile = projectiles::read_body(body, &mut charged);
+                    let metadata = read_plugin_metadata(body);
+                    match (projectile, metadata) {
+                        (true, None) => data = charged,
+                        (false, Some(text)) if data.plugin_meta.is_none() => data.plugin_meta = Some(text),
+                        _ => return None,
+                    }
+                }
+                23 => {
+                    if data.plugin_meta.is_some() { return None; }
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    data.plugin_meta = Some(read_plugin_metadata(reader.take(length)?)?);
+                }
                 18 => { data.dyed_color = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
                 19 => { let mut sides = [0; 4]; for item in &mut sides { *item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?); } data.pot_decorations = Some(sides); }
 
@@ -1309,7 +1421,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         let count=i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                         if !(1..=64).contains(&count) { return None; }
                         let len=u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
-                        let extra=reader.take(len)?; let nested=if len==0 {None} else {intern(from_bytes(extra)?)};
+                        let extra=reader.take(len)?; let nested=if len==0 {None} else {intern(from_bytes_with_legacy_metadata(extra, legacy)?)};
                         data.bundle.push(Content{slot:0,item,count,data:nested});
                     }
                     data.bundle_selected=(usize::from(selected)<data.bundle.len()).then_some(selected);
@@ -1334,7 +1446,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         let count = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                         let length = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
                         let extras = reader.take(length)?;
-                        let nested = if extras.is_empty() { None } else { intern(from_bytes(extras)?) };
+                        let nested = if extras.is_empty() { None } else { intern(from_bytes_with_legacy_metadata(extras, legacy)?) };
 
                         if slot < 27 && count > 0 {
                             data.contents.push(Content { slot, item, count, data: nested });
@@ -1364,7 +1476,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                     data.honey=(honey<=5).then_some(honey);
                     let len=usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
                     data.bees=reader.take(len)?.to_vec();
-                    if !data.bees.is_empty() && crate::hive::Data::from_bytes(&data.bees).is_none() { return None; }
+                    if !data.bees.is_empty() && crate::hive::Data::from_bytes_with_legacy_metadata(&data.bees, legacy).is_none() { return None; }
                 }
                 13 | 14 => {
                     let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
@@ -1380,7 +1492,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                     let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                     let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
                     let bytes = reader.take(length)?;
-                    let nested = if bytes.is_empty() { None } else { intern(from_bytes(bytes)?) };
+                    let nested = if bytes.is_empty() { None } else { intern(from_bytes_with_legacy_metadata(bytes, legacy)?) };
                     data.charged_arrow = Some(Content { slot: 0, item, count: 1, data: nested });
                 }
                 _ => break,
@@ -1396,6 +1508,17 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
 // ---------------------------------------------------------------------------
 
 /// Разбирает запись предмета: имя без пространства имён и довески.
+pub fn stack_from_value(value: &crate::snbt::Value) -> Result<crate::inventory::Stack, String> {
+    let id = value.get("id").and_then(crate::snbt::Value::as_str).ok_or("нет id предмета")?;
+    let mut parts = Vec::new();
+    if let Some(crate::snbt::Value::Map(fields)) = value.get("components") {
+        for (key, value) in fields { parts.push(format!("{key}={}",value.text())); }
+    }
+    let (name, extra) = parse_item_spec(&format!("{id}[{}]",parts.join(",")))?;
+    let item = crate::blocks::item_named(&name).ok_or("неизвестный предмет")?;
+    Ok(crate::inventory::Stack::new(item,1).with_extras(extra))
+}
+
 pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
     let (name, components) = match spec.split_once('[') {
         Some((name, rest)) => (name, Some(rest.strip_suffix(']').ok_or_else(|| "нет закрывающей ]".to_string())?)),
@@ -1407,9 +1530,13 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
     for part in components.map(split_top_level).unwrap_or_default() {
         let (key, value) = part.split_once('=').ok_or_else(|| format!("нет значения у {part}"))?;
         let key = key.trim().strip_prefix("minecraft:").unwrap_or(key.trim());
+        if key == "custom_data" {
+            return Err("custom_data в командах пока не поддерживается: NBT нельзя сохранить без потери типов".into());
+        }
         let value = snbt::parse(value.trim()).ok_or_else(|| format!("не разобрать значение {value}"))?;
 
         match key {
+            "charged_projectiles" => projectiles::parse(&value, &mut data)?,
             "bucket_entity_data" => data.bucket = Some(crate::mob::water::bucket::BucketData::parse(&value)),
             "salmon/size" | "axolotl/variant" | "tropical_fish/pattern" | "tropical_fish/base_color" | "tropical_fish/pattern_color" => {
                 let (id,value)=crate::mob::water::bucket::parse_variant(key,&value)?;
@@ -1444,9 +1571,38 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                 }
                 if crate::bundle::weight(&data)>64 {return Err("мешок переполнен".into());}
             }
+            "container" => {
+                let Value::List(contents) = value else { return Err("содержимое контейнера — список".into()); };
+                if contents.len() > 27 { return Err("поддерживается не более 27 ячеек контейнера".into()); }
+                let mut seen = [false; 27];
+                for entry in contents {
+                    let slot = entry.get("slot").and_then(Value::as_f64).filter(|v| (0.0..27.0).contains(v) && v.fract() == 0.0).ok_or("ячейка контейнера — целое число 0..26")? as usize;
+                    if std::mem::replace(&mut seen[slot], true) { return Err("повтор ячейки контейнера".into()); }
+                    let item = entry.get("item").ok_or("нет предмета в ячейке")?;
+                    if let Some(count) = item.get("count").or_else(|| item.get("Count"))
+                        && !count.as_f64().is_some_and(|v| (1.0..=127.0).contains(&v) && v.fract() == 0.0) {
+                        return Err("количество в ячейке — целое число 1..127".into());
+                    }
+                    let text = format!("{{Item:{}}}", crate::commands::component_text(item));
+                    let stack = crate::commands::item_from_text(&text).ok_or("неверный предмет в контейнере")?;
+                    data.contents.push(Content { slot: slot as u8, item: stack.stored_item(), count: stack.count, data: stack.data });
+                }
+                data.contents.sort_by_key(|c| c.slot);
+            }
             "dyed_color" => data.dyed_color = Some(value.as_f64().or_else(|| value.get("rgb").and_then(Value::as_f64)).ok_or("dyed_color — число")? as i32 & 0xffffff),
             "pot_decorations" => {
-                let Value::List(sides) = value else { return Err("стороны — список".into()); };
+                if let Value::Map(fields) = &value {
+                    let mut ids = [0;4];
+                    for (side, value) in fields {
+                        let slot = ["back","left","right","front"].iter().position(|s|s==side).ok_or("неизвестная сторона")?;
+                        let stack = stack_from_value(value)?;
+                        ids[slot] = stack.item;
+                        data.pot_sides.push(Content { slot: slot as u8, item: stack.stored_item(), count: 1, data: stack.data });
+                    }
+                    data.pot_decorations = Some(ids);
+                    continue;
+                }
+                let Value::List(sides) = value else { return Err("стороны — список или составное значение".into()); };
                 if sides.len() != 4 { return Err("нужны четыре стороны".into()); }
                 let mut ids = [0; 4];
                 for (i, side) in sides.iter().enumerate() { ids[i] = crate::blocks::item_named(side.as_str().ok_or("сторона — предмет")?.trim_start_matches("minecraft:")).ok_or("неизвестная сторона")?; }
@@ -1569,6 +1725,13 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
     data.enchants.sort_unstable();
     data.stored.sort_unstable();
 
+    // Длина довесков в существующем формате сохранения — u16. Не даём
+    // команде создать предмет, который повредит следующую запись. Проверка
+    // нужна и снаружи мешка, в котором лежит предмет с контейнером.
+    if to_bytes(&data).len() > u16::MAX as usize {
+        return Err("данные предмета превышают предел сохранения 65535 байт".into());
+    }
+
     Ok((name, data))
 }
 
@@ -1638,6 +1801,65 @@ pub(crate) fn split_top_level(text: &str) -> Vec<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn container_commands_reject_lost_slots_and_invalid_counts() {
+        for contents in [
+            "{}", "[{slot:-1,item:{id:stone}}]", "[{slot:27,item:{id:stone}}]",
+            "[{slot:0.5,item:{id:stone}}]", "[{slot:0,item:{id:stone}},{slot:0,item:{id:dirt}}]",
+            "[{slot:0,item:{id:air}}]", "[{slot:0,item:{id:missing}}]", "[{slot:0}]",
+            "[{slot:0,item:{id:stone,count:0}}]", "[{slot:0,item:{id:stone,count:128}}]",
+            "[{slot:0,item:{id:stone,count:1.5}}]", "[{slot:0,item:{id:stone,count:\"1\"}}]",
+        ] { assert!(parse_item_spec(&format!("shulker_box[container={contents}]")).is_err(),"{contents}"); }
+        let (_,data)=parse_item_spec("shulker_box[container=[{slot:26,item:{id:stone}},{slot:0,item:{id:dirt,count:2}}]]").unwrap();
+        assert_eq!(data.contents.iter().map(|c|c.slot).collect::<Vec<_>>(),vec![0,26]);
+        assert_eq!(from_bytes(&to_bytes(&data)),Some(data));
+    }
+
+    #[test]
+    fn container_wire_rejects_invalid_templates_atomically_and_bounds_depth() {
+        let original=Data { contents:vec![Content {slot:0,item:1,count:3,data:None}],..Data::default() };
+        for body in [vec![28],vec![1,2],vec![1,1,0,1,0,0],vec![1,1,1,0,0,0],
+            vec![1,1,1,1,0,1,3],vec![1,1,1,1,2,0,3,0,3,0],vec![0,0]] {
+            let mut data=original.clone();assert!(!read_container_component(&body,&mut data),"{body:?}");assert_eq!(data,original);
+        }
+        let mut body=vec![0];
+        for _ in 0..15 {let mut parent=vec![1,1,1,1,1,0,75];parent.extend(body);body=parent;}
+        let mut data=Data::default();assert!(read_container_component(&body,&mut data));
+        let mut deeper=vec![1,1,1,1,1,0,75];deeper.extend(body);
+        assert!(!read_container_component(&deeper,&mut data));
+        assert!(read_container_component(&[0],&mut data));assert!(data.contents.is_empty());
+    }
+
+    #[test]
+    fn container_rejects_contents_that_cannot_fit_saved_extra_length() {
+        let book = Data { book: Some(crate::book::Book { pages:vec!["x".repeat(400);100], ..Default::default() }), ..Default::default() };
+        let id = intern(book).unwrap();
+        let contents = (0..2).map(|slot| Content { slot, item:crate::blocks::item_named("writable_book").unwrap(),count:1,data:Some(id) }).collect();
+        let data = Data { contents, ..Default::default() };
+        assert!(to_bytes(&data).len() > u16::MAX as usize);
+        let (_,wire) = encode_components(&data);
+        assert_eq!(wire[0],75);
+        assert!(!read_container_component(&wire[1..],&mut Data::default()));
+        let pages = (0..100).map(|_|format!("\"{}\"","x".repeat(400))).collect::<Vec<_>>().join(",");
+        let entries = (0..2).map(|slot|format!("{{slot:{slot},item:{{id:writable_book,components:{{writable_book_content:{{pages:[{pages}]}}}}}}}}")).collect::<Vec<_>>().join(",");
+        assert!(parse_item_spec(&format!("shulker_box[container=[{entries}]]")).unwrap_err().contains("65535"));
+        assert!(parse_item_spec(&format!("paper[custom_name=\"{}\"]","x".repeat(65536))).unwrap_err().contains("65535"));
+    }
+
+    #[test]
+    fn container_keeps_custom_tnt_type_when_cloned_by_creative_client() {
+        let kind = crate::custom_tnt::by_name("nuke").unwrap();
+        let tnt = crate::custom_tnt::stack(kind,2).unwrap();
+        let mut slots = vec![None;27];slots[26] = Some(tnt);
+        let shulker = crate::inventory::Stack::new(crate::blocks::item_named("shulker_box").unwrap(),1);
+        let packed = crate::containers::with_contents(shulker,&slots);
+        let (_,wire) = encode_components(&packed.extras());
+        assert_eq!(wire[0],75);
+        let mut decoded = Data::default();assert!(read_container_component(&wire[1..],&mut decoded));
+        assert_eq!(crate::containers::contents_of(&shulker.with_extras(decoded.clone())),slots);
+        assert_eq!(from_bytes(&to_bytes(&decoded)),Some(decoded));
+    }
 
     #[test]
     fn file_tail_tags_are_distinct_and_keep_their_old_numbers() {
@@ -1902,4 +2124,47 @@ mod bundle_component_tests {
         assert_eq!(read.bundle,data.bundle);
     }
 
+}
+
+// Ограничение старого API сохраняется при чтении обеих меток.
+fn read_plugin_metadata(bytes: &[u8]) -> Option<String> {
+    if bytes.len() > 16384 { return None; }
+    let text = std::str::from_utf8(bytes).ok()?;
+    let _: serde_json::Value = serde_json::from_str(text).ok()?;
+    Some(text.to_owned())
+}
+
+#[cfg(test)]
+mod merged_plugin_metadata_tests {
+    use super::*;
+    #[test]
+    fn plugin_metadata_23_roundtrip_and_legacy_20_are_unambiguous() {
+        let data = Data { plugin_meta: Some(r#"{"pdc":{"fixture":"value"}}"#.into()), ..Data::default() };
+        let bytes = to_bytes(&data);
+        assert_eq!(from_bytes(&bytes), Some(data.clone()));
+        let tail = data.plugin_meta.as_ref().unwrap().len() + 5;
+        assert_eq!(bytes[bytes.len() - tail], 23);
+        let mut legacy = bytes.clone();
+        let start = legacy.len() - tail;
+        legacy[start] = 20;
+        assert_eq!(from_bytes(&legacy), Some(data));
+        for end in start+1..legacy.len() { assert!(from_bytes(&legacy[..end]).is_none()); }
+        let mut duplicate = bytes.clone(); duplicate.extend_from_slice(&legacy[start..]);
+        assert!(from_bytes(&duplicate).is_none());
+        let mut malformed = bytes.clone(); *malformed.last_mut().unwrap() = b'!';
+        assert!(from_bytes(&malformed).is_none());
+        let too_large = Data { plugin_meta: Some(format!("\"{}\"", "x".repeat(16383))), ..Data::default() };
+        assert!(from_bytes(&to_bytes(&too_large)).is_none());
+    }
+
+    #[test]
+    fn projectile_20_and_metadata_23_survive_together() {
+        let arrow = crate::blocks::item_named("arrow").unwrap();
+        let data = Data { charged: 1, charged_projectiles: vec![ChargedProjectile {
+            content: Content { slot: 0, item: arrow, count: 2, data: None }, intangible: true,
+        }], plugin_meta: Some(r#"{"fixture":true}"#.into()), ..Data::default() };
+        let parsed = from_bytes(&to_bytes(&data)).unwrap();
+        assert_eq!(parsed.plugin_meta, data.plugin_meta);
+        assert_eq!(loaded_projectiles(&parsed), loaded_projectiles(&data));
+    }
 }

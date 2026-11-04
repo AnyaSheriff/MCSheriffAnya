@@ -1,0 +1,15 @@
+
+running 1 test
+[17:55:39] [Server thread/INFO]: Подготовка мира "world"
+[17:55:39] [Server thread/INFO]: Семя мира: 1
+[17:55:39] [Server thread/INFO]: Тип мира: minecraft:flat
+MCSA gameplay probe ready on 26028
+[17:55:40] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+MCSA probe connection: Некорректный пакет Configuration776
+[17:55:40] [Server thread/INFO]: Останавливаю сервер
+[17:55:40] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+MCSA persistence probe saved world
+test gameplay_probe::serve_java_1_21_11_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2990 filtered out; finished in 1.68s
+

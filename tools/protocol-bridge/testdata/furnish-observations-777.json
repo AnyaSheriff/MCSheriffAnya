@@ -1,0 +1,433 @@
+{
+ "source": "tools/protocol-bridge/probe_furnish_777.py, официальный сервер 26.3 (jar_sha1 33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c)",
+ "stacks": {
+  "straw_bed": [
+   16
+  ],
+  "music_disc_bounce": [
+   1
+  ],
+  "white_cushion": [
+   16
+  ],
+  "orange_cushion": [
+   16
+  ],
+  "magenta_cushion": [
+   16
+  ],
+  "light_blue_cushion": [
+   16
+  ],
+  "yellow_cushion": [
+   16
+  ],
+  "lime_cushion": [
+   16
+  ],
+  "pink_cushion": [
+   16
+  ],
+  "gray_cushion": [
+   16
+  ],
+  "light_gray_cushion": [
+   16
+  ],
+  "cyan_cushion": [
+   16
+  ],
+  "purple_cushion": [
+   16
+  ],
+  "blue_cushion": [
+   16
+  ],
+  "brown_cushion": [
+   16
+  ],
+  "green_cushion": [
+   16
+  ],
+  "red_cushion": [
+   16
+  ],
+  "black_cushion": [
+   16
+  ],
+  "ocean_monument_map": [
+   64
+  ],
+  "woodland_mansion_map": [
+   64
+  ],
+  "buried_trial_chambers_map": [
+   64
+  ],
+  "jungle_pyramid_map": [
+   64
+  ],
+  "swamp_hut_map": [
+   64
+  ],
+  "desert_village_map": [
+   64
+  ],
+  "plains_village_map": [
+   64
+  ],
+  "savanna_village_map": [
+   64
+  ],
+  "snowy_village_map": [
+   64
+  ],
+  "taiga_village_map": [
+   64
+  ],
+  "buried_treasure_map": [
+   64
+  ],
+  "buried_ancient_city_map": [
+   64
+  ],
+  "buried_mineshaft_map": [
+   64
+  ],
+  "desert_pyramid_map": [
+   64
+  ],
+  "abandoned_camp_map": [
+   64
+  ],
+  "warm_ocean_ruins_map": [
+   64
+  ]
+ },
+ "drops": {
+  "straw_bed_head": {
+   "hand": [
+    [
+     "straw_bed",
+     1
+    ]
+   ],
+   "pickaxe": [
+    [
+     "straw_bed",
+     1
+    ]
+   ],
+   "axe": [
+    [
+     "straw_bed",
+     1
+    ]
+   ],
+   "shears": [
+    [
+     "straw_bed",
+     1
+    ]
+   ]
+  },
+  "straw_bed_foot": {
+   "hand": [],
+   "pickaxe": [],
+   "axe": [],
+   "shears": []
+  },
+  "white_bed": {
+   "hand": [
+    [
+     "white_bed",
+     1
+    ]
+   ],
+   "pickaxe": [
+    [
+     "white_bed",
+     1
+    ]
+   ],
+   "axe": [
+    [
+     "white_bed",
+     1
+    ]
+   ],
+   "shears": [
+    [
+     "white_bed",
+     1
+    ]
+   ]
+  },
+  "hay_block": {
+   "hand": [
+    [
+     "hay_block",
+     1
+    ]
+   ],
+   "pickaxe": [
+    [
+     "hay_block",
+     1
+    ]
+   ],
+   "axe": [
+    [
+     "hay_block",
+     1
+    ]
+   ],
+   "shears": [
+    [
+     "hay_block",
+     1
+    ]
+   ]
+  }
+ },
+ "crafting": [
+  {
+   "result": "straw_bed",
+   "count": 4,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "hay_block",
+    "hay_block",
+    "hay_block"
+   ],
+   "group_raw": 0,
+   "category": 3
+  },
+  {
+   "result": "white_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "white_wool_slab",
+    "white_wool_slab",
+    "white_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "orange_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "orange_wool_slab",
+    "orange_wool_slab",
+    "orange_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "magenta_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "magenta_wool_slab",
+    "magenta_wool_slab",
+    "magenta_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "light_blue_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "light_blue_wool_slab",
+    "light_blue_wool_slab",
+    "light_blue_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "yellow_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "yellow_wool_slab",
+    "yellow_wool_slab",
+    "yellow_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "lime_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "lime_wool_slab",
+    "lime_wool_slab",
+    "lime_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "pink_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "pink_wool_slab",
+    "pink_wool_slab",
+    "pink_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "gray_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "gray_wool_slab",
+    "gray_wool_slab",
+    "gray_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "light_gray_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "light_gray_wool_slab",
+    "light_gray_wool_slab",
+    "light_gray_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "cyan_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "cyan_wool_slab",
+    "cyan_wool_slab",
+    "cyan_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "purple_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "purple_wool_slab",
+    "purple_wool_slab",
+    "purple_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "blue_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "blue_wool_slab",
+    "blue_wool_slab",
+    "blue_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "brown_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "brown_wool_slab",
+    "brown_wool_slab",
+    "brown_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "green_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "green_wool_slab",
+    "green_wool_slab",
+    "green_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "red_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "red_wool_slab",
+    "red_wool_slab",
+    "red_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  },
+  {
+   "result": "black_cushion",
+   "count": 1,
+   "shaped": true,
+   "width": 3,
+   "height": 1,
+   "cells": [
+    "black_wool_slab",
+    "black_wool_slab",
+    "black_wool_slab"
+   ],
+   "group_raw": 24,
+   "category": 3
+  }
+ ]
+}

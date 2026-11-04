@@ -1,0 +1,71 @@
+[22:48:32] [Server thread/INFO]: config/mcsa.properties: дописаны новые настройки: viaproxy, viaproxy-memory, console-colors, offline-license-mode, tab-tps, debug, prefetch-at-once, bedrock-online-mode, bedrock-show-coordinates, autumn-forests, pink-cherry-groves, text-info, portal-delay, portal-min-width, portal-min-height, portal-max-width, portal-max-height
+[22:48:32] [Server thread/INFO]: Запуск сервера MCSheriffAnya
+[22:48:32] [Server thread/INFO]: Ядер: 12. Такту отведено ядро 11, остальные — сети и складыванию мира
+[22:48:32] [Server thread/INFO]: Загрузка настроек
+[22:48:32] [Server thread/INFO]: Создана директория: logs
+[22:48:32] [Server thread/INFO]: Создана директория: world/playerdata
+[22:48:32] [Server thread/INFO]: Создана директория: skins
+[22:48:32] [Server thread/INFO]: Основная версия игры: Minecraft Java 26.3 (протокол 777)
+[22:48:32] [Server thread/INFO]: Сервер запущен на *:26185
+[22:48:32] [Server thread/INFO]: Подготовка мира "world"
+[22:48:32] [Server thread/INFO]: Семя мира: 1
+[22:48:32] [Server thread/INFO]: Тип мира: minecraft:flat
+[22:48:32] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_nether"
+[22:48:32] [Server thread/INFO]: Семя мира: 1
+[22:48:32] [Server thread/INFO]: Тип мира: minecraft:the_nether
+[22:48:32] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_end"
+[22:48:32] [Server thread/INFO]: Семя мира: 1
+[22:48:32] [Server thread/INFO]: Тип мира: minecraft:the_end
+[22:48:32] [Server thread/INFO]: Скины: в config/skins.toml дописаны настройки скинов Bedrock
+[22:48:32] [Server thread/INFO]: Плагины: папки plugins/ и modules/ пусты
+[22:48:32] [Server thread/INFO]: Готово (0.001 с)! Чтобы узнать команды, набери help
+[22:48:32] [Server thread/INFO]: Опознаватель игрока Mcsa770 — 6408c68b-a4ff-3f71-b875-553748f48c5e
+[22:48:32] [Server thread/INFO]: Скины: скина Mcsa770 нет ни в одном источнике
+[22:48:32] [Server thread/INFO]: Точка появления: 0.5 63 0.5
+[22:48:32] [Server thread/INFO]: Mcsa770[/127.0.0.1:47688 → localhost:26185] вошёл с номером сущности 1 в (0.5, 63.0, 0.5)
+[22:48:36] [Server thread/INFO]: Mcsa770 зашёл на сервер
+[22:48:36] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[22:48:36] [Server thread/INFO]: Mcsa770 потерял соединение: отключился
+[22:48:36] [Server thread/INFO]: Опознаватель игрока Mcsa771 — 2bf28b9c-c15e-3b17-829e-327e587337a4
+[22:48:36] [Server thread/INFO]: Скины: скина Mcsa771 нет ни в одном источнике
+[22:48:36] [Server thread/INFO]: Mcsa771[/127.0.0.1:47710 → localhost:26185] вошёл с номером сущности 14 в (0.5, 63.0, 0.5)
+[22:48:39] [Server thread/INFO]: Mcsa770 вышел
+[22:48:39] [Server thread/INFO]: Mcsa771 зашёл на сервер
+[22:48:40] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[22:48:40] [Server thread/INFO]: Mcsa771 потерял соединение: отключился
+[22:48:40] [Server thread/INFO]: Опознаватель игрока Mcsa772 — ade0182d-fa3b-305f-91b1-b66c4c834a69
+[22:48:40] [Server thread/INFO]: Скины: скина Mcsa772 нет ни в одном источнике
+[22:48:40] [Server thread/INFO]: Mcsa772[/127.0.0.1:47740 → localhost:26185] вошёл с номером сущности 19 в (0.5, 63.0, 0.5)
+[22:48:44] [Server thread/INFO]: Mcsa771 вышел
+[22:48:44] [Server thread/INFO]: Mcsa772 зашёл на сервер
+[22:48:44] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[22:48:44] [Server thread/INFO]: Mcsa772 потерял соединение: отключился
+[22:48:44] [Server thread/INFO]: Опознаватель игрока Mcsa773 — 027240f4-5e01-326f-a50f-1fdd547cf83c
+[22:48:44] [Server thread/INFO]: Скины: скина Mcsa773 нет ни в одном источнике
+[22:48:44] [Server thread/INFO]: Mcsa773[/127.0.0.1:43040 → localhost:26185] вошёл с номером сущности 28 в (0.5, 63.0, 0.5)
+[22:48:48] [Server thread/INFO]: Mcsa772 вышел
+[22:48:48] [Server thread/INFO]: Mcsa773 зашёл на сервер
+[22:48:49] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[22:48:49] [Server thread/INFO]: Mcsa773 потерял соединение: отключился
+[22:48:49] [Server thread/INFO]: Опознаватель игрока Mcsa774 — add0dd7f-a004-325c-84e5-7cfddbf712ab
+[22:48:49] [Server thread/INFO]: Скины: скина Mcsa774 нет ни в одном источнике
+[22:48:49] [Server thread/INFO]: Mcsa774[/127.0.0.1:43062 → localhost:26185] вошёл с номером сущности 29 в (0.5, 63.0, 0.5)
+[22:48:52] [Server thread/INFO]: Mcsa773 вышел
+[22:48:52] [Server thread/INFO]: Mcsa774 зашёл на сервер
+[22:48:53] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[22:48:53] [Server thread/INFO]: Mcsa774 потерял соединение: отключился
+[22:48:53] [Server thread/INFO]: Опознаватель игрока Mcsa776 — 83f1fb8c-aa49-34c8-b722-d65d318995ae
+[22:48:53] [Server thread/INFO]: Скины: скина Mcsa776 нет ни в одном источнике
+[22:48:53] [Server thread/INFO]: Mcsa776[/127.0.0.1:44844 → localhost:26185] вошёл с номером сущности 34 в (0.5, 63.0, 0.5)
+[22:48:57] [Server thread/INFO]: Mcsa774 вышел
+[22:48:57] [Server thread/INFO]: Mcsa776 зашёл на сервер
+[22:48:57] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[22:48:57] [Server thread/INFO]: Mcsa776 потерял соединение: отключился
+[22:48:57] [Server thread/INFO]: Вход отклонён: версия клиента (протокол 769) не подходит, ядру нужен протокол 775
+[22:48:57] [Server thread/INFO]: Останавливаю сервер
+[22:48:57] [Server thread/INFO]: Mcsa776 вышел
+[22:48:57] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[22:48:57] [Server thread/INFO]: Остановка сервера
+[22:48:57] [Server thread/INFO]: Сохранение игроков
+[22:48:57] [Server thread/INFO]: Сохранение мира
+[22:48:57] [Server thread/INFO]: Мир сохранён

@@ -1,0 +1,33 @@
+{
+  "primary": 775,
+  "client": 776,
+  "peer": null,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "scenario": "relog-light",
+  "runner_sha256": "064ceb48afdf9a078e2b847ce5f6693250c2884a692f492802aaa7d2a74c7268",
+  "binary_sha256": "32a61db5648586c1d3ddce792aeae21d9a87555b5f3714734078df5a3c39d0f7",
+  "error": "UnboundLocalError: cannot access local variable 'io' where it is not associated with a value",
+  "sessions": [
+    {
+      "version": 776,
+      "records": [
+        {
+          "name": "login",
+          "bytes": 109,
+          "sha256": "02cf66a71147b99d605a6002bb577d45d29e04220e3c2b86950c78f137a789d1",
+          "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64000000000000000001ff000000003f0000"
+        }
+      ],
+      "sent": [],
+      "acks": [],
+      "lights": [],
+      "inventory": {},
+      "health_events": []
+    }
+  ],
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

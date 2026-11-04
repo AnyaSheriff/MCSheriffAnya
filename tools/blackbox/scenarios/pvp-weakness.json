@@ -1,5 +1,6 @@
 {
  "name": "pvp-weakness",
+ "attr_phase": true,
  "about": "Слабость I у нападающего (3 с): −4 к урону меча (7 → 3), снятие эффекта по сроку.",
  "second": true,
  "track_self": true,
@@ -15,6 +16,7 @@
   "clear $(bot2)",
   "kill $(bot)",
   "!wait 30",
+  "!syncattrs",
   "tp $(bot) $(3.5,0,3.5) 180 0",
   "tp $(bot2) $(3.5,0,1.5) 0 0",
   "give $(bot2) minecraft:diamond_sword 1",

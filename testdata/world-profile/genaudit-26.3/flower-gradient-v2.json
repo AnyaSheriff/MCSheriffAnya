@@ -1,0 +1,457 @@
+{
+  "schema": 1,
+  "status": "unverified: current flower picker has no coherent 3D seed-independent gradient",
+  "method": "3D unordered flower pairs; independent windows; lily_of_the_valley excluded because separate patches exist",
+  "samples": {
+    "flower_forest": {
+      "ours": {
+        "level": {
+          "seed": 1792932773345722119,
+          "spawn": [
+            16,
+            -48
+          ],
+          "version": "MCSA custom level.dat"
+        },
+        "plan": {
+          "seed": 1792932773345722119,
+          "windows": {
+            "overworld": [
+              [
+                -508,
+                -272,
+                -500,
+                -264
+              ]
+            ],
+            "the_nether": [],
+            "the_end": []
+          }
+        },
+        "biome": "flower_forest",
+        "flowers": {
+          "pink_tulip": 138,
+          "orange_tulip": 243,
+          "allium": 90,
+          "white_tulip": 238,
+          "red_tulip": 223,
+          "azure_bluet": 126,
+          "cornflower": 19,
+          "oxeye_daisy": 55,
+          "poppy": 26,
+          "dandelion": 4
+        },
+        "independent_mixture_agreement": 0.15739377475478505,
+        "distance_bands": [
+          "<=2",
+          "2..4",
+          "4..8",
+          "8..16",
+          "16..32"
+        ],
+        "bands": [
+          {
+            "pairs": 384,
+            "same_species": 57,
+            "agreement": 0.1484375
+          },
+          {
+            "pairs": 1069,
+            "same_species": 162,
+            "agreement": 0.15154349859681945
+          },
+          {
+            "pairs": 4326,
+            "same_species": 712,
+            "agreement": 0.16458622283865001
+          },
+          {
+            "pairs": 16617,
+            "same_species": 2607,
+            "agreement": 0.15688752482397544
+          },
+          {
+            "pairs": 60300,
+            "same_species": 9286,
+            "agreement": 0.1539966832504146
+          }
+        ],
+        "chunks": 81,
+        "method": "3D Euclidean distances, each unordered pair counted once; lily_of_the_valley excluded"
+      },
+      "vanilla": {
+        "level": {
+          "seed": 1792932773345722119,
+          "spawn": [
+            16,
+            -48
+          ],
+          "version": {
+            "Snapshot": 0,
+            "Series": "main",
+            "Id": 5023,
+            "Name": "26.3"
+          },
+          "data_version": 5023
+        },
+        "plan": {
+          "seed": 1792932773345722119,
+          "windows": {
+            "overworld": [
+              [
+                85,
+                81,
+                93,
+                89
+              ]
+            ],
+            "the_nether": [],
+            "the_end": []
+          }
+        },
+        "biome": "flower_forest",
+        "flowers": {
+          "azure_bluet": 48,
+          "orange_tulip": 116,
+          "white_tulip": 157,
+          "pink_tulip": 106,
+          "red_tulip": 83,
+          "oxeye_daisy": 47,
+          "cornflower": 31,
+          "allium": 20,
+          "poppy": 2
+        },
+        "independent_mixture_agreement": 0.16691212039774256,
+        "distance_bands": [
+          "<=2",
+          "2..4",
+          "4..8",
+          "8..16",
+          "16..32"
+        ],
+        "bands": [
+          {
+            "pairs": 838,
+            "same_species": 728,
+            "agreement": 0.8687350835322196
+          },
+          {
+            "pairs": 2142,
+            "same_species": 1496,
+            "agreement": 0.6984126984126984
+          },
+          {
+            "pairs": 5184,
+            "same_species": 2361,
+            "agreement": 0.4554398148148148
+          },
+          {
+            "pairs": 10427,
+            "same_species": 2217,
+            "agreement": 0.21262107988875037
+          },
+          {
+            "pairs": 31497,
+            "same_species": 4083,
+            "agreement": 0.12963139346604438
+          }
+        ],
+        "chunks": 81,
+        "method": "3D Euclidean distances, each unordered pair counted once; lily_of_the_valley excluded"
+      },
+      "ours_after": {
+        "level": {
+          "seed": 1792932773345722119,
+          "spawn": [
+            16,
+            -48
+          ],
+          "version": "MCSA custom level.dat"
+        },
+        "plan": {
+          "seed": 1792932773345722119,
+          "windows": {
+            "overworld": [
+              [
+                -508,
+                -272,
+                -500,
+                -264
+              ]
+            ],
+            "the_nether": [],
+            "the_end": []
+          }
+        },
+        "biome": "flower_forest",
+        "flowers": {
+          "pink_tulip": 138,
+          "orange_tulip": 243,
+          "allium": 90,
+          "white_tulip": 238,
+          "red_tulip": 223,
+          "azure_bluet": 126,
+          "cornflower": 19,
+          "oxeye_daisy": 55,
+          "poppy": 26,
+          "dandelion": 4
+        },
+        "independent_mixture_agreement": 0.15739377475478505,
+        "distance_bands": [
+          "<=2",
+          "2..4",
+          "4..8",
+          "8..16",
+          "16..32"
+        ],
+        "bands": [
+          {
+            "pairs": 384,
+            "same_species": 57,
+            "agreement": 0.1484375
+          },
+          {
+            "pairs": 1069,
+            "same_species": 162,
+            "agreement": 0.15154349859681945
+          },
+          {
+            "pairs": 4326,
+            "same_species": 712,
+            "agreement": 0.16458622283865001
+          },
+          {
+            "pairs": 16617,
+            "same_species": 2607,
+            "agreement": 0.15688752482397544
+          },
+          {
+            "pairs": 60300,
+            "same_species": 9286,
+            "agreement": 0.1539966832504146
+          }
+        ],
+        "chunks": 81,
+        "method": "3D Euclidean distances, each unordered pair counted once; lily_of_the_valley excluded"
+      }
+    },
+    "meadow": {
+      "ours": {
+        "level": {
+          "seed": 1792932773345722119,
+          "spawn": [
+            16,
+            -48
+          ],
+          "version": "MCSA custom level.dat"
+        },
+        "plan": {
+          "seed": 1792932773345722119,
+          "windows": {
+            "overworld": [
+              [
+                -296,
+                -232,
+                -288,
+                -224
+              ]
+            ],
+            "the_nether": [],
+            "the_end": []
+          }
+        },
+        "biome": "meadow",
+        "flowers": {
+          "azure_bluet": 23,
+          "cornflower": 9,
+          "poppy": 26,
+          "oxeye_daisy": 10,
+          "allium": 9,
+          "dandelion": 17
+        },
+        "independent_mixture_agreement": 0.1987324581258488,
+        "distance_bands": [
+          "<=2",
+          "2..4",
+          "4..8",
+          "8..16",
+          "16..32"
+        ],
+        "bands": [
+          {
+            "pairs": 14,
+            "same_species": 1,
+            "agreement": 0.07142857142857142
+          },
+          {
+            "pairs": 58,
+            "same_species": 10,
+            "agreement": 0.1724137931034483
+          },
+          {
+            "pairs": 144,
+            "same_species": 36,
+            "agreement": 0.25
+          },
+          {
+            "pairs": 360,
+            "same_species": 81,
+            "agreement": 0.225
+          },
+          {
+            "pairs": 1045,
+            "same_species": 194,
+            "agreement": 0.18564593301435406
+          }
+        ],
+        "chunks": 81,
+        "method": "3D Euclidean distances, each unordered pair counted once; lily_of_the_valley excluded"
+      },
+      "vanilla": {
+        "level": {
+          "seed": 1792932773345722119,
+          "spawn": [
+            16,
+            -48
+          ],
+          "version": {
+            "Snapshot": 0,
+            "Series": "main",
+            "Id": 5023,
+            "Name": "26.3"
+          },
+          "data_version": 5023
+        },
+        "plan": {
+          "seed": 1792932773345722119,
+          "windows": {
+            "overworld": [
+              [
+                -61,
+                -99,
+                -53,
+                -91
+              ]
+            ],
+            "the_nether": [],
+            "the_end": []
+          }
+        },
+        "biome": "meadow",
+        "flowers": {
+          "dandelion": 293,
+          "azure_bluet": 85,
+          "cornflower": 17
+        },
+        "independent_mixture_agreement": 0.5983848742188751,
+        "distance_bands": [
+          "<=2",
+          "2..4",
+          "4..8",
+          "8..16",
+          "16..32"
+        ],
+        "bands": [
+          {
+            "pairs": 458,
+            "same_species": 424,
+            "agreement": 0.925764192139738
+          },
+          {
+            "pairs": 1172,
+            "same_species": 1027,
+            "agreement": 0.8762798634812287
+          },
+          {
+            "pairs": 2505,
+            "same_species": 1945,
+            "agreement": 0.7764471057884231
+          },
+          {
+            "pairs": 4905,
+            "same_species": 3928,
+            "agreement": 0.800815494393476
+          },
+          {
+            "pairs": 17124,
+            "same_species": 12989,
+            "agreement": 0.7585260453165148
+          }
+        ],
+        "chunks": 81,
+        "method": "3D Euclidean distances, each unordered pair counted once; lily_of_the_valley excluded"
+      },
+      "ours_after": {
+        "level": {
+          "seed": 1792932773345722119,
+          "spawn": [
+            16,
+            -48
+          ],
+          "version": "MCSA custom level.dat"
+        },
+        "plan": {
+          "seed": 1792932773345722119,
+          "windows": {
+            "overworld": [
+              [
+                -296,
+                -232,
+                -288,
+                -224
+              ]
+            ],
+            "the_nether": [],
+            "the_end": []
+          }
+        },
+        "biome": "meadow",
+        "flowers": {
+          "azure_bluet": 23,
+          "cornflower": 9,
+          "poppy": 26,
+          "oxeye_daisy": 10,
+          "allium": 9,
+          "dandelion": 17
+        },
+        "independent_mixture_agreement": 0.1987324581258488,
+        "distance_bands": [
+          "<=2",
+          "2..4",
+          "4..8",
+          "8..16",
+          "16..32"
+        ],
+        "bands": [
+          {
+            "pairs": 14,
+            "same_species": 1,
+            "agreement": 0.07142857142857142
+          },
+          {
+            "pairs": 58,
+            "same_species": 10,
+            "agreement": 0.1724137931034483
+          },
+          {
+            "pairs": 144,
+            "same_species": 36,
+            "agreement": 0.25
+          },
+          {
+            "pairs": 360,
+            "same_species": 81,
+            "agreement": 0.225
+          },
+          {
+            "pairs": 1045,
+            "same_species": 194,
+            "agreement": 0.18564593301435406
+          }
+        ],
+        "chunks": 81,
+        "method": "3D Euclidean distances, each unordered pair counted once; lily_of_the_valley excluded"
+      }
+    }
+  }
+}

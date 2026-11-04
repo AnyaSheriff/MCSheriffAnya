@@ -3,7 +3,7 @@
 // [проверить] порядок кнопок и полный набор рецептов записью vanilla.
 use std::sync::OnceLock;
 use crate::{blocks, inventory::Stack};
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Recipe { pub input: i32, pub output: i32, pub count: i32 }
 pub fn recipes() -> &'static [Recipe] {
     static ALL: OnceLock<Vec<Recipe>> = OnceLock::new();
@@ -67,17 +67,79 @@ pub fn recipes() -> &'static [Recipe] {
         all
     })
 }
+/// Камнерез для серы и киновари (вики, страницы Sulfur / Polished Sulfur / Sulfur Bricks и киноварь):
+/// из базового блока — всё семейство, из полированного — полированные и кирпичные варианты,
+/// из кирпичей — кирпичные; плиты по 2, остальное по 1. Резной — только из базового блока
+/// (в Java «Polished → Chiseled» помечено «only BE»). Порядок кнопок — по имени результата, как у
+/// прежней таблицы [проверить: порядок на официальном 26.3 не снимался].
+pub fn mineral_recipes() -> &'static [Recipe] {
+    use crate::gameplay_catalog::{BlockForm, SlabDescriptor, MINERALS};
+    static ALL: OnceLock<Vec<Recipe>> = OnceLock::new();
+    ALL.get_or_init(|| {
+        let material = |row: &SlabDescriptor| if row.name.contains("sulfur") { "sulfur" } else { "cinnabar" };
+        // 0 — базовый блок, 1 — полированный, 2 — кирпичи.
+        let tier = |row: &SlabDescriptor| -> u8 {
+            let name = row.name;
+            if name.starts_with("polished_") { 1 } else if name.contains("brick") { 2 } else { 0 }
+        };
+        let shapes = |row: &SlabDescriptor| matches!(row.form, BlockForm::Full | BlockForm::Slab | BlockForm::Stairs | BlockForm::Wall);
+        let mut all = Vec::new();
+        for input in MINERALS.iter().filter(|row| row.form == BlockForm::Full && !row.name.starts_with("chiseled_")) {
+            for output in MINERALS.iter().filter(|row| shapes(row) && material(row) == material(input)) {
+                let chiseled = output.name.starts_with("chiseled_");
+                let allowed = if chiseled { tier(input) == 0 } else { tier(output) >= tier(input) && output != input };
+                if allowed {
+                    all.push(Recipe { input: input.item, output: output.item, count: if output.form == BlockForm::Slab { 2 } else { 1 } });
+                }
+            }
+        }
+        // Официальный порядок — по имени рецепта «<результат>_from_<вход>_stonecutting»
+        // (наблюдение probe_poplar_777.py: declare_recipes).
+        let name = |item: i32| crate::gameplay_catalog::MINERALS.iter().find(|row| row.item == item).map_or("", |row| row.name);
+        all.sort_by_key(|r| format!("{}_from_{}_stonecutting", name(r.output), name(r.input)));
+        all
+    })
+}
+
+/// Серверный профиль дописывает запись; номера и порядок775 неизменны.
+pub fn recipes_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [Recipe] {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return recipes(); }
+    static PREVIEW: OnceLock<Vec<Recipe>> = OnceLock::new();
+    PREVIEW.get_or_init(|| {
+        let mut all = recipes().to_vec();
+        all.extend(crate::gameplay_catalog::CONCRETE_SLABS.iter().map(|row| Recipe { input: row.input_item, output: row.item, count: 2 }));
+        // Ступени бетона 26.3: камнерез даёт 1 из 1 (наблюдение официального сервера); у шерсти камнереза нет.
+        all.extend(crate::gameplay_catalog::CONCRETE_STAIRS.iter().map(|row| Recipe { input: row.input_item, output: row.item, count: 1 }));
+        all.extend_from_slice(mineral_recipes());
+        all
+    })
+}
 pub fn choices(input: i32) -> Vec<&'static Recipe> { recipes().iter().filter(|r| r.input == input).collect() }
+pub fn choices_for_catalog(catalog: crate::gameplay_catalog::Catalog, input: i32) -> Vec<&'static Recipe> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return choices(input); }
+    recipes_for_catalog(catalog).iter().filter(|r| r.input == input).collect()
+}
 pub fn result(input: Option<Stack>, selected: i32) -> Option<Stack> {
     let recipe = *choices(input?.item).get(usize::try_from(selected).ok()?)?;
     Some(Stack::new(recipe.output,recipe.count))
 }
+/// selected — кнопка среди рецептов текущего входа, не глобальный номер.
+pub fn result_for_catalog(catalog: crate::gameplay_catalog::Catalog, input: Option<Stack>, selected: i32) -> Option<Stack> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return result(input, selected); }
+    let recipe = *choices_for_catalog(catalog, input?.item).get(usize::try_from(selected).ok()?)?;
+    Some(Stack::new(recipe.output, recipe.count))
+}
 // Update Recipes, minecraft-data 26.1 protocol.json: IDSet, SlotDisplay.
-pub fn recipe_packet() -> Vec<u8> {
+pub fn recipe_packet() -> Vec<u8> { packet(recipes()) }
+pub fn recipe_packet_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> Vec<u8> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return recipe_packet(); }
+    packet(recipes_for_catalog(catalog))
+}
+fn packet(recipes: &[Recipe]) -> Vec<u8> {
     use crate::network::varint::encode_varint;
     let mut out=encode_varint(0x85); out.extend(encode_varint(0));
-    out.extend(encode_varint(recipes().len() as i32));
-    for r in recipes() {
+    out.extend(encode_varint(recipes.len() as i32));
+    for r in recipes {
         for v in [2,r.input,5,r.output,r.count,0,0] { out.extend(encode_varint(v)); }
     }
     out
@@ -96,5 +158,81 @@ mod tests {
         assert!(result(None,0).is_none());
         assert!(recipes().iter().all(|r|r.count>0));
     }
+    #[test]
+    fn profile_rows_preserve_native_order_and_packet_bytes() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        let base = Catalog::new(Profile::Java26_1_2);
+        let preview = Catalog::new(Profile::Preview26_3);
+        let extended = recipes_for_catalog(preview);
+        assert_eq!(&extended[..recipes().len()], recipes());
+        assert_eq!(extended.len(), recipes().len() + crate::gameplay_catalog::CONCRETE_SLABS.len() + crate::gameplay_catalog::CONCRETE_STAIRS.len() + mineral_recipes().len());
+        assert_eq!(recipe_packet_for_catalog(base), recipe_packet());
+        // Прежние строки пакета сохраняются дословно: меняются только размер и хвост.
+        let native_body = recipe_packet(); let extended_body = recipe_packet_for_catalog(preview);
+        let prefix = crate::network::varint::encode_varint(0x85).len() + 1;
+        let native_header = prefix + crate::network::varint::encode_varint(recipes().len() as i32).len();
+        let preview_header = prefix + crate::network::varint::encode_varint(extended.len() as i32).len();
+        assert_eq!(&native_body[native_header..], &extended_body[preview_header..preview_header + native_body.len() - native_header]);
+        assert_eq!(choices_for_catalog(base, 615).len(), 0);
+        assert_eq!(choices_for_catalog(preview, 615), vec![&extended[recipes().len()], &extended[recipes().len() + crate::gameplay_catalog::CONCRETE_SLABS.len()]]);
+    }
+
+    #[test]
+    fn preview_selection_uses_local_button_and_base_cannot_cut_new_slab() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        let base = Catalog::new(Profile::Java26_1_2);
+        let preview = Catalog::new(Profile::Preview26_3);
+        let input = Some(Stack::new(615, 3));
+        assert_eq!(result_for_catalog(preview, input, 0), Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM, 2)));
+        for selected in [-1, 2, recipes().len() as i32, i32::MAX] {
+            assert!(result_for_catalog(preview, input, selected).is_none());
+        }
+        assert!(result_for_catalog(base, input, 0).is_none());
+        assert!(result_for_catalog(preview, None, 0).is_none());
+        assert!(result_for_catalog(preview, Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM, 1)), 0).is_none());
+    }
+
+    #[test]
+    fn each_color_has_one_own_cut_and_keeps_native_choices() {
+        use crate::gameplay_catalog::{Catalog, Profile, CONCRETE_SLABS};
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+            let choices = choices_for_catalog(preview, row.input_item);
+            assert_eq!(choices.len(), 2, "плита (кнопка 0) и ступени (кнопка 1)");
+            assert_eq!(choices[0].output, row.item);
+            let stairs = &crate::gameplay_catalog::CONCRETE_STAIRS[index];
+            assert_eq!(choices[1].output, stairs.item);
+            assert_eq!(result_for_catalog(preview, Some(Stack::new(row.input_item, 1)), 1), Some(Stack::new(stairs.item, 1)));
+            assert!(result_for_catalog(base, Some(Stack::new(row.input_item, 1)), 1).is_none());
+            assert_eq!(result_for_catalog(preview, Some(Stack::new(row.input_item, 1)), 0), Some(Stack::new(row.item, 2)));
+            assert!(result_for_catalog(base, Some(Stack::new(row.input_item, 1)), 0).is_none());
+            assert!(result_for_catalog(preview, Some(Stack::new(row.input_item, 1)), 2).is_none());
+        }
+        for recipe in recipes() {
+            assert_eq!(choices_for_catalog(preview, recipe.input), choices(recipe.input));
+        }
+    }
+
 }
 
+
+#[cfg(test)]
+mod wool_cut_refusal_tests {
+    use super::*;
+    #[test]
+    fn wool_inputs_and_slabs_have_no_stonecutter_result() {
+        use crate::gameplay_catalog::{Catalog, Profile, WOOL_SLABS};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            for row in &WOOL_SLABS {
+                for input in [row.input_item, row.item] {
+                    assert!(choices_for_catalog(catalog, input).is_empty());
+                    for button in [-1, 0, 1, i32::MAX] {
+                        assert!(result_for_catalog(catalog, Some(Stack::new(input, 64)), button).is_none());
+                    }
+                }
+            }
+        }
+    }
+}

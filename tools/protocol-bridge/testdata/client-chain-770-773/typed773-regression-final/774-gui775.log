@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv10/tools/protocol-bridge/probe_776_action_client.py", line 288, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv10/tools/protocol-bridge/probe_776_action_client.py", line 178, in main
+    wait(lambda:any(r['name']=='pong' and r['hex']==struct.pack('>i',token).hex() for r in report['packets']))
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv10/tools/protocol-bridge/probe_776_action_client.py", line 75, in wait
+    raise RuntimeError(report['relay_errors'])
+RuntimeError: ["toServer: ConnectionResetError(104, 'Connection reset by peer')"]

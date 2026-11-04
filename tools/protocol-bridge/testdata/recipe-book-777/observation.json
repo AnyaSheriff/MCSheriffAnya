@@ -1,0 +1,15 @@
+{
+  "version": "26.3",
+  "protocol": 777,
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "commands": [
+    "recipe take McsaProbe *",
+    "give McsaProbe iron_ingot",
+    "recipe give McsaProbe *"
+  ],
+  "entries": 1720,
+  "payload_sha256": "c42c4784efc852049f2461d1b9dc584bf4164c8936ac87810496d3a0c2bb9ba0",
+  "source": "Network observation only; copied server, stdin /dev/null; ports 26187/26188; stopped by PID. Initial whitelist rejection yielded no Play observation.",
+  "items_source": "Pinned candidate-json/items.json",
+  "items_sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+}

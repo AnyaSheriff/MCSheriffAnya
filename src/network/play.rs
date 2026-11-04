@@ -20,6 +20,9 @@
 // клиент берёт из того же измерения (обычный overworld: от -64, высота 384),
 // поэтому секций в чанке ровно 24.
 
+mod auth_limbo;
+pub(crate) use auth_limbo::chat_login;
+
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::Path;
@@ -31,8 +34,10 @@ use super::connection::Connection;
 use tokio::time::timeout;
 
 use super::nbt;
-use super::keep_alive::KeepAlive;
-use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect, read_packet};
+use super::keep_alive::{KeepAlive, ReaderGuard};
+use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect};
+#[cfg(test)]
+use super::packet::read_packet;
 use super::types;
 use super::configuration;
 use super::varint::{encode_string, encode_varint, encode_varlong};
@@ -48,12 +53,12 @@ use crate::commands::{
     Source,
 };
 use crate::hardness_table::UNBREAKABLE;
-mod chat_auth;
-pub use chat_auth::authenticate as chat_authenticate;
 mod mining;
 mod movement_enchantments;
 mod spear;
 mod give;
+mod command_tree;
+mod command_completion;
 use crate::playerdata::{self, PlayerData};
 use crate::players::{Change, Member, Order, Position};
 use crate::placing;
@@ -76,6 +81,7 @@ mod vitals;
 mod mobs;
 mod land;
 mod water;
+mod sulfur;
 #[cfg(test)]
 mod water_tests;
 mod merchant;
@@ -110,6 +116,7 @@ mod signs;
 mod cauldron;
 mod block_use;
 mod vehicle;
+mod terrain_floor;
 mod horse;
 mod armor_stands;
 mod glide;
@@ -123,7 +130,13 @@ mod bundle_use;
 #[cfg(test)]
 mod review_tests;
 #[cfg(test)]
+mod custom_data_tests;
+#[cfg(test)]
+mod command_equipment_tests;
+#[cfg(test)]
 mod disconnect_tests;
+#[cfg(test)]
+mod save_conservation_tests;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -396,15 +409,6 @@ const SET_ENTITY_DATA: i32 = 0x63;
 /// у любой сущности, семь у живой, затем главная рука и части скина. Промах
 /// здесь означает, что клиент запишет байт в чужое свойство.
 const SKIN_PARTS_PROPERTY: u8 = 16;
-
-/// Сколько чанков в каждую сторону присылается сразу при входе и после
-/// переноса — чтобы было на чём стоять. Остальное догружается порциями.
-const NEAR_CHUNKS: i32 = 3;
-
-/// Сколько чанков догружать за один круг основного цикла. Круг бывает на
-/// каждом такте и на каждом пакете игрока, так что даль приходит быстро,
-/// но не заслоняет чат и движение.
-const CHUNKS_PER_STEP: usize = 64;
 
 /// Номер свойства «ведущая рука» у игрока — прямо перед частями скина.
 const MAIN_HAND_PROPERTY: u8 = 15;
@@ -707,6 +711,12 @@ pub async fn play_session(
     (came_from, came_to, limbo_entity): (&str, &str, Option<i32>),
     verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && !matches!(socket.client_version(), mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_3)
+        && !socket.probe_776_enabled() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
+    }
+    socket.content = shared.catalog().content_codec();
     // Смена сессии завершается до load: прежний владелец уже сохранил вещи
     // и вышел из списка. Lease отпускается только после нашего ухода.
     let lease = shared.sessions.acquire(name, *uuid).await;
@@ -717,7 +727,16 @@ pub async fn play_session(
     let skin_parts = look.skin_parts;
     // Что осталось от прошлого захода: место, поворот и режим игры. Если
     // игрок здесь впервые, этого нет — он появится в точке появления.
-    let saved = playerdata::load(&shared.playerdata, uuid);
+    let saved = match playerdata::load_checked_for_catalog(&shared.playerdata, uuid, shared.catalog()) {
+        Ok(saved) => saved,
+        Err(error) => {
+            let reason = format!("Вход запрещён: {error}. Сохранение игрока не изменено. Обратитесь к администратору.");
+            let mut out = Outgoing::new(socket);
+            send_disconnect(&mut out, &reason).await?;
+            out.flush().await?;
+            return Ok(false);
+        }
+    };
 
     // Скин узнаётся до входа в мир: он должен быть готов к тому мгновению,
     // когда сервер расскажет о новом игроке остальным.
@@ -733,7 +752,7 @@ pub async fn play_session(
         .expect("мир захвачен другим потоком")
         .spawn_position();
 
-    let mut player = PlayerState::new(
+    let mut player = PlayerState::new_for_catalog(
         *uuid,
         name.to_string(),
         saved,
@@ -741,8 +760,10 @@ pub async fn play_session(
         skin_parts,
         shared.next_reader(),
         spawn,
+        shared.catalog(),
     );
 
+    player.restart_attrs_tracking(*shared.ticks.borrow());
     player.entity_id = limbo_entity.unwrap_or(0);
     player.main_hand = look.main_hand;
     player.view = view_for(shared, &look);
@@ -807,9 +828,14 @@ pub async fn play_session(
 
     // Как у обычного сервера: «потерял соединение» с причиной, а «вышел»
     // добавит общий список игроков следом.
+    #[cfg(test)]
+    if let Err(error) = &result { eprintln!("MCSA play probe failure: {error}"); }
     match &result {
         Ok(()) => log_info!("{} потерял соединение: отключился", player.name),
-        Err(error) => log_info!("{} потерял соединение: {}", player.name, error.kind()),
+        Err(error) => {
+            log_debug!("Play: ошибка соединения {}: {error}", player.name);
+            log_info!("{} потерял соединение: {}", player.name, error.kind());
+        }
     }
 
     finish_play(shared, &mut player);
@@ -822,7 +848,7 @@ fn finish_play(shared: &Shared, player: &mut PlayerState) {
     close_own_window(shared, player);
 
     // Курсор и сетка верстака при выходе возвращаются в инвентарь, а что
-    // не влезло — на землю: в файл игрока они не пишутся.
+    // не влезло — на землю. При аварии до этого шага курсор остаётся в v10.
     for stack in player.inventory.close_window().thrown {
         throw_out(shared, player, stack);
     }
@@ -830,7 +856,7 @@ fn finish_play(shared: &Shared, player: &mut PlayerState) {
     // При выходе записываем положение в любом случае — в том числе когда
     // соединение оборвалось ошибкой. Иначе последние метры пути пропали бы.
     player.progress.custom("leave_game", 1);
-    player.save(&shared.playerdata);
+    player.save_with_catalog(&shared.playerdata, shared.catalog());
     log_debug!(
         "Play: положение игрока {} записано при выходе: {:.2} {:.2} {:.2}",
         player.name,
@@ -900,6 +926,7 @@ fn forget_reader(shared: &Shared,
 /// соединение оборвалось ошибкой. Иначе он остался бы в списке навсегда.
 pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
     crate::commands_admin::forget_address(uuid);
+    shared.advancement_states.lock().expect("достижения захвачены другим потоком").remove(uuid);
 
     // Во время quit игрок и его снимок ещё доступны Bukkit-обработчикам.
     // Вызов идёт без замков; удаляем запись только после завершения события.
@@ -1009,23 +1036,23 @@ async fn enter_world(
         if from_limbo {
             send_respawn_after_death(stream, player.dimension, player).await?;
         } else {
-            send_login(
-                stream,
-                player.dimension,
-                player.game_mode,
-                player.entity_id,
-                shared.properties.view_distance,
-                shared.properties.simulation_distance,
-            )
-            .await?;
+        send_login(
+            stream,
+            player.dimension,
+            player.game_mode,
+            player.entity_id,
+            shared.properties.view_distance,
+            shared.properties.simulation_distance,
+            shared.properties.online_mode,
+        )
+        .await?;
         }
         send_player_abilities(stream, player).await?;
         send_player_position(stream, player).await?;
 
         // Клиент подтверждает телепортацию — до подтверждения он игнорирует
         // пакеты о перемещении.
-        let look = read_confirm_teleportation(stream).await?;
-        player.awaiting_teleport = false;
+        let look = read_confirm_teleportation(stream, player).await?;
 
         if let Some(look) = look {
             player.skin_parts = look.skin_parts;
@@ -1044,9 +1071,11 @@ async fn enter_world(
 
         // Дерево команд: без него клиент не знает, что можно вводить после косой
         // черты, и не подсказывает.
-        let may_tnt = crate::permissions::allowed(shared, &player.uuid, crate::custom_tnt::GIVE_NODE);
-        send_commands(stream, may_tnt, shared, &player.uuid).await?;
-        write_body(stream, crate::stonecutter::recipe_packet()).await?;
+        player.net.command_protocol = stream.stream().client_version().protocol();
+        let access = command_access(shared, &player.uuid);
+        send_commands(stream, shared, &player.uuid, access.1).await?;
+        player.net.command_access = Some(access);
+        write_body(stream, crate::stonecutter::recipe_packet_for_catalog(shared.catalog())).await?;
 
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
         // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
@@ -1071,8 +1100,9 @@ async fn enter_world(
         }
 
         send_default_spawn_position(stream, player.spawn_point).await?;
+        vitals::send_initial_effects(stream, player).await?;
         vitals::send_health(stream, &player.vit).await?;
-        vitals::send_experience_if_any(stream, &player.vit).await?;
+        vitals::send_join_experience(stream, &player.vit, shared.catalog()).await?;
         send_game_event_start_waiting(stream).await?;
         let (age, time, _) = world_age(shared, player.dimension);
         send_time(stream, age, Some(time)).await?;
@@ -1083,26 +1113,10 @@ async fn enter_world(
         // дальности прорисовки. Отправляем квадрат вокруг игрока: он может стоять
         // и не в начале координат — при следующем заходе он появляется там, где
         // вышел.
-        let (center_x, center_z) = player.chunk();
+        let sent = SentChunks::new();
 
-        let mut sent = SentChunks::new();
-
-        // Сперва только ближний квадрат — чтобы было на чём стоять. Остальное
-        // догружается в основном цикле: иначе на большой дальности игрок ждал бы
-        // тысячи чанков, прежде чем войти, а сообщение о его входе остальные
-        // увидели бы только через десяток секунд. У оригинала так же: игрок
-        // появляется сразу, даль дорисовывается потом.
-        send_chunks_around(
-            stream,
-            shared, player.dimension,
-            (center_x, center_z),
-            &mut sent,
-            (NEAR_CHUNKS, player.view),
-            usize::MAX,
-        )
-        .await?;
-
-        log_debug!("Play: отправлено ближних чанков — {}", sent.len());
+        // Весь обзор готовит ограниченный конвейер основного цикла.
+        // Вход не ждёт ни диска, ни генерации, ни расчёта света.
 
         // Чужие игроки появляются в мире только теперь: сущность клиент создаёт
         // лишь после того, как получил запись об игроке в списке, а место в мире —
@@ -1163,7 +1177,7 @@ async fn enter_world(
 
         // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
         // показал бы пустой инвентарь, хотя на сервере вещи есть.
-        send_container_content(stream, player).await?;
+        send_container_content(stream, player, shared.catalog()).await?;
         send_held_slot(stream, player.inventory.selected()).await?;
 
         if !others.is_empty() {
@@ -1207,6 +1221,7 @@ async fn send_login(
     entity_id: i32,
     view: i32,
     simulation: i32,
+    online_mode: bool,
 ) -> io::Result<()> {
     let mut body = encode_varint(LOGIN);
 
@@ -1229,7 +1244,7 @@ async fn send_login(
     push_spawn_info(&mut body, dimension, game_mode);
     body.push(0x00); // обязательный защищённый чат
 
-    write_body(stream, body).await
+    stream.send_login(&body, online_mode).await
 }
 
 /// Сведения о месте появления — общая часть Login (Play) и Respawn: в каком
@@ -1416,13 +1431,45 @@ async fn write_body(stream: &mut Outgoing<'_>, body: Vec<u8>) -> io::Result<()> 
     stream.send(&body).await
 }
 
+/// Номер сверяется и при первом входе, и после следующего переноса.
+/// В26.3 ответ содержит итоговую позу: оригинал принимает её (наблюдение
+/// tools/protocol-bridge/testdata/teleport-observation-26.3.json).
+fn accept_teleport(packet: &PacketInfo, player: &mut PlayerState) -> bool {
+    let Some(confirmation) = packet.teleport_confirmation() else { return false; };
+    if !player.awaiting_teleport || confirmation.id != player.teleport { return false; }
+    if let Some(at) = confirmation.pose {
+        // Те же границы, что у обычного движения. Не допускаем испорченные
+        // координаты в сохранение мира; точные пределы vanilla [проверить].
+        if !valid_position(at.x, at.y, at.z) || !at.yaw.is_finite() || !at.pitch.is_finite() { return false; }
+        player.set_position(at.x, at.y, at.z);
+        player.set_rotation(at.yaw, at.pitch);
+        // Confirm777 уже задаёт новую опорную позу. Следующий Position —
+        // настоящий шаг: Via pvp-mace терял первые0,0784блока падения
+        // и0,4704урона при совершенно одинаковых входных пакетах.
+        // Старый Confirm775 без позы по-прежнему ждёт первого места.
+        vitals::confirmed_pose(player);
+    }
+    player.awaiting_teleport = false;
+    true
+}
+
+fn valid_position(x: f64, y: f64, z: f64) -> bool {
+    let sane = |value: f64, limit: f64| value.is_finite() && value.abs() <= limit;
+    sane(x, 30_000_000.0) && sane(y, 20_000_000.0) && sane(z, 30_000_000.0)
+}
+
 /// Читает подтверждение телепортации, пропуская прочие пакеты клиента —
 /// кроме настроек: их клиент шлёт сразу после входа, и выбросить их значило
 /// бы потерять, например, его ведущую руку. Возвращает последние из них.
 async fn read_confirm_teleportation(
     stream: &mut Outgoing<'_>,
+    player: &mut PlayerState,
 ) -> io::Result<Option<configuration::ClientLook>> {
     let mut look = None;
+    let version = stream.stream().client_version();
+    let legacy = stream.stream().legacy.clone();
+    let probe_776 = stream.stream().probe_776_enabled();
+    let content = stream.stream().content;
 
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
@@ -1437,12 +1484,12 @@ async fn read_confirm_teleportation(
                     None => std::future::pending().await,
                 }
             } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
-            packet = tokio::time::timeout_at(deadline, read_packet(stream.stream())) => {
+            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_with_content(stream.stream(), version, legacy.as_ref(), probe_776, content)) => {
                 packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
             }
         };
 
-        if packet.id == CONFIRM_TELEPORTATION {
+        if accept_teleport(&packet, player) {
             log_debug!("Play: клиент подтвердил телепортацию");
             return Ok(look);
         }
@@ -2309,6 +2356,90 @@ async fn send_pick_up(
     write_body(stream, body).await
 }
 
+/// При потере журнала заново показывает только Dropped: предметы, блоки и TNT.
+/// Мобы, вагонетки, рамки, шарики и Bedrock требуют отдельного восстановления.
+async fn recover_dropped(
+    stream: &mut Outgoing<'_>,
+    seen: &mut SeenItems,
+    changes: &[items::Change],
+    current: &[Dropped],
+) -> io::Result<std::collections::HashSet<i32>> {
+    let ids = dropped_recovery_ids(seen, changes, current);
+    // Удаляем и живые старые IDs: Spawn после этого всегда однозначно создаёт
+    // сущность заново. Прочие карты слежения здесь не очищаются.
+    let mut old: Vec<_> = seen.keys().copied().collect();
+    old.sort_unstable();
+    for entity_id in old {
+        send_remove_entity(stream, entity_id).await?;
+        seen.remove(&entity_id);
+    }
+    for item in current {
+        send_dropped_item(stream, item).await?;
+        // Обычный Spawn падающего блока содержит нулевую скорость, а shown_item
+        // уже запомнит текущую. Явная сверка нужна для всех трёх видов.
+        send_teleport_with_speed(stream, item.entity_id,
+            item_place((item.x, item.y, item.z), item.on_ground), (item.vx, item.vy, item.vz)).await?;
+        let mut data = encode_varint(SET_ENTITY_DATA);
+        data.extend_from_slice(&encode_varint(item.entity_id));
+        data.push(5); // NoGravity, включая явный false.
+        data.extend_from_slice(&encode_varint(8)); // PROPERTY_BOOLEAN.
+        data.push(u8::from(item.no_gravity));
+        if let Some(fuse) = item.fuse {
+            // Новое появление: текущий остаток, не shown_fuse прошлого такта
+            // (там также бывает служебный -1). Обычная рассылка не меняется.
+            data.push(TNT_FUSE_PROPERTY);
+            data.extend_from_slice(&encode_varint(PROPERTY_INT));
+            data.extend_from_slice(&encode_varint(fuse));
+            data.push(TNT_BLOCK_PROPERTY);
+            data.extend_from_slice(&encode_varint(PROPERTY_BLOCK_STATE));
+            data.extend_from_slice(&encode_varint(item.block.unwrap_or_else(|| blocks::state_by_name("tnt").unwrap_or(0))));
+        }
+        data.push(PROPERTIES_END);
+        write_body(stream, data).await?;
+        let mut shown = shown_item(item);
+        shown.first_sent = true; // Полное состояние уже ушло, это не такт появления.
+        seen.insert(item.entity_id, shown);
+    }
+    Ok(ids)
+}
+
+fn dropped_recovery_ids(seen: &SeenItems, changes: &[items::Change], current: &[Dropped]) -> HashSet<i32> {
+    let mut ids: std::collections::HashSet<i32> = seen.keys().copied().collect();
+    ids.extend(current.iter().map(|item| item.entity_id));
+    for change in changes {
+        match change {
+            items::Change::Dropped(item) => { ids.insert(item.entity_id); }
+            items::Change::Stack { entity_id, .. } | items::Change::Fuse { entity_id, .. } => {
+                ids.insert(*entity_id);
+            }
+            _ => {}
+        }
+    }
+    ids
+}
+
+fn other_item_change_id(change: &items::Change) -> Option<i32> {
+    match change {
+        items::Change::Cart(cart) => Some(cart.entity_id),
+        items::Change::Lightning(bolt) => Some(bolt.entity_id),
+        items::Change::Frame(frame) => Some(frame.entity_id),
+        items::Change::Orb(orb) => Some(orb.entity_id),
+        items::Change::FrameItem { entity_id, .. } | items::Change::FrameRotation { entity_id, .. }
+            | items::Change::MobEvent { entity_id, .. } => Some(*entity_id),
+        _ => None,
+    }
+}
+
+/// Taken/Gone общие с шариками и другими семействами: неизвестный ID
+/// не считаем Dropped. Stack/Fuse принадлежат только Dropped.
+fn dropped_change(change: &items::Change, ids: &std::collections::HashSet<i32>) -> bool {
+    match change {
+        items::Change::Dropped(_) | items::Change::Stack { .. } | items::Change::Fuse { .. } => true,
+        items::Change::Gone { entity_id } | items::Change::Taken { entity_id, .. } => ids.contains(entity_id),
+        _ => false,
+    }
+}
+
 /// Досылает клиенту всё, что случилось с лежащими предметами.
 async fn send_pending_item_changes(
     stream: &mut Outgoing<'_>,
@@ -2322,19 +2453,47 @@ async fn send_pending_item_changes(
     let Known { carts, frames, mobs, listener } = known;
     let orb_range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
 
-    let changes = {
+    let batch = {
         let mut items = shared
             .items_in(dimension)
             .lock()
             .expect("предметы захвачены другим потоком");
 
-        let (changes, count) = items.changes_since(*from, reader);
-        *from = count;
-
-        changes
+        if stream.client_version() == mcsa_protocol::JavaVersion::V26_3 {
+            items.changes_since_checked(*from, reader)
+        } else {
+            let (changes, end) = items.changes_since(*from, reader);
+            items::CheckedChanges { changes, end, dropped: None }
+        }
+    };
+    let items::CheckedChanges { changes, end, dropped } = batch;
+    // При ошибке отправки подключение закрывается; эту границу не используют снова.
+    *from = end;
+    let recovered = if let Some(current) = dropped {
+        // Один reset может быть большим: своевременный keepalive во время
+        // него пока не гарантирован; это не полное восстановление сущностей.
+        let started = Instant::now();
+        let ids = dropped_recovery_ids(seen, &changes, &current);
+        if ids.iter().any(|id| carts.contains_key(id) || frames.contains_key(id) || mobs.contains_key(id))
+            || changes.iter().filter_map(other_item_change_id).any(|id| ids.contains(&id))
+        {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Номер Dropped совпал с другим семейством при восстановлении"));
+        }
+        let old_count = seen.len();
+        log_info!("Пропущены записи Items: Java777 Dropped reset, old={}, current={}, tail={}, end={}; прочие семейства не восстановлены",
+            old_count, current.len(), changes.len(), end);
+        let recovered = recover_dropped(stream, seen, &changes, &current).await?;
+        log_info!("Java777 Dropped reset сформирован: old={}, current={}, elapsed_ms={}; прочие семейства не восстановлены",
+            old_count, current.len(), started.elapsed().as_millis());
+        Some(recovered)
+    } else {
+        None
     };
 
     for change in changes {
+        if recovered.as_ref().is_some_and(|ids| dropped_change(&change, ids)) {
+            continue;
+        }
         match change {
             items::Change::Dropped(item) => {
                 send_dropped_item(stream, &item).await?;
@@ -2467,7 +2626,9 @@ async fn send_item_moves(
             continue;
         };
 
-        let now = shown_item(&item);
+        let mut now = shown_item(&item);
+        // Отчёт появления — состояние доставки, а не изменение физики.
+        now.first_sent = shown.first_sent;
 
         if now == shown {
             continue;
@@ -2620,58 +2781,26 @@ fn item_place((x, y, z): (f64, f64, f64), on_ground: bool) -> Position {
 
 /// Дописывает «слот» протокола: сколько предметов и какой это предмет.
 ///
-/// Довески передаются только у особого динамита (`slot_components`), у
-/// прочих предметов их нет.
+/// Полные довески передаются общим кодеком; оформление TNT добавляется к ним.
 fn push_slot(body: &mut Vec<u8>, stack: Option<Stack>) {
     match stack {
         Some(stack) => {
             body.extend_from_slice(&encode_varint(stack.count));
             body.extend_from_slice(&encode_varint(stack.item));
 
-            match stack.tnt.and_then(crate::custom_tnt::by_id) {
-                Some(kind) => body.extend_from_slice(&slot_components(kind)),
-                None => {
-                    // Довески стопки (износ, зачарования…) — компонентами
-                    // (stackdata.rs); ничего не убираем.
-                    let (added, components) = crate::stackdata::encode_components(&stack.extras());
-
-                    body.extend_from_slice(&encode_varint(added));
-                    body.extend_from_slice(&encode_varint(0));
-                    body.extend_from_slice(&components);
-                }
-            }
+            let (added, components) = crate::stackdata::encode_stack_components(&stack, true);
+            body.extend_from_slice(&encode_varint(added));
+            body.extend_from_slice(&encode_varint(0));
+            body.extend_from_slice(&components);
         }
         None => body.extend_from_slice(&encode_varint(0)),
     }
 }
 
-/// Номера довесков предмета в 775 (minecraft-data, protocol.json,
-/// SlotComponentType): custom_data, custom_name, lore.
+#[cfg(test)]
 const COMPONENT_CUSTOM_DATA: i32 = 0;
+#[cfg(test)]
 const COMPONENT_CUSTOM_NAME: i32 = 6;
-const COMPONENT_LORE: i32 = 11;
-
-/// Довески особого динамита: три добавленных, ни одного убранного —
-/// цветное название без курсива, строка описания серым и пометка
-/// `{mcsheriffanya_tnt:"вид"}` в custom_data (её клиент в творческом
-/// режиме присылает обратно — так вид и узнаётся).
-fn slot_components(kind: &crate::custom_tnt::Kind) -> Vec<u8> {
-    let text = |text: &str, colour: &str| {
-        nbt::Compound::new().string("text", text).string("color", colour).boolean("italic", false).encode_network()
-    };
-
-    let mut out = encode_varint(3);
-
-    out.extend_from_slice(&encode_varint(0));
-    out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_NAME));
-    out.extend_from_slice(&text(kind.title, kind.colour));
-    out.extend_from_slice(&encode_varint(COMPONENT_LORE));
-    out.extend_from_slice(&encode_varint(1));
-    out.extend_from_slice(&text(kind.lore, "gray"));
-    out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_DATA));
-    out.extend_from_slice(&nbt::Compound::new().string(crate::custom_tnt::MARKER, kind.name).encode_network());
-    out
-}
 
 /// Отправляет выбранный слот панели быстрого доступа.
 ///
@@ -2692,10 +2821,11 @@ async fn send_held_slot(stream: &mut Outgoing<'_>, slot: i32) -> io::Result<()> 
 async fn send_container_content(
     stream: &mut Outgoing<'_>,
     player: &mut PlayerState,
+    catalog: crate::gameplay_catalog::Catalog,
 ) -> io::Result<()> {
     if player.window.is_some() {
         player.inventory_after_window = true;
-        return send_window_content(stream, player).await;
+        return send_window_content(stream, player, catalog).await;
     }
 
     player.state_id += 1;
@@ -2754,145 +2884,6 @@ async fn send_container_slot(
     write_body(stream, body).await
 }
 
-/// Отправляет клиенту чанки вокруг этого места — те, которых у него ещё нет.
-///
-/// Мир ровный и бесконечный: чанк складывается, когда до него дошли, и
-/// с этого мгновения хранится вместе с остальным миром.
-async fn send_chunks_around(
-    stream: &mut Outgoing<'_>,
-    shared: &Shared,
-    dimension: crate::dimension::Dimension,
-    (center_x, center_z): (i32, i32),
-    sent: &mut SentChunks,
-    (radius, view): (i32, i32),
-    limit: usize,
-) -> io::Result<bool> {
-    // Ушедшие из виду чанки клиент выбрасывает сам. Сервер должен об этом
-    // знать, иначе, вернувшись, игрок увидит на их месте пустоту: сервер
-    // считал бы, что они у клиента уже есть.
-
-    let gone: Vec<(i32, i32)> = sent
-        .iter()
-        .filter(|(x, z)| (x - center_x).abs() > view || (z - center_z).abs() > view)
-        .copied()
-        .collect();
-
-    for (chunk_x, chunk_z) in gone {
-        send_unload_chunk(stream, chunk_x, chunk_z).await?;
-        sent.remove(&(chunk_x, chunk_z));
-    }
-
-    // Что показать игроку: сперва ближние чанки, потом дальние — так земля
-    // под ногами появляется сразу, а даль дорисовывается. За раз — не больше
-    // `limit`: остальное дошлёт следующий вызов, а игрок тем временем уже
-    // ходит и видит чат.
-    let radius = radius.min(view);
-    let mut wanted: Vec<(i32, i32)> = Vec::new();
-
-    for chunk_x in (center_x - radius)..=(center_x + radius) {
-        for chunk_z in (center_z - radius)..=(center_z + radius) {
-            if !sent.contains(&(chunk_x, chunk_z)) {
-                wanted.push((chunk_x, chunk_z));
-            }
-        }
-    }
-
-    wanted.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
-
-    let all = wanted.len() <= limit;
-    wanted.truncate(limit);
-
-    for place in &wanted {
-        sent.insert(*place);
-    }
-
-    // Готовим чанки пачками и сразу несколькими руками: складывание куска
-    // мира — работа счётная, и на дальности в тридцать два чанка их тысячи.
-    // Замок мира при этом не держим: такт не должен ждать землю.
-    const AT_ONCE: usize = 16;
-
-    for part in wanted.chunks(AT_ONCE) {
-        // Свет у края чанка зависит от соседей: без них там остался бы шов.
-        // Поэтому складываются и соседи отправляемых чанков — клиенту они
-        // уйдут позже, когда до них дойдёт очередь.
-        let mut needed: Vec<(i32, i32)> = Vec::new();
-
-        for (chunk_x, chunk_z) in part.iter().copied() {
-            for place in (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (chunk_x + dx, chunk_z + dz))) {
-                if !needed.contains(&place) {
-                    needed.push(place);
-                }
-            }
-        }
-
-        let source = {
-            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-
-            needed.retain(|(chunk_x, chunk_z)| !world.has_chunk(*chunk_x, *chunk_z));
-            Arc::new(world.source())
-        };
-
-        // Пока чанки складываются и светятся, уже готовое (выгрузка чанков,
-        // центр обзора) не должно ждать в очереди.
-        stream.flush().await?;
-
-        let mut coming = Vec::new();
-
-        for (chunk_x, chunk_z) in needed {
-            let source = Arc::clone(&source);
-
-            coming.push(tokio::task::spawn_blocking(move || {
-                (chunk_x, chunk_z, source.take(chunk_x, chunk_z))
-            }));
-        }
-
-        for waiting in coming {
-            let Ok((chunk_x, chunk_z, ready)) = waiting.await else {
-                continue;
-            };
-
-            shared.accept_chunk(dimension,chunk_x,chunk_z,ready);
-        }
-
-        // Свет — тоже вне захвата мира и сразу несколькими руками: миру
-        // достаются только ссылки на секции, счёт идёт в стороне.
-        let mut lighting = Vec::new();
-
-        for (chunk_x, chunk_z) in part.iter().copied() {
-            let job = shared
-                .world_in(dimension)
-                .lock()
-                .expect("мир захвачен другим потоком")
-                .light_job(chunk_x, chunk_z);
-
-            lighting.push(tokio::task::spawn_blocking(move || job.map(LightJob::finish)));
-        }
-
-        for ((chunk_x, chunk_z), waiting) in part.iter().copied().zip(lighting) {
-            let light = match waiting.await {
-                Ok(Some((light, recounted))) => {
-                    // Пересчитанный собственный свет — обратно в чанки,
-                    // чтобы не считать его заново.
-                    if !recounted.is_empty() {
-                        shared
-                            .world_in(dimension)
-                            .lock()
-                            .expect("мир захвачен другим потоком")
-                            .store_light(recounted);
-                    }
-
-                    light
-                }
-                _ => ChunkLight::open_sky(),
-            };
-
-            send_chunk(stream, shared.world_in(dimension), chunk_x, chunk_z, &light).await?;
-        }
-    }
-
-    Ok(all)
-}
-
 /// Чанки, которые складываются впрок за краем обзора одного игрока: к
 /// тому мгновению, как чанк войдёт в обзор, он уже готов, и отправка не ждёт
 /// генерации. Клиенту эти чанки не шлются. Насколько далеко и сколько за
@@ -2904,11 +2895,14 @@ async fn send_chunks_around(
 struct Prefetch {
     /// Что уже складывается и ещё не пришло.
     pending: std::collections::HashSet<(i32, i32)>,
-    sender: std::sync::mpsc::Sender<(i32, i32, world::ReadyChunk)>,
-    receiver: std::sync::mpsc::Receiver<(i32, i32, world::ReadyChunk)>,
+    sender: std::sync::mpsc::Sender<(i32, i32, Option<world::ReadyChunk>, PreparationTicket, tokio::sync::OwnedSemaphorePermit)>,
+    receiver: std::sync::mpsc::Receiver<(i32, i32, Option<world::ReadyChunk>, PreparationTicket, tokio::sync::OwnedSemaphorePermit)>,
     /// Вокруг какого чанка кольцо уже всё готово: пока игрок там, искать
     /// нечего.
     done_around: Option<(i32, i32, i32)>,
+    demand: Demand,
+    slots: Arc<tokio::sync::Semaphore>,
+    retry: HashMap<(i32, i32), (std::time::Instant, u32)>,
 }
 
 impl Prefetch {
@@ -2920,23 +2914,41 @@ impl Prefetch {
             sender,
             receiver,
             done_around: None,
+            demand: Demand::default(),
+            slots: Arc::new(tokio::sync::Semaphore::new(PREPARATIONS_PER_CONNECTION)),
+            retry: HashMap::new(),
         }
     }
 
     /// Кладёт в мир то, что успело сложиться. Чанк, который тем временем
     /// появился в мире другим путём (его прислали игроку, в нём уже что-то
     /// поменяли), не заменяется.
-    fn collect(&mut self, shared: &Shared, dimension: crate::dimension::Dimension) {
-        let arrived: Vec<_> = self.receiver.try_iter().collect();
-
-        if arrived.is_empty() {
-            return;
-        }
-
-        for (chunk_x, chunk_z, ready) in arrived {
+    fn collect(&mut self, shared: &Shared, dimension: crate::dimension::Dimension) -> Vec<(i32, i32)> {
+        let _timing = super::packet::TimingSpan::new("prefetch_collect");
+        let started = std::time::Instant::now();
+        let mut accepted = Vec::new();
+        let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+        let recovered: Vec<_> = self.retry.keys().copied().filter(|&(x, z)| world.has_chunk(x, z)).collect();
+        for place in recovered { self.retry.remove(&place); accepted.push(place); }
+        // Готовые ответы остаются в ограниченном канале, пока не хватит времени.
+        while started.elapsed() < std::time::Duration::from_millis(4) {
+            let Ok((chunk_x, chunk_z, ready, _ticket, _permit)) = self.receiver.try_recv() else { break; };
             self.pending.remove(&(chunk_x, chunk_z));
-            shared.accept_chunk(dimension,chunk_x,chunk_z,ready);
+
+            let Some(ready) = ready else { continue; };
+            if !preparation_wanted(&self.demand, (chunk_x, chunk_z)) { continue; }
+            if !world.has_chunk(chunk_x, chunk_z) {
+                if world.accept_prepared(chunk_x, chunk_z, ready) {
+                    self.retry.remove(&(chunk_x, chunk_z));
+                    accepted.push((chunk_x, chunk_z));
+                } else {
+                    let attempts = self.retry.get(&(chunk_x, chunk_z)).map_or(0, |(_, n)| *n).saturating_add(1);
+                    let delay = std::time::Duration::from_millis(100 * (1u64 << attempts.min(6)));
+                    self.retry.insert((chunk_x, chunk_z), (std::time::Instant::now() + delay, attempts));
+                }
+            }
         }
+        accepted
     }
 
     /// Запускает складывание ближайших недостающих чанков кольца от `view`
@@ -2944,6 +2956,7 @@ impl Prefetch {
     fn step(&mut self, shared: &Shared,
     dimension: crate::dimension::Dimension, (center_x, center_z): (i32, i32), view: i32) {
         let (ahead, at_once) = (shared.settings.prefetch_chunks, shared.settings.prefetch_at_once);
+        self.set_demand((center_x, center_z), view + ahead);
 
         if ahead <= 0 || self.done_around == Some((center_x, center_z, view)) || self.pending.len() >= at_once {
             return;
@@ -2984,16 +2997,258 @@ impl Prefetch {
         let mut missing = missing;
         missing.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
 
-        for (chunk_x, chunk_z) in missing.into_iter().take(at_once - self.pending.len()) {
-            let source = Arc::clone(&source);
-            let sender = self.sender.clone();
-
-            self.pending.insert((chunk_x, chunk_z));
-            tokio::task::spawn_blocking(move || {
-                // Игрок мог уйти, и приёмника уже нет — тогда чанк не нужен.
-                let _ = sender.send((chunk_x, chunk_z, source.take(chunk_x, chunk_z)));
-            });
+        self.set_demand((center_x, center_z), reach);
+        for (x, z) in missing.into_iter().take(at_once.min(PREPARATIONS_PER_CONNECTION).saturating_sub(self.pending.len())) {
+            self.schedule(&source, x, z);
         }
+    }
+
+    fn set_demand(&mut self, center: (i32, i32), reach: i32) {
+        *self.demand.lock().expect("обзор подготовки") = Some((center, reach));
+        self.retry.retain(|&(x, z), _| (x - center.0).abs() <= reach && (z - center.1).abs() <= reach);
+    }
+
+    fn schedule(&mut self, source: &Arc<world::ChunkSource>, x: i32, z: i32) {
+        let source = source.clone();
+        self.schedule_with(source.preparation_key(x, z), move || source.take(x, z));
+    }
+
+    fn schedule_with(&mut self, key: PreparationKey, prepare: impl FnOnce() -> world::ReadyChunk + Send + 'static) {
+        let (_, x, z) = key;
+        if self.pending.len() >= PREPARATIONS_PER_CONNECTION || self.pending.contains(&(x, z))
+            || self.retry.get(&(x, z)).is_some_and(|(until, _)| *until > std::time::Instant::now()) { return; }
+        let Ok(permit) = self.slots.clone().try_acquire_owned() else { return; };
+        let Some(ticket) = PreparationTicket::acquire(key) else { return; };
+        self.pending.insert((x, z));
+        let (sender, demand) = (self.sender.clone(), self.demand.0.clone());
+        tokio::task::spawn_blocking(move || {
+            // Проверка после ожидания пула, непосредственно перед дорогой работой.
+            let ready = preparation_wanted(&demand, (x, z)).then(prepare);
+            let _ = sender.send((x, z, ready, ticket, permit));
+        });
+    }
+
+}
+
+const PREPARATIONS_PER_CONNECTION: usize = 32;
+const PREPARATIONS_GLOBAL: usize = 64;
+type PreparationKey = (std::path::PathBuf, i32, i32);
+fn preparations() -> &'static Mutex<HashSet<PreparationKey>> {
+    static ACTIVE: std::sync::OnceLock<Mutex<HashSet<PreparationKey>>> = std::sync::OnceLock::new();
+    ACTIVE.get_or_init(Default::default)
+}
+struct PreparationTicket(PreparationKey);
+impl PreparationTicket {
+    fn acquire(key: PreparationKey) -> Option<Self> {
+        let mut active = preparations().lock().expect("очередь подготовки");
+        if active.len() >= PREPARATIONS_GLOBAL || !active.insert(key.clone()) { return None; }
+        Some(Self(key))
+    }
+}
+impl Drop for PreparationTicket {
+    fn drop(&mut self) { preparations().lock().expect("очередь подготовки").remove(&self.0); }
+}
+fn preparation_wanted(demand: &DemandState, (x, z): (i32, i32)) -> bool {
+    demand.lock().expect("обзор подготовки").is_some_and(|((cx, cz), reach)| (x - cx).abs() <= reach && (z - cz).abs() <= reach)
+}
+type DemandState = Mutex<Option<((i32, i32), i32)>>;
+#[derive(Default)]
+struct Demand(Arc<DemandState>);
+impl std::ops::Deref for Demand {
+    type Target = DemandState;
+    fn deref(&self) -> &Self::Target { &self.0 }
+}
+impl Drop for Demand {
+    fn drop(&mut self) { *self.0.lock().expect("обзор подготовки") = None; }
+}
+
+// Подготовка дальней земли не останавливает обработчик пакетов: даже один
+// холодный чанк/свет может считаться дольше такта. В игру попадает только
+// готовый результат; снимок блоков для записи по-прежнему берётся перед send.
+struct LitChunk {
+    prepared: world::light::PreparedLight,
+    packet: Option<ChunkPayload>,
+    contents: Option<ChunkContents>,
+}
+impl From<world::light::PreparedLight> for LitChunk {
+    fn from(prepared: world::light::PreparedLight) -> Self { Self { prepared, packet: None, contents: None } }
+}
+impl std::ops::Deref for LitChunk {
+    type Target = world::light::PreparedLight;
+    fn deref(&self) -> &Self::Target { &self.prepared }
+}
+impl std::ops::DerefMut for LitChunk {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.prepared }
+}
+type PendingChunkLight = ((i32, i32), tokio::task::JoinHandle<io::Result<Option<LitChunk>>>);
+
+enum ChunkPayload {
+    Internal(Vec<u8>),
+    Wire(super::packet::PreparedChunkPacket),
+}
+
+struct ChunkBuild {
+    snapshot: ChunkSnapshot,
+    registry: Arc<configuration::ChunkBiomes>,
+    encoder: Option<super::packet::ChunkEncoder>,
+}
+
+fn start_light(job: LightJob, demand: Arc<DemandState>, build: Option<ChunkBuild>) -> Option<PendingChunkLight> {
+    static SLOTS: std::sync::OnceLock<Arc<tokio::sync::Semaphore>> = std::sync::OnceLock::new();
+    let permit = SLOTS.get_or_init(|| Arc::new(tokio::sync::Semaphore::new(32))).clone().try_acquire_owned().ok()?;
+    let place = job.chunks[4].as_ref()?.place;
+    Some((place, tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        if !preparation_wanted(&demand, place) { return Ok(None); }
+        let prepared = job.prepare();
+        let contents = build.as_ref().map(|build| (build.snapshot.entities.clone(), build.snapshot.shelves.clone()));
+        let packet = build.map(|build| {
+            let body = encode_chunk(build.snapshot, place.0, place.1, &prepared.light, &build.registry)?;
+            match build.encoder {
+                Some(encoder) => encoder.encode(&body, mcsa_protocol::chunk::Context {
+                    min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: build.registry.count as u32,
+                }).map(ChunkPayload::Wire),
+                None => Ok(ChunkPayload::Internal(body)),
+            }
+        }).transpose()?;
+        Ok(Some(LitChunk { prepared, packet, contents }))
+    })))
+}
+
+struct ProgressiveChunks {
+    dimension: crate::dimension::Dimension,
+    loads: Prefetch,
+    light: Vec<PendingChunkLight>,
+}
+
+impl ProgressiveChunks {
+    fn new(dimension: crate::dimension::Dimension) -> Self {
+        Self { dimension, loads: Prefetch::new(), light: Vec::new() }
+    }
+
+    async fn step(&mut self, stream: &mut Outgoing<'_>, shared: &Shared,
+        dimension: crate::dimension::Dimension, center: (i32, i32), sent: &mut SentChunks, view: i32,
+    ) -> io::Result<bool> {
+        let _timing = super::packet::TimingSpan::new("progressive_chunks");
+        if self.dimension != dimension {
+            let slots = self.loads.slots.clone();
+            *self = Self::new(dimension);
+            self.loads.slots = slots;
+        }
+        self.loads.set_demand(center, view + 1);
+        let accepted = self.loads.collect(shared, dimension);
+        // Появившийся после ошибки сосед меняет свет уже отправленного края.
+        for (x, z) in accepted {
+            sent.retain(|&(sx, sz)| (sx - x).abs() > 1 || (sz - z).abs() > 1);
+        }
+        let inside = |(x, z): (i32, i32)| (x - center.0).abs() <= view && (z - center.1).abs() <= view;
+        let gone: Vec<_> = sent.iter().copied().filter(|place| !inside(*place)).collect();
+        for (x, z) in gone { send_unload_chunk(stream, x, z).await?; sent.remove(&(x, z)); }
+        let started = std::time::Instant::now();
+        let mut bytes = 0;
+        let mut index = 0;
+        // Ответы игры уже сброшены. Пачка ограничена временем, числом и байтами.
+        while index < self.light.len() && started.elapsed() < std::time::Duration::from_millis(8) && bytes < 1024 * 1024 {
+            if !self.light[index].1.is_finished() { index += 1; continue; }
+            let (place, job) = self.light.remove(index);
+            let Some(mut prepared) = job.await.map_err(io::Error::other)?? else { continue; };
+            if !inside(place) || sent.contains(&place) { continue; }
+            {
+                let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+                if !world.accept_prepared_light(&mut prepared) { continue; }
+            }
+            if let Some(size) = send_prepared_chunk(stream, shared.world_in(dimension), place.0, place.1, &prepared).await? {
+                bytes += size;
+                sent.insert(place);
+            }
+        }
+        let mut wanted: Vec<_> = ((center.0 - view)..=(center.0 + view)).flat_map(|x|
+            ((center.1 - view)..=(center.1 + view)).map(move |z| (x, z)))
+            .filter(|place| !sent.contains(place) && !self.light.iter().any(|(at, _)| at == place)).collect();
+        wanted.sort_by_key(|(x, z)| (x - center.0).pow(2) + (z - center.1).pow(2));
+        let registry = if stream.legacy_view()?.is_none() { Some(stream.chunk_biomes()?) } else { None };
+        {
+            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+            let source = Arc::new(world.source());
+            let retries: Vec<_> = self.loads.retry.keys().copied().collect();
+            for (x, z) in retries {
+                if !world.has_chunk(x, z) { self.loads.schedule(&source, x, z); }
+            }
+            let planning = std::time::Instant::now();
+            for (x, z) in wanted.into_iter().take(256) {
+                if planning.elapsed() >= std::time::Duration::from_millis(2) { break; }
+                if self.light.len() >= 16 { break; }
+                let mut waiting = false;
+                for (nx, nz) in (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (x + dx, z + dz))) {
+                    if !world.has_chunk(nx, nz) {
+                        self.loads.schedule(&source, nx, nz);
+                        // Недоступный сосед не мешает отправить центральный чанк.
+                        if !self.loads.retry.contains_key(&(nx, nz)) { waiting = true; }
+                    }
+                }
+                if waiting { continue; }
+                if let Some(job) = world.light_job(x, z) {
+                    let build = registry.as_ref().map(|registry| ChunkBuild { snapshot: chunk_snapshot(&world, x, z), registry: registry.clone(), encoder: stream.chunk_encoder() });
+                    if let Some(pending) = start_light(job, self.loads.demand.0.clone(), build) { self.light.push(pending); }
+                }
+            }
+        }
+        Ok(sent.len() == ((view * 2 + 1) as usize).pow(2))
+    }
+}
+
+// Правка блока не должна держать его подтверждение за расчётом света.
+// Повторные правки объединяются; результат старого измерения не публикуется.
+#[derive(Default)]
+struct LightUpdates {
+    dimension: Option<crate::dimension::Dimension>,
+    pending: std::collections::BTreeSet<(i32, i32)>,
+    running: Vec<PendingChunkLight>,
+    demand: Demand,
+}
+
+impl LightUpdates {
+    async fn step(&mut self, stream: &mut Outgoing<'_>, shared: &Shared,
+        dimension: crate::dimension::Dimension, center: (i32, i32), view: i32,
+    ) -> io::Result<()> {
+        let _timing = super::packet::TimingSpan::new("light_updates");
+        if self.dimension != Some(dimension) {
+            self.running.clear();
+            *self.demand.lock().expect("обзор света") = None;
+            self.demand = Demand::default();
+            // До первого вызова уже могли прийти правки текущего измерения.
+            if self.dimension.is_some() { self.pending.clear(); }
+            self.dimension = Some(dimension);
+        }
+        let inside = |(x, z): (i32, i32)| (x - center.0).abs() <= view && (z - center.1).abs() <= view;
+        *self.demand.lock().expect("обзор света") = Some((center, view));
+        self.pending.retain(|place| inside(*place));
+        let mut index = 0;
+        while index < self.running.len() {
+            if !self.running[index].1.is_finished() { index += 1; continue; }
+            let ((x, z), job) = self.running.remove(index);
+            let Some(mut prepared) = job.await.map_err(io::Error::other)?? else { continue; };
+            {
+                let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+                if !world.accept_prepared_light(&mut prepared) { self.pending.insert((x, z)); continue; }
+            }
+            if inside((x, z)) {
+                if stream.legacy_view()?.is_some() {
+                    if send_prepared_chunk(stream, shared.world_in(dimension), x, z, &prepared).await?.is_none() { self.pending.insert((x, z)); }
+                } else { send_light_update(stream, x, z, &prepared.light).await?; }
+            }
+        }
+        while self.running.len() < 4 {
+            let place = self.pending.iter().copied().find(|place| !self.running.iter().any(|(at, _)| at == place));
+            let Some((x, z)) = place else { break; };
+            self.pending.remove(&(x, z));
+            let job = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").light_job(x, z);
+            if let Some(job) = job {
+                if let Some(pending) = start_light(job, self.demand.0.clone(), None) { self.running.push(pending); }
+                else { self.pending.insert((x, z)); break; }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -3089,6 +3344,30 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 
 }
 
+/// Чёрный ящик 41111789931: /item меняет собственный Slot и чужой
+/// Equipment в одном такте. Публикация обязана предшествовать отпусканию
+/// барьера; Attributes и перезарядку здесь не пересчитываем. [проверить]
+async fn apply_command_hold(
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState,
+    stack: Option<Stack>, completion: Option<Arc<crate::shared::CommandEquipmentCompletion>>,
+) -> io::Result<()> {
+    let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
+    player.inventory.set(slot, stack);
+    send_container_slot(stream, player, slot).await?;
+    publish_player(shared, player);
+    if let Some(completion) = completion { completion.finish(); }
+    Ok(())
+}
+
+/// Только командная рука прерывает ожидание ещё не готового входного пакета.
+/// Notify хранит сигнал между проверкой очереди и началом ожидания.
+async fn command_hold_wake(shared: &Shared, uuid: &[u8; 16], wake: &tokio::sync::Notify) {
+    loop {
+        if shared.players.lock().expect("игроки").has_command_hold(uuid) { return; }
+        wake.notified().await;
+    }
+}
+
 fn publish_ui(shared: &Shared, player: &PlayerState) {
     let (level, exp) = crate::survival::level_of(player.vit.xp);
     let plugin_state = if crate::plugins::active() { crate::presentation::PlayerState {
@@ -3103,7 +3382,7 @@ fn publish_ui(shared: &Shared, player: &PlayerState) {
         if crafting::is_table(player) { "WORKBENCH" } else if open.merchant.is_some() { "MERCHANT" } else if let Some(station) = &open.station { match station.kind { crate::enchanting::Station::Anvil => "ANVIL", crate::enchanting::Station::Grindstone => "GRINDSTONE", crate::enchanting::Station::Smithing => "SMITHING", crate::enchanting::Station::Stonecutter => "STONECUTTER", crate::enchanting::Station::Loom => "LOOM", crate::enchanting::Station::Cartography => "CARTOGRAPHY", crate::enchanting::Station::Crafting => "WORKBENCH", crate::enchanting::Station::Enchanting => "ENCHANTING" } } else { match open.kind {
             Some(containers::Kind::Furnace) => "FURNACE", Some(containers::Kind::BlastFurnace) => "BLAST_FURNACE", Some(containers::Kind::Smoker) => "SMOKER", Some(containers::Kind::Hopper) => "HOPPER", Some(containers::Kind::Dispenser) => "DISPENSER", Some(containers::Kind::Dropper) => "DROPPER", Some(containers::Kind::BrewingStand) => "BREWING", Some(containers::Kind::Beacon) => "BEACON", Some(containers::Kind::Lectern) => "LECTERN", Some(containers::Kind::Crafter) => "CRAFTER", Some(containers::Kind::ShulkerBox) => "SHULKER_BOX", Some(containers::Kind::EnderChest) => "ENDER_CHEST", _ => "CHEST",
         } }
-    }).into(), cursor: player.inventory.cursor(), inventory: player.inventory.slots().to_vec(), selected: player.inventory.selected() as u32, ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
+    }).into(), cursor: player.inventory.cursor(), inventory: player.inventory.slots().to_vec(), selected: player.inventory.selected() as u32, ping: player.keep_alive.latency(), health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
     if first {
         let packets: Vec<_> = players.ui.list_names.iter().map(|(uuid, (_, name))| crate::presentation::list_packet(uuid, Some(name))).collect();
         for packet in packets { players.order(&player.uuid, Order::Packet(packet)); }
@@ -3296,6 +3575,17 @@ async fn send_other_moves(
                 continue;
             }
 
+            // Оригинал777 повторяет предмет при начале использования, даже
+            // без изменения Slot (pvp-bow, itemaudit4-shield). До Metadata8.
+            if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+                && phase == Phase::Swings && shown.living & 1 == 0 && only.living & 1 != 0
+            {
+                let (slot, stack) = if only.living & 2 != 0 {
+                    (EQUIPMENT_OFF_HAND, now.worn[0])
+                } else { (EQUIPMENT_MAIN_HAND, now.held) };
+                send_equipment(stream, entity_id, &[(slot, stack)]).await?;
+            }
+
             if only.swings != shown.swings {
                 send_swing(stream, entity_id).await?;
             }
@@ -3372,7 +3662,24 @@ async fn send_other_moves(
             }
 
             // Частицы эффектов: цвет в свойстве 10 (пустой список — сняты).
-            if only.effect_colors != shown.effect_colors {
+            let combined_metadata = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
+            if combined_metadata && (only.effect_colors != shown.effect_colors || only.health_bits != shown.health_bits) {
+                // Оригинал777 объединяет здоровье9 и частицы10 в одном
+                // снимке (pvp-mace-landing-motion, снятие Instant Health).
+                let mut data = encode_varint(SET_ENTITY_DATA);
+                data.extend_from_slice(&encode_varint(entity_id));
+                if only.health_bits != shown.health_bits {
+                    data.push(9);
+                    data.extend_from_slice(&encode_varint(3));
+                    data.extend_from_slice(&f32::from_bits(only.health_bits).to_be_bytes());
+                }
+                if only.effect_colors != shown.effect_colors {
+                    vitals::push_effect_particles(&mut data, &only.effect_colors);
+                }
+                data.push(PROPERTIES_END);
+                write_body(stream, data).await?;
+            }
+            if !combined_metadata && only.effect_colors != shown.effect_colors {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
@@ -3382,7 +3689,7 @@ async fn send_other_moves(
             }
 
             // Здоровье чужого игрока: свойство 9 с числом.
-            if only.health_bits != shown.health_bits {
+            if !combined_metadata && only.health_bits != shown.health_bits {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
@@ -3600,18 +3907,26 @@ fn push_text_component(out: &mut Vec<u8>, text: &str) {
     out.extend_from_slice(&nbt::text_component(text));
 }
 
-/// Отправляет Commands — дерево команд, по которому клиент подсказывает ввод
-/// после косой черты.
-///
-/// Узлы дерева бывают трёх видов: корень, слово и аргумент. У нас пока только
-/// слова, поэтому дерево простое. Слово, на котором команда считается
-/// законченной, помечается отдельным битом — без него клиент не даст
-/// отправить команду.
-///
-/// Ветка `tnt` (особый динамит) — только тем, кому она позволена
-/// (`may_tnt`): остальным её незачем и видеть. Права, выданные позже,
-/// откроют её при следующем входе.
-async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool, shared: &Shared, who: &[u8;16]) -> io::Result<()> {
+/// Уровень и право на собственную ветвь проверяются раздельно: замки
+/// ops/permissions никогда не удерживаются во время записи в сеть.
+fn command_access(shared: &Shared, who: &[u8; 16]) -> (i32, bool) {
+    let level = shared.ops.lock().expect("права").level_of(who);
+    let may_tnt = crate::permissions::allowed(shared, who, crate::custom_tnt::GIVE_NODE);
+    (level, may_tnt)
+}
+
+async fn send_commands(stream: &mut Outgoing<'_>, shared: &Shared, who: &[u8; 16], may_tnt: bool) -> io::Result<()> {
+    let level = shared.ops.lock().expect("права").level_of(who);
+    let protocol = stream.stream().client_version().protocol();
+    let body = if protocol >= 775 {
+        let names = crate::plugins::command_names(shared, who);
+        if names.is_empty() { command_tree::packet(level, protocol, may_tnt) }
+        else { command_tree::packet_with_plugins(level, protocol, may_tnt, &names) }
+    } else { legacy_commands(shared, who, may_tnt) };
+    write_body(stream, body).await
+}
+
+fn legacy_commands(shared: &Shared, who: &[u8; 16], may_tnt: bool) -> Vec<u8> {
     /// Виды узлов — младшие два бита флагов.
     const NODE_ROOT: u8 = 0x00;
     const NODE_LITERAL: u8 = 0x01;
@@ -3863,7 +4178,7 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool, shared: &Shared
 
     body.extend_from_slice(&encode_varint(0)); // корень — узел номер 0
 
-    write_body(stream, body).await
+    body
 }
 
 /// Собирает подсказки к набираемой команде.
@@ -3871,11 +4186,49 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool, shared: &Shared
 /// Клиент присылает всё, что набрано, и ждёт, чем дописать последнее слово.
 /// Сам он умеет дополнять только названия команд: имена игроков знает
 /// только сервер.
+#[cfg(test)]
 fn suggestions(payload: &[u8], shared: &Shared, who: &[u8; 16]) -> Option<Suggestions> {
-    let mut cursor = Cursor::new(payload);
+    suggestions_for(payload, shared, who, 777)
+}
 
+fn suggestion_input(payload: &[u8]) -> Option<(i32, &str)> {
+    if payload.len() > command_completion::MAX_INPUT_UTF16 * 3 + 10 { return None; }
+    let mut cursor = Cursor::new(payload);
     let id = cursor.varint()?;
-    let text = cursor.string()?;
+    let length = usize::try_from(cursor.varint()?).ok()?;
+    let text = std::str::from_utf8(cursor.bytes(length)?).ok()?;
+    (text.encode_utf16().take(command_completion::MAX_INPUT_UTF16 + 1).count() <= command_completion::MAX_INPUT_UTF16)
+        .then_some((id, text))
+}
+
+#[cfg(test)]
+fn suggestions_for(payload: &[u8], shared: &Shared, who: &[u8; 16], protocol: i32) -> Option<Suggestions> {
+    let (id, text) = suggestion_input(payload)?;
+    suggestions_for_input(id, text, shared, who, protocol)
+}
+
+fn suggestions_for_input(id: i32, text: &str, shared: &Shared, who: &[u8; 16], protocol: i32) -> Option<Suggestions> {
+    let level = shared.ops.lock().expect("права").level_of(who);
+    if protocol >= 775 && !text.trim_start_matches('/').starts_with("tnt ") {
+        let tree = command_tree::for_level(level, protocol);
+        let mut result = command_completion::complete(&tree, id, text, shared, who);
+        let line = text.strip_prefix('/').unwrap_or(text);
+        if !line.contains(' ') {
+            let names = crate::plugins::command_names(shared, who);
+            append_plugin_root_hints(&mut result, text, &names);
+        } else {
+            let command = line.split(' ').next().unwrap_or("");
+            let names = crate::plugins::command_names(shared, who);
+            if names.iter().any(|name| name.eq_ignore_ascii_case(command)) {
+                let typed = line.rsplit(' ').next().unwrap_or("");
+                let matches = crate::plugins::tab_complete(shared, who, line).unwrap_or_default()
+                    .into_iter().filter(|value| value.starts_with(typed)).collect::<Vec<_>>();
+                result = Suggestions { id, start: text_length(text) - text_length(typed), length: text_length(typed),
+                    tooltips: vec![None; matches.len()], matches };
+            }
+        }
+        return Some(result);
+    }
 
     // Дописывается последнее слово: от него и считаем место замены.
     let typed = text.rsplit(' ').next().unwrap_or("");
@@ -3883,14 +4236,36 @@ fn suggestions(payload: &[u8], shared: &Shared, who: &[u8; 16]) -> Option<Sugges
     // Место и длина считаются в знаках, а не в байтах: иначе на русских
     // именах клиент заменял бы не тот кусок строки.
     let length = text_length(typed);
-    let start = text_length(&text) - length;
+    let start = text_length(text) - length;
 
     Some(Suggestions {
         id,
         start,
         length,
-        matches: hints_for(&text, typed, shared, who),
+        matches: hints_for(text, typed, shared, who),
+        tooltips: Vec::new(),
     })
+}
+
+/// Дополняем только корневое слово; диапазоны и пояснения ванильных
+/// подсказок остаются согласованы с UTF-16 клиента.
+fn append_plugin_root_hints(result: &mut Suggestions, text: &str, names: &[String]) {
+    let line = text.strip_prefix('/').unwrap_or(text);
+    let typed = line.to_ascii_lowercase();
+    let names: Vec<_> = names.iter().filter(|name| name.starts_with(&typed)).collect();
+    if names.is_empty() { return; }
+    if result.matches.is_empty() {
+        result.start = i32::from(text.starts_with('/'));
+        result.length = text_length(line);
+    }
+    result.tooltips.resize(result.matches.len(), None);
+    let mut matches: Vec<_> = std::mem::take(&mut result.matches).into_iter()
+        .zip(std::mem::take(&mut result.tooltips)).collect();
+    matches.extend(names.into_iter().map(|name| (name.clone(), None)));
+    matches.sort_by_cached_key(|(name, _)| (name.to_lowercase(), name.clone()));
+    matches.dedup_by(|a, b| a.0 == b.0);
+    matches.truncate(1000);
+    (result.matches, result.tooltips) = matches.into_iter().unzip();
 }
 
 /// Что подсказать: имена игроков, названия предметов или что-то ещё —
@@ -4036,9 +4411,14 @@ async fn send_suggestions(stream: &mut Outgoing<'_>, hints: &Suggestions) -> io:
     body.extend_from_slice(&encode_varint(hints.length));
     body.extend_from_slice(&encode_varint(hints.matches.len() as i32));
 
-    for hint in &hints.matches {
+    for (index, hint) in hints.matches.iter().enumerate() {
         body.extend_from_slice(&encode_string(hint));
-        body.push(0); // пояснения к подсказке нет
+        if let Some(Some(tooltip)) = hints.tooltips.get(index) {
+            body.push(1);
+            body.extend_from_slice(tooltip);
+        } else {
+            body.push(0);
+        }
     }
 
     write_body(stream, body).await
@@ -4070,6 +4450,18 @@ async fn send_keep_alive(stream: &mut Outgoing<'_>, id: i64) -> io::Result<()> {
     push_i64(&mut body, id);
 
     write_body(stream, body).await
+}
+
+/// Сначала старый вывод, затем отдельная рамка Keep Alive без работы мира
+/// между резервированием и flush. Drop ticket закрывает отменённую отправку.
+async fn send_keep_alive_due(stream: &mut Outgoing<'_>, alive: &KeepAlive) -> io::Result<()> {
+    if !alive.due() { return Ok(()); }
+    stream.flush().await?;
+    let Some(ticket) = alive.begin_send() else { return Ok(()); };
+    send_keep_alive(stream, ticket.id()).await?;
+    stream.flush().await?;
+    if !ticket.sent() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "отправка Keep Alive отменена")); }
+    Ok(())
 }
 
 /// Отправляет Set Default Spawn Position — точку возрождения.
@@ -4129,6 +4521,15 @@ async fn send_player_abilities(stream: &mut Outgoing<'_>, player: &PlayerState) 
     body.push(player.abilities.flags());
     push_f32(&mut body, player.abilities.fly_speed);
     push_f32(&mut body, player.abilities.walk_speed);
+    write_body(stream, body).await
+}
+
+async fn send_abilities(stream: &mut Outgoing<'_>, game_mode: i32) -> io::Result<()> {
+    let abilities = playerdata::Abilities::for_mode(game_mode);
+    let mut body = encode_varint(PLAYER_ABILITIES);
+    body.push(abilities.flags());
+    push_f32(&mut body, abilities.fly_speed);
+    push_f32(&mut body, abilities.walk_speed);
     write_body(stream, body).await
 }
 
@@ -4204,7 +4605,12 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
         (player.x, player.y, player.z),
     );
     // В портале Края ждать не надо.
-    let needed = if end_portal { 1 } else { crate::portal::wait(&shared.settings, player.game_mode == GAME_MODE_CREATIVE) };
+    // В 26.3 наблюдатель проходит портал без задержки, как творческий игрок.
+    // [проверить] Обычный сервер: сетевая проба остановилась до входа.
+    let instant = player.game_mode == GAME_MODE_CREATIVE
+        || (shared.catalog().changed_rules() && player.game_mode == GAME_MODE_SPECTATOR);
+    let gateway = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").gateway_exit((player.x,player.y,player.z)).is_some();
+    let needed = if end_portal || gateway { 1 } else { crate::portal::wait(&shared.settings, instant) };
 
     if player.in_portal < needed {
         return;
@@ -4216,8 +4622,9 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
 
     let (mut dimension, (mut x, mut y, mut z)) = crate::portal::travel(shared, player.dimension, (player.x, player.y, player.z));
 
+    if gateway { player.progress.trigger("end/enter_end_gateway"); }
     // Из Энда — к точке возрождения игрока (кровать), а не к общей.
-    if player.dimension == Dimension::End && dimension == Dimension::Overworld {
+    if !gateway && player.dimension == Dimension::End && dimension == Dimension::Overworld {
         dimension = Dimension::Overworld;
         (x, y, z) = on_the_ground(shared, player.spawn_point);
     }
@@ -4238,10 +4645,14 @@ async fn flush_tick(
     world_changes: &mut usize,
     pending: &mut Vec<Reaction>,
 ) -> io::Result<bool> {
+    let _timing = super::packet::TimingSpan::new("flush_tick");
     let lagged = send_pending_world_events(stream, shared, player, world_changes).await?;
 
     for reaction in pending.drain(..) {
         apply_reaction(stream, shared, player, &reaction).await?;
+        if super::packet::timing_enabled() && let Some(sequence) = reaction.acknowledge {
+            eprintln!("NET_TIMING response sequence={sequence} tick={}", *shared.ticks.borrow());
+        }
     }
 
     Ok(lagged)
@@ -4276,8 +4687,18 @@ async fn send_pending_world_events(
     // сделанное после метки уйдёт со следующей.
     let mut pending = std::mem::take(&mut player.pending_changes);
     let mut entities = std::mem::take(&mut player.pending_entities);
+    let mut light_chunks = std::collections::BTreeSet::new();
 
     for event in &events {
+        if let WorldEvent::Change(change) = event && !change.direct {
+            // Свет распространяется на 15 блоков: затронуты и соседние чанки.
+            for dx in -1..=1 { for dz in -1..=1 {
+                let at = ((change.x >> 4) + dx, (change.z >> 4) + dz);
+                let here = player.chunk();
+                if (at.0 - here.0).abs() <= player.view
+                    && (at.1 - here.1).abs() <= player.view { light_chunks.insert(at); }
+            }}
+        }
         match event {
             WorldEvent::Change(change) if change.direct => {
                 send_block_update(stream, change.x, change.y, change.z, change.state).await?;
@@ -4335,6 +4756,7 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::Level { except: Some(id), .. } if *id == player.entity_id => {}
+            WorldEvent::Level { effect: 2019 | 2020, .. } if stream.stream().client_version() != mcsa_protocol::JavaVersion::V26_3 => {}
             WorldEvent::Level { x, y, z, effect, data, .. } => {
                 let mut body = encode_varint(WORLD_EVENT);
 
@@ -4459,7 +4881,7 @@ async fn send_pending_world_events(
                 player.net.renew_effect_particles();
 
                 if let Some((attribute, ..)) = effect.kind.modifier() {
-                    player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                    player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                 }
             }
             WorldEvent::PotionEffect { .. } => {}
@@ -4505,7 +4927,7 @@ async fn send_pending_world_events(
                     // того же срока (чёрный ящик, stray-slowness: Effect на +27,
                     // Attributes на +28; повтор — Effect +89, Attributes +90).
                     if let Some((attribute, ..)) = effect.kind.modifier() {
-                        player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                        player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                     }
                 }
             }
@@ -4562,7 +4984,7 @@ async fn send_pending_world_events(
 
                     vitals::give_effect(stream, player, curse).await?;
                     // Скорость удара уходит на такт позже эффекта (elder-fatigue).
-                    player.attrs_touched.push((crate::attributes::ATTACK_SPEED, *shared.ticks.borrow() + 1));
+                    player.attrs_touched.push((crate::attributes::ATTACK_SPEED, player.attr_due(*shared.ticks.borrow() + 1)));
                     send_game_event(stream, GAME_EVENT_ELDER_CURSE, if *silent { 0.0 } else { 1.0 }).await?;
                 }
             }
@@ -4630,6 +5052,11 @@ async fn send_pending_world_events(
 
     player.pending_changes = pending;
     player.pending_entities = entities;
+
+    if player.light_updates.dimension != Some(player.dimension) {
+        player.light_updates = LightUpdates { dimension: Some(player.dimension), ..Default::default() };
+    }
+    player.light_updates.pending.extend(light_chunks);
 
     Ok(lagged)
 }
@@ -4737,7 +5164,7 @@ async fn open_window(
     let props = {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-        world.container(at.0, at.1, at.2).map(crate::furnace::properties).unwrap_or_default()
+        world.container(at.0, at.1, at.2).map(|container| crate::furnace::properties_for_catalog(container, world.catalog())).unwrap_or_default()
     };
 
     player.window = Some(OpenWindow {
@@ -4753,7 +5180,7 @@ async fn open_window(
         station: None,
         plugin_chest: None, ender: kind == containers::Kind::EnderChest,
     });
-    send_window_content(stream, player).await?;
+    send_window_content(stream, player, shared.catalog()).await?;
 
     for (property, value) in props.into_iter().enumerate() {
         send_window_property(stream, id, property as i16, value).await?;
@@ -4805,7 +5232,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     write_body(stream, body).await?;
 
     player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, plugin_chest: None, ender: false });
-    send_window_content(stream, player).await
+    send_window_content(stream, player, shared.catalog()).await
 }
 
 /// Окно вагонетки-хранилища: вид меню и заголовок. Вид — тот же, что у
@@ -4829,7 +5256,7 @@ pub(super) fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension
 
 /// Всё окно хранилища целиком: ячейки хранилища (как их знает клиент),
 /// рюкзак и панель игрока, курсор.
-async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState, catalog: crate::gameplay_catalog::Catalog) -> io::Result<()> {
     let Some(window) = &player.window else {
         return Ok(());
     };
@@ -4861,7 +5288,7 @@ async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState
     }
 
     if window.crafter {
-        push_slot(&mut body, crate::crafting::craft(&window.shown));
+        push_slot(&mut body, crate::crafting::craft_for_catalog(catalog, &window.shown));
     }
 
     push_slot(&mut body, player.inventory.cursor());
@@ -4900,7 +5327,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
             body.extend(encode_varint(window.id));
             write_body(stream, body).await?;
             close_own_window(shared, player);
-            send_container_content(stream, player).await?;
+            send_container_content(stream, player, shared.catalog()).await?;
         } else {
             let changed: Vec<_> = slots.iter().enumerate().filter(|(i, item)| window.shown[*i] != **item).map(|(i, item)| (i, *item)).collect();
             for (slot, stack) in changed {
@@ -4919,7 +5346,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
             body.extend_from_slice(&encode_varint(window.id));
             write_body(stream, body).await?;
             close_own_window(shared, player);
-            if std::mem::take(&mut player.inventory_after_window) { send_container_content(stream, player).await?; }
+            if std::mem::take(&mut player.inventory_after_window) { send_container_content(stream, player, shared.catalog()).await?; }
         }
 
         return Ok(());
@@ -4952,6 +5379,8 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
             body.extend_from_slice(&encode_varint(window.id));
             write_body(stream, body).await?;
             close_own_window(shared, player);
+        } else if shared.catalog().changed_rules() {
+            merchant::refresh_open_offers(stream, shared, player).await?;
         }
 
         return Ok(());
@@ -4985,7 +5414,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     };
 
     let changed: Vec<usize> = (0..now.len()).filter(|&slot| now[slot] != window.shown[slot]).collect();
-    let result = window.crafter.then(|| (window.result_slot(), crate::crafting::craft(&window.shown), crate::crafting::craft(&now)));
+    let result = window.crafter.then(|| (window.result_slot(), crate::crafting::craft_for_catalog(shared.catalog(), &window.shown), crate::crafting::craft_for_catalog(shared.catalog(), &now)));
 
     // Свойства печи и стойки, снятые вместе с содержимым: уходят после
     // ячеек, только сменившиеся (чёрный ящик, furnace-smelt).
@@ -5031,7 +5460,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
 }
 
 /// Игрок закрыл окно хранилища (или оно закрылось само): хранилище
-/// теряет смотрящего, курсор возвращается в инвентарь.
+/// теряет смотрящего, незавершённое перетаскивание сбрасывается.
 fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     player.crafting_drag = None;
     let Some(window) = player.window.take() else {
@@ -5070,7 +5499,7 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     if let Some(trade) = window.merchant {
         merchant::notify_close(shared,player,&trade);
         for stack in trade.slots[..2].iter().flatten() {
-            player.inventory.put(*stack);
+            if let Some(rest) = player.inventory.put(*stack).1 { throw_out(shared, player, rest); }
         }
 
         merchant::release(shared, player.dimension, trade.villager);
@@ -5563,6 +5992,7 @@ async fn send_recipes(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io
 /// ответ на запрос экрана статистики, достижения (пакет, объявление,
 /// награда) и запись на диск раз в пять минут (progress.rs).
 async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    let _timing = super::packet::TimingSpan::new("progress_tick");
     player.progress.tick_player(player.sneaking, !player.vit.dead, player.sleeping.is_some());
     if !player.vit.dead {
         // Фантомам нужно знать, сколько игрок не спал (src/mob/phantom.rs).
@@ -5571,7 +6001,13 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         shared.players.lock().expect("список игроков захвачен другим потоком").set_rest(&player.uuid, rest);
     }
 
+    {
+        let mut states = shared.advancement_states.lock().expect("достижения захвачены другим потоком");
+        let entry = states.entry(player.uuid).or_insert_with(|| (player.progress.adv.clone(), player.advancement_revision));
+        if entry.1 == player.advancement_revision { entry.0 = player.progress.adv.clone(); }
+    }
     progression::effects(player);
+    progression::poll_structure(player);
     // Предметы у игрока: набор сверяется с таблицей «есть предмет».
     {
         let names: Vec<&str> = player.inventory.slots()[5..].iter().flatten().filter_map(|stack| blocks::item_name(stack.item)).collect();
@@ -5624,7 +6060,18 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         }
 
         if announce && !def.is_root() {
-            let component = crate::advancements::announcement(&player.name, def);
+            let mut component = crate::advancements::announcement(&player.name, def);
+            if shared.catalog().changed_rules() {
+                // Bed-leave777: имя в объявлении — компонент игрока, включая
+                // suggest_command/show_entity; прежний основной сохраняет строку.
+                let words: Vec<i32> = player.uuid.as_chunks::<4>().0.iter()
+                    .map(|part| i32::from_be_bytes(*part)).collect();
+                component["with"][0] = serde_json::json!({
+                    "click_event": {"action": "suggest_command", "command": format!("/tell {} ", player.name)},
+                    "insertion": player.name, "text": player.name,
+                    "hover_event": {"name": player.name, "action": "show_entity", "id": "minecraft:player", "uuid": words}
+                });
+            }
             let line = format!("{} has made the {} [{}]", player.name, match def.frame {
                 1 => "challenge",
                 2 => "goal",
@@ -5674,13 +6121,120 @@ async fn send_pending_chat(
 
 /// Отправляет чанк с указанными координатами — из текущего состояния мира.
 /// Свет посчитан заранее, вне захвата мира.
-async fn send_chunk(
+async fn send_chunk(stream: &mut Outgoing<'_>, world: &Mutex<World>, x: i32, z: i32, light: &ChunkLight) -> io::Result<()> {
+    send_chunk_inner(stream, world, x, z, light, None).await.map(|_| ())
+}
+
+async fn send_prepared_chunk(stream: &mut Outgoing<'_>, world: &Mutex<World>, x: i32, z: i32, prepared: &LitChunk) -> io::Result<Option<usize>> {
+    if let Some(body) = &prepared.packet {
+        {
+            let world = world.lock().expect("мир захвачен другим потоком");
+            if !world.light_is_current(prepared) { return Ok(None); }
+            if let Some(contents) = &prepared.contents {
+                let snapshot = chunk_snapshot(&world, x, z);
+                if snapshot.entities != contents.0 || snapshot.shelves != contents.1 { return Ok(None); }
+            }
+        }
+        let size = match body {
+            ChunkPayload::Wire(packet) => { stream.send_prepared_chunk(packet).await?; packet.len() }
+            ChunkPayload::Internal(body) => {
+                let registry = stream.chunk_biomes()?;
+                stream.send_chunk(body, mcsa_protocol::chunk::Context {
+                    min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: registry.count as u32,
+                }).await?;
+                body.len()
+            }
+        };
+        return Ok(Some(size));
+    }
+    send_chunk_inner(stream, world, x, z, &prepared.light, Some(prepared)).await
+}
+
+async fn send_chunk_inner(
     stream: &mut Outgoing<'_>,
     world: &Mutex<World>,
     chunk_x: i32,
     chunk_z: i32,
     light: &ChunkLight,
-) -> io::Result<()> {
+    prepared: Option<&LitChunk>,
+) -> io::Result<Option<usize>> {
+    if let Some((window, sky)) = stream.legacy_view()? {
+        let Some(chunk) = legacy_chunks::snapshot(world, chunk_x, chunk_z, light, prepared, window, sky)? else { return Ok(None); };
+        stream.send_legacy_chunk(&chunk).await?;
+        return Ok(Some(128 * 1024));
+    }
+    let biome_registry = stream.chunk_biomes()?;
+    let snapshot = {
+        let world = world.lock().expect("мир захвачен другим потоком");
+        if prepared.is_some_and(|light| !world.light_is_current(light)) { return Ok(None); }
+        chunk_snapshot(&world, chunk_x, chunk_z)
+    };
+    let body = encode_chunk(snapshot, chunk_x, chunk_z, light, &biome_registry)?;
+    stream.send_chunk(&body, mcsa_protocol::chunk::Context {
+        min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: biome_registry.count as u32,
+    }).await?;
+    Ok(Some(body.len()))
+}
+
+// Секции общие с LightJob: блоки, NBT и свет относятся к одному снимку.
+type ChunkBlocks = (Vec<Option<Arc<[u16]>>>, Vec<u16>);
+type ChunkContents = (Vec<(i32, i32, i32, containers::Kind)>, HashMap<(i32, i32, i32), Vec<u8>>);
+struct ChunkSnapshot {
+    taken: Option<ChunkBlocks>,
+    entities: Vec<(i32, i32, i32, containers::Kind)>,
+    shelves: HashMap<(i32, i32, i32), Vec<u8>>,
+}
+
+fn chunk_snapshot(world: &World, chunk_x: i32, chunk_z: i32) -> ChunkSnapshot {
+    let taken = world.chunk_packet(chunk_x, chunk_z, |sections, biomes| (sections.to_vec(), biomes.to_vec()));
+    let entities = world.chunk_containers(chunk_x, chunk_z);
+
+    // Полки показывают свои предметы всем — их данные идут и в пакете
+    // чанка, иначе вошедший увидит пустые полки. [проверить] так ли у
+    // оригинала.
+    let mut shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
+        .iter()
+        .filter(|(_, _, _, kind)| *kind == containers::Kind::Shelf)
+        .filter_map(|&(x, y, z, _)| {
+            let (wx, wz) = (chunk_x * 16 + x, chunk_z * 16 + z);
+
+            world.container(wx, y, wz).map(|c| ((x, y, z), redstone::shelf::nbt(&c.slots)))
+        })
+        .collect();
+
+    for &(x, y, z, kind) in &entities {
+        let data = world.container(chunk_x * 16 + x, y, chunk_z * 16 + z);
+        if let Some(c) = data {
+            match kind {
+                containers::Kind::Campfire => { shelves.insert((x, y, z), crate::campfire::nbt(c)); }
+                containers::Kind::Beacon => { shelves.insert((x, y, z), crate::beacon::nbt(c)); }
+                _ => {}
+            }
+        }
+    }
+
+    // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
+    for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
+        shelves.insert((x, y, z), nbt);
+    }
+
+    // Таблички несут текст.
+    for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
+        shelves.insert((x, y, z), nbt);
+    }
+
+    for (at, nbt) in world.chunk_pots(chunk_x, chunk_z) { shelves.insert(at, nbt); }
+
+    // Испытательные спавнеры — моба, хранилища — подошедших (trial.rs).
+    for ((x, y, z), nbt) in world.chunk_trials(chunk_x, chunk_z) {
+        shelves.insert((x, y, z), nbt);
+    }
+
+    ChunkSnapshot { taken, entities, shelves }
+}
+
+fn encode_chunk(snapshot: ChunkSnapshot, chunk_x: i32, chunk_z: i32, light: &ChunkLight, biome_registry: &configuration::ChunkBiomes) -> io::Result<Vec<u8>> {
+    let ChunkSnapshot { taken, entities, shelves } = snapshot;
     let mut body = encode_varint(CHUNK_DATA);
 
     push_i32(&mut body, chunk_x);
@@ -5690,67 +6244,17 @@ async fn send_chunk(
     // минимальной высотой.
     body.extend_from_slice(&encode_varint(0));
 
-    // Секции чанка — одним блоком байт с длиной впереди. Под захватом мира
-    // берутся только ссылки на секции (они общие с миром) и биомы, а
-    // складываются байты уже без него: складывание палитр — самое долгое
-    // в пакете, и такт всё это время ждал бы мира. Хранилища — тем же
-    // захватом.
-    let (taken, entities, shelves) = {
-        let world = world.lock().expect("мир захвачен другим потоком");
-        let taken = world.chunk_packet(chunk_x, chunk_z, |sections, biomes| (sections.to_vec(), biomes.to_vec()));
-        let entities = world.chunk_containers(chunk_x, chunk_z);
-
-        // Полки показывают свои предметы всем — их данные идут и в пакете
-        // чанка, иначе вошедший увидит пустые полки. [проверить] так ли у
-        // оригинала.
-        let mut shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
-            .iter()
-            .filter(|(_, _, _, kind)| *kind == containers::Kind::Shelf)
-            .filter_map(|&(x, y, z, _)| {
-                let (wx, wz) = (chunk_x * 16 + x, chunk_z * 16 + z);
-
-                world.container(wx, y, wz).map(|c| ((x, y, z), redstone::shelf::nbt(&c.slots)))
-            })
-            .collect();
-
-        for &(x, y, z, kind) in &entities {
-            let data = world.container(chunk_x * 16 + x, y, chunk_z * 16 + z);
-            if let Some(c) = data {
-                match kind {
-                    containers::Kind::Campfire => { shelves.insert((x, y, z), crate::campfire::nbt(c)); }
-                    containers::Kind::Beacon => { shelves.insert((x, y, z), crate::beacon::nbt(c)); }
-                    _ => {}
-                }
-            }
-        }
-
-        // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
-        for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
-            shelves.insert((x, y, z), nbt);
-        }
-
-        // Таблички несут текст.
-        for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
-            shelves.insert((x, y, z), nbt);
-        }
-
-        for (at, nbt) in world.chunk_pots(chunk_x, chunk_z) { shelves.insert(at, nbt); }
-
-        // Испытательные спавнеры — моба, хранилища — подошедших (trial.rs).
-        for ((x, y, z), nbt) in world.chunk_trials(chunk_x, chunk_z) {
-            shelves.insert((x, y, z), nbt);
-        }
-
-        (taken, entities, shelves)
-    };
-
+    let taken = taken.map(|(sections, biomes)| {
+        let mapped = biomes.into_iter().map(|id| biome_registry.map(id)).collect::<io::Result<Vec<_>>>()?;
+        Ok::<_, io::Error>((sections, mapped))
+    }).transpose()?;
     let sections = taken.map(|(sections, biomes)| {
         let mut out = Vec::new();
 
         // У каждой секции свои 64 клетки биома: пещерные биомы лежат
         // только в толще.
         for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
-            push_section(&mut out, section.as_deref(), Some(biomes));
+            push_section(&mut out, section.as_deref(), Some(biomes), biome_registry);
         }
 
         // Самая высокая секция, где есть хоть один блок: свет выше неё
@@ -5792,7 +6296,7 @@ async fn send_chunk(
             let mut empty = Vec::new();
 
             for _ in 0..world::SECTIONS {
-                push_section(&mut empty, None, None);
+                push_section(&mut empty, None, None, biome_registry);
             }
 
             body.extend_from_slice(&encode_varint(empty.len() as i32));
@@ -5826,7 +6330,7 @@ async fn send_chunk(
 
     push_light(&mut body, top, light);
 
-    write_body(stream, body).await
+    Ok(body)
 }
 
 /// Добавляет одну секцию чанка.
@@ -5837,7 +6341,7 @@ async fn send_chunk(
 /// Формат: количество непустых блоков, количество блоков с жидкостью, затем
 /// состояния блоков и биомы. Состояния кодируются либо одним значением, либо
 /// палитрой, либо напрямую — что короче.
-fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]>) {
+fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]>, registry: &configuration::ChunkBiomes) {
     /// Больше этого числа разных состояний (восемь битов на блок) палитра
     /// не бывает — дальше номера пишутся прямо, как и у оригинала.
     const MAX_PALETTE: usize = 256;
@@ -5874,7 +6378,7 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]
         push_direct_container(out, states);
     }
 
-    push_biomes(out, biomes);
+    push_biomes(out, biomes, registry);
 }
 
 /// Добавляет биомы секции.
@@ -5886,14 +6390,14 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]
 /// больше — и номера пишутся прямо, битов столько, сколько нужно на номер
 /// любого биома реестра (страница протокола, «Chunk Format» → Paletted
 /// Container).
-fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
+fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>, registry: &configuration::ChunkBiomes) {
     /// Больше битов на клетку палитра не берёт.
     const MAX_PALETTE_BITS: usize = 3;
 
     let Some(biomes) = biomes else {
         // Чанка ещё нет — пусть будет равнина: она в реестре первой... а
         // точнее, под тем номером, под каким её объявил сервер.
-        push_single_value_container(out, plains_number());
+        push_single_value_container(out, i32::from(registry.plains));
         return;
     };
 
@@ -5914,7 +6418,7 @@ fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
     let bits = bits_for(palette.len());
 
     if bits > MAX_PALETTE_BITS {
-        let bits = bits_for(world::terrain::biome_registry_size());
+        let bits = bits_for(registry.count);
         let numbers: Vec<u32> = biomes.iter().map(|biome| *biome as u32).collect();
 
         out.push(bits as u8);
@@ -5952,12 +6456,6 @@ fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
 /// (не меньше одного).
 fn bits_for(count: usize) -> usize {
     (usize::BITS - count.saturating_sub(1).leading_zeros()).max(1) as usize
-}
-
-/// Номер равнины в реестре биомов: под ним клиенту уходят места, которых
-/// сервер ещё не сложил.
-fn plains_number() -> i32 {
-    world::terrain::Biome::Plains.number()
 }
 
 /// Добавляет контейнер состояний блоков с палитрой: 4 бита на блок, палитра
@@ -6041,6 +6539,17 @@ fn push_single_value_container(out: &mut Vec<u8>, global_id: i32) {
     out.push(0);
     out.extend_from_slice(&encode_varint(global_id));
 }
+
+/// После изменения блока отправляет полный пересчитанный свет чанка.
+async fn send_light_update(stream: &mut Outgoing<'_>, x: i32, z: i32, light: &ChunkLight) -> io::Result<()> {
+    let mut body = encode_varint(0x30); // Закреплённый protocol-26.1.json: update_light.
+    body.extend(encode_varint(x));
+    body.extend(encode_varint(z));
+    // Полная маска также очищает прежний свет после удаления источника/крыши.
+    push_light(&mut body, Some(world::SECTIONS as usize - 1), light);
+    write_body(stream, body).await
+}
+
 
 /// Добавляет данные освещения чанка (`top` — номер самой высокой непустой
 /// секции среди секций мира, `None` — чанк пуст).
@@ -6209,11 +6718,12 @@ async fn read_and_log_play_packets(
     let mut standing_in = player.chunk();
     let mut seen = entered.seen;
 
-    // Весь ли обзор уже прислан. При входе прислан только ближний квадрат —
-    // даль догружается здесь, порциями.
+    // Готов ли обзор: пока конвейер занят им, загрузка впрок не запускается.
     let mut all_chunks_sent = false;
     let mut last_view = player.view;
     let mut prefetch = Prefetch::new();
+    let mut chunks = ProgressiveChunks::new(player.dimension);
+    prefetch.slots = chunks.loads.slots.clone();
 
     // Круг цикла начинается либо с пакета клиента, либо с конца такта: всё,
     // что случилось в мире за такт, должно уйти клиенту сразу, а не тогда,
@@ -6221,8 +6731,11 @@ async fn read_and_log_play_packets(
     let mut ticks = shared.ticks.subscribe();
     let mut starts = shared.tick_starts.subscribe();
     let mut pending: Vec<Reaction> = Vec::new();
-    let mut inbound = Inbound::start(stream.stream(), shared)?;
+    stream.keep_alive(player.keep_alive.clone());
+    let mut keep_alive_updates = player.keep_alive.subscribe();
+    let mut inbound = Inbound::start(stream.stream(), shared, player.keep_alive.clone())?;
     let mut finished_tick = false;
+    let mut orders_woken = false;
     let mut pearl_orders = Vec::new();
     let wake = shared.players.lock().expect("список игроков захвачен другим потоком").waker(&player.uuid);
 
@@ -6230,18 +6743,26 @@ async fn read_and_log_play_packets(
         // Всё, что прошлый круг положил в очередь, уходит одной записью,
         // прежде чем ждать клиента или конца такта.
         if control.reason().is_some() { return Ok(()); }
-        stream.deadline(player.keep_alive.deadline());
+        if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
+        let light_center = player.chunk();
+        stream.flush().await?;
+        player.light_updates.step(stream, shared, player.dimension, light_center, player.view).await?;
         stream.flush().await?;
 
-        let ready = if std::mem::take(&mut finished_tick) { None } else { tokio::select! {
+        let ready = if std::mem::take(&mut finished_tick) { None } else if std::mem::take(&mut orders_woken) {
+            Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await)
+        } else { tokio::select! {
             biased;
             _ = control.cancelled() => return Ok(()),
             _ = ticks.changed() => None,
+            _ = keep_alive_updates.changed() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await),
             ready = tokio::time::timeout_at(player.keep_alive.next_wake(), inbound.recv()) => Some(ready),
             // Поручение (перенос командой) — обработать сразу, как у оригинала,
             // где пакет переноса уходит в миг команды.
             _ = wake.notified() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await),
         } };
+
+        if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
 
         // Связь пропала без закрытия соединения (Wi-Fi, NAT): TCP заметит это
         // через много минут, а до тех пор ник занят и вернуться нельзя. Как
@@ -6267,10 +6788,7 @@ async fn read_and_log_play_packets(
             return Ok(());
         }
 
-        if let Some(id) = player.keep_alive.send_due() {
-            stream.deadline(player.keep_alive.deadline());
-            send_keep_alive(stream, id).await?;
-        }
+        send_keep_alive_due(stream, &player.keep_alive).await?;
 
         // Время суток клиент считает сам, но время от времени его надо
         // сверять с сервером — иначе часы разойдутся. Сверяем по возрасту
@@ -6311,19 +6829,8 @@ async fn read_and_log_play_packets(
             all_chunks_sent = false;
         }
 
-        if !all_chunks_sent {
-            all_chunks_sent = send_chunks_around(
-                stream,
-                shared, player.dimension,
-                chunk,
-                &mut sent_chunks,
-                (player.view, player.view),
-                CHUNKS_PER_STEP,
-            )
-            .await?;
-        }
-
         // Весь обзор прислан — складываем впрок то, что за его краем.
+        prefetch.set_demand(chunk, player.view + shared.settings.prefetch_chunks);
         prefetch.collect(shared, player.dimension);
 
         if all_chunks_sent {
@@ -6336,6 +6843,13 @@ async fn read_and_log_play_packets(
         send_pending_chat(stream, shared, &player.uuid, &mut chat_lines).await?;
         note_criteria(shared, player, &mut criteria_seen);
         send_pending_score(stream, shared, &player.uuid, &mut score_sent).await?;
+
+        // После op/deop клиент сразу получает новое дерево, без переподключения.
+        let access = command_access(shared, &player.uuid);
+        if Some(access) != player.net.command_access {
+            send_commands(stream, shared, &player.uuid, access.1).await?;
+            player.net.command_access = Some(access);
+        }
 
         // Поручения от команд: выгнать, перенести. Их отдаёт не то
         // подключение, которого они касаются, поэтому забираем их отсюда.
@@ -6402,7 +6916,7 @@ async fn read_and_log_play_packets(
 
             match order {
                 Order::Respawn => {}
-                Order::PluginSpawn { point } => { player.respawn = point;player.save(&shared.playerdata); }
+                Order::PluginSpawn { point } => { player.respawn = point;player.save_with_catalog(&shared.playerdata, shared.catalog()); }
                 Order::WakeUp => player.wake_due = true,
                 Order::Message { component } => {
                     let mut body = encode_varint(SYSTEM_CHAT);
@@ -6425,6 +6939,11 @@ async fn read_and_log_play_packets(
                 Order::PluginVelocity { value } => {player.net.velocity = Some(value);send_velocity(stream, player.entity_id, value).await?;},
                 Order::Effect(effect) => {
                     vitals::give_effect(stream, player, effect).await?;
+                    // Мгновенный эффект виден соседям до его удаления в ходе
+                    // сущности (777, pvp-mace-landing-motion).
+                    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                        publish_player(shared, player);
+                    }
                     // Маяк (фоновый эффект) обновляет частицы и атрибуты на такт
                     // позже каждый раз (чёрный ящик, beacon-effect: +158 эффект,
                     // +159 Metadata 10 и Attributes).
@@ -6433,7 +6952,7 @@ async fn read_and_log_play_packets(
                         player.net.renew_effect_particles();
 
                         if let Some((attribute, ..)) = effect.kind.modifier() {
-                            player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                            player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                         }
                     }
                 }
@@ -6468,7 +6987,8 @@ async fn read_and_log_play_packets(
                 }
                 Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false }),
                 Order::Progress(event) => player.progress.event(event),
-                Order::Advancement { grant, ids, criterion } => {
+                Order::Advancement { grant, ids, criterion, revision } => {
+                    if revision != 0 { player.advancement_revision = revision; }
                     for id in ids {
                         let changed = match (grant, &criterion) {
                             (true, Some(criterion)) => player.progress.adv.grant(id, criterion),
@@ -6526,7 +7046,7 @@ async fn read_and_log_play_packets(
                     let reader = player.reader;
 
                     if respawning {
-                        vitals::respawned(player);
+                        vitals::respawned_in(shared, player);
 
                         if let Some(yaw) = target.as_ref().and_then(|target| target.yaw) {
                             player.yaw = yaw;
@@ -6551,7 +7071,7 @@ async fn read_and_log_play_packets(
                     // Из портала в Энд игрок выходит лицом на запад (замер
                     // оригинала: yaw 90, наклон прежний); переход командой
                     // поворот не трогает.
-                    if dimension == Dimension::End && !player.portal_ready {
+                    if dimension == Dimension::End && from_dimension != Dimension::End && !player.portal_ready {
                         player.yaw = 90.0;
                     }
 
@@ -6660,6 +7180,10 @@ async fn read_and_log_play_packets(
                     }
                     sent_chunks.clear();
                     prefetch = Prefetch::new();
+                    prefetch.slots = chunks.loads.slots.clone();
+
+                    // Новое появление в мире — новый отсчёт рассылки атрибутов.
+                    player.restart_attrs_tracking(*shared.ticks.borrow());
 
                     // Как у оригинала, всё о самом игроке уходит сразу, до чанков.
                     // (После перехода без смерти место и «жди чанки» ушли выше:
@@ -6681,21 +7205,11 @@ async fn read_and_log_play_packets(
                     let chunk = player.chunk();
                     standing_in = chunk;
                     send_center_chunk(stream, chunk).await?;
-                    send_chunks_around(
-                        stream,
-                        shared,
-                        player.dimension,
-                        chunk,
-                        &mut sent_chunks,
-                        (NEAR_CHUNKS, player.view),
-                        usize::MAX,
-                    )
-                    .await?;
                     all_chunks_sent = false;
 
-                    send_container_content(stream, player).await?;
+                    send_container_content(stream, player, shared.catalog()).await?;
 
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
 
                     log_info!("{} перешёл в {} ({:.1}, {:.1}, {:.1})", player.name, dimension.name(), x, y, z);
                 }
@@ -6739,7 +7253,7 @@ async fn read_and_log_play_packets(
                         vitals::pearl_hit(stream, shared, player).await?;
                     }
 
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
 
                     publish_player(shared, player);
 
@@ -6751,15 +7265,6 @@ async fn read_and_log_play_packets(
                     send_center_chunk(stream, chunk).await?;
 
                     // Под ногами — сразу, даль — порциями в цикле.
-                    send_chunks_around(
-                        stream,
-                        shared, player.dimension,
-                        chunk,
-                        &mut sent_chunks,
-                        (NEAR_CHUNKS, player.view),
-                        usize::MAX,
-                    )
-                    .await?;
                     all_chunks_sent = false;
 
                     log_debug!(
@@ -6803,11 +7308,10 @@ async fn read_and_log_play_packets(
                 // Режим сменила команда — своя или чужая (с Bedrock, из
                 // консоли): клиенту нужен Game Event «смена режима», строка
                 // в списке игроков — тоже.
-                Order::GameMode { mode } => {
-                    let now = *shared.ticks.borrow();
-                    vitals::game_mode_order(stream, player, mode, now).await?;
+                Order::GameMode { mode, at } => {
+                    vitals::game_mode_order(stream, player, mode, at).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
                 }
 
                 Order::SetSlot { slot, stack } => {
@@ -6830,7 +7334,7 @@ async fn read_and_log_play_packets(
                 Order::PluginOpen { chest } => {
                     let (title, slots, active) = { let gui = chest.lock().expect("сундук"); (gui.title.clone(), gui.slots.clone(), gui.active) };
                     if !active { continue; }
-                    if player.window.as_ref().and_then(|open| open.plugin_chest.as_ref()).is_some_and(|old| std::sync::Arc::ptr_eq(old, &chest)) { send_window_content(stream, player).await?; continue; }
+                    if player.window.as_ref().and_then(|open| open.plugin_chest.as_ref()).is_some_and(|old| std::sync::Arc::ptr_eq(old, &chest)) { send_window_content(stream, player, shared.catalog()).await?; continue; }
                     close_own_window(shared, player);
                     for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
                     player.window_counter = player.window_counter % WINDOW_IDS + 1;
@@ -6842,7 +7346,7 @@ async fn read_and_log_play_packets(
                     body.extend(crate::scoreboard::encode_component(&title));
                     write_body(stream, body).await?;
                     player.window = Some(OpenWindow { id, halves: Vec::new(), cart: None, shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false, plugin_chest: Some(chest) });
-                    send_window_content(stream, player).await?;
+                    send_window_content(stream, player, shared.catalog()).await?;
                 }
                 Order::PluginClose { owner } => {
                     if let Some(open) = player.window.as_ref().filter(|open| open.plugin_chest.as_ref().is_none_or(|chest| chest.lock().expect("сундук").owner == owner)) {
@@ -6851,12 +7355,12 @@ async fn read_and_log_play_packets(
                         write_body(stream, body).await?;
                         close_own_window(shared, player);
                         for stack in player.inventory.close_window().thrown { throw_out(shared, player, stack); }
-                        send_container_content(stream, player).await?;
+                        send_container_content(stream, player, shared.catalog()).await?;
                     }
                 }
                 Order::SetEnderSlot { slot, stack } => {
                     player.ender[slot] = stack;
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
                 }
 
                 // Готовый пакет команд мира (рамка, такт, наездники).
@@ -6871,7 +7375,7 @@ async fn read_and_log_play_packets(
 
                     crate::commands_world::apply_attribute_edit(&mut player.attrs, &edit);
                     crate::commands_world::finish_attribute_edit(shared, &player.uuid, &player.attrs);
-                    player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                    player.attrs_touched.push((attribute, player.attr_due(*shared.ticks.borrow() + 1)));
                 }
 
                 // `enchant`: зачарование предмету в основной руке.
@@ -6906,12 +7410,16 @@ async fn read_and_log_play_packets(
                     send_container_slot(stream, player, slot).await?;
                 }
 
+                Order::CommandHold { stack, completion } => {
+                    apply_command_hold(stream, shared, player, stack, completion).await?;
+                }
+
                 Order::Clear => {
                     for slot in 0..inventory::SLOTS as i32 {
                         player.inventory.set(slot, None);
                     }
 
-                    send_container_content(stream, player).await?;
+                    send_container_content(stream, player, shared.catalog()).await?;
                     log_debug!("Play: инвентарь игрока {} очищен", player.name);
                 }
             }
@@ -6980,6 +7488,10 @@ async fn read_and_log_play_packets(
                 }
                 sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
+                // Длительности эффектов сохраняем и у молчащего клиента.
+                if (*shared.ticks.borrow()).is_multiple_of(100) {
+                    player.save_if_needed(&shared.playerdata, shared.catalog());
+                }
                 progress_tick(stream, shared, player).await?;
                 maps::send_ticks(stream, shared, player).await?;
                 glide::tick(shared, player);
@@ -7013,8 +7525,11 @@ async fn read_and_log_play_packets(
                 if lagged {
                     log_info!("{} отстал от событий мира — чанки присылаются заново", player.name);
                     sent_chunks.clear();
-                    all_chunks_sent = false;
                 }
+
+                // Ответы этого такта уходят до подготовки дальней земли.
+                stream.flush().await?;
+                all_chunks_sent = chunks.step(stream, shared, player.dimension, player.chunk(), &mut sent_chunks, player.view).await?;
             }
             Some(Err(_)) => {}
             // Читатель закончил: клиент закрыл соединение.
@@ -7061,27 +7576,37 @@ async fn read_and_log_play_packets(
                                     break;
                                 }
                                 _ = control.cancelled() => return Ok(()),
+                                _ = command_hold_wake(shared, &player.uuid, &wake) => {
+                                    orders_woken = true;
+                                    break;
+                                }
+                                _ = keep_alive_updates.changed() => {
+                                    if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
+                                }
                                 _ = tokio::time::sleep_until(player.keep_alive.next_wake()) => {
+                                    if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
                                     if player.keep_alive.expired() {
                                         return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
                                     }
-                                    if let Some(id) = player.keep_alive.send_due() {
-                                        stream.deadline(player.keep_alive.deadline());
-                                        send_keep_alive(stream, id).await?;
-                                        stream.flush().await?;
-                                    }
+                                    send_keep_alive_due(stream, &player.keep_alive).await?;
                                 }
                                 changed = starts.changed() => if changed.is_err() { break; },
                             }
                         }
                     }
 
-                    if finished_tick {
+                    if finished_tick || orders_woken {
                         inbound.queued = Some(Ok((packet, arrived, permit)));
                         break;
                     }
 
+                    if let Some(at) = permit.received { eprintln!("NET_TIMING process id={} queue_us={} backlog={}", packet.id, at.elapsed().as_micros(), inbound.packets.len()); }
+                    let processing = super::packet::TimingSpan::new("handle_client_packet");
                     let reaction = handle_client_packet(&packet, player, shared);
+                    drop(processing);
+                    if super::packet::timing_enabled() && let Some(sequence) = reaction.acknowledge {
+                        eprintln!("NET_TIMING action sequence={sequence} arrived_tick={arrived} handled_tick={}", *starts.borrow());
+                    }
 
                     // Действие в начале такта могло сменить то, что видят другие
                     // (лук опущен, вещь износилась): им это должно быть известно
@@ -7125,7 +7650,7 @@ async fn read_and_log_play_packets(
                 }
                 // Запись на диск — после пачки: она не задерживает движение
                 // перед следующим Use Item на той же границе такта.
-                player.save_if_needed(&shared.playerdata);
+                player.save_if_needed(&shared.playerdata, shared.catalog());
             }
             Some(Ok(Some(Err(e)))) if is_client_disconnect(&e) => {
                 log_debug!("Play: клиент закрыл соединение ({})", e.kind());
@@ -7159,8 +7684,11 @@ fn is_gated(packet_id: i32) -> bool {
 // Счётчик принадлежит пакету: ошибка записи, kick или закрытие очереди
 // освобождают его даже после извлечения из канала, до применения действия.
 struct TickPermit {
+    received: Option<tokio::time::Instant>,
     waiting: Option<Arc<[std::sync::atomic::AtomicUsize; 2]>>,
     index: usize,
+    // Заряд очереди живёт и после recv, до обработки/отбрасывания пакета.
+    _inbound_charge: Option<InboundCharge>,
 }
 
 impl TickPermit {
@@ -7170,7 +7698,7 @@ impl TickPermit {
             waiting[index].fetch_add(1, std::sync::atomic::Ordering::AcqRel);
             waiting.clone()
         });
-        Self { waiting, index }
+        Self { waiting, index, received: super::packet::timing_enabled().then(tokio::time::Instant::now), _inbound_charge: None }
     }
 }
 
@@ -7179,6 +7707,40 @@ impl Drop for TickPermit {
         if let Some(waiting) = &self.waiting {
             waiting[self.index].fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
         }
+    }
+}
+
+// Верхняя граница ещё не обработанных игровых пакетов, не ACK. После них
+// допускается одна незаряженная terminal error. Байты — capacity тела плюс
+// inline Incoming, не полная heap-память (legacy action может иметь довески).
+const INBOUND_PACKETS: usize = 4096;
+const INBOUND_BYTES: usize = 8 * 1024 * 1024;
+
+#[derive(Default)]
+struct InboundBudget { used: Mutex<(usize, usize)> }
+
+impl InboundBudget {
+    fn charge(self: &Arc<Self>, bytes: usize) -> io::Result<InboundCharge> {
+        let mut used = self.used.lock().expect("очередь входных пакетов");
+        if used.0 >= INBOUND_PACKETS || bytes > INBOUND_BYTES.saturating_sub(used.1) {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Переполнена очередь игровых пакетов"));
+        }
+        used.0 += 1;
+        used.1 += bytes;
+        Ok(InboundCharge { budget: self.clone(), bytes })
+    }
+
+    #[cfg(test)]
+    fn usage(&self) -> (usize, usize) { *self.used.lock().unwrap() }
+}
+
+struct InboundCharge { budget: Arc<InboundBudget>, bytes: usize }
+
+impl Drop for InboundCharge {
+    fn drop(&mut self) {
+        let mut used = self.budget.used.lock().expect("очередь входных пакетов");
+        used.0 -= 1;
+        used.1 -= self.bytes;
     }
 }
 
@@ -7196,6 +7758,62 @@ struct Inbound {
     packets: tokio::sync::mpsc::UnboundedReceiver<io::Result<Incoming>>,
     reader: tokio::task::JoinHandle<()>,
     queued: Option<io::Result<Incoming>>,
+    alive: KeepAlive,
+    _budget: Arc<InboundBudget>,
+    #[cfg(test)]
+    _yield_count: Arc<std::sync::atomic::AtomicUsize>,
+}
+
+// Неигровой ACK принимается до создания TickPermit и постановки в FIFO.
+#[cfg(test)]
+fn inbound_packet(packet: PacketInfo, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+) -> Option<Incoming> {
+    inbound_packet_budgeted(packet, arrived, waiting, alive, None).expect("тест без лимита очереди")
+}
+
+fn inbound_packet_charge(packet: &PacketInfo) -> usize {
+    packet.body.capacity().saturating_add(std::mem::size_of::<Incoming>())
+}
+
+fn inbound_packet_budgeted(packet: PacketInfo, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+    budget: Option<&Arc<InboundBudget>>,
+) -> io::Result<Option<Incoming>> {
+    if packet.id == SERVERBOUND_KEEP_ALIVE {
+        alive.answer(packet.payload());
+        return Ok(None);
+    }
+    let charge = budget.map(|budget| budget.charge(inbound_packet_charge(&packet))).transpose()?;
+    let mut permit = TickPermit::new(waiting, arrived, is_gated(packet.id));
+    permit._inbound_charge = charge;
+    Ok(Some((packet, arrived, permit)))
+}
+
+// Ошибка чтения/переполнения идёт FIFO вслед за уже принятыми действиями.
+// При успешной передаче terminal error guard не закрывает control раньше FIFO.
+#[cfg(test)]
+fn forward_read(read: io::Result<PacketInfo>, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+    sender: &tokio::sync::mpsc::UnboundedSender<io::Result<Incoming>>, guard: &mut ReaderGuard,
+) -> bool {
+    forward_read_budgeted(read, arrived, waiting, alive, sender, guard, None)
+}
+
+fn forward_read_budgeted(read: io::Result<PacketInfo>, arrived: u64,
+    waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, alive: &KeepAlive,
+    sender: &tokio::sync::mpsc::UnboundedSender<io::Result<Incoming>>, guard: &mut ReaderGuard,
+    budget: Option<&Arc<InboundBudget>>,
+) -> bool {
+    let incoming = read.and_then(|packet| inbound_packet_budgeted(packet, arrived, waiting, alive, budget));
+    match incoming {
+        Ok(None) => true,
+        Ok(Some(packet)) => sender.send(Ok(packet)).is_ok(),
+        Err(error) => {
+            if sender.send(Err(error)).is_ok() { guard.disarm(); }
+            false
+        }
+    }
 }
 
 impl Inbound {
@@ -7215,40 +7833,198 @@ impl Inbound {
         if ready { packet.ok() } else { self.queued = Some(packet); None }
     }
 
-    fn start(stream: &mut Connection, shared: &Shared) -> io::Result<Self> {
-        // Буфер читателя хранит уже расшифрованные байты; состояние CFB8
-        // передаётся из Configuration без сброса IV.
-        let mut own = tokio::io::BufReader::new(stream.take_reader()?);
+    fn start(stream: &mut Connection, shared: &Shared, alive: KeepAlive) -> io::Result<Self> {
+        Self::start_on(super::inbound_runtime::handle()?, stream, shared, alive)
+    }
+
+    fn start_on(handle: &tokio::runtime::Handle, stream: &mut Connection, shared: &Shared, alive: KeepAlive) -> io::Result<Self> {
+        // take_reader дублирует OS fd и регистрирует from_std именно здесь.
+        // Перенос одной task без новой регистрации оставил бы старый reactor.
+        let reader = {
+            let _entered = handle.enter();
+            stream.take_reader()?
+        };
+        let mut own = tokio::io::BufReader::new(reader);
+        let version = own.get_ref().client_version();
+        let legacy = own.get_ref().legacy.clone();
+        let probe_776 = own.get_ref().probe_776_enabled();
+        let content = own.get_ref().content;
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
-
-        let reader = tokio::spawn(async move {
+        let budget = Arc::new(InboundBudget::default());
+        let incoming_budget = budget.clone();
+        #[cfg(test)]
+        let yield_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        #[cfg(test)]
+        let reader_yields = yield_count.clone();
+        let receiving = alive.clone();
+        // Guard существует и при отмене task до её первого poll.
+        let mut guard = receiving.reader_guard();
+        let reader = handle.spawn(async move {
+            let (mut frames, mut bytes) = (0usize, 0usize);
             loop {
-                let read = read_packet(&mut own).await;
+                let read = super::packet::read_play_packet_with_content(&mut own, version, legacy.as_ref(), probe_776, content).await;
+                frames += 1;
+                bytes += read.as_ref().map_or(0, |packet| packet.body.len());
                 let arrived = *starts.borrow();
-                let failed = read.is_err();
-
-                let read = read.map(|packet| {
-                    let permit = TickPermit::new(&waiting, arrived, is_gated(packet.id));
-                    (packet, arrived, permit)
-                });
-                if sender.send(read).is_err() || failed {
-                    return;
+                if !forward_read_budgeted(read, arrived, &waiting, &receiving, &sender, &mut guard, Some(&incoming_budget)) { return; }
+                if frames >= 64 || bytes >= 256 * 1024 {
+                    // Горячий сокет не занимает общий IO executor без перерыва.
+                    #[cfg(test)]
+                    reader_yields.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    tokio::task::yield_now().await;
+                    frames = 0;
+                    bytes = 0;
                 }
             }
         });
 
-        Ok(Self { packets, reader, queued: None })
+        Ok(Self { packets, reader, queued: None, alive, _budget: budget,
+            #[cfg(test)] _yield_count: yield_count })
     }
+
 }
 
 impl Drop for Inbound {
     fn drop(&mut self) {
+        self.alive.close();
         self.reader.abort();
 
         // При закрытии канала неприменённые пакеты отпустят TickPermit.
         self.packets.close();
+    }
+}
+
+#[cfg(test)]
+mod keep_alive_lag_tests {
+    use super::*;
+    use crate::network::keep_alive::{KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT};
+
+    fn packet(id: i32, payload: &[u8]) -> PacketInfo {
+        let mut body = encode_varint(id);
+        body.extend_from_slice(payload);
+        PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false,
+            foreign_inventory: false, legacy_inventory: None }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reader_ack_bypasses_gameplay_fifo_and_does_not_take_tick_permit() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let id = alive.send_due().unwrap();
+        let waiting = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0)]);
+        let mut gameplay = Vec::new();
+        gameplay.push(inbound_packet(packet(ATTACK, &[]), 0, &waiting, &alive).unwrap());
+        for _ in 0..1000 {
+            assert!(inbound_packet(packet(SERVERBOUND_KEEP_ALIVE, &(id + 1).to_be_bytes()), 0, &waiting, &alive).is_none());
+        }
+        assert!(inbound_packet(packet(SERVERBOUND_KEEP_ALIVE, &id.to_be_bytes()), 0, &waiting, &alive).is_none());
+        gameplay.push(inbound_packet(packet(SET_CARRIED_ITEM, &[]), 0, &waiting, &alive).unwrap());
+        assert_eq!(waiting[0].load(Ordering::Acquire), 2);
+        let (ticks, mut tick_receiver) = tokio::sync::watch::channel(0);
+        ticks.send_replace(1);
+        let tick_won = tokio::select! {
+            biased;
+            _ = tick_receiver.changed() => true,
+            _ = std::future::pending::<()>() => false,
+        };
+        assert!(tick_won);
+        tokio::time::advance(KEEP_ALIVE_TIMEOUT + Duration::from_secs(1)).await;
+        assert!(!alive.expired(), "готовый такт и очередь игры не задерживают приём ACK");
+        assert_eq!(gameplay.iter().map(|(packet, _, _)| packet.id).collect::<Vec<_>>(), [ATTACK, SET_CARRIED_ITEM]);
+        drop(gameplay);
+        assert_eq!(waiting[0].load(Ordering::Acquire), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn decoded_gameplay_precedes_eof_and_malformed_error_without_timeout_close() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        for (kind, message) in [(io::ErrorKind::UnexpectedEof, "peer EOF"), (io::ErrorKind::InvalidData, "malformed packet")] {
+            let alive = KeepAlive::new();
+            tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+            let id = alive.send_due().unwrap();
+            assert!(alive.answer(&id.to_be_bytes()));
+            let waiting = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0)]);
+            let (sender, mut packets) = tokio::sync::mpsc::unbounded_channel();
+            let mut guard = alive.reader_guard();
+            assert!(forward_read(Ok(packet(ATTACK, &[])), 0, &waiting, &alive, &sender, &mut guard));
+            assert!(!forward_read(Err(io::Error::new(kind, message)), 0, &waiting, &alive, &sender, &mut guard));
+            drop(guard);
+            drop(sender);
+            assert!(!alive.closed());
+            assert!(!alive.expired());
+            let game = packets.recv().await.unwrap().unwrap();
+            assert_eq!(game.0.id, ATTACK);
+            assert_eq!(waiting[0].load(Ordering::Acquire), 1);
+            drop(game);
+            let error = match packets.recv().await.unwrap() { Err(error) => error, Ok(_) => panic!("нужна ошибка после игрового пакета") };
+            assert_eq!(error.kind(), kind);
+            assert_eq!(error.to_string(), message);
+            assert!(packets.recv().await.is_none());
+            assert_eq!(waiting[0].load(Ordering::Acquire), 0);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn failed_terminal_handoff_keeps_reader_guard_armed() {
+        use std::sync::atomic::AtomicUsize;
+        let alive = KeepAlive::new();
+        let waiting = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0)]);
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+        drop(receiver);
+        let mut guard = alive.reader_guard();
+        assert!(!forward_read(Err(io::Error::new(io::ErrorKind::UnexpectedEof, "peer EOF")), 0, &waiting, &alive, &sender, &mut guard));
+        drop(guard);
+        assert!(alive.closed());
+        assert!(!alive.expired());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancelled_challenge_flush_closes_sending_ticket() {
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let sending = alive.clone();
+        let (_peer, mut writer) = tokio::io::duplex(1);
+        let task = tokio::spawn(async move {
+            let mut out = Outgoing::duplex(&mut writer);
+            out.keep_alive(sending.clone());
+            send_keep_alive_due(&mut out, &sending).await
+        });
+        tokio::task::yield_now().await;
+        assert!(!alive.due());
+        assert_eq!(alive.deadline(), None);
+        task.abort();
+        assert!(task.await.unwrap_err().is_cancelled());
+        assert!(alive.closed());
+        assert!(!alive.answer(&1i64.to_be_bytes()));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn due_challenge_flushes_old_output_before_starting_response_clock() {
+        let alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        let sending = alive.clone();
+        let (mut peer, mut writer) = tokio::io::duplex(1);
+        let task = tokio::spawn(async move {
+            let mut out = Outgoing::duplex(&mut writer);
+            out.keep_alive(sending.clone());
+            // Полная старая рамка используется только как вывод до challenge.
+            send_keep_alive(&mut out, 999).await?;
+            send_keep_alive_due(&mut out, &sending).await
+        });
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(3)).await;
+        assert_eq!(alive.deadline(), None);
+        assert!(alive.due(), "challenge ещё не зарезервирован за старой записью");
+        let old = super::super::packet::read_packet(&mut peer).await.unwrap();
+        assert_eq!(old.payload(), &999i64.to_be_bytes());
+        let challenge = super::super::packet::read_packet(&mut peer).await.unwrap();
+        assert_eq!(challenge.payload(), &1i64.to_be_bytes());
+        task.await.unwrap().unwrap();
+        assert_eq!(alive.deadline(), Some(tokio::time::Instant::now() + KEEP_ALIVE_TIMEOUT));
+        assert!(alive.answer(challenge.payload()));
     }
 }
 
@@ -7291,6 +8067,7 @@ async fn apply_reaction(
     player: &mut PlayerState,
     reaction: &Reaction,
 ) -> io::Result<()> {
+    if let Some(ack) = reaction.legacy_confirmation { stream.send_legacy_confirmation(ack).await?; }
     for body in &reaction.packets {
         write_body(stream, body.clone()).await?;
     }
@@ -7338,7 +8115,7 @@ async fn apply_reaction(
     }
 
     if reaction.inventory {
-        send_container_content(stream, player).await?;
+        send_container_content(stream, player, shared.catalog()).await?;
     }
 
     // Оригинал шлёт итог крафта на каждую перемену сетки, до остальных ячеек.
@@ -7366,7 +8143,7 @@ async fn apply_reaction(
         send_suggestions(stream, hints).await?;
     }
 
-    if reaction.window_content { send_window_content(stream, player).await?; }
+    if reaction.window_content { send_window_content(stream, player, shared.catalog()).await?; }
 
     for (slot, stack) in reaction.window_slots.clone() {
         send_window_slot(stream, player, slot, stack).await?;
@@ -7449,6 +8226,7 @@ async fn send_window_property(stream: &mut Outgoing<'_>, window: i32, property: 
 /// уведомить об этом клиента.
 #[derive(Default)]
 struct Reaction {
+    legacy_confirmation: Option<mcsa_protocol::legacy_inventory::Confirmation>,
     /// Номер действия с блоком, которое нужно подтвердить клиенту.
     acknowledge: Option<i32>,
 
@@ -7538,6 +8316,7 @@ struct Suggestions {
 
     /// Чем дописать.
     matches: Vec<String>,
+    tooltips: Vec<Option<Vec<u8>>>,
 }
 
 impl Reaction {
@@ -7567,8 +8346,18 @@ fn handle_client_packet(
     player: &mut PlayerState,
     shared: &Shared,
 ) -> Reaction {
+    if let Some(action) = &packet.legacy_inventory {
+        return legacy_inventory::handle(action, packet, player, shared);
+    }
     let before = (player.x, player.y, player.z, player.yaw, player.pitch);
     let mut reaction = handle_client_packet_inner(packet, player, shared);
+    if packet.foreign_inventory && matches!(packet.id,CLICK_CONTAINER|USE_ITEM_ON) {
+        // Действия вычисляет сервер. Межверсионные хэши не разрешают скрыть
+        // авторитетное обновление контейнера/курсора после щелчка.
+        // Клиент772 предсказывает установку вместо использования статуи:
+        // возвращаем настоящую руку, иначе пустая рука вызывает второй Use.
+        reaction.inventory=true;
+    }
     if player.inventory.restore_retained() {reaction.inventory=true;reaction.window_content=player.window.is_some();}
 
     // Бездействие (`setidletimeout`): движение и повороты считаются делом,
@@ -7598,18 +8387,18 @@ fn handle_client_packet_inner(
     match packet.id {
         SERVERBOUND_ABILITIES => {
             if let Some(flags)=payload.first() {
-                player.flight_owners[1]=None;
+                player.flight_owners[1] = None;
                 player.abilities.client_flying(*flags);
                 if player.abilities.flying { player.vit.fall = 0.0; }
             }
         }
         SERVERBOUND_KEEP_ALIVE => {
             log_debug!("Play: клиент ответил на Keep Alive");
-            player.keep_alive.answer(payload);
+            // В рабочем соединении ответ уже принял Inbound до FIFO игры.
+            // Повторное принятие здесь исказило бы срок и RTT.
         }
         CONFIRM_TELEPORTATION => {
-            if Cursor::new(payload).varint() == Some(player.teleport) {
-                player.awaiting_teleport = false;
+            if accept_teleport(packet, player) {
 
                 // Перенесённый командой встанет на блок под ногами через
                 // `players::SETTLE_TICKS` тактов.
@@ -7638,8 +8427,7 @@ fn handle_client_packet_inner(
             // Как у оригинала: не число, бесконечность и место за границей
             // мира не принимаются — они ушли бы в файл игрока и всем
             // остальным, а огромные координаты переполняли бы счёт чанков.
-            let sane = |value: f64, limit: f64| value.is_finite() && value.abs() <= limit;
-            if !(sane(x, 30_000_000.0) && sane(y, 20_000_000.0) && sane(z, 30_000_000.0)) {
+            if !valid_position(x, y, z) {
                 log_debug!("Play: {} прислал недопустимое место {} {} {}", player.name, x, y, z);
                 return reaction;
             }
@@ -7660,6 +8448,7 @@ fn handle_client_packet_inner(
             // в ответ на свой очередной пакет места). Сдвиг, который клиент
             // посчитал сам, принимается. Допуск 0,0625 — как у оригинала на
             // «moved wrongly» [проверить].
+            let piston_step = player.shoved_to.is_some();
             if let Some(at) = player.shoved_to.take() {
                 let off = (x - at.0).powi(2) + (y - at.1).powi(2) + (z - at.2).powi(2);
 
@@ -7691,6 +8480,15 @@ fn handle_client_packet_inner(
                 return reaction;
             }
 
+            // Обычная сверка пола до записи места, ground и последствий шага.
+            // Согласованный ответ на толчок поршня сохраняет прежний путь.
+            let floor = if piston_step { terrain_floor::Decision::Legacy }
+                else { terrain_floor::classify(shared, player, (x, y, z)) };
+            if floor == terrain_floor::Decision::Reject {
+                reaction.resync = true;
+                return reaction;
+            }
+
             let from = (player.x, player.y, player.z);
 
             let (x, y, z) = if crate::plugins::active() {
@@ -7714,13 +8512,14 @@ fn handle_client_packet_inner(
             // Признак «на земле» — в байте флагов после координат (и углов).
             let flags = if packet.id == SET_PLAYER_POSITION { POSITION_BYTES } else { POSITION_BYTES + ROTATION_BYTES };
             if let Some(&flag) = payload.get(flags) {
-                player.set_on_ground(flag & ON_GROUND_FLAG != 0);
+                player.set_on_ground(floor == terrain_floor::Decision::PreserveGround || flag & ON_GROUND_FLAG != 0);
                 // Бит 2 — упёрся в стену (нужен элитрам: удар о стену).
                 player.glide.wall = flag & 0x02 != 0;
             }
 
             // Прыжок, бег и приземление считает здоровье (vitals.rs).
             vitals::moved(player, shared, from);
+            vitals::confirm_support(player, &mut reaction, *shared.ticks.borrow());
         }
         SET_PLAYER_ROTATION => {
             if let Some((yaw, pitch)) = read_rotation(payload, 0) {
@@ -7745,6 +8544,7 @@ fn handle_client_packet_inner(
                 if !player.net.teleported {
                     vitals::moved(player, shared, (player.x, player.y, player.z));
                 }
+                vitals::confirm_support(player, &mut reaction, *shared.ticks.borrow());
             }
         }
         SET_PLAYER_ON_GROUND => {
@@ -7757,6 +8557,7 @@ fn handle_client_packet_inner(
                 if !player.net.teleported {
                     vitals::moved(player, shared, (player.x, player.y, player.z));
                 }
+                vitals::confirm_support(player, &mut reaction, *shared.ticks.borrow());
             }
         }
         0x34 => { gameplay::beacon_select(payload, player, shared); }
@@ -7802,22 +8603,6 @@ fn handle_client_packet_inner(
         }
         // Разобрать пакет могло и не получиться: тогда отвечать не на что.
         PLAYER_ACTION => {
-            if Cursor::new(payload).varint() == Some(6) && crate::plugins::active() {
-                publish_ui(shared,player);
-                let slot=player.inventory.selected_slot();
-                if !crate::plugins::item_event(&plugin_view(player),2,0) {
-                    let main=player.inventory.slot(slot);let off=player.inventory.slot(inventory::OFFHAND);
-                    player.inventory.set(slot,off);player.inventory.set(inventory::OFFHAND,main);
-                    player.net.using=None;vitals::stop_eating(player);
-                }
-                reaction.slots=vec![slot,inventory::OFFHAND];return reaction;
-            }
-            // Статус 5 — «отпустил кнопку использования»: еда прервана.
-            if Cursor::new(payload).varint() == Some(5) {
-                vitals::stop_eating(player);
-                vitals::release_use(player, shared);
-            }
-
             if let Some(answer) = break_block(payload, player, shared) {
                 reaction = answer;
             }
@@ -7861,6 +8646,7 @@ fn handle_client_packet_inner(
             // не нужны: подписи мы не проверяем, а текст стоит первым полем.
             let text = Cursor::new(payload).string();
             if let Some(text) = text.as_deref().and_then(crate::chat::allowed) {
+                if crate::auth::sensitive_command(text) { return reaction; }
                 log_debug!("Play: {} пишет в чат: {}", player.name, text);
 
                 // Плагины могут отменить сообщение или заменить текст
@@ -8006,7 +8792,13 @@ fn handle_client_packet_inner(
             }
         }
         TAB_COMPLETE_REQUEST => {
-            if let Some(answer) = suggestions(payload, shared, &player.uuid) {
+            let Some((id, text)) = suggestion_input(payload) else {
+                shared.players.lock().expect("список игроков").order(&player.uuid,
+                    Order::Kick { reason: "Запрос подсказок повреждён или длиннее 32500 символов UTF-16".into() });
+                return reaction;
+            };
+            if !player.net.completion_budget.take(payload.len()) { return reaction; }
+            if let Some(answer) = suggestions_for_input(id, text, shared, &player.uuid, player.net.command_protocol) {
                 reaction.suggestions = Some(answer);
             }
         }
@@ -8071,6 +8863,9 @@ fn handle_client_packet_inner(
         SWING_ARM => {
             let now = *shared.ticks.borrow();
 
+            // Punch777 после Attack — настоящий взмах (Via pvp-armor).
+            // Прежний Arm Animation сохраняет отдельное поведение777.
+            if !packet.punch && !pvp::broadcast_swing_after_attack(shared.catalog(), player.last_attack, now) { return reaction; }
             shared.players.lock().expect("список игроков захвачен другим потоком").swing_at(&player.uuid, now);
         }
         SET_CARRIED_ITEM => {
@@ -8090,7 +8885,20 @@ fn handle_client_packet_inner(
                     slot,
                     format_hex(payload)
                 );
+                if slot > 8 { return reaction; }
                 player.inventory.select(slot as i32);
+                // Перезарядка начинается при выборе, даже если до следующего
+                // удара нет рассылки атрибутов; износ не меняет тип оружия.
+                let attack_tick = *shared.ticks.borrow();
+                // Чёрный ящик 41088730983, pvp-shield-back: hotbar на
+                // своей чётности — Attributes через два такта, а не сразу.
+                // Пакет уже в начале нового такта, ticks ещё хранит конец
+                // предыдущего. Для 26.3 срок считаем от начала; прежний
+                // отсчёт перезарядки сохраняем. [проверить] свежим повтором.
+                let tracking_tick = if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                    attack_tick.max(*shared.tick_starts.borrow())
+                } else { attack_tick };
+                vitals::update_equipment_at(player, attack_tick, tracking_tick);
 
                 // Сменил руку — щит опущен, лук спущен впустую.
                 if player.net.using.is_some_and(|using| using.hand == 0) {
@@ -8099,8 +8907,15 @@ fn handle_client_packet_inner(
             }
         }
         SET_CREATIVE_MODE_SLOT => {
+            // CreativeSlot не несёт происхождения заменителя. При новых вещах
+            // возвращаем авторитетный инвентарь, не заменяем их видимыми двойниками.
+            if packet.foreign_inventory && crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2)
+                .validate_inventory(&player.inventory).is_err() {
+                reaction.inventory=true;
+                return reaction;
+            }
             // Слот −1 — предмет выброшен прямо из меню, мимо инвентаря.
-            if let Some(thrown) = read_creative_slot(payload, player) {
+            if let Some(thrown) = read_creative_slot_with_catalog(payload, player, shared.catalog()) {
                 throw_out(shared, player, thrown);
             }
         }
@@ -8298,6 +9113,7 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
         player.vit.fall = 0.0;
         player.vit.smash_landing = true;
         player.vit.smash_forgives = data.level("wind_burst") > 0;
+        player.vit.wind_lift = player.vit.smash_forgives;
         player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 
@@ -8390,6 +9206,24 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     if let Some((x, y, z)) = smash_event {
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(x, y, z, 2013, crate::combat::SMASH_PARTICLES);
+    }
+
+    // «Порыв ветра» и по мобу: взрыв ветра у нападающего за частицами удара
+    // о землю, как в pvp::strike_player: подброс после сокрушающего удара
+    // по любой цели, не только по игроку (вики, Wind Burst) [проверить по
+    // мобу ящиком].
+    let wind = data.level("wind_burst");
+
+    if smash && landed && wind > 0 {
+        let mut targets = crate::tick::blast_targets(shared, player.dimension);
+        if let Some(me) = targets.iter_mut().find(|p| p.entity_id == player.entity_id) {
+            (me.x, me.y, me.z) = (player.x, player.y, player.z);
+            me.flying_creative = player.game_mode == GAME_MODE_CREATIVE && player.abilities.flying;
+        }
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+        crate::tnt::wind_burst(&mut world, &mut items, &targets, (from.0, from.1 - 0.1, from.2), crate::tnt::wind_burst_knockback(wind), player.entity_id);
     }
 
     if let Some((at, guardian)) = spikes {
@@ -8625,9 +9459,19 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     }
 
     if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > REACH * REACH
-        || (player.game_mode == GAME_MODE_ADVENTURE && !crate::mob::horse::equine(mob.kind))
+        || (player.game_mode == GAME_MODE_ADVENTURE && !crate::mob::horse::equine(mob.kind) && mob.kind != crate::mob::Kind::Cushion)
         || mob.is_dead()
     {
+        return true;
+    }
+
+    // Подушка: использование — сесть (вики, Cushion: «Right-click to sit»). Высота сиденья — [проверить].
+    if items.mobs()[index].kind==crate::mob::Kind::Cushion {
+        let (id,at)={let m=&items.mobs()[index]; (m.entity_id,(m.x,m.y+0.1,m.z))};
+        if !player.sneaking && player.ride.vehicle.is_none() && !player.vit.dead
+            && shared.riding.lock().expect("учёт седоков").mount(player.entity_id,id,1) {
+            player.set_position(at.0,at.1,at.2);
+        }
         return true;
     }
 
@@ -8638,6 +9482,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         }
         return true;
     }
+    if sulfur::use_on_mob(&mut items, index, player, shared, &mut world, reaction) { return true; }
     if water::use_on_mob(&mut items, index, player, &mut world, reaction) { return true; }
     // Вики, Golden Dandelion: переключает возраст только у растущих малышей.
     // [Bedrock: потом] use/частицы; offhand маршрутизация use_entity [проверить].
@@ -8879,7 +9724,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     let mut mined = None;
     let result = break_block_inner(payload, player, shared, &mut mined);
     if player.game_mode == GAME_MODE_SURVIVAL && let Some(state) = mined {
-        if let Some(stack) = held { pvp::wear_held(shared, player, stack, crate::mining::wear(state, stack), false); }
+        if let Some(stack) = held { pvp::wear_held(shared, player, stack, crate::mining::wear_with_catalog(shared.catalog(), state, stack), false); }
         player.vit.add_exhaustion(0.005);
     }
     result
@@ -8920,6 +9765,39 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         && crate::plugins::interact(&plugin_view(player), 0, 0, Some((x, y, z)), u32::from(face)) & 1 != 0
     {
         return Some(Reaction { confirm: vec![(x, y, z)], ..Reaction::accepted(sequence) });
+    }
+    // Действия без блока применяем только после полного разбора пакета.
+    // Иначе один байт release мог потратить стрелу, а хвост jab — повредить копьё.
+    if matches!(status, 5..=7)
+        && (cursor.offset != payload.len() || player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR)
+    {
+        return Some(Reaction::default());
+    }
+    // Собственная проба bow: status5, нулевая позиция/грань/sequence.
+    // Позиция отпускания не ограничивает дальность использования предмета.
+    if status == 5 {
+        vitals::stop_eating(player);
+        vitals::release_use(player, shared);
+        return Some(Reaction::default());
+    }
+
+    // Обычная проба official775: action6 меняет обе руки без потери числа
+    // предметов (observations-player-actions-26.3.md). Позиция тут не блок.
+    if status == 6 {
+        if crate::plugins::active() {
+            publish_ui(shared, player);
+            if crate::plugins::item_event(&plugin_view(player), 2, 0) { return Some(Reaction { slots: vec![player.inventory.selected_slot(), inventory::OFFHAND], ..Reaction::default() }); }
+        }
+        let main = player.inventory.selected_slot();
+        let held = player.inventory.slot(main);
+        let offhand = player.inventory.slot(inventory::OFFHAND);
+        player.inventory.set(main, offhand);
+        player.inventory.set(inventory::OFFHAND, held);
+        // Смена рук прерывает использование; отпускание не должно выстрелить
+        // уже перемещённым луком или закончить еду из прежнего слота.
+        player.net.using = None;
+        vitals::stop_eating(player);
+        return Some(Reaction { slots: vec![main, inventory::OFFHAND], ..Reaction::default() });
     }
 
     // Java 26.1.2: jab копья — действие без блока. Нулевая позиция в
@@ -8991,7 +9869,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         && let Some(reaction) = debug_stick::interact(shared, player, (x,y,z), 1, true, sequence)
     { return Some(reaction); }
 
-    let breaks_now = mining::allows(player, shared, (x, y, z), state, status);
+    let breaks_now = mining::allows(player, shared, (x, y, z), state, status, face);
 
     // Удар по редстоуновой руде зажигает её (вики, Redstone Ore: «pressing
     // either the break or the use control»). В творческом блок ломается
@@ -9102,6 +9980,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     let bed = sleep::bed_break_plan(&world, (x, y, z), player.game_mode == GAME_MODE_CREATIVE);
 
     let pot = world.pot((x,y,z));
+    let pot_data = world.pot_details((x,y,z));
     let hive_block = crate::hive::is_hive(state);
     let hive_silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
     let hive_drop = if hive_block && hive_silk { crate::hive::silk_stack(&world, (x, y, z)) } else { None };
@@ -9138,7 +10017,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
 
     if let Some(sides) = pot {
         if player.game_mode != GAME_MODE_CREATIVE && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
-            for stack in crate::pottery::drops(sides,player.inventory.held()) {
+            for stack in crate::pottery::drops_with_data(sides,pot_data,player.inventory.held()) {
                 let scattered = crate::tick::scattered((x,y,z),|| f64::from(world.random_unit()));
                 block_drops.spawn(stack,scattered.0,scattered.1,items::MINED_DELAY);
             }
@@ -9243,7 +10122,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             return Some(Reaction::accepted(sequence));
         }
 
-        let placed: Vec<_> = crate::mining::block_drops(broken, tool, || world.random_unit()).into_iter()
+        let placed: Vec<_> = crate::mining::block_drops_with_catalog(world.catalog(), broken, tool, || world.random_unit()).into_iter()
             .map(|stack| (crate::custom_tnt::tag_drop(stack, custom), crate::tick::scattered((x, y, z), || f64::from(world.random_unit())))).collect();
         // Мир отпускаем: класть предметы будем под другим замком.
         drop(world);
@@ -9397,6 +10276,22 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     if !within_reach(player, (clicked_x, clicked_y, clicked_z)) {
         log_debug!("Play: {} тянется к {} {} {} слишком далеко", player.name, clicked_x, clicked_y, clicked_z);
         return Some(Reaction::accepted(sequence));
+    }
+
+    // 26.3: мотыга и лопата уступают щиту; приседание оставляет действие инструмента.
+    if shared.catalog().changed_rules() && !player.sneaking
+        && player.inventory.held().and_then(|s| blocks::item_name(s.item))
+            .is_some_and(|n| n.ends_with("_hoe") || n.ends_with("_shovel"))
+        && player.inventory.slot(inventory::OFFHAND).and_then(|s| blocks::item_name(s.item)) == Some("shield")
+        && {
+            let world = shared.world_in(player.dimension).lock().expect("мир");
+            let name = blocks::block_at_state(world.get_block(clicked_x, clicked_y, clicked_z));
+            let hoe = player.inventory.held().and_then(|s| blocks::item_name(s.item)).is_some_and(|n| n.ends_with("_hoe"));
+            if hoe { matches!(name, Some("grass_block" | "dirt" | "dirt_path" | "coarse_dirt" | "rooted_dirt")) }
+            else { matches!(name, Some("grass_block" | "dirt" | "coarse_dirt" | "rooted_dirt" | "podzol" | "mycelium")) }
+        }
+    {
+        return Some(refused);
     }
 
     if interaction & 1 == 0 && let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence, interaction) {
@@ -9610,9 +10505,11 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 
                     let slots = match used {
                         redstone::bookshelf::Used::Placed => spend_placed(player),
-                        // Не влезшее в инвентарь пропадает. [проверить] у
-                        // оригинала оно выпадает под ноги.
-                        redstone::bookshelf::Used::Taken(book) => player.inventory.put(book).0,
+                        redstone::bookshelf::Used::Taken(book) => {
+                            let (slots, rest) = player.inventory.put(book);
+                            if let Some(rest) = rest { throw_out(shared, player, rest); }
+                            slots
+                        }
                     };
 
                     return Some(Reaction { slots, ..Reaction::accepted(sequence) });
@@ -9856,11 +10753,15 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     }
 
     if let Some(name)=player.inventory.held().and_then(|s|blocks::item_name(s.item))
-        && matches!(name,"painting"|"armor_stand") {
+        && (matches!(name,"painting"|"armor_stand") || name.ends_with("_cushion")) {
         let clicked=(clicked_x,clicked_y,clicked_z);
         let mut world=shared.world_in(player.dimension).lock().expect("мир");
         let mut items=shared.items_in(player.dimension).lock().expect("сущности");
-        let placed=if name=="painting" {crate::painting::place(&mut world,&mut items,shared,clicked,face as u8)} else {
+        let placed=if name=="painting" {crate::painting::place(&mut world,&mut items,shared,clicked,face as u8)} else if let Some(color)=crate::mob::cushion::color_of_item(name) {
+            // Подушка ставится на верх блока; сбоку — на опору под соседней клеткой, снизу — нельзя.
+            let (nx,ny,nz)=offset_towards(clicked_x,clicked_y,clicked_z,face);
+            match face { 1=>crate::mob::cushion::place(&mut world,&mut items,shared,clicked,color), 0=>false, _=>crate::mob::cushion::place(&mut world,&mut items,shared,(nx,ny-1,nz),color) }
+        } else {
 crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.yaw)
         };
         if placed && name=="painting" {
@@ -10034,11 +10935,15 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
         return Some(reaction);
     }
 
+    if let Some(reaction) = sulfur::use_bucket(item, (clicked_x, clicked_y, clicked_z), face, sequence, player, shared) {
+        return Some(reaction);
+    }
+
     if let Some(reaction) = use_spawn_egg(item, (clicked_x, clicked_y, clicked_z), face, sequence, player, shared) {
         return Some(reaction);
     }
 
-    let Some((name, default_state)) = blocks::block_for_item(item) else {
+    let Some((name, default_state)) = shared.catalog().block_for_item(item).ok().flatten() else {
         log_debug!("Play: предмет {} блоком не является — ставить нечего", item);
 
         // Оригинал и тут повторяет клиенту блок и блок за гранью (чёрный
@@ -10158,11 +11063,11 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
     }
 
     match placed {
-        placing::Placement::Placed => Some(Reaction {
+        placing::Placement::Placed | placing::Placement::Merged => Some(Reaction {
             slots: spend_placed(player),
             ..Reaction::accepted(sequence)
         }),
-        placing::Placement::Merged | placing::Placement::Nothing => Some(Reaction::accepted(sequence)),
+        placing::Placement::Nothing => Some(Reaction::accepted(sequence)),
         placing::Placement::Refused(places) => Some(Reaction::refused(sequence, &places)),
     }
 }
@@ -10314,7 +11219,7 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     if bundle_use::start(shared,player,hand,*shared.ticks.borrow()) {
         let mut answer=answer; answer.inventory=true; return Some(answer);
     }
-    if maps::fill(shared, player, hand).is_some() {
+    if maps::fill(shared, player, hand).is_some() || maps::resolve_held(shared, player, hand).is_some() {
         let mut answer = answer;
         answer.inventory = true;
         return Some(answer);
@@ -10562,6 +11467,7 @@ fn use_spawn_egg(
     let (x, y, z) = offset_towards(clicked.0, clicked.1, clicked.2, face);
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), kind, (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5));
 
+    if kind == crate::mob::Kind::SulfurCube { crate::mob::sulfur_cube::initialize(&mut mob); }
     if kind == crate::mob::Kind::Slime {
         let mut rng = crate::mob::Rng::new(mob.entity_id as u64);
         let size = crate::mob::slime::roll_size(&mut rng);
@@ -10699,8 +11605,8 @@ fn read_slot(cursor: &mut Cursor) -> Option<(Option<Stack>, bool)> {
 
 /// Читает слот от клиента в творческом режиме (Untrusted Slot): у каждого
 /// довеска там своя длина, поэтому их можно пропускать. Из довесков
-/// смотрится только custom_data — пометка особого динамита; прочие
-/// отбрасываются, как и прежде.
+/// custom_data сохраняется целиком; неподдержанный или битый compound
+/// отвергается до изменения инвентаря.
 fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
     let count = cursor.varint()?;
 
@@ -10710,35 +11616,38 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
 
     let mut stack = Stack::new(cursor.varint()?, count);
     let added = cursor.varint()?;
-    let _removed = cursor.varint()?;
+    let removed = cursor.varint()?;
+    if !(0..=256).contains(&added) || !(0..=256).contains(&removed) { return None; }
+    let mut seen = std::collections::BTreeSet::new();
 
     let mut extras = crate::stackdata::Data::default();
 
-    for _ in 0..added.clamp(0, 256) {
+    for _ in 0..added {
         let kind = cursor.varint()?;
+        if !seen.insert(kind) { return None; }
         let length = usize::try_from(cursor.varint()?).ok()?;
         let data = cursor.bytes(length)?;
 
-        if kind == COMPONENT_CUSTOM_DATA
-            && let Some(name) = nbt::string_field(data, crate::custom_tnt::MARKER)
-            && Some(stack.item) == blocks::item_named("tnt")
-        {
-            stack.tnt = crate::custom_tnt::by_name(&name).map(|kind| kind.id);
+        if kind == 0 {
+            if !crate::stackdata::read_custom_data(data, &mut extras) { return None; }
+            continue;
         }
 
         if kind == 50 {
             if !crate::stackdata::read_bundle_component(data, &mut extras) { return None; }
+        } else if kind == crate::stackdata::COMPONENT_CHARGED_PROJECTILES {
+            if !crate::stackdata::read_charged_component(data, &mut extras) { return None; }
+        } else if kind == crate::stackdata::COMPONENT_CONTAINER {
+            if !crate::stackdata::read_container_component(data, &mut extras) { return None; }
         } else { crate::stackdata::read_component(kind, data, &mut extras); }
     }
 
-    // Имя особого динамита — от его вида, своим именем оно не хранится.
-    if let Some(kind) = stack.tnt.and_then(crate::custom_tnt::by_id)
-        && extras.name.as_deref() == Some(kind.title)
-    {
-        extras.name = None;
+    for _ in 0..removed {
+        if !seen.insert(cursor.varint()?) { return None; }
     }
-
-    Some(Some(stack.with_extras(extras)))
+    if crate::stackdata::to_bytes(&extras).len() > u16::MAX as usize { return None; }
+    stack = crate::stackdata::stack_with_components(stack.item, stack.count, extras);
+    Some(Some(stack))
 }
 
 /// Разбирает сообщение о содержимом слота инвентаря в творческом режиме.
@@ -10749,7 +11658,12 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
 ///
 /// Возвращает предмет, который надо бросить на землю: его выбросили прямо
 /// из меню (слот −1).
+#[cfg(test)]
 fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack> {
+    read_creative_slot_with_catalog(payload, player, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+}
+
+fn read_creative_slot_with_catalog(payload: &[u8], player: &mut PlayerState, catalog: crate::gameplay_catalog::Catalog) -> Option<Stack> {
     // В выживании предметы берутся из мира, а не из меню. Клиент такого
     // сообщения там и не шлёт, но верить ему на слово нельзя: изменённый
     // клиент мог бы выдать себе что угодно.
@@ -10762,12 +11676,13 @@ fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack>
 
     let slot = cursor.u16()? as i16;
     let stack = read_untrusted_slot(&mut cursor)?;
+    if cursor.offset != payload.len() { return None; }
 
     // Номер предмета и число — тоже от клиента. Несуществующий предмет
     // в руке ушёл бы всем остальным и отключил бы их, а число больше стопки
     // ломало бы счёт при делении стопки.
     if let Some(stack) = stack
-        && (!known_item(stack.item) || stack.count > crate::blocks::stack_size(stack.item))
+        && catalog.validate_stack(&stack).is_err()
     {
         log_debug!(
             "Play: {} прислал недопустимый предмет {} ({} шт.) — не берём",
@@ -10797,19 +11712,11 @@ fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack>
     None
 }
 
-/// Есть ли такой предмет в реестре (воздух — не предмет).
-fn known_item(item: i32) -> bool {
-    item > 0
-        && crate::blocks_table::ITEM_NAMES
-            .binary_search_by_key(&item, |(number, _)| *number)
-            .is_ok()
-}
-
 /// Щелчок в окне хранилища. Как у оригинала (вики, Click Container):
 /// щелчок выполняется на сервере, итог сравнивается с тем, что клиент
 /// предсказал сам (присланные изменённые ячейки и курсор), и досылаются
 /// только несовпавшие ячейки. Предсказание сверяется по предмету и числу:
-/// своих довесков у наших предметов нет.
+/// довески изменившихся стопок досылаются полностью.
 /// Кнопка в окне кафедры: листать (1 — назад, 2 — вперёд, 100 + N — на
 /// страницу N) или взять книгу (3). Страница сменилась — клиенту новое
 /// свойство окна; книгу взяли — она в инвентаре, окно закрывается.
@@ -10968,7 +11875,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
     let mut cursor = Cursor::new(payload);
 
-    let (Some(_window), Some(_state_id), Some(slot), Some(button), Some(mode)) =
+    let (Some(window_id), Some(state_id), Some(slot), Some(button), Some(mode)) =
         (cursor.varint(), cursor.varint(), cursor.u16(), cursor.u8(), cursor.varint())
     else {
         return;
@@ -10998,13 +11905,19 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         return;
     };
 
+    if window.id != window_id || player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR { return; }
+    // Устаревший state ID не отменяет действие: после него нужен полный
+    // авторитетный снимок (официальный777, probe_shulker_hotbar.py).
+    reaction.inventory |= state_id != player.state_id;
+    if mode != 5 { player.crafting_drag = None; }
+    let cursor_before = player.inventory.cursor();
+    let offhand_before = player.inventory.slot(inventory::OFFHAND);
     if let Some(chest) = window.plugin_chest.clone() {
-        if _window != window.id { return; }
         let (owner, handle, active) = { let chest = chest.lock().expect("сундук"); (chest.owner.clone(), chest.handle, chest.active) };
         publish_player(shared, player);
         let drag = if mode == 5 {
             let slots = chest.lock().expect("сундук").slots.clone();
-            prepare_plugin_drag(player, _window, slot as i16 as i32, button as i8, &slots)
+            prepare_plugin_drag(player, window_id, slot as i16 as i32, button as i8, &slots)
         } else { player.crafting_drag = None; None };
         let notify = mode != 5 || drag.is_some();
         let cancelled = !active || if let Some((_, selected)) = &drag {
@@ -11080,7 +11993,10 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         let before = snapshot(&slots, &player.inventory);
         let (slots_before, inventory_before) = (slots.clone(), player.inventory.clone());
         let llama=cart.is_some_and(|id| shared.items_in(player.dimension).lock().expect("мобы").mobs().iter().any(|m| m.entity_id==id && crate::mob::land::llama(m.kind)));
-        let mut click = if llama && mode==1 { land::quick_move(&mut slots,&mut player.inventory,slot as i16 as i32) }
+        let mut click = if mode == 5 {
+            window::Window { container: &mut slots, inventory: &mut player.inventory, kind, horse: horse_kind }
+                .drag(&mut player.crafting_drag, window_id, slot as i16 as i32, button as i8, player.game_mode == GAME_MODE_CREATIVE)
+        } else if llama && mode==1 { land::quick_move(&mut slots,&mut player.inventory,slot as i16 as i32) }
             else { window::Window { container: &mut slots, inventory: &mut player.inventory, kind, horse: horse_kind }.click(slot as i16 as i32, button as i8, mode) };
 
         // В выключенную ячейку крафтера ничего не кладётся (вики, Crafter:
@@ -11182,7 +12098,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     }
 
     if let Some(window) = player.window.as_mut() {
-        let crafted = window.crafter.then(|| (crate::crafting::craft(&window.shown), crate::crafting::craft(&after[..size])));
+        let crafted = window.crafter.then(|| (crate::crafting::craft_for_catalog(shared.catalog(), &window.shown), crate::crafting::craft_for_catalog(shared.catalog(), &after[..size])));
 
         window.shown = after[..size].to_vec();
 
@@ -11204,17 +12120,27 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             .find(|(place, _)| *place == index)
             .map_or(as_pair(before[index]), |(_, item)| *item);
 
-        // Мешок, у которого изменилось содержимое на месте, клиент предсказать не может (хэш довесков
-        // другой): ячейка уходит заново (чёрный ящик bundle-chest-select).
-        let bundle_changed = before[index] != *stack && stack.is_some_and(|s| crate::bundle::is_bundle(s.item)) && before[index].is_some_and(|b| b.item == stack.map_or(-1, |s| s.item));
+        // Хэш довесков здесь не сверяется: изменившуюся стопку с данными
+        // (включая содержимое шалкера) отправляем полностью, как мешок
+        // в чёрном ящике bundle-chest-select.
+        let components_changed = before[index] != *stack && stack.is_some_and(|s| s.data.is_some());
+        let bundle_changed = before[index] != *stack && stack.is_some_and(|s| crate::bundle::is_bundle(s.item))
+            && before[index].is_some_and(|b| b.item == stack.map_or(-1, |s| s.item));
 
-        if !readable || expected != as_pair(*stack) || bundle_changed {
+        if !readable || expected != as_pair(*stack) || components_changed || bundle_changed {
             reaction.window_slots.push((index, *stack));
         }
     }
 
-    if !readable || predicted_cursor != Some(as_pair(player.inventory.cursor())) {
+    if !readable || predicted_cursor != Some(as_pair(player.inventory.cursor()))
+        || (cursor_before != player.inventory.cursor() && player.inventory.cursor().is_some_and(|s| s.data.is_some()))
+    {
         reaction.cursor = Some(player.inventory.cursor());
+    }
+    // Вторая рука не входит в36ячеек снизу: её перемену нельзя потерять
+    // при синхронизации окна и последующем закрытии.
+    if offhand_before != player.inventory.slot(inventory::OFFHAND) {
+        reaction.slots.push(inventory::OFFHAND);
     }
 }
 
@@ -11553,6 +12479,9 @@ struct PlayerState {
     /// Инвентарь игрока: сервер ведёт его сам и показывает клиенту.
     inventory: Inventory,
 
+    /// Блокировка старых щелчков после отрицательного подтверждения.
+    legacy_transaction: Option<(u8, i16)>,
+
     /// Счётчик состояний окна. Клиент возвращает его в щелчке, а сервер
     /// увеличивает при каждой посылке содержимого: по нему клиент понимает,
     /// что картинка у него свежая.
@@ -11621,6 +12550,7 @@ struct PlayerState {
 
     /// Данные блок-сущностей, которые уйдут после ближайшей пачки.
     pending_entities: Vec<PendingEntity>,
+    light_updates: LightUpdates,
 
     /// Инвентарь менялся, пока было открыто окно хранилища, так, что окно
     /// этого не показало (броня, вторая рука): после закрытия прислать
@@ -11632,6 +12562,7 @@ struct PlayerState {
     /// Номер последнего открытого окна — следующее получит номер на один
     /// больше.
     window_counter: i32,
+    /// Перетаскивание в инвентаре, верстаке или хранилище: окно, кнопка, ячейки.
     plugin_native_drag: Option<(i32,i8,Vec<i32>)>,
     crafting_drag: Option<(i32, i8, Vec<i32>)>,
 
@@ -11661,6 +12592,11 @@ struct PlayerState {
     /// Атрибуты, чьи модификаторы от предметов снимались и ставились заново:
     /// клиенту они уходят, даже если значение то же.
     attrs_touched: Vec<(i32, u64)>,
+    /// Период рассылки атрибутов777; None сохраняет задержки основного775.
+    /// [проверить] Начальная фаза entity tick; пока привязана к чётному такту мира.
+    attrs_tracking_phase: Option<u64>,
+    /// Повторный износ следующим тактом откладывает общий пакет модификаторов.
+    attrs_equipment_tick: Option<u64>,
 
     /// Такты, когда скорость удара повторится чужим клиентам.
     speed_due: Vec<u64>,
@@ -11670,6 +12606,7 @@ struct PlayerState {
     speed_touch: u32,
 
     /// Статистика и достижения игрока (progress.rs).
+    advancement_revision: u64,
     progress: crate::progress::Progress,
     progress_location: progression::Location,
 }
@@ -11725,6 +12662,26 @@ impl OpenWindow {
 }
 
 impl PlayerState {
+    /// 26.3: Update Attributes уходит раз в два такта, и чётность берётся от
+    /// появления игрока в мире (вход, возрождение, переход), а не от возраста
+    /// мира. Чёрный ящик, attr-respawn-even/odd-probe ×3: возрождение на +20 —
+    /// рассылки на чётных тактах (42, 52, 64…), на +21 — на нечётных (41, 53…).
+    fn restart_attrs_tracking(&mut self, now: u64) {
+        if let Some(phase) = self.attrs_tracking_phase.as_mut() {
+            *phase = now % 2;
+        }
+    }
+
+    /// Ближайший такт рассылки атрибутов не раньше `earliest`: в 26.3 — только
+    /// такты своей чётности (attribute-phase-equipment: и износ, и смена режима),
+    /// в 26.1.2 — сам `earliest`.
+    fn attr_due(&self, earliest: u64) -> u64 {
+        match self.attrs_tracking_phase {
+            Some(phase) if earliest % 2 != phase => earliest + 1,
+            _ => earliest,
+        }
+    }
+
     /// Заводит запись об игроке. `saved` — то, что осталось от прошлого
     /// захода: оттуда берутся место, поворот и режим игры. Если игрок здесь
     /// впервые, он появляется в точке появления.
@@ -11737,10 +12694,21 @@ impl PlayerState {
         reader: journal::Reader,
         spawn: (f64, f64, f64),
     ) -> Self {
+        Self::new_for_catalog(uuid, name, saved, skin, skin_parts, reader, spawn,
+            crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    /// Книгу рецептов выбирает основной профиль мира, а не протокол игрока.
+    #[allow(clippy::too_many_arguments)]
+    fn new_for_catalog(
+        uuid: [u8; 16], name: String, saved: Option<PlayerData>, skin: Option<Skin>,
+        skin_parts: u8, reader: journal::Reader, spawn: (f64, f64, f64),
+        catalog: crate::gameplay_catalog::Catalog,
+    ) -> Self {
         // Игрок, сохранённый ниже дна мира, вернулся бы в пустоту и падал
         // вечно. Такое бывает после того, как мир поменялся, — ставим его
         // в точку появления.
-        let saved = saved.filter(|data| {
+        let saved = saved.map(|mut data| {
             let in_the_void = data.y < world::MIN_Y as f64;
 
             if in_the_void {
@@ -11752,7 +12720,8 @@ impl PlayerState {
                 );
             }
 
-            !in_the_void
+            if in_the_void { (data.x, data.y, data.z) = spawn; }
+            data
         });
 
         let (x, y, z, yaw, pitch, game_mode) = match &saved {
@@ -11780,8 +12749,9 @@ impl PlayerState {
         abilities.flying &= abilities.mayfly;
 
         // Здоровье, еда, воздух и огонь — как при выходе.
-        let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored(&data.vitals)).unwrap_or_default();
+        let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored_with_effects(&data.vitals, &data.effects)).unwrap_or_default();
         let mut attrs = crate::attributes::Attributes::player();
+        attrs.set_catalog(catalog);
         attrs.set_creative_ranges(game_mode == GAME_MODE_CREATIVE);
 
         // Семя зачарования 0 — не заведено: завести (вики, Enchanting
@@ -11790,7 +12760,7 @@ impl PlayerState {
             vit.xp_seed = crate::enchanting::new_seed(u64::from_be_bytes(uuid[..8].try_into().unwrap_or_default()));
         }
 
-        Self {
+        let mut player = Self {
             spawn_point: spawn,
             respawn: saved.as_ref().and_then(|data| data.respawn),
             ender: saved.as_ref().map_or_else(playerdata::empty_ender, |data| data.ender.clone()),
@@ -11856,9 +12826,11 @@ impl PlayerState {
                 .map(|data| data.inventory.clone())
                 .unwrap_or_else(Inventory::new),
             state_id: 0,
+            legacy_transaction: None,
             window: None,
             pending_changes: Vec::new(),
             pending_entities: Vec::new(),
+            light_updates: LightUpdates::default(),
             inventory_after_window: false,
             late_slots: Vec::new(),
             window_counter: 0,
@@ -11873,9 +12845,12 @@ impl PlayerState {
             equip_seen: Vec::new(),
             foot_enchants: movement_enchantments::State::default(),
             attrs_touched: Vec::new(),
+            attrs_tracking_phase: (catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3).then_some(0),
+            attrs_equipment_tick: None,
             speed_due: Vec::new(),
             speed_touch: 0,
-            progress: crate::progress::Progress::load(&uuid),
+            advancement_revision: 0,
+            progress: crate::progress::Progress::load_for_catalog(&uuid, catalog),
             progress_location: progression::Location::default(),
             skin,
             skin_parts,
@@ -11884,7 +12859,10 @@ impl PlayerState {
             reported: None,
             stopped: false,
             saved,
-        }
+        };
+        vitals::apply_effect_modifiers(&mut player);
+        player.net = vitals::Net::synced(&player.vit);
+        player
     }
 
     /// Запись игрока для общего списка.
@@ -12063,21 +13041,27 @@ impl PlayerState {
             || saved.ender != self.ender
             || saved.shoulders != self.shoulders
             || saved.vitals.health != self.vit.health
+            || saved.effects.needs_save(&self.vit.saved_effects())
             || saved.vitals.food != self.vit.food
+            // Насыщение тоже: при быстром перезаходе новый вход читает файл
+            // раньше записи при выходе (pvp-thorns 26.3: после мирной паузы
+            // у оригинала насыщение 19–20, у нас с диска приходило 5).
+            || saved.vitals.saturation != self.vit.saturation
     }
 
     /// Записывает положение на диск, если оно отличается от того, что там уже
     /// лежит. Так же, как сохраняется мир: сразу, а не только при выходе, —
     /// сервер может и не успеть сохранить, если его выключат.
-    fn save_if_needed(&mut self, directory: &Path) {
+    fn save_if_needed(&mut self, directory: &Path, catalog: crate::gameplay_catalog::Catalog) {
+        let _timing = super::packet::TimingSpan::new("save_player");
         if self.needs_save() {
-            self.save(directory);
+            self.save_with_catalog(directory, catalog);
         }
     }
 
     /// Записывает положение на диск. Зовётся при выходе игрока — тогда
     /// записывается в любом случае, даже если ничего не изменилось.
-    fn save(&mut self, directory: &Path) {
+    fn save_with_catalog(&mut self, directory: &Path, catalog: crate::gameplay_catalog::Catalog) {
         let data = PlayerData {
             abilities: self.abilities,
             shoulders: self.shoulders.clone(),
@@ -12090,13 +13074,14 @@ impl PlayerState {
             inventory: self.inventory.clone(),
             dimension: self.dimension,
             vitals: self.vit.saved(),
+            effects: self.vit.saved_effects(),
             respawn: self.respawn,
             ender: self.ender.clone(),
         };
 
         self.progress.save(&self.uuid);
 
-        match playerdata::save(directory, &self.uuid, &data) {
+        match playerdata::save_for_catalog(directory, &self.uuid, &data, catalog) {
             Ok(()) => self.saved = Some(data),
             Err(e) => log_error!(
                 "Не удалось сохранить положение игрока {}: {}",
@@ -12339,13 +13324,13 @@ mod tests {
         let one = [5u16; 64];
         let mut out = Vec::new();
 
-        push_biomes(&mut out, Some(&one));
+        push_biomes(&mut out, Some(&one), &configuration::test_chunk_biomes(mcsa_protocol::wire::INTERNAL, false));
         assert_eq!(out, vec![0, 5]);
 
         let two: Vec<u16> = (0..64).map(|cell| if cell < 16 { 1 } else { 7 }).collect();
         let mut out = Vec::new();
 
-        push_biomes(&mut out, Some(&two));
+        push_biomes(&mut out, Some(&two), &configuration::test_chunk_biomes(mcsa_protocol::wire::INTERNAL, false));
         // Один бит, палитра [1, 7], 64 записи — один long.
         assert_eq!(&out[..4], &[1, 2, 1, 7]);
         assert_eq!(out.len(), 4 + 8);
@@ -12354,7 +13339,7 @@ mod tests {
         let many: Vec<u16> = (0..64).map(|cell| cell % 10).collect();
         let mut out = Vec::new();
 
-        push_biomes(&mut out, Some(&many));
+        push_biomes(&mut out, Some(&many), &configuration::test_chunk_biomes(mcsa_protocol::wire::INTERNAL, false));
         // Прямо: в реестре 65 биомов — семь битов, девять записей на long,
         // восемь long'ов, палитры нет.
         assert_eq!(out[0], 7);
@@ -12385,6 +13370,7 @@ mod tests {
             game_mode: GAME_MODE_CREATIVE,
             dimension: Default::default(),
             vitals: Default::default(),
+            effects: Default::default(),
             respawn: None,
             ender: playerdata::empty_ender(),
         };
@@ -12428,6 +13414,7 @@ mod tests {
             game_mode: 0,
             dimension: Default::default(),
             vitals: Default::default(),
+            effects: Default::default(),
             respawn: None,
             ender: playerdata::empty_ender(),
         };
@@ -12455,6 +13442,7 @@ mod tests {
             pitch: 0.0,
             game_mode: 0,
             dimension: Default::default(),
+            effects: Default::default(),
             vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21, experience_total: 21, xp_seed: 5 },
             respawn: None,
             ender: playerdata::empty_ender(),
@@ -12539,7 +13527,7 @@ mod tests {
 
         player.set_position(123.5, 70.0, -45.25);
         player.set_rotation(90.0, 0.0);
-        player.save_if_needed(&directory);
+        player.save_if_needed(&directory, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));
 
         let read = playerdata::load(&directory, &player.uuid).expect("файл игрока");
 
@@ -12610,6 +13598,7 @@ mod tests {
             id: SET_PLAYER_POSITION,
             length: body.len() as i32,
             body,
+            teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None,
         };
 
         assert_eq!(packet.payload().len(), POSITION_BYTES);
@@ -12641,7 +13630,7 @@ mod tests {
                 push_f32(&mut body, *value);
             }
             body.push(flags);
-            PacketInfo { id, length: body.len() as i32, body }
+            PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }
         };
 
         handle_client_packet(&packet(SET_PLAYER_POSITION, &[1.5, 2.0, 3.5], &[], 0x01), &mut player, &shared);
@@ -12892,13 +13881,15 @@ mod tests {
     /// какой кусок строки заменить.
     #[test]
     fn suggestions_complete_player_names() {
+        let ops_path = std::env::temp_dir().join(format!("mcsa-command-player-names-{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&ops_path);
         let shared = crate::shared::Shared::new(
             crate::world::World::in_memory(),
             crate::world::World::in_memory(),
             std::path::PathBuf::new(),
             std::path::PathBuf::new(),
             Default::default(),
-            crate::ops::Ops::open(std::path::Path::new("/tmp/mcsheriffanya-no-ops.json")),
+            crate::ops::Ops::open(&ops_path),
             crate::skins::Settings::default(),
         );
 
@@ -12922,6 +13913,8 @@ mod tests {
             }
         }
 
+        shared.ops.lock().expect("права").give(&[1; 16], "Вася", crate::ops::HIGHEST_LEVEL);
+
         let ask = |text: &str| {
             let mut payload = encode_varint(7); // номер запроса
             payload.extend_from_slice(&encode_string(text));
@@ -12940,14 +13933,15 @@ mod tests {
         assert_eq!(hints.start, "kick ".len() as i32);
 
         // Ничего не набрано — подходят все имена и все значки.
-        assert_eq!(ask("tp ").matches.len(), 3 + 5);
+        assert_eq!(ask("tp ").matches.len(), 3 + 6 + 3);
 
         // Набрано то, чего нет.
         assert!(ask("kick Юра").matches.is_empty());
 
         // Особый динамит без прав не подсказывается вовсе.
-        assert!(ask("tnt ").matches.is_empty());
-        assert!(ask("tnt give Вася m").matches.is_empty());
+        assert!(suggestions(&[encode_varint(1), encode_string("tnt ")].concat(), &shared, &[9; 16]).unwrap().matches.is_empty());
+        assert!(suggestions(&[encode_varint(1), encode_string("tnt give Вася m")].concat(), &shared, &[9; 16]).unwrap().matches.is_empty());
+        let _ = std::fs::remove_file(ops_path);
     }
 
     /// Подсказки к `tnt`: слова, игроки, виды из таблицы, число — тому, у
@@ -13021,4 +14015,54 @@ mod tests {
 mod tails_tests;
 
 #[cfg(test)]
+mod chunk_compat_tests;
+
+#[cfg(test)]
+mod initial_776_probe;
+
+#[cfg(test)]
+mod legacy_action_tests;
+
+mod legacy_chunks;
+
+mod legacy_inventory;
+
+#[cfg(test)]
+mod dupe_tests;
+
+#[cfg(test)]
+mod hand_action_tests;
+
+#[cfg(test)]
+mod use_action_tests;
+
+#[cfg(test)]
+mod catalog_action_tests;
+#[cfg(test)]
+mod changed_rules_tests;
+
+#[cfg(test)]
+mod crafter_catalog_tests;
+
+#[cfg(test)]
+mod concrete_slab_family_tests;
+
+#[cfg(test)]
 mod abilities_tests;
+
+#[cfg(test)]
+#[path = "play/chunk_stream_tests.rs"]
+mod chunk_stream_tests;
+
+#[cfg(test)]
+mod shulker_hotbar_tests;
+
+#[cfg(test)]
+mod item_gap_tests;
+
+#[cfg(test)]
+mod inbound_budget_tests;
+
+#[cfg(test)]
+#[path = "play/inbound_runtime_tests.rs"]
+mod inbound_runtime_tests;

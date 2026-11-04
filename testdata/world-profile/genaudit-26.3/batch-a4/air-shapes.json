@@ -1,0 +1,103 @@
+{
+  "method": "Read-only A3 accepted and official worlds, same owner A3 measurement plan. Biome of the measured natural surface; cells Y160..175 at least six blocks below that surface. Counts are per biome, not coordinate matches. This additional attribution is not a fresh A4 generation.",
+  "samples": {
+    "accepted": {
+      "air_cells_and_below_surface_cells_Y160": {
+        "windswept_savanna": [
+          11,
+          11
+        ],
+        "forest": [
+          364,
+          366
+        ],
+        "sparse_jungle": [
+          25,
+          25
+        ],
+        "windswept_hills": [
+          5477,
+          5621
+        ]
+      },
+      "height_quantiles_min_median_p95_p99_max": {
+        "windswept_savanna": {
+          "n": 29328,
+          "quantiles": [
+            47.0,
+            69.0,
+            112.0,
+            136.0,
+            176.0
+          ]
+        },
+        "beach": {
+          "n": 33920,
+          "quantiles": [
+            47.0,
+            59.0,
+            64.0,
+            66.0,
+            77.0
+          ]
+        },
+        "windswept_hills": {
+          "n": 55911,
+          "quantiles": [
+            38.0,
+            96.0,
+            152.0,
+            168.0,
+            208.0
+          ]
+        }
+      },
+      "jagged_and_frozen_peaks_present": false
+    },
+    "vanilla": {
+      "air_cells_and_below_surface_cells_Y160": {
+        "sparse_jungle": [
+          0,
+          82
+        ],
+        "windswept_savanna": [
+          398,
+          5139
+        ]
+      },
+      "height_quantiles_min_median_p95_p99_max": {
+        "windswept_savanna": {
+          "n": 29328,
+          "quantiles": [
+            14.0,
+            61.0,
+            141.0,
+            175.72999999999956,
+            210.0
+          ]
+        },
+        "windswept_hills": {
+          "n": 56192,
+          "quantiles": [
+            40.0,
+            82.0,
+            116.0,
+            124.0,
+            137.0
+          ]
+        },
+        "beach": {
+          "n": 33888,
+          "quantiles": [
+            7.0,
+            62.0,
+            78.0,
+            133.0,
+            143.0
+          ]
+        }
+      },
+      "jagged_and_frozen_peaks_present": false
+    }
+  }
+}

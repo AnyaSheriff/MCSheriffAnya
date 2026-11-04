@@ -7,7 +7,8 @@ use super::ai::{Ctx, Plan, Watcher};
 use super::{Event, Kind, Mob, Rng, View, hostile};
 
 pub fn cube(kind: Kind) -> bool {
-    matches!(kind, Kind::Slime | Kind::MagmaCube)
+    // Куб серы идёт тем же путём прыжков и приземлений; его правила — в sulfur_cube.rs.
+    matches!(kind, Kind::Slime | Kind::MagmaCube | Kind::SulfurCube)
 }
 
 /// Вики: «health is equal to their size squared»; Size в NBT на единицу меньше.
@@ -33,6 +34,7 @@ pub fn damage(size: i32) -> f32 {
 
 /// Вики: «2–4 smaller slimes», каждый вдвое меньше; маленький не делится.
 pub fn split(parent: &Mob, rng: &mut Rng, next_id: &mut dyn FnMut() -> i32) -> Vec<Mob> {
+    if parent.kind == Kind::SulfurCube { return super::sulfur_cube::split(parent, rng, next_id); }
     if !cube(parent.kind) || parent.nether.size <= 1 || parent.h.despawn || !parent.gone() {
         return Vec::new();
     }
@@ -128,7 +130,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 /// [проверить] Луч видимости и границы ящика для присевшего игрока.
 pub fn contact(mob: &Mob, view: &dyn View, player: &Watcher) -> Option<hostile::Melee> {
     // Замер slime-attack: слизень с NoAI у игрока не бьёт ни разу (оригинал, 80 тактов).
-    if mob.no_ai || mob.is_dead() || mob.h.despawn || !player.targetable || player.spectator {
+    if mob.kind == Kind::SulfurCube || mob.no_ai || mob.is_dead() || mob.h.despawn || !player.targetable || player.spectator {
         return None;
     }
     let damage = if mob.kind == Kind::MagmaCube { super::nether::cube_damage(mob.nether.size) } else { damage(mob.nether.size) };
@@ -173,6 +175,7 @@ fn hop_pitch(mob: &Mob, rng: &mut Rng, factor: f32) -> f32 {
 }
 
 pub fn landed(mob: &mut Mob, rng: &mut Rng) {
+    if mob.kind == Kind::SulfurCube { return; }
     // [проверить] Частицы item_slime при приземлении рисует клиент по on_ground;
     // не дублируем их пакетами. Серверный Poof при исчезновении — общий.
     let name = if mob.kind == Kind::MagmaCube {

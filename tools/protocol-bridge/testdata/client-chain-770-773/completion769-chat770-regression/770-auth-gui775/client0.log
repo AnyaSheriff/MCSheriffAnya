@@ -1,0 +1,93 @@
+NOTE: Picked up JDK_JAVA_OPTIONS: -Dorg.lwjgl.glfw.libname=/tmp/s26-mv12-gui/usr/lib/x86_64-linux-gnu/libglfw.so.3.4
+[23:25:45] [main/WARN]: Failed retrieving storage space for org.lwjgl.system.SharedLibraryExtractPath
+java.nio.file.NoSuchFileException: /tmp/mcsa-chat770-gui-7oqk5bro/game0/natives/lwjgl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403) ~[?:?]
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375) ~[?:?]
+	at ae.b(SourceFile:167) [client.jar:?]
+	at ae.a(SourceFile:154) [client.jar:?]
+	at ae.b(SourceFile:147) [client.jar:?]
+	at ae.a(SourceFile:87) [client.jar:?]
+	at ae.a(SourceFile:82) [client.jar:?]
+	at ae.e(SourceFile:56) [client.jar:?]
+	at ae.a(SourceFile:87) [client.jar:?]
+	at ae.<init>(SourceFile:56) [client.jar:?]
+	at p.<init>(SourceFile:35) [client.jar:?]
+	at p.g(SourceFile:234) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:134) [client.jar:?]
+[23:25:45] [main/WARN]: Failed retrieving storage space for io.netty.native.workdir
+java.nio.file.NoSuchFileException: /tmp/mcsa-chat770-gui-7oqk5bro/game0/natives/netty
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106) ~[?:?]
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51) ~[?:?]
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39) ~[?:?]
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403) ~[?:?]
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375) ~[?:?]
+	at ae.b(SourceFile:167) [client.jar:?]
+	at ae.a(SourceFile:154) [client.jar:?]
+	at ae.b(SourceFile:148) [client.jar:?]
+	at ae.a(SourceFile:87) [client.jar:?]
+	at ae.a(SourceFile:82) [client.jar:?]
+	at ae.e(SourceFile:56) [client.jar:?]
+	at ae.a(SourceFile:87) [client.jar:?]
+	at ae.<init>(SourceFile:56) [client.jar:?]
+	at p.<init>(SourceFile:35) [client.jar:?]
+	at p.g(SourceFile:234) [client.jar:?]
+	at net.minecraft.client.main.Main.main(SourceFile:134) [client.jar:?]
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.5/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[23:25:47] [Datafixer Bootstrap/INFO]: 263 Datafixer optimizations took 2785 milliseconds
+[23:25:52] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[23:25:52] [Render thread/INFO]: Setting user: McsaProbe
+[23:25:53] [Render thread/INFO]: Backend library: LWJGL version 3.3.3+5
+Failed to create /home/lenox/.cache/mesa_shader_cache for shader cache (Read-only file system)---disabling.
+[23:25:53] [Render thread/INFO]: [STDERR]: [LWJGL] [ThreadLocalUtil] Unsupported JNI version detected, this may result in a crash. Please inform LWJGL developers.
+[23:25:53] [Render thread/INFO]: Using optional rendering extensions: GL_KHR_debug, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access
+[23:25:54] [Render thread/INFO]: Reloading ResourceManager: vanilla
+[23:25:54] [Worker-Main-8/INFO]: Found unifont_all_no_pua-16.0.01.hex, loading
+[23:25:54] [Worker-Main-6/INFO]: Found unifont_jp_patch-16.0.01.hex, loading
+[23:25:56] [Render thread/WARN]: minecraft:pipeline/entity_translucent_emissive shader program does not use sampler Sampler2 defined in the pipeline. This might be a bug.
+[23:25:56] [Render thread/INFO]: OpenAL initialized on device No Output
+[23:25:56] [Render thread/INFO]: Sound engine started
+[23:25:57] [Render thread/INFO]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 2048x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[23:25:57] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[23:25:57] [Render thread/INFO]: Connecting to 127.0.0.1, 26127
+[23:26:00] [Download-1/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[23:26:00] [Download-1/ERROR]: Failed to fetch Realms feature flags
+fnm: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+	at flq.a(SourceFile:495) ~[client.jar:?]
+	at flq.n(SourceFile:177) [client.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614) [?:?]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+[23:26:00] [Render thread/INFO]: [System] [CHAT] Регистрация: /register <пароль> <повтор>
+[23:26:04] [Render thread/INFO]: [System] [CHAT] McsaProbe зашёл на сервер
+[23:26:04] [Render thread/INFO]: Loaded 0 advancements
+[23:26:06] [Render thread/INFO]: [System] [CHAT] [Server] MCSA_CORE_DIG_110000
+X connection to :100 broken (explicit kill or server shutdown).

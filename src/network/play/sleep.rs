@@ -127,6 +127,13 @@ pub(super) fn use_bed(world: &mut World, shared: &Shared, player: &mut PlayerSta
     // изножье ломается с частицами (2001) — раньше вспышки; обе половины —
     // общей пачкой (чёрный ящик, bed-nether).
     if !bed::beds_work(player.dimension) {
+        // Соломенная кровать не взрывается: исчезает без предмета (вики, Straw Bed).
+        if bed::is_straw(world.get_block(head.0, head.1, head.2)) {
+            bed::remove_both(world, head);
+            swing_twice(world, player.entity_id);
+            repeat_clicked(world, clicked, face);
+            return accepted;
+        }
         let foot = bed::foot_of(world, head);
 
         world.set_block(head.0, head.1, head.2, world::AIR);
@@ -160,7 +167,10 @@ pub(super) fn use_bed(world: &mut World, shared: &Shared, player: &mut PlayerSta
         } else if bed::bed_obstructed(world, head) {
             refuse(world, player, "block.minecraft.bed.obstructed");
         } else {
-            set_respawn(world, player, head);
+            // Соломенная кровать точку возрождения не ставит (вики, Straw Bed).
+            if !bed::is_straw(world.get_block(head.0, head.1, head.2)) {
+                set_respawn(world, player, head);
+            }
 
             let raining = world.weather.is_raining();
             let thundering = world.weather.is_thundering();
@@ -231,7 +241,10 @@ pub(super) fn wake_up(shared: &Shared, player: &mut PlayerState, announce: bool)
 
     world.note_private(player.entity_id, body);
 
-    if bed::is_bed(world.get_block(head.0, head.1, head.2)) {
+    if bed::is_straw(world.get_block(head.0, head.1, head.2)) {
+        // Одноразовая: ломается, когда игрок встал, и ничего не роняет.
+        bed::remove_both(&mut world, head);
+    } else if bed::is_bed(world.get_block(head.0, head.1, head.2)) {
         bed::set_occupied(&mut world, head, false);
         bed::note_entities(&mut world, head);
     }

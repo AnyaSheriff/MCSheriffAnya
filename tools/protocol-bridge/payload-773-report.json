@@ -1,0 +1,130 @@
+{
+  "scope": "Canonical773 client codecs and explicit views; live evidence and admission recorded separately in CONTINUED.md",
+  "common_component_definitions": 96,
+  "equal_envelopes": [
+    "Slot",
+    "UntrustedSlot",
+    "UntrustedSlotComponent"
+  ],
+  "missing_components": [
+    "attack_range",
+    "damage_type",
+    "kinetic_weapon",
+    "minimum_attack_charge",
+    "piercing_weapon",
+    "swing_animation",
+    "use_effects",
+    "zombie_nautilus/variant"
+  ],
+  "missing_entities": [
+    "camel_husk",
+    "nautilus",
+    "parched",
+    "zombie_nautilus"
+  ],
+  "changed_metadata": {
+    "bee": {
+      "older": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "remaining_anger_time"
+      ],
+      "newer": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "anger_end_time"
+      ]
+    },
+    "wolf": {
+      "older": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "owneruuid",
+        "interested",
+        "collar_color",
+        "remaining_anger_time",
+        "variant",
+        "sound_variant"
+      ],
+      "newer": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "living_entity_flags",
+        "health",
+        "effect_particles",
+        "effect_ambience",
+        "arrow_count",
+        "stinger_count",
+        "sleeping_pos",
+        "mob_flags",
+        "baby",
+        "flags",
+        "owneruuid",
+        "interested",
+        "collar_color",
+        "anger_end_time",
+        "variant",
+        "sound_variant"
+      ]
+    }
+  },
+  "semantic_limits": [
+    "Active anger conversion requires the exact mob snapshot clock",
+    "Corrected35 attribute IDs reuse the observed775 order; live payloads do not prove35 distinct semantics",
+    "Opaque773 accepted the typed bee entity prefix; unsupported custom component forms remain refused"
+  ]
+}

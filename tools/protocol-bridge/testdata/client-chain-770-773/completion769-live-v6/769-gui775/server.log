@@ -1,0 +1,111 @@
+
+running 1 test
+MCSA gameplay probe ready on 26126
+[23:28:03] [Server thread/INFO]: Marked chunk [-1, -1] in minecraft:minecraft:overworld to be force loaded
+[23:28:03] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_1
+[23:28:03] [Server thread/INFO]: Заполнено блоков: 0
+[23:28:03] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_2
+[23:28:04] [Server thread/INFO]: Заполнено блоков: 256
+[23:28:04] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_3
+[23:28:04] [Server thread/INFO]: Changed the block at -16, 64, -16
+[23:28:04] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_4
+[23:28:04] [Server thread/INFO]: Changed the block at -15, 64, -16
+[23:28:04] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_5
+[23:28:05] [Server thread/INFO]: Changed the block at -14, 64, -16
+[23:28:05] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_6
+[23:28:05] [Server thread/INFO]: Changed the block at -13, 64, -16
+[23:28:05] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_7
+[23:28:05] [Server thread/INFO]: Changed the block at -12, 64, -16
+[23:28:05] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_8
+[23:28:06] [Server thread/INFO]: Changed the block at -11, 64, -16
+[23:28:06] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_9
+[23:28:06] [Server thread/INFO]: Changed the block at -10, 64, -16
+[23:28:06] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_10
+[23:28:06] [Server thread/INFO]: Changed the block at -9, 64, -16
+[23:28:06] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_11
+[23:28:07] [Server thread/INFO]: Changed the block at -8, 64, -16
+[23:28:07] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_12
+[23:28:07] [Server thread/INFO]: Changed the block at -7, 64, -16
+[23:28:07] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_13
+[23:28:07] [Server thread/INFO]: Changed the block at -5, 64, -16
+[23:28:07] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_14
+[23:28:08] [Server thread/INFO]: Changed the block at -4, 64, -16
+[23:28:08] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_15
+[23:28:08] [Server thread/INFO]: Changed the block at -3, 64, -16
+[23:28:08] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_16
+[23:28:08] [Server thread/INFO]: Changed the block at -2, 64, -16
+[23:28:08] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_17
+[23:28:09] [Server thread/INFO]: Changed the block at -1, 64, -16
+[23:28:09] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_18
+[23:28:09] [Server thread/INFO]: Changed the block at -16, 64, -15
+[23:28:09] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_19
+[23:28:09] [Server thread/INFO]: Changed the block at -15, 64, -15
+[23:28:09] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_20
+[23:28:10] [Server thread/INFO]: Changed the block at -14, 64, -15
+[23:28:10] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_21
+[23:28:10] [Server thread/INFO]: Changed the block at -13, 64, -15
+[23:28:10] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_22
+[23:28:10] [Server thread/INFO]: Changed the block at -12, 64, -15
+[23:28:10] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_23
+[23:28:11] [Server thread/INFO]: Changed the block at -11, 64, -15
+[23:28:11] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_24
+[23:28:11] [Server thread/INFO]: Changed the block at -10, 64, -15
+[23:28:11] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_25
+[23:28:12] [Server thread/INFO]: Changed the block at -9, 64, -15
+[23:28:12] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_26
+[23:28:12] [Server thread/INFO]: Changed the block at -8, 64, -15
+[23:28:12] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_27
+[23:28:12] [Server thread/INFO]: Changed the block at -7, 64, -15
+[23:28:12] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_28
+[23:28:13] [Server thread/INFO]: Changed the block at -6, 64, -15
+[23:28:13] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_29
+[23:28:13] [Server thread/INFO]: Changed the block at -5, 64, -15
+[23:28:13] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_30
+[23:28:13] [Server thread/INFO]: Changed the block at -4, 64, -15
+[23:28:13] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_31
+[23:28:14] [Server thread/INFO]: Changed the block at -3, 64, -15
+[23:28:14] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_32
+[23:28:14] [Server thread/INFO]: Changed the block at -2, 64, -15
+[23:28:14] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_33
+[23:28:14] [Server thread/INFO]: Changed the block at -1, 64, -15
+[23:28:14] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_34
+[23:28:15] [Server thread/INFO]: Changed the block at -16, 64, -14
+[23:28:15] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_35
+[23:28:15] [Server thread/INFO]: Changed the block at -15, 64, -14
+[23:28:15] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_36
+[23:28:15] [Server thread/INFO]: Changed the block at -14, 64, -14
+[23:28:15] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_37
+[23:28:16] [Server thread/INFO]: Changed the block at -13, 64, -14
+[23:28:16] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_38
+[23:28:16] [Server thread/INFO]: Changed the block at -12, 64, -14
+[23:28:16] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_39
+[23:28:16] [Server thread/INFO]: Changed the block at -11, 64, -14
+[23:28:16] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_40
+[23:28:16] [Server thread/INFO]: Changed the block at -10, 64, -14
+[23:28:16] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_41
+[23:28:17] [Server thread/INFO]: Changed the block at -9, 64, -14
+[23:28:17] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_42
+[23:28:17] [Server thread/INFO]: Changed the block at -8, 64, -14
+[23:28:17] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_43
+[23:28:17] [Server thread/INFO]: Changed the block at -7, 64, -14
+[23:28:17] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_44
+[23:28:18] [Server thread/INFO]: Changed the block at -6, 64, -14
+[23:28:18] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_45
+[23:28:18] [Server thread/INFO]: Changed the block at -5, 64, -14
+[23:28:18] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_46
+[23:28:18] [Server thread/INFO]: Changed the block at -4, 64, -14
+[23:28:18] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_47
+[23:28:19] [Server thread/INFO]: Changed the block at -16, 64, -13
+[23:28:19] [Server thread/INFO]: [Server] MCSA_ACTION_BARRIER_48
+[23:28:34] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:28:34] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[23:28:34] [Server thread/INFO]: McsaProbe[/127.0.0.1:60538 → localhost:26132] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[23:28:35] [Server thread/INFO]: McsaProbe зашёл на сервер
+[23:28:35] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[23:28:35] [Server thread/INFO]: Останавливаю сервер
+[23:28:35] [Server thread/INFO]: McsaProbe вышел
+[23:28:35] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_1_21_4_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2996 filtered out; finished in 32.63s
+

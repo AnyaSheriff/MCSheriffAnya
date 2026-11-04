@@ -1,0 +1,231 @@
+{
+  "version": 777,
+  "checks": [
+    "place-and-open-exact-contents",
+    "move-0-to-27",
+    "move-26-to-28",
+    "move-27-to-0",
+    "reopen-keeps-contents-without-duplication"
+  ],
+  "snapshots": {
+    "opened": [
+      {
+        "item": "stone",
+        "count": 3
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "item": "potion",
+        "count": 1,
+        "potion": 13
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "reopened": [
+      {
+        "item": "stone",
+        "count": 3
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "item": "potion",
+        "count": 1,
+        "potion": 13
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "commands_sha256": "2f29750df6221451a5ec63288d754276a537456256182cc44a0314f701f914e7",
+  "gameplay_version": "26.3",
+  "items_sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+  "test_binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+  "packets": [
+    {
+      "name": "window_items",
+      "payload": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "window_items",
+      "payload": "00022e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0003002401900501004d1b01010300000000000000000000000000000000000000000000000000000001f70901010035010d000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0004002400"
+    },
+    {
+      "name": "open_window",
+      "payload": "01140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+    },
+    {
+      "name": "window_items",
+      "payload": "01053f030100000000000000000000000000000000000000000000000000000001f709010035010d00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0106000000"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "03010000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0107001b03010000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0108001a00"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "01f709010035010d000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "0109001c01f709010035010d000000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "010a001b00"
+    },
+    {
+      "name": "set_cursor_item",
+      "payload": "03010000"
+    },
+    {
+      "name": "set_slot",
+      "payload": "010b000003010000"
+    },
+    {
+      "name": "open_window",
+      "payload": "02140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+    },
+    {
+      "name": "window_items",
+      "payload": "020c3f0301000000000000000000000000000000000000000000000000000000000001f709010035010d0000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "exit_code": 0
+}

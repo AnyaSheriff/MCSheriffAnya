@@ -1,0 +1,65 @@
+# Тестовые сетевые записи
+
+Это наши записи обмена с официальным сервером как с чёрным ящиком. JAR не
+распаковывался; код, mappings и содержимое реестров не читались. Все профили
+и миры временные, игрок — синтетический McsaProbe, online-mode=false.
+
+- `login-success-*.bin`: полезная нагрузка LoginSuccess (без ID).
+- `play-login-*.bin`: полное тело LoginPlay, включая ID.
+- `teleport-confirm-26.3.bin`: полезная нагрузка первого ответа собственного
+  клиента на Synchronize Player Position (без ID пакета).
+- `entity-delta-26.3.bin`: шесть 8-байтовых Delta от движения тестовой стойки.
+- `teleport-observation-26.3.json`: четыре опыта с ConfirmTeleportation;
+  координаты/углы после ответа и следующего пакета движения.
+
+LoginPlay26.1.2 получен `observe.py --protocol 775`; LoginPlay26.3 и ответ на
+перенос — `probe_teleport.py`. SHA-1 официальных JAR:
+
+- 26.1.2: `97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51`.
+- 26.3: `33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c`.
+
+Опыты используют только loopback и отдельный временный каталог; сервер
+останавливается в `finally`. При воспроизведении выбирать свободный тестовый
+порт, не запускать одновременно с cargo. JSON-схемы закреплены в
+`../candidate-sources-26.3.json`. Семантика позы относится к четырём измеренным
+случаям; это не полная проверка античита или поддержки26.3 нашим ядром.
+
+`light-*.bin` — только LightData из MapChunk тестового чанка (-1,-1),
+факел (-16,65,-16) установлен/удалён. `probe_light.py`, свежий вход для
+каждого состояния; значения14/0 и SHA256 в `light-observations.json`.
+Обёртки UpdateLight в Rust-тестах синтетические. Подробнее и ограничения:
+[свет/чанки](../../research/light-chunks-26.3.md).
+
+
+`block-entities-*.json` — записи только явно поставленных блоков из
+`probe_block_entities.py`. Кровать в777 дополнительно проверена командой
+execute if block; отсутствие BE не объясняется исчезновением блока.
+`oak_sign-*`, `oak_hanging_sign-*`, `beacon-*` — наблюдённые NBT для точного
+сравнения. `play-login-*-none.bin` и `*-previous-creative.bin` — вход до/после
+смены creative→survival; Wiki3848030 и эти записи исправляют ошибку кандидата
+JSON в кодировании previous game mode. См. исследование чанков/блок-сущностей.
+
+
+`item-observations.json` — по10 наших сетевых Slot-записей официальных1.12.2,
+26.1.2 и26.3 после явно перечисленных команд. SHA1 JAR/выход сервера сохранены.
+`src/item_observation_tests.rs` содержит те же hex-байты для тестов без JSON-
+зависимости и явный порядок реестра зачарований контрольных современных миров.
+NBT1.12.2 имеет имя корня; Slot775/777 содержит компоненты вместо старого Damage.
+# Entity observations
+
+`entity-observations.json` was recorded by our `probe_entities.py` using ordinary
+commands on isolated official 775/777 servers. It contains eleven controlled
+entity cases and four dimension changes per version. Only random spawn UUIDs
+are normalized during the comparison; metadata and Respawn are compared exactly.
+The 777 command uses the documented `BlockState` inner fields `id/properties`.
+No JAR code, registry dumps or world-generation data were extracted.
+
+# Particle observations
+
+`particle-observations.json`: 23 WorldParticles and two entity metadata cases
+from each official775/777server, recorded by our ordinary commands. World
+packets compare byte-for-byte after translation. The two cow effect particles
+are compared as a set because their ordering differs between independent worlds;
+the adapter itself retains order. AreaEffectCloud contains its default
+entity_effect particle, not the attempted dust override. See
+[particle research](../../research/particles-26.3.md) for limitations.

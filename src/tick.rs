@@ -9,6 +9,9 @@
 // каждом такте отдаёт те, которым пора. Поэтому стоящая вода ничего не стоит:
 // пока её никто не трогает, проверять нечего.
 
+mod idle;
+mod tnt_diagnostics;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -170,16 +173,22 @@ async fn run(shared: Arc<Shared>) {
     // начинаем сетку заново, иначе после долгой заминки мир мчался бы
     // рывком.
     let mut next = tokio::time::Instant::now();
+    let mut presence = shared.players.lock().expect("игроки").presence();
     let mut ticks: u64 = 0;
     let mut phases = PhaseStats::default();
+    let mut tnt_diagnostics = tnt_diagnostics::Diagnostics::from_env();
     let mut mob_rng = crate::mob::Rng::new(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |passed| passed.as_nanos() as u64));
     // Ночь пропускается в начале этого такта (`morning`): спящих будят
     // концом прошлого.
     let mut morning_due = false;
 
     loop {
-        tokio::time::sleep_until(next).await;
-
+        // Пауза пустого сервера сильнее freeze/step/sprint: их счётчики ждут
+        // входа игрока; функции и плагины тоже не тикают в пустом мире.
+        if let Some(paused) = idle::wait_tick(&shared, &mut presence, next).await {
+            next = tokio::time::Instant::now();
+            shared.world_cmd.ticking.lock().expect("такт").resumed_after_idle(paused);
+        }
         let behind = tokio::time::Instant::now().saturating_duration_since(next);
 
         if behind > CATCH_UP_LIMIT {
@@ -219,19 +228,7 @@ async fn run(shared: Arc<Shared>) {
         // Ждём недолго: застрявшее подключение не должно останавливать мир.
         shared.tick_starts.send_replace(ticks);
 
-        let patience = tokio::time::Instant::now() + PATIENCE;
-
-        let earlier = &shared.waiting_for_tick[(ticks.wrapping_sub(1) % 2) as usize];
-
-        while earlier.load(std::sync::atomic::Ordering::Acquire) > 0
-            && tokio::time::Instant::now() < patience
-        {
-            tokio::task::yield_now().await;
-        }
-
-        if earlier.load(std::sync::atomic::Ordering::Acquire) > 0 {
-            log_debug!("Такт {}: действия игроков не успели к началу такта", ticks);
-        }
+        wait_for_player_packets(&shared, ticks).await;
 
         // Функции: `#minecraft:tick` и запланированное `schedule` — в начале
         // такта, после действий игроков, без замков (functions.rs).
@@ -253,9 +250,15 @@ async fn run(shared: Arc<Shared>) {
             crate::commands_world::step_borders(&shared);
         }
 
+        // Не более одного снимка на измерение; вывод только после освобождения замков.
+        let mut tnt_reports: Option<Vec<tnt_diagnostics::Batch>> = None;
         for dimension in Dimension::ALL.into_iter().filter(|_| plan.run_world) {
+            let diagnostic_due = tnt_diagnostics.as_ref().is_some_and(|diagnostics| diagnostics.due(ticks, dimension));
+            let world_wait = diagnostic_due.then(std::time::Instant::now);
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
             world.plugin_events_enabled=crate::plugins::active();
+
+            let world_wait_us = world_wait.map_or(0, |clock| clock.elapsed().as_micros().min(u64::MAX as u128) as u64);
 
             // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
             // с них.
@@ -418,7 +421,7 @@ async fn run(shared: Arc<Shared>) {
             // он проходит и там разбивается, как у оригинала. В выгруженных
             // чанках мира нет — там всё замирает, а не проваливается в пустоту.
             let solid = |x, y, z| blocks::stops_items(world.get_block(x, y, z));
-            let holds_block = |x, y, z| blocks::solid_top(world.get_block(x, y, z));
+            let holds_block = |x, y, z| holds_falling_block(world.get_block(x, y, z));
             let loaded = |chunk_x, chunk_z| world.has_chunk(chunk_x, chunk_z);
 
             let water = |x, y, z| {
@@ -440,12 +443,24 @@ async fn run(shared: Arc<Shared>) {
 
             let (splashes, exploding, gains) = {
                 let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                let mut diagnostic = if diagnostic_due {
+                    tnt_diagnostics.as_mut().and_then(|diagnostics| diagnostics.begin(ticks, dimension, &items, &world, world_wait_us))
+                } else { None };
+                // Измеряется step_with_water + снимок after_step + step_orbs + burn_fuses.
+                let item_clock = diagnostic.as_ref().map(|_| std::time::Instant::now());
                 let splashes = items.step_with_water(&solid, &holds_block, &loaded, &water);
+                if let Some(batch) = &mut diagnostic { batch.after_step(&items, &world); }
 
                 let gains = items.step_orbs(&pullers, &solid);
 
                 // Сперва шаг, потом запал — у каждого динамита.
-                (splashes, items.burn_fuses(&loaded), gains)
+                let exploding = items.burn_fuses(&loaded);
+                if let Some(mut batch) = diagnostic {
+                    let elapsed = item_clock.map_or(0, |clock| clock.elapsed().as_micros().min(u64::MAX as u128) as u64);
+                    batch.finish(&items, exploding.len(), elapsed);
+                    tnt_reports.get_or_insert_with(|| Vec::with_capacity(3)).push(batch);
+                }
+                (splashes, exploding, gains)
             };
 
             // Подобранное шариками уходит подключениям: они прибавят очки и
@@ -563,6 +578,10 @@ async fn run(shared: Arc<Shared>) {
             phases.add(5, &mut clock);
         }
 
+        if let Some(reports) = tnt_reports {
+            for report in reports { report.log(); }
+        }
+
         for dimension in Dimension::ALL {
             let deaths=std::mem::take(&mut shared.items_in(dimension).lock().expect("сущности").plugin_deaths);
             for (uuid,at,stand,drops) in deaths {
@@ -594,15 +613,35 @@ async fn run(shared: Arc<Shared>) {
 
         // Сначала фиксируем рассылку, потом будим подключения. Их поздние
         // публикации относятся уже к следующему концу такта [проверить].
-        {
-            let _publication = shared.publication.lock().expect("публикация такта");
-            for dimension in Dimension::ALL {
-                shared.world_in(dimension).lock().expect("мир").publish_events();
-            }
-            shared.players.lock().expect("игроки").publish_tick();
-            shared.ticks.send_replace(ticks);
-        }
+        publish_finished_tick(&shared, ticks);
     }
+}
+
+/// Прежнее ограниченное ожидание: сетевой ввод и командные поручения руки
+/// завершают публикацию до снимка, если подключение уложилось в 5 мс.
+pub(crate) async fn wait_for_player_packets(shared: &Shared, tick: u64) -> bool {
+    let patience = tokio::time::Instant::now() + PATIENCE;
+    let earlier = &shared.waiting_for_tick[(tick.wrapping_sub(1) % 2) as usize];
+    while earlier.load(std::sync::atomic::Ordering::Acquire) > 0
+        && tokio::time::Instant::now() < patience
+    {
+        tokio::task::yield_now().await;
+    }
+    let complete = earlier.load(std::sync::atomic::Ordering::Acquire) == 0;
+    if !complete { log_debug!("Такт {}: действия игроков не успели к началу такта", tick); }
+    shared.expire_command_equipment(tick);
+    complete
+}
+
+/// Одна граница публикации для работы сервера и проверки порядка владельца
+/// и наблюдателя. Поздние записи остаются следующему такту.
+pub(crate) fn publish_finished_tick(shared: &Shared, tick: u64) {
+    let _publication = shared.publication.lock().expect("публикация такта");
+    for dimension in Dimension::ALL {
+        shared.world_in(dimension).lock().expect("мир").publish_events();
+    }
+    shared.players.lock().expect("игроки").publish_tick();
+    shared.ticks.send_replace(tick);
 }
 
 /// Раз во сколько тактов писать в лог (при `debug`), сколько времени ушло на
@@ -664,6 +703,20 @@ impl PhaseStats {
     }
 }
 
+/// Событие шага (частота 1) отдельно от приземления: у ковра ноги на y+1/16,
+/// прежнее y-0.2 попадает в подложку. Мох не меняет прежний выбор подложки.
+fn quiet_step_at(world: &World, at: redstone::sculk_family::Point) -> bool {
+    let x = at.0.floor() as i32; let z = at.2.floor() as i32;
+    let feet = world.get_block(x, at.1.floor() as i32, z);
+    // Допуск только для выбранной высоты контакта, не модель физики опоры.
+    let carpet_contact = (at.1 - (at.1.floor() + 1.0 / 16.0)).abs() <= 1.0e-5;
+    if carpet_contact && blocks::block_at_state(feet).is_some_and(|name| name.ends_with("_carpet") && redstone::sculk_family::quiet_block(name)) {
+        return true;
+    }
+    let below = world.get_block(x, (at.1 - 0.2).floor() as i32, z);
+    redstone::sculk_family::quiet_step_state(world.catalog(), below)
+}
+
 /// Снимки для скалка: UUID переживает выход и смену измерения; шаги берутся
 /// из движения, а не из звуков. [проверить] порог шага настоящего клиента.
 fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
@@ -696,7 +749,9 @@ fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
             if unsettled > 0 || distance > 8.0 { continue; }
             let cell = (player.at.0.floor() as i32, (player.at.1 - 0.2).floor() as i32, player.at.2.floor() as i32);
             let floor = blocks::block_at_state(world.get_block(cell.0, cell.1, cell.2)).unwrap_or("air");
-            if sculk_family::quiet_block(floor) || player.sneaking { continue; }
+            let quiet = if ground && was_ground { quiet_step_at(world, player.at) }
+                else { sculk_family::quiet_block(floor) };
+            if quiet || player.sneaking { continue; }
             let walked = walked + distance * 0.6;
             if ground && (!was_ground || walked >= 1.0) {
                 redstone::game_event_from(world, player.at, if was_ground { 1 } else { 2 }, Some(player.id), false);
@@ -718,9 +773,15 @@ fn sculk_finish(shared: &Shared, dimension: Dimension, world: &mut World, ticks:
             redstone::sculk_family::feed(world, charge.catalyst, charge.at, charge.amount);
         }
         for event in std::mem::take(&mut items.vibrations) {
-            // Шаги и приземления мобов на шерсти так же тихи, как у игроков.
+            // Событие шага моба использует ту же политику; обычной проверки мобов не было.
+            // Приземление (частота 2) остаётся на прежнем пути без обобщения шага.
             let floor = world.get_block(event.at.0.floor() as i32, (event.at.1 - 0.2).floor() as i32, event.at.2.floor() as i32);
-            if matches!(event.frequency, 1 | 2) && blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block) { continue; }
+            let quiet = match event.frequency {
+                1 => quiet_step_at(world, event.at),
+                2 => blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block),
+                _ => false,
+            };
+            if quiet { continue; }
             redstone::game_event_from(world, event.at, event.frequency, event.source, event.projectile);
         }
     }
@@ -1006,6 +1067,7 @@ fn step_frames(shared: &Shared, dimension: Dimension, world: &mut World) {
 pub struct MobView<'a>(pub &'a World);
 
 impl crate::mob::View for MobView<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() }
     fn biome(&self, x: i32, y: i32, z: i32) -> &'static str { self.0.mob_biome(x,y,z) }
     fn griefing(&self) -> bool { self.0.wildlife_griefing }
     fn raining(&self) -> bool { !self.0.is_nether() && !self.0.is_end() && self.0.weather.is_raining() }
@@ -1188,7 +1250,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let kinds = if dimension == Dimension::End { &crate::mob::spawn::END_HOSTILE[..] } else { &crate::mob::spawn::HOSTILE[..] };
     let mut natural: Vec<crate::mob::Mob> = Vec::new();
 
-    if hostile_spawning && difficulty > crate::survival::PEACEFUL && ticks.is_multiple_of(8) && !watchers.is_empty() {
+    let peaceful_piglins = world.catalog().changed_rules() && nether;
+    if hostile_spawning && (difficulty > crate::survival::PEACEFUL || peaceful_piglins) && ticks.is_multiple_of(8) && !watchers.is_empty() {
         let players: Vec<(f64, f64, f64)> = watchers.iter().filter(|player| !player.spectator).map(|player| (player.x, player.y, player.z)).collect();
         let crowd = {
             let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
@@ -1211,6 +1274,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             // Fortress); нужен только блочный свет не выше 11 (вики, Mob spawning).
             natural = if nether {
                 let kinds_at = |x: i32, y: i32, z: i32| {
+                    if difficulty == crate::survival::PEACEFUL {
+                        return crate::mob::spawn::nether_kinds(world.surface_biome(x, z)).iter().copied()
+                            .filter(|(kind, _)| crate::mob::spawn::peaceful_exception(world.catalog(), *kind)).collect();
+                    }
                     let on_bricks = blocks::block_at_state(world.get_block(x, y - 1, z)) == Some("nether_bricks");
 
                     if on_bricks && world.in_fortress(x, y, z) {
@@ -1287,6 +1354,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     let targets = blast_targets(shared, dimension);
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+    if world.catalog().changed_rules() {
+        let riding = shared.riding.lock().expect("седоки");
+        for mob in items.mobs_mut() { mob.riding = riding.vehicle_of(mob.entity_id).is_some(); }
+    }
     crate::effect_reactions::mobs(world, &mut items, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), rng);
 
     for mut mob in loaded {
@@ -1582,7 +1653,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             let Some(y)=y else { continue; };
             let mut trader=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::WanderingTrader,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
             if !crate::mob::spawn::fits(&MobView(world),&trader) { continue; }
-            trader.land.despawn=48000; trader.villager.offers=crate::mob::trader::offers(rng);
+            trader.land.despawn=48000; trader.villager.offers=crate::mob::trader::offers_for_catalog(world.catalog(),rng);
             let (id,uuid)=(trader.entity_id,trader.uuid);
             let mut llamas=Vec::new();
             for _ in 0..2 {
@@ -1680,6 +1751,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         for id in rideables {
             if items.mobs().iter().find(|m| m.entity_id==id).is_none_or(|m| m.is_dead() || (crate::mob::land::llama(m.kind) && m.land.rider.is_none())) { riding.clear_vehicle(id); }
         }
+    }
+    {
+        // Сломанная подушка сбрасывает седока.
+        let mut riding=shared.riding.lock().expect("седоки");
+        for mob in items.mobs().iter().filter(|m| m.kind==crate::mob::Kind::Cushion && m.is_dead()) { riding.clear_vehicle(mob.entity_id); }
     }
     crate::mob::arthropod::step(&mut items, world, crate::mob::arthropod::Rules {
         griefing: shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed),
@@ -2115,7 +2191,7 @@ fn step_spawners(shared: &Shared, world: &mut World, items: &mut items::Items, w
 
         if let Some(kind) = kind
             && spawn_mobs
-            && !(hostile && difficulty == crate::survival::PEACEFUL)
+            && !(hostile && difficulty == crate::survival::PEACEFUL && !crate::mob::spawn::peaceful_exception(world.catalog(), kind))
         {
             // Сколько таких рядом: коробка дальности ±SpawnRange по сторонам и ±1 по высоте.
             let reach = f64::from(data.spawn_range);
@@ -2199,6 +2275,9 @@ fn strike_villager(items: &mut items::Items, world: &mut World, strike: &crate::
         return false;
     };
 
+    // Официальный263: Silent у нападающего подавляет1026; Silent
+    // у жителя сам по себе звук превращения не подавляет (s26i-silent2).
+    let silent = items.mobs().iter().any(|mob| mob.entity_id == strike.attacker && mob.silent);
     let damage = strike.melee.damage;
     let mob = &mut items.mobs_mut()[index];
 
@@ -2241,7 +2320,7 @@ fn strike_villager(items: &mut items::Items, world: &mut World, strike: &crate::
     let (id, (x, y, z)) = (mob.entity_id, mob.cell());
 
     items.flush_mob_events(next_id, rng);
-    world.note_level_event(x, y, z, 1026, 0);
+    if !silent { world.note_level_event(x, y, z, 1026, 0); }
     items.remove_mobs(|gone| gone.entity_id == id);
     items.add_mob_late(zombie);
     true
@@ -2525,6 +2604,24 @@ fn start_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 }
 
+fn holds_falling_block(state: i32) -> bool {
+    // Наковальня не закрывает всю верхнюю грань, но ловит падающий блок
+    // на высоте целого блока (чёрный ящик, falling-chain-anvil-column).
+    blocks::solid_top(state) || matches!(blocks::block_at_state(state), Some("anvil" | "chipped_anvil" | "damaged_anvil"))
+}
+
+/// Вики, Anvil: «5% × the number of blocks fallen», если высота больше одного.
+/// [проверить] Округление дробной высоты: сетевые пробы — целые 2, 4 и 24.
+fn anvil_after_fall(state: i32, distance: f32, roll: f32) -> Option<i32> {
+    let name = blocks::block_at_state(state)?;
+    if !matches!(name, "anvil" | "chipped_anvil" | "damaged_anvil")
+        || distance <= 1.0 || roll >= (0.05 * distance.ceil()).min(1.0)
+    { return Some(state); }
+    let next = blocks::state_by_name(crate::enchanting::anvil_damaged(name)?)?;
+    let facing = blocks::orientation_of(state)?.value(state, "facing")?;
+    blocks::orientation_of(next)?.with(next, "facing", facing)
+}
+
 /// Ставит обратно в мир то, что долетело до земли.
 ///
 /// «If it lands with the bottom center of its hitbox in a replaceable block,
@@ -2537,7 +2634,7 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         .expect("предметы захвачены другим потоком")
         .take_landed();
 
-    for block in landed {
+    for mut block in landed {
         let Some(state) = block.block else {
             continue;
         };
@@ -2547,6 +2644,17 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
             block.y.round() as i32,
             block.z.floor() as i32,
         );
+
+        let state = if matches!(blocks::block_at_state(state), Some("anvil" | "chipped_anvil" | "damaged_anvil")) {
+            let Some(next) = anvil_after_fall(state, block.fall_distance as f32, world.random_unit()) else {
+                world.note_level_event(x, y, z, 1029, 0);
+                continue;
+            };
+            if next != state && let Some(item) = blocks::block_at_state(next).and_then(blocks::item_for_block) {
+                block.stack = Stack::new(item, 1);
+            }
+            next
+        } else { state };
 
         // Место свободно — блок встаёт обратно. Заменяемое (трава, вода,
         // снежный слой) он просто занимает: так у оригинала.
@@ -2625,6 +2733,9 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Посев — несколько стопок (farming.rs), прочее — одна.
         let stacks = match crate::farming::harvest(world, state, 0) {
             Some(stacks) => stacks,
+            // Блоки каталога 26.3 (шип серы): выпадение по каталогу мира, без инструмента.
+            None if matches!(world.catalog().block_entry(state), Ok(Some(_))) =>
+                world.catalog().drops_by_luck(state, None, luck).ok().flatten().into_iter().collect(),
             None => blocks::world_drops(state, luck).into_iter().collect(),
         };
 
@@ -3151,7 +3262,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     let wanted = {
         let view = |x, y, z| world.get_block(x, y, z);
 
-        fluids::in_world(world.is_nether(), || fluids::update((x, y, z), &view))
+        fluids::in_world(world.is_nether(), || fluids::update_with_catalog((x, y, z), &view, world.catalog()))
     };
 
     if let Some(state) = wanted {
@@ -3172,7 +3283,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     let targets = {
         let view = |x, y, z| world.get_block(x, y, z);
 
-        fluids::in_world(world.is_nether(), || fluids::spreading((x, y, z), &view))
+        fluids::in_world(world.is_nether(), || fluids::spreading_with_catalog((x, y, z), &view, world.catalog()))
     };
 
     for ((tx, ty, tz), state) in targets {
@@ -3231,6 +3342,33 @@ mod tests {
         let wrong_item = mob_projectiles(&fired, Dimension::Overworld, 3, &mut crate::mob::Rng::new(42), &mut || 20);
         assert_eq!(wrong_item.len(), 1);
         assert_eq!(wrong_item[0].pierce_left, 0);
+    }
+
+    #[test]
+    fn infection_sound_depends_on_attacker_silence_and_keeps_villager_data() {
+        use crate::mob::{Kind, Mob, Strike, hostile::Melee};
+        for (attacker_silent, victim_silent) in [(false,false),(true,false),(false,true),(true,true)] {
+            let mut items = crate::items::Items::new();
+            let mut attacker = Mob::new(1, Kind::Zombie, (0.5,64.0,0.5));
+            attacker.silent = attacker_silent;
+            items.add_mob(attacker);
+            let mut villager = Mob::new(2, Kind::Villager, (1.5,64.0,0.5));
+            villager.silent = victim_silent;
+            villager.vitals.health = 1.0;
+            villager.villager.level = 2;
+            items.add_mob(villager);
+            let strike = Strike { attacker: 1, at: (0.5,64.0,0.5), kind: Kind::Zombie,
+                melee: Melee { target: 2, damage: 3.0, push: (1.0,0.0), wither: false, hunger: false },
+                enchantments: Default::default() };
+            let mut world = World::in_memory();
+            let from = world.watch_events(1);
+            assert!(strike_villager(&mut items, &mut world, &strike, 3, &mut crate::mob::Rng::new(1), &mut || 3));
+            let converted = items.mobs().iter().find(|mob| mob.kind == Kind::ZombieVillager).unwrap();
+            assert_eq!((converted.villager.level, converted.silent), (2,victim_silent));
+            assert!(!items.mobs().iter().any(|mob| mob.entity_id == 2));
+            let (events,_) = world.events_since(from,1);
+            assert_eq!(events.iter().filter(|event| matches!(event, crate::world::WorldEvent::Level { effect: 1026, data: 0, .. })).count(), usize::from(!attacker_silent));
+        }
     }
 
     /// Камень.
@@ -3793,6 +3931,96 @@ mod tests {
     }
 
     #[test]
+    fn falling_anvil_damage_keeps_facing_and_uses_fall_distance() {
+        let state = blocks::state_from_text("anvil[facing=east]").unwrap();
+        assert_eq!(anvil_after_fall(state, 1.0, 0.0), Some(state));
+        assert_eq!(anvil_after_fall(state, 4.0, 0.21), Some(state));
+        let chipped = anvil_after_fall(state, 4.0, 0.19).unwrap();
+        assert_eq!(blocks::block_at_state(chipped), Some("chipped_anvil"));
+        assert_eq!(blocks::orientation_of(chipped).unwrap().value(chipped, "facing"), Some("east"));
+        let damaged = anvil_after_fall(chipped, 24.0, 0.999).unwrap();
+        assert_eq!(blocks::block_at_state(damaged), Some("damaged_anvil"));
+        assert_eq!(anvil_after_fall(damaged, 24.0, 0.999), None);
+    }
+
+    #[test]
+    fn falling_sand_lands_on_each_anvil_stage_instead_of_dropping_as_an_item() {
+        for name in ["anvil", "chipped_anvil", "damaged_anvil"] {
+            let shared = mob_server();
+            let dimension = Dimension::Overworld;
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            world.set_block_silently(0, 69, 0, blocks::state_by_name(name).unwrap());
+            let sand = blocks::state_by_name("sand").unwrap();
+            shared.items_in(dimension).lock().unwrap().drop_block(1, sand, Stack::new(blocks::item_named("sand").unwrap(), 1), (0.5, 74.0, 0.5));
+            for _ in 0..30 {
+                shared.items_in(dimension).lock().unwrap().step(
+                    &|x,y,z| blocks::stops_items(world.get_block(x,y,z)),
+                    &|x,y,z| holds_falling_block(world.get_block(x,y,z)), &|_,_| true);
+                land_falling(&shared, dimension, &mut world);
+            }
+            assert_eq!(world.get_block(0, 70, 0), sand, "{name}");
+            assert!(shared.items_in(dimension).lock().unwrap().items().is_empty());
+        }
+    }
+
+    /// Без начального обновления песок висит; каждый ушедший блок будит соседей.
+    #[test]
+    fn floating_falling_layers_collapse_in_two_tick_manhattan_waves() {
+        for name in ["sand", "red_sand", "gravel", "white_concrete_powder", "anvil"] {
+            let shared = mob_server();
+            let dimension = Dimension::Overworld;
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            let state = blocks::state_by_name(name).unwrap();
+            for x in 4..=8 { for z in 4..=8 { world.set_block_silently(x, 70, z, state); } }
+            redstone::settle(&mut world);
+            for _ in 0..10 { falling_test_tick(&shared, dimension, &mut world); }
+            assert!(shared.items_in(dimension).lock().unwrap().items().is_empty());
+            assert_eq!(crate::placing::break_block(&mut world, 6, 70, 6), Some(state));
+            for tick in 1..=10 {
+                falling_test_tick(&shared, dimension, &mut world);
+                for x in 4i32..=8 { for z in 4i32..=8 {
+                    let distance = (x - 6).abs() + (z - 6).abs();
+                    let expected = if distance * 2 <= tick { AIR } else { state };
+                    assert_eq!(world.get_block(x, 70, z), expected, "{name}, такт {tick}, {x},{z}");
+                } }
+                let expected = [0, 0, 4, 4, 12, 12, 20, 20, 24, 24, 24][tick as usize];
+                assert_eq!(shared.items_in(dimension).lock().unwrap().items().len(), expected, "{name}, такт {tick}");
+            }
+        }
+    }
+
+    #[test]
+    fn falling_column_and_supported_overhang_propagate_without_falling_through_support() {
+        for column in [false, true] {
+            let shared = mob_server();
+            let dimension = Dimension::Overworld;
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            let state = blocks::state_by_name("sand").unwrap();
+            for offset in 0..5 {
+                let (x, y) = if column { (4, 70 + offset) } else { (4 + offset, 70) };
+                world.set_block_silently(x, y, 4, state);
+            }
+            if !column { world.set_block_silently(8, 69, 4, STONE); }
+            crate::placing::break_block(&mut world, 4, 70, 4);
+            for tick in 1..=10 {
+                falling_test_tick(&shared, dimension, &mut world);
+                let count = (tick / 2).min(if column { 4 } else { 3 });
+                assert_eq!(shared.items_in(dimension).lock().unwrap().items().len(), count, "столб={column}, такт {tick}");
+            }
+            if !column { assert_eq!(world.get_block(8, 70, 4), state); }
+        }
+    }
+
+    fn falling_test_tick(shared: &Shared, dimension: Dimension, world: &mut World) {
+        for (pos, kind) in world.advance(PER_TICK) {
+            if kind == TickKind::Block { redstone::ticked(world, pos); }
+            redstone::settle(world);
+        }
+        start_falling(shared, dimension, world);
+        redstone::settle(world);
+    }
+
+    #[test]
     fn falling_dripstone_lands_with_1045_and_drops_the_item() {
         let shared = mob_server();
         let dimension = Dimension::Overworld;
@@ -3974,3 +4202,7 @@ mod tests {
         assert!(quiet.items_in(overworld).lock().unwrap().mobs().is_empty(), "правило выключено — никого");
     }
 }
+
+#[cfg(test)]
+#[path = "tick/sculk_step_tests.rs"]
+mod sculk_step_tests;

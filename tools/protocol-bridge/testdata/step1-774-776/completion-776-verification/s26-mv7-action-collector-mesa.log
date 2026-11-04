@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 170, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 146, in main
+    stage='jab';gui(client,'click','1');wait(lambda:bool(actions(stage)))
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv7/tools/protocol-bridge/probe_776_action_client.py", line 64, in wait
+    raise TimeoutError(stage)
+TimeoutError: jab

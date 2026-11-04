@@ -1,0 +1,22 @@
+# craft-inventory-planks: оригинал против нас
+
+| такт | оригинал                                                       | у нас                                                          |
+|------|----------------------------------------------------------------|----------------------------------------------------------------|
+| | **▶ window_click {"slot":36,"button":0,"mode":0,"inventory":true}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":36,"button":0,"mode":0,"inventory":true}** |
+| +0 | инвентарь 36: пусто                                            | инвентарь 36: пусто                                            |
+| +0 | курсор: stripped_spruce_wood×2                                 | курсор: stripped_spruce_wood×2                                 |
+| | **▶ window_click {"slot":4,"button":0,"mode":0,"inventory":true}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":4,"button":0,"mode":0,"inventory":true}** |
+| +0 | инвентарь 0: spruce_planks×4                                   | инвентарь 0: spruce_planks×4                                   |
+| +0 | инвентарь 4: stripped_spruce_wood×2                            | инвентарь 4: stripped_spruce_wood×2                            |
+| | **▶ window_click {"slot":0,"button":0,"mode":0,"inventory":true}** (первый отклик через 0 / 0 такт.) | **▶ window_click {"slot":0,"button":0,"mode":0,"inventory":true}** |
+| +0 | инвентарь 0: spruce_planks×4                                   | инвентарь 0: spruce_planks×4                                   |
+| +0 | инвентарь 4: stripped_spruce_wood×1                            | инвентарь 4: stripped_spruce_wood×1                            |
+| +0 | курсор: spruce_planks×4                                        | курсор: spruce_planks×4                                        |
+| | **▶ close** (первый отклик через 0 / 0 такт.) | **▶ close** |
+| +0 | инвентарь 0: пусто                                             | инвентарь 0: пусто                                             |
+| +0 | инвентарь 4: пусто                                             | инвентарь 4: пусто                                             |
+| +0 | инвентарь 36: spruce_planks×4                                  | инвентарь 36: spruce_planks×4                                  |
+| +0 | инвентарь 37: stripped_spruce_wood×1                           | инвентарь 37: stripped_spruce_wood×1                           |
+| +0 | курсор: пусто                                                  | курсор: пусто                                                  |
+
+Совпало: 12. Сдвинуто по тактам: 0. Нет у нас: 0. Лишнее у нас: 0.

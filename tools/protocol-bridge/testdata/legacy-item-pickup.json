@@ -1,0 +1,690 @@
+{
+  "protocol": 340,
+  "scenario": "NoGravity bedrock3 pickup; ordinary fall10blocks onto authored bedrock platform",
+  "functional_checks": "PASS on both targets",
+  "packet_sequence_equal": false,
+  "observations": {
+    "official": {
+      "source": "verification-legacy-items-final/pickup-official340-3/result.json",
+      "source_sha256": "c6592420652d38c769b7854ec69473acacc610f3d932e6fa739193942445a8da",
+      "exit_code": 0,
+      "height_origin": 0,
+      "checks": [
+        "no-gravity-spawn-and-stack3",
+        "no-gravity-position-stable",
+        "collect3-to-own-player",
+        "inventory-gained3",
+        "collected-item-removed",
+        "falling-spawn-and-stack3",
+        "falling-downward-motion",
+        "falling-position-changed",
+        "landed-on-authored-platform",
+        "stopped-motion",
+        "fallen-item-still-present"
+      ],
+      "outcome": {
+        "pickup_count": 3,
+        "pickup_inventory_total": 3,
+        "final_fall_position": [
+          3.5,
+          64.0,
+          0.5
+        ],
+        "final_fall_velocity": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "events": [
+        {
+          "stage": "no-gravity",
+          "name": "spawn_entity",
+          "entity": 47,
+          "uuid": "877478b26c6d4e2d9ccefe01fa65a393",
+          "kind": 2,
+          "object_data": 1,
+          "position": [
+            3.5,
+            64.5,
+            0.5
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_metadata",
+          "entity": 47,
+          "fields": {
+            "0": 0,
+            "1": 0,
+            "2": "",
+            "3": 0,
+            "4": 0,
+            "5": 1,
+            "6": {
+              "item": 7,
+              "count": 3,
+              "damage": 0
+            }
+          }
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 47
+        },
+        {
+          "stage": "pickup",
+          "name": "collect",
+          "entity": 47,
+          "collector": 46,
+          "count": 3
+        },
+        {
+          "stage": "pickup",
+          "name": "entity_destroy",
+          "entities": [
+            47
+          ]
+        },
+        {
+          "stage": "falling",
+          "name": "spawn_entity",
+          "entity": 48,
+          "uuid": "d19aa13688664b52aa8a0e51b0335e3b",
+          "kind": 2,
+          "object_data": 1,
+          "position": [
+            3.5,
+            74.0,
+            0.5
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "stage": "falling",
+          "name": "entity_metadata",
+          "entity": 48,
+          "fields": {
+            "0": 0,
+            "1": 0,
+            "2": "",
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": {
+              "item": 7,
+              "count": 3,
+              "damage": 0
+            }
+          }
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 48
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            -0.677625,
+            0.0
+          ],
+          "entity": 48
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "position": [
+            3.5,
+            65.88292959999313,
+            0.5
+          ],
+          "ground": false,
+          "entity": 48
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 48
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "position": [
+            3.5,
+            64.0,
+            0.5
+          ],
+          "ground": true,
+          "entity": 48
+        },
+        {
+          "stage": "falling",
+          "name": "rel_entity_move",
+          "delta": [
+            0,
+            0,
+            0
+          ],
+          "position": [
+            3.5,
+            64.0,
+            0.5
+          ],
+          "ground": true,
+          "entity": 48
+        }
+      ],
+      "raw_entity_packets": [
+        {
+          "stage": "join",
+          "name": "entity_metadata",
+          "payload": "2e0000000101ac02020300030600040600050600060000070241a000000801000906000a01000b02000000000c01000d007f0e00010f0d0a000000100d0a000000ff"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "spawn_entity",
+          "payload": "2f877478b26c6d4e2d9ccefe01fa65a39302400c00000000000040502000000000003fe0000000000000000000000001000000000000"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_metadata",
+          "payload": "2f0000000101000203000306000406000506010605000703000000ff"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_velocity",
+          "payload": "2f000000000000"
+        },
+        {
+          "stage": "pickup",
+          "name": "collect",
+          "payload": "2f2e03"
+        },
+        {
+          "stage": "pickup",
+          "name": "entity_destroy",
+          "payload": "012f"
+        },
+        {
+          "stage": "falling",
+          "name": "spawn_entity",
+          "payload": "30d19aa13688664b52aa8a0e51b0335e3b02400c00000000000040528000000000003fe0000000000000000000000001000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_metadata",
+          "payload": "300000000101000203000306000406000506000605000703000000ff"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "30000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "300000ead30000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "payload": "30400c00000000000040507881eb2729043fe0000000000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "30000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "payload": "30400c00000000000040500000000000003fe0000000000000000001"
+        },
+        {
+          "stage": "falling",
+          "name": "rel_entity_move",
+          "payload": "3000000000000001"
+        }
+      ]
+    },
+    "core": {
+      "source": "verification-legacy-items-final/pickup-core340/result.json",
+      "source_sha256": "a3c51f2d90c8a1a93309e1b1066c0bd12ae8c674eb71cf8154c71ce080ae896b",
+      "exit_code": 0,
+      "height_origin": -64,
+      "checks": [
+        "no-gravity-spawn-and-stack3",
+        "no-gravity-position-stable",
+        "collect3-to-own-player",
+        "inventory-gained3",
+        "collected-item-removed",
+        "falling-spawn-and-stack3",
+        "falling-downward-motion",
+        "falling-position-changed",
+        "landed-on-authored-platform",
+        "stopped-motion",
+        "fallen-item-still-present"
+      ],
+      "outcome": {
+        "pickup_count": 3,
+        "pickup_inventory_total": 3,
+        "final_fall_position": [
+          3.5,
+          64.0,
+          0.5
+        ],
+        "final_fall_velocity": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "events": [
+        {
+          "stage": "no-gravity",
+          "name": "spawn_entity",
+          "entity": 2,
+          "uuid": "18e032576ebb9060000000026974656d",
+          "kind": 2,
+          "object_data": 1,
+          "position": [
+            3.5,
+            64.5,
+            0.5
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_metadata",
+          "entity": 2,
+          "fields": {
+            "5": 1,
+            "6": {
+              "item": 7,
+              "count": 3,
+              "damage": 0
+            }
+          }
+        },
+        {
+          "stage": "no-gravity",
+          "name": "rel_entity_move",
+          "delta": [
+            0,
+            0,
+            0
+          ],
+          "position": [
+            3.5,
+            64.5,
+            0.5
+          ],
+          "ground": false,
+          "entity": 2
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_metadata",
+          "entity": 2,
+          "fields": {
+            "5": 1,
+            "6": {
+              "item": 7,
+              "count": 3,
+              "damage": 0
+            }
+          }
+        },
+        {
+          "stage": "pickup",
+          "name": "collect",
+          "entity": 2,
+          "collector": 1,
+          "count": 3
+        },
+        {
+          "stage": "pickup",
+          "name": "entity_destroy",
+          "entities": [
+            2
+          ]
+        },
+        {
+          "stage": "falling",
+          "name": "spawn_entity",
+          "entity": 3,
+          "uuid": "18e03257bc45e4d2000000036974656d",
+          "kind": 2,
+          "object_data": 1,
+          "position": [
+            3.5,
+            74.0,
+            0.5
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "stage": "falling",
+          "name": "entity_metadata",
+          "entity": 3,
+          "fields": {
+            "6": {
+              "item": 7,
+              "count": 3,
+              "damage": 0
+            }
+          }
+        },
+        {
+          "stage": "falling",
+          "name": "rel_entity_move",
+          "delta": [
+            0,
+            0,
+            0
+          ],
+          "position": [
+            3.5,
+            74.0,
+            0.5
+          ],
+          "ground": false,
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_metadata",
+          "entity": 3,
+          "fields": {
+            "6": {
+              "item": 7,
+              "count": 3,
+              "damage": 0
+            }
+          }
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            -0.677625,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "position": [
+            3.5,
+            65.88293039264076,
+            0.5
+          ],
+          "ground": false,
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            -0.677625,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "position": [
+            3.5,
+            64.0,
+            0.5
+          ],
+          "ground": true,
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            -0.12,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            -0.12,
+            0.0
+          ],
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "rel_entity_move",
+          "delta": [
+            0,
+            0,
+            0
+          ],
+          "position": [
+            3.5,
+            64.0,
+            0.5
+          ],
+          "ground": true,
+          "entity": 3
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "entity": 3
+        }
+      ],
+      "raw_entity_packets": [
+        {
+          "stage": "join",
+          "name": "entity_metadata",
+          "payload": "010000000d007f0e0001ff"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "spawn_entity",
+          "payload": "0218e032576ebb9060000000026974656d02400c00000000000040601000000000003fe0000000000000000000000001000000000000"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_metadata",
+          "payload": "020506010605000703000000ff"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "rel_entity_move",
+          "payload": "0200000000000000"
+        },
+        {
+          "stage": "no-gravity",
+          "name": "entity_metadata",
+          "payload": "020506010605000703000000ff"
+        },
+        {
+          "stage": "pickup",
+          "name": "collect",
+          "payload": "020103"
+        },
+        {
+          "stage": "pickup",
+          "name": "entity_destroy",
+          "payload": "0102"
+        },
+        {
+          "stage": "falling",
+          "name": "spawn_entity",
+          "payload": "0318e03257bc45e4d2000000036974656d02400c00000000000040614000000000003fe0000000000000000000000001000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_metadata",
+          "payload": "030605000703000000ff"
+        },
+        {
+          "stage": "falling",
+          "name": "rel_entity_move",
+          "payload": "0300000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_metadata",
+          "payload": "030605000703000000ff"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "030000ead30000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "payload": "03400c00000000000040603c40f73d212b3fe0000000000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "030000ead30000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "03000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_teleport",
+          "payload": "03400c00000000000040600000000000003fe0000000000000000001"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "03000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "030000fc400000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "03000000000000"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "030000fc400000"
+        },
+        {
+          "stage": "falling",
+          "name": "rel_entity_move",
+          "payload": "0300000000000001"
+        },
+        {
+          "stage": "falling",
+          "name": "entity_velocity",
+          "payload": "03000000000000"
+        }
+      ]
+    }
+  },
+  "remaining_differences": [
+    "Core repeats velocity near absolute synchronization because the native sync decomposes into legacy teleport plus velocity; this is not an additional physics step.",
+    "Post-landing velocity sequences differ, but entity ID phases differ: official48%4=0, core3%4=3. Own support checks use(ticks+entity_id)%4, so this run does not establish a physics regression. Equal-phase and current-primary control observations are still needed.",
+    "Intermediate falling Y differs by approximately7.93e-7; final normalized position and velocity match.",
+    "No graphical client or partial pickup/reconnect/respawn observed by this scenario."
+  ],
+  "phase_context": {
+    "official_falling_entity": 48,
+    "official_entity_mod4": 0,
+    "core_falling_entity": 3,
+    "core_entity_mod4": 3,
+    "own_source": "src/items.rs::Items::step_with_water, cycle=(item.ticks+item.entity_id)%4",
+    "interpretation": "Observed packet stream difference, phase-confounded; not a confirmed physics bug"
+  }
+}

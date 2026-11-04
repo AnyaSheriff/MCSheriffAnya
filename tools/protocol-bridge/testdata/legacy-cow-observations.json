@@ -1,0 +1,1792 @@
+{
+  "protocol": 340,
+  "source": "Own ordinary network observation of pinned official 1.12.2 server; no server code inspected",
+  "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+  "protocol_json_sha256": "2dad4c918f6bd4492bfa8159b4db6ffbbf8f088b628258f03d437b0c0b760af9",
+  "report_sha256": "cb81d05649deca06acd5ffa5956a13d023d73cc2d9067eaea7395883bd3954c1",
+  "checks": [
+    "login-and-platform",
+    "adult-spawn",
+    "baby-spawn",
+    "health-change-raw-metadata",
+    "movement-speed031",
+    "adult-absolute-teleport",
+    "falling-spawn",
+    "out-of-range-remove",
+    "same-entities-retracked",
+    "head-rotation-observed",
+    "relative-motion-observed"
+  ],
+  "coverage": {
+    "entity_head_rotation": true,
+    "rel_entity_move": true,
+    "entity_move_look": false,
+    "entity_teleport": true,
+    "entity_velocity": true,
+    "entity_metadata": true,
+    "entity_update_attributes": true
+  },
+  "commands": [
+    "gamerule doMobSpawning false",
+    "gamerule randomTickSpeed 0",
+    "setworldspawn 0 64 0",
+    "fill -8 63 -8 8 63 8 minecraft:bedrock",
+    "fill -8 64 -8 8 76 8 minecraft:air",
+    "tp McsaProbe 0.5 64 0.5",
+    "summon cow 3.5 64 0.5 {NoAI:1b,Silent:1b,Tags:[\"mcsa_adult\"]}",
+    "summon cow 6.5 64 0.5 {NoAI:1b,Silent:1b,Age:-24000,Tags:[\"mcsa_baby\"]}",
+    "entitydata @e[type=cow,tag=mcsa_adult,c=1] {Health:4f}",
+    "entitydata @e[type=cow,tag=mcsa_adult,c=1] {Attributes:[{Name:\"generic.movementSpeed\",Base:0.31d}]}",
+    "tp @e[type=cow,tag=mcsa_adult,c=1] 3.5 64 0.5 90 10",
+    "tp @e[type=cow,tag=mcsa_adult,c=1] -6.5 64 0.5 180 0",
+    "summon cow 3.5 70 3.5 {Silent:1b,Tags:[\"mcsa_falling\"]}",
+    "tp McsaProbe 128.5 64 0.5",
+    "tp McsaProbe 0.5 64 0.5",
+    "stop"
+  ],
+  "authored_entities": {
+    "adult": 47,
+    "baby": 48,
+    "falling": 55
+  },
+  "events": [
+    {
+      "stage": "adult-spawn",
+      "name": "spawn_entity_living",
+      "payload": "2f88ef3423520a473195533533c7f9118d5c400c00000000000040500000000000003fe00000000000000000000000000000000000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0600ff",
+      "entity": 47,
+      "uuid": "88ef3423520a473195533533c7f9118d",
+      "kind": 92,
+      "position": [
+        3.5,
+        64.0,
+        0.5
+      ],
+      "angles": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "metadata": "0000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "adult-spawn",
+      "name": "entity_metadata",
+      "payload": "2f0000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0600ff",
+      "entity": 47,
+      "metadata": "0000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "adult-spawn",
+      "name": "entity_update_attributes",
+      "payload": "2f000000041667656e657269632e61726d6f72546f7567686e6573730000000000000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001567656e657269632e6d6f76656d656e7453706565643fc99999a000000000",
+      "entity": 47
+    },
+    {
+      "stage": "adult-spawn",
+      "name": "entity_metadata",
+      "payload": "2f0101ac02ff",
+      "entity": 47,
+      "metadata": "0101ac02ff",
+      "fields": [
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "stage": "adult-spawn",
+      "name": "entity_update_attributes",
+      "payload": "2f000000021167656e657269632e6d61784865616c74684024000000000000001567656e657269632e6d6f76656d656e7453706565643fc99999a000000000",
+      "entity": 47
+    },
+    {
+      "stage": "baby-spawn",
+      "name": "spawn_entity_living",
+      "payload": "30677d9d3dcfa241d296772d38918180305c401a00000000000040500000000000003fe00000000000000000000000000000000000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "entity": 48,
+      "uuid": "677d9d3dcfa241d296772d3891818030",
+      "kind": 92,
+      "position": [
+        6.5,
+        64.0,
+        0.5
+      ],
+      "angles": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "metadata": "0000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "stage": "baby-spawn",
+      "name": "entity_metadata",
+      "payload": "300000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "entity": 48,
+      "metadata": "0000000101000203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "stage": "baby-spawn",
+      "name": "entity_update_attributes",
+      "payload": "30000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001667656e657269632e61726d6f72546f7567686e6573730000000000000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 48
+    },
+    {
+      "stage": "baby-spawn",
+      "name": "entity_metadata",
+      "payload": "300101ac02ff",
+      "entity": 48,
+      "metadata": "0101ac02ff",
+      "fields": [
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "stage": "baby-spawn",
+      "name": "entity_update_attributes",
+      "payload": "30000000021567656e657269632e6d6f76656d656e7453706565643fc99999a0000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 48
+    },
+    {
+      "stage": "health4",
+      "name": "entity_metadata",
+      "payload": "2f070240800000ff",
+      "entity": 47,
+      "metadata": "070240800000ff",
+      "fields": [
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 4.0
+        }
+      ]
+    },
+    {
+      "stage": "health4",
+      "name": "rel_entity_move",
+      "payload": "2f00000000000000",
+      "entity": 47,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "speed031",
+      "name": "entity_update_attributes",
+      "payload": "2f000000011567656e657269632e6d6f76656d656e7453706565643fd3d70a3d70a3d700",
+      "entity": 47
+    },
+    {
+      "stage": "turn",
+      "name": "rel_entity_move",
+      "payload": "3000000000000000",
+      "entity": 48,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "turn",
+      "name": "entity_teleport",
+      "payload": "2f400c00000000000040500000000000003fe0000000000000400701",
+      "entity": 47,
+      "position": [
+        3.5,
+        64.0,
+        0.5
+      ],
+      "angles": [
+        64,
+        7
+      ],
+      "ground": 1
+    },
+    {
+      "stage": "turn",
+      "name": "entity_head_rotation",
+      "payload": "2f40",
+      "entity": 47,
+      "head_yaw": 64
+    },
+    {
+      "stage": "teleport",
+      "name": "entity_teleport",
+      "payload": "2fc01a00000000000040500000000000003fe0000000000000800001",
+      "entity": 47,
+      "position": [
+        -6.5,
+        64.0,
+        0.5
+      ],
+      "angles": [
+        128,
+        0
+      ],
+      "ground": 1
+    },
+    {
+      "stage": "teleport",
+      "name": "entity_head_rotation",
+      "payload": "2f80",
+      "entity": 47,
+      "head_yaw": 128
+    },
+    {
+      "stage": "teleport",
+      "name": "rel_entity_move",
+      "payload": "2f00000000000001",
+      "entity": 47,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 1
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "spawn_entity_living",
+      "payload": "375c5314b7298d4485b3494d45842fc6d55c400c0000000000004051800000000000400c0000000000000000000000000000000000000101000203000306000406010506000600000702412000000801000906000a01000b00000c0600ff",
+      "entity": 55,
+      "uuid": "5c5314b7298d4485b3494d45842fc6d5",
+      "kind": 92,
+      "position": [
+        3.5,
+        70.0,
+        3.5
+      ],
+      "angles": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "metadata": "0000000101000203000306000406010506000600000702412000000801000906000a01000b00000c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_metadata",
+      "payload": "370000000101000203000306000406010506000600000702412000000801000906000a01000b00000c0600ff",
+      "entity": 55,
+      "metadata": "0000000101000203000306000406010506000600000702412000000801000906000a01000b00000c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_update_attributes",
+      "payload": "37000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001667656e657269632e61726d6f72546f7567686e657373000000000000000000",
+      "entity": 55
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_metadata",
+      "payload": "370101ac02ff",
+      "entity": 55,
+      "metadata": "0101ac02ff",
+      "fields": [
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_update_attributes",
+      "payload": "37000000021567656e657269632e6d6f76656d656e7453706565643fc99999a0000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 55
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_velocity",
+      "payload": "370000f67e0000",
+      "entity": 55,
+      "velocity": [
+        0,
+        -2434,
+        0
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "370000f892000000",
+      "entity": 55,
+      "delta": [
+        0,
+        -1902,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_velocity",
+      "payload": "370000efd90000",
+      "entity": 55,
+      "velocity": [
+        0,
+        -4135,
+        0
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "370000edf2000000",
+      "entity": 55,
+      "delta": [
+        0,
+        -4622,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_velocity",
+      "payload": "370000e9980000",
+      "entity": 55,
+      "velocity": [
+        0,
+        -5736,
+        0
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "370000e3f1000000",
+      "entity": 55,
+      "delta": [
+        0,
+        -7183,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_velocity",
+      "payload": "370000e3b50000",
+      "entity": 55,
+      "velocity": [
+        0,
+        -7243,
+        0
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "370000da87000000",
+      "entity": 55,
+      "delta": [
+        0,
+        -9593,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_status",
+      "payload": "0000003702",
+      "entity": 55
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_velocity",
+      "payload": "370000fd8d0000",
+      "entity": 55,
+      "velocity": [
+        0,
+        -627,
+        0
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_teleport",
+      "payload": "37400c0000000000004050000000000000400c000000000000000001",
+      "entity": 55,
+      "position": [
+        3.5,
+        64.0,
+        3.5
+      ],
+      "angles": [
+        0,
+        0
+      ],
+      "ground": 1
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_metadata",
+      "payload": "37070240e00000ff",
+      "entity": 55,
+      "metadata": "070240e00000ff",
+      "fields": [
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 7.0
+        }
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "entity_velocity",
+      "payload": "370000fd8d0000",
+      "entity": 55,
+      "velocity": [
+        0,
+        -627,
+        0
+      ]
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "3000000000000000",
+      "entity": 48,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "2f00000000000001",
+      "entity": 47,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 1
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "3700000000000001",
+      "entity": 55,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 1
+    },
+    {
+      "stage": "falling-spawn",
+      "name": "rel_entity_move",
+      "payload": "3000000000000000",
+      "entity": 48,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 0
+    },
+    {
+      "stage": "untrack",
+      "name": "entity_destroy",
+      "payload": "032f3037",
+      "entities": [
+        47,
+        48,
+        55
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "spawn_entity_living",
+      "payload": "2f88ef3423520a473195533533c7f9118d5cc01a00000000000040500000000000003fe00000000000008000800000000000000000000101ac020203000306000406010506000600000702408000000801000906000a01000b00010c0600ff",
+      "entity": 47,
+      "uuid": "88ef3423520a473195533533c7f9118d",
+      "kind": 92,
+      "position": [
+        -6.5,
+        64.0,
+        0.5
+      ],
+      "angles": [
+        128,
+        0,
+        128
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "metadata": "0000000101ac020203000306000406010506000600000702408000000801000906000a01000b00010c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 4.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "entity_metadata",
+      "payload": "2f0000000101ac020203000306000406010506000600000702408000000801000906000a01000b00010c0600ff",
+      "entity": 47,
+      "metadata": "0000000101ac020203000306000406010506000600000702408000000801000906000a01000b00010c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 4.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "entity_update_attributes",
+      "payload": "2f000000041667656e657269632e61726d6f72546f7567686e6573730000000000000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001567656e657269632e6d6f76656d656e7453706565643fd3d70a3d70a3d700",
+      "entity": 47
+    },
+    {
+      "stage": "retrack",
+      "name": "spawn_entity_living",
+      "payload": "30677d9d3dcfa241d296772d38918180305c401a00000000000040500000000000003fe00000000000000000000000000000000000000101ac020203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "entity": 48,
+      "uuid": "677d9d3dcfa241d296772d3891818030",
+      "kind": 92,
+      "position": [
+        6.5,
+        64.0,
+        0.5
+      ],
+      "angles": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "metadata": "0000000101ac020203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "entity_metadata",
+      "payload": "300000000101ac020203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "entity": 48,
+      "metadata": "0000000101ac020203000306000406010506000600000702412000000801000906000a01000b00010c0601ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 10.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 1
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "entity_update_attributes",
+      "payload": "30000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001667656e657269632e61726d6f72546f7567686e6573730000000000000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 48
+    },
+    {
+      "stage": "retrack",
+      "name": "spawn_entity_living",
+      "payload": "375c5314b7298d4485b3494d45842fc6d55c400c0000000000004050000000000000400c0000000000000000000000fd8d00000000000101ac02020300030600040601050600060000070240e000000801000906000a01000b00000c0600ff",
+      "entity": 55,
+      "uuid": "5c5314b7298d4485b3494d45842fc6d5",
+      "kind": 92,
+      "position": [
+        3.5,
+        64.0,
+        3.5
+      ],
+      "angles": [
+        0,
+        0,
+        0
+      ],
+      "velocity": [
+        0,
+        -627,
+        0
+      ],
+      "metadata": "0000000101ac02020300030600040601050600060000070240e000000801000906000a01000b00000c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 7.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "entity_metadata",
+      "payload": "370000000101ac02020300030600040601050600060000070240e000000801000906000a01000b00000c0600ff",
+      "entity": 55,
+      "metadata": "0000000101ac02020300030600040601050600060000070240e000000801000906000a01000b00000c0600ff",
+      "fields": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 1,
+          "serializer": 1,
+          "value": 300
+        },
+        {
+          "index": 2,
+          "serializer": 3,
+          "value": ""
+        },
+        {
+          "index": 3,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 4,
+          "serializer": 6,
+          "value": 1
+        },
+        {
+          "index": 5,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 6,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 7,
+          "serializer": 2,
+          "value": 7.0
+        },
+        {
+          "index": 8,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 9,
+          "serializer": 6,
+          "value": 0
+        },
+        {
+          "index": 10,
+          "serializer": 1,
+          "value": 0
+        },
+        {
+          "index": 11,
+          "serializer": 0,
+          "value": 0
+        },
+        {
+          "index": 12,
+          "serializer": 6,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stage": "retrack",
+      "name": "entity_update_attributes",
+      "payload": "37000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001667656e657269632e61726d6f72546f7567686e657373000000000000000000",
+      "entity": 55
+    },
+    {
+      "stage": "retrack",
+      "name": "rel_entity_move",
+      "payload": "3000000000000000",
+      "entity": 48,
+      "delta": [
+        0,
+        0,
+        0
+      ],
+      "ground": 0
+    }
+  ],
+  "attributes": [
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 118,
+      "sha256": "15e303c0ad7d712e7dfb42d451712202098d0d277db4172e5b4f0002066dad15",
+      "payload": "2f000000041667656e657269632e61726d6f72546f7567686e6573730000000000000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001567656e657269632e6d6f76656d656e7453706565643fc99999a000000000",
+      "entity": 47,
+      "attributes": [
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        }
+      ],
+      "stage": "adult-spawn"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 63,
+      "sha256": "f503c47a6157606296df32fa9e54c2cdb9f573d971cad12711f1fa8094d25284",
+      "payload": "2f000000021167656e657269632e6d61784865616c74684024000000000000001567656e657269632e6d6f76656d656e7453706565643fc99999a000000000",
+      "entity": 47,
+      "attributes": [
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        }
+      ],
+      "stage": "adult-spawn"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 118,
+      "sha256": "46e3262b7e185fc0a10b0c7293265547d996e25a622a8284210816d675dc3d76",
+      "payload": "30000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001667656e657269632e61726d6f72546f7567686e6573730000000000000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 48,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        }
+      ],
+      "stage": "baby-spawn"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 63,
+      "sha256": "ae3469e13414651bc60dd8634f4e82e40fe7f0eb2dd94a73ba9d703bb43d61d7",
+      "payload": "30000000021567656e657269632e6d6f76656d656e7453706565643fc99999a0000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 48,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        }
+      ],
+      "stage": "baby-spawn"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 36,
+      "sha256": "f3bcec6eb8261404ad5caf7d4ca92f3ea7100afe90ee9f4a7353fe629cccb1b4",
+      "payload": "2f000000011567656e657269632e6d6f76656d656e7453706565643fd3d70a3d70a3d700",
+      "entity": 47,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.31,
+          "modifiers": []
+        }
+      ],
+      "stage": "speed031"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 118,
+      "sha256": "3f171fffade06389a1b85442c632ce2260f869cfd628b9a562304bf15ee3978d",
+      "payload": "37000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001667656e657269632e61726d6f72546f7567686e657373000000000000000000",
+      "entity": 55,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        }
+      ],
+      "stage": "falling-spawn"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 63,
+      "sha256": "86fb7b4ff011ae884eeabb5d6245da76af9e3e4784eebbbaf62346cee7ff21b7",
+      "payload": "37000000021567656e657269632e6d6f76656d656e7453706565643fc99999a0000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 55,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        }
+      ],
+      "stage": "falling-spawn"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 118,
+      "sha256": "a155ca9ca4a3b3c7739d36ecf71433ecb2bc641b3cec702f431542638c54f0d7",
+      "payload": "2f000000041667656e657269632e61726d6f72546f7567686e6573730000000000000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001567656e657269632e6d6f76656d656e7453706565643fd3d70a3d70a3d700",
+      "entity": 47,
+      "attributes": [
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.31,
+          "modifiers": []
+        }
+      ],
+      "stage": "retrack"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 118,
+      "sha256": "46e3262b7e185fc0a10b0c7293265547d996e25a622a8284210816d675dc3d76",
+      "payload": "30000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001667656e657269632e61726d6f72546f7567686e6573730000000000000000001167656e657269632e6d61784865616c7468402400000000000000",
+      "entity": 48,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        }
+      ],
+      "stage": "retrack"
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 118,
+      "sha256": "3f171fffade06389a1b85442c632ce2260f869cfd628b9a562304bf15ee3978d",
+      "payload": "37000000041567656e657269632e6d6f76656d656e7453706565643fc99999a0000000000d67656e657269632e61726d6f720000000000000000001167656e657269632e6d61784865616c74684024000000000000001667656e657269632e61726d6f72546f7567686e657373000000000000000000",
+      "entity": 55,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.20000000298023224,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 10.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        }
+      ],
+      "stage": "retrack"
+    }
+  ],
+  "limits": [
+    "No core comparison or graphical client in this observation",
+    "No entity_move_look observed",
+    "No direct isolated NoAI/Silent toggle; NoAI evidence is adult versus falling initial metadata",
+    "Empty inline spawn metadata not observed",
+    "No same-dimension respawn, damage equivalence, equipment, named cow or effects verification"
+  ],
+  "client_validation": {
+    "report_sha256": "cb01e372e8bc92d0ee375fc75d987098acca64a5fd4e839b3105b215b29b1645",
+    "visual_review_sha256": "de04ae03c65ee49604a4cf22c972e5af9a95566ac5aab77b7e912f4cb73c3531",
+    "checks_passed": 15,
+    "observations": {
+      "cow-baseline": "No cows visible",
+      "cow-empty-inline": "Two adult cow models visible after Spawn Living with inline ff",
+      "cow-observed-metadata": "One adult and one calf visible after separate recorded Metadata",
+      "cow-head-relative": "Adult cow visibly shifted toward center and head orientation changed; calf remains",
+      "cow-removed": "Both cows absent"
+    },
+    "screenshots": [
+      {
+        "stage": "cow-baseline",
+        "file": "cow-baseline.png",
+        "sha256": "ca0d8b197231360572d5bcf6bfcff789b908447e046d2d55ef9fbd9de02c6fc6"
+      },
+      {
+        "stage": "cow-empty-inline",
+        "file": "cow-empty-inline.png",
+        "sha256": "e4bb14b9517a25047f88d365ef35712fe8835c9c4c8d86c12064954180ac5e6b"
+      },
+      {
+        "stage": "cow-observed-metadata",
+        "file": "cow-observed-metadata.png",
+        "sha256": "d6ac5a4492d49e088e77062c2b300f4e03f6e819a9ab90bcf0c0e277b53d0355"
+      },
+      {
+        "stage": "cow-head-relative",
+        "file": "cow-head-relative.png",
+        "sha256": "db25469bc86cd50c5e26a5a18f78d2e2adbddf2fbd07821a2d3db7893a64e5b6"
+      },
+      {
+        "stage": "cow-removed",
+        "file": "cow-removed.png",
+        "sha256": "dbc308bd42ee3b9a02c350f6e8afde0685271b53eeb321ebf3bc155cf6541891"
+      }
+    ],
+    "limits": [
+      "This is authored packet fixture, not integrated core route",
+      "No health bar is shown, health semantics not visually verified",
+      "No combat, effects, sound or same-dimension respawn verification",
+      "First attempt retained with Game Menu overlay; final attempt uses private pauseOnLostFocus:false"
+    ],
+    "observed_fixture_sha256": "2078fffaeaf1f3354618e24af98688884a72e8bee6b764f9272ba8a204ced4a4"
+  }
+}

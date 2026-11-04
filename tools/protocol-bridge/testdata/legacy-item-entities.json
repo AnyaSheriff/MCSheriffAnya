@@ -1,0 +1,33 @@
+{
+  "source": "verification-legacy-runtime/official-item-entities/result.json",
+  "sha256": "b9e9c779aaeb14a152fda0d0bc8a1d7b90f021d2c1067d3abd7f1cc1960e4bf5",
+  "protocol": 340,
+  "exit_code": 0,
+  "entities": [
+    {
+      "stage": "item-no-gravity",
+      "name": "spawn_entity",
+      "payload": "2f43107c4db03d40b69e4f62588ea40c8802408e9400000000004012000000000000c0825c0000000000000000000001005000000000"
+    },
+    {
+      "stage": "item-no-gravity",
+      "name": "entity_metadata",
+      "payload": "2f0000000101000203000306000406000506010605000703000000ff"
+    },
+    {
+      "stage": "item-no-gravity",
+      "name": "entity_velocity",
+      "payload": "2f005000000000"
+    },
+    {
+      "stage": "item-pickup",
+      "name": "collect",
+      "payload": "2f2e03"
+    },
+    {
+      "stage": "item-pickup",
+      "name": "entity_destroy",
+      "payload": "012f"
+    }
+  ]
+}

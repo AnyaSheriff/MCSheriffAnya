@@ -1,0 +1,139 @@
+{
+  "name": "weapon-hotbar-switch",
+  "about": "Смена меча, топора, булавы, копья и трезубца: полный удар после ожидания перезарядки.",
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "!hotbar 0",
+    "tp $(bot) $(3.5,0,0.5) 0 0",
+    "!stopfly",
+    "!look 3.141592653589793 -0.25",
+    "item replace entity $(bot) hotbar.0 with diamond_sword",
+    "item replace entity $(bot) hotbar.1 with diamond_axe",
+    "item replace entity $(bot) hotbar.2 with mace",
+    "item replace entity $(bot) hotbar.3 with iron_spear",
+    "item replace entity $(bot) hotbar.4 with trident"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 1,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 3,
+      "hotbar": 0
+    },
+    {
+      "after": 45,
+      "attack": true
+    },
+    {
+      "after": 50,
+      "cmd": "data get entity @e[type=cow,limit=1,distance=..48] Health"
+    },
+    {
+      "after": 55,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 56,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 58,
+      "hotbar": 1
+    },
+    {
+      "after": 100,
+      "attack": true
+    },
+    {
+      "after": 105,
+      "cmd": "data get entity @e[type=cow,limit=1,distance=..48] Health"
+    },
+    {
+      "after": 110,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 111,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 113,
+      "hotbar": 2
+    },
+    {
+      "after": 155,
+      "attack": true
+    },
+    {
+      "after": 160,
+      "cmd": "data get entity @e[type=cow,limit=1,distance=..48] Health"
+    },
+    {
+      "after": 165,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 166,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 168,
+      "hotbar": 3
+    },
+    {
+      "after": 210,
+      "attack": true,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 215,
+      "cmd": "data get entity @e[type=cow,limit=1,distance=..48] Health"
+    },
+    {
+      "after": 220,
+      "cmd": "kill @e[type=cow,distance=..48]"
+    },
+    {
+      "after": 221,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 223,
+      "hotbar": 4
+    },
+    {
+      "after": 265,
+      "attack": true
+    },
+    {
+      "after": 270,
+      "cmd": "data get entity @e[type=cow,limit=1,distance=..48] Health"
+    }
+  ],
+  "record_ticks": 300,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "difficulty peaceful",
+    "!startfly"
+  ]
+}

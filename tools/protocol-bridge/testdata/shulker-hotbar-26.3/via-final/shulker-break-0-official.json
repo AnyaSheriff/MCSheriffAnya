@@ -1,0 +1,1106 @@
+{
+ "scenario": "shulker-break",
+ "host": "127.0.0.1",
+ "port": 26171,
+ "lane": 1,
+ "window": {
+  "first": 2407,
+  "last": 2577
+ },
+ "events": [
+  {
+   "tick": 2407,
+   "ms": 148,
+   "kind": "do",
+   "what": "dig 0,0,0 0",
+   "phase": 0.02
+  },
+  {
+   "tick": 2407,
+   "ms": 173,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2408,
+   "ms": 222,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2409,
+   "ms": 272,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2410,
+   "ms": 322,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2411,
+   "ms": 372,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2412,
+   "ms": 422,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2413,
+   "ms": 472,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2414,
+   "ms": 522,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2415,
+   "ms": 572,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2416,
+   "ms": 622,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2417,
+   "ms": 672,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2418,
+   "ms": 722,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2419,
+   "ms": 772,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2420,
+   "ms": 822,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2421,
+   "ms": 872,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2422,
+   "ms": 922,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2423,
+   "ms": 972,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2424,
+   "ms": 1022,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2425,
+   "ms": 1072,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2426,
+   "ms": 1122,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2427,
+   "ms": 1172,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2428,
+   "ms": 1222,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2429,
+   "ms": 1272,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2430,
+   "ms": 1322,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2431,
+   "ms": 1372,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2432,
+   "ms": 1422,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2433,
+   "ms": 1472,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2434,
+   "ms": 1522,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2435,
+   "ms": 1572,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2436,
+   "ms": 1622,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2437,
+   "ms": 1672,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2438,
+   "ms": 1722,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2439,
+   "ms": 1772,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2440,
+   "ms": 1822,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2441,
+   "ms": 1872,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2442,
+   "ms": 1922,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2443,
+   "ms": 1972,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2444,
+   "ms": 2022,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2445,
+   "ms": 2072,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2446,
+   "ms": 2122,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2447,
+   "ms": 2172,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2448,
+   "ms": 2222,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2449,
+   "ms": 2272,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2450,
+   "ms": 2322,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2451,
+   "ms": 2372,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2452,
+   "ms": 2422,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2453,
+   "ms": 2472,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2454,
+   "ms": 2522,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2455,
+   "ms": 2572,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2456,
+   "ms": 2622,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2457,
+   "ms": 2672,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2458,
+   "ms": 2722,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2459,
+   "ms": 2772,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2460,
+   "ms": 2822,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2461,
+   "ms": 2872,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2462,
+   "ms": 2922,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2463,
+   "ms": 2972,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2464,
+   "ms": 3022,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2465,
+   "ms": 3072,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2466,
+   "ms": 3122,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2467,
+   "ms": 3172,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2468,
+   "ms": 3222,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2469,
+   "ms": 3272,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2470,
+   "ms": 3322,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2471,
+   "ms": 3372,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2472,
+   "ms": 3422,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2473,
+   "ms": 3472,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2474,
+   "ms": 3522,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2475,
+   "ms": 3572,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2476,
+   "ms": 3622,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2477,
+   "ms": 3672,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2478,
+   "ms": 3722,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2020,
+   "data": 1
+  },
+  {
+   "tick": 2479,
+   "ms": 3772,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2480,
+   "ms": 3822,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2481,
+   "ms": 3872,
+   "kind": "level",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "effect": 2019,
+   "data": 1
+  },
+  {
+   "tick": 2482,
+   "ms": 3897,
+   "kind": "do",
+   "what": "dig 0,0,0 2",
+   "phase": 0
+  },
+  {
+   "tick": 2482,
+   "ms": 3925,
+   "kind": "spawn",
+   "at": [
+    0.4,
+    0.56,
+    0.37
+   ],
+   "type": "item",
+   "data": 0,
+   "id": 179,
+   "velocity": {
+    "x": 0.09644143319294396,
+    "y": 0.2000244155527071,
+    "z": 0.0725752304217786
+   }
+  },
+  {
+   "tick": 2482,
+   "ms": 3925,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 2492,
+   "ms": 4425,
+   "kind": "destroy",
+   "ids": [
+    179
+   ]
+  },
+  {
+   "tick": 2527,
+   "ms": 6148,
+   "kind": "do",
+   "what": "click 0,-1,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 2527,
+   "ms": 6174,
+   "kind": "block",
+   "at": [
+    0,
+    -1,
+    0
+   ],
+   "state": "stone"
+  },
+  {
+   "tick": 2527,
+   "ms": 6174,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "shulker_box[facing=up]"
+  },
+  {
+   "tick": 2527,
+   "ms": 6174,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "shulker_box[facing=up]"
+  },
+  {
+   "tick": 2537,
+   "ms": 6898,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 2542,
+   "ms": 6922,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9364092946052551
+  },
+  {
+   "tick": 2542,
+   "ms": 6922,
+   "kind": "window",
+   "type": "20",
+   "title": "container.shulkerBox"
+  },
+  {
+   "tick": 2542,
+   "ms": 6923,
+   "kind": "slots",
+   "items": "0:stone×5 13:diamond×3"
+  },
+  {
+   "tick": 2542,
+   "ms": 6923,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "shulker_box[facing=up]"
+  },
+  {
+   "tick": 2542,
+   "ms": 6923,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 2542,
+   "ms": 6923,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "shulker_box"
+  },
+  {
+   "tick": 2547,
+   "ms": 7147,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 2547,
+   "ms": 7172,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.918543815612793
+  },
+  {
+   "tick": 2547,
+   "ms": 7172,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "shulker_box"
+  }
+ ]
+}

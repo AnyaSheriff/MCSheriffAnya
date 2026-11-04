@@ -8,6 +8,7 @@ use aes::cipher::{BlockDecryptMut, BlockEncryptMut, KeyIvInit};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 pub type Connection = CryptoStream<tokio::net::TcpStream>;
+pub type LegacySession = std::sync::Arc<std::sync::Mutex<mcsa_protocol::legacy_play::Session>>;
 type Encryptor = cfb8::Encryptor<aes::Aes128>;
 type Decryptor = cfb8::Decryptor<aes::Aes128>;
 
@@ -16,11 +17,39 @@ pub struct CryptoStream<S> {
     encryptor: Option<Encryptor>,
     decryptor: Option<Decryptor>,
     read_taken: bool,
+    pub protocol: Option<mcsa_protocol::Negotiated>,
+    pub(crate) content: mcsa_protocol::content::ContentCodec,
+    pub(crate) chunk_biomes: Option<std::sync::Arc<super::configuration::ChunkBiomes>>,
+    pub login_session_id: Option<[u8; 16]>,
+    pub legacy: Option<LegacySession>,
+    #[cfg(test)]
+    pub(crate) probe_776: bool,
+    #[cfg(test)]
+    read_pending_probe: Option<std::sync::mpsc::Sender<()>>,
 }
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, encryptor: None, decryptor: None, read_taken: false }
+        Self { inner, chunk_biomes: None, content: Default::default(), encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false, #[cfg(test)] read_pending_probe: None }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn probe_read_pending(&mut self, sender: std::sync::mpsc::Sender<()>) {
+        self.read_pending_probe = Some(sender);
+    }
+
+    pub(crate) fn probe_776_enabled(&self) -> bool {
+        #[cfg(test)]
+        { self.probe_776 && matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
+        #[cfg(not(test))]
+        { matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
+    }
+
+    /// Мир сервера в профиле Preview26_3 (биомы 26.3 в реестре).
+    pub fn world_is_preview(&self) -> bool { self.content.is_preview() }
+
+    pub fn client_version(&self) -> mcsa_protocol::JavaVersion {
+        self.protocol.map_or(mcsa_protocol::wire::INTERNAL, |profile| profile.client)
     }
 
     pub fn enable_encryption(&mut self, secret: &[u8; 16]) {
@@ -48,6 +77,13 @@ impl Connection {
         own.set_nonblocking(true)?;
         let mut reader = Self::new(tokio::net::TcpStream::from_std(own)?);
         reader.decryptor = self.decryptor.take();
+        reader.protocol = self.protocol;
+        reader.content = self.content;
+        reader.chunk_biomes = self.chunk_biomes.clone();
+        reader.login_session_id = self.login_session_id;
+        reader.legacy = self.legacy.clone();
+        #[cfg(test)]
+        { reader.probe_776 = self.probe_776; reader.read_pending_probe = self.read_pending_probe.take(); }
         self.read_taken = true;
         Ok(reader)
     }
@@ -72,7 +108,14 @@ impl<S: AsyncRead + Unpin> AsyncRead for CryptoStream<S> {
             return Poll::Ready(Err(io::Error::other("читатель уже передан")));
         }
         let start = buf.filled().len();
-        ready!(Pin::new(&mut this.inner).poll_read(cx, buf))?;
+        match Pin::new(&mut this.inner).poll_read(cx, buf) {
+            Poll::Ready(result) => result?,
+            Poll::Pending => {
+                #[cfg(test)]
+                if let Some(probe) = this.read_pending_probe.take() { let _ = probe.send(()); }
+                return Poll::Pending;
+            }
+        }
         if let Some(cipher) = &mut this.decryptor {
             decrypt(cipher, &mut buf.filled_mut()[start..]);
         }
@@ -161,6 +204,27 @@ mod tests {
             right.write_all(&secret).await.unwrap();
         };
         tokio::join!(sender, receiver);
+    }
+
+    #[tokio::test]
+    async fn play_reader_keeps_negotiated_versions_and_cannot_be_taken_twice() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let peer=tokio::net::TcpStream::connect(listener.local_addr().unwrap());
+        let (peer,accepted)=tokio::join!(peer,listener.accept());
+        let mut peer=peer.unwrap();
+        let mut writer=Connection::new(accepted.unwrap().0);
+        let protocol=mcsa_protocol::Negotiated::native_only(775,super::super::NATIVE_VERSION).unwrap();
+        writer.protocol=Some(protocol);
+        writer.login_session_id=Some([23; 16]);
+        let mut reader=writer.take_reader().unwrap();
+        assert_eq!(reader.protocol,Some(protocol));
+        assert_eq!(reader.login_session_id,Some([23; 16]));
+        assert_eq!(writer.protocol,Some(protocol));
+        assert!(writer.take_reader().is_err());
+        peer.write_all(b"play").await.unwrap();
+        let mut bytes=[0;4];
+        reader.read_exact(&mut bytes).await.unwrap();
+        assert_eq!(&bytes,b"play");
     }
 
     #[tokio::test]

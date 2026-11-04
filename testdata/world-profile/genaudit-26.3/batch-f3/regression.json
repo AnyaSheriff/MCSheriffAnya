@@ -1,0 +1,162 @@
+{
+  "unit": "blocks per thousand projected surface-biome columns",
+  "method": "Small full generated-chunk windows, independent of cave biome volume. Bounds allow sampling variation; census tolerance remains max(5, 20% vanilla).",
+  "samples": [
+    {
+      "seed": 1792932773345722119,
+      "biome": "meadow",
+      "bounds": [
+        -116,
+        -90,
+        -104,
+        -84
+      ],
+      "minimum_columns": 2000,
+      "limits": {
+        "short_grass": [
+          65,
+          110
+        ],
+        "wildflowers": [
+          25,
+          75
+        ],
+        "tall_grass": [
+          9,
+          16
+        ],
+        "poppy": [
+          0,
+          2
+        ],
+        "allium": [
+          0,
+          2
+        ],
+        "oxeye_daisy": [
+          0,
+          2
+        ],
+        "azure_bluet": [
+          29,
+          46
+        ],
+        "cornflower": [
+          22,
+          36
+        ],
+        "dandelion": [
+          10,
+          17
+        ]
+      }
+    },
+    {
+      "seed": 100554032945340,
+      "biome": "meadow",
+      "bounds": [
+        -54,
+        -98,
+        -46,
+        -90
+      ],
+      "minimum_columns": 2000,
+      "limits": {
+        "short_grass": [
+          55,
+          125
+        ],
+        "wildflowers": [
+          25,
+          75
+        ]
+      }
+    },
+    {
+      "seed": 1792932773345722119,
+      "biome": "cherry_grove",
+      "bounds": [
+        -41,
+        -80,
+        -27,
+        -69
+      ],
+      "minimum_columns": 2000,
+      "limits": {
+        "short_grass": [
+          100,
+          210
+        ],
+        "pink_petals": [
+          240,
+          430
+        ]
+      }
+    },
+    {
+      "seed": 100554032945340,
+      "biome": "cherry_grove",
+      "chunks": [
+        [
+          -67,
+          -76
+        ],
+        [
+          -67,
+          -75
+        ],
+        [
+          -67,
+          -74
+        ],
+        [
+          -67,
+          -73
+        ],
+        [
+          -19,
+          -91
+        ],
+        [
+          -19,
+          -90
+        ],
+        [
+          -18,
+          -91
+        ],
+        [
+          -18,
+          -90
+        ],
+        [
+          -18,
+          -89
+        ],
+        [
+          -18,
+          -88
+        ],
+        [
+          -17,
+          -89
+        ],
+        [
+          -17,
+          -88
+        ]
+      ],
+      "minimum_columns": 900,
+      "limits": {
+        "pink_petals": [
+          165,
+          245
+        ],
+        "short_grass": [
+          80,
+          125
+        ]
+      }
+    }
+  ]
+}

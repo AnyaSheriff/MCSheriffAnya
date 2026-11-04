@@ -1,0 +1,15 @@
+{
+  "client": 769,
+  "primary": 775,
+  "checks": [
+    "register-frozen-limbo-no-playerdata-before-password",
+    "three-wrong-passwords-close-without-world-entry",
+    "relogin-wrong-rejected-correct-enters",
+    "credential-retries-after-login-remain-private",
+    "passwords-absent-from-server-log-and-results"
+  ],
+  "status": "pass",
+  "public_admission": false,
+  "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+  "server_exit": "stop-and-stdin-eof"
+}

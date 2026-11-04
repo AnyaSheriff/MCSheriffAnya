@@ -63,7 +63,17 @@ pub(super) struct NativeWait { active: AtomicBool, left: AtomicU64 }
 impl NativeWait {
     fn reset(&self) { self.left.store(NATIVE_WAIT_EPOCHS,Ordering::Relaxed); }
     pub(super) fn enter(&self) -> NativeWaitGuard<'_> { self.active.store(true,Ordering::Relaxed);NativeWaitGuard(self) }
-    fn consume(&self) -> bool { self.active.load(Ordering::Relaxed) && self.left.fetch_update(Ordering::Relaxed,Ordering::Relaxed,|left|left.checked_sub(1)).is_ok() }
+    fn consume(&self) -> bool {
+        if !self.active.load(Ordering::Relaxed) { return false; }
+        let mut left = self.left.load(Ordering::Relaxed);
+        while let Some(next) = left.checked_sub(1) {
+            match self.left.compare_exchange_weak(left, next, Ordering::Relaxed, Ordering::Relaxed) {
+                Ok(_) => return true,
+                Err(current) => left = current,
+            }
+        }
+        false
+    }
 }
 pub(super) struct NativeWaitGuard<'a>(&'a NativeWait);
 impl Drop for NativeWaitGuard<'_> { fn drop(&mut self) { self.0.active.store(false,Ordering::Relaxed); } }
@@ -194,6 +204,8 @@ pub struct Host {
     registry: CommandRegistry,
     names: Arc<Mutex<Vec<String>>>,
     epochs: Option<Arc<AtomicBool>>,
+    #[cfg(test)]
+    test_call_epochs: Option<u64>,
     native_wait: Arc<NativeWait>,
     /// Сколько хозяин тратит на такт целиком (задачи всех плагинов).
     pub tick_stats: Stats,
@@ -271,9 +283,19 @@ impl Host {
             registry: Arc::new(Mutex::new(HashMap::new())),
             names: Arc::new(Mutex::new(Vec::new())),
             epochs: None,
+            #[cfg(test)]
+            test_call_epochs: None,
             native_wait: Arc::new(NativeWait::default()),
             tick_stats: Stats::default(),
         })
+    }
+
+    /// Функциональные тесты не измеряют задержки планировщика ОС под нагрузкой.
+    /// Топливо и память остаются ограничены; рабочий сервер этого метода не имеет.
+    #[cfg(test)]
+    pub(super) fn with_test_call_epochs(mut self, epochs: u64) -> Self {
+        self.test_call_epochs = Some(epochs);
+        self
     }
 
     /// Запускает часы эпох при первой загрузке плагина (без плагинов поток
@@ -366,6 +388,8 @@ impl Host {
         let component = Component::new(&self.engine, &bytes).map_err(|error| format!("{}: не wasm-компонент: {}", manifest.wasm_file(), short(&error)))?;
 
         let limits = if trusted { MODULE_LIMITS } else { PLUGIN_LIMITS };
+        #[cfg(test)]
+        let limits = Limits { epochs: self.test_call_epochs.unwrap_or(limits.epochs), ..limits };
 
         let network = super::network::Access::new(&manifest.network_hosts, self.shared.settings.plugin_network_hosts.get(&manifest.name).map(Vec::as_slice).unwrap_or_default());
         crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
@@ -864,15 +888,15 @@ impl Host {
         let now=self.shared_tick();let mut crashes=Vec::new();for plugin in &mut self.loaded {let Some(function)=plugin.world_init else {continue;};if let Err(reason)=plugin.call(now,|_,store|function.call(store,(super::api::dimension_to_wit(dimension),))) {crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason});}}self.bury(crashes);
     }
     pub fn populate(&mut self, dimension: crate::dimension::Dimension, x: i32, z: i32, seed: i64, mut chunk: crate::world::Chunk) -> crate::world::Chunk {
-        let now=self.shared_tick();let mut crashes=Vec::new();let dimension=super::api::dimension_to_wit(dimension);
+        let now=self.shared_tick();let catalog=self.shared.catalog();let mut crashes=Vec::new();let dimension=super::api::dimension_to_wit(dimension);
         for plugin in &mut self.loaded {let (Some(wants),Some(populate))=(plugin.wants_population,plugin.populate) else {continue;};
             let result=plugin.call(now,|_,store|{let (wanted,)=wants.call(&mut *store,(dimension,))?;if !wanted {return Ok(Vec::new());}
-                let (palette,runs)=chunk.population_snapshot();
+                let (palette,runs)=chunk.population_snapshot(catalog);
                 // Полный проход 98304 блоков имеет отдельный конечный бюджет.
                 store.set_fuel(400_000_000)?;store.set_epoch_deadline(200);
                 let (edits,)=populate.call(&mut *store,(dimension,x,z,seed.wrapping_add((x as i64).wrapping_mul(341873128712)).wrapping_add((z as i64).wrapping_mul(132897987541)),palette,runs))?;Ok(edits)
             });
-            let result=result.and_then(|edits|if edits.is_empty() {Ok(())}else {chunk.apply_population(edits)});
+            let result=result.and_then(|edits|if edits.is_empty() {Ok(())}else {chunk.apply_population(catalog, edits)});
             if let Err(reason)=result {crashes.push(Crash {plugin:plugin.manifest.name.clone(),reason:format!("Генерация чанка {x} {z}: {reason}")});}
         }
         self.bury(crashes);

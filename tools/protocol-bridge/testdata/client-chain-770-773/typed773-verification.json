@@ -1,0 +1,300 @@
+{
+  "client_translation_only": true,
+  "lower_admission_complete": false,
+  "public_admission": {
+    "775": {
+      "774": "open",
+      "776": "open",
+      "773": "closed",
+      "772": "closed",
+      "771": "closed",
+      "770": "closed"
+    },
+    "777": {
+      "774": "open",
+      "776": "open",
+      "773": "closed",
+      "772": "closed",
+      "771": "closed",
+      "770": "closed"
+    }
+  },
+  "checks": {
+    "rust": 3166,
+    "core": 2908,
+    "startup": 3,
+    "protocol": 244,
+    "seedmap": 11,
+    "ignored": 92,
+    "python": 237,
+    "clippy_workspace": "PASS -D warnings",
+    "clippy_root": "PASS -D warnings",
+    "release": "PASS",
+    "public": 24
+  },
+  "scope": "Bounded adjacent773 inventory/recipe/particle/trade/metadata foundation only; full Play and live lower-client checklist unfinished",
+  "evidence": {
+    "774/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775",
+        "checks": 6,
+        "result_sha256": "58eaa1ec715840779d46d51365108e85843f292697b6799b98bcd55380d04b63"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay775",
+        "checks": 11,
+        "result_sha256": "50bfd11df6ddfd93c68cf816d9d9fd5a651176e7d053b73b39eaaf77c25f9317"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions775",
+        "checks": 5,
+        "result_sha256": "2f6c1100e2c73b52d3bde514bbd84baca0a661adb56d8d2d371314caa0a828b1"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password775",
+        "checks": 5,
+        "result_sha256": "e3b052b4a9159af3535c1fcb10f7e70c2de3c107f8e02c6066163ea57b08c523"
+      }
+    },
+    "774/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777",
+        "checks": 6,
+        "result_sha256": "028d661dd6900314d1e2113900ea19c618a3fbbfcf10cfd45d26fe836b2721f1"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay777",
+        "checks": 11,
+        "result_sha256": "20601259f9b54def3702fb3d200b2dfe59442c372e45a50e33e70ed0cea95b69"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions777",
+        "checks": 5,
+        "result_sha256": "d78913d946aef74555915ec457e513ee07db4714edebd12afef9dd571cdf6396"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password777",
+        "checks": 5,
+        "result_sha256": "6344c385e78cad369b34e3b4eee9c82898d2c8542fe73fb3804b2a30a15dded9"
+      }
+    },
+    "776/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775",
+        "checks": 6,
+        "result_sha256": "4c32f34a21d22bbf60ab2db537e5a1a4107ac3f3ad0c895229dcea0f05f2e312"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay775",
+        "checks": 11,
+        "result_sha256": "24ebbca10be3fa3b4d54fcb7d2ca56da6054d1f41781ba65b40dd52e035a886b"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions775",
+        "checks": 5,
+        "result_sha256": "aba7415bf1b610e7727f981d8460c31f04276798edac4f65fa1decd739c1e37a"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password775",
+        "checks": 5,
+        "result_sha256": "d18c31018c56e46026097c70d4585b08e31cb37a8dd08b2e73933e3e840b5f5b"
+      }
+    },
+    "776/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777",
+        "checks": 6,
+        "result_sha256": "c008af05440af63de50cb7c1b1b27a50eb647eac8e7e929f5293acdf661ab951"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay777",
+        "checks": 11,
+        "result_sha256": "6dc9a113c4b60aeb6799bb3120aa4873167be7ec0e3c500b67db24dd7ccfc173"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions777",
+        "checks": 5,
+        "result_sha256": "1b8610f1cd8280e50cbbe00a463d24ee2ee3d82aab98158dab353b9ee07da91d"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password777",
+        "checks": 5,
+        "result_sha256": "3ea8cc070809a545cc7dca1cae751c7ccf209225002fe38dedd6099927309e0b"
+      }
+    }
+  },
+  "original_payloads": {
+    "774": "f49c99cd5a0d5e41bf07a95be35ca2c18ddca5e1c5759d80afedd9dce872da41",
+    "776": "b315a5d410c666ec1b0bc4b8a38635ec38c765693decc46f15ed82752810bab3"
+  },
+  "binaries": {
+    "test_sha256": "935b532036a73a3e25088ea10a7526b1081fa97e742cf1e91bc9b037ebd7c5da",
+    "release_sha256": "c2b618aa28a37ffa7da84c85c7aa39c86ec5e79261709a88a8630030c4f75b9a"
+  },
+  "new_source_sha256": {
+    "tools/protocol-bridge/src/client_773.rs": "5c07b8c329e6df937f75328252e85dd9ee4afa6c563df425816e5ef1642b4c67",
+    "tools/protocol-bridge/src/client_773_tests.rs": "d002a665b6f9dbac4e3142246ef4ca05f06968ffc217f3c61211f0119900f092",
+    "tools/protocol-bridge/src/generated_payload_773.rs": "849d1137e4a083b9f4b0dfdff52a74234d97dfe3e7b180f494d901eeee4631fe",
+    "tools/protocol-bridge/generate_payload_773.py": "53989ea6b31761204483d504220d21d63302169b9e123f467bb4f0be3ba0a912",
+    "tools/protocol-bridge/payload-773-report.json": "e8e17d813f201a757539ff111732ea02d00ac96df6bb1742420370e1d6b2b6e4",
+    "tools/protocol-bridge/src/adjacent.rs": "1887531cb7e48db23c5180755c4c7fccba072e2c54f005bb3fe600aad81a1399",
+    "tools/protocol-bridge/src/adjacent_tests.rs": "d8b4c6256b585e1dd0865a4007206221e14930140784d33e3466110e2f3c7a96",
+    "tools/protocol-bridge/src/component_776.rs": "5ef0f2a29145190a50ecf436137b90cebdafe9355955cf7626a5bf90c583db5e",
+    "tools/protocol-bridge/src/entities.rs": "484724778f766543df1ca57c16c28cb7857e4bfe818174a1696d802f5daf8917",
+    "tools/protocol-bridge/src/items.rs": "16f19fbfbaffc92e3179b5cefc07143e1e5e92efded2f2ed1854a1e39bfd1743",
+    "tools/protocol-bridge/src/lib.rs": "ed206db96f7740c0a3277de92e39c74e057b0cbbd751ab2999db00dafe8232f2",
+    "tools/protocol-bridge/src/nested_items.rs": "0895e2355e9c3769d1c76661a59b342dfa66b9ca57e7c5f0d98ef2ef45fe13ec",
+    "tools/protocol-bridge/src/recipes.rs": "e36f867d505d92d90ac8c579ee4c2ad96d2e3b48a9be60191ece96f220404e41",
+    "tools/protocol-bridge/live_client.py": "c4495e799c8aef453944e0955f6fa2e39e4098bd8329ad24ee432bd7aba8e1da",
+    "tools/protocol-bridge/prepare_registry_client.py": "4d231daa271b255d49495f73443c8b1f530f58aba989e27755d4265b760a4936",
+    "tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md": "50ec89b540e6ad2a52b73e5f082f05556a24cec34acc79456e9a989f1941e0f9",
+    "docs/multiversion-plan.md": "f4a0707eb12bc20dc594e3ccc7215c1b843b0ce42645841634d704009f6c9fb2",
+    "docs/java-26.3-content.md": "a20d7088027885497459074edf7f35bb67fc53f40b9d538f9bb1fb70de4d259c"
+  },
+  "retained_failures": [
+    "targeted-first.log: test-format compile error",
+    "typed773-regression/774-gui775: Xvfb/NVIDIA before connection",
+    "typed773-regression-final/774-gui775: obsolete774 bee-prefix fixture",
+    "typed773-regression-v2/776-gui775: old GLFW override lacks preedit callback",
+    "client773-prepare.log: initial Java-version assertion excluded1.21.10"
+  ],
+  "limitations": [
+    "773 attributes/anger/bee prefix and missing-content projections incomplete",
+    "773 full connection/chunk/Play integration and every live checklist still absent",
+    "772-770 inherit unfinished773; no older gameplay profiles or new admission gates",
+    "No fresh official-server run; existing observations reused"
+  ],
+  "artifact_sha256": {
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/targeted-second.log": "e9ec7c67f5762f53e7ef8cd9a0d23c76117a21af22da40272499aaa862687c11",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/client773-download-verification.json": "86f0dba21aea66fcfd098c063a6578bd98e41d00a9fc4cdcf5a77b74646b9615",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/live-regress-v3.log": "d1ad2ec90561ba0cf6bbc3092cf49a443c5866e84f3ef7260b0e9ee8b6bcc116",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/client773-prepare.log": "c014f3613afa55e09e707c93dc260cff022fcc4dedcc26c9a01153f55c9bd855",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/clippy-root.log": "a70da5408e7a6da7efe97b23011504833b16a7875bda14543f2504b5b8c7d97a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/targeted-third.log": "e3ac8ae41a7d0106cd14fb4599dfb5b7fc12a2aa9fd4d9b8de4c3ca148fbe905",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/client773-prepare-v2.log": "7f595043e07db1a6ff9b489c07960492bdc37701b6996270a374782f44f70df8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/python-final.log": "08b27473c21a639b721b417b57f2fe35cf70eea1e2310e8a9847b397404b2b51",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/rust-final.log": "54b2fb9e68de0db9d99567e00e7f306f1b5df1644eb5fb16986836eaf175dcf2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/targeted-first.log": "157dfc0dc8c52ef05e2fc9fc6dea1b2ffac30d9870a5c9fa753a4c6f1913208b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/build.log": "f40d2da60ba1c3636279d1fd43bf503fde0635f4f34e11c58eb62b7db64241e6",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/rust-first.log": "e84409af2a46629f1ad8858130848afedf3e5ca503fbe2bb85d45d22e7006770",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/live-regress-final.log": "3b35ace486ec665359c9045af45378b7cd09c9605562d89e8d336326b75cd68b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/generator.log": "263abbe7dd7d6d9ee3fcfa2cfd539b53760773d497d201d49656af0c4c0ae463",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/wiki-sources.json": "090f45285ada2576f9f4f6d941aca9fdab6e85ecdb063e209f01e018b9a5328d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/xvfb-mesa.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/run-regression-v3.py": "e07502f7e59258a44835fea570c8b832757a5a73f2c48d8ff311adb657d8bd4d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/python.log": "e9fc9038823195609f71fc0ec7d78beea24f02bc5fe8e376cf75b6a71b68a7d2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/verify.py": "03731afcca9ecff6f8f0420e3f1e61af80e13524cdd35f258c082922271dfbd4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/xvfb-nvidia-failure.log": "bf7a00463fd5edf24518ed0f5a2d106ae5f3cfab1b8f27143f71303bfdfcebc2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/clippy-workspace.log": "326a999465e15d953e82f9a80abb2b8dc0fd191100186d39542527af257f6629",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/run-regression.py": "040545cf5a912c68025a14d5bd7ab86b0038dddfa902ecfd85cc1f3923748315",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/public.log": "85ae7491ad69084ccc25a635f396ae437d77cd09e30faa939a070b9e46f70e1c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/live-regress-v2.log": "2ea789877e5f2e66bb43aa94841202e2771abcf50df265f883e2cdc472d96804",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/live-regress.log": "3b35ace486ec665359c9045af45378b7cd09c9605562d89e8d336326b75cd68b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-public-final/primary775.log": "339f3bcc8b7cb828c055bef9e4352064b4a4e2f1dfe48e0867a27cfdc04a9644",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-public-final/result.json": "40acc6bdc9564b9aafba01f4708bd938c36c71c1302b4cee8711800653973011",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-public-final/primary777.log": "c801d0fcc9ca687ec68ad48de94a7aedf703b99e66c09a8a365768b453334e6e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression/jobs.json": "f5fd406683af934f9579e1e92978932444ff1f5b97591ef8ba07381bce61e30d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression/774-gui775.log": "a59c69ebc61daae12fd09b812834f24783a9c2c75790e1144ac638fc5b950f27",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression/774-gui775/server.log": "2e7bbb130f0fb8480b50e2636abb78dc5dfe54ae2bd17c5192a973313737d312",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression/774-gui775/client.log": "21ef47b5b8172e2064e9fb81fbb795ae2f61571092499e81e03a122dc403539a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression/774-gui775/result.json": "75ca13aeddad05e88eae8f82eab03e9825cf1074abc705883cac5d9e05bc3ddf",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression/774-gui775/client-crash-reports/crash-2026-10-23_19.23.17-client.txt": "d4707cc3189606453b1d576369ab9e3c4f56f85ed22cd7cfa93577fba13e4711",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-final/jobs.json": "e6a0bc1702a3b8aaf9d3018f6a594844dc7fa8581179658f5ab7e7fa3fade529",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-final/774-gui775.log": "4ca1f44a193384f7f7e411d49fd48cf718f35987f9b2c164ac02ebcd22c82d34",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-final/774-gui775/server.log": "a5959dd3441b76ce91681efc84848b542755f3e8e8049ea83254ac0062500b6d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-final/774-gui775/client.log": "7e9a53336d0ae6a26d784267e640fb0e66434d0cd361173841b23cc52737bd43",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-final/774-gui775/result.json": "03dbe3a6558f22f047b87ae52c6ae98f8d02a32dc9e5e7ded8b1d40c8904fe4f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-final/774-gui775/client-debug/disconnect-2026-10-23_19.26.09-client.txt": "373c83b45c032c62f6d35f023c860078db5eae965854238cfb83a642e45cf1db",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/jobs.json": "24e49ba76a6a1868ce6b0b9777d4c91957e99a65a339ab8dd65c7215fe1d8521",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777.log": "7d4afb39d866754d8834b6da0bda52f5c9aaf4372d03f8d68af00ceba83d4cc2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775.log": "7d4afb39d866754d8834b6da0bda52f5c9aaf4372d03f8d68af00ceba83d4cc2",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/776-gui775.log": "a59c69ebc61daae12fd09b812834f24783a9c2c75790e1144ac638fc5b950f27",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/776-gui775/server.log": "aadd071327cce6227ad534300fa80b8d248f55720a06d43fe1467b1519e555ba",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/776-gui775/client.log": "e14b64e41649206702276c7af4e9499460cd98e63d592ee4734d150d48ea0d40",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/776-gui775/result.json": "e08a9a9de361e1b0a18cad73bf62e00f3ef7df4236b6b41e17df6061222c43a9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/statue-standing.png": "adc23b3be829b06496f29d0db83e4e91d1f53e201ca34462d1b1e2a75dc5967e",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/ready-cancel.png": "750dfb47938302db27c3a25ced00de2617494cf2e098886997f445ce1532888a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/statue-running.png": "67ffd8018abfb3a80a379299ad382c2e80cfb1f6d1aa6c9ce02f4aca6148a840",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/server.log": "b2036f128cec5409823ff48f97b0699c6eef8b90d267f430d735eef204516569",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/statue-ready.png": "d1d045946372b5e1c32d3b55aa476d6214069bdcc97c007b9a37558558f99cde",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/statue-star.png": "b8d3fa84fc6e733a9654f81fb4af4384b02dba84a8ce0e2bf5bcff3143a3453a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/finished-actions.png": "bee008e2c04912e9466cdf01915c574aa16dd478798a52a04eb252cc6f9e922f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/statue-sitting.png": "5dbbd0ccf7cf2a05559f7c344a767e788684c79ebcc63b0ad2e36675933effc0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/client.log": "d658b851d9a49f755e477934261e2bfe000c99befced9e155a502aac701e9989",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/result.json": "028d661dd6900314d1e2113900ea19c618a3fbbfcf10cfd45d26fe836b2721f1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui777/payloads-accepted.png": "961873c89af701ba59c92160ae2cabbe9370a65f0db36482f388832e8771fdad",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/statue-standing.png": "521bf91797f8ce86688cda91de967582216eac87132ccadf1c0ab9ad4c23eac0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/ready-cancel.png": "84398b41415166e9dd7e7ad9e960265531f030712aa4b3071cc5d8d9abca88e7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/statue-running.png": "2728d187d1e9e685ddc57ed8ed0fe799c5b128b182691d5a5964d8c598ff0d2d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/server.log": "ad528782aa542f72218f5dbbeef21200006f13f20f516509464207d5062d181a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/statue-ready.png": "9f937495aae3810dfd4fdb9fe1e5d0d3ab377b552b32092e32f2714eb811bc9a",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/statue-star.png": "6c24a0b39cba1e5c9adf6d2bb8b8fe8c0e67991fa45c5be61b61e4c0459005c9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/finished-actions.png": "5f18c3701a05e12ce06c0046f6f42ee7ae286fd9f8f9fa476c771a2d09382af7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/statue-sitting.png": "98735a84fa26c9e40ec9a99b9427a4d76a9dd9f149b0afb750d7c701b9161465",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/client.log": "7a558fb7ecfa71bf86874653f6a59f40b0a6c6c8429f51ada741aab49b8530df",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/result.json": "58eaa1ec715840779d46d51365108e85843f292697b6799b98bcd55380d04b63",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/774-gui775/payloads-accepted.png": "b1f4a9d8c8b41dea6e58ef3238fb53cf5c6cf84fe86bf3f2bb32057a769b31a5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v2/776-gui775/client-crash-reports/crash-2026-10-23_19.29.17-client.txt": "1bb17b49189fb447b8c573227cfa8ce90d922b2794804a810e1979722876ff07",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/jobs.json": "5248f42708df5b168ebe2e004584ff3c324f94f771ab43b57cd6784f8d3dc411",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777.log": "9abc70d4c7711e0ef41df6f24b878314a8fd838f487e6ff0a2279aa21359c84d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775.log": "9abc70d4c7711e0ef41df6f24b878314a8fd838f487e6ff0a2279aa21359c84d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password777/server.log": "aeed5305d1ee7a5471a06ba7add5055b45be869debfddf60abc7250b3820bc75",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password777/result.json": "6344c385e78cad369b34e3b4eee9c82898d2c8542fe73fb3804b2a30a15dded9",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/statue-standing.png": "12e3c841b7ba79877a039910373846397ad380bacd0d9e8836714996e89f5428",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/ready-cancel.png": "3500dba00bde0584979f2de84d51f934b28f259aa23f1f35dfb85d624088323b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/statue-running.png": "d6d52e99ec215a0682611b6a6afb549d8caa5fd4538a3b992a445b41af299c37",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/server.log": "0f4d02fbb3b26609960a30ac040f4e2481708785826ce3b4cf939ace9f173449",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/statue-ready.png": "031ae035fbe0257fc18b9b21d4448b9f73b877ea20239e252165cb01ab44183c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/statue-star.png": "c8fc9d20e2d619708106187cd86cb54c512c375c17affd4d76a08e8b57fc9507",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/finished-actions.png": "afcf54cfdf254f77837fda7db325608f7a0e40c480e2a78ad6aae01d4b8f91d5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/statue-sitting.png": "394935f14f46b6d33114f69a9ef74b73b18ad90476ce8f7c73820d5f8f738197",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/client.log": "2da19137abf5e8907021e8d47a8e8e57185c51ec36e52c4f71ca5a66ce754d14",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/result.json": "c008af05440af63de50cb7c1b1b27a50eb647eac8e7e929f5293acdf661ab951",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui777/payloads-accepted.png": "6a300a5c0ccfebab716cbc7f8f4bc2e12554d718ca0ad407484b1828573bd3ce",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/statue-standing.png": "220b0afd790c0ff32822ab5c0460bc994abe49fb19c9f09d65aef7110b02b9c4",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/ready-cancel.png": "74677140fc1a1d26d7c12d7812544d20326ae5e5163cb1fb2e9ecc96056ccbc8",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/statue-running.png": "7376cce0c298db9dea2735fe50ce9725b2b4979c6054c2e16b17275a6969c080",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/server.log": "aeb701e10c3ca0ba63640b8e3c30b68931f2994aab13056bb7faa52fa14a445f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/statue-ready.png": "caee079acc35e7d14dbc08cfaa195417b56dddfa9616398681fa2681191cf74d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/statue-star.png": "7fc06d9d0974195fc9ccfc04f9739b593fd6a2b2b4dfa40cc9eb773a58fda463",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/finished-actions.png": "ba903f0f2edc2b6b9c969aad3aec9e8b8d415ba9dcba52a18bcb57da8e38c5c5",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/statue-sitting.png": "673723d2bb4dad0051c00f17f5b634f965fc6e1e8c35af7e6c7cb81fc9193877",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/client.log": "d6d342313251530456feeaba79320bcdab0b51a27b4b9db9f12a5b806fa89ca6",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/result.json": "4c32f34a21d22bbf60ab2db537e5a1a4107ac3f3ad0c895229dcea0f05f2e312",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gui775/payloads-accepted.png": "a8274304b44c0183c1fcb33f523f128c36514e927c4c832ca17ea3a2655448ab",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password777/server.log": "7733e7dd07af1ed3e67044c73483a80981e6f69589f0fabd62b6c410c0b8725f",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password777/result.json": "3ea8cc070809a545cc7dca1cae751c7ccf209225002fe38dedd6099927309e0b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions775/server.log": "06174109326a4b8f537f239de2819b6c6e82d509cc2da7bb4e0fea7c0742745c",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions775/result.json": "2f6c1100e2c73b52d3bde514bbd84baca0a661adb56d8d2d371314caa0a828b1",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password775/server.log": "d0f701cbbe3983a99194c947e9087b95cae8e9edc382dc92e6bf209d28e3800d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-password775/result.json": "e3b052b4a9159af3535c1fcb10f7e70c2de3c107f8e02c6066163ea57b08c523",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions777/server.log": "ef046faf1ed511fd520785f05beef6587f473808dc766931096fedc712010410",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions777/result.json": "1b8610f1cd8280e50cbbe00a463d24ee2ee3d82aab98158dab353b9ee07da91d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay775/server.log": "44e3378d5360b1f31c65302aa203ed38081760540821e2afd0ab170045f48367",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay775/result.json": "50bfd11df6ddfd93c68cf816d9d9fd5a651176e7d053b73b39eaaf77c25f9317",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay775/server.log": "9c1312f8b932e5fede70efabf2f3ddf100e755117bf2fa6c3bec30de55b8f6db",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay775/result.json": "24ebbca10be3fa3b4d54fcb7d2ca56da6054d1f41781ba65b40dd52e035a886b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay777/server.log": "8c72dd27f7da13f234f45e3fe699552a3a527f286fde5f7a06cfcf5a9ee3be4b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-gameplay777/result.json": "6dc9a113c4b60aeb6799bb3120aa4873167be7ec0e3c500b67db24dd7ccfc173",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay777/server.log": "a50cefd3d82ed033234c4a7f382831de4e4e1ac7ba0414d3da2bf5c4ca9eb166",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-gameplay777/result.json": "20601259f9b54def3702fb3d200b2dfe59442c372e45a50e33e70ed0cea95b69",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password775/server.log": "74367d2acc06ffb0fb406f162919fca8ee78d19f3571f556bfc713ed1fb57475",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-password775/result.json": "d18c31018c56e46026097c70d4585b08e31cb37a8dd08b2e73933e3e840b5f5b",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions777/server.log": "869b53c62be7d2b2a9bd0390163aaa17844a4342e21f51092ba9b1740a56d603",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/774-dimensions777/result.json": "d78913d946aef74555915ec457e513ee07db4714edebd12afef9dd571cdf6396",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions775/server.log": "2e4888266b14a7a484f7e17c9919edec7ab9b0c996424b478eb4b83aaa2669eb",
+    "tools/protocol-bridge/testdata/client-chain-770-773/typed773-regression-v3/776-dimensions775/result.json": "aba7415bf1b610e7727f981d8460c31f04276798edac4f65fa1decd739c1e37a"
+  }
+}

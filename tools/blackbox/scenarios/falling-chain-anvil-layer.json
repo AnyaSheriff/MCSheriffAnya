@@ -1,0 +1,35 @@
+{
+  "name": "falling-chain-anvil-layer",
+  "about": "Цепочка падения: anvil, layer; заливка strict без обновлений, затем сломать один блок.",
+  "blocks": [],
+  "setup": [
+    "fill $(-2,4,-2) $(2,4,2) minecraft:anvil strict",
+    "tp $(bot) $(0.5,3,3.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "dig": [
+        0,
+        4,
+        0
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 65,
+  "random": [
+    {
+      "type": "values",
+      "name": "случайный износ наковальни при падении",
+      "kind": "block",
+      "field": "state",
+      "values": [
+        "anvil[facing=north]",
+        "chipped_anvil[facing=north]"
+      ],
+      "why": "minecraft.wiki/w/Anvil: «5% × the number of blocks fallen». Сверяются точные место и такт; у начально целой наковальни допустима только одна ступень износа.",
+      "match": "(?:anvil|chipped_anvil)\\[facing=north\\]"
+    }
+  ]
+}

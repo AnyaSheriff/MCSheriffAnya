@@ -1,0 +1,158 @@
+{
+  "format": 1,
+  "protocol": 776,
+  "source_recording": "verification-stonecutter776-02/result.json",
+  "source_sha256": "a5c5daeceef2cbd4b9747cecc2b67c9e61aa5b8e78dd96f50f38bb443f93942e",
+  "provenance": {
+    "metadata_sha256": "8d009c6ed0b7b8c65bfff515a1ff8b12cc8df72627bb0e355ecbce9f7bc34f9c",
+    "server_url": "https://piston-data.mojang.com/v1/objects/823e2250d24b3ddac457a60c92a6a941943fcd6a/server.jar",
+    "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+    "candidate_sources": {
+      "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json": {
+        "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json",
+        "bytes": 339684,
+        "sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c"
+      },
+      "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json": {
+        "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json",
+        "bytes": 88789,
+        "sha256": "6ea2d04f7f78ea56fa3db8453dd62c4b6021b5eef01994e24e3e3e5f6c28295d"
+      }
+    },
+    "metadata_requirement": "version metadata must be obtained through the official launcher manifest"
+  },
+  "case": "ordinary stonecutter stone→stone_slab",
+  "selected": {
+    "packet_payload_sha256": "19d0ed67e27daafe4ccb5d07fabd5bf5ce4518f240ae938df6c67ae37617db77",
+    "packet_payload_length": 3360,
+    "entry_ordinal": 249,
+    "button_ordinal_for_stone": 9,
+    "entry_offset": 2813,
+    "display_offset": 2815,
+    "display_end": 2821,
+    "input_ids": [
+      1
+    ],
+    "display_type": 5,
+    "display_hex": "05b702020000",
+    "template_hex": "b702020000",
+    "decoded_template": {
+      "item": 311,
+      "count": 2,
+      "added": 0,
+      "removed": 0
+    },
+    "scope": "Only selected stone→stone_slab display retained; packet remainder discarded"
+  },
+  "menu": {
+    "window": 1,
+    "type": 24
+  },
+  "actions": [
+    {
+      "action": "window_click",
+      "slot": 29,
+      "revision": 1,
+      "payload_hex": "0101001d00000000",
+      "predicted_cursor": null
+    },
+    {
+      "action": "window_click",
+      "slot": 0,
+      "revision": 2,
+      "payload_hex": "0102000000000000",
+      "predicted_cursor": null
+    },
+    {
+      "action": "select_recipe",
+      "ordinal": 9,
+      "payload_hex": "0109"
+    },
+    {
+      "action": "window_click",
+      "slot": 1,
+      "revision": 4,
+      "payload_hex": "0104000100000000",
+      "predicted_cursor": null
+    }
+  ],
+  "selected_slot_updates": [
+    {
+      "slot": 0,
+      "revision": 3,
+      "payload_hex": "0103000003010000",
+      "value": {
+        "item": 1,
+        "count": 3
+      }
+    },
+    {
+      "slot": 1,
+      "revision": 4,
+      "payload_hex": "0104000102b7020000",
+      "value": {
+        "item": 311,
+        "count": 2
+      }
+    },
+    {
+      "slot": 0,
+      "revision": 5,
+      "payload_hex": "0105000002010000",
+      "value": {
+        "item": 1,
+        "count": 2
+      }
+    }
+  ],
+  "cursor_updates": [
+    {
+      "payload_hex": "03010000",
+      "value": {
+        "item": 1,
+        "count": 3
+      }
+    },
+    {
+      "payload_hex": "02b7020000",
+      "value": {
+        "item": 311,
+        "count": 2
+      }
+    }
+  ],
+  "final_snapshot": {
+    "stage": "taken",
+    "revision": 5,
+    "input": {
+      "item": 1,
+      "count": 2
+    },
+    "output": {
+      "item": 311,
+      "count": 2
+    },
+    "cursor": {
+      "item": 311,
+      "count": 2
+    },
+    "cursor_evidence": "server-set-cursor-item",
+    "authored_player_slots": {}
+  },
+  "checks": [
+    "selected-component-free-template",
+    "actual-stonecutter-menu",
+    "authored-input3",
+    "selected-output2",
+    "take-output-consumes-one-input"
+  ],
+  "limits": {
+    "actual_template_components": "none",
+    "existing_known_component_template_composition": "synthetic regression, not separate official observation",
+    "public_wire_776": false,
+    "creative_untrusted_776": false,
+    "full_recipe_packet_stored": false,
+    "runtime_core_776": false,
+    "prior_failure": "verification-stonecutter776-01: observer failed to distinguish predicted empty cursor; preserved outside repo"
+  }
+}

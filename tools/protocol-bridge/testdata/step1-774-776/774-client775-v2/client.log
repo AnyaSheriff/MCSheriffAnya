@@ -1,0 +1,166 @@
+/usr/bin/xvfb-run: line 173:    52 Aborted                    (core dumped) XAUTHORITY=$AUTHFILE Xvfb ":$SERVERNUM" $XVFBARGS $LISTENTCP >> "$ERRORFILE" 2>&1
+NOTE: Picked up JDK_JAVA_OPTIONS: -Dorg.lwjgl.glfw.libname=/tmp/s26-mv8-gui/libglfw.so.3.4
+[18:00:54] [main/WARN]: Failed retrieving storage space for org.lwjgl.system.SharedLibraryExtractPath
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-yhbgk4yo/client/natives/lwjgl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59)
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66)
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403)
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375)
+	at y.b(SourceFile:175)
+	at y.a(SourceFile:162)
+	at y.b(SourceFile:155)
+	at y.a(SourceFile:95)
+	at y.a(SourceFile:90)
+	at y.f(SourceFile:59)
+	at y.a(SourceFile:95)
+	at y.<init>(SourceFile:59)
+	at m.<init>(SourceFile:35)
+	at m.g(SourceFile:233)
+	at net.minecraft.client.main.Main.main(SourceFile:130)
+[18:00:54] [main/WARN]: Failed retrieving storage space for io.netty.native.workdir
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-yhbgk4yo/client/natives/netty
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59)
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66)
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403)
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375)
+	at y.b(SourceFile:175)
+	at y.a(SourceFile:162)
+	at y.b(SourceFile:156)
+	at y.a(SourceFile:95)
+	at y.a(SourceFile:90)
+	at y.f(SourceFile:59)
+	at y.a(SourceFile:95)
+	at y.<init>(SourceFile:59)
+	at m.<init>(SourceFile:35)
+	at m.g(SourceFile:233)
+	at net.minecraft.client.main.Main.main(SourceFile:130)
+[18:00:54] [Datafixer Bootstrap/INFO]: 287 Datafixer optimizations took 321 milliseconds
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.11/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[18:00:58] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[18:00:58] [Render thread/INFO]: Setting user: McsaProbe
+[18:00:58] [Render thread/INFO]: Backend library: LWJGL version 3.3.3+5
+[18:00:58] [Render thread/WARN]: Failed retrieving storage space for io.netty.native.workdir
+java.nio.file.NoSuchFileException: /tmp/mcsa-776-actions-client-yhbgk4yo/client/natives/netty
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileStore.devFor(UnixFileStore.java:59)
+	at java.base/sun.nio.fs.UnixFileStore.<init>(UnixFileStore.java:66)
+	at java.base/sun.nio.fs.LinuxFileStore.<init>(LinuxFileStore.java:48)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:51)
+	at java.base/sun.nio.fs.LinuxFileSystemProvider.getFileStore(LinuxFileSystemProvider.java:39)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.getFileStore(UnixFileSystemProvider.java:403)
+	at java.base/java.nio.file.Files.getFileStore(Files.java:1375)
+	at y.b(SourceFile:175)
+	at y.a(SourceFile:162)
+	at y.b(SourceFile:156)
+	at y.a(SourceFile:95)
+	at y.a(SourceFile:90)
+	at y.f(SourceFile:59)
+	at y.a(SourceFile:95)
+	at y.<init>(SourceFile:59)
+	at m.<init>(SourceFile:35)
+	at m.a(SourceFile:225)
+	at net.minecraft.client.main.Main.main(SourceFile:240)
+[18:00:58] [Render thread/WARN]: Failed to get system info for Render Extensions
+java.lang.IllegalStateException: Can't getDevice() before it was initialized
+	at com.mojang.blaze3d.systems.RenderSystem.getDevice(SourceFile:299)
+	at gfj.bG(SourceFile:2527)
+	at y.a(SourceFile:78)
+	at gfj.a(SourceFile:2527)
+	at gfj.a(SourceFile:2497)
+	at net.minecraft.client.main.Main.main(SourceFile:243)
+---- Minecraft Crash Report ----
+// Don't be sad, have a hug! <3
+
+Time: 2026-10-23 18:00:58
+Description: Initializing game
+
+java.lang.IllegalStateException: Failed to initialize GLFW, errors: GLFW error during init: [0x1000E]X11: Failed to open display :99
+	at com.mojang.blaze3d.platform.GLX._initGlfw(SourceFile:63)
+	at com.mojang.blaze3d.systems.RenderSystem.initBackendSystem(SourceFile:201)
+	at gfj.<init>(SourceFile:501)
+	at net.minecraft.client.main.Main.main(SourceFile:234)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at com.mojang.blaze3d.platform.GLX._initGlfw(SourceFile:63)
+	at com.mojang.blaze3d.systems.RenderSystem.initBackendSystem(SourceFile:201)
+	at gfj.<init>(SourceFile:501)
+
+-- Initialization --
+Details:
+	Modules: 
+Stacktrace:
+	at net.minecraft.client.main.Main.main(SourceFile:234)
+
+-- System Details --
+Details:
+	Minecraft Version: 1.21.11
+	Minecraft Version ID: 1.21.11
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 97943416 bytes (93 MiB) / 308281344 bytes (294 MiB) up to 1073741824 bytes (1024 MiB)
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 19108.20
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 7961.97
+	Space in storage for jna.tmpdir (MiB): available: 7813.29, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7813.29, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): ERR
+	Space in storage for java.io.tmpdir (MiB): available: 7813.29, total: 7952.55
+	Space in storage for workdir (MiB): available: 7813.29, total: 7952.55
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 
+	Launched Version: 1.21.11
+	Launcher name: mcsa-probe
+	Backend library: LWJGL version 3.3.3+5
+	Backend API: Unknown
+	Window size: <not initialized>
+	GFLW Platform: <error>
+	Render Extensions: ERR
+	GL debug messages: <no renderer available>
+	Is Modded: Probably not. Client jar signature and brand is untouched
+	Universe: 404
+	Type: Client (map_client.txt)
+	Locale: en
+	System encoding: UTF-8
+	File encoding: UTF-8
+	CPU: 12x AMD Ryzen 5 3600 6-Core Processor
+#@!@# Game crashed! Crash report saved to: #@!@# /tmp/mcsa-776-actions-client-yhbgk4yo/client/crash-reports/crash-2026-10-23_18.00.58-client.txt
+/usr/bin/xvfb-run: line 185: kill: (52) - No such process

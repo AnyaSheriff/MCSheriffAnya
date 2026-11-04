@@ -307,6 +307,10 @@ impl Container {
     /// Записывает хранилище для файла региона: вид, место внутри чанка,
     /// ожидание воронки и непустые ячейки.
     pub fn write(&self, (x, y, z): (i32, i32, i32), out: &mut Vec<u8>) {
+    self.write_with_legacy_metadata((x,y,z), out, false)
+}
+
+pub(crate) fn write_with_legacy_metadata(&self, (x, y, z): (i32, i32, i32), out: &mut Vec<u8>, legacy_metadata: bool) {
         out.push(self.kind.number());
         out.push(((x.rem_euclid(16) << 4) | z.rem_euclid(16)) as u8);
         out.extend_from_slice(&(y as i16).to_be_bytes());
@@ -323,7 +327,7 @@ impl Container {
             // (`Stack::stored_item`).
             out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.push(stack.count.clamp(0, 127) as u8);
-            stack.write_extras(out);
+            stack.write_extras_with_legacy_metadata(out, legacy_metadata);
         }
 
         // Своё у проигрывателя и кафедры — после ячеек.
@@ -349,6 +353,10 @@ impl Container {
     /// Читает хранилище, записанное `write`. Возвращает место (мировые X и
     /// Z по номеру чанка) и само хранилище; None — запись испорчена.
     pub fn read(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32) -> Option<((i32, i32, i32), Container)> {
+    Self::read_with_legacy_metadata(bytes, chunk_x, chunk_z, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, legacy_metadata: bool) -> Option<((i32, i32, i32), Container)> {
         let mut take = |count: usize| -> Option<&[u8]> {
             let (head, rest) = bytes.split_at_checked(count)?;
             *bytes = rest;
@@ -371,7 +379,7 @@ impl Container {
             let count = take(1)?[0] as i32;
             let item = stored.item;
 
-            if let Some(extras) = Stack::read_extras(raw, &mut take)? {
+            if let Some(extras) = Stack::read_extras_strict_with_legacy_metadata(raw, &mut take, legacy_metadata)? {
                 stored = stored.with_extras(extras);
             }
 
@@ -654,7 +662,7 @@ pub fn contents_of(stack: &Stack) -> Vec<Option<Stack>> {
 
     for content in &stack.extras().contents {
         if let Some(place) = slots.get_mut(usize::from(content.slot)) {
-            let mut item = Stack::new(content.item, content.count);
+            let mut item = Stack::from_stored(content.item, content.count);
 
             item.data = content.data;
             *place = Some(item);
@@ -672,7 +680,7 @@ pub fn with_contents(stack: Stack, slots: &[Option<Stack>]) -> Stack {
         .iter()
         .enumerate()
         .filter_map(|(slot, found)| {
-            found.map(|found| crate::stackdata::Content { slot: slot as u8, item: found.item, count: found.count, data: found.data })
+            found.map(|found| crate::stackdata::Content { slot: slot as u8, item: found.stored_item(), count: found.count, data: found.data })
         })
         .collect();
 

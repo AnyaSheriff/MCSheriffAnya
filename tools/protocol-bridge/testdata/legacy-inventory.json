@@ -1,0 +1,1538 @@
+{
+  "protocol": 340,
+  "checks": [
+    "pickup-accepted",
+    "place-accepted",
+    "wrong-prediction-still-applies-server-click-and-resyncs",
+    "click-blocked-until-transaction-ack",
+    "wrong-ack-id-keeps-clicks-blocked",
+    "matching-ack-unlocks-clicks",
+    "right-pickup-observed",
+    "shift-observed",
+    "hotbar-swap-observed",
+    "drop-one-observed",
+    "drop-stack-observed",
+    "creative-clone-observed",
+    "double-click-observed",
+    "left-drag-observed",
+    "right-drag-observed",
+    "creative-drag-observed",
+    "right-place-observed",
+    "double-collect-observed"
+  ],
+  "actions": [
+    {
+      "stage": "pickup",
+      "transaction": 1,
+      "slot": 36,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002400000100000708000000"
+    },
+    {
+      "stage": "place",
+      "transaction": 2,
+      "slot": 37,
+      "button": 0,
+      "mode": 0,
+      "expected": null,
+      "payload": "00002500000200ffff"
+    },
+    {
+      "stage": "wrong-prediction",
+      "transaction": 3,
+      "slot": 37,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00002500000300010840000000"
+    },
+    {
+      "stage": "blocked-before-ack",
+      "transaction": 4,
+      "slot": 38,
+      "button": 0,
+      "mode": 0,
+      "expected": null,
+      "payload": "00002600000400ffff"
+    },
+    {
+      "stage": "wrong-ack-id",
+      "transaction": 5,
+      "slot": 38,
+      "button": 0,
+      "mode": 0,
+      "expected": null,
+      "payload": "00002600000500ffff"
+    },
+    {
+      "stage": "matching-ack-false",
+      "transaction": 6,
+      "slot": 38,
+      "button": 0,
+      "mode": 0,
+      "expected": null,
+      "payload": "00002600000600ffff"
+    },
+    {
+      "stage": "right-pickup",
+      "transaction": 20,
+      "slot": 36,
+      "button": 1,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002401001400000708000000"
+    },
+    {
+      "stage": "right-pickup-observe",
+      "transaction": 21,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500001500010840000000"
+    },
+    {
+      "stage": "shift",
+      "transaction": 22,
+      "slot": 36,
+      "button": 0,
+      "mode": 1,
+      "expected": null,
+      "payload": "00002400001601ffff"
+    },
+    {
+      "stage": "shift-observe",
+      "transaction": 23,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500001700010840000000"
+    },
+    {
+      "stage": "hotbar-swap",
+      "transaction": 24,
+      "slot": 36,
+      "button": 1,
+      "mode": 2,
+      "expected": null,
+      "payload": "00002401001802ffff"
+    },
+    {
+      "stage": "hotbar-swap-observe",
+      "transaction": 25,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500001900010840000000"
+    },
+    {
+      "stage": "drop-one",
+      "transaction": 26,
+      "slot": 36,
+      "button": 0,
+      "mode": 4,
+      "expected": null,
+      "payload": "00002400001a04ffff"
+    },
+    {
+      "stage": "drop-one-observe",
+      "transaction": 27,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500001b00010840000000"
+    },
+    {
+      "stage": "drop-stack",
+      "transaction": 28,
+      "slot": 36,
+      "button": 1,
+      "mode": 4,
+      "expected": null,
+      "payload": "00002401001c04ffff"
+    },
+    {
+      "stage": "drop-stack-observe",
+      "transaction": 29,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500001d00010840000000"
+    },
+    {
+      "stage": "creative-clone",
+      "transaction": 30,
+      "slot": 36,
+      "button": 2,
+      "mode": 3,
+      "expected": null,
+      "payload": "00002402001e03ffff"
+    },
+    {
+      "stage": "creative-clone-observe",
+      "transaction": 31,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500001f00010840000000"
+    },
+    {
+      "stage": "double-click",
+      "transaction": 32,
+      "slot": 36,
+      "button": 0,
+      "mode": 6,
+      "expected": null,
+      "payload": "00002400002006ffff"
+    },
+    {
+      "stage": "double-click-observe",
+      "transaction": 33,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500002100010840000000"
+    },
+    {
+      "stage": "left-drag-pickup",
+      "transaction": 34,
+      "slot": 36,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002400002200000708000000"
+    },
+    {
+      "stage": "left-drag",
+      "transaction": 35,
+      "slot": -999,
+      "button": 0,
+      "mode": 5,
+      "expected": null,
+      "payload": "00fc1900002305ffff"
+    },
+    {
+      "stage": "left-drag",
+      "transaction": 36,
+      "slot": 37,
+      "button": 1,
+      "mode": 5,
+      "expected": null,
+      "payload": "00002501002405ffff"
+    },
+    {
+      "stage": "left-drag",
+      "transaction": 37,
+      "slot": 38,
+      "button": 1,
+      "mode": 5,
+      "expected": null,
+      "payload": "00002601002505ffff"
+    },
+    {
+      "stage": "left-drag",
+      "transaction": 38,
+      "slot": -999,
+      "button": 2,
+      "mode": 5,
+      "expected": null,
+      "payload": "00fc1902002605ffff"
+    },
+    {
+      "stage": "left-drag-observe",
+      "transaction": 39,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500002700010840000000"
+    },
+    {
+      "stage": "right-drag-pickup",
+      "transaction": 40,
+      "slot": 36,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002400002800000708000000"
+    },
+    {
+      "stage": "right-drag",
+      "transaction": 41,
+      "slot": -999,
+      "button": 4,
+      "mode": 5,
+      "expected": null,
+      "payload": "00fc1904002905ffff"
+    },
+    {
+      "stage": "right-drag",
+      "transaction": 42,
+      "slot": 37,
+      "button": 5,
+      "mode": 5,
+      "expected": null,
+      "payload": "00002505002a05ffff"
+    },
+    {
+      "stage": "right-drag",
+      "transaction": 43,
+      "slot": 38,
+      "button": 5,
+      "mode": 5,
+      "expected": null,
+      "payload": "00002605002b05ffff"
+    },
+    {
+      "stage": "right-drag",
+      "transaction": 44,
+      "slot": -999,
+      "button": 6,
+      "mode": 5,
+      "expected": null,
+      "payload": "00fc1906002c05ffff"
+    },
+    {
+      "stage": "right-drag-observe",
+      "transaction": 45,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500002d00010840000000"
+    },
+    {
+      "stage": "creative-drag-pickup",
+      "transaction": 46,
+      "slot": 36,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002400002e00000708000000"
+    },
+    {
+      "stage": "creative-drag",
+      "transaction": 47,
+      "slot": -999,
+      "button": 8,
+      "mode": 5,
+      "expected": null,
+      "payload": "00fc1908002f05ffff"
+    },
+    {
+      "stage": "creative-drag",
+      "transaction": 48,
+      "slot": 37,
+      "button": 9,
+      "mode": 5,
+      "expected": null,
+      "payload": "00002509003005ffff"
+    },
+    {
+      "stage": "creative-drag",
+      "transaction": 49,
+      "slot": 38,
+      "button": 9,
+      "mode": 5,
+      "expected": null,
+      "payload": "00002609003105ffff"
+    },
+    {
+      "stage": "creative-drag",
+      "transaction": 50,
+      "slot": -999,
+      "button": 10,
+      "mode": 5,
+      "expected": null,
+      "payload": "00fc190a003205ffff"
+    },
+    {
+      "stage": "creative-drag-observe",
+      "transaction": 51,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500003300010840000000"
+    },
+    {
+      "stage": "right-place-pickup",
+      "transaction": 52,
+      "slot": 36,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002400003400000708000000"
+    },
+    {
+      "stage": "right-place",
+      "transaction": 53,
+      "slot": 37,
+      "button": 1,
+      "mode": 0,
+      "expected": null,
+      "payload": "00002501003500ffff"
+    },
+    {
+      "stage": "right-place-observe",
+      "transaction": 54,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500003600010840000000"
+    },
+    {
+      "stage": "double-collect-pickup",
+      "transaction": 55,
+      "slot": 36,
+      "button": 1,
+      "mode": 0,
+      "expected": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      },
+      "payload": "00002401003700000708000000"
+    },
+    {
+      "stage": "double-collect",
+      "transaction": 56,
+      "slot": 37,
+      "button": 0,
+      "mode": 6,
+      "expected": null,
+      "payload": "00002500003806ffff"
+    },
+    {
+      "stage": "double-collect-observe",
+      "transaction": 57,
+      "slot": 5,
+      "button": 0,
+      "mode": 0,
+      "expected": {
+        "item": 264,
+        "count": 64,
+        "damage": 0
+      },
+      "payload": "00000500003900010840000000"
+    }
+  ],
+  "snapshots": [
+    {
+      "stage": "right-pickup-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 4,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": 7,
+        "count": 4,
+        "damage": 0
+      }
+    },
+    {
+      "stage": "shift-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 8,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "hotbar-swap-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 8,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "drop-one-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 7,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "drop-stack-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "creative-clone-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 8,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": 7,
+        "count": 64,
+        "damage": 0
+      }
+    },
+    {
+      "stage": "double-click-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 8,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "left-drag-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 4,
+          "damage": 0
+        },
+        {
+          "item": 7,
+          "count": 4,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "right-drag-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 1,
+          "damage": 0
+        },
+        {
+          "item": 7,
+          "count": 1,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": 7,
+        "count": 6,
+        "damage": 0
+      }
+    },
+    {
+      "stage": "creative-drag-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 64,
+          "damage": 0
+        },
+        {
+          "item": 7,
+          "count": 64,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null
+    },
+    {
+      "stage": "right-place-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": 7,
+          "count": 1,
+          "damage": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": 7,
+        "count": 7,
+        "damage": 0
+      }
+    },
+    {
+      "stage": "double-collect-observe",
+      "slots": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": {
+        "item": 7,
+        "count": 8,
+        "damage": 0
+      }
+    }
+  ],
+  "source": "Own packet observation; official 1.12.2 SHA1 886945bfb2b978778c3a0288fd7fab09d315b25f; probe_legacy_inventory.py --modes --item bedrock",
+  "transactions": [
+    {
+      "stage": "pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 1,
+      "accepted": true,
+      "payload": "00000101"
+    },
+    {
+      "stage": "place",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 2,
+      "accepted": true,
+      "payload": "00000201"
+    },
+    {
+      "stage": "wrong-prediction",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 3,
+      "accepted": false,
+      "payload": "00000300"
+    },
+    {
+      "stage": "matching-ack-false",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 6,
+      "accepted": true,
+      "payload": "00000601"
+    },
+    {
+      "stage": "right-pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 20,
+      "accepted": true,
+      "payload": "00001401"
+    },
+    {
+      "stage": "right-pickup-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 21,
+      "accepted": false,
+      "payload": "00001500"
+    },
+    {
+      "stage": "shift",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 22,
+      "accepted": true,
+      "payload": "00001601"
+    },
+    {
+      "stage": "shift-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 23,
+      "accepted": false,
+      "payload": "00001700"
+    },
+    {
+      "stage": "hotbar-swap",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 24,
+      "accepted": true,
+      "payload": "00001801"
+    },
+    {
+      "stage": "hotbar-swap-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 25,
+      "accepted": false,
+      "payload": "00001900"
+    },
+    {
+      "stage": "drop-one",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 26,
+      "accepted": true,
+      "payload": "00001a01"
+    },
+    {
+      "stage": "drop-one-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 27,
+      "accepted": false,
+      "payload": "00001b00"
+    },
+    {
+      "stage": "drop-stack",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 28,
+      "accepted": true,
+      "payload": "00001c01"
+    },
+    {
+      "stage": "drop-stack-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 29,
+      "accepted": false,
+      "payload": "00001d00"
+    },
+    {
+      "stage": "creative-clone",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 30,
+      "accepted": true,
+      "payload": "00001e01"
+    },
+    {
+      "stage": "creative-clone-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 31,
+      "accepted": false,
+      "payload": "00001f00"
+    },
+    {
+      "stage": "double-click",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 32,
+      "accepted": true,
+      "payload": "00002001"
+    },
+    {
+      "stage": "double-click-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 33,
+      "accepted": false,
+      "payload": "00002100"
+    },
+    {
+      "stage": "left-drag-pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 34,
+      "accepted": true,
+      "payload": "00002201"
+    },
+    {
+      "stage": "left-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 35,
+      "accepted": true,
+      "payload": "00002301"
+    },
+    {
+      "stage": "left-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 36,
+      "accepted": true,
+      "payload": "00002401"
+    },
+    {
+      "stage": "left-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 37,
+      "accepted": true,
+      "payload": "00002501"
+    },
+    {
+      "stage": "left-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 38,
+      "accepted": true,
+      "payload": "00002601"
+    },
+    {
+      "stage": "left-drag-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 39,
+      "accepted": false,
+      "payload": "00002700"
+    },
+    {
+      "stage": "right-drag-pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 40,
+      "accepted": true,
+      "payload": "00002801"
+    },
+    {
+      "stage": "right-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 41,
+      "accepted": true,
+      "payload": "00002901"
+    },
+    {
+      "stage": "right-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 42,
+      "accepted": true,
+      "payload": "00002a01"
+    },
+    {
+      "stage": "right-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 43,
+      "accepted": true,
+      "payload": "00002b01"
+    },
+    {
+      "stage": "right-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 44,
+      "accepted": true,
+      "payload": "00002c01"
+    },
+    {
+      "stage": "right-drag-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 45,
+      "accepted": false,
+      "payload": "00002d00"
+    },
+    {
+      "stage": "creative-drag-pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 46,
+      "accepted": true,
+      "payload": "00002e01"
+    },
+    {
+      "stage": "creative-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 47,
+      "accepted": true,
+      "payload": "00002f01"
+    },
+    {
+      "stage": "creative-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 48,
+      "accepted": true,
+      "payload": "00003001"
+    },
+    {
+      "stage": "creative-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 49,
+      "accepted": true,
+      "payload": "00003101"
+    },
+    {
+      "stage": "creative-drag",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 50,
+      "accepted": true,
+      "payload": "00003201"
+    },
+    {
+      "stage": "creative-drag-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 51,
+      "accepted": false,
+      "payload": "00003300"
+    },
+    {
+      "stage": "right-place-pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 52,
+      "accepted": true,
+      "payload": "00003401"
+    },
+    {
+      "stage": "right-place",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 53,
+      "accepted": true,
+      "payload": "00003501"
+    },
+    {
+      "stage": "right-place-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 54,
+      "accepted": false,
+      "payload": "00003600"
+    },
+    {
+      "stage": "double-collect-pickup",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 55,
+      "accepted": true,
+      "payload": "00003701"
+    },
+    {
+      "stage": "double-collect",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 56,
+      "accepted": true,
+      "payload": "00003801"
+    },
+    {
+      "stage": "double-collect-observe",
+      "name": "transaction",
+      "window": 0,
+      "transaction": 57,
+      "accepted": false,
+      "payload": "00003900"
+    }
+  ]
+}

@@ -134,6 +134,7 @@ pub(super) enum UseKind {
     /// eye-of-ender-far, eye-of-ender-none: Metadata 8=1).
     EnderEye,
     Spyglass,
+    Spear,
 }
 
 /// Использование предмета, которое тянется: щит поднят, лук натянут.
@@ -210,6 +211,10 @@ struct Meta {
 
 /// Сетевая сторона здоровья игрока.
 pub(super) struct Net {
+    /// Протокол дерева команд и последний действительно отправленный допуск.
+    pub command_protocol: i32,
+    pub command_access: Option<(i32, bool)>,
+    pub completion_budget: super::command_completion::CompletionBudget,
     pub hits: Vec<Pending>,
     /// Урон, что сейчас применяется, уже разослан остальным (см. `Pending::announced`).
     pub announced: bool,
@@ -246,6 +251,8 @@ pub(super) struct Net {
     /// (чёрный ящик, void-death: скорость на такт позже удара несёт шаг этого
     /// же такта).
     pub(super) velocity_due: bool,
+    /// После отложенного толчка777 повторно сверяется опора под ногами.
+    pub(super) check_support: Option<u64>,
     prev_ground: bool,
     pub last_delta: (f64, f64, f64),
     /// fall-mode-teleport-motion: инерция creative → survival доживает
@@ -256,6 +263,7 @@ pub(super) struct Net {
     pub eating: Option<Eating>,
     /// Поднятый щит или натянутый лук.
     pub using: Option<Using>,
+    pub spear_charge: super::spear::Charge,
     /// Рука, которой в последний раз что-то использовали: её бит остаётся
     /// в флагах и после отпускания (чёрный ящик, pvp-shield: 8=2).
     pub last_hand: i32,
@@ -299,6 +307,8 @@ pub(super) struct Net {
     /// Среда игрока по последнему такту: лава, вода.
     pub(super) in_lava: bool,
     pub in_water: bool,
+    /// Drowning777: первое погружение создаёт синхронизируемый oxygen_bonus.
+    oxygen_seen: bool,
     /// Ключ имени того, кто нанёс последний удар (моб, стрела, крипер):
     /// для сообщения о смерти; пусто — никто.
     pub killer: &'static str,
@@ -350,6 +360,9 @@ impl Net {
 
     pub fn new() -> Self {
         Self {
+            command_protocol: 777,
+            command_access: None,
+            completion_budget: Default::default(),
             hits: Vec::new(),
             announced: false,
             announced_health: None,
@@ -366,6 +379,7 @@ impl Net {
             velocity: None,
             pin: None,
             velocity_due: false,
+            check_support: None,
             prev_ground: false,
             last_delta: (0.0, 0.0, 0.0),
             mode_fall_velocity: None,
@@ -373,6 +387,7 @@ impl Net {
             sweep_motion: Default::default(),
             eating: None,
             using: None,
+            spear_charge: Default::default(),
             last_hand: 0,
             arrows: 0,
             stingers: 0,
@@ -395,6 +410,7 @@ impl Net {
             teleported: false,
             in_lava: false,
             in_water: false,
+            oxygen_seen: false,
             killer: "",
             hurt_from: None,
             command_origin: None,
@@ -670,6 +686,16 @@ fn magma_contact(player: &PlayerState, env: &Env) -> bool {
         && !protected_from_hot_blocks(player)
 }
 
+/// После толчка клиент может прислать только флаг земли, без координат.
+/// Via pvp-bow777: airborne→grounded даёт сверку опоры на+4; ожидание
+/// следующего Position задерживало её до+6. Шаг в воздухе ожидание не тратит.
+pub(super) fn confirm_support(player: &mut PlayerState, reaction: &mut Reaction, now: u64) {
+    if player.on_ground && player.net.check_support.is_some_and(|due| now >= due) {
+        player.net.check_support = None;
+        reaction.confirm.push((player.x.floor() as i32, (player.y - 0.2).floor() as i32, player.z.floor() as i32));
+    }
+}
+
 /// Смена режима общая для своей команды и поручения другого игрока.
 pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
     if player.game_mode == mode { return; }
@@ -698,9 +724,21 @@ pub(super) async fn game_mode_order(stream: &mut Outgoing<'_>, player: &mut Play
     send_game_event_game_mode(stream, mode).await?;
     send_player_abilities(stream, player).await?;
     for attribute in [crate::attributes::BLOCK_INTERACTION_RANGE, crate::attributes::ENTITY_INTERACTION_RANGE] {
-        player.attrs_touched.push((attribute, now + 2));
+        player.attrs_touched.push((attribute, player.attr_due(now + 2)));
     }
     Ok(())
+}
+
+/// Новая опорная поза сбрасывает производные движения, но не пролёт.
+pub(super) fn confirmed_pose(player: &mut PlayerState) {
+    player.net.teleported = false;
+    player.net.pin = None;
+    player.net.mode_fall_velocity = None;
+    player.net.prev_ground = player.on_ground;
+    player.net.last_delta = (0.0, 0.0, 0.0);
+    player.net.sweep_motion = Default::default();
+    player.net.spear_charge = Default::default();
+    if player.net.using.is_some_and(|using| using.kind == UseKind::Spear) { player.net.using = None; }
 }
 
 /// Пакет движения от клиента: прыжок, бег по земле и приземление.
@@ -717,11 +755,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
     let jump = dx * dx + dy * dy + dz * dz > 100.0;
 
     if std::mem::take(&mut player.net.teleported) || jump {
-        player.net.pin = None;
-        player.net.mode_fall_velocity = None;
-        player.net.prev_ground = on_ground;
-        player.net.last_delta = (0.0, 0.0, 0.0);
-        player.net.sweep_motion = Default::default();
+        confirmed_pose(player);
         // fall-mode-teleport-reset: /tp не прибавляет скачок координат,
         // но сохраняет уже накопленный пролёт (после /tp вниз урон 1).
 
@@ -765,7 +799,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // Высота падения вместе с этим шагом — для грядки.
         let fallen = (player.vit.fall + (-dy).max(0.0)) as f32;
         let smashed = player.vit.smash_landing;
-        let damage = if player.fall_damage_allowed() {player.vit.land_java(dy, on_ground, env.soft, env.landing)} else {player.vit.fall=0.0;None};
+        let damage = if player.fall_damage_allowed() { player.vit.land_java(dy, on_ground, env.soft, env.landing) } else { player.vit.fall = 0.0; None };
         if env.soft { player.net.mode_fall_velocity = None; }
         if on_ground && fallen >= 2.0 {
             player.progress.custom("fall_one_cm", (fallen * 100.0).round() as i32);
@@ -985,6 +1019,7 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
         "shield" if now >= player.net.shield_disabled_until => UseKind::Shield,
         "bow" => UseKind::Bow,
         "spyglass" => UseKind::Spyglass,
+        name if name.ends_with("_spear") => UseKind::Spear,
         // Незаряженный арбалет заряжается, если есть чем (вики, Crossbow);
         // заряженный стреляет (`bow::crossbow_fire`).
         "crossbow" => {
@@ -1018,6 +1053,12 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
     if kind == UseKind::Spyglass {
         shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.use", 1.0, 1.0);
         if let Some(stack) = stack { player.progress.used(stack.item); }
+    }
+    if kind == UseKind::Spear {
+        let item=stack.expect("копьё").item;
+        super::spear::start(player, hand, now, item);
+        let sound=if name=="wooden_spear" {"minecraft:item.spear_wood.use"}else{"minecraft:item.spear.use"};
+        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_except((player.x,player.y,player.z),sound,if name=="wooden_spear" {0.7}else{1.0},1.0,player.entity_id);
     }
     player.net.using = Some(Using { hand, since: now, kind });
     player.net.last_hand = hand;
@@ -1053,7 +1094,7 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
         UseKind::Spyglass => shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.stop_using", 1.0, 1.0),
-        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush | UseKind::Bundle => {}
+        UseKind::Spear | UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush | UseKind::Bundle => {}
     }
 }
 
@@ -1360,9 +1401,58 @@ pub(super) async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> 
     write_body(stream, body).await
 }
 
-/// При входе опыт сообщается, только если он есть.
-pub(super) async fn send_experience_if_any(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::Result<()> {
-    if vit.xp > 0 { send_experience(stream, vit).await } else { Ok(()) }
+/// Официальный 777 присылает при входе и нулевой опыт (запись 41393643616).
+/// Для прежних профилей сохраняем прежний путь до отдельного наблюдения.
+pub(super) async fn send_join_experience(stream: &mut Outgoing<'_>, vit: &Vitals, catalog: crate::gameplay_catalog::Catalog) -> io::Result<()> {
+    if vit.xp > 0 || catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        send_experience(stream, vit).await
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod join_experience_tests {
+    use super::*;
+
+    #[test]
+    fn restored_effect_packet_keeps_visibility_without_new_grant_bit() {
+        for (ambient, visible, show_icon, flags) in [(false, false, false, 0), (false, true, true, 6), (true, true, false, 3)] {
+            let effect = survival::Effect { kind: survival::EffectKind::NightVision,
+                amplifier: 0, ticks_left: survival::INFINITE, ambient, visible, show_icon };
+            let body = initial_effect_packet(42, effect);
+            let mut expected = encode_varint(ENTITY_EFFECT);
+            for value in [42, 15, 0, -1] { expected.extend_from_slice(&encode_varint(value)); }
+            expected.push(flags);
+            assert_eq!(body, expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn login_xp_sends_one_exact_packet_even_for_zero_points_and_nonzero_total() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for (xp, total, level, bar) in [(0, 0, 0, 0.0_f32), (0, 7, 0, 0.0), (10, 7, 1, 1.0 / 3.0)] {
+                let mut vit = Vitals::new();
+                vit.xp = xp;
+                vit.xp_total = total;
+                let mut out = Outgoing::capture();
+                send_health(&mut out, &vit).await.unwrap();
+                send_join_experience(&mut out, &vit, Catalog::new(profile)).await.unwrap();
+                let mut bytes = out.queued();
+                assert_eq!(read_packet(&mut bytes).await.unwrap().id, SET_HEALTH);
+                if profile == Profile::Preview26_3 || xp > 0 {
+                    let packet = read_packet(&mut bytes).await.unwrap();
+                    assert_eq!(packet.id, SET_EXPERIENCE);
+                    let mut expected = bar.to_be_bytes().to_vec();
+                    expected.extend_from_slice(&encode_varint(level));
+                    expected.extend_from_slice(&encode_varint(total));
+                    assert_eq!(packet.payload(), expected);
+                }
+                assert!(bytes.is_empty(), "опыт после здоровья, без повторного пакета");
+            }
+        }
+    }
 }
 
 /// Команда `experience`: очки или уровни, клиенту — Set Experience.
@@ -1572,6 +1662,12 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
 /// Пересчитывает модификаторы от предметов, если рука или броня сменились.
 /// Зовётся и в конце такта, и перед ударом: урон берётся из атрибутов.
 pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
+    update_equipment_at(player, now, now);
+}
+
+/// Смена hotbar в начале такта: отсчёт удара прежний, срок рассылки —
+/// от уже начавшегося такта. Остальные пути передают одинаковые номера.
+pub(super) fn update_equipment_at(player: &mut PlayerState, now: u64, tracking_tick: u64) {
     let equipment = equipment_of(player);
 
     if equipment == player.equip_seen {
@@ -1585,6 +1681,7 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
         player.last_attack = now;
     }
 
+    let now = tracking_tick;
     player.equip_seen = equipment;
 
     // Атрибуты, которых касались предметы до и после: снятый и вновь
@@ -1596,9 +1693,7 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
     touched.sort_unstable();
     touched.dedup();
 
-    if touched.contains(&crate::attributes::ATTACK_SPEED) {
-        player.speed_due.push(now + 1);
-    }
+    let speed_touched = touched.contains(&crate::attributes::ATTACK_SPEED);
 
     for attribute in &touched {
         player.inventory.note_attribute(*attribute as u8);
@@ -1608,7 +1703,26 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
     // (чёрный ящик, craft-repair-tools: оригинал +1, надевание — +2).
     let applied: Vec<i32> = player.attrs_applied.iter().map(|(attribute, _)| *attribute).collect();
 
-    player.attrs_touched.extend(touched.into_iter().map(|attribute| (attribute, now + if applied.contains(&attribute) { 2 } else { 1 })));
+    //777, itemaudit4-knockback-phase: после ударов15/56/98/139 рассылка
+    // идёт16/58/100/140 — один общий двухтактовый период, не постоянные+2.
+    let tracking_phase = player.attrs_tracking_phase;
+    // Sword-sweep-secondary-motion: износ20/21 объединяется в Attributes23;
+    // второй износ не должен попадать в ещё ожидающий пакет первого.
+    let consecutive = player.attrs_equipment_tick.is_some_and(|before| now.saturating_sub(before) == 1);
+    player.attrs_equipment_tick = Some(now);
+    player.attrs_touched.extend(touched.into_iter().map(|attribute| {
+        let delay = tracking_phase.map_or_else(|| if applied.contains(&attribute) { 2 } else { 1 },
+            |phase| if !consecutive && (now + 1) % 2 == phase { 1 } else { 2 });
+        (attribute, now + delay)
+    }));
+
+    // Чужим клиентам скорость удара. 26.3: тем же тактом, что и самому
+    // игроку — у оригинала один отсчёт на игрока (attribute-phase-equipment:
+    // свои Attributes и чужие entity_update_attributes вместе, +1 или +2).
+    // Снимок для соседей виден им тактом позже, поэтому срок на такт раньше.
+    if let Some(due) = player.attrs_touched.iter().rev().find(|(attribute, _)| *attribute == crate::attributes::ATTACK_SPEED).map(|(_, due)| *due).filter(|_| speed_touched) {
+        player.speed_due.push(if tracking_phase.is_some() { due - 1 } else { now + 1 });
+    }
 }
 
 /// Что на игроке из вещей, дающих атрибуты: рука, вторая рука, броня.
@@ -1703,13 +1817,27 @@ pub(super) async fn send_respawn_intro(stream: &mut Outgoing<'_>, player: &Playe
     send_default_spawn_position(stream, player.spawn_point).await
 }
 
+/// Опыт сохраняется по правилу мира в момент возрождения.
+/// Смена правила между смертью и возрождением отдельно не сопоставлена.
+pub(super) fn respawned_in(shared: &Shared, player: &mut PlayerState) {
+    let keep = shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
+    respawned_with_keep_inventory(player, keep);
+}
+
 /// Возрождение: всё заново, точка смерти остаётся в пакете Respawn.
 pub(super) fn respawned(player: &mut PlayerState) {
-    player.vit.respawned();
+    respawned_with_keep_inventory(player, false);
+}
+
+fn respawned_with_keep_inventory(player: &mut PlayerState, keep_inventory: bool) {
+    player.vit.respawned_with_keep_inventory(keep_inventory);
     player.abilities = playerdata::Abilities::for_mode(player.game_mode);
     player.flight_owners[0] = None;
     player.flight_owners[1] = None;
     player.net.reset();
+    // Официальный340 после смерти создаёт новое окно инвентаря:
+    // незавершённый ACK прежней жизни больше не блокирует щелчки.
+    player.legacy_transaction = None;
     player.foot_enchants = Default::default();
 
     // Клиент после возрождения знает атрибуты по умолчанию.
@@ -2044,7 +2172,18 @@ pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, play
     player.net.hurt_from = at;
     player.net.command_origin = Some(origin.clone());
     let killer = origin.player.as_ref().map(|(name, uuid)| Killer { name, uuid: *uuid, weapon: None });
-    let result = hit_by(stream, shared, player, amount, source, origin.direct, origin.cause, killer, None).await;
+    // itemaudit2-shield-magic, официальный777: /damage indirect_magic без
+    // источника даёт Hurt Animation yaw0 и случайную горизонтальную отдачу0,4.
+    // Щит без позиции источника её не блокирует; прежний основной не меняем.
+    let magic_feedback = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && source == Source::IndirectMagic && at.is_none() && origin.direct == 0 && origin.cause == 0;
+    let result = hit_by(stream, shared, player, amount, source, origin.direct, origin.cause, killer, magic_feedback.then_some(0.0)).await;
+    if magic_feedback && matches!(result, Ok(Some(_))) {
+        let angle = f64::from(world_random(shared, player.dimension)) * std::f64::consts::TAU;
+        let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
+        knock_back(player, (angle.cos(), angle.sin()), crate::mob::BASE_KNOCKBACK, resistance);
+        player.net.check_support = Some(*shared.ticks.borrow() + 1);
+    }
     player.net.command_origin = None;
     player.net.hurt_from = None;
     result.map(|_| ())
@@ -2424,11 +2563,12 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     let tick_now = player.publication.as_ref().map_or_else(|| *shared.ticks.borrow(), |p| p.tick);
 
     tick_spin(shared, player, tick_now);
+    super::spear::tick(shared, player);
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
 
     // Творческий игрок сыт полностью: насыщение 20 (чёрный ящик, pvp-thorns:
     // после возврата из творческого режима у оригинала saturation=20, у нас 5).
-    if player.game_mode == GAME_MODE_CREATIVE {
+    if player.game_mode == GAME_MODE_CREATIVE && shared.catalog().profile() != crate::gameplay_catalog::Profile::Preview26_3 {
         player.vit.food = 20;
         player.vit.saturation = 20.0;
     }
@@ -2682,10 +2822,45 @@ async fn orbs_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Play
     Ok(())
 }
 
+/// Мирная сложность в выживании и в творческом одинаково: сытость +1 раз
+/// в 10 тактов, здоровье и насыщение +1 раз в 20 (насыщение не выше
+/// сытости). Чёрный ящик 26.3, peaceful-saturation-probe: в творческом с
+/// нуля сытость 1, 2, 3… через каждые 10 тактов, насыщение 1, 2… через 20,
+/// лечение в тот же такт; pvp-thorns: у ударившего после мирной паузы
+/// между сценариями насыщение 19–20, у нас было 5. Лечение и насыщение
+/// при выключенном natural_health_regeneration стоят (прежняя запись
+/// pvp-thorns263); сытость — [проверить].
+fn peaceful_tick(shared: &Shared, player: &mut PlayerState) {
+    if player.vit.food < 20 && player.vit.age.is_multiple_of(10) {
+        player.vit.food += 1;
+    }
+
+    if shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed) && player.vit.age.is_multiple_of(20) {
+        if player.vit.health < player.vit.max_health {
+            player.vit.heal(1.0);
+        }
+
+        player.vit.saturation = (player.vit.saturation + 1.0).min(player.vit.food as f32);
+    }
+}
+
 /// Творческий режим: тонуть не тонет, но бездна бьёт и здесь.
 async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     player.vit.age = player.vit.age.wrapping_add(1);
+    // Оригинал263: creative не ставит насыщение20 сразу (mace:12/16).
+    // saturation-ticks: мирное восстановление по1; свежий pvp-thorns263
+    // на easy сохраняет5, пока прежнее ядро ошибочно накапливало8.
+    // С выключенной natural_health_regeneration значение сохраняется.
+    // [проверить] Фаза20 тактов вне этой записи.
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 && difficulty == survival::PEACEFUL {
+        peaceful_tick(shared, player);
+    }
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        // Creative тоже лечится едой: после thorns/падения оригинал263
+        // расходует насыщение, а мирное восстановление восполняет его.
+        player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed));
+    }
     if player.y < void_below(player.dimension) {
         hit(stream, shared, player, 4.0, Source::OutOfWorld, 0).await?;
     }
@@ -2730,6 +2905,13 @@ pub(super) async fn struck(stream: &mut Outgoing<'_>, shared: &Shared, player: &
     hit(stream, shared, player, crate::lightning::STRIKE_DAMAGE, Source::Lightning, 0).await?;
 
     Ok(())
+}
+
+fn observe_oxygen(shared: &Shared, player: &mut PlayerState, submerged: bool) {
+    if submerged && !player.net.oxygen_seen && shared.catalog().changed_rules() {
+        player.net.oxygen_seen = true;
+        player.attrs_touched.push((ATTRIBUTE_OXYGEN, player.attr_due(*shared.ticks.borrow() + 1)));
+    }
 }
 
 async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
@@ -2867,6 +3049,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         give_effect(stream, player, effect).await?;
     }
 
+    observe_oxygen(shared, player, env.eyes_in_water && !env.in_bubbles);
     let oxygen = player.attrs.value(crate::attributes::OXYGEN_BONUS);
     let oxygen_roll = if env.eyes_in_water && !env.in_bubbles && oxygen > 0.0 { world_random(shared, player.dimension) } else { 0.0 };
     if !player.vit.dead && player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, oxygen_roll) {
@@ -2884,13 +3067,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     // Мирная сложность лечит сама и кормит (вики, Difficulty: «Peaceful»).
     if difficulty == survival::PEACEFUL {
-        if player.vit.health < survival::MAX_HEALTH && player.vit.age.is_multiple_of(20) {
-            player.vit.heal(1.0);
-        }
-
-        if player.vit.food < 20 && player.vit.age.is_multiple_of(10) {
-            feed(shared,player,1,0.0,None);
-        }
+        peaceful_tick(shared, player);
     }
 
     effects_and_eating_tick(stream, shared, player, difficulty).await?;
@@ -3276,6 +3453,26 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
     }
 }
 
+/// Восстановленные эффекты уже действуют: сообщаем их без повторного наложения.
+pub(super) async fn send_initial_effects(stream: &mut Outgoing<'_>, player: &PlayerState) -> io::Result<()> {
+    for effect in &player.vit.effects {
+        write_body(stream, initial_effect_packet(player.entity_id, *effect)).await?;
+    }
+    Ok(())
+}
+
+fn initial_effect_packet(entity_id: i32, effect: survival::Effect) -> Vec<u8> {
+    let mut body = encode_varint(ENTITY_EFFECT);
+    body.extend_from_slice(&encode_varint(entity_id));
+    body.extend_from_slice(&encode_varint(effect.kind.id()));
+    body.extend_from_slice(&encode_varint(effect.amplifier));
+    body.extend_from_slice(&encode_varint(if effect.kind.instant() { 1 } else { effect.ticks_left }));
+    // Вход не является новой выдачей: официальный777 не ставит bit8
+    // (41456459340: Poison14→6, скрытый NightVision8→0).
+    body.push(effect.flags() & !0x08);
+    body
+}
+
 /// Модификаторы атрибутов от действующих эффектов (сила, слабость, скорость,
 /// замедление): ставятся по уровню, снятые эффекты убираются.
 pub(super) fn apply_effect_modifiers(player: &mut PlayerState) {
@@ -3330,6 +3527,124 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 mod tests {
     use super::*;
 
+    #[tokio::test]
+    async fn hotbar_packet_waits_for_attribute_phase_without_changing_attack_clock() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        // 41088730983: у оригинала hotbar1875 -> Attributes1877 при фазе1;
+        // у нас было1807 -> 1807. Проверяем handler и настоящую рассылку.
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for phase in [0, 1] {
+                for tick in [100, 101] {
+                    let catalog = Catalog::new(profile);
+                    let shared = Shared::new(
+                        World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                        Default::default(), Default::default(), Default::default(),
+                        crate::ops::Ops::open(std::path::Path::new("tmp/hotbar-attribute-phase/ops.json")),
+                        crate::skins::Settings::default(),
+                    );
+                    let mut player = PlayerState::new_for_catalog(
+                        [78; 16], "HotbarPhase".into(), None, None, 0x7f, 78,
+                        (0.5, 64.0, 0.5), catalog,
+                    );
+                    player.restart_attrs_tracking(phase);
+                    let sword = blocks::item_named("diamond_sword").unwrap();
+                    let axe = blocks::item_named("iron_axe").unwrap();
+                    player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(sword, 1)));
+                    player.inventory.set(inventory::FIRST_HOTBAR + 1, Some(Stack::new(axe, 1)));
+                    sync_attributes(&mut Outgoing::capture(), &mut player, 20).await.unwrap();
+                    sync_attributes(&mut Outgoing::capture(), &mut player, 30).await.unwrap();
+                    assert!(player.attrs_touched.is_empty());
+                    player.last_attack = 42;
+                    shared.ticks.send_replace(tick - 1);
+                    shared.tick_starts.send_replace(tick);
+                    let mut body = encode_varint(super::super::SET_CARRIED_ITEM);
+                    body.extend_from_slice(&1u16.to_be_bytes());
+                    let packet = PacketInfo {
+                        id: super::super::SET_CARRIED_ITEM, length: body.len() as i32, body,
+                        teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None,
+                    };
+
+                    super::super::handle_client_packet(&packet, &mut player, &shared);
+                    assert_eq!(player.inventory.held(), Some(Stack::new(axe, 1)));
+                    assert_eq!(player.last_attack, tick - 1, "прежний отсчёт перезарядки");
+                    let due = if profile == Profile::Preview26_3 {
+                        tick + if tick % 2 == phase { 2 } else { 1 }
+                    } else { tick + 1 };
+                    assert_eq!(player.attrs_touched.iter().find(|(id, _)| *id == crate::attributes::ATTACK_SPEED).map(|(_, at)| *at), Some(due));
+                    // Повтор выбора той же ячейки не сбрасывает зарядку и срок.
+                    let waiting = player.attrs_touched.clone();
+                    shared.ticks.send_replace(tick);
+                    super::super::handle_client_packet(&packet, &mut player, &shared);
+                    assert_eq!(player.last_attack, tick - 1);
+                    assert_eq!(player.attrs_touched, waiting);
+
+                    for now in tick..due {
+                        let mut out = Outgoing::capture();
+                        sync_attributes(&mut out, &mut player, now).await.unwrap();
+                        assert!(out.queued().is_empty(), "{profile:?}, phase={phase}, tick={tick}, now={now}: рано");
+                    }
+                    let mut out = Outgoing::capture();
+                    sync_attributes(&mut out, &mut player, due).await.unwrap();
+                    let mut bytes = out.queued();
+                    let sent = read_packet(&mut bytes).await.unwrap();
+                    assert_eq!(sent.id, UPDATE_ATTRIBUTES);
+                    let speed = player.attrs.get(crate::attributes::ATTACK_SPEED).unwrap().clone();
+                    assert_eq!(sent.payload(), crate::attributes::encode_update(player.entity_id, &[speed]));
+                    assert!(bytes.is_empty(), "один пакет в назначенный срок");
+                    let mut out = Outgoing::capture();
+                    sync_attributes(&mut out, &mut player, due + 1).await.unwrap();
+                    assert!(out.queued().is_empty(), "без повторной отправки");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn equipment_attribute_ticks_follow_263_cycle_and_keep_2612_delays() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let mut player=PlayerState::new_for_catalog([74;16],"AttrCycle".into(),None,None,0x7f,74,(0.5,64.0,0.5),Catalog::new(profile));
+            let sword=blocks::item_named("wooden_sword").unwrap();
+            let mut due=Vec::new();
+            for (damage,tick) in [15,56,98,139].into_iter().enumerate() {
+                let data=crate::stackdata::Data {damage:damage as i32+1,..Default::default()};
+                player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(sword,1).with_extras(data)));
+                player.attrs_touched.clear();update_equipment(&mut player,tick);
+                due.push(player.attrs_touched.iter().find(|(id,_)| *id==crate::attributes::ATTACK_SPEED).unwrap().1);
+            }
+            assert_eq!(due,if profile==Profile::Preview26_3 {vec![16,58,100,140]} else {vec![17,58,100,141]});
+        }
+    }
+
+    #[test]
+    fn attribute_phase_follows_the_spawn_tick_in_263_only() {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        // attr-respawn-even/odd-probe: возрождение +20 — рассылки 42, 52…; +21 — 41, 53…
+        for (spawn,want) in [(20,[42,52]),(21,[41,53])] {
+            let mut player=PlayerState::new_for_catalog([76;16],"AttrSpawn".into(),None,None,0x7f,76,(0.5,64.0,0.5),Catalog::new(Profile::Preview26_3));
+            player.restart_attrs_tracking(spawn);
+            assert_eq!([player.attr_due(41),player.attr_due(52)],want);
+        }
+        let mut player=PlayerState::new_for_catalog([77;16],"AttrOld".into(),None,None,0x7f,77,(0.5,64.0,0.5),Catalog::new(Profile::Java26_1_2));
+        player.restart_attrs_tracking(21);
+        assert_eq!(player.attr_due(52),52);
+    }
+
+    #[test]
+    fn repeated_equipment_wear_waits_for_the_last_change() {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        for profile in [Profile::Java26_1_2,Profile::Preview26_3] {
+            let mut player=PlayerState::new_for_catalog([75;16],"AttrMerge".into(),None,None,0x7f,75,(0.5,64.0,0.5),Catalog::new(profile));
+            let sword=blocks::item_named("wooden_sword").unwrap();
+            for tick in [20,21] {
+                let data=crate::stackdata::Data {damage:tick as i32,..Default::default()};
+                player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(sword,1).with_extras(data)));
+                update_equipment(&mut player,tick);
+            }
+            assert_eq!(player.attrs_touched.iter().filter(|(id,_)| *id==crate::attributes::ATTACK_SPEED).map(|(_,due)|*due).max(),Some(23));
+        }
+    }
+
     #[test]
     fn game_modes_update_reach_without_changing_its_base() {
         use crate::attributes::{BLOCK_INTERACTION_RANGE, ENTITY_INTERACTION_RANGE};
@@ -3344,6 +3659,47 @@ mod tests {
         respawned(&mut player);
         assert_eq!(player.attrs.value(BLOCK_INTERACTION_RANGE), 5.0);
         assert_eq!(player.attrs.value(ENTITY_INTERACTION_RANGE), 5.0);
+    }
+
+    #[test]
+    fn respawn_reads_keep_inventory_and_preserves_exact_experience() {
+        let shared = bow_shared();
+        for keep in [false, true] {
+            shared.keep_inventory.store(keep, std::sync::atomic::Ordering::Relaxed);
+            let mut player = PlayerState::new([93; 16], "RespawnXp".into(), None, None, 0x7f, 93, (0.5, 64.0, 0.5));
+            // Уровень 12 и неполная шкала; суммарный счёт отличается от текущего XP.
+            let xp = survival::total_at_level(12) + 7;
+            player.vit.xp = xp;
+            player.vit.xp_total = 1234;
+            player.vit.xp_seed = 91;
+            player.vit.food = 2;
+            player.vit.saturation = 0.0;
+            player.vit.give_effect(survival::EffectKind::Poison, 0, 500);
+            player.vit.give_effect(survival::EffectKind::Poison, 1, 50);
+            player.vit.give_effect(survival::EffectKind::Absorption, 0, 500);
+            player.vit.dead = true;
+            player.vit.health = 0.0;
+            player.net.sent_health = 0.0;
+            player.net.xp_taken.push(17);
+            player.net.new_orbs.push(((0.5, 64.0, 0.5), 9));
+            player.net.announced_health = Some(0.0);
+            respawned_in(&shared, &mut player);
+            assert_eq!((player.vit.xp, player.vit.xp_total), if keep { (xp, 1234) } else { (0, 0) });
+            assert_eq!(survival::level_of(player.vit.xp), if keep { (12, 7.0 / survival::level_size(12) as f32) } else { (0, 0.0) });
+            assert_eq!((player.vit.health, player.vit.food, player.vit.saturation, player.vit.dead), (20.0, 20, 5.0, false));
+            assert_eq!((player.vit.absorption, player.vit.xp_seed), (0.0, 91));
+            assert!(player.vit.effects.is_empty());
+            assert!(player.net.hits.is_empty());
+            assert!(player.net.xp_taken.is_empty());
+            assert!(player.net.new_orbs.is_empty());
+            assert!(player.net.announced_health.is_none());
+            assert_eq!(player.net.sent_health, Net::new().sent_health);
+            // Скрытый слабый яд тоже не должен вернуться в новой жизни.
+            for _ in 0..501 {
+                let tick = player.vit.effects_tick();
+                assert!(tick.restored.is_empty() && tick.hurt.is_empty());
+            }
+        }
     }
 
     #[test]
@@ -3891,6 +4247,7 @@ pub(super) fn bedrock_environment(shared: &Shared, player: &mut PlayerState) -> 
     if env.in_lava { ignite(player, survival::LAVA_FIRE_TICKS); player.vit.fall *= 0.5; hits.push((4.0, Source::Lava)); }
     if let Some(amount) = crate::commands_world::border_of(shared, player.dimension).damage_at(player.x, player.z) { hits.push((amount, Source::OutsideBorder)); }
     if let Some(effect) = turtle_shell_effect(player, env.eyes_in_water) { player.vit.give_effect_shown(effect); }
+    observe_oxygen(shared, player, env.eyes_in_water && !env.in_bubbles);
     let oxygen = player.attrs.value(crate::attributes::OXYGEN_BONUS);
     let roll = if oxygen > 0.0 && env.eyes_in_water && !env.in_bubbles { world_random(shared, player.dimension) } else { 0.0 };
     if player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, roll) { hits.push((2.0, Source::Drown)); }
@@ -4103,6 +4460,83 @@ mod hot_block_enchantment_tests {
         assert!(!bedrock_environment(&shared, &mut player).iter().any(|(_, source)| *source == Source::Campfire));
         shared.world_in(player.dimension).lock().unwrap().set_block_silently(0, 64, 0, fluids::state_of(fluids::Kind::Lava, 0));
         assert!(bedrock_environment(&shared, &mut player).contains(&(4.0, Source::Lava)));
+    }
+}
+
+#[cfg(test)]
+mod combat_777_command_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile};
+
+    #[tokio::test]
+    async fn creative_263_preserves_saturation_when_natural_regeneration_is_disabled() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog=Catalog::new(profile);
+            let shared=Shared::new(World::in_memory_with_catalog(catalog),World::in_memory_with_catalog(catalog),
+                Default::default(),Default::default(),Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/combat777-creative/ops.json")),crate::skins::Settings::default());
+            shared.natural_regeneration.store(false,std::sync::atomic::Ordering::Relaxed);
+            let mut player=PlayerState::new_for_catalog([76;16],"Creative".into(),None,None,0,76,(0.5,64.0,0.5),catalog);
+            player.game_mode=GAME_MODE_CREATIVE;
+            player.vit.saturation=6.0;
+            for now in 0..340 {
+                shared.ticks.send_replace(now);
+                tick(&mut Outgoing::capture(),&shared,&mut player).await.unwrap();
+            }
+            assert_eq!(player.vit.saturation,if profile==Profile::Preview26_3 {6.0} else {20.0});
+        }
+    }
+
+    #[tokio::test]
+    async fn creative_263_does_not_gain_saturation_on_easy() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+            Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/combat777-creative/ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new_for_catalog([77;16], "CreativeEasy".into(), None, None, 0, 77, (0.5,64.0,0.5), catalog);
+        player.game_mode = GAME_MODE_CREATIVE;
+        for _ in 0..340 {
+            creative_tick(&mut Outgoing::capture(), &shared, &mut player, survival::EASY).await.unwrap();
+        }
+        assert_eq!(player.vit.saturation, 5.0);
+    }
+
+    #[tokio::test]
+    async fn unattributed_magic_has_hurt_feedback_only_in_the_263_primary() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/combat777-command/ops.json")), crate::skins::Settings::default());
+            shared.difficulty.store(2, std::sync::atomic::Ordering::Relaxed);
+            let mut player = PlayerState::new_for_catalog([73;16], "Magic".into(), None, None, 0, 73, (0.5,64.0,0.5), catalog);
+            player.game_mode = GAME_MODE_SURVIVAL;
+            player.on_ground = true;
+            player.inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(),1)));
+            player.net.using = Some(Using { kind: UseKind::Shield, hand: 1, since: 0 });
+            shared.ticks.send_replace(10);
+            let mut out = Outgoing::capture();
+            command_hit(&mut out, &shared, &mut player, 4.0, Source::IndirectMagic, Default::default()).await.unwrap();
+            assert_eq!(player.vit.health, 16.0);
+            assert_eq!(player.inventory.slot(inventory::OFFHAND).unwrap().extras().damage, 0);
+            let preview = profile == Profile::Preview26_3;
+            assert_eq!(player.net.velocity.is_some(), preview);
+            if let Some((x,y,z)) = player.net.velocity {
+                assert!((x.hypot(z)-0.4).abs()<1e-9);
+                assert!((y-0.3608).abs()<1e-9);
+            }
+            let mut bytes = out.queued();
+            let mut animations = 0;
+            while !bytes.is_empty() {
+                let packet = read_packet(&mut bytes).await.unwrap();
+                if packet.id == HURT_ANIMATION { animations += 1; }
+            }
+            assert_eq!(animations, usize::from(preview));
+            player.net.velocity = None;
+            command_hit(&mut out, &shared, &mut player, 4.0, Source::IndirectMagic, Default::default()).await.unwrap();
+            assert_eq!(player.vit.health,16.0);
+            assert!(player.net.velocity.is_none(), "отклонённый повторный урон не толкает");
+        }
     }
 }
 

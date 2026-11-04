@@ -60,8 +60,10 @@ pub fn craft(grid: &[Option<Stack>]) -> Option<Stack> {
         }
         return output("firework_star", 1, Data { explosion: Some(explosion), ..Default::default() });
     }
-    if count("filled_map") == 1 && count("map") + 1 == n && n >= 2 {
-        return Some(items.iter().find(|s| name(s) == "filled_map")?.with_count(n as i32));
+    // Копия карты, в том числе карты строения 26.3 (вики, Explorer Map: «clone by crafting with an Empty Map»).
+    let is_map = |s: &Stack| name(s) == "filled_map" || crate::maps::is_structure_map(name(s));
+    if items.iter().filter(|s| is_map(s)).count() == 1 && count("map") + 1 == n && n >= 2 {
+        return Some(items.iter().find(|s| is_map(s))?.with_count(n as i32));
     }
     if count("written_book") == 1 && count("writable_book") + 1 == n && n >= 2 {
         let book = items.iter().find(|s| name(s) == "written_book")?;

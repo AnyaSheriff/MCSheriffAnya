@@ -1,0 +1,1056 @@
+{
+  "old": {
+    "version": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "effects": [
+      {
+        "name": "speed",
+        "source_id": 0,
+        "observed_ids": [
+          0
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010000d00f08"
+          }
+        ]
+      },
+      {
+        "name": "slowness",
+        "source_id": 1,
+        "observed_ids": [
+          1
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010100d00f08"
+          }
+        ]
+      },
+      {
+        "name": "haste",
+        "source_id": 2,
+        "observed_ids": [
+          2
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010200d00f08"
+          }
+        ]
+      },
+      {
+        "name": "mining_fatigue",
+        "source_id": 3,
+        "observed_ids": [
+          3
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010300d00f08"
+          }
+        ]
+      },
+      {
+        "name": "strength",
+        "source_id": 4,
+        "observed_ids": [
+          4
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010400d00f08"
+          }
+        ]
+      },
+      {
+        "name": "instant_health",
+        "source_id": 5,
+        "observed_ids": [
+          5
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "84010105006408"
+          }
+        ]
+      },
+      {
+        "name": "instant_damage",
+        "source_id": 6,
+        "observed_ids": [
+          6
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "84010106006408"
+          }
+        ]
+      },
+      {
+        "name": "jump_boost",
+        "source_id": 7,
+        "observed_ids": [
+          7
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010700d00f08"
+          }
+        ]
+      },
+      {
+        "name": "nausea",
+        "source_id": 8,
+        "observed_ids": [
+          8
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010800d00f08"
+          }
+        ]
+      },
+      {
+        "name": "regeneration",
+        "source_id": 9,
+        "observed_ids": [
+          9
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010900d00f08"
+          }
+        ]
+      },
+      {
+        "name": "resistance",
+        "source_id": 10,
+        "observed_ids": [
+          10
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010a00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "fire_resistance",
+        "source_id": 11,
+        "observed_ids": [
+          11
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010b00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "water_breathing",
+        "source_id": 12,
+        "observed_ids": [
+          12
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010c00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "invisibility",
+        "source_id": 13,
+        "observed_ids": [
+          13
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010d00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "blindness",
+        "source_id": 14,
+        "observed_ids": [
+          14
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010e00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "night_vision",
+        "source_id": 15,
+        "observed_ids": [
+          15
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401010f00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "hunger",
+        "source_id": 16,
+        "observed_ids": [
+          16
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011000d00f08"
+          }
+        ]
+      },
+      {
+        "name": "weakness",
+        "source_id": 17,
+        "observed_ids": [
+          17
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011100d00f08"
+          }
+        ]
+      },
+      {
+        "name": "poison",
+        "source_id": 18,
+        "observed_ids": [
+          18
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011200d00f08"
+          }
+        ]
+      },
+      {
+        "name": "wither",
+        "source_id": 19,
+        "observed_ids": [
+          19
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011300d00f08"
+          }
+        ]
+      },
+      {
+        "name": "health_boost",
+        "source_id": 20,
+        "observed_ids": [
+          20
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011400d00f08"
+          }
+        ]
+      },
+      {
+        "name": "absorption",
+        "source_id": 21,
+        "observed_ids": [
+          21
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011500d00f08"
+          }
+        ]
+      },
+      {
+        "name": "saturation",
+        "source_id": 22,
+        "observed_ids": [
+          22
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "84010116006408"
+          }
+        ]
+      },
+      {
+        "name": "glowing",
+        "source_id": 23,
+        "observed_ids": [
+          23
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011700d00f08"
+          }
+        ]
+      },
+      {
+        "name": "levitation",
+        "source_id": 24,
+        "observed_ids": [
+          24
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011800d00f08"
+          }
+        ]
+      },
+      {
+        "name": "luck",
+        "source_id": 25,
+        "observed_ids": [
+          25
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011900d00f08"
+          }
+        ]
+      },
+      {
+        "name": "unluck",
+        "source_id": 26,
+        "observed_ids": [
+          26
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011a00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "slow_falling",
+        "source_id": 27,
+        "observed_ids": [
+          27
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011b00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "conduit_power",
+        "source_id": 28,
+        "observed_ids": [
+          28
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011c00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "dolphins_grace",
+        "source_id": 29,
+        "observed_ids": [
+          29
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011d00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "bad_omen",
+        "source_id": 30,
+        "observed_ids": [
+          30
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011e00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "hero_of_the_village",
+        "source_id": 31,
+        "observed_ids": [
+          31
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401011f00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "darkness",
+        "source_id": 32,
+        "observed_ids": [
+          32
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012000d00f08"
+          }
+        ]
+      },
+      {
+        "name": "trial_omen",
+        "source_id": 33,
+        "observed_ids": [
+          33
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012100d00f08"
+          }
+        ]
+      },
+      {
+        "name": "raid_omen",
+        "source_id": 34,
+        "observed_ids": [
+          34
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012200d00f08"
+          }
+        ]
+      },
+      {
+        "name": "wind_charged",
+        "source_id": 35,
+        "observed_ids": [
+          35
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012300d00f08"
+          }
+        ]
+      },
+      {
+        "name": "weaving",
+        "source_id": 36,
+        "observed_ids": [
+          36
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012400d00f08"
+          }
+        ]
+      },
+      {
+        "name": "oozing",
+        "source_id": 37,
+        "observed_ids": [
+          37
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012500d00f08"
+          }
+        ]
+      },
+      {
+        "name": "infested",
+        "source_id": 38,
+        "observed_ids": [
+          38
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012600d00f08"
+          }
+        ]
+      },
+      {
+        "name": "breath_of_the_nautilus",
+        "source_id": 39,
+        "observed_ids": [
+          39
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8401012700d00f08"
+          }
+        ]
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "version": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "effects": [
+      {
+        "name": "speed",
+        "source_id": 0,
+        "observed_ids": [
+          0
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010000d00f08"
+          }
+        ]
+      },
+      {
+        "name": "slowness",
+        "source_id": 1,
+        "observed_ids": [
+          1
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010100d00f08"
+          }
+        ]
+      },
+      {
+        "name": "haste",
+        "source_id": 2,
+        "observed_ids": [
+          2
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010200d00f08"
+          }
+        ]
+      },
+      {
+        "name": "mining_fatigue",
+        "source_id": 3,
+        "observed_ids": [
+          3
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010300d00f08"
+          }
+        ]
+      },
+      {
+        "name": "strength",
+        "source_id": 4,
+        "observed_ids": [
+          4
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010400d00f08"
+          }
+        ]
+      },
+      {
+        "name": "instant_health",
+        "source_id": 5,
+        "observed_ids": [
+          5
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "87010105006408"
+          }
+        ]
+      },
+      {
+        "name": "instant_damage",
+        "source_id": 6,
+        "observed_ids": [
+          6
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "87010106006408"
+          }
+        ]
+      },
+      {
+        "name": "jump_boost",
+        "source_id": 7,
+        "observed_ids": [
+          7
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010700d00f08"
+          }
+        ]
+      },
+      {
+        "name": "nausea",
+        "source_id": 8,
+        "observed_ids": [
+          8
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010800d00f08"
+          }
+        ]
+      },
+      {
+        "name": "regeneration",
+        "source_id": 9,
+        "observed_ids": [
+          9
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010900d00f08"
+          }
+        ]
+      },
+      {
+        "name": "resistance",
+        "source_id": 10,
+        "observed_ids": [
+          10
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010a00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "fire_resistance",
+        "source_id": 11,
+        "observed_ids": [
+          11
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010b00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "water_breathing",
+        "source_id": 12,
+        "observed_ids": [
+          12
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010c00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "invisibility",
+        "source_id": 13,
+        "observed_ids": [
+          13
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010d00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "blindness",
+        "source_id": 14,
+        "observed_ids": [
+          14
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010e00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "night_vision",
+        "source_id": 15,
+        "observed_ids": [
+          15
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701010f00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "hunger",
+        "source_id": 16,
+        "observed_ids": [
+          16
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011000d00f08"
+          }
+        ]
+      },
+      {
+        "name": "weakness",
+        "source_id": 17,
+        "observed_ids": [
+          17
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011100d00f08"
+          }
+        ]
+      },
+      {
+        "name": "poison",
+        "source_id": 18,
+        "observed_ids": [
+          18
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011200d00f08"
+          }
+        ]
+      },
+      {
+        "name": "wither",
+        "source_id": 19,
+        "observed_ids": [
+          19
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011300d00f08"
+          }
+        ]
+      },
+      {
+        "name": "health_boost",
+        "source_id": 20,
+        "observed_ids": [
+          20
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011400d00f08"
+          }
+        ]
+      },
+      {
+        "name": "absorption",
+        "source_id": 21,
+        "observed_ids": [
+          21
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011500d00f08"
+          }
+        ]
+      },
+      {
+        "name": "saturation",
+        "source_id": 22,
+        "observed_ids": [
+          22
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "87010116006408"
+          }
+        ]
+      },
+      {
+        "name": "glowing",
+        "source_id": 23,
+        "observed_ids": [
+          23
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011700d00f08"
+          }
+        ]
+      },
+      {
+        "name": "levitation",
+        "source_id": 24,
+        "observed_ids": [
+          24
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011800d00f08"
+          }
+        ]
+      },
+      {
+        "name": "luck",
+        "source_id": 25,
+        "observed_ids": [
+          25
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011900d00f08"
+          }
+        ]
+      },
+      {
+        "name": "unluck",
+        "source_id": 26,
+        "observed_ids": [
+          26
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011a00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "slow_falling",
+        "source_id": 27,
+        "observed_ids": [
+          27
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011b00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "conduit_power",
+        "source_id": 28,
+        "observed_ids": [
+          28
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011c00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "dolphins_grace",
+        "source_id": 29,
+        "observed_ids": [
+          29
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011d00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "bad_omen",
+        "source_id": 30,
+        "observed_ids": [
+          30
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011e00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "hero_of_the_village",
+        "source_id": 31,
+        "observed_ids": [
+          31
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701011f00d00f08"
+          }
+        ]
+      },
+      {
+        "name": "darkness",
+        "source_id": 32,
+        "observed_ids": [
+          32
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012000d00f08"
+          }
+        ]
+      },
+      {
+        "name": "trial_omen",
+        "source_id": 33,
+        "observed_ids": [
+          33
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012100d00f08"
+          }
+        ]
+      },
+      {
+        "name": "raid_omen",
+        "source_id": 34,
+        "observed_ids": [
+          34
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012200d00f08"
+          }
+        ]
+      },
+      {
+        "name": "wind_charged",
+        "source_id": 35,
+        "observed_ids": [
+          35
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012300d00f08"
+          }
+        ]
+      },
+      {
+        "name": "weaving",
+        "source_id": 36,
+        "observed_ids": [
+          36
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012400d00f08"
+          }
+        ]
+      },
+      {
+        "name": "oozing",
+        "source_id": 37,
+        "observed_ids": [
+          37
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012500d00f08"
+          }
+        ]
+      },
+      {
+        "name": "infested",
+        "source_id": 38,
+        "observed_ids": [
+          38
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012600d00f08"
+          }
+        ]
+      },
+      {
+        "name": "breath_of_the_nautilus",
+        "source_id": 39,
+        "observed_ids": [
+          39
+        ],
+        "packets": [
+          {
+            "name": "entity_effect",
+            "body": "8701012700d00f08"
+          }
+        ]
+      }
+    ],
+    "exit_code": 0
+  }
+}

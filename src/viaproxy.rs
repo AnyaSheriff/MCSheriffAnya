@@ -20,22 +20,16 @@ pub fn configure(settings: &mut Settings, properties: &mut ServerProperties) -> 
     if !settings.viaproxy {
         return Ok(());
     }
+    if settings.java_version != Some(mcsa_protocol::JavaVersion::V26_1_2) {
+        return Err(error("ViaProxy: закреплённый релиз не проверен с основной версией 26.3; отключите viaproxy и используйте прямое подключение"));
+    }
     if settings.viaproxy_port == 0 || settings.viaproxy_port == properties.server_port {
         return Err(error(
             "ViaProxy: публичный порт должен быть ненулевым и отличаться от server-port",
         ));
     }
-    let memory = &settings.viaproxy_memory;
-    if memory.len() < 2
-        || !matches!(memory.as_bytes().last(), Some(b'M' | b'm' | b'G' | b'g'))
-        || memory[..memory.len() - 1]
-            .parse::<u32>()
-            .ok()
-            .is_none_or(|n| n == 0)
-    {
-        return Err(error(
-            "viaproxy-memory: ожидается размер, например 512M или 1G",
-        ));
+    if settings.viaproxy_memory < 320 * 1024 * 1024 {
+        return Err(error("viaproxy-memory: минимум 320M"));
     }
     properties.server_ip = "127.0.0.1".into();
     settings.proxy_protocol = true;
@@ -98,8 +92,9 @@ async fn prepare(settings: &Settings, port: u16) -> io::Result<()> {
         ));
     }
     let config = format!(
-        "bind-address: 0.0.0.0:{}\ntarget-address: 127.0.0.1:{port}\ntarget-version: '26.1.2'\nproxy-online-mode: false\nauth-method: NONE\nbackend-haproxy: true\nfrontend-haproxy: false\nwildcard-domain-handling: NONE\nallow-legacy-client-passthrough: false\nignore-protocol-translation-errors: false\nlog-ips: true\n",
-        settings.viaproxy_port
+        "bind-address: 0.0.0.0:{}\ntarget-address: 127.0.0.1:{port}\ntarget-version: '{}'\nproxy-online-mode: false\nauth-method: NONE\nbackend-haproxy: true\nfrontend-haproxy: false\nwildcard-domain-handling: NONE\nallow-legacy-client-passthrough: false\nignore-protocol-translation-errors: false\nlog-ips: true\n",
+        settings.viaproxy_port,
+        settings.java_version.ok_or_else(|| error("ViaProxy: основная версия Java не выбрана"))?.name()
     );
     tokio::fs::write("viaproxy/viaproxy.yml", config).await
 }
@@ -205,9 +200,20 @@ mod tests {
         assert!(!verified(b"not a jar"));
     }
     #[test]
+    fn unverified_263_proxy_is_rejected_before_backend_changes() {
+        let mut settings = Settings { viaproxy: true, ..Settings::default() };
+        let mut properties = ServerProperties { server_ip: "0.0.0.0".into(), ..ServerProperties::default() };
+        let failure = configure(&mut settings, &mut properties).unwrap_err().to_string();
+        assert!(failure.contains("не проверен"));
+        assert!(failure.contains("26.3"));
+        assert_eq!(properties.server_ip, "0.0.0.0");
+        assert!(!settings.proxy_protocol);
+    }
+    #[test]
     fn isolates_backend() {
         let mut s = Settings {
             viaproxy: true,
+            java_version: Some(mcsa_protocol::JavaVersion::V26_1_2),
             ..Settings::default()
         };
         let mut p = ServerProperties {
@@ -221,7 +227,7 @@ mod tests {
             s.proxy_protocol_trusted_sources,
             vec!["127.0.0.1".parse::<std::net::IpAddr>().unwrap()]
         );
-        s.viaproxy_memory = "bad".into();
+        s.viaproxy_memory = 319 * 1024 * 1024;
         assert!(configure(&mut s, &mut p).is_err());
     }
 }

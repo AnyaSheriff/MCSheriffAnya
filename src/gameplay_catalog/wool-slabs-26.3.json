@@ -1,0 +1,1756 @@
+{
+  "scope": "Pinned selected JSON metadata and allocated canonical IDs; not gameplay/harvest/recipe observations. Wool is a separate family.",
+  "candidate_commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+  "entries": [
+    {
+      "name": "white_wool_slab",
+      "block777": {
+        "id": 183,
+        "name": "white_wool_slab",
+        "displayName": "White Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3708,
+        "minStateId": 3705,
+        "maxStateId": 3710,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          282
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 282,
+        "name": "white_wool_slab",
+        "displayName": "White Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3705,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3706,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3707,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3708,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3709,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3710,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "white_wool",
+        "item775": 213,
+        "item777": 250,
+        "block777": 151
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1522,
+        "block": 1184,
+        "minStateId": 29969,
+        "maxStateId": 29974,
+        "defaultState": 29972
+      }
+    },
+    {
+      "name": "orange_wool_slab",
+      "block777": {
+        "id": 184,
+        "name": "orange_wool_slab",
+        "displayName": "Orange Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3714,
+        "minStateId": 3711,
+        "maxStateId": 3716,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          283
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 283,
+        "name": "orange_wool_slab",
+        "displayName": "Orange Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3711,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3712,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3713,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3714,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3715,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3716,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "orange_wool",
+        "item775": 214,
+        "item777": 251,
+        "block777": 152
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1523,
+        "block": 1185,
+        "minStateId": 29975,
+        "maxStateId": 29980,
+        "defaultState": 29978
+      }
+    },
+    {
+      "name": "magenta_wool_slab",
+      "block777": {
+        "id": 185,
+        "name": "magenta_wool_slab",
+        "displayName": "Magenta Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3720,
+        "minStateId": 3717,
+        "maxStateId": 3722,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          284
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 284,
+        "name": "magenta_wool_slab",
+        "displayName": "Magenta Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3717,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3718,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3719,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3720,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3721,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3722,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "magenta_wool",
+        "item775": 215,
+        "item777": 252,
+        "block777": 153
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1524,
+        "block": 1186,
+        "minStateId": 29981,
+        "maxStateId": 29986,
+        "defaultState": 29984
+      }
+    },
+    {
+      "name": "light_blue_wool_slab",
+      "block777": {
+        "id": 186,
+        "name": "light_blue_wool_slab",
+        "displayName": "Light Blue Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3726,
+        "minStateId": 3723,
+        "maxStateId": 3728,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          285
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 285,
+        "name": "light_blue_wool_slab",
+        "displayName": "Light Blue Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3723,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3724,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3725,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3726,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3727,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3728,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "light_blue_wool",
+        "item775": 216,
+        "item777": 253,
+        "block777": 154
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1525,
+        "block": 1187,
+        "minStateId": 29987,
+        "maxStateId": 29992,
+        "defaultState": 29990
+      }
+    },
+    {
+      "name": "yellow_wool_slab",
+      "block777": {
+        "id": 187,
+        "name": "yellow_wool_slab",
+        "displayName": "Yellow Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3732,
+        "minStateId": 3729,
+        "maxStateId": 3734,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          286
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 286,
+        "name": "yellow_wool_slab",
+        "displayName": "Yellow Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3729,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3730,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3731,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3732,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3733,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3734,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "yellow_wool",
+        "item775": 217,
+        "item777": 254,
+        "block777": 155
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1526,
+        "block": 1188,
+        "minStateId": 29993,
+        "maxStateId": 29998,
+        "defaultState": 29996
+      }
+    },
+    {
+      "name": "lime_wool_slab",
+      "block777": {
+        "id": 188,
+        "name": "lime_wool_slab",
+        "displayName": "Lime Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3738,
+        "minStateId": 3735,
+        "maxStateId": 3740,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          287
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 287,
+        "name": "lime_wool_slab",
+        "displayName": "Lime Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3735,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3736,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3737,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3738,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3739,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3740,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "lime_wool",
+        "item775": 218,
+        "item777": 255,
+        "block777": 156
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1527,
+        "block": 1189,
+        "minStateId": 29999,
+        "maxStateId": 30004,
+        "defaultState": 30002
+      }
+    },
+    {
+      "name": "pink_wool_slab",
+      "block777": {
+        "id": 189,
+        "name": "pink_wool_slab",
+        "displayName": "Pink Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3744,
+        "minStateId": 3741,
+        "maxStateId": 3746,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          288
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 288,
+        "name": "pink_wool_slab",
+        "displayName": "Pink Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3741,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3742,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3743,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3744,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3745,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3746,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "pink_wool",
+        "item775": 219,
+        "item777": 256,
+        "block777": 157
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1528,
+        "block": 1190,
+        "minStateId": 30005,
+        "maxStateId": 30010,
+        "defaultState": 30008
+      }
+    },
+    {
+      "name": "gray_wool_slab",
+      "block777": {
+        "id": 190,
+        "name": "gray_wool_slab",
+        "displayName": "Gray Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3750,
+        "minStateId": 3747,
+        "maxStateId": 3752,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          289
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 289,
+        "name": "gray_wool_slab",
+        "displayName": "Gray Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3747,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3748,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3749,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3750,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3751,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3752,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "gray_wool",
+        "item775": 220,
+        "item777": 257,
+        "block777": 158
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1529,
+        "block": 1191,
+        "minStateId": 30011,
+        "maxStateId": 30016,
+        "defaultState": 30014
+      }
+    },
+    {
+      "name": "light_gray_wool_slab",
+      "block777": {
+        "id": 191,
+        "name": "light_gray_wool_slab",
+        "displayName": "Light Gray Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3756,
+        "minStateId": 3753,
+        "maxStateId": 3758,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          290
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 290,
+        "name": "light_gray_wool_slab",
+        "displayName": "Light Gray Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3753,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3754,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3755,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3756,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3757,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3758,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "light_gray_wool",
+        "item775": 221,
+        "item777": 258,
+        "block777": 159
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1530,
+        "block": 1192,
+        "minStateId": 30017,
+        "maxStateId": 30022,
+        "defaultState": 30020
+      }
+    },
+    {
+      "name": "cyan_wool_slab",
+      "block777": {
+        "id": 192,
+        "name": "cyan_wool_slab",
+        "displayName": "Cyan Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3762,
+        "minStateId": 3759,
+        "maxStateId": 3764,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          291
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 291,
+        "name": "cyan_wool_slab",
+        "displayName": "Cyan Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3759,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3760,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3761,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3762,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3763,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3764,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "cyan_wool",
+        "item775": 222,
+        "item777": 259,
+        "block777": 160
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1531,
+        "block": 1193,
+        "minStateId": 30023,
+        "maxStateId": 30028,
+        "defaultState": 30026
+      }
+    },
+    {
+      "name": "purple_wool_slab",
+      "block777": {
+        "id": 193,
+        "name": "purple_wool_slab",
+        "displayName": "Purple Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3768,
+        "minStateId": 3765,
+        "maxStateId": 3770,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          292
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 292,
+        "name": "purple_wool_slab",
+        "displayName": "Purple Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3765,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3766,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3767,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3768,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3769,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3770,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "purple_wool",
+        "item775": 223,
+        "item777": 260,
+        "block777": 161
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1532,
+        "block": 1194,
+        "minStateId": 30029,
+        "maxStateId": 30034,
+        "defaultState": 30032
+      }
+    },
+    {
+      "name": "blue_wool_slab",
+      "block777": {
+        "id": 194,
+        "name": "blue_wool_slab",
+        "displayName": "Blue Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3774,
+        "minStateId": 3771,
+        "maxStateId": 3776,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          293
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 293,
+        "name": "blue_wool_slab",
+        "displayName": "Blue Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3771,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3772,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3773,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3774,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3775,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3776,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "blue_wool",
+        "item775": 224,
+        "item777": 261,
+        "block777": 162
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1533,
+        "block": 1195,
+        "minStateId": 30035,
+        "maxStateId": 30040,
+        "defaultState": 30038
+      }
+    },
+    {
+      "name": "brown_wool_slab",
+      "block777": {
+        "id": 195,
+        "name": "brown_wool_slab",
+        "displayName": "Brown Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3780,
+        "minStateId": 3777,
+        "maxStateId": 3782,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          294
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 294,
+        "name": "brown_wool_slab",
+        "displayName": "Brown Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3777,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3778,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3779,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3780,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3781,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3782,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "brown_wool",
+        "item775": 225,
+        "item777": 262,
+        "block777": 163
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1534,
+        "block": 1196,
+        "minStateId": 30041,
+        "maxStateId": 30046,
+        "defaultState": 30044
+      }
+    },
+    {
+      "name": "green_wool_slab",
+      "block777": {
+        "id": 196,
+        "name": "green_wool_slab",
+        "displayName": "Green Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3786,
+        "minStateId": 3783,
+        "maxStateId": 3788,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          295
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 295,
+        "name": "green_wool_slab",
+        "displayName": "Green Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3783,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3784,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3785,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3786,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3787,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3788,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "green_wool",
+        "item775": 226,
+        "item777": 263,
+        "block777": 164
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1535,
+        "block": 1197,
+        "minStateId": 30047,
+        "maxStateId": 30052,
+        "defaultState": 30050
+      }
+    },
+    {
+      "name": "red_wool_slab",
+      "block777": {
+        "id": 197,
+        "name": "red_wool_slab",
+        "displayName": "Red Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3792,
+        "minStateId": 3789,
+        "maxStateId": 3794,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          296
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 296,
+        "name": "red_wool_slab",
+        "displayName": "Red Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3789,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3790,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3791,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3792,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3793,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3794,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "red_wool",
+        "item775": 227,
+        "item777": 264,
+        "block777": 165
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1536,
+        "block": 1198,
+        "minStateId": 30053,
+        "maxStateId": 30058,
+        "defaultState": 30056
+      }
+    },
+    {
+      "name": "black_wool_slab",
+      "block777": {
+        "id": 198,
+        "name": "black_wool_slab",
+        "displayName": "Black Wool Slab",
+        "hardness": 0.8,
+        "resistance": 0.8,
+        "stackSize": 64,
+        "diggable": true,
+        "material": "wool",
+        "transparent": false,
+        "emitLight": 0,
+        "filterLight": 0,
+        "defaultState": 3798,
+        "minStateId": 3795,
+        "maxStateId": 3800,
+        "states": [
+          {
+            "name": "type",
+            "type": "enum",
+            "num_values": 3,
+            "values": [
+              "top",
+              "bottom",
+              "double"
+            ]
+          },
+          {
+            "name": "waterlogged",
+            "type": "bool",
+            "num_values": 2
+          }
+        ],
+        "drops": [
+          297
+        ],
+        "boundingBox": "block"
+      },
+      "item777": {
+        "id": 297,
+        "name": "black_wool_slab",
+        "displayName": "Black Wool Slab",
+        "stackSize": 64
+      },
+      "enumerated_states777": [
+        {
+          "id": 3795,
+          "properties": {
+            "type": "top",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3796,
+          "properties": {
+            "type": "top",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3797,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3798,
+          "properties": {
+            "type": "bottom",
+            "waterlogged": "false"
+          }
+        },
+        {
+          "id": 3799,
+          "properties": {
+            "type": "double",
+            "waterlogged": "true"
+          }
+        },
+        {
+          "id": 3800,
+          "properties": {
+            "type": "double",
+            "waterlogged": "false"
+          }
+        }
+      ],
+      "default_properties": {
+        "type": "bottom",
+        "waterlogged": "false"
+      },
+      "wool_input": {
+        "name": "black_wool",
+        "item775": 228,
+        "item777": 265,
+        "block777": 166
+      },
+      "harvest_tools_paired": [],
+      "canonical": {
+        "family": "wool",
+        "item": 1537,
+        "block": 1199,
+        "minStateId": 30059,
+        "maxStateId": 30064,
+        "defaultState": 30062
+      }
+    }
+  ],
+  "source_sha256": {
+    "candidate/blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+    "candidate/items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+    "candidate/recipes.json": "173c3b7cfbf1cc9e2a189fe5a3384c22a536d8b90a659850da336739eca38a6d",
+    "native/items.json": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e"
+  }
+}

@@ -1,0 +1,38 @@
+_XSERVTransmkdir: Owner of /tmp/.X11-unix should be set to root
+(EE) 
+(EE) Backtrace:
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 0: Xvfb (?+0x0) [0x557f8b99fe55]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 1: /usr/lib/libc.so.6 (?+0x0) [0x7f660cc3e6f0]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 2: /usr/lib/libnvidia-egl-gbm.so.1 (?+0x0) [0x7f6609d05653]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 3: /usr/lib/libEGL_nvidia.so.0 (?+0x0) [0x7f6602780399]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 4: /usr/lib/libEGL_nvidia.so.0 (?+0x0) [0x7f660272130f]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 5: /usr/lib/libEGL.so.1 (?+0x0) [0x7f6609d6e25e]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 6: /usr/lib/dri/swrast_dri.so (?+0x0) [0x7f660c625363]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 7: Xvfb (?+0x0) [0x557f8b9af0f7]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 8: Xvfb (?+0x0) [0x557f8b9ac106]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 9: Xvfb (?+0x0) [0x557f8b8c143c]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 10: Xvfb (?+0x0) [0x557f8b9d5b7c]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 11: Xvfb (?+0x0) [0x557f8b869f22]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 12: /usr/lib/libc.so.6 (?+0x0) [0x7f660cc27781]
+(EE) 13: /usr/lib/libc.so.6 (__libc_start_main+0x89) [0x7f660cc278b9]
+(EE) unw_get_proc_name failed: no unwind info found [-10]
+(EE) 14: Xvfb (?+0x0) [0x557f8b86c905]
+(EE) 
+(EE) Segmentation fault at address 0x0
+(EE) 
+Fatal server error:
+(EE) Caught signal 11 (Segmentation fault). Server aborting
+(EE) 

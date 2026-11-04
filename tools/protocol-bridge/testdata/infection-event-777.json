@@ -1,0 +1,37 @@
+{
+  "source": "official 26.3 network observation, s26i-sound, non-silent zombie/villager; s26i-first silent conversion emitted no level event",
+  "events": [
+    {
+      "wire_file": "tools/blackbox/reports/s26i-sound/official-wire-down-1.bin",
+      "packet_id": 47,
+      "payload_hex": "00000402000019c000068fc50000000000",
+      "data": 0,
+      "global": 0
+    }
+  ],
+  "silent_controls": {
+    "attacker": {
+      "recording": "tools/blackbox/reports/s26i-silent2/s26i-silent-attacker-0-official.json",
+      "conversion_events": 1,
+      "level_events": []
+    },
+    "victim": {
+      "recording": "tools/blackbox/reports/s26i-silent2/s26i-silent-victim-0-official.json",
+      "conversion_events": 1,
+      "level_events": [
+        {
+          "tick": 1037,
+          "ms": 2623,
+          "kind": "level",
+          "at": [
+            3,
+            0,
+            4
+          ],
+          "effect": 1026,
+          "data": 0
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "seed": 1792932773345722119,
+  "chunk": [
+    108,
+    -207
+  ],
+  "reference_window": [
+    105,
+    -211,
+    113,
+    -203
+  ],
+  "source": "Official 26.3 read-only region measurements; shore window, not a globally representative sample.",
+  "previous_probe": {
+    "seed": 100554032945340,
+    "chunk": [
+      -12,
+      -4
+    ],
+    "before_ground_height": 33,
+    "before_surface_biome": "deep_cold_ocean"
+  },
+  "reason": "Named octave streams replace the common phase and the continentalness clip."
+}

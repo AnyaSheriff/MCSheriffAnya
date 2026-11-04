@@ -1,0 +1,50 @@
+[
+  {
+    "scenario": "scaffolding-support",
+    "repeat": 0,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "ed8b98ef1320fe808db8e1206c4ea9c6d0e306bbe868d450f6ca56e513b1ea66",
+    "counts": [
+      35,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "scaffolding-support",
+    "repeat": 1,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "ed8b98ef1320fe808db8e1206c4ea9c6d0e306bbe868d450f6ca56e513b1ea66",
+    "counts": [
+      35,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "scaffolding-support",
+    "repeat": 2,
+    "exits": {
+      "ours": 0
+    },
+    "status": "match",
+    "official_sha256": "ed8b98ef1320fe808db8e1206c4ea9c6d0e306bbe868d450f6ca56e513b1ea66",
+    "counts": [
+      35,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  }
+]

@@ -1,0 +1,61 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[15:07:01] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[15:07:01] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[15:07:01] [Server thread/INFO]: McsaProbe[/127.0.0.1:43090 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[15:07:01] [Server thread/INFO]: McsaProbe зашёл на сервер
+[15:07:01] [Server thread/INFO]: Правило spawn_mobs: false
+[15:07:01] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[15:07:02] [Server thread/INFO]: Заполнено блоков: 90
+[15:07:02] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[15:07:02] [Server thread/INFO]: Заполнено блоков: 0
+[15:07:02] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[15:07:02] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[15:07:02] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[15:07:03] [Server thread/INFO]: Игроку McsaProbe установлен режим: выживание
+[15:07:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[15:07:03] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[15:07:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+[15:07:03] [Server thread/INFO]: Правило natural_health_regeneration: false
+[15:07:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_7
+[15:07:04] [Server thread/INFO]: Опознаватель игрока McsaPeer — 04401d94-d4a5-3fdd-9518-a3cc040d6cfd
+[15:07:04] [Server thread/INFO]: Скины: скина McsaPeer нет ни в одном источнике
+[15:07:04] [Server thread/INFO]: McsaPeer[/127.0.0.1:43098 → localhost:26028] вошёл с номером сущности 6 в (0.5, 64.0, 0.5)
+[15:07:04] [Server thread/INFO]: McsaPeer зашёл на сервер
+[15:07:04] [Server thread/INFO]: McsaPeer перенесён в 0.5 65 1.5
+[15:07:04] [Server thread/INFO]: [Server] MCSA_CORE_DIG_8
+[15:07:05] [Server thread/INFO]: Игроку McsaPeer установлен режим: выживание
+[15:07:05] [Server thread/INFO]: [Server] MCSA_CORE_DIG_9
+[15:07:07] [Server thread/INFO]: Gave 2 [stone] to McsaProbe
+[15:07:07] [Server thread/INFO]: [Server] MCSA_CORE_DIG_10
+[15:07:09] [Server thread/INFO]: Убит: McsaProbe
+[15:07:09] [Server thread/INFO]: [Server] MCSA_CORE_DIG_11
+[15:07:09] [Server thread/INFO]: McsaProbe was killed
+[15:07:09] [Server thread/INFO]: McsaProbe was killed
+[15:07:09] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[15:07:09] [Server thread/INFO]: [Server] MCSA_CORE_DIG_12
+[15:07:09] [Server thread/INFO]: McsaProbe перешёл в minecraft:overworld (0.5, 65.0, 0.5)
+[15:07:10] [Server thread/INFO]: Инвентарь очищен: McsaProbe
+[15:07:10] [Server thread/INFO]: [Server] MCSA_CORE_DIG_13
+[15:07:10] [Server thread/INFO]: Gave 3 [diamond] to McsaProbe
+[15:07:10] [Server thread/INFO]: [Server] MCSA_CORE_DIG_14
+[15:07:10] [Server thread/INFO]: McsaProbe has made the advancement [Diamonds!]
+[15:07:10] [Server thread/INFO]: McsaProbe has made the advancement [Diamonds!]
+[15:07:12] [Server thread/INFO]: Changed the block at 2, 65, 0
+[15:07:12] [Server thread/INFO]: [Server] MCSA_CORE_DIG_15
+[15:07:16] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[15:07:16] [Server thread/INFO]: McsaProbe вышел
+[15:07:17] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[15:07:17] [Server thread/INFO]: McsaProbe[/127.0.0.1:38874 → localhost:26028] вошёл с номером сущности 10 в (0.5, 65.0, 0.5)
+MCSA probe connection: Перевод Java-пакета: Chunk(Entity(UnsupportedVersion))
+MCSA play probe failure: Broken pipe (os error 32)
+[15:07:17] [Server thread/INFO]: McsaPeer потерял соединение: broken pipe
+[15:07:17] [Server thread/INFO]: Останавливаю сервер
+[15:07:17] [Server thread/INFO]: McsaProbe вышел
+[15:07:17] [Server thread/INFO]: McsaPeer вышел
+[15:07:17] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_26_2_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2988 filtered out; finished in 17.49s
+

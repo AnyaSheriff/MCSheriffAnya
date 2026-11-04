@@ -100,3 +100,35 @@ async fn advancement_completion_enqueues_one_announcement_for_console_and_chat()
         }
     }
 }
+
+#[test]
+fn modern_plugin_root_hints_keep_vanilla_matches_tooltips_and_utf16_ranges() {
+    let shared = shared();
+    let names = vec!["hello".to_string(), "helpful".to_string(), "hello".to_string()];
+    for text in ["", "/", "he", "/he", "HEL", "/HEL"] {
+        let tree = command_tree::for_level(0, 777);
+        let mut result = command_completion::complete(&tree, 17, text, &shared, &[27; 16]);
+        let vanilla = result.matches.clone();
+        append_plugin_root_hints(&mut result, text, &names);
+        assert_eq!(result.id, 17);
+        assert_eq!(result.start, i32::from(text.starts_with('/')));
+        assert_eq!(result.length, text_length(text.strip_prefix('/').unwrap_or(text)));
+        assert_eq!(result.matches.len(), result.tooltips.len());
+        assert!(vanilla.iter().all(|name| result.matches.contains(name)));
+        assert_eq!(result.matches.iter().filter(|name| name.as_str() == "hello").count(), 1);
+        assert!(result.matches.contains(&"helpful".to_string()));
+    }
+    let mut result = Suggestions { id: 18, start: 1, length: 2,
+        matches: vec!["help".into()], tooltips: vec![Some(vec![10, 0])] };
+    append_plugin_root_hints(&mut result, "/he", &names);
+    let help = result.matches.iter().position(|name| name == "help").unwrap();
+    assert_eq!(result.tooltips[help], Some(vec![10, 0]));
+    // Пустой список с учётом прав не раскрывает чужих команд и не
+    // меняет диапазон уже рассчитанного ванильного ответа.
+    let mut empty = Suggestions { id: 19, start: 0, length: 0, matches: Vec::new(), tooltips: Vec::new() };
+    for (text, names) in [("/he", &[][..]), ("/🙂", names.as_slice())] {
+        append_plugin_root_hints(&mut empty, text, names);
+        assert_eq!((empty.start, empty.length), (0, 0));
+        assert!(empty.matches.is_empty() && empty.tooltips.is_empty());
+    }
+}

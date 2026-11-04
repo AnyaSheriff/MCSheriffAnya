@@ -230,6 +230,8 @@ pub enum Order {
     /// Положить в основную руку (выбранную ячейку панели) это — или
     /// опустошить её: `item replace entity <игрок> weapon.mainhand`.
     Hold { stack: Option<crate::inventory::Stack> },
+    /// 26.3 /item: до снимка такта нужна опубликованная рука владельца.
+    CommandHold { stack: Option<crate::inventory::Stack>, completion: Option<std::sync::Arc<crate::shared::CommandEquipmentCompletion>> },
 
     /// Очистить инвентарь.
     Clear,
@@ -243,7 +245,9 @@ pub enum Order {
     SetEnderSlot { slot: usize, stack: Option<crate::inventory::Stack> },
 
     /// Сменить режим игры: подключение само скажет об этом своему клиенту.
-    GameMode { mode: i32 },
+    /// `at` — такт команды: чужое подключение берёт поручение тактом позже,
+    /// а атрибуты дальности у оригинала отсчитываются от самой команды.
+    GameMode { mode: i32, at: u64 },
 
     /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
     Hurt { amount: f32, source: crate::survival::Source },
@@ -317,7 +321,7 @@ pub enum Order {
     Progress(crate::progress::Event),
 
     /// Команда `advancement`: выдать или отнять достижения (все условия, либо одно).
-    Advancement { grant: bool, ids: Vec<&'static str>, criterion: Option<String> },
+    Advancement { grant: bool, ids: Vec<&'static str>, criterion: Option<String>, revision: u64 },
 
     ChangeDimension {
         dimension: crate::dimension::Dimension,
@@ -327,8 +331,17 @@ pub enum Order {
     },
 }
 
+/// Фактический вход/выход, общий у Java и Bedrock; сетевой ping сюда не попадает.
+#[derive(Clone, Copy, Debug)]
+pub struct Presence {
+    pub online: usize,
+    pub changed: tokio::time::Instant,
+    pub console_until: Option<tokio::time::Instant>,
+}
+
 /// Список игроков на сервере и журнал изменений.
 pub struct Players {
+    presence: tokio::sync::watch::Sender<Presence>,
     pub ui: crate::presentation::State,
     shoulders: HashMap<[u8;16],[i32;2]>,
     members: Vec<Member>,
@@ -365,6 +378,7 @@ impl Players {
     pub fn shoulders(&self, uuid: &[u8;16]) -> [i32;2] { self.shoulders.get(uuid).copied().unwrap_or([-1,-1]) }
     pub fn new() -> Self {
         Self {
+            presence: tokio::sync::watch::channel(Presence { online: 0, changed: tokio::time::Instant::now(), console_until: None }).0,
             ui: Default::default(),
             shoulders: HashMap::new(),
             members: Vec::new(),
@@ -378,6 +392,24 @@ impl Players {
             wakes: HashMap::new(),
             sleepers: HashMap::new(),
         }
+    }
+
+    /// Последняя смена состава сохраняется и если короткий вход/выход
+    /// успел целиком произойти между чтениями такта.
+    pub fn presence(&self) -> tokio::sync::watch::Receiver<Presence> { self.presence.subscribe() }
+
+    /// Только настоящий ввод консоли: не трогаем время последнего ухода,
+    /// а даём пустому серверу минимум30с работы. Все изменения состава и
+    /// этого срока выполняются под одним внешним Players lock.
+    pub fn note_console_command(&self) {
+        let mut presence = *self.presence.borrow();
+        if presence.online != 0 { return; }
+        presence.console_until = Some(tokio::time::Instant::now() + std::time::Duration::from_secs(30));
+        self.presence.send_replace(presence);
+    }
+
+    fn note_presence(&self) {
+        self.presence.send_replace(Presence { online: self.members.len(), changed: tokio::time::Instant::now(), console_until: None });
     }
 
     /// Чёрный ящик, crossbow-shoot: loading_end и заряженная рука вместе.
@@ -415,6 +447,7 @@ impl Players {
         member.entity_id = entity_id;
 
         self.members.push(member.clone());
+        self.note_presence();
         self.changes.push(Change::Joined(member.clone()));
 
         Some((member, others))
@@ -443,6 +476,7 @@ impl Players {
 
         self.ui.leave(uuid);
         self.members.retain(|member| &member.uuid != uuid);
+        self.note_presence();
         self.orders.remove(uuid);
         self.connections.remove(uuid);
         self.gear.remove(uuid);
@@ -733,7 +767,7 @@ impl Players {
             };
             if let Some(reason) = reason { connection.disconnect(reason); }
         }
-        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. });
+        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. } | Order::CommandHold { .. });
 
         self.orders.entry(*uuid).or_default().push(order);
 
@@ -751,6 +785,9 @@ impl Players {
         self.wakes.entry(*uuid).or_default().clone()
     }
 
+    /// Этот будильник регистрирует Java Play loop; Bedrock его не использует.
+    pub(crate) fn has_java_waker(&self, uuid: &[u8; 16]) -> bool { self.wakes.contains_key(uuid) }
+
     /// Куда игрока перенесёт последнее ждущее поручение, если перенос в
     /// своём измерении и после него нет перехода в другое.
     pub fn pending_teleport(&self, uuid: &[u8; 16]) -> Option<(f64, f64, f64)> {
@@ -765,6 +802,10 @@ impl Players {
     /// Забирает поручения для этого игрока.
     pub fn take_orders(&mut self, uuid: &[u8; 16]) -> Vec<Order> {
         self.orders.remove(uuid).unwrap_or_default()
+    }
+
+    pub(crate) fn has_command_hold(&self, uuid: &[u8; 16]) -> bool {
+        self.orders.get(uuid).is_some_and(|orders| orders.iter().any(|order| matches!(order, Order::CommandHold { .. })))
     }
 
     /// Все, кто сейчас на сервере.

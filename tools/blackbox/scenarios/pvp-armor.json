@@ -1,5 +1,6 @@
 {
  "name": "pvp-armor",
+ "attr_phase": true,
  "about": "Жертва в полной алмазной броне: снижение урона по формуле брони и твёрдости, броня изнашивается, атрибуты броня и твёрдость уходят клиенту.",
  "second": true,
  "track_self": true,
@@ -16,6 +17,7 @@
   "clear $(bot2)",
   "kill $(bot)",
   "!wait 30",
+  "!syncattrs",
   "give $(bot2) minecraft:diamond_sword 1",
   "item replace entity $(bot) armor.head with minecraft:diamond_helmet",
   "item replace entity $(bot) armor.chest with minecraft:diamond_chestplate",

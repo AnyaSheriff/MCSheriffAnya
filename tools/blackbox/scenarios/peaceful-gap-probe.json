@@ -1,0 +1,38 @@
+{
+ "name": "peaceful-gap-probe",
+ "about": "Насыщение второго игрока после мирной паузы в творческом полёте, как между сценариями.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "track_second": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration true",
+  "gamemode survival $(bot2)",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "effect give $(bot2) minecraft:hunger 2 255",
+  "!wait 40",
+  "effect clear $(bot2)",
+  "difficulty peaceful",
+  "gamemode creative $(bot2)",
+  "!startfly",
+  "!wait 200",
+  "!stopfly",
+  "gamemode survival $(bot2)",
+  "difficulty normal",
+  "!wait 2"
+ ],
+ "actions": [
+  {"after": 0, "cmd": "damage $(bot2) 1"}
+ ],
+ "record_ticks": 10,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot2)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

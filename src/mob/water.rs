@@ -446,6 +446,8 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai
     if mob.water.target.is_some() { return plan; }
     if let Some(p) = ctx.players.iter().find(|p| !p.spectator && p.holding.iter().flatten().any(|food| mob.kind.likes(food)) && distance(mob,(p.x,p.y,p.z)) < 100.0) {
         mob.water.swim_to=Some((p.x,p.y,p.z));
+    } else if !ai::stroll_active(mob, view, ctx) {
+        mob.water.swim_to = None;
     } else if mob.water.swim_to.is_none_or(|at| distance(mob,at)<0.5) || rng.below(100)==0 {
         mob.water.swim_to=water_goal(mob,view,rng);
     }
@@ -605,7 +607,7 @@ pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],out
             continue;
         }
         let prey=mobs.iter().enumerate().filter(|(j,m)| *j!=i && !m.is_dead() && !m.h.despawn)
-            .filter(|(_,m)| if kind==Kind::Frog { super::slime::cube(m.kind) && m.nether.size==1 }
+            .filter(|(_,m)| if kind==Kind::Frog { super::slime::cube(m.kind) && m.kind!=Kind::SulfurCube && m.nether.size==1 }
                 else { m.water.wet || super::is_water(view.block(m.cell().0,m.cell().1,m.cell().2)) })
             .filter(|(_,m)| kind==Kind::Frog || matches!(m.kind,Kind::Drowned | Kind::Guardian | Kind::ElderGuardian)
                 || (mobs[i].water.hunt_cooldown==0 && (fish(m.kind) || matches!(m.kind,Kind::Squid | Kind::GlowSquid))))

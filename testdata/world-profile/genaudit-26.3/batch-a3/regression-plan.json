@@ -1,0 +1,79 @@
+{
+  "method": "Full generated chunks; biome-conditioned surface layers. Reference percentages are from the saved official two-seed pass 2 census, not coordinate matching.",
+  "reference": "../discrepancies-pass2.json",
+  "cases": [
+    {
+      "seed": 1792932773345722119,
+      "biome": "meadow",
+      "centre_chunk": [
+        -112,
+        -90
+      ],
+      "radius": 2,
+      "depth": 0,
+      "block": "grass_block",
+      "minimum_percent": 90.0,
+      "maximum_percent": 100.0,
+      "vanilla_census_percent": 98.456983
+    },
+    {
+      "seed": 1792932773345722119,
+      "biome": "meadow",
+      "centre_chunk": [
+        -112,
+        -90
+      ],
+      "radius": 2,
+      "depth": 2,
+      "block": "dirt",
+      "minimum_percent": 75.0,
+      "maximum_percent": 95.0,
+      "vanilla_census_percent": 85.738778
+    },
+    {
+      "seed": 100554032945340,
+      "biome": "cherry_grove",
+      "centre_chunk": [
+        -18,
+        -90
+      ],
+      "radius": 3,
+      "depth": 3,
+      "block": "dirt",
+      "minimum_percent": 15.0,
+      "maximum_percent": 65.0,
+      "vanilla_census_percent": 35.036496
+    },
+    {
+      "seed": 1792932773345722119,
+      "biome": "beach",
+      "centre_chunk": [
+        -2,
+        19
+      ],
+      "radius": 2,
+      "depth": 4,
+      "block": "sandstone",
+      "minimum_percent": 35.0,
+      "maximum_percent": 85.0,
+      "vanilla_census_percent": 58.815882
+    }
+  ],
+  "pending_cases": [
+    {
+      "seed": 100554032945340,
+      "biome": "eroded_badlands",
+      "centre_chunk": [
+        42,
+        29
+      ],
+      "radius": 2,
+      "depth": 2,
+      "block": "red_terracotta",
+      "minimum_percent": 0.0,
+      "maximum_percent": 5.0,
+      "vanilla_census_percent": 0.0,
+      "status": "Unfixed: independent red stream moved excessive red terracotta to Y48-79; experiment reverted."
+    }
+  ]
+}

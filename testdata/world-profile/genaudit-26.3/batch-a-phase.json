@@ -1,0 +1,115 @@
+{
+  "source": "Official 26.3 generated region files, read-only; three preselected chunks per seed at Y=224. Biome counts, not coordinate-by-coordinate block equality.",
+  "cases": [
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "chunk": [
+        -32,
+        0
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "plains": 13,
+        "river": 3
+      }
+    },
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "chunk": [
+        -80,
+        -64
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "ocean": 16
+      }
+    },
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "chunk": [
+        16,
+        64
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "forest": 16
+      }
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "chunk": [
+        -64,
+        -64
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "flower_forest": 11,
+        "plains": 5
+      }
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "chunk": [
+        0,
+        0
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "river": 16
+      }
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "chunk": [
+        64,
+        64
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "wooded_badlands": 16
+      }
+    },
+    {
+      "label": "fresh",
+      "seed": 20261025,
+      "chunk": [
+        -64,
+        -64
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "plains": 16
+      }
+    },
+    {
+      "label": "fresh",
+      "seed": 20261025,
+      "chunk": [
+        0,
+        0
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "ocean": 16
+      }
+    },
+    {
+      "label": "fresh",
+      "seed": 20261025,
+      "chunk": [
+        64,
+        64
+      ],
+      "sample_y": 224,
+      "quart_biomes": {
+        "frozen_peaks": 16
+      }
+    }
+  ]
+}

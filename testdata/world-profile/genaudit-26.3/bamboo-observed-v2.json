@@ -1,0 +1,70 @@
+{
+  "plan": {
+    "seed": 1792932773345722119,
+    "windows": {
+      "overworld": [
+        [
+          53,
+          49,
+          61,
+          57
+        ]
+      ],
+      "the_nether": [],
+      "the_end": []
+    }
+  },
+  "level": {
+    "seed": 1792932773345722119,
+    "spawn": [
+      16,
+      -48
+    ],
+    "version": {
+      "Snapshot": 0,
+      "Series": "main",
+      "Id": 5023,
+      "Name": "26.3"
+    },
+    "data_version": 5023
+  },
+  "files": [
+    [
+      "r.1.1.mca",
+      "15570a5409f3207c2940e80a06a1631512a6fac9c055ba2bd9c71cd92d4577e4"
+    ]
+  ],
+  "chunks": 81,
+  "height_histogram": {
+    "1": 3,
+    "2": 7,
+    "4": 3,
+    "5": 2,
+    "6": 124,
+    "7": 105,
+    "8": 113,
+    "9": 113,
+    "10": 123,
+    "11": 120,
+    "12": 118,
+    "13": 123,
+    "14": 90,
+    "15": 106,
+    "16": 116,
+    "17": 101
+  },
+  "ground_at_base": {
+    "podzol": 785,
+    "grass_block": 571,
+    "sand": 6,
+    "gravel": 5
+  },
+  "states": {
+    "age=1,leaves=none,stage=0": 11356,
+    "age=1,leaves=small,stage=0": 1357,
+    "age=1,leaves=large,stage=0": 1357,
+    "age=1,leaves=large,stage=1": 1357
+  },
+  "bamboo_blocks": 15427,
+  "columns": 20736
+}

@@ -1,0 +1,23 @@
+{
+  "client": 769,
+  "primary": 775,
+  "status": "pass",
+  "checks": [
+    "gui-register-and-play",
+    "gui-wrong-password-stays-in-limbo",
+    "gui-relogin-and-play",
+    "credentials-absent-from-client-and-server-logs"
+  ],
+  "binary_sha256": "c6d337c981862f5ff83744ee0d11a2182e43d9b5af5a2cffb73f7e78a214d843",
+  "screenshots": [
+    {
+      "file": "entered0.png",
+      "sha256": "6d230718e21b2332381af5a67a8eeee48bb24c4599820964cd96e058b8e693a5"
+    },
+    {
+      "file": "entered1.png",
+      "sha256": "c444474e2c74ba8455d4208ef00a7ebaee34cb0d5eebf0a9d708e21430f8a0ac"
+    }
+  ],
+  "server_exit": "stop-and-stdin-eof"
+}

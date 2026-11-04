@@ -1,0 +1,25 @@
+{
+  "source": "Official 26.3 read-only census region measurements; three recorded End windows, 2803 chunks per seed",
+  "cases": [
+    {
+      "seed": 1792932773345722119,
+      "vanilla": {
+        "jump_ge16_share": 1.104646,
+        "window1/blocks/end_stone": 4676.322314,
+        "window2/blocks/end_stone": 3999.155188,
+        "top/end_barrens/end_stone": 35.576543,
+        "top/end_midlands/end_stone": 78.546029
+      }
+    },
+    {
+      "seed": 100554032945340,
+      "vanilla": {
+        "jump_ge16_share": 0.944824,
+        "window1/blocks/end_stone": 4488.801653,
+        "window2/blocks/end_stone": 4576.758494,
+        "top/end_barrens/end_stone": 39.849646,
+        "top/end_midlands/end_stone": 82.174834
+      }
+    }
+  ]
+}

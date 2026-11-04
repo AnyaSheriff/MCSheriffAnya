@@ -1,0 +1,895 @@
+{
+  "schema": 1,
+  "version": "26.3",
+  "side_order": [
+    "back",
+    "left",
+    "right",
+    "front"
+  ],
+  "scope": "Official command-only import/readback/destroy drops on fresh void cells. No claim for player placement, crafting, tool shattering, orientation or later core parity. Components-only input is stored by the block but ignored for decoration drops.",
+  "sources": [
+    {
+      "series": "first",
+      "receipt_path": "receipt.json",
+      "receipt_sha256": "b387e0750d3d20c76fabdd73973f5fd9772cb41a388f852194da3f803734835a",
+      "jar_path": "/home/lenox/.cache/mcsheriffanya/reports-bb263c/combat777-current/official/server.jar",
+      "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+      "elapsed_seconds": 13.453,
+      "exit_code": 0
+    },
+    {
+      "series": "second",
+      "receipt_path": "second/receipt.json",
+      "receipt_sha256": "b2a402f20844ef2ad705001761dead53f9b7bd1a65c79e27c00bf2cccd86cfe0",
+      "jar_path": "/home/lenox/.cache/mcsheriffanya/reports-bb263c/combat777-current/official/server.jar",
+      "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+      "elapsed_seconds": 14.349,
+      "exit_code": 0
+    }
+  ],
+  "cases": [
+    {
+      "id": "first-blank",
+      "series": "first",
+      "input_snbt": "{}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 0,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        0,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 0 64 0 minecraft:decorated_pot",
+          "reply": "[12:49:52] [Server thread/INFO]: System chat: Changed the block at 0, 64, 0\n[12:49:52] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_9_DONE\n"
+        },
+        {
+          "command": "data get block 0 64 0",
+          "reply": "[12:49:52] [Server thread/INFO]: System chat: 0, 64, 0 has the following block data: {components: {}, x: 0, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:52] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_10_DONE\n"
+        },
+        {
+          "command": "setblock 0 64 0 minecraft:air destroy",
+          "reply": "[12:49:52] [Server thread/INFO]: System chat: Changed the block at 0, 64, 0\n[12:49:52] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_11_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=0,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:52] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:52] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_12_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "first-legacy_strings",
+      "series": "first",
+      "input_snbt": "{sherds:[\"minecraft:brick\",\"minecraft:angler_pottery_sherd\",\"minecraft:brick\",\"minecraft:brick\"]}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 8,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        8,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 8 64 0 minecraft:decorated_pot{sherds:[\"minecraft:brick\",\"minecraft:angler_pottery_sherd\",\"minecraft:brick\",\"minecraft:brick\"]}",
+          "reply": "[12:49:52] [Server thread/WARN]: [net.minecraft.commands.arguments.blocks.BlockInput] Serialization errors:\n: Failed to decode value '[\"minecraft:brick\",\"minecraft:angler_pottery_sherd\",\"minecraft:brick\",\"minecraft:brick\"]' from field 'sherds': Not a map: [\"minecraft:brick\",\"minecraft:angler_pottery_sherd\",\"minecraft:brick\",\"minecraft:brick\"]\n[12:49:52] [Server thread/INFO]: System chat: Changed the block at 8, 64, 0\n[12:49:52] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_15_DONE\n"
+        },
+        {
+          "command": "data get block 8 64 0",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: 8, 64, 0 has the following block data: {components: {}, x: 8, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_16_DONE\n"
+        },
+        {
+          "command": "setblock 8 64 0 minecraft:air destroy",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Changed the block at 8, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_17_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=8,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_18_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "first-legacy_compounds",
+      "series": "first",
+      "input_snbt": "{sherds:[{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"side\"}},{},{},{}]}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 16,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        16,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 16 64 0 minecraft:decorated_pot{sherds:[{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"side\"}},{},{},{}]}",
+          "reply": "[12:49:53] [Server thread/WARN]: [net.minecraft.commands.arguments.blocks.BlockInput] Serialization errors:\n: Failed to decode value '[{components:{\"minecraft:custom_name\":\"side\"},id:\"minecraft:brick\"},{},{},{}]' from field 'sherds': Not a map: [{components:{\"minecraft:custom_name\":\"side\"},id:\"minecraft:brick\"},{},{},{}]\n[12:49:53] [Server thread/INFO]: System chat: Changed the block at 16, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_21_DONE\n"
+        },
+        {
+          "command": "data get block 16 64 0",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: 16, 64, 0 has the following block data: {components: {}, x: 16, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_22_DONE\n"
+        },
+        {
+          "command": "setblock 16 64 0 minecraft:air destroy",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Changed the block at 16, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_23_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=16,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_24_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "first-components_blank",
+      "series": "first",
+      "input_snbt": "{components:{\"minecraft:pot_decorations\":{}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "x": 24,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        24,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 24 64 0 minecraft:decorated_pot{components:{\"minecraft:pot_decorations\":{}}}",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Changed the block at 24, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_27_DONE\n"
+        },
+        {
+          "command": "data get block 24 64 0",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: 24, 64, 0 has the following block data: {components: {\"minecraft:pot_decorations\": {}}, x: 24, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_28_DONE\n"
+        },
+        {
+          "command": "setblock 24 64 0 minecraft:air destroy",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Changed the block at 24, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_29_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=24,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_30_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "first-components_front_brick",
+      "series": "first",
+      "input_snbt": "{components:{\"minecraft:pot_decorations\":{front:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"side\"}}}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {
+          "minecraft:pot_decorations": {
+            "front": {
+              "components": {
+                "minecraft:custom_name": "side"
+              },
+              "id": "minecraft:brick"
+            }
+          }
+        },
+        "x": 32,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        32,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 32 64 0 minecraft:decorated_pot{components:{\"minecraft:pot_decorations\":{front:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"side\"}}}}}",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Changed the block at 32, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_33_DONE\n"
+        },
+        {
+          "command": "data get block 32 64 0",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: 32, 64, 0 has the following block data: {components: {\"minecraft:pot_decorations\": {front: {components: {\"minecraft:custom_name\": \"side\"}, id: \"minecraft:brick\"}}}, x: 32, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_34_DONE\n"
+        },
+        {
+          "command": "setblock 32 64 0 minecraft:air destroy",
+          "reply": "[12:49:53] [Server thread/INFO]: System chat: Changed the block at 32, 64, 0\n[12:49:53] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_35_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=32,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_36_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "first-components_front_sherd",
+      "series": "first",
+      "input_snbt": "{components:{\"minecraft:pot_decorations\":{front:{id:\"minecraft:angler_pottery_sherd\",components:{\"minecraft:custom_name\":\"shard\"}}}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {
+          "minecraft:pot_decorations": {
+            "front": {
+              "components": {
+                "minecraft:custom_name": "shard"
+              },
+              "id": "minecraft:angler_pottery_sherd"
+            }
+          }
+        },
+        "x": 40,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        40,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 40 64 0 minecraft:decorated_pot{components:{\"minecraft:pot_decorations\":{front:{id:\"minecraft:angler_pottery_sherd\",components:{\"minecraft:custom_name\":\"shard\"}}}}}",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: Changed the block at 40, 64, 0\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_39_DONE\n"
+        },
+        {
+          "command": "data get block 40 64 0",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: 40, 64, 0 has the following block data: {components: {\"minecraft:pot_decorations\": {front: {components: {\"minecraft:custom_name\": \"shard\"}, id: \"minecraft:angler_pottery_sherd\"}}}, x: 40, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_40_DONE\n"
+        },
+        {
+          "command": "setblock 40 64 0 minecraft:air destroy",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: Changed the block at 40, 64, 0\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_41_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=40,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_42_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "first-components_unknown_item",
+      "series": "first",
+      "input_snbt": "{components:{\"minecraft:pot_decorations\":{front:{id:\"minecraft:no_such_item\"}}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "x": 48,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        48,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 48 64 0 minecraft:decorated_pot{components:{\"minecraft:pot_decorations\":{front:{id:\"minecraft:no_such_item\"}}}}",
+          "reply": "[12:49:54] [Server thread/WARN]: [net.minecraft.commands.arguments.blocks.BlockInput] Serialization errors:\n: Failed to decode value '{\"minecraft:pot_decorations\":{front:{id:\"minecraft:no_such_item\"}}}' from field 'components': Failed to parse either. First: Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: minecraft:no_such_item; Second: Not a string missed input: {\"minecraft:pot_decorations\":{front:{id:\"minecraft:no_such_item\"}}}\n[12:49:54] [Server thread/INFO]: System chat: Changed the block at 48, 64, 0\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_45_DONE\n"
+        },
+        {
+          "command": "data get block 48 64 0",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: 48, 64, 0 has the following block data: {components: {\"minecraft:pot_decorations\": {}}, x: 48, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_46_DONE\n"
+        },
+        {
+          "command": "setblock 48 64 0 minecraft:air destroy",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: Changed the block at 48, 64, 0\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_47_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=48,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:49:54] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_48_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-all_four_named",
+      "series": "second",
+      "input_snbt": "{sherds:{back:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"back-brick\"}},left:{id:\"minecraft:angler_pottery_sherd\",components:{\"minecraft:custom_name\":\"left-angler\"}},right:{id:\"minecraft:archer_pottery_sherd\",components:{\"minecraft:custom_name\":\"right-archer\"}},front:{id:\"minecraft:arms_up_pottery_sherd\",components:{\"minecraft:custom_name\":\"front-arms\"}}}}",
+      "expected_sides": [
+        {
+          "id": "minecraft:brick",
+          "name": "back-brick"
+        },
+        {
+          "id": "minecraft:angler_pottery_sherd",
+          "name": "left-angler"
+        },
+        {
+          "id": "minecraft:archer_pottery_sherd",
+          "name": "right-archer"
+        },
+        {
+          "id": "minecraft:arms_up_pottery_sherd",
+          "name": "front-arms"
+        }
+      ],
+      "observed_block_data": {
+        "components": {},
+        "sherds": {
+          "left": {
+            "components": {
+              "minecraft:custom_name": "left-angler"
+            },
+            "id": "minecraft:angler_pottery_sherd"
+          },
+          "back": {
+            "components": {
+              "minecraft:custom_name": "back-brick"
+            },
+            "id": "minecraft:brick"
+          },
+          "right": {
+            "components": {
+              "minecraft:custom_name": "right-archer"
+            },
+            "id": "minecraft:archer_pottery_sherd"
+          },
+          "front": {
+            "components": {
+              "minecraft:custom_name": "front-arms"
+            },
+            "id": "minecraft:arms_up_pottery_sherd"
+          }
+        },
+        "x": 0,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {
+            "left": {
+              "components": {
+                "minecraft:custom_name": "left-angler"
+              },
+              "id": "minecraft:angler_pottery_sherd"
+            },
+            "back": {
+              "components": {
+                "minecraft:custom_name": "back-brick"
+              },
+              "id": "minecraft:brick"
+            },
+            "right": {
+              "components": {
+                "minecraft:custom_name": "right-archer"
+              },
+              "id": "minecraft:archer_pottery_sherd"
+            },
+            "front": {
+              "components": {
+                "minecraft:custom_name": "front-arms"
+              },
+              "id": "minecraft:arms_up_pottery_sherd"
+            }
+          }
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        0,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 0 64 0 minecraft:decorated_pot{sherds:{back:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"back-brick\"}},left:{id:\"minecraft:angler_pottery_sherd\",components:{\"minecraft:custom_name\":\"left-angler\"}},right:{id:\"minecraft:archer_pottery_sherd\",components:{\"minecraft:custom_name\":\"right-archer\"}},front:{id:\"minecraft:arms_up_pottery_sherd\",components:{\"minecraft:custom_name\":\"front-arms\"}}}}",
+          "reply": "[12:51:13] [Server thread/INFO]: System chat: Changed the block at 0, 64, 0\n[12:51:13] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_9_DONE\n"
+        },
+        {
+          "command": "data get block 0 64 0",
+          "reply": "[12:51:13] [Server thread/INFO]: System chat: 0, 64, 0 has the following block data: {components: {}, sherds: {left: {components: {\"minecraft:custom_name\": \"left-angler\"}, id: \"minecraft:angler_pottery_sherd\"}, back: {components: {\"minecraft:custom_name\": \"back-brick\"}, id: \"minecraft:brick\"}, right: {components: {\"minecraft:custom_name\": \"right-archer\"}, id: \"minecraft:archer_pottery_sherd\"}, front: {components: {\"minecraft:custom_name\": \"front-arms\"}, id: \"minecraft:arms_up_pottery_sherd\"}}, x: 0, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:13] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_10_DONE\n"
+        },
+        {
+          "command": "setblock 0 64 0 minecraft:air destroy",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Changed the block at 0, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_11_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=0,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {left: {components: {\"minecraft:custom_name\": \"left-angler\"}, id: \"minecraft:angler_pottery_sherd\"}, back: {components: {\"minecraft:custom_name\": \"back-brick\"}, id: \"minecraft:brick\"}, right: {components: {\"minecraft:custom_name\": \"right-archer\"}, id: \"minecraft:archer_pottery_sherd\"}, front: {components: {\"minecraft:custom_name\": \"front-arms\"}, id: \"minecraft:arms_up_pottery_sherd\"}}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_12_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-plain_brick",
+      "series": "second",
+      "input_snbt": "{sherds:{front:{id:\"minecraft:brick\"}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        {
+          "id": "minecraft:brick"
+        }
+      ],
+      "observed_block_data": {
+        "components": {},
+        "sherds": {
+          "front": {
+            "id": "minecraft:brick"
+          }
+        },
+        "x": 8,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {
+            "front": {
+              "id": "minecraft:brick"
+            }
+          }
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        8,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 8 64 0 minecraft:decorated_pot{sherds:{front:{id:\"minecraft:brick\"}}}",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Changed the block at 8, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_15_DONE\n"
+        },
+        {
+          "command": "data get block 8 64 0",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: 8, 64, 0 has the following block data: {components: {}, sherds: {front: {id: \"minecraft:brick\"}}, x: 8, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_16_DONE\n"
+        },
+        {
+          "command": "setblock 8 64 0 minecraft:air destroy",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Changed the block at 8, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_17_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=8,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {front: {id: \"minecraft:brick\"}}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_18_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-empty",
+      "series": "second",
+      "input_snbt": "{sherds:{}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 16,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        16,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 16 64 0 minecraft:decorated_pot{sherds:{}}",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Changed the block at 16, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_21_DONE\n"
+        },
+        {
+          "command": "data get block 16 64 0",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: 16, 64, 0 has the following block data: {components: {}, x: 16, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_22_DONE\n"
+        },
+        {
+          "command": "setblock 16 64 0 minecraft:air destroy",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Changed the block at 16, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_23_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=16,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_24_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-invalid_item",
+      "series": "second",
+      "input_snbt": "{sherds:{front:{id:\"minecraft:no_such_item\"}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 24,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        24,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 24 64 0 minecraft:decorated_pot{sherds:{front:{id:\"minecraft:no_such_item\"}}}",
+          "reply": "[12:51:14] [Server thread/WARN]: [net.minecraft.commands.arguments.blocks.BlockInput] Serialization errors:\n: Failed to decode value '{front:{id:\"minecraft:no_such_item\"}}' from field 'sherds': Failed to parse either. First: Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: minecraft:no_such_item; Second: Not a string\n[12:51:14] [Server thread/INFO]: System chat: Changed the block at 24, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_27_DONE\n"
+        },
+        {
+          "command": "data get block 24 64 0",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: 24, 64, 0 has the following block data: {components: {}, x: 24, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_28_DONE\n"
+        },
+        {
+          "command": "setblock 24 64 0 minecraft:air destroy",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Changed the block at 24, 64, 0\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_29_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=24,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:14] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:14] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_30_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-unknown_side",
+      "series": "second",
+      "input_snbt": "{sherds:{middle:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"middle\"}}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 32,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        32,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 32 64 0 minecraft:decorated_pot{sherds:{middle:{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"middle\"}}}}",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Changed the block at 32, 64, 0\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_33_DONE\n"
+        },
+        {
+          "command": "data get block 32 64 0",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: 32, 64, 0 has the following block data: {components: {}, x: 32, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_34_DONE\n"
+        },
+        {
+          "command": "setblock 32 64 0 minecraft:air destroy",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Changed the block at 32, 64, 0\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_35_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=32,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_36_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-mixed_valid_invalid",
+      "series": "second",
+      "input_snbt": "{sherds:{back:{id:\"minecraft:no_such_item\"},front:{id:\"minecraft:angler_pottery_sherd\",components:{\"minecraft:custom_name\":\"valid-front\"}}}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        {
+          "id": "minecraft:angler_pottery_sherd",
+          "name": "valid-front"
+        }
+      ],
+      "observed_block_data": {
+        "components": {},
+        "sherds": {
+          "front": {
+            "components": {
+              "minecraft:custom_name": "valid-front"
+            },
+            "id": "minecraft:angler_pottery_sherd"
+          }
+        },
+        "x": 40,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {
+            "front": {
+              "components": {
+                "minecraft:custom_name": "valid-front"
+              },
+              "id": "minecraft:angler_pottery_sherd"
+            }
+          }
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        40,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 40 64 0 minecraft:decorated_pot{sherds:{back:{id:\"minecraft:no_such_item\"},front:{id:\"minecraft:angler_pottery_sherd\",components:{\"minecraft:custom_name\":\"valid-front\"}}}}",
+          "reply": "[12:51:15] [Server thread/WARN]: [net.minecraft.commands.arguments.blocks.BlockInput] Serialization errors:\n: Failed to decode value '{back:{id:\"minecraft:no_such_item\"},front:{components:{\"minecraft:custom_name\":\"valid-front\"},id:\"minecraft:angler_pottery_sherd\"}}' from field 'sherds': Failed to parse either. First: Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: minecraft:no_such_item; Second: Not a string\n[12:51:15] [Server thread/INFO]: System chat: Changed the block at 40, 64, 0\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_39_DONE\n"
+        },
+        {
+          "command": "data get block 40 64 0",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: 40, 64, 0 has the following block data: {components: {}, sherds: {front: {components: {\"minecraft:custom_name\": \"valid-front\"}, id: \"minecraft:angler_pottery_sherd\"}}, x: 40, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_40_DONE\n"
+        },
+        {
+          "command": "setblock 40 64 0 minecraft:air destroy",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Changed the block at 40, 64, 0\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_41_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=40,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {front: {components: {\"minecraft:custom_name\": \"valid-front\"}, id: \"minecraft:angler_pottery_sherd\"}}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_42_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-list_negative",
+      "series": "second",
+      "input_snbt": "{sherds:[{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"list-side\"}}]}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "observed_block_data": {
+        "components": {},
+        "x": 48,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {}
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        48,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 48 64 0 minecraft:decorated_pot{sherds:[{id:\"minecraft:brick\",components:{\"minecraft:custom_name\":\"list-side\"}}]}",
+          "reply": "[12:51:15] [Server thread/WARN]: [net.minecraft.commands.arguments.blocks.BlockInput] Serialization errors:\n: Failed to decode value '[{components:{\"minecraft:custom_name\":\"list-side\"},id:\"minecraft:brick\"}]' from field 'sherds': Not a map: [{components:{\"minecraft:custom_name\":\"list-side\"},id:\"minecraft:brick\"}]\n[12:51:15] [Server thread/INFO]: System chat: Changed the block at 48, 64, 0\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_45_DONE\n"
+        },
+        {
+          "command": "data get block 48 64 0",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: 48, 64, 0 has the following block data: {components: {}, x: 48, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_46_DONE\n"
+        },
+        {
+          "command": "setblock 48 64 0 minecraft:air destroy",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Changed the block at 48, 64, 0\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_47_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=48,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:15] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:15] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_48_DONE\n"
+        }
+      ]
+    },
+    {
+      "id": "second-side_string",
+      "series": "second",
+      "input_snbt": "{sherds:{front:\"minecraft:brick\"}}",
+      "expected_sides": [
+        null,
+        null,
+        null,
+        {
+          "id": "minecraft:brick"
+        }
+      ],
+      "observed_block_data": {
+        "components": {},
+        "sherds": {
+          "front": {
+            "id": "minecraft:brick"
+          }
+        },
+        "x": 56,
+        "y": 64,
+        "z": 0,
+        "id": "minecraft:decorated_pot"
+      },
+      "observed_drop_data": {
+        "components": {
+          "minecraft:pot_decorations": {
+            "front": {
+              "id": "minecraft:brick"
+            }
+          }
+        },
+        "count": 1,
+        "id": "minecraft:decorated_pot"
+      },
+      "at": [
+        56,
+        64,
+        0
+      ],
+      "raw_commands": [
+        {
+          "command": "setblock 56 64 0 minecraft:decorated_pot{sherds:{front:\"minecraft:brick\"}}",
+          "reply": "[12:51:16] [Server thread/INFO]: System chat: Changed the block at 56, 64, 0\n[12:51:16] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_51_DONE\n"
+        },
+        {
+          "command": "data get block 56 64 0",
+          "reply": "[12:51:16] [Server thread/INFO]: System chat: 56, 64, 0 has the following block data: {components: {}, sherds: {front: {id: \"minecraft:brick\"}}, x: 56, y: 64, z: 0, id: \"minecraft:decorated_pot\"}\n[12:51:16] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_52_DONE\n"
+        },
+        {
+          "command": "setblock 56 64 0 minecraft:air destroy",
+          "reply": "[12:51:16] [Server thread/INFO]: System chat: Changed the block at 56, 64, 0\n[12:51:16] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_53_DONE\n"
+        },
+        {
+          "command": "data get entity @e[type=minecraft:item,x=56,y=64,z=0,distance=..2,limit=1,sort=nearest] Item",
+          "reply": "[12:51:16] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {front: {id: \"minecraft:brick\"}}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:16] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_54_DONE\n"
+        }
+      ]
+    }
+  ],
+  "extra_item_controls": [
+    {
+      "series": "first",
+      "raw": {
+        "summon": "[12:49:54] [Server thread/INFO]: System chat: Summoned new Decorated Pot\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_49_DONE\n",
+        "data": "[12:49:54] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {front: {components: {\"minecraft:custom_name\": \"item-side\"}, id: \"minecraft:brick\"}}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:49:54] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_50_DONE\n"
+      }
+    },
+    {
+      "series": "second",
+      "raw": {
+        "summon": "[12:51:16] [Server thread/INFO]: System chat: Summoned new Decorated Pot\n[12:51:16] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_55_DONE\n",
+        "data": "[12:51:16] [Server thread/INFO]: System chat: Decorated Pot has the following entity data: {components: {\"minecraft:pot_decorations\": {front: {components: {\"minecraft:custom_name\": \"item-side\"}, id: \"minecraft:brick\"}}}, count: 1, id: \"minecraft:decorated_pot\"}\n[12:51:16] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_56_DONE\n"
+      }
+    }
+  ],
+  "jar_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64"
+}

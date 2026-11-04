@@ -70,7 +70,7 @@ fn firework_shape_fade_flight_and_rejections() {
 fn map_book_banner_and_container_copies_keep_data_and_originals() {
     let map=s("filled_map",1).with_extras(Data{map_id:Some(42),name:Some("map".into()),..Default::default()});
     assert_eq!(craft(&[Some(map),Some(s("map",1)),Some(s("map",1))]),Some(map.with_count(3)));
-    let original=s("written_book",1).with_extras(Data{book:Some(crate::book::Book{pages:vec!["words".into()],title:Some("title".into()),author:"author".into(),generation:0}),..Default::default()});
+    let original=s("written_book",1).with_extras(Data{book:Some(crate::book::Book{pages:vec!["words".into()],title:Some("title".into()),author:"author".into(),generation:0,resolved:false}),..Default::default()});
     let mut grid=vec![Some(original),Some(s("writable_book",1)),None,None];let copy=craft(&player::padded(&grid)).unwrap();
     assert_eq!(copy.extras().book.as_ref().unwrap().generation,1);
     let mut bag=Inventory::new();assert!(player::take(&mut grid,&mut bag,copy,0,0,&mut Vec::new()));assert_eq!(grid[0],Some(original));assert!(grid[1].is_none());

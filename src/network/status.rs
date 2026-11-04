@@ -23,14 +23,17 @@ use super::handshake::HandshakePacket;
 use super::varint::{encode_string, encode_varint, read_varint};
 use crate::log_debug;
 
-use super::{PROTOCOL_VERSION, VERSION_NAME};
 
 /// Формирует JSON-ответ Server List Ping по спецификации протокола.
 pub fn build_status_response(motd: &str, online: i32, max: i32) -> String {
+    build_status_response_for(motd, online, max, super::NATIVE_VERSION)
+}
+
+pub fn build_status_response_for(motd: &str, online: i32, max: i32, version: mcsa_protocol::JavaVersion) -> String {
     let response = json!({
         "version": {
-            "name": VERSION_NAME,
-            "protocol": PROTOCOL_VERSION
+            "name": version.name(),
+            "protocol": version.protocol()
         },
         "players": {
             "max": max,
@@ -57,6 +60,7 @@ pub async fn handle_status(
     motd: &str,
     online: i32,
     max: i32,
+    version: mcsa_protocol::JavaVersion,
 ) -> io::Result<()> {
     // Читаем пакет Status Request: VarInt длина пакета + VarInt packet_id.
     // Тело пакета пустое, поэтому больше ничего читать не нужно.
@@ -79,7 +83,7 @@ pub async fn handle_status(
     );
 
     // Формируем JSON-ответ.
-    let json_response = build_status_response(motd, online, max);
+    let json_response = if version == super::NATIVE_VERSION { build_status_response(motd, online, max) } else { build_status_response_for(motd, online, max, version) };
 
     // Тело пакета: VarInt packet_id (0x00) + String с JSON.
     let mut body = encode_varint(0x00);

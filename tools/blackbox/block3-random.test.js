@@ -5,21 +5,25 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { spawnSync } = require('node:child_process');
-const root = path.resolve(__dirname, '../..');
 
 function compare(name, left, right) {
-  const dir = fs.mkdtempSync(path.join(root, 'tmp/block3-rule-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcsa-block3-rule-'));
   try {
+    for (const file of ['compare.js', 'value-order.js']) fs.copyFileSync(path.join(__dirname, file), path.join(dir, file));
+    fs.mkdirSync(path.join(dir, 'scenarios'));
+    fs.copyFileSync(path.join(__dirname, 'scenarios', `${name}.json`), path.join(dir, 'scenarios', `${name}.json`));
     const files = [left, right].map((events, i) => {
       const file = path.join(dir, `${i}.json`);
       fs.writeFileSync(file, JSON.stringify({ events: [{ kind: 'do', tick: 0, what: 'probe' }, ...events.map(e => ({ tick: 0, ...e }))] }));
       return file;
     });
-    const result = spawnSync(process.execPath, [path.join(__dirname, 'compare.js'), name, '--files', ...files], { encoding: 'utf8' });
-    assert.equal(result.status, 0, result.stderr);
+    const result = spawnSync(process.execPath, [path.join(dir, 'compare.js'), name, '--files', ...files], { encoding: 'utf8' });
     const counts = /Совпало: (\d+)\. Сдвинуто по тактам: (\d+)\. Нет у нас: (\d+)\. Лишнее у нас: (\d+)\./.exec(result.stdout);
     assert.ok(counts, result.stdout);
+    const mismatch = counts.slice(2).some(n => Number(n) > 0) || result.stdout.includes('Внимание:');
+    assert.equal(result.status, mismatch ? 1 : 0, result.stderr);
     return counts.slice(1).map(Number);
   } finally { fs.rmSync(dir, { recursive: true }); }
 }

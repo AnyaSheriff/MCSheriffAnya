@@ -67,9 +67,10 @@ pub fn format_uuid(uuid: &[u8; 16]) -> String {
 }
 
 /// Читает и разбирает пакет Login Start из TCP-потока.
-pub async fn read_login_start<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<LoginStart> {
+pub async fn read_login_start<R: AsyncRead + Unpin>(stream: &mut super::connection::CryptoStream<R>) -> io::Result<LoginStart> {
     let length = read_varint(stream).await?;
-    if !(18..=82).contains(&length) {
+    let legacy = stream.client_version() == mcsa_protocol::JavaVersion::V1_12_2;
+    if !(if legacy { 3..=18 } else { 18..=82 }).contains(&length) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "длина Login Start"));
     }
     let mut body = vec![0; length as usize];
@@ -77,8 +78,16 @@ pub async fn read_login_start<R: AsyncRead + Unpin>(stream: &mut R) -> io::Resul
     let (id, mut offset) = super::packet::decode_varint(&body)?;
     if id != 0 { return Err(io::Error::new(io::ErrorKind::InvalidData, "ожидался Login Start")); }
     let username = super::packet::decode_string(&body, &mut offset)?;
-    let uuid = body.get(offset..).and_then(|bytes| bytes.try_into().ok())
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "UUID Login Start"))?;
+    let uuid = if legacy {
+        if offset != body.len() || !valid_name(&username) {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Login Start 1.12.2"));
+        }
+        // В340 клиент UUID вообще не присылает; это не кандидат для переноса прав.
+        offline_uuid(&username)
+    } else {
+        body.get(offset..).and_then(|bytes| bytes.try_into().ok())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "UUID Login Start"))?
+    };
 
     Ok(LoginStart { username, uuid })
 }
@@ -155,23 +164,35 @@ pub async fn send_set_compression<W: AsyncWrite + Unpin>(stream: &mut W, thresho
 /// Отправляет пакет Login Success: подтверждает вход игрока под указанным
 /// именем и UUID. Подписанное свойство textures приходит от sessionserver.
 pub async fn send_login_success<W: AsyncWrite + Unpin>(
-    stream: &mut W,
+    stream: &mut super::connection::CryptoStream<W>,
     username: &str,
     uuid: &[u8; 16],
     skin: Option<&crate::skins::Skin>,
     threshold: i32,
 ) -> io::Result<()> {
-    // Тело пакета: VarInt packet_id + UUID + String username + VarInt properties.
+    use mcsa_protocol::{JavaVersion, login::{Property, Success}};
+    use rsa::rand_core::{OsRng, RngCore};
+    let version = stream.client_version();
+    let session_id = if matches!(version, JavaVersion::V26_2 | JavaVersion::V26_3) {
+        let mut id = [0; 16];
+        OsRng.try_fill_bytes(&mut id).map_err(io::Error::other)?;
+        id[6] = (id[6] & 15) | 0x40;
+        id[8] = (id[8] & 63) | 0x80;
+        Some(id)
+    } else { None };
+    let properties = skin.into_iter().map(|skin| Property {
+        name: "textures".into(), value: skin.value.clone(),
+        signature: (!skin.signature.is_empty()).then(|| skin.signature.clone()),
+    }).collect();
+    let payload = if version == JavaVersion::V1_12_2 {
+        mcsa_protocol::legacy_control::Packet::LoginSuccess { uuid: *uuid, username: username.into() }
+            .encode().map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("Login Success340: {error:?}")))?.2
+    } else {
+        Success { uuid: *uuid, username: username.into(), properties, session_id }
+            .encode(version).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("Login Success: {error:?}")))?
+    };
     let mut body = encode_varint(0x02);
-    body.extend_from_slice(uuid);
-    body.extend_from_slice(&encode_string(username));
-    body.extend_from_slice(&encode_varint(i32::from(skin.is_some())));
-    if let Some(skin) = skin {
-        body.extend(encode_string("textures"));
-        body.extend(encode_string(&skin.value));
-        body.push(u8::from(!skin.signature.is_empty()));
-        if !skin.signature.is_empty() { body.extend(encode_string(&skin.signature)); }
-    }
+    body.extend(payload);
 
     // Полный пакет: длина тела + само тело, в сжатом виде, если оно включено.
     let mut packet = Vec::with_capacity(body.len() + 8);
@@ -179,6 +200,7 @@ pub async fn send_login_success<W: AsyncWrite + Unpin>(
     super::packet::frame(&mut packet, &body, threshold);
 
     super::packet::write_bytes(stream, &packet).await?;
+    stream.login_session_id = session_id;
 
     Ok(())
 }
@@ -186,6 +208,28 @@ pub async fn send_login_success<W: AsyncWrite + Unpin>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn legacy_login_has_no_client_uuid_and_rejects_trailing_identity() {
+        use super::super::connection::CryptoStream;
+        use mcsa_protocol::{JavaVersion, Negotiated};
+        for trailing in [false, true] {
+            let mut body = vec![0];
+            body.extend(encode_string("McsaProbe"));
+            if trailing { body.extend([42; 16]); }
+            let mut bytes = encode_varint(body.len() as i32);
+            bytes.extend(body);
+            let mut stream = CryptoStream::new(bytes.as_slice());
+            stream.protocol = Some(Negotiated { client: JavaVersion::V1_12_2, native: JavaVersion::V26_1_2 });
+            let result = read_login_start(&mut stream).await;
+            if trailing { assert!(result.is_err()); }
+            else {
+                let login = result.unwrap();
+                assert_eq!(login.username, "McsaProbe");
+                assert_eq!(login.uuid, offline_uuid("McsaProbe"));
+            }
+        }
+    }
 
     /// Опознаватель считается так же, как у оригинала: для ника «Notch»
     /// без проверки Mojang это общеизвестное b50ad385-829d-3141-a216-7e7d7539ba7f.

@@ -1,0 +1,22 @@
+{
+  "scope": "implemented core; custom tnt/changepassword excluded; root suggestions projected onto implemented commands",
+  "op4": {
+    "node_path_mismatches_before": 2402,
+    "node_path_mismatches_after": 0,
+    "suggestion_mismatches_before": 224,
+    "suggestion_mismatches_after": 0,
+    "queries": 231
+  },
+  "nonop": {
+    "node_path_mismatches_before": 154,
+    "node_path_mismatches_after": 0,
+    "suggestion_mismatches_before": 117,
+    "suggestion_mismatches_after": 0,
+    "queries": 118
+  },
+  "native775_op4": {
+    "suggestion_mismatches_before": 208,
+    "suggestion_mismatches_after": 0,
+    "queries": 215
+  }
+}

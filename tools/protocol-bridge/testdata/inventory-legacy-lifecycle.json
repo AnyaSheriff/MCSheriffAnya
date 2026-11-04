@@ -1,0 +1,33 @@
+{
+  "probe": "tools/protocol-bridge/probe_inventory_edges.py",
+  "protocol": 340,
+  "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+  "result_sha256": "e3fbe2c5582923adfba85331918b699439e06cc91625c29830289e8e362e85f6",
+  "cases": [
+    {
+      "transition": "close-window",
+      "rejected": 11,
+      "click_without_ack": 12,
+      "unlocked_without_ack": false,
+      "responses": [],
+      "old_ack_then_click_accepted": true
+    },
+    {
+      "transition": "death-respawn",
+      "rejected": 14,
+      "click_without_ack": 15,
+      "unlocked_without_ack": true,
+      "responses": [
+        {
+          "stage": "death-respawn-without-ack",
+          "name": "transaction",
+          "window": 0,
+          "transaction": 15,
+          "accepted": true,
+          "payload": "00000f01"
+        }
+      ],
+      "old_ack_then_click_accepted": true
+    }
+  ]
+}

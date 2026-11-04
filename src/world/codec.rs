@@ -24,6 +24,32 @@ use super::*;
 
 use std::cell::RefCell;
 
+/// Неподдержанная раскладка/каталог не равны повреждённому чанку:
+/// повторная генерация поверх таких данных запрещена.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum DecodeError {
+    Damaged,
+    UnsupportedLayout(u8),
+    UnknownBlockState(u16),
+    InvalidInventory { profile: crate::gameplay_catalog::Profile, item: i32 },
+    InvalidMob { profile: crate::gameplay_catalog::Profile },
+    InvalidHive { profile: crate::gameplay_catalog::Profile },
+    UnsupportedCatalogState { profile: crate::gameplay_catalog::Profile, state: u16 },
+}
+impl std::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidInventory { profile, item } => write!(f, "предмет {item} в чанке несовместим с профилем {profile:?} или не сохраняется без потерь"),
+            Self::InvalidMob { profile } => write!(f, "запись моба несовместима с профилем {profile:?} или не сохраняется без потерь"),
+            Self::InvalidHive { profile } => write!(f, "запись улья несовместима с профилем {profile:?} или не сохраняется без потерь"),
+            Self::Damaged => f.write_str("содержимое чанка повреждено"),
+            Self::UnsupportedLayout(version) => write!(f,"раскладка чанка {version} не поддержана"),
+            Self::UnknownBlockState(state) => write!(f,"состояние блока {state} отсутствует в текущем каталоге"),
+            Self::UnsupportedCatalogState { profile, state } => write!(f,"состояние блока {state} недоступно в профиле {profile:?}"),
+        }
+    }
+}
+
 /// Секция целиком из воздуха.
 const AIR_SECTION: u8 = 0;
 
@@ -199,6 +225,15 @@ fn read_container(reader: &mut Reader, dest: &mut [u16], valid: &dyn Fn(u16) -> 
     Some(())
 }
 
+fn validate_state(catalog: crate::gameplay_catalog::Catalog, state: u16) -> Result<(), DecodeError> {
+    use crate::gameplay_catalog::{Error, Kind};
+    match catalog.name(Kind::State, unpack(state)) {
+        Ok(_) => Ok(()),
+        Err(Error::Disabled { profile, .. }) => Err(DecodeError::UnsupportedCatalogState { profile, state }),
+        Err(_) => Err(DecodeError::UnknownBlockState(state)),
+    }
+}
+
 impl Chunk {
     /// Записывает чанк в байты для файла региона (до сжатия).
     pub(super) fn to_bytes(&self) -> Vec<u8> {
@@ -231,7 +266,7 @@ impl Chunk {
         // Хранилища — последними, и только если они есть. Порядок — по
         // месту, чтобы одинаковый чанк давал одинаковые байты. Если дальше
         // идёт что-то ещё, число хранилищ пишется и нулём.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -245,7 +280,7 @@ impl Chunk {
         // Особый динамит — после хранилищ (их число тогда пишется и
         // нулём): сколько, потом место и номер вида. Если дальше рамки —
         // число пишется и нулём.
-        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
 
             places.sort_unstable();
@@ -261,7 +296,7 @@ impl Chunk {
         // Рамки для предметов (frame.rs): сколько и записи по порядку места,
         // чтобы одинаковый чанк давал одинаковые байты. Если дальше мобы —
         // число пишется и нулём.
-        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut frames: Vec<&crate::frame::Frame> = self.frames.iter().collect();
 
             frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
@@ -274,7 +309,7 @@ impl Chunk {
 
         // Мобы (mob/mod.rs): сколько и записи по порядку. Если дальше
         // командные блоки — число пишется и нулём.
-        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             out.extend_from_slice(&(self.mobs.len() as u16).to_be_bytes());
 
             for mob in &self.mobs {
@@ -284,7 +319,7 @@ impl Chunk {
 
         // Командные блоки (command_block.rs), по порядку места. Если дальше
         // спавнеры — число пишется и нулём.
-        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.command_blocks.keys().copied().collect();
 
             places.sort_unstable();
@@ -297,7 +332,7 @@ impl Chunk {
 
         // Спавнеры (spawner.rs), по порядку места. Если дальше таблички —
         // число пишется и нулём.
-        if !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.spawners.keys().copied().collect();
 
             places.sort_unstable();
@@ -310,7 +345,7 @@ impl Chunk {
 
         // Таблички (sign.rs), по порядку места. Если дальше испытательные
         // блоки — число пишется и нулём.
-        if !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.signs.keys().copied().collect();
 
             places.sort_unstable();
@@ -323,7 +358,7 @@ impl Chunk {
 
         // Испытательные спавнеры и хранилища (trial.rs), по порядку места.
         // Если дальше ульи — число пишется и нулём.
-        if !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.trials.keys().copied().collect();
 
             places.sort_unstable();
@@ -335,7 +370,7 @@ impl Chunk {
         }
 
         // Ульи и гнёзда пчёл (hive.rs) — самыми последними, по порядку места.
-        if !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.hives.is_empty() || !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places: Vec<_> = self.hives.keys().copied().collect();
             places.sort_unstable();
             out.extend_from_slice(&(places.len() as u16).to_be_bytes());
@@ -348,7 +383,7 @@ impl Chunk {
             }
         }
 
-        if !self.archaeology.is_empty() || !self.pots.is_empty() {
+        if !self.archaeology.is_empty() || !self.pots.is_empty() || !self.gateways.is_empty() {
             let mut places:Vec<_>=self.archaeology.keys().copied().collect();places.sort_unstable();
             out.extend_from_slice(&(places.len() as u16).to_be_bytes());
             for (x,y,z) in places {
@@ -358,12 +393,33 @@ impl Chunk {
             }
         }
 
-        if !self.pots.is_empty() {
+        if !self.pots.is_empty() || !self.gateways.is_empty() {
             out.extend_from_slice(&(self.pots.len() as u16).to_be_bytes());
             let mut places: Vec<_> = self.pots.keys().copied().collect(); places.sort_unstable();
             for (x,y,z) in places {
                 out.push(((x<<4)|z) as u8); out.extend_from_slice(&(y as i16).to_be_bytes());
                 for item in self.pots[&(x,y,z)] { out.extend_from_slice(&item.to_be_bytes()); }
+            }
+        }
+
+        if !self.pot_details.is_empty() || !self.gateways.is_empty() {
+            out.extend_from_slice(&(self.pot_details.len() as u16).to_be_bytes());
+            let mut places: Vec<_> = self.pot_details.keys().copied().collect(); places.sort_unstable();
+            for (x,y,z) in places {
+                out.push(((x<<4)|z) as u8); out.extend_from_slice(&(y as i16).to_be_bytes());
+                let bytes = crate::stackdata::to_bytes(&self.pot_details[&(x,y,z)]);
+                out.extend_from_slice(&(bytes.len() as u32).to_be_bytes()); out.extend(bytes);
+            }
+        }
+
+        if !self.gateways.is_empty() {
+            out.extend_from_slice(&(self.gateways.len() as u16).to_be_bytes());
+            let mut places: Vec<_> = self.gateways.keys().copied().collect(); places.sort_unstable();
+            for (x,y,z) in places {
+                out.push(((x<<4)|z) as u8); out.extend_from_slice(&(y as i16).to_be_bytes());
+                let (ex,ey,ez,exact) = self.gateways[&(x,y,z)];
+                for value in [ex,ey,ez] { out.extend_from_slice(&value.to_be_bytes()); }
+                out.push(u8::from(exact));
             }
         }
 
@@ -376,14 +432,91 @@ impl Chunk {
     /// блоков, номер биома — в реестре, палитра и номера — сходиться. Испорченная запись
     /// даёт None, а не панику под замком мира и не чужие блоки у клиента.
     pub(super) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        if *bytes.first()? != CHUNK_VERSION {
-            return None;
-        }
+        Self::decode_for_load(bytes).ok()
+    }
 
+    /// Runtime не должен терять причину отказа за Option::None.
+    pub(super) fn decode_for_load(bytes: &[u8]) -> Result<Self, DecodeError> {
+        Self::decode_for_load_with_catalog(bytes, crate::gameplay_catalog::Catalog::new(
+            crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    /// Каталог задаёт мир, а не версия клиента. Отказ каталога не разрешает
+    /// восстанавливать чанк генерацией; runtime обязан сохранить typed error.
+    pub(super) fn decode_for_load_with_catalog(
+        bytes: &[u8], catalog: crate::gameplay_catalog::Catalog,
+    ) -> Result<Self, DecodeError> {
+        Self::decode_with_storage_context(bytes, catalog, false)
+    }
+
+    pub(super) fn decode_for_main_import_with_catalog(
+        bytes: &[u8], catalog: crate::gameplay_catalog::Catalog,
+    ) -> Result<Self, DecodeError> {
+        if bytes.first() != Some(&4) { return Err(DecodeError::Damaged); }
+        Self::decode_with_storage_context(bytes, catalog, true)
+    }
+
+    fn decode_with_storage_context(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog, legacy_metadata: bool) -> Result<Self, DecodeError> {
+        let version = *bytes.first().ok_or(DecodeError::Damaged)?;
+        if !matches!(version, 4 | CHUNK_VERSION) { return Err(DecodeError::UnsupportedLayout(version)); }
+        let incompatible = std::cell::Cell::new(None);
+        let state_ok = |state: u16| {
+            match validate_state(catalog, state) {
+                Ok(()) => true,
+                Err(error) => { incompatible.set(Some(error)); false }
+            }
+        };
+        let chunk = Self::read_current(bytes, &state_ok, catalog, &incompatible, legacy_metadata).ok_or_else(||
+            incompatible.get().unwrap_or(DecodeError::Damaged))?;
+        chunk.validate_catalog(catalog)?;
+        Ok(chunk)
+    }
+
+    /// Проверяет блоки и сохранённые предметы до передачи байтов writer.
+    pub(super) fn validate_catalog(&self, catalog: crate::gameplay_catalog::Catalog) -> Result<(), DecodeError> {
+        // Счётчик записи — u16: нельзя обрезать число мобов и оставить хвост,
+        // который после перезапуска прочитается как следующий раздел чанка.
+        if self.mobs.len() > usize::from(u16::MAX) {
+            return Err(DecodeError::InvalidMob { profile: catalog.profile() });
+        }
+        for blocks in self.sections.iter().flatten() {
+            for &state in blocks.iter() { validate_state(catalog, state)?; }
+        }
+        let valid_stack = |stack: &crate::inventory::Stack| catalog.validate_stack(stack)
+            .map_err(|_| DecodeError::InvalidInventory { profile: catalog.profile(), item: stack.item });
+        for container in self.containers.values().chain(self.spilled.iter().map(|(_, container)| container)) {
+            for stack in container.slots.iter().flatten() { valid_stack(stack)?; }
+        }
+        for frame in &self.frames {
+            if let Some(stack) = &frame.item { valid_stack(stack)?; }
+        }
+        for data in self.pot_details.values() {
+            valid_stack(&crate::inventory::Stack::new(crate::blocks::item_named("decorated_pot").unwrap(),1).with_extras(data.clone()))?;
+        }
+        for sides in self.pots.values() {
+            for &item in sides {
+                catalog.name(crate::gameplay_catalog::Kind::Item, item).map_err(|_| DecodeError::InvalidInventory { profile: catalog.profile(), item })?;
+            }
+        }
+        for mob in &self.mobs {
+            catalog.validate_mob(mob).map_err(|_| DecodeError::InvalidMob { profile: catalog.profile() })?;
+            mob.validate_item_storage().map_err(|_| DecodeError::InvalidMob { profile: catalog.profile() })?;
+        }
+        for hive in self.hives.values() {
+            catalog.validate_hive(hive).map_err(|_| DecodeError::InvalidHive { profile: catalog.profile() })?;
+        }
+        Ok(())
+    }
+
+    /// Проверяет каталог и пишет текущую раскладку, в том числе при явном импорте main.
+    pub(super) fn to_bytes_with_catalog(&self, catalog: crate::gameplay_catalog::Catalog) -> Result<Vec<u8>, DecodeError> {
+        self.validate_catalog(catalog)?;
+        Ok(self.to_bytes())
+    }
+
+    fn read_current(bytes: &[u8], state_ok: &dyn Fn(u16) -> bool, catalog: crate::gameplay_catalog::Catalog, incompatible: &std::cell::Cell<Option<DecodeError>>, legacy_metadata: bool) -> Option<Self> {
         let mut reader = Reader::new(bytes.get(1..)?);
         let mut chunk = Chunk::new();
-
-        let state_ok = |state: u16| unpack(state) == AIR || crate::blocks::block_at_state(unpack(state)).is_some();
 
         for section in 0..SECTIONS as usize {
             // Вид секции подглядываем: воздушная секции не заводится.
@@ -394,10 +527,10 @@ impl Chunk {
 
             let blocks = chunk.filled_section(section);
 
-            read_container(&mut reader, blocks, &state_ok)?;
+            read_container(&mut reader, blocks, state_ok)?;
         }
 
-        let biomes = terrain::biome_registry_size();
+        let biomes = if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 { terrain::biome_registry_size_preview() } else { terrain::biome_registry_size() };
 
         for cells in chunk.biomes.chunks_mut(SECTION_BIOMES) {
             read_container(&mut reader, cells, &|biome| (biome as usize) < biomes)?;
@@ -413,7 +546,22 @@ impl Chunk {
             rest = &rest[2..];
 
             for _ in 0..count {
-                let (place, container) = containers::Container::read(&mut rest, 0, 0)?;
+                let original = rest;
+                let (place, mut container) = containers::Container::read_with_legacy_metadata(&mut rest, 0, 0, legacy_metadata)?;
+                let mut encoded = Vec::new();
+                container.write_with_legacy_metadata(place, &mut encoded, legacy_metadata);
+                let consumed = original.len().checked_sub(rest.len())?;
+                if encoded != original.get(..consumed)? {
+                    let item=container.slots.iter().flatten().find(|stack| catalog.validate_stack(stack).is_err()).map_or(0, |stack| stack.item);
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile:catalog.profile(), item }));
+                    return None;
+                }
+                if legacy_metadata { for stack in container.slots.iter_mut().flatten() { crate::stackdata::main_import::stack(stack)?; } }
+                let invalid = container.slots.iter().flatten().find(|stack| catalog.validate_stack(stack).is_err());
+                if invalid.is_some() {
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile: catalog.profile(), item: invalid.map_or(0, |stack| stack.item) }));
+                    return None;
+                }
 
                 if containers::Kind::of(chunk.block(place.0, place.1, place.2)) == Some(container.kind) {
                     chunk.containers.insert(place, container);
@@ -451,21 +599,42 @@ impl Chunk {
             rest = &rest[2..];
 
             for _ in 0..count {
-                let frame = crate::frame::read(&mut rest, 0, 0, 0)?;
+                let original = rest;
+                let mut frame = if legacy_metadata {
+                    crate::frame::read_with_legacy_metadata(&mut rest, 0, 0, 0, true)
+                } else { crate::frame::read(&mut rest, 0, 0, 0) }?;
+                let mut encoded = Vec::new();
+                crate::frame::write_with_legacy_metadata(&frame, &mut encoded, legacy_metadata);
+                let consumed = original.len().checked_sub(rest.len())?;
+                if encoded != original.get(..consumed)? {
+                    let item=frame.item.as_ref().filter(|stack| catalog.validate_stack(stack).is_err()).map_or(0, |stack| stack.item);
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile:catalog.profile(), item }));
+                    return None;
+                }
+                if legacy_metadata && let Some(stack) = &mut frame.item { crate::stackdata::main_import::stack(stack)?; }
+                let invalid = frame.item.as_ref().filter(|stack| catalog.validate_stack(stack).is_err());
+                if invalid.is_some() {
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile: catalog.profile(), item: invalid.map_or(0, |stack| stack.item) }));
+                    return None;
+                }
 
                 chunk.frames.push(frame);
             }
         }
 
-        // Мобы, если записаны. Испорченная запись — весь чанк испорчен.
+        // Неподдержанная запись моба запрещает повторную генерацию чанка.
         if rest.len() >= 2 {
             let count = u16::from_be_bytes([rest[0], rest[1]]);
 
             rest = &rest[2..];
 
             for _ in 0..count {
-                let mob = crate::mob::Mob::read(&mut rest)?;
+                let mut mob = crate::mob::Mob::read_with_storage_context(&mut rest, bytes[0] == 4, legacy_metadata).or_else(|| {
+                    incompatible.set(Some(DecodeError::InvalidMob { profile: catalog.profile() }));
+                    None
+                })?;
 
+                if legacy_metadata { crate::stackdata::main_import::mob(&mut mob)?; }
                 chunk.mobs.push(mob);
             }
         }
@@ -545,7 +714,15 @@ impl Chunk {
                     return None;
                 }
                 let (bytes, tail) = tail.split_at_checked(len)?;
-                let hive = crate::hive::Data::from_bytes(bytes)?;
+                let mut hive = crate::hive::Data::from_bytes_with_legacy_metadata(bytes, legacy_metadata).or_else(|| {
+                    incompatible.set(Some(DecodeError::InvalidHive { profile: catalog.profile() }));
+                    None
+                })?;
+                if legacy_metadata { crate::hive::normalize_main_entities(&mut hive)?; }
+                if catalog.validate_hive(&hive).is_err() {
+                    incompatible.set(Some(DecodeError::InvalidHive { profile: catalog.profile() }));
+                    return None;
+                }
                 if crate::hive::is_hive(chunk.block(place.0, place.1, place.2)) {
                     chunk.hives.insert(place, hive);
                 }
@@ -578,6 +755,34 @@ impl Chunk {
             }
         }
 
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes(rest[..2].try_into().ok()?); rest = &rest[2..];
+            for _ in 0..count {
+                let (head, tail) = rest.split_at_checked(7)?; rest = tail;
+                let at = (i32::from(head[0]>>4),i32::from(i16::from_be_bytes(head[1..3].try_into().ok()?)),i32::from(head[0]&15));
+                let len = u32::from_be_bytes(head[3..7].try_into().ok()?) as usize;
+                let (bytes, tail) = rest.split_at_checked(len)?; rest = tail;
+                if !in_bounds(at.1) || !chunk.pots.contains_key(&at) { return None; }
+                let mut data = crate::stackdata::from_bytes_with_legacy_metadata(bytes, legacy_metadata)?;
+                let canonical = if legacy_metadata { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
+                if canonical != bytes { return None; }
+                if legacy_metadata { crate::stackdata::main_import::components(&mut data)?; }
+                chunk.pot_details.insert(at, data);
+            }
+        }
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes(rest[..2].try_into().ok()?); rest = &rest[2..];
+            for _ in 0..count {
+                let (head,tail) = rest.split_at_checked(16)?; rest = tail;
+                let at = (i32::from(head[0]>>4),i32::from(i16::from_be_bytes(head[1..3].try_into().ok()?)),i32::from(head[0]&15));
+                if !in_bounds(at.1) || crate::blocks::block_at_state(chunk.block(at.0,at.1,at.2)) != Some("end_gateway") { return None; }
+                let exit = (i32::from_be_bytes(head[3..7].try_into().ok()?),i32::from_be_bytes(head[7..11].try_into().ok()?),i32::from_be_bytes(head[11..15].try_into().ok()?),head[15]!=0);
+                chunk.gateways.insert(at,exit);
+            }
+        }
+        // Импорт не может молча выбросить неизвестный/повреждённый хвост:
+        // точная сверка результата использует этот же декодер исходника.
+        if legacy_metadata && !rest.is_empty() { return None; }
         Some(chunk)
     }
 
@@ -606,7 +811,7 @@ impl Chunk {
         my_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
         their_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
 
-        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs && self.hives == other.hives && self.archaeology == other.archaeology && self.pots == other.pots
+        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs && self.hives == other.hives && self.archaeology == other.archaeology && self.pots == other.pots && self.gateways == other.gateways && self.pot_details == other.pot_details
     }
 }
 
@@ -929,8 +1134,172 @@ mod tests {
         chunk.set(2,8,3,crate::blocks::state_by_name("decorated_pot").unwrap());
         let sides = [crate::blocks::item_named("archer_pottery_sherd").unwrap();4];
         chunk.pots.insert((2,8,3),sides);
-        let back = Chunk::from_bytes(&chunk.to_bytes()).unwrap(); assert_eq!(back.pots,chunk.pots);
+        let side = crate::inventory::Stack::new(crate::blocks::item_named("brick").unwrap(),1).with_extras(crate::stackdata::Data { name: Some("side".into()), ..Default::default() });
+        chunk.pot_details.insert((2,8,3),crate::stackdata::Data { pot_sides: vec![crate::stackdata::Content { slot:0,item:side.stored_item(),count:1,data:side.data }], ..Default::default() });
+        chunk.set(4,8,3,crate::blocks::state_by_name("end_gateway").unwrap());
+        chunk.gateways.insert((4,8,3),(8,70,9,true));
+        let back = Chunk::from_bytes(&chunk.to_bytes()).unwrap(); assert_eq!(back.pots,chunk.pots); assert_eq!(back.pot_details,chunk.pot_details); assert_eq!(back.gateways,chunk.gateways);
         chunk.set(2,8,3,0); assert!(chunk.pots.is_empty());
     }
 
+}
+
+#[cfg(test)]
+#[path = "codec_incompatible_tests.rs"]
+mod incompatible_tests;
+
+#[cfg(test)]
+#[path = "codec_catalog_tests.rs"]
+mod catalog_tests;
+
+#[cfg(test)]
+#[path = "codec_mob_storage_tests.rs"]
+mod mob_storage_tests;
+
+#[cfg(test)]
+mod merged_main_mob_tail_tests {
+    use super::*;
+
+    #[test]
+    fn layout_four_uuid_attribute_tail_upgrades_without_overlay_guessing() {
+        let mut mob = crate::mob::Mob::new(97, crate::mob::Kind::Zombie, (1.0, 70.0, 1.0));
+        // Нули в начале UUID похожи на длину дополнения: выбор только по версии чанка.
+        mob.uuid = [0; 16];
+        mob.edit_plugin_attribute(&crate::commands_world::AttributeEdit::SetBase {
+            attribute: crate::attributes::MAX_HEALTH, value: 40.0,
+        }).unwrap();
+        mob.vitals.health = 35.0;
+        let mut record = Vec::new();
+        mob.write(&mut record);
+        // Старый main writer: flags128/name0/leash0/UUID/count/attribute.
+        // В новой записи перед UUID добавлен FFFFFFFF + has_overlay0.
+        let mut tail = vec![128, 0, 0, 0];
+        tail.extend([0xff; 4]);
+        tail.push(0);
+        tail.extend(mob.uuid);
+        tail.push(1);
+        tail.extend(crate::attributes::MAX_HEALTH.to_be_bytes());
+        tail.extend(40.0f64.to_be_bytes());
+        tail.extend(0u16.to_be_bytes());
+        assert!(record.ends_with(&tail));
+        let mut legacy_record = record[..record.len()-tail.len()].to_vec();
+        legacy_record.extend(&tail[..4]);
+        legacy_record.extend(&tail[9..]);
+        let mut chunk = Chunk::flat();
+        chunk.mobs.push(mob.clone());
+        let mut bytes = chunk.to_bytes();
+        let offset = bytes.windows(record.len()).position(|window| window == record).unwrap();
+        bytes.splice(offset..offset+record.len(), legacy_record);
+        bytes[0] = 4;
+        let loaded = Chunk::from_bytes(&bytes).unwrap();
+        assert_eq!(loaded.mobs[0].uuid, mob.uuid);
+        assert_eq!(loaded.mobs[0].plugin_attributes, mob.plugin_attributes);
+        assert_eq!(loaded.mobs[0].vitals.health, 35.0);
+        let upgraded = loaded.to_bytes();
+        assert_eq!(upgraded[0], CHUNK_VERSION);
+        let reloaded = Chunk::from_bytes(&upgraded).unwrap();
+        assert_eq!(reloaded.mobs[0].plugin_attributes, mob.plugin_attributes);
+        assert_eq!(reloaded.mobs[0].uuid, mob.uuid);
+    }
+}
+
+#[cfg(test)]
+mod main_metadata_import_tests {
+    use super::*;
+    use crate::{inventory::Stack, stackdata::{Content, Data}};
+
+    #[test]
+    fn explicit_main_four_import_converts_nested_chest_and_mob_metadata() {
+        let diamond = crate::blocks::item_named("diamond").unwrap();
+        let inner = Data { plugin_meta: Some("{\"customModelData\":71}".into()), ..Default::default() };
+        let inner_stack = Stack::new(diamond, 2).with_extras(inner);
+        let data = Data {
+            plugin_meta: Some("{\"customModelData\":72}".into()),
+            contents: vec![Content { slot: 0, item: inner_stack.stored_item(), count: inner_stack.count, data: inner_stack.data }],
+            ..Default::default()
+        };
+        let stack = Stack::new(crate::blocks::item_named("shulker_box").unwrap(), 1).with_extras(data.clone());
+        let mut chunk = Chunk::flat();
+        chunk.set(1, 80, 1, crate::blocks::state_by_name("chest").unwrap());
+        chunk.containers.get_mut(&(1,80,1)).unwrap().slots[0] = Some(stack);
+        let mut mob = crate::mob::Mob::new(40, crate::mob::Kind::Zombie, (1.0,80.0,1.0));
+        mob.equipment = Some([Some(stack), None, None, None, None, None]);
+        chunk.mobs.push(mob);
+        let mut bytes = chunk.to_bytes();
+        bytes[0] = 4;
+        let current = crate::stackdata::to_bytes(&data);
+        let legacy = crate::stackdata::to_bytes_main_metadata(&data);
+        assert_eq!(current.len(), legacy.len());
+        assert_ne!(current, legacy);
+        let offsets: Vec<_> = bytes.windows(current.len()).enumerate().filter_map(|(i,w)| (w == current).then_some(i)).collect();
+        assert_eq!(offsets.len(), 2);
+        for offset in offsets { bytes[offset..offset+legacy.len()].copy_from_slice(&legacy); }
+        let source = bytes.clone();
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        assert!(Chunk::decode_for_load_with_catalog(&bytes, catalog).is_err());
+        let imported = Chunk::decode_for_main_import_with_catalog(&bytes, catalog).unwrap();
+        assert_eq!(bytes, source);
+        assert_eq!(imported.containers[&(1,80,1)].slots[0], Some(stack));
+        assert_eq!(imported.mobs[0].equipment.as_ref().unwrap()[0], Some(stack));
+        let rewritten = imported.to_bytes();
+        assert_eq!(rewritten[0], CHUNK_VERSION);
+        let reloaded = Chunk::decode_for_load_with_catalog(&rewritten, catalog).unwrap();
+        assert_eq!(reloaded.containers[&(1,80,1)].slots[0], Some(stack));
+        assert_eq!(reloaded.mobs[0].equipment.as_ref().unwrap()[0], Some(stack));
+    }
+}
+
+#[cfg(test)]
+mod main_import_catalog_boundaries {
+    use super::*;
+
+    #[test]
+    fn explicit_main_import_does_not_reinterpret_current_preview_layout() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut chunk = Chunk::new();
+        let state = crate::gameplay_catalog::WHITE_SLAB_FIRST_STATE;
+        chunk.set(1, 80, 1, state);
+        let legacy = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        assert!(matches!(chunk.to_bytes_with_catalog(legacy), Err(DecodeError::UnsupportedCatalogState { .. })));
+        let bytes = chunk.to_bytes_with_catalog(catalog).unwrap();
+        let source = bytes.clone();
+        assert!(Chunk::decode_for_main_import_with_catalog(&bytes, catalog).is_err());
+        let loaded = Chunk::decode_for_load_with_catalog(&bytes, catalog).unwrap();
+        assert_eq!(loaded.block(1,80,1), state);
+        assert_eq!(loaded.to_bytes_with_catalog(catalog).unwrap(), source);
+    }
+}
+
+#[cfg(test)]
+pub(super) mod main_hive_import_tests {
+    use super::*;
+    use crate::stackdata::main_import::tests::{HIVE, raw_stack, assert_hive, assert_stack, catalog};
+
+    pub(crate) fn source_chunk() -> Vec<u8> {
+        let mut chunk=Chunk::flat();
+        chunk.set(1,80,1,crate::blocks::state_by_name("beehive").unwrap());
+        chunk.hives.insert((1,80,1),serde_json::from_slice(HIVE).unwrap());
+        chunk.set(2,80,1,crate::blocks::state_by_name("chest").unwrap());
+        chunk.containers.get_mut(&(2,80,1)).unwrap().slots[0]=Some(raw_stack());
+        // Block-only/raw hive JSON не использует современный Mob writer.
+        let mut bytes=chunk.to_bytes(); bytes[0]=4; bytes
+    }
+
+    #[test]
+    fn explicit_main_chunk_import_normalizes_block_and_container_hives() {
+        let bytes=source_chunk(); let original=bytes.clone();
+        assert!(Chunk::decode_for_load_with_catalog(&bytes,catalog()).is_err());
+        let converted=Chunk::decode_for_main_import_with_catalog(&bytes,catalog()).unwrap();
+        assert_hive(&converted.hives[&(1,80,1)]);
+        assert_stack(converted.containers[&(2,80,1)].slots[0].unwrap());
+        let current=converted.to_bytes_with_catalog(catalog()).unwrap();
+        let loaded=Chunk::decode_for_load_with_catalog(&current,catalog()).unwrap();
+        assert_hive(&loaded.hives[&(1,80,1)]); assert_stack(loaded.containers[&(2,80,1)].slots[0].unwrap());
+        assert_eq!(bytes,original);
+        let mut trailing=bytes.clone();trailing.push(0x71);
+        assert!(Chunk::decode_for_main_import_with_catalog(&trailing,catalog()).is_err());
+        let mut damaged=bytes;
+        let at=damaged.windows(HIVE.len()).position(|w|w==HIVE).unwrap(); damaged[at]=b'!';
+        assert!(Chunk::decode_for_main_import_with_catalog(&damaged,catalog()).is_err());
+    }
 }

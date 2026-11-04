@@ -464,7 +464,9 @@ fn custom_tablist_reload_commands_chat_and_all_hud_features() {
     let config="bossbar:\n  enabled: true\n  format: '<red>%tps% TPS'\n  progress: 0.25\n  color: BLUE\n  style: SEGMENTED_10\nactionbar:\n  enabled: true\n  lines: ['first', 'second']\n  update-interval: 10\nscoreboard:\n  enabled: true\n  title: '<bold>Статистика'\n  lines: ['%online%', '%mspt%', '%unknown%']\n";
     std::fs::write(folder.join("config.yml"),config).unwrap();
     let shared=shared();java_info(&shared);
-    let mut host=Host::new(Arc::clone(&shared),root).unwrap();
+    // Проверяем команды и HUD, а не срок 200 мс: чужая сборка может снять
+    // поток с ядра даже во время enable. Лимиты топлива и памяти прежние.
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap().with_test_call_epochs(1000);
     host.load("custom-tablist").unwrap();
     let first_tick=host.loaded[0].store.data().tick+1;host.tick(first_tick);
     {
@@ -479,7 +481,8 @@ fn custom_tablist_reload_commands_chat_and_all_hud_features() {
     assert!(shared.chat.lock().unwrap().since(0).iter().any(|line| line.contains("Первый: <red>hello %player%")));
     assert!(host.run_command(console(),"cprefix",&["Первый".into(),"<gold>[Admin]".into()]).unwrap().0);
     assert!(std::fs::read_to_string(folder.join("config.yml")).unwrap().contains("[Admin]"));
-    assert!(host.run_command(console(),"tablist",&["toggle".into(),"all".into(),"off".into()]).unwrap().0);
+    let result=host.run_command(console(),"tablist",&["toggle".into(),"all".into(),"off".into()]).unwrap();
+    assert!(result.0, "{}", result.1);
     assert!(shared.players.lock().unwrap().ui.owned.is_empty());
     assert_eq!(host.chat(&view(),"hello"),ChatOutcome::Pass);
     std::fs::write(folder.join("config.yml"),"bad: [").unwrap();
@@ -986,7 +989,7 @@ fn fourlegacy_population_releases_canonical_inputs_between_chunks() {
     std::fs::write(folder.join("data/config.yml"),"config-version: 2\nworld:\n  ore-generation: 1.0\n").unwrap();
     let shared=shared();let mut host=Host::new(shared,root).unwrap();host.load("fourlegacy").unwrap();
     let mut chunk=crate::world::Chunk::new();
-    chunk.apply_population((0..32768).step_by(2).map(|i|format!("{i} netherrack")).collect()).unwrap();
+    chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), (0..32768).step_by(2).map(|i|format!("{i} netherrack")).collect()).unwrap();
     // Одни входные runs заняли бы свыше 32 МиБ за этот проход без free.
     for x in 0..160 {
         host.populate(crate::dimension::Dimension::Nether,x,0,123,chunk.clone());

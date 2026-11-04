@@ -1,0 +1,43 @@
+{
+  "source": "Official 26.3 saved full-census regions; cells of size 4x4x4, Y -64..319. Own regression samples one column per chunk across the same census footprint, without coordinate matching.",
+  "relative_tolerance": 0.2,
+  "minimum_tolerance_pp": 0.01,
+  "samples": [
+    {
+      "seed": 1792932773345722119,
+      "windows": [
+        [
+          -129,
+          -90,
+          63,
+          102
+        ]
+      ],
+      "official_cells": 57214464,
+      "official_percent": {
+        "lush_caves": 1.2561561356233275,
+        "dripstone_caves": 1.5993263521615793,
+        "deep_dark": 0.0735478357360824,
+        "sulfur_caves": 0.5965606878708153
+      }
+    },
+    {
+      "seed": 100554032945340,
+      "windows": [
+        [
+          -67,
+          -98,
+          125,
+          94
+        ]
+      ],
+      "official_cells": 57214464,
+      "official_percent": {
+        "lush_caves": 1.3148405969511485,
+        "dripstone_caves": 0.966729322151825,
+        "deep_dark": 0.27717466688143755,
+        "sulfur_caves": 0.41488459981028575
+      }
+    }
+  ]
+}

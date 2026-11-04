@@ -1,0 +1,8 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv11/tools/protocol-bridge)
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv11)
+    Finished `release` profile [optimized] target(s) in 2m 16s
+  Executable unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-be36ca87248fd34f)
+  Executable unittests src/main.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsheriffanya-b5a369944de6d5e0)
+  Executable unittests src/bin/seedmap.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/seedmap-a1866386a8493614)
+  Executable tests/world_startup.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/world_startup-4257c1ddc90ffb11)
+  Executable unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/seedmap_core-ae404b20effa358b)

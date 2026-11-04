@@ -111,7 +111,8 @@ pub(super) fn use_on(items: &mut items::Items, index: usize, world: &World, play
     true
 }
 struct MobWorld<'a>(&'a World);
-impl crate::mob::View for MobWorld<'_> { fn block(&self,x:i32,y:i32,z:i32)->i32 { self.0.get_block(x,y,z) } fn loaded(&self,x:i32,z:i32)->bool { self.0.has_chunk(x,z) } }
+impl crate::mob::View for MobWorld<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() } fn block(&self,x:i32,y:i32,z:i32)->i32 { self.0.get_block(x,y,z) } fn loaded(&self,x:i32,z:i32)->bool { self.0.has_chunk(x,z) } }
 
 // Окно ламы: две ячейки снаряжения, затем 3·Strength грузовых ячеек.
 // [проверить] 26.1 horse-screen после переноса седла в отдельный слот.

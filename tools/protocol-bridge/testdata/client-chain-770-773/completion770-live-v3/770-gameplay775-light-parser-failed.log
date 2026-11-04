@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_step1_gameplay_776.py", line 364, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_step1_gameplay_776.py", line 169, in main
+    client = login('McsaProbe', args.client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_step1_gameplay_776.py", line 164, in login
+    probe.pump(20, lambda _: probe.position is not None and 'window_items' in probe.seen)
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_gameplay.py", line 61, in pump
+    self.observe_packet(name, payload)
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_step1_gameplay_776.py", line 87, in observe_packet
+    LightClient.observe_packet(self, name, payload)
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_light.py", line 100, in observe_packet
+    observed = decode(varint(-1) + varint(-1) + light, self.version)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_light.py", line 50, in decode
+    assert data.read() == b''
+           ^^^^^^^^^^^^^^^^^^
+AssertionError

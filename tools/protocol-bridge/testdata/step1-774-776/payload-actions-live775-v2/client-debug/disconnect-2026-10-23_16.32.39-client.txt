@@ -1,0 +1,134 @@
+---- Minecraft Network Protocol Error Report ----
+// +'${`%&NO CARRIER
+
+Time: 2026-10-23 16:32:39
+Description: Packet handling error
+
+io.netty.handler.codec.DecoderException: Failed to decode packet 'clientbound/minecraft:block_entity_data'
+	at net.minecraft.network.codec.IdDispatchCodec.decode(IdDispatchCodec.java:41)
+	at net.minecraft.network.codec.IdDispatchCodec.decode(IdDispatchCodec.java:14)
+	at net.minecraft.network.PacketDecoder.decode(PacketDecoder.java:30)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:545)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:484)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:296)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)
+	at io.netty.handler.flow.FlowControlHandler.dequeue(FlowControlHandler.java:235)
+	at io.netty.handler.flow.FlowControlHandler.dequeueAll(FlowControlHandler.java:212)
+	at io.netty.handler.flow.FlowControlHandler.channelRead(FlowControlHandler.java:187)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:355)
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:361)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:325)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)
+	at io.netty.handler.timeout.IdleStateHandler.channelRead(IdleStateHandler.java:288)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:355)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1429)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918)
+	at io.netty.channel.epoll.AbstractEpollStreamChannel$EpollStreamUnsafe.epollInReady(AbstractEpollStreamChannel.java:804)
+	at io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.handle(AbstractEpollChannel.java:487)
+	at io.netty.channel.epoll.EpollIoHandler$DefaultEpollIoRegistration.handle(EpollIoHandler.java:349)
+	at io.netty.channel.epoll.EpollIoHandler.processReady(EpollIoHandler.java:546)
+	at io.netty.channel.epoll.EpollIoHandler.run(EpollIoHandler.java:491)
+	at io.netty.channel.SingleThreadIoEventLoop.runIo(SingleThreadIoEventLoop.java:225)
+	at io.netty.channel.SingleThreadIoEventLoop.run(SingleThreadIoEventLoop.java:196)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:1195)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: io.netty.handler.codec.DecoderException: Expected non-null compound tag
+	at net.minecraft.network.codec.ByteBufCodecs$16.decode(ByteBufCodecs.java:266)
+	at net.minecraft.network.codec.ByteBufCodecs$16.decode(ByteBufCodecs.java:261)
+	at net.minecraft.network.codec.StreamCodec$4.decode(StreamCodec.java:80)
+	at net.minecraft.network.codec.StreamCodec$9.decode(StreamCodec.java:177)
+	at net.minecraft.network.codec.StreamCodec$5.decode(StreamCodec.java:95)
+	at net.minecraft.network.codec.StreamCodec$5.decode(StreamCodec.java:91)
+	at net.minecraft.network.codec.IdDispatchCodec.decode(IdDispatchCodec.java:36)
+	... 27 more
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Netty Epoll IO #0
+Stacktrace:
+	at net.minecraft.network.PacketListener.fillCrashReport(PacketListener.java:33)
+
+-- Connection --
+Details:
+	Protocol: play
+	Flow: CLIENTBOUND
+	Is Local: false
+	Server type: OTHER
+	Server brand: MCSheriffAnya
+Stacktrace:
+	at net.minecraft.network.PacketListener.fillCrashReport(PacketListener.java:33)
+	at net.minecraft.network.protocol.PacketUtils.fillCrashReport(PacketUtils.java:47)
+	at net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl.storeDisconnectionReport(ClientCommonPacketListenerImpl.java:146)
+	at net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl.createDisconnectionInfo(ClientCommonPacketListenerImpl.java:137)
+	at net.minecraft.network.Connection.exceptionCaught(Connection.java:135)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeExceptionCaught(AbstractChannelHandlerContext.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.fireExceptionCaught(AbstractChannelHandlerContext.java:272)
+	at io.netty.channel.ChannelInboundHandlerAdapter.exceptionCaught(ChannelInboundHandlerAdapter.java:143)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeExceptionCaught(AbstractChannelHandlerContext.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:360)
+	at io.netty.handler.flow.FlowControlHandler.dequeue(FlowControlHandler.java:235)
+	at io.netty.handler.flow.FlowControlHandler.dequeueAll(FlowControlHandler.java:212)
+	at io.netty.handler.flow.FlowControlHandler.channelRead(FlowControlHandler.java:187)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:355)
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:361)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:325)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)
+	at io.netty.handler.timeout.IdleStateHandler.channelRead(IdleStateHandler.java:288)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:355)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1429)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918)
+	at io.netty.channel.epoll.AbstractEpollStreamChannel$EpollStreamUnsafe.epollInReady(AbstractEpollStreamChannel.java:804)
+	at io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.handle(AbstractEpollChannel.java:487)
+	at io.netty.channel.epoll.EpollIoHandler$DefaultEpollIoRegistration.handle(EpollIoHandler.java:349)
+	at io.netty.channel.epoll.EpollIoHandler.processReady(EpollIoHandler.java:546)
+	at io.netty.channel.epoll.EpollIoHandler.run(EpollIoHandler.java:491)
+	at io.netty.channel.SingleThreadIoEventLoop.runIo(SingleThreadIoEventLoop.java:225)
+	at io.netty.channel.SingleThreadIoEventLoop.run(SingleThreadIoEventLoop.java:196)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:1195)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+-- System Details --
+Details:
+	Minecraft Version: 26.2
+	Minecraft Version ID: 26.2
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 141337848 bytes (134 MiB) / 408944640 bytes (390 MiB) up to 1073741824 bytes (1024 MiB)
+	Memory (heap): init: 250MiB, used: 254MiB, committed: 390MiB, max: 1024MiB
+	Memory (non-head): init: 007MiB, used: 157MiB, committed: 159MiB, max: 000MiB
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 8538.14
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 2857.91
+	Space in storage for jna.tmpdir (MiB): available: 7891.24, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7891.24, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7891.24, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7891.24, total: 7952.55
+	Space in storage for workdir (MiB): available: 7891.24, total: 7952.55
+	Operating System Version: GNU/Linux Arch Linux unknown (unknown) build 7.2.11-1-cachyos
+	Process Elevated: false
+	Process Loads: Uptime: 18s, user: 73s (400.93%), kernel: 2s (11.59%), total: 75s (412.52%)
+	Process Virtual Size (MiB): 5374.25
+	Process Resident Size (MiB): 1672.84
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 

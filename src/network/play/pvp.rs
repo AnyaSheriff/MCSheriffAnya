@@ -16,6 +16,10 @@ use crate::combat::{self, PlayerStrike};
 use crate::survival::Source;
 use crate::world::World;
 
+pub(super) fn broadcast_swing_after_attack(catalog: crate::gameplay_catalog::Catalog, last_attack: u64, now: u64) -> bool {
+    catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3 || last_attack != now
+}
+
 /// Досягаемость удара по существу (атрибут `entity_interaction_range`) и запас
 /// сервера: оригинал принимает удар, если ящик цели ближе 3 + 3 блоков от глаз
 /// (чёрный ящик, itemaudit-reach-scan2: удар с зазором 5,95 прошёл, с 6,1 — нет;
@@ -73,7 +77,7 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
             let at = (member.position.x, member.position.y, member.position.z);
             world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, attacker);
             world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
-            world.note_player_strike(PlayerStrike {
+            world.note_player_strike(PlayerStrike { kinetic: None, projectile: None,
                 victim:attacker,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
                 from,yaw:player.yaw,damage,source:Source::Thorns,extra_knockback:0.0,weapon:None,
                 disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new(),
@@ -94,6 +98,35 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
 #[cfg(test)]
 mod itemaudit_tests {
     use super::*;
+
+    #[test]
+    fn real_swing_after_same_tick_attack_reaches_observers_once() {
+        use crate::gameplay_catalog::{Catalog,Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(Path::new("tmp/combat-swing-ops.json")), crate::skins::Settings::default());
+            let mut player = PlayerState::new_for_catalog([19;16], "Swing".into(), None, None, 0, 19, (0.5,64.0,0.5), catalog);
+            shared.players.lock().unwrap().join(player.member(), player.entity_id).unwrap();
+            let mut body = encode_varint(SWING_ARM);
+            body.push(0);
+            let mut packet = PacketInfo { id: SWING_ARM, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
+            shared.ticks.send_replace(40);
+            player.last_attack = 40;
+            handle_client_packet(&packet, &mut player, &shared);
+            assert_eq!(shared.players.lock().unwrap().members()[0].swings, u32::from(profile == Profile::Java26_1_2));
+            // Пустой Punch777 обязан пережить перевод в тот же внутренний ID.
+            packet.punch = true;
+            // pvp-armor777: по одному Animate0 после ударов0 и14.
+            for (tick, expected) in [(40,1), (40,1), (43,1), (54,2)] {
+                shared.ticks.send_replace(tick);
+                player.last_attack = tick;
+                handle_client_packet(&packet, &mut player, &shared);
+                assert_eq!(shared.players.lock().unwrap().members()[0].swings, expected);
+            }
+        }
+    }
 
     #[test]
     fn effects_mounts_and_spears_prevent_critical_hits() {
@@ -206,6 +239,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         player.vit.fall = 0.0;
         player.vit.smash_landing = true;
         player.vit.smash_forgives = data.level("wind_burst") > 0;
+        player.vit.wind_lift = player.vit.smash_forgives;
         player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 
@@ -226,7 +260,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_sound((player.x, player.y, player.z), "minecraft:entity.player.attack.knockback");
     }
 
-    shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_strike(PlayerStrike {
+    shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_strike(PlayerStrike { kinetic: None, projectile: None,
         victim: target,
         attacker: player.entity_id,
         attacker_uuid: player.uuid,
@@ -434,14 +468,30 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
         return block_with_shield(stream, shared, player, strike, hand, now).await;
     }
 
+    // Копьё может толкнуть без урона: скорость цели сняла относительный
+    // порог урона, а собственная скорость нападающего ещё достаточна.
+    if let Some(kinetic) = strike.kinetic && damage <= 0.0 {
+        if kinetic.knockback {
+            vitals::knock_back(player, crate::mob::look_direction(strike.yaw), crate::mob::BASE_KNOCKBACK,
+                player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+        }
+        if kinetic.dismount { super::vehicle::dismount(shared, player); }
+        return Ok(());
+    }
+
     let killer = vitals::Killer { name: &strike.attacker_name, uuid: strike.attacker_uuid, weapon: strike.weapon };
     let at = (player.x, player.y, player.z);
     let from = strike.from;
     // Анимация ушиба: откуда пришёл удар относительно взгляда жертвы.
     let toward = (from.2 - at.2).atan2(from.0 - at.0).to_degrees() as f32;
     let yaw = (toward - player.yaw).rem_euclid(360.0);
+    // Официальный777 pvp-bow: sourceCause — стрелок, sourceDirect — стрела.
+    // Прежний основной сохраняет свой wire-result; кредит убийства не меняется.
+    let direct = if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        strike.projectile.unwrap_or(strike.attacker)
+    } else { strike.attacker };
     let result = if mortal {
-        vitals::hit_by_breached(stream, shared, player, damage, strike.source, strike.attacker, strike.attacker, Some(killer), Some(yaw), strike.breach_scale).await?
+        vitals::hit_by_breached(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale).await?
     } else {
         None
     };
@@ -464,6 +514,16 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             // Износ надетой брони: каждой детали 1 за каждые 4 единицы урона.
             if !combat::bypasses_armor(strike.source) {
                 wear_armor(shared, player, strike.damage);
+                // Оригинал777 itemaudit4-shield: износ брони сообщается
+                // вместе с отложенными Metadata/скоростью, через такт после стрелы.
+                if strike.source.is_projectile() && shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                    for (slot, _) in combat::ARMOR_SLOTS {
+                        if player.net.slots_dirty.contains(&slot) {
+                            player.net.slots_dirty.retain(|dirty| *dirty != slot);
+                            player.net.slot_changed_later(slot);
+                        }
+                    }
+                }
             }
 
             // Шипы (вики, Thorns): сработавшие детали теряют по 2 прочности;
@@ -480,7 +540,10 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             let dir = if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(strike.yaw) };
             let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
 
-            vitals::knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);
+            if strike.kinetic.is_none_or(|hit| hit.knockback) {
+                vitals::knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);
+            }
+            if strike.kinetic.is_some_and(|hit| hit.dismount) { super::vehicle::dismount(shared, player); }
 
             if strike.extra_knockback > 0.0 {
                 let look = crate::mob::look_direction(strike.yaw);
@@ -513,6 +576,9 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                     let friction = if player.on_ground { 0.546 } else { 0.91 };
 
                     player.net.delayed_velocity = Some((now + 1, (velocity.0 * friction, (velocity.1 - 0.08) * 0.98, velocity.2 * friction)));
+                    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                        player.net.check_support = Some(now);
+                    }
                     player.net.meta_hold = now + 1;
                     // Пробивающая стрела и трезубец в теле не застревают
                     // (чёрный ящик, crossbow-piercing: Metadata без 12=1).
@@ -637,7 +703,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
         }
 
         world.note_sound_player_except(feet, "minecraft:entity.player.hurt", 1.0, 1.0, entity_id);
-        world.note_player_strike(PlayerStrike {
+        world.note_player_strike(PlayerStrike { kinetic: None, projectile: None,
             victim: entity_id,
             attacker: player.entity_id,
             attacker_uuid: player.uuid,
@@ -860,5 +926,64 @@ mod itemaudit4_thorns_tests {
             retaliate(&shared,&mut p,Source::Thorns,99);assert_eq!(p.inventory.slot(6).unwrap().extras().damage,2);
         }
         assert!(combat::shield_blocks(Source::Thorns));
+    }
+}
+
+#[cfg(test)]
+mod combat_777_projectile_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile};
+
+    #[tokio::test]
+    async fn projectile_damage_keeps_shooter_credit_and_uses_observed_direct_entity_in_263() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog=Catalog::new(profile);
+            let shared=Shared::new(World::in_memory_with_catalog(catalog),World::in_memory_with_catalog(catalog),
+                Default::default(),Default::default(),Default::default(),
+                crate::ops::Ops::open(Path::new("tmp/combat777-projectile/ops.json")),crate::skins::Settings::default());
+            shared.difficulty.store(2,std::sync::atomic::Ordering::Relaxed);
+            let mut player=PlayerState::new_for_catalog([71;16],"Victim".into(),None,None,0,71,(0.5,64.0,0.5),catalog);
+            player.entity_id=71;
+            player.game_mode=GAME_MODE_SURVIVAL;
+            player.on_ground=true;
+            let strike=PlayerStrike { kinetic: None,
+                victim:71,attacker:2,projectile:Some(42),attacker_uuid:[2;16],attacker_name:"Archer".into(),
+                from:(0.5,65.0,-1.5),yaw:0.0,damage:5.0,source:Source::Arrow,extra_knockback:0.0,
+                weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,
+                thorns_slots:Vec::new(),effects:Vec::new(),
+            };
+            let mut out=Outgoing::capture();
+            take_strike(&mut out,&shared,&mut player,&strike).await.unwrap();
+            assert_eq!(player.vit.health,15.0);
+            let direct=if profile==Profile::Preview26_3 {42}else{2};
+            let expected=vitals::damage_packet(71,Source::Arrow,direct,2,None);
+            let mut queued=out.queued();
+            let mut actual=Vec::new();
+            while !queued.is_empty() {
+                let packet=read_packet(&mut queued).await.unwrap();
+                if packet.id==0x19 {actual.push(packet.body);}
+            }
+            assert_eq!(actual,vec![expected]);
+            player.vit.invulnerable=0;
+            shared.ticks.send_replace(20);
+            player.inventory.set(6,Some(Stack::new(blocks::item_named("diamond_chestplate").unwrap(),1)));
+            take_strike(&mut Outgoing::capture(),&shared,&mut player,&strike).await.unwrap();
+            assert_eq!(player.inventory.slot(6).unwrap().extras().damage,1);
+            let mut slot_ticks=Vec::new();
+            for now in 20..=21 {
+                shared.ticks.send_replace(now);
+                let mut out=Outgoing::capture();
+                vitals::tick(&mut out,&shared,&mut player).await.unwrap();
+                let mut bytes=out.queued();
+                while !bytes.is_empty() {
+                    let packet=read_packet(&mut bytes).await.unwrap();
+                    if packet.id==SET_CONTAINER_SLOT {
+                        let mut cursor=Cursor::new(packet.payload());cursor.varint();cursor.varint();
+                        if cursor.u16()==Some(6) {slot_ticks.push(now);}
+                    }
+                }
+            }
+            assert_eq!(slot_ticks,vec![if profile==Profile::Preview26_3 {21}else{20}]);
+        }
     }
 }

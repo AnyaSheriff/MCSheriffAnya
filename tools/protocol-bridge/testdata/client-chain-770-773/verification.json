@@ -1,0 +1,292 @@
+{
+  "timestamp_utc": "2026-10-23T16:05:38.667895+00:00",
+  "client_translation_only": true,
+  "lower_client_admission_complete": false,
+  "public_admission": {
+    "775": {
+      "774": "open",
+      "776": "open",
+      "773": "closed",
+      "772": "closed",
+      "771": "closed",
+      "770": "closed"
+    },
+    "777": {
+      "774": "open",
+      "776": "open",
+      "773": "closed",
+      "772": "closed",
+      "771": "closed",
+      "770": "closed"
+    }
+  },
+  "implemented_lower_scope": "Four separately pinned adjacent static-ID/control steps; full Play codecs and all existing live checklist evidence below774 unfinished",
+  "checks": {
+    "rust": 3157,
+    "core": 2908,
+    "startup": 3,
+    "protocol": 235,
+    "seedmap": 11,
+    "ignored": 92,
+    "python": 237,
+    "clippy_workspace": "PASS -D warnings",
+    "clippy_root": "PASS -D warnings",
+    "release": "PASS",
+    "production_status_and_admission": 24,
+    "online_login": "Shared RSA/session-service/encryption/compression/identity test774/775/776/777 PASS"
+  },
+  "evidence": {
+    "774/775": {
+      "gui": {
+        "directory": "774-gui775-v2",
+        "result_sha256": "ab1e421f4743abc0cf0d00ce9328d9465e5d8560a19222d7823686c064aa3e46",
+        "checks": 6
+      },
+      "gameplay": {
+        "directory": "774-gameplay775",
+        "result_sha256": "c86c90853879500dae87e7206326db18a658accd4e76b889b66bebf625694f1f",
+        "checks": 11
+      },
+      "dimensions": {
+        "directory": "774-dimensions775-end-v3",
+        "result_sha256": "10f071bded688eef268715838b3c4327224ae3cfba0e562e3ed6062c6cede466",
+        "checks": 5
+      },
+      "password": {
+        "directory": "774-password775",
+        "result_sha256": "84acac2f0ac0799c3c5cf0ba23a8492c79564be6bea65fbc10af8f17af753158",
+        "checks": 5
+      }
+    },
+    "774/777": {
+      "gui": {
+        "directory": "774-gui777",
+        "result_sha256": "104af5fdeb3184dee3f2531a58dbe37f8e52cd26d1049714c6601ec7a5a33d7e",
+        "checks": 6
+      },
+      "gameplay": {
+        "directory": "774-gameplay777",
+        "result_sha256": "0232af3fa8dde8e64b3e26346a9612910ce02cd3e64ca061ccbb76fd25c51a7d",
+        "checks": 11
+      },
+      "dimensions": {
+        "directory": "774-dimensions777",
+        "result_sha256": "abaa9be4bbcdd65ced26e50bece8065b5c9c02442cbf1ca5c1cdacd09f3557fc",
+        "checks": 5
+      },
+      "password": {
+        "directory": "774-password777",
+        "result_sha256": "96c297a9865360e5acad2e0a3b2796a87d221e7137e2aad32beb14182191c653",
+        "checks": 5
+      }
+    },
+    "776/775": {
+      "gui": {
+        "directory": "776-gui775",
+        "result_sha256": "a800398e34eca4c3b93535de47cbfb48ddc933d0d896c23592591b718483ab7b",
+        "checks": 6
+      },
+      "gameplay": {
+        "directory": "776-gameplay775",
+        "result_sha256": "1aa521e0758cee7f352b76c55ba3931f5d3b9953ecce9333c67fa334e65b56ed",
+        "checks": 11
+      },
+      "dimensions": {
+        "directory": "776-dimensions775",
+        "result_sha256": "54f4a5d083fda16714e5c0ed8d8aa9269fa3264f1c8ad01bf954998dcb8a4a4c",
+        "checks": 5
+      },
+      "password": {
+        "directory": "776-password775",
+        "result_sha256": "2af88850b167198d7d660bcbc90d9a6ae67222be95be03a9c15698ea1cd24971",
+        "checks": 5
+      }
+    },
+    "776/777": {
+      "gui": {
+        "directory": "776-gui777",
+        "result_sha256": "44d9e0d3351fae978af890e03f63f397800ba4d07c28a743f34d6353f46d515a",
+        "checks": 6
+      },
+      "gameplay": {
+        "directory": "776-gameplay777",
+        "result_sha256": "76620a6e54d8766040dddfb6b7719aa1741c79dc49e7d57ab6528522b496eba5",
+        "checks": 11
+      },
+      "dimensions": {
+        "directory": "776-dimensions777",
+        "result_sha256": "f7460abc1b360dc6e9a4f77bbd9dce9dd63782d27bc0ac186f7b40672f7f29e2",
+        "checks": 5
+      },
+      "password": {
+        "directory": "776-password777",
+        "result_sha256": "dcae3d71fa0cf162b062cfe3d8975a98265c1f823b24edd6b16ef18037fa326a",
+        "checks": 5
+      }
+    }
+  },
+  "binaries": {
+    "release_sha256": "06d5ff35a4f31c4351b0a8d62ebe0877e2658cc03dacff1c94a14048aa5504c5",
+    "test_sha256": "37b7be9e85e232b406bd59883b3fd2e05c7bbb084c656081dfdc845d76514bd7"
+  },
+  "original_payloads": {
+    "774": "f49c99cd5a0d5e41bf07a95be35ca2c18ddca5e1c5759d80afedd9dce872da41",
+    "776": "b315a5d410c666ec1b0bc4b8a38635ec38c765693decc46f15ed82752810bab3"
+  },
+  "source_cache": "/home/lenox/.local/share/mcsa-java-26.3-probe/client-chain-json",
+  "cargo_target": "/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target",
+  "CARGO_BUILD_JOBS": 6,
+  "limitations": [
+    "All eight770-773 pairs closed: typed Play codecs/content projections/checklist unfinished",
+    "End evidence is packet robot, not graphical client End gameplay",
+    "Nether/End disk persistence and exhaustive live entity/attribute semantics remain unproven",
+    "No new official-server run: reused prior evidence"
+  ],
+  "retained_failures": [
+    "774-dimensions775-end-v1",
+    "774-dimensions775-end-v2",
+    "774-gui775",
+    "protocol compile/test corrections in verification logs"
+  ],
+  "source_sha256": {
+    "docs/java-26.3-content.md": "e12fe1d395e0590dd1d173d6d46d97421ee1dddb94f384662cb0387ad020c94b",
+    "docs/multiversion-plan.md": "94cbd03ce9ffa6a497ea05e63359c939c17146df1b61cd809969af0336a214a4",
+    "src/config/mcsheriffanya.rs": "560f3e5ad2ac8129bb4b2bf784dbcd733130f63bea0a6a4255f13674b95a20da",
+    "tools/protocol-bridge/probe_public_776.py": "d2c7f8a0b76ac4e2aeab080380dd7fe959169ae38d190266fa01e800a907e760",
+    "tools/protocol-bridge/probe_step1_dimensions_recipes_776.py": "6397751c0e1a1ac56cdee535b6ea2372d7011c098a03c1ab2b0f9f1d1255795f",
+    "tools/protocol-bridge/src/chain.rs": "51155b549b693e1aa4503f9be2c386823b1c961b44c4762ce7136b2f7f3e90e7",
+    "tools/protocol-bridge/src/chunk_sections.rs": "717a014b7adcdaa8f369977a844e863a033aed99e1c05ddbc915a850472ce21b",
+    "tools/protocol-bridge/src/entities.rs": "5b1757bd437588e923e1f7c8e1f13a7713ae3554aafa70bcfc717daade39e611",
+    "tools/protocol-bridge/src/ids.rs": "0273137171a7c70b2c955a574f36954a320de21fd5916fd7e4b223c2485b1233",
+    "tools/protocol-bridge/src/lib.rs": "ae667bd389aa539a22b3d7ab0d499119a3ea0b55dd7174e47a70906d004f5e4b",
+    "tools/protocol-bridge/src/light.rs": "5f3cf2d804ab53302e930f84821d9e8e535465a7119e5e83583a7465023bd904",
+    "tools/protocol-bridge/src/movement.rs": "095734dc9d9e4a616abb9117b8cad9e6f96ec0842f3f83729ee7656e4509dbc8",
+    "tools/protocol-bridge/src/packet_layouts.rs": "b5044c1b5a8e87f5111405b4efa965514eba4ae105669e062c1e492f540f9d68",
+    "tools/protocol-bridge/src/wire.rs": "371992bbe0d2f8e747dbfd0aa9c1c6abdc617123b90d52a978260ca4a45f9ff8",
+    "tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md": "115b40c6c5c03ef8221020c5f14553d4e96c53360b14af6f38d5f979962532b0",
+    "tools/protocol-bridge/client-chain-sources.json": "6d5562fe42c74d7f241f5b334514fe43938c70317cae6f642d11213a72b3321d",
+    "tools/protocol-bridge/client-chain-report.json": "fbeab9f39cf5d0017147b374993b0def320f466f1591789820f65e91b8bffb33",
+    "tools/protocol-bridge/generate_client_chain.py": "3e5100d6a498d755521b704e00085868f9e8de4a746dc262f1c642a809373881",
+    "tools/protocol-bridge/test_client_chain.py": "30a2b494d757fbcf3871252dffc79a0993a10333ed2995723110b1cbb70a3dc9",
+    "tools/protocol-bridge/src/adjacent.rs": "4fa7926e908eecb8921c82a1dadea8cbe230781a6a789658cc3533d243315e30",
+    "tools/protocol-bridge/src/adjacent_tests.rs": "baf5acbf396a451146278b3af155504a65850f64554f0d010962069710b5cdd9",
+    "tools/protocol-bridge/src/generated_client_chain.rs": "a56918120f7108af9f6d4eb0f06f31a8f08829ac1ef3e8604423cda5e723284d",
+    "tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md": "e68a3beec13278c43fc4fc22640f357398b2e4c64fdaeab8bac1adbfc01dff62"
+  },
+  "artifact_sha256": {
+    "774-dimensions775-end-v1/result.json": "d93dc7ff846ccf66802d1004557ac73b17150e5fb382a0c0ff37bfa5ed425ca7",
+    "774-dimensions775-end-v1/server.log": "d83a561a4ad9ccbee3e5fd0e7de4d8ef0b0321262357fdf76d400be475cd0607",
+    "774-dimensions775-end-v2/result.json": "b04a6c3989715a2a43655f362f10123494035c6c397bd00f727c8764463d3236",
+    "774-dimensions775-end-v2/server.log": "19a470b34ea9ac6283bc0d74e2342f515e804746f80e8f59d1284face4dfb236",
+    "774-dimensions775-end-v3/result.json": "10f071bded688eef268715838b3c4327224ae3cfba0e562e3ed6062c6cede466",
+    "774-dimensions775-end-v3/server.log": "1e3ea1e8d2e1145fef1328d29795d456fc76cd0f6bed7133e4881b01d4105be2",
+    "774-dimensions777/result.json": "abaa9be4bbcdd65ced26e50bece8065b5c9c02442cbf1ca5c1cdacd09f3557fc",
+    "774-dimensions777/server.log": "dd3e241a5b1834f76cef4e068c5325dff5a2e72651df97417ef600e67ae04b10",
+    "774-gameplay775/result.json": "c86c90853879500dae87e7206326db18a658accd4e76b889b66bebf625694f1f",
+    "774-gameplay775/server.log": "1f5ad49786cbe869e7aee33d0b41846d3876ad328690c8fb2a28154ee7e683fe",
+    "774-gameplay777/result.json": "0232af3fa8dde8e64b3e26346a9612910ce02cd3e64ca061ccbb76fd25c51a7d",
+    "774-gameplay777/server.log": "ba13c873a1f4855e283842a945b0e84e8fce599817df0d83087ed698afeeb987",
+    "774-gui775/client.log": "52f660c742531bf3f0596fe04d27cdedab244127fbeb7082ce8285bb8baf1c52",
+    "774-gui775/result.json": "b06b3dacae07bcbfb9eadd33ee2666234a2ed94748949bc5294ecb53ade1b1ab",
+    "774-gui775/server.log": "94b6febaf32f21aadb55607c205cfdbaadd3ac33929e0f7009128519e096601c",
+    "774-gui775-v2/client.log": "e57b3129a44a3658ebdfbe4c869919737ca8154f62732b25ee9dfd322ba54fb1",
+    "774-gui775-v2/finished-actions.png": "ad5782d8d9780bb7f0a61bf86b22c515d1c40f329a83aa65bd0f59ae6e89c601",
+    "774-gui775-v2/payloads-accepted.png": "961873c89af701ba59c92160ae2cabbe9370a65f0db36482f388832e8771fdad",
+    "774-gui775-v2/ready-cancel.png": "03b7ec665b8df53352b5a741ec3fa6221b4fe2f885c05f29b846664ec9bc7c5d",
+    "774-gui775-v2/result.json": "ab1e421f4743abc0cf0d00ce9328d9465e5d8560a19222d7823686c064aa3e46",
+    "774-gui775-v2/server.log": "ce09b33b70a98749920c5252cf13b952a8da4387648cfb837cd5085f355a969f",
+    "774-gui775-v2/statue-ready.png": "fa1883ce1b358cba4632b91e338f67d4c51ac7ae920742f40a55d929d356dc93",
+    "774-gui775-v2/statue-running.png": "45f899951eb3d4b7e4ef409f80652488b6f6311db53f7bdc2b35b54ba62f1b3d",
+    "774-gui775-v2/statue-sitting.png": "bf392f22d01d9a3e59b4e21cc3dd1bce62ac82e59ff8d48ea2b4d658adfe49eb",
+    "774-gui775-v2/statue-standing.png": "4f98ed7b8c727ac3f2ab90a34806442ca03bba332cf027c6bc234b265ef10443",
+    "774-gui775-v2/statue-star.png": "78dbfaacd96bd3e766493b43f8feef0e7529131d8fa54a659ce7b238852f9b4b",
+    "774-gui777/client.log": "6406d6fc4c82c52ffd22d0c081625ba0a841f97cdd8d490f96f71d7653259ec0",
+    "774-gui777/finished-actions.png": "cb1e6fbf1f79b83deb258affe615b9a29ee29bb58bb78acfeb18f0049c501bda",
+    "774-gui777/payloads-accepted.png": "961873c89af701ba59c92160ae2cabbe9370a65f0db36482f388832e8771fdad",
+    "774-gui777/ready-cancel.png": "8892bf72b364ef2611b854fe36a58dce51ace9551c5cc5dc3bc7345af7a7f0c4",
+    "774-gui777/result.json": "104af5fdeb3184dee3f2531a58dbe37f8e52cd26d1049714c6601ec7a5a33d7e",
+    "774-gui777/server.log": "6ce99c467466bf37d47a02138419ef3c81802db55b8e330d4dc0ef9e616b1da7",
+    "774-gui777/statue-ready.png": "50a0de7407eb1dccafa98e1d339c3aae59c1d4cf467007bda8d813e071c61925",
+    "774-gui777/statue-running.png": "6023d50b37169094ee1584264982001598aaa57a8ba1ade4a7d017ee58b2c716",
+    "774-gui777/statue-sitting.png": "22b9286bef0b9a3da151a8a408341e774416a91e108943e598f3bbefd0f9a3c6",
+    "774-gui777/statue-standing.png": "c77429da55503f42add8749ee2442d9e7cfaa0e0b8cea5e594471e05cfa2bf3b",
+    "774-gui777/statue-star.png": "c423a22b99c8bece0ee73a52d600fcf968d39c87e497accc44dbdf516a205184",
+    "774-password775/result.json": "84acac2f0ac0799c3c5cf0ba23a8492c79564be6bea65fbc10af8f17af753158",
+    "774-password775/server.log": "ec53c43e6dcb80615c845416b8af0b1a7531160eddd9b01e13ea95ea90fb9acb",
+    "774-password777/result.json": "96c297a9865360e5acad2e0a3b2796a87d221e7137e2aad32beb14182191c653",
+    "774-password777/server.log": "5e37d6ea11094eca5a3090a5c27275ac961e726ed5e055e992e81bf0d4e75bb0",
+    "776-dimensions775/result.json": "54f4a5d083fda16714e5c0ed8d8aa9269fa3264f1c8ad01bf954998dcb8a4a4c",
+    "776-dimensions775/server.log": "0f6f8299cf1eadb9dce5ae8674cf28d048a981c0713dcd281603528570af5b4c",
+    "776-dimensions777/result.json": "f7460abc1b360dc6e9a4f77bbd9dce9dd63782d27bc0ac186f7b40672f7f29e2",
+    "776-dimensions777/server.log": "564bf9aa53042a873f0fbd41ba9a6fe7fb62e9dceb3ab1cd1733983f991fb8c8",
+    "776-gameplay775/result.json": "1aa521e0758cee7f352b76c55ba3931f5d3b9953ecce9333c67fa334e65b56ed",
+    "776-gameplay775/server.log": "abcb3efc3729b8c1d81ffa5b7d1c4f03b2a2cf4c38ac571cf4a9f1c8971fe238",
+    "776-gameplay777/result.json": "76620a6e54d8766040dddfb6b7719aa1741c79dc49e7d57ab6528522b496eba5",
+    "776-gameplay777/server.log": "5398242db0b31c4b628764ecdf96aab0f6e940e95d0b49113515786b65814927",
+    "776-gui775/client.log": "94582e0fd2f5da9a3460907485498f12a931af561ec657ca370b6726672141b5",
+    "776-gui775/finished-actions.png": "8d7c03018296fd5de144a76b11e8ad786bf10440390ad725649a20c11b4ba5c8",
+    "776-gui775/payloads-accepted.png": "d0fd13953cf3cc88d3188b7663180a8416c5f9d31b41e9647176c23fd73dedd9",
+    "776-gui775/ready-cancel.png": "c5c451fd3525d47a959f2a73f538a480996478c5d30d15d2d7324bdbf8c69e46",
+    "776-gui775/result.json": "a800398e34eca4c3b93535de47cbfb48ddc933d0d896c23592591b718483ab7b",
+    "776-gui775/server.log": "6b113929b60b402c070e4885d61ed50de4f52819643519c9c5b4ff049cd47d31",
+    "776-gui775/statue-ready.png": "090d69c086c18b2f8c60a3d377bf6a54cbba05f599f82ad45a6911755907e8ae",
+    "776-gui775/statue-running.png": "eda9d325ad10ad5c33c1bd8d9d3f6b30ef5dfe604096b3543d0f59ed83622d09",
+    "776-gui775/statue-sitting.png": "7c4b807d1ee135563bad121bc1938e04276bbf498f3ac54519c53af1f4227d16",
+    "776-gui775/statue-standing.png": "6f28bffbb3be7b8c1acec99e2e2fbfeeeeb5fa58286ca815232a202c7e087241",
+    "776-gui775/statue-star.png": "bc0b4298d39b739d4202445286a0b77b1b73042525ed5d3ab46926fb553854b5",
+    "776-gui777/client.log": "a6e15cc62f557d1291136ef9228daa6e83e41cd9426c918e1d863f990aeb5274",
+    "776-gui777/finished-actions.png": "ed619c57614ac1273a9ca7f52fcba76170697e744282490cb1b22b8f7d309cd5",
+    "776-gui777/payloads-accepted.png": "6a300a5c0ccfebab716cbc7f8f4bc2e12554d718ca0ad407484b1828573bd3ce",
+    "776-gui777/ready-cancel.png": "4aa544558056d4c7470cb35711468e049dc0bfafde76b107119078f9a0a70450",
+    "776-gui777/result.json": "44d9e0d3351fae978af890e03f63f397800ba4d07c28a743f34d6353f46d515a",
+    "776-gui777/server.log": "c5351b53f72712ffcf6ed35711fde4f5b7cd0b543b6244a49c637657d84b7365",
+    "776-gui777/statue-ready.png": "3a2d243e0b7f04971dd237b3a3c5a4ad3055d25251a05ab7b8fa4bffc0a13bde",
+    "776-gui777/statue-running.png": "4b6f8c81b3855117e633aa3310ddfa2795e6a7172f20d309cd983291c7d71a74",
+    "776-gui777/statue-sitting.png": "af38c49d506b1ce3341858b934376da03159e00ae1770d9b664ab3f29dd87394",
+    "776-gui777/statue-standing.png": "1659cce84b736d7e5090fa221481a2d024b62f5e1c6c0ffbb8f5e42e4aedf905",
+    "776-gui777/statue-star.png": "10eb1728889788506a4c575ced964321811ef00bdd695acf777d6e95aeb6f288",
+    "776-password775/result.json": "2af88850b167198d7d660bcbc90d9a6ae67222be95be03a9c15698ea1cd24971",
+    "776-password775/server.log": "329dd1f3051440144c72b0d4e29eb7c07789d51089cba7cd057b5c9b071e278d",
+    "776-password777/result.json": "dcae3d71fa0cf162b062cfe3d8975a98265c1f823b24edd6b16ef18037fa326a",
+    "776-password777/server.log": "d0e5f3a959914876ae6726112966fe0bbbb167013583246937b0046f06d538d0",
+    "CONTINUED.md": "e68a3beec13278c43fc4fc22640f357398b2e4c64fdaeab8bac1adbfc01dff62",
+    "public-final/primary775.log": "26965f374e3105806b6c8808dbc41209363d42d4bb056edb3f410cd86e083372",
+    "public-final/primary777.log": "3df362386a827a08a17c1253d871a326c7d3cd237e40a468d4554ad6df066399",
+    "public-final/result.json": "5fb3ce8bd33b4ab8ba0bf7ff50e6c0af524b6e0add23c3af9b8c09139f22dc36",
+    "regression-jobs.json": "65ec1633a23232e2a8e01ae0177090732c7c6f1411714a2c7a1274231ddd821c",
+    "verification/774-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "verification/774-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "verification/774-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "verification/774-gui775-v2.log": "7d4afb39d866754d8834b6da0bda52f5c9aaf4372d03f8d68af00ceba83d4cc2",
+    "verification/774-gui775.log": "d612b4727b59e8ddb04d92a5f733e8980833088b002dc4e9ea9cd264620a1b30",
+    "verification/774-gui777.log": "7d4afb39d866754d8834b6da0bda52f5c9aaf4372d03f8d68af00ceba83d4cc2",
+    "verification/774-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "verification/774-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "verification/776-dimensions775.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "verification/776-dimensions777.log": "210dfc9764a0c3cbc8c01870e4339b2872972d50af303f0155f0189ad1f7b174",
+    "verification/776-gameplay775.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "verification/776-gameplay777.log": "ad5894394f644ee93ea378c997cc22414a3019475f0c85963f6f8057014f89a0",
+    "verification/776-gui775.log": "9abc70d4c7711e0ef41df6f24b878314a8fd838f487e6ff0a2279aa21359c84d",
+    "verification/776-gui777.log": "9abc70d4c7711e0ef41df6f24b878314a8fd838f487e6ff0a2279aa21359c84d",
+    "verification/776-password775.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "verification/776-password777.log": "506ffd489d9d7ecd95d7381b9237d50392645227dc32d49020226f4b1bbfd839",
+    "verification/s26-mv9-build.log": "bf62cd1c40a9a90fa09139218f4fc2e262f706fb788b81b92e219fa5fa718b69",
+    "verification/s26-mv9-clippy-root.log": "343c13e7f6f2d320993b573f830525e33b59b3c32656ef426e015b1e30f3fdc2",
+    "verification/s26-mv9-clippy.log": "3473259b8f5c8f301c64b043424b733b24a2cf0b6481ad0fbd64e839f11164c4",
+    "verification/s26-mv9-protocol-v2.log": "a0ee846fca9f7f27e9664e78522bb981ea154ed31df479b881c07dc03e4d596e",
+    "verification/s26-mv9-protocol.log": "8cbf79cc99d52c73bb0f92939e77d4cd10620d250d2ef4616e44ae89ef474f41",
+    "verification/s26-mv9-public.log": "85ae7491ad69084ccc25a635f396ae437d77cd09e30faa939a070b9e46f70e1c",
+    "verification/s26-mv9-python-final.log": "eee116c797eb4fa5fa2a3a59d19ae1a566976dfd46ccb15194d49fd40dd1a859",
+    "verification/s26-mv9-regress-v2.log": "d85595a7c7ced58dad4fb46e9607ad4a90c5821b608ff2df4a1a5b91ade40317",
+    "verification/s26-mv9-rust.log": "d2503cdca44fe3ee2fa68c7c1afde27ac2b78c247458a9013b6fd5856f269ca8"
+  },
+  "cleanup": {
+    "temporary_test_leftovers_removed": true,
+    "python_caches_removed": true,
+    "generated_Cargo_lock_removed": true,
+    "temporary_GUI_packages_removed": true,
+    "runner_worlds_and_auth_databases_removed": true,
+    "no_commit_or_push": true,
+    "preexisting_codex_log_and_plugins_target_preserved": true
+  }
+}

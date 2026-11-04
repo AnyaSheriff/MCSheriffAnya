@@ -1,0 +1,22 @@
+
+running 1 test
+MCSA gameplay probe ready on 26126
+[23:34:32] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:34:33] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[23:34:33] [Server thread/INFO]: McsaProbe[/127.0.0.1:50162 → localhost:26126] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[23:34:36] [Server thread/INFO]: McsaProbe зашёл на сервер
+[23:34:36] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[23:34:36] [Server thread/INFO]: McsaProbe вышел
+[23:34:37] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:34:38] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:34:40] [Server thread/INFO]: McsaProbe[/127.0.0.1:59414 → localhost:26126] вошёл с номером сущности 6 в (0.5, 64.0, 0.5)
+[23:34:43] [Server thread/INFO]: McsaProbe зашёл на сервер
+[23:34:43] [Server thread/INFO]: [McsaProbe: Использование: auth setpassword <name> <password> | auth unregister <name> | auth list; /changepassword <old> <new>]
+[23:34:43] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[23:34:43] [Server thread/INFO]: Останавливаю сервер
+[23:34:43] [Server thread/INFO]: McsaProbe вышел
+[23:34:43] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_1_21_4_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2996 filtered out; finished in 15.15s
+

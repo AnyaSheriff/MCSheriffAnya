@@ -1,0 +1,1934 @@
+{
+  "schema": 3,
+  "status": "Retained T3 source verified with workspace tests/clippy/release build and1536fresh target chunks. Complete rejected experiment preserved separately. No rebased integration or new full census claim.",
+  "base_commit": "e2f2bf52d9b9df37d6d38b1d76ac9504cb30666c",
+  "experimental_census": "experimental-measurements.json",
+  "deferred": {
+    "mangrove": "Whole runtime experiment excluded: tall mixture0.8 fits rise but increases mangrove logs22/30percent above official and lily pads47/105percent; independent root/crown choices are not established by recorded marginal histograms.",
+    "bamboo_jungle": "Whole Fancy/Bush thinning excluded: removes short stems, median jungle-log span1->5/6 vs official1, excess bamboo. Existing oak-leaf surplus remains open.",
+    "jungle_spacing": "Spacing reduction excluded: close-neighbor fraction overshoots recorded19.44/16.78percent to24.80/25.47percent and suppresses bamboo."
+  },
+  "artifact_directory": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/batch-t3/repair",
+  "target_plan": "retained-target-plan.json",
+  "validation": {
+    "started": 1793104648.372009,
+    "source_sha256": {
+      "src/world/trees.rs": "8199e87070de349b7f2ba3f1199119772384b4034d504212292ebc9fcd35468f",
+      "src/world/tree_shapes_26_3.rs": "e01a15fe84930ed01e7588931b4922ada6e5875fb55b583dc2c3797b5ee7c7b2",
+      "src/world/mod.rs": "8b4eb1d2a8f3e5f29e6536390f1521efc749b4889188c267cc243993e13b775f",
+      "testdata/world-profile/genaudit-26.3/batch-t3/crown-models.json": "bb45a7333b304f1d80352709852199a7356bb49a7a08fe8bced7f2eb58f5fa1a",
+      "testdata/world-profile/genaudit-26.3/batch-t3/observed-crowns.json.gz": "2e97f13d4139539eb9926bba77270e8aa22a82f17c124fed61465028c54a830b"
+    },
+    "status": "complete",
+    "workspace-tests": {
+      "exit_code": 0
+    },
+    "clippy": {
+      "exit_code": 0
+    },
+    "build": {
+      "exit_code": 0
+    },
+    "workspace_tests": {
+      "passed": 3473,
+      "failed": 0,
+      "ignored": 115
+    },
+    "test_binary_sha256": "469787f85e024a3f965af186da2e8c3544c4ace1ae0a6cd238d8324d1fa9d32b",
+    "fresh_export_exit_code": 0,
+    "source_hashes_match": true,
+    "finished": 1793105297.1146722,
+    "build_cargo_lock": {
+      "path": "/home/lenox/.cache/mcsheriffanya/gen-audit-263/batch-t3/repair/Cargo.lock",
+      "sha256": "fbe72aa6fd9030a9aeda98b5a5ca79db8ede4c829be3e71aa7622c0d9c46604a"
+    }
+  },
+  "experimental_new_outside_rows": [
+    {
+      "label": "owner",
+      "rows": [
+        {
+          "dimension": "overworld",
+          "metric": "blocks/bamboo",
+          "before": 8.243792,
+          "after": 9.532873,
+          "official": 7.645521,
+          "tolerance": 1.529104137023813,
+          "unit": "per chunk",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": null,
+          "after_denominator": null
+        },
+        {
+          "dimension": "overworld",
+          "metric": "blocks/mangrove_log",
+          "before": 2.895326,
+          "after": 3.901662,
+          "official": 3.217966,
+          "tolerance": 0.6435931165937341,
+          "unit": "per chunk",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": null,
+          "after_denominator": null
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/bamboo_jungle/bamboo",
+          "before": 6233.564896,
+          "after": 7233.500619,
+          "official": 5741.364573,
+          "tolerance": 1148.272914626828,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            48664128,
+            48631296
+          ],
+          "after_denominator": [
+            48664128,
+            48631296
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/beach/birch_leaves",
+          "before": 5.389932,
+          "after": 4.374361,
+          "official": 9.986443,
+          "tolerance": 5,
+          "unit": "per million biome blocks",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            189056192,
+            188956160
+          ],
+          "after_denominator": [
+            189056192,
+            188956160
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/cherry_grove/tall_grass",
+          "before": 60.194208,
+          "after": 65.151378,
+          "official": 53.546715,
+          "tolerance": 10.709342940620814,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            2824192,
+            2913344
+          ],
+          "after_denominator": [
+            2824192,
+            2913344
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/jungle/bamboo",
+          "before": 18.026412,
+          "after": 14.543361,
+          "official": 19.833481,
+          "tolerance": 5,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            184895360,
+            184788544
+          ],
+          "after_denominator": [
+            184895360,
+            184788544
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/mangrove_swamp/lily_pad",
+          "before": 35.472647,
+          "after": 50.558362,
+          "official": 34.383453,
+          "tolerance": 6.876690565904017,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            162604160,
+            162549120
+          ],
+          "after_denominator": [
+            162604160,
+            162549120
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/mangrove_swamp/mangrove_log",
+          "before": 659.528022,
+          "after": 887.086776,
+          "official": 726.112821,
+          "tolerance": 145.22256410862144,
+          "unit": "per million biome blocks",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            162604160,
+            162549120
+          ],
+          "after_denominator": [
+            162604160,
+            162549120
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/meadow/oak_log",
+          "before": 5.477971,
+          "after": 0.0,
+          "official": 8.044908,
+          "tolerance": 5,
+          "unit": "per million biome blocks",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            2190592,
+            2237440
+          ],
+          "after_denominator": [
+            2190592,
+            2237440
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/old_growth_birch_forest/short_grass",
+          "before": 134.829477,
+          "after": 135.654276,
+          "official": 112.409195,
+          "tolerance": 22.48183901041593,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            139427968,
+            139472576
+          ],
+          "after_denominator": [
+            139427968,
+            139472576
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/swamp/mangrove_roots",
+          "before": 32.945257,
+          "after": 25.929138,
+          "official": 33.143419,
+          "tolerance": 6.628683769748628,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            9834496,
+            9896384
+          ],
+          "after_denominator": [
+            9834496,
+            9896384
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/windswept_savanna/mangrove_roots",
+          "before": 5.575347,
+          "after": 4.766022,
+          "official": 9.892086,
+          "tolerance": 5,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            11120384,
+            11120000
+          ],
+          "after_denominator": [
+            11120384,
+            11120000
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "tree_span/bamboo_jungle/jungle_log/p50",
+          "before": 1.0,
+          "after": 5.0,
+          "official": 1.0,
+          "tolerance": 2,
+          "unit": "blocks (trunk span estimator)",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": null,
+          "after_denominator": null
+        }
+      ]
+    },
+    {
+      "label": "second",
+      "rows": [
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/grove/birch_leaves",
+          "before": 148.911869,
+          "after": 125.88426,
+          "official": 185.381356,
+          "tolerance": 37.076271186440685,
+          "unit": "per million biome blocks",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            651392,
+            679680
+          ],
+          "after_denominator": [
+            651392,
+            679680
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/jungle/bamboo",
+          "before": 17.469779,
+          "after": 14.156743,
+          "official": 22.23484,
+          "tolerance": 5,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            173556864,
+            174321024
+          ],
+          "after_denominator": [
+            173556864,
+            174321024
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/mangrove_swamp/lily_pad",
+          "before": 16.146713,
+          "after": 27.711251,
+          "official": 13.493467,
+          "tolerance": 5,
+          "unit": "per million biome blocks",
+          "batch": "F",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            4582976,
+            4594816
+          ],
+          "after_denominator": [
+            4582976,
+            4594816
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "feature_biome/mangrove_swamp/mangrove_log",
+          "before": 668.779413,
+          "after": 967.493611,
+          "official": 743.228891,
+          "tolerance": 148.6457781987353,
+          "unit": "per million biome blocks",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": [
+            4582976,
+            4594816
+          ],
+          "after_denominator": [
+            4582976,
+            4594816
+          ]
+        },
+        {
+          "dimension": "overworld",
+          "metric": "tree_span/bamboo_jungle/jungle_log/p50",
+          "before": 1.0,
+          "after": 6.0,
+          "official": 1.0,
+          "tolerance": 2,
+          "unit": "blocks (trunk span estimator)",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": null,
+          "after_denominator": null
+        },
+        {
+          "dimension": "overworld",
+          "metric": "tree_span/cherry_grove/cherry_log/p50",
+          "before": 5.0,
+          "after": 6.5,
+          "official": 4.0,
+          "tolerance": 2,
+          "unit": "blocks (trunk span estimator)",
+          "batch": "F-tree",
+          "before_verdict": "within",
+          "after_verdict": "outside",
+          "before_denominator": null,
+          "after_denominator": null
+        }
+      ]
+    }
+  ],
+  "generation_stage": "retained-bounded-repair",
+  "samples": [
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "cases": [
+        {
+          "case": "bamboo",
+          "bounds_chunks": [
+            -96,
+            -36,
+            -81,
+            -21
+          ],
+          "coverage": [
+            {
+              "dimension": "overworld",
+              "ours": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "025ebd68d66d41c60c3cafdbf4f883cdfa9fe9d78d3c0c19448efe2193b0e9b7",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  -96,
+                  -36,
+                  -81,
+                  -21
+                ]
+              },
+              "vanilla": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "025ebd68d66d41c60c3cafdbf4f883cdfa9fe9d78d3c0c19448efe2193b0e9b7",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  -96,
+                  -36,
+                  -81,
+                  -21
+                ]
+              },
+              "same_chunks": true,
+              "complete": true
+            },
+            {
+              "dimension": "the_nether",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            },
+            {
+              "dimension": "the_end",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            }
+          ],
+          "rows": [
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/bamboo_jungle/bamboo",
+              "before": 6072.082374,
+              "experiment": 7073.760468,
+              "retained": 6072.082374,
+              "official": 4995.91183,
+              "tolerance": 999.1823659030451,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                6450176,
+                6447872
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "horizontal_log_blocks/jungle_log",
+              "before": 1.25,
+              "experiment": 0.050781,
+              "retained": 0.050781,
+              "official": 0.0,
+              "tolerance": 0.1,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_span/bamboo_jungle/jungle_log/p50",
+              "before": 1.0,
+              "experiment": 5.0,
+              "retained": 1.0,
+              "official": 1.0,
+              "tolerance": 2,
+              "unit": "blocks (trunk span estimator)",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            }
+          ],
+          "new_outside": [],
+          "worsened_outside": [],
+          "disappeared_rows": [],
+          "new_rows": []
+        },
+        {
+          "case": "jungle",
+          "bounds_chunks": [
+            -123,
+            52,
+            -108,
+            67
+          ],
+          "coverage": [
+            {
+              "dimension": "overworld",
+              "ours": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "ac9974aff425e53dcfd104f74214452f8b9502263a2e5198e1cc36c02457267f",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  -123,
+                  52,
+                  -108,
+                  67
+                ]
+              },
+              "vanilla": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "ac9974aff425e53dcfd104f74214452f8b9502263a2e5198e1cc36c02457267f",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  -123,
+                  52,
+                  -108,
+                  67
+                ]
+              },
+              "same_chunks": true,
+              "complete": true
+            },
+            {
+              "dimension": "the_nether",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            },
+            {
+              "dimension": "the_end",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            }
+          ],
+          "rows": [
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/jungle/bamboo",
+              "before": 24.877446,
+              "experiment": 21.604098,
+              "retained": 24.877446,
+              "official": 23.551018,
+              "tolerance": 5,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                9164928,
+                9086656
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "horizontal_log_blocks/jungle_log",
+              "before": 2.011719,
+              "experiment": 0.015625,
+              "retained": 0.019531,
+              "official": 0.0,
+              "tolerance": 0.1,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_span/jungle/jungle_log/p50",
+              "before": 1.0,
+              "experiment": 1.0,
+              "retained": 1.0,
+              "official": 1.0,
+              "tolerance": 2,
+              "unit": "blocks (trunk span estimator)",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            }
+          ],
+          "new_outside": [],
+          "worsened_outside": [],
+          "disappeared_rows": [],
+          "new_rows": []
+        },
+        {
+          "case": "mangrove",
+          "bounds_chunks": [
+            16,
+            -34,
+            31,
+            -19
+          ],
+          "coverage": [
+            {
+              "dimension": "overworld",
+              "ours": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "816f550e24efb6ef2c3e1da83084328e233778fc68de3f766641d5b6bf8bb8d3",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  16,
+                  -34,
+                  31,
+                  -19
+                ]
+              },
+              "vanilla": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "816f550e24efb6ef2c3e1da83084328e233778fc68de3f766641d5b6bf8bb8d3",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  16,
+                  -34,
+                  31,
+                  -19
+                ]
+              },
+              "same_chunks": true,
+              "complete": true
+            },
+            {
+              "dimension": "the_nether",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            },
+            {
+              "dimension": "the_end",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            }
+          ],
+          "rows": [
+            {
+              "dimension": "overworld",
+              "metric": "blocks/air",
+              "before": 65583.0,
+              "experiment": 65096.652344,
+              "retained": 65583.351562,
+              "official": 65109.242188,
+              "tolerance": 13021.8484375,
+              "unit": "per chunk",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/mangrove_leaves",
+              "before": 805.671875,
+              "experiment": 1041.140625,
+              "retained": 805.699219,
+              "official": 1077.445312,
+              "tolerance": 215.48906250000002,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/mud",
+              "before": 702.417969,
+              "experiment": 688.488281,
+              "retained": 702.410156,
+              "official": 590.335938,
+              "tolerance": 118.0671875,
+              "unit": "per chunk",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/muddy_mangrove_roots",
+              "before": 43.332031,
+              "experiment": 52.714844,
+              "retained": 43.339844,
+              "official": 54.132812,
+              "tolerance": 10.826562500000001,
+              "unit": "per chunk",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/oak_leaves",
+              "before": 3.0625,
+              "experiment": 2.773438,
+              "retained": 2.773438,
+              "official": 9.214844,
+              "tolerance": 1.84296875,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/oak_log",
+              "before": 0.359375,
+              "experiment": 0.339844,
+              "retained": 0.339844,
+              "official": 0.757812,
+              "tolerance": 0.15156250000000002,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/vine",
+              "before": 272.953125,
+              "experiment": 458.035156,
+              "retained": 272.882812,
+              "official": 338.304688,
+              "tolerance": 67.6609375,
+              "unit": "per chunk",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "covered_grass",
+              "before": 1.835632,
+              "experiment": 1.829529,
+              "retained": 1.831055,
+              "official": 4.556274,
+              "tolerance": 1,
+              "unit": "per 100 columns",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "covered_grass_by/oak_leaves",
+              "before": 0.315457,
+              "experiment": 0.280528,
+              "retained": 0.282251,
+              "official": 0.488168,
+              "tolerance": 2,
+              "unit": "per 100 grass blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "covered_grass_by/vine",
+              "before": 0.846754,
+              "experiment": 0.676568,
+              "retained": 0.830151,
+              "official": 3.119312,
+              "tolerance": 2,
+              "unit": "per 100 grass blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "depth/64/underground_air",
+              "before": 9.433565,
+              "experiment": 9.474049,
+              "retained": 9.433738,
+              "official": 7.120553,
+              "tolerance": 2,
+              "unit": "percentage points",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                109172,
+                66933
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "depth/80/air",
+              "before": 92.554569,
+              "experiment": 89.143848,
+              "retained": 92.563152,
+              "official": 91.456604,
+              "tolerance": 2,
+              "unit": "percentage points",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                1048576,
+                1048576
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "depth/80/underground_air",
+              "before": 30.169721,
+              "experiment": 30.434707,
+              "retained": 30.187075,
+              "official": 10.584244,
+              "tolerance": 2,
+              "unit": "percentage points",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                57624,
+                13265
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/lily_pad",
+              "before": 39.1538,
+              "experiment": 57.545552,
+              "retained": 39.1538,
+              "official": 25.01313,
+              "tolerance": 5.002625939791554,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/mangrove_leaves",
+              "before": 8995.366157,
+              "experiment": 11591.148994,
+              "retained": 8995.585628,
+              "official": 11980.762534,
+              "tolerance": 2396.1525067193165,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/mangrove_log",
+              "before": 633.483909,
+              "experiment": 869.547965,
+              "retained": 633.483909,
+              "official": 739.774282,
+              "tolerance": 147.95485630351934,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/mangrove_roots",
+              "before": 1187.650646,
+              "experiment": 1317.095216,
+              "retained": 1187.650646,
+              "official": 1237.360032,
+              "tolerance": 247.47200635842535,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/muddy_mangrove_roots",
+              "before": 484.638015,
+              "experiment": 592.091494,
+              "retained": 484.725804,
+              "official": 606.458688,
+              "tolerance": 121.291737698104,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/oak_leaves",
+              "before": 0.965677,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 5.660866,
+              "tolerance": 5,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "outside",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/mangrove_leaves",
+              "before": 1101.663357,
+              "experiment": 1629.220457,
+              "retained": 1117.179742,
+              "official": 271.267361,
+              "tolerance": 54.25347222222223,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/oak_leaves",
+              "before": 403.426018,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 1371.837798,
+              "tolerance": 274.3675595238095,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/oak_log",
+              "before": 38.790963,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 46.502976,
+              "tolerance": 9.300595238095239,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "height_mean/mangrove_swamp",
+              "before": 61.805758,
+              "experiment": 61.815585,
+              "retained": 61.805724,
+              "official": 62.864384,
+              "tolerance": 5,
+              "unit": "blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-3/mud",
+              "before": 48.400418,
+              "experiment": 54.244202,
+              "retained": 48.397047,
+              "official": 42.337894,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-3/stone",
+              "before": 39.428263,
+              "experiment": 33.227144,
+              "retained": 39.431634,
+              "official": 43.913454,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_base_estimates/swamp/oak_log",
+              "before": 0.003906,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 0.003906,
+              "tolerance": 0.1,
+              "unit": "per chunk",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_span/swamp/oak_log/p50",
+              "before": 5.0,
+              "experiment": null,
+              "retained": null,
+              "official": 6.0,
+              "tolerance": 2,
+              "unit": "blocks (trunk span estimator)",
+              "before_verdict": "within",
+              "retained_verdict": null,
+              "denominator": null
+            }
+          ],
+          "new_outside": [
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/oak_leaves",
+              "before": 0.965677,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 5.660866,
+              "tolerance": 5,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "outside",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/oak_log",
+              "before": 38.790963,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 46.502976,
+              "tolerance": 9.300595238095239,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            }
+          ],
+          "worsened_outside": [
+            {
+              "dimension": "overworld",
+              "metric": "blocks/oak_leaves",
+              "before": 3.0625,
+              "experiment": 2.773438,
+              "retained": 2.773438,
+              "official": 9.214844,
+              "tolerance": 1.84296875,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "blocks/oak_log",
+              "before": 0.359375,
+              "experiment": 0.339844,
+              "retained": 0.339844,
+              "official": 0.757812,
+              "tolerance": 0.15156250000000002,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "covered_grass",
+              "before": 1.835632,
+              "experiment": 1.829529,
+              "retained": 1.831055,
+              "official": 4.556274,
+              "tolerance": 1,
+              "unit": "per 100 columns",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "covered_grass_by/vine",
+              "before": 0.846754,
+              "experiment": 0.676568,
+              "retained": 0.830151,
+              "official": 3.119312,
+              "tolerance": 2,
+              "unit": "per 100 grass blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "depth/64/underground_air",
+              "before": 9.433565,
+              "experiment": 9.474049,
+              "retained": 9.433738,
+              "official": 7.120553,
+              "tolerance": 2,
+              "unit": "percentage points",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                109172,
+                66933
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "depth/80/underground_air",
+              "before": 30.169721,
+              "experiment": 30.434707,
+              "retained": 30.187075,
+              "official": 10.584244,
+              "tolerance": 2,
+              "unit": "percentage points",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                57624,
+                13265
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/oak_leaves",
+              "before": 0.965677,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 5.660866,
+              "tolerance": 5,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "outside",
+              "denominator": [
+                22781952,
+                22788032
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/mangrove_leaves",
+              "before": 1101.663357,
+              "experiment": 1629.220457,
+              "retained": 1117.179742,
+              "official": 271.267361,
+              "tolerance": 54.25347222222223,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/oak_leaves",
+              "before": 403.426018,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 1371.837798,
+              "tolerance": 274.3675595238095,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/swamp/oak_log",
+              "before": 38.790963,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 46.502976,
+              "tolerance": 9.300595238095239,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "outside",
+              "denominator": [
+                128896,
+                129024
+              ]
+            }
+          ],
+          "disappeared_rows": [
+            {
+              "dimension": "overworld",
+              "metric": "layer/forest/-2/mangrove_roots",
+              "before": null,
+              "experiment": 0.071839,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                1392,
+                1408
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/forest/-3/mangrove_roots",
+              "before": null,
+              "experiment": 0.071839,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                1392,
+                1408
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-1/mangrove_propagule",
+              "before": null,
+              "experiment": 0.001686,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-2/mangrove_propagule",
+              "before": null,
+              "experiment": 0.001686,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-3/mangrove_propagule",
+              "before": null,
+              "experiment": 0.001686,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-3/moss_carpet",
+              "before": null,
+              "experiment": 0.001686,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-5/mangrove_propagule",
+              "before": null,
+              "experiment": 0.003371,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-5/moss_carpet",
+              "before": null,
+              "experiment": 0.001686,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                59328,
+                59344
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_span/swamp/oak_log/p50",
+              "before": 5.0,
+              "experiment": null,
+              "retained": null,
+              "official": 6.0,
+              "tolerance": 2,
+              "unit": "blocks (trunk span estimator)",
+              "before_verdict": "within",
+              "retained_verdict": null,
+              "denominator": null
+            }
+          ],
+          "new_rows": []
+        }
+      ]
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "cases": [
+        {
+          "case": "bamboo",
+          "bounds_chunks": [
+            110,
+            -18,
+            125,
+            -3
+          ],
+          "coverage": [
+            {
+              "dimension": "overworld",
+              "ours": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "1f1da78ce9e1f556ca242caec5e328d9a170c7888152849103a115f0fb267a0c",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  110,
+                  -18,
+                  125,
+                  -3
+                ]
+              },
+              "vanilla": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "1f1da78ce9e1f556ca242caec5e328d9a170c7888152849103a115f0fb267a0c",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  110,
+                  -18,
+                  125,
+                  -3
+                ]
+              },
+              "same_chunks": true,
+              "complete": true
+            },
+            {
+              "dimension": "the_nether",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            },
+            {
+              "dimension": "the_end",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            }
+          ],
+          "rows": [
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/bamboo_jungle/bamboo",
+              "before": 6282.580665,
+              "experiment": 7464.16991,
+              "retained": 6282.580665,
+              "official": 4439.753616,
+              "tolerance": 887.9507232334417,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                9257024,
+                9247360
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "horizontal_log_blocks/jungle_log",
+              "before": 1.601562,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 0.050781,
+              "tolerance": 0.1,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "within",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_span/bamboo_jungle/jungle_log/p50",
+              "before": 1.0,
+              "experiment": 6.0,
+              "retained": 1.0,
+              "official": 1.0,
+              "tolerance": 2,
+              "unit": "blocks (trunk span estimator)",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            }
+          ],
+          "new_outside": [],
+          "worsened_outside": [],
+          "disappeared_rows": [],
+          "new_rows": []
+        },
+        {
+          "case": "jungle",
+          "bounds_chunks": [
+            39,
+            -36,
+            54,
+            -21
+          ],
+          "coverage": [
+            {
+              "dimension": "overworld",
+              "ours": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "81e6c389e2f020a3fd6e901aaf13586a441540c8c6788619afbe3666ff7f5984",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  39,
+                  -36,
+                  54,
+                  -21
+                ]
+              },
+              "vanilla": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "81e6c389e2f020a3fd6e901aaf13586a441540c8c6788619afbe3666ff7f5984",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  39,
+                  -36,
+                  54,
+                  -21
+                ]
+              },
+              "same_chunks": true,
+              "complete": true
+            },
+            {
+              "dimension": "the_nether",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            },
+            {
+              "dimension": "the_end",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            }
+          ],
+          "rows": [
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/jungle/bamboo",
+              "before": 25.732872,
+              "experiment": 23.561661,
+              "retained": 25.732872,
+              "official": 30.546228,
+              "tolerance": 6.109245561367129,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                12435456,
+                12407424
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "horizontal_log_blocks/jungle_log",
+              "before": 2.5625,
+              "experiment": 0.0,
+              "retained": 0.0,
+              "official": 0.125,
+              "tolerance": 0.1,
+              "unit": "per chunk",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": null
+            },
+            {
+              "dimension": "overworld",
+              "metric": "tree_span/jungle/jungle_log/p50",
+              "before": 1.0,
+              "experiment": 1.0,
+              "retained": 1.0,
+              "official": 1.0,
+              "tolerance": 2,
+              "unit": "blocks (trunk span estimator)",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": null
+            }
+          ],
+          "new_outside": [],
+          "worsened_outside": [],
+          "disappeared_rows": [],
+          "new_rows": []
+        },
+        {
+          "case": "mangrove",
+          "bounds_chunks": [
+            -62,
+            35,
+            -47,
+            50
+          ],
+          "coverage": [
+            {
+              "dimension": "overworld",
+              "ours": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "79425fb0f1b07cebb883cf4b53e28b12dd2f55ee5feb3802ac38bbc53efcdb93",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  -62,
+                  35,
+                  -47,
+                  50
+                ]
+              },
+              "vanilla": {
+                "chunks": 256,
+                "requested": 256,
+                "chunk_sha256": "79425fb0f1b07cebb883cf4b53e28b12dd2f55ee5feb3802ac38bbc53efcdb93",
+                "missing_first20": [],
+                "bounds_chunks": [
+                  -62,
+                  35,
+                  -47,
+                  50
+                ]
+              },
+              "same_chunks": true,
+              "complete": true
+            },
+            {
+              "dimension": "the_nether",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            },
+            {
+              "dimension": "the_end",
+              "ours": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "vanilla": {
+                "chunks": 0,
+                "requested": 0
+              },
+              "same_chunks": true,
+              "complete": true,
+              "status": "not requested by this plan"
+            }
+          ],
+          "rows": [
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/lily_pad",
+              "before": 16.591571,
+              "experiment": 28.474723,
+              "retained": 16.591571,
+              "official": 13.864241,
+              "tolerance": 5,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                4460096,
+                4471936
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/mangrove_leaves",
+              "before": 9841.04378,
+              "experiment": 12494.349897,
+              "retained": 9841.04378,
+              "official": 11603.251925,
+              "tolerance": 2320.650384978676,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                4460096,
+                4471936
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/mangrove_log",
+              "before": 665.232318,
+              "experiment": 956.033233,
+              "retained": 665.232318,
+              "official": 735.699259,
+              "tolerance": 147.13985173311963,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                4460096,
+                4471936
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/mangrove_roots",
+              "before": 1137.867884,
+              "experiment": 1371.495143,
+              "retained": 1137.867884,
+              "official": 1353.776083,
+              "tolerance": 270.75521653261586,
+              "unit": "per million biome blocks",
+              "before_verdict": "within",
+              "retained_verdict": "within",
+              "denominator": [
+                4460096,
+                4471936
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "feature_biome/mangrove_swamp/muddy_mangrove_roots",
+              "before": 487.881875,
+              "experiment": 644.604959,
+              "retained": 487.881875,
+              "official": 650.948493,
+              "tolerance": 130.18969860033778,
+              "unit": "per million biome blocks",
+              "before_verdict": "outside",
+              "retained_verdict": "outside",
+              "denominator": [
+                4460096,
+                4471936
+              ]
+            }
+          ],
+          "new_outside": [],
+          "worsened_outside": [],
+          "disappeared_rows": [
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-1/mangrove_roots",
+              "before": null,
+              "experiment": 0.01717,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                11648,
+                11680
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-2/mangrove_roots",
+              "before": null,
+              "experiment": 0.042926,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                11648,
+                11680
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-2/vine",
+              "before": null,
+              "experiment": 0.008585,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                11648,
+                11680
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-3/mangrove_roots",
+              "before": null,
+              "experiment": 0.060096,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                11648,
+                11680
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-3/vine",
+              "before": null,
+              "experiment": 0.008585,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                11648,
+                11680
+              ]
+            },
+            {
+              "dimension": "overworld",
+              "metric": "layer/mangrove_swamp/-4/vine",
+              "before": null,
+              "experiment": 0.008585,
+              "retained": null,
+              "official": 0.0,
+              "tolerance": 5,
+              "unit": "percentage points",
+              "before_verdict": null,
+              "retained_verdict": null,
+              "denominator": [
+                11648,
+                11680
+              ]
+            }
+          ],
+          "new_rows": []
+        }
+      ]
+    }
+  ],
+  "analyzer_source_sha256": "c7b3ff0610a67edb74595fecfd3a9ffdcc92f3c2c26c2f7d7dc4ceb13c7027d8",
+  "fresh_export_chunks": 1536,
+  "reused_chunks": 0,
+  "full_census_status": "Not rerun for retained source. Earlier complete census describes the rejected experimental source only.",
+  "historical_small_residuals_note": "The old full experiment has small/border regressions retained verbatim in experimental_new_outside_rows, not asserted as a new full retained-source census. Relevant remaining code is unchanged: owner beach birch leaves1019->827 vs1887; meadow oak logs12->0 vs18; cherry tall grass170->184 vs156; old birch short grass18799->18914 vs15678; second grove birch leaves97->82 vs126 and small cherry span5->6.5 vs4. Fresh target regressions are separate."
+}

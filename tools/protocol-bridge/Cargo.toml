@@ -1,0 +1,15 @@
+[package]
+name = "mcsa-protocol"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[features]
+# Только явный test-probe API; обычные admission/wire guards не меняются.
+probe-776 = []
+
+[dependencies]
+
+[dev-dependencies]
+serde_json = "1"

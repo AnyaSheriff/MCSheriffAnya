@@ -1,0 +1,205 @@
+{
+  "seed": 1792932773345722119,
+  "version": "26.3",
+  "port": 26172,
+  "heap": "2G",
+  "observations": 32,
+  "method": "Isolated place feature minecraft:dark_oak at y=200 on grass; random_tick_speed=0; tick sprint 100; saved regions read-only; no game code or archive contents read.",
+  "plots": {
+    "points": [
+      [
+        4108,
+        4108
+      ],
+      [
+        4108,
+        4132
+      ],
+      [
+        4108,
+        4156
+      ],
+      [
+        4108,
+        4180
+      ],
+      [
+        4108,
+        4204
+      ],
+      [
+        4108,
+        4228
+      ],
+      [
+        4108,
+        4252
+      ],
+      [
+        4108,
+        4276
+      ],
+      [
+        4132,
+        4108
+      ],
+      [
+        4132,
+        4132
+      ],
+      [
+        4132,
+        4156
+      ],
+      [
+        4132,
+        4180
+      ],
+      [
+        4132,
+        4204
+      ],
+      [
+        4132,
+        4228
+      ],
+      [
+        4132,
+        4252
+      ],
+      [
+        4132,
+        4276
+      ],
+      [
+        4156,
+        4108
+      ],
+      [
+        4156,
+        4132
+      ],
+      [
+        4156,
+        4156
+      ],
+      [
+        4156,
+        4180
+      ],
+      [
+        4156,
+        4204
+      ],
+      [
+        4156,
+        4228
+      ],
+      [
+        4156,
+        4252
+      ],
+      [
+        4156,
+        4276
+      ],
+      [
+        4180,
+        4108
+      ],
+      [
+        4180,
+        4132
+      ],
+      [
+        4180,
+        4156
+      ],
+      [
+        4180,
+        4180
+      ],
+      [
+        4180,
+        4204
+      ],
+      [
+        4180,
+        4228
+      ],
+      [
+        4180,
+        4252
+      ],
+      [
+        4180,
+        4276
+      ]
+    ],
+    "base_y": 200
+  },
+  "summary": {
+    "n": 32,
+    "trunk": 7.0,
+    "leaves": 118.96875,
+    "branches": 33.875,
+    "distance": {
+      "1": 806,
+      "2": 1293,
+      "3": 1251,
+      "4": 356,
+      "5": 101
+    },
+    "layers": {
+      "-1": [
+        39.4,
+        3.9,
+        0.025
+      ],
+      "0": [
+        48.885,
+        4.0,
+        0.0
+      ],
+      "1": [
+        32.871,
+        3.645,
+        0.0
+      ],
+      "2": [
+        26.0,
+        3.368,
+        0.092
+      ],
+      "3": [
+        20.778,
+        3.889,
+        0.0
+      ],
+      "4": [
+        7.333,
+        3.0,
+        0.0
+      ],
+      "5": [
+        4.0,
+        3.0,
+        0.0
+      ]
+    }
+  },
+  "regions": {
+    "r.8.8.mca": "3872d58f9d50bcda3c0acc4cc6e1d1c2a72112e489629284626dc9c452b20813"
+  },
+  "spruce_leaf_litter_probe": "Registry command rejected this name; not evidence that natural spruce has no litter.",
+  "seed_confirmation": {
+    "seed": 1792932773345722119,
+    "console_reply": "[22:22:41] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld\n[22:22:41] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_nether\n[22:22:41] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_end\n[22:22:41] [Server thread/INFO]: System chat: Seed: [1792932773345722119]\n[22:22:41] [Server thread/INFO]: [Not Secure] [Server] GENAUDIT_SYNC_1_DONE\n"
+  },
+  "raw_fixture_sha256": "be83d90270864cab3f89a7975327b0b6e78bfdb5c9bb71b729171fcca197dc77",
+  "reproduction": [
+    "vegetation_plots_263.py: save isolated plots",
+    "crowns_263.py: extract --plots plots.json",
+    "pack_crowns_263.py: pack observed dark_oak models without game code"
+  ]
+}

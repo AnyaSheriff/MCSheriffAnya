@@ -1,0 +1,1480 @@
+{
+  "method": "Natural official 26.3 region start records. Two original census controls and 32 independent new candidate windows. No implementation, archive or data-pack access. Low initial Nether heights match 16 natural controls; terrain support and final height of high frames remain unverified.",
+  "rows": [
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        95,
+        -102
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_10",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1532,
+          27,
+          -1631,
+          1543,
+          34,
+          -1622
+        ],
+        "TPX": 1520,
+        "TPY": 27,
+        "TPZ": -1632,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        86,
+        -120
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_3",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -96,
+        120
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_4",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1536,
+          27,
+          1921,
+          -1528,
+          35,
+          1928
+        ],
+        "TPX": -1536,
+        "TPY": 27,
+        "TPZ": 1920,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -108,
+        141
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_4",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 27
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -72,
+        -103
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_6",
+        "Rotation": "CLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1153,
+          99,
+          -1647,
+          -1147,
+          105,
+          -1643
+        ],
+        "TPX": -1152,
+        "TPY": 99,
+        "TPZ": -1648,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -57,
+        -100
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_5",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 72
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -72,
+        142
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_9",
+        "Rotation": "NONE",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1152,
+          30,
+          2272,
+          -1143,
+          37,
+          2280
+        ],
+        "TPX": -1152,
+        "TPY": 30,
+        "TPZ": 2272,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -72,
+        123
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_9",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 28
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        60,
+        -16
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_3",
+        "Rotation": "NONE",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          953,
+          29,
+          -256,
+          960,
+          37,
+          -248
+        ],
+        "TPX": 960,
+        "TPY": 29,
+        "TPZ": -256,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        55,
+        -25
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_2",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        46,
+        -113
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/giant_portal_2",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          746,
+          96,
+          -1807,
+          756,
+          111,
+          -1792
+        ],
+        "TPX": 736,
+        "TPY": 96,
+        "TPZ": -1808,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        64,
+        -120
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/giant_portal_1",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 39
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -112,
+        56
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_3",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1792,
+          49,
+          904,
+          -1784,
+          57,
+          911
+        ],
+        "TPX": -1792,
+        "TPY": 49,
+        "TPZ": 896,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -114,
+        42
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_8",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 27
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -65,
+        44
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_2",
+        "Rotation": "NONE",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1040,
+          27,
+          704,
+          -1032,
+          38,
+          712
+        ],
+        "TPX": -1040,
+        "TPY": 27,
+        "TPZ": 704,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -57,
+        42
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_5",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 47
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        80,
+        51
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_4",
+        "Rotation": "NONE",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1273,
+          31,
+          816,
+          1280,
+          39,
+          824
+        ],
+        "TPX": 1280,
+        "TPY": 31,
+        "TPZ": 816,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        83,
+        41
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_2",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        103,
+        136
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_1",
+        "Rotation": "NONE",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1643,
+          69,
+          2176,
+          1648,
+          78,
+          2181
+        ],
+        "TPX": 1648,
+        "TPY": 69,
+        "TPZ": 2176,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        86,
+        123
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_7",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 27
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        41,
+        51
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_3",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          656,
+          31,
+          824,
+          664,
+          39,
+          831
+        ],
+        "TPX": 656,
+        "TPY": 31,
+        "TPZ": 816,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        52,
+        57
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_3",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        46,
+        134
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_9",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          737,
+          28,
+          2153,
+          745,
+          35,
+          2162
+        ],
+        "TPX": 736,
+        "TPY": 28,
+        "TPZ": 2144,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        51,
+        135
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_5",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        97,
+        -27
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_10",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1553,
+          48,
+          -431,
+          1564,
+          55,
+          -422
+        ],
+        "TPX": 1552,
+        "TPY": 48,
+        "TPZ": -432,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        94,
+        -31
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_7",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 100
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -65,
+        -25
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_1",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1034,
+          28,
+          -399,
+          -1029,
+          37,
+          -394
+        ],
+        "TPX": -1040,
+        "TPY": 28,
+        "TPZ": -400,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -77,
+        -34
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_10",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 43
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -96,
+        -24
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_9",
+        "Rotation": "CLOCKWISE_90",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1535,
+          36,
+          -394,
+          -1527,
+          43,
+          -385
+        ],
+        "TPX": -1536,
+        "TPY": 36,
+        "TPZ": -384,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -112,
+        -30
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_8",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 27
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        -112,
+        -110
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_2",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1792,
+          53,
+          -1760,
+          -1784,
+          64,
+          -1752
+        ],
+        "TPX": -1792,
+        "TPY": 53,
+        "TPZ": -1760,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -107,
+        -98
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_7",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 27
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        95,
+        -120
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_10",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1532,
+          29,
+          -1919,
+          1543,
+          36,
+          -1910
+        ],
+        "TPX": 1520,
+        "TPY": 29,
+        "TPZ": -1920,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        83,
+        -117
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_10",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -79,
+        -101
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_9",
+        "Rotation": "CLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1263,
+          28,
+          -1617,
+          -1255,
+          35,
+          -1608
+        ],
+        "TPX": -1264,
+        "TPY": 28,
+        "TPZ": -1616,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -65,
+        -105
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_10",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -76,
+        136
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_5",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1214,
+          29,
+          2175,
+          -1208,
+          38,
+          2184
+        ],
+        "TPX": -1216,
+        "TPY": 29,
+        "TPZ": 2176,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -58,
+        142
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_5",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        48,
+        -35
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_5",
+        "Rotation": "NONE",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          768,
+          42,
+          -560,
+          777,
+          51,
+          -554
+        ],
+        "TPX": 768,
+        "TPY": 42,
+        "TPZ": -560,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        43,
+        -25
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_3",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 48
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -116,
+        -28
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_10",
+        "Rotation": "CLOCKWISE_90",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1854,
+          31,
+          -460,
+          -1845,
+          38,
+          -449
+        ],
+        "TPX": -1856,
+        "TPY": 31,
+        "TPZ": -448,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -101,
+        -16
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_3",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 28
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -112,
+        128
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_8",
+        "Rotation": "NONE",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1792,
+          80,
+          2048,
+          -1779,
+          88,
+          2056
+        ],
+        "TPX": -1792,
+        "TPY": 80,
+        "TPZ": 2048,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -99,
+        127
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_4",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 28
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        43,
+        -120
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_7",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          688,
+          42,
+          -1920,
+          696,
+          48,
+          -1912
+        ],
+        "TPX": 688,
+        "TPY": 42,
+        "TPZ": -1920,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        49,
+        -96
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_9",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 97
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        49,
+        122
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_9",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          794,
+          60,
+          1952,
+          803,
+          67,
+          1960
+        ],
+        "TPX": 784,
+        "TPY": 60,
+        "TPZ": 1952,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        58,
+        129
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_9",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 83
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -101,
+        42
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_4",
+        "Rotation": "NONE",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1623,
+          38,
+          672,
+          -1616,
+          46,
+          680
+        ],
+        "TPX": -1616,
+        "TPY": 38,
+        "TPZ": 672,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -109,
+        58
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_8",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 32
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        86,
+        -22
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_6",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1380,
+          29,
+          -352,
+          1384,
+          35,
+          -346
+        ],
+        "TPX": 1376,
+        "TPY": 29,
+        "TPZ": -352,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        95,
+        -31
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_5",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 53
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -67,
+        59
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_7",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1072,
+          29,
+          944,
+          -1064,
+          35,
+          952
+        ],
+        "TPX": -1072,
+        "TPY": 29,
+        "TPZ": 944,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -66,
+        52
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_6",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 62
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        90,
+        52
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_7",
+        "Rotation": "NONE",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1440,
+          27,
+          832,
+          1448,
+          33,
+          840
+        ],
+        "TPX": 1440,
+        "TPY": 27,
+        "TPZ": 832,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        82,
+        62
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_10",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 28
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -66,
+        -33
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_6",
+        "Rotation": "COUNTERCLOCKWISE_90",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1057,
+          76,
+          -527,
+          -1051,
+          82,
+          -523
+        ],
+        "TPX": -1056,
+        "TPY": 76,
+        "TPZ": -528,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -56,
+        -29
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_9",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 3,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 85
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        100,
+        132
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_6",
+        "Rotation": "NONE",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          1596,
+          29,
+          2112,
+          1600,
+          35,
+          2118
+        ],
+        "TPX": 1600,
+        "TPY": 29,
+        "TPZ": 2112,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        97,
+        135
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_2",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": true,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 77
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        61,
+        41
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_6",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "NONE",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          976,
+          28,
+          656,
+          980,
+          34,
+          662
+        ],
+        "TPX": 976,
+        "TPY": 28,
+        "TPZ": 656,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        45,
+        53
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_3",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 1,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 78
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        -114,
+        -101
+      ],
+      "cohort": "new_controls",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_4",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          -1816,
+          34,
+          -1616,
+          -1809,
+          42,
+          -1608
+        ],
+        "TPX": -1824,
+        "TPY": 34,
+        "TPZ": -1616,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        -97,
+        -102
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_1",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 29
+    },
+    {
+      "seed": 1792932773345722119,
+      "chunk": [
+        15,
+        -25
+      ],
+      "cohort": "original_census",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_7",
+        "Rotation": "CLOCKWISE_180",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          248,
+          69,
+          -400,
+          256,
+          75,
+          -392
+        ],
+        "TPX": 240,
+        "TPY": 69,
+        "TPZ": -400,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        16,
+        -38
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/portal_10",
+      "old_air_at_measured_candidate": true,
+      "old_turns_at_measured_candidate": 0,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 91
+    },
+    {
+      "seed": 100554032945340,
+      "chunk": [
+        9,
+        16
+      ],
+      "cohort": "original_census",
+      "part": {
+        "Template": "minecraft:ruined_portal/portal_2",
+        "Rotation": "NONE",
+        "Mirror": "FRONT_BACK",
+        "VerticalPlacement": "in_nether",
+        "BB": [
+          136,
+          28,
+          256,
+          144,
+          39,
+          264
+        ],
+        "TPX": 144,
+        "TPY": 28,
+        "TPZ": 256,
+        "Properties": {
+          "overgrown": 0,
+          "mossiness": 0.0,
+          "replace_with_blackstone": 1,
+          "vines": 0,
+          "cold": 0,
+          "air_pocket": 0
+        }
+      },
+      "old_candidate_chunk": [
+        6,
+        16
+      ],
+      "old_template_at_measured_candidate": "ruined_portal/giant_portal_1",
+      "old_air_at_measured_candidate": false,
+      "old_turns_at_measured_candidate": 2,
+      "old_mirror_at_measured_candidate": false,
+      "old_selection_matches": false,
+      "old_nonair_initial_y": 28
+    }
+  ],
+  "reference_replay": {
+    "observed": 34,
+    "old_grid_exact": 0,
+    "new_grid_exact": 34,
+    "old_template_rotation_mirror_exact_on_official_candidates": 0,
+    "new_template_rotation_mirror_exact": 34,
+    "old_air_pockets_on_official_candidates": 14,
+    "new_air_pockets": 0,
+    "official_air_pockets": 0,
+    "low_initial_height_controls": 16,
+    "old_nonair_initial_height_exact": 5,
+    "new_initial_height_exact": 16
+  }
+}

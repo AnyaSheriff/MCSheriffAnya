@@ -1,0 +1,375 @@
+{
+ "scenario": "shulker-hotbar-quick-move",
+ "host": "127.0.0.1",
+ "port": 26271,
+ "lane": 1,
+ "window": {
+  "first": 407,
+  "last": 487
+ },
+ "events": [
+  {
+   "tick": 407,
+   "ms": 147,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 407,
+   "ms": 173,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9810599684715271
+  },
+  {
+   "tick": 407,
+   "ms": 173,
+   "kind": "window",
+   "type": "20",
+   "title": "container.shulkerBox"
+  },
+  {
+   "tick": 407,
+   "ms": 174,
+   "kind": "slots",
+   "items": "0:stone×12 26:diamond×3 62:stone×60"
+  },
+  {
+   "tick": 407,
+   "ms": 174,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "shulker_box[facing=up]"
+  },
+  {
+   "tick": 407,
+   "ms": 174,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 407,
+   "ms": 174,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "shulker_box"
+  },
+  {
+   "tick": 409,
+   "ms": 247,
+   "kind": "do",
+   "what": "window_click {\"slot\":0,\"button\":0,\"mode\":1}",
+   "phase": 0.02
+  },
+  {
+   "tick": 409,
+   "ms": 272,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 0,
+   "item": "пусто"
+  },
+  {
+   "tick": 409,
+   "ms": 273,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 61,
+   "item": "stone×8"
+  },
+  {
+   "tick": 409,
+   "ms": 273,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 62,
+   "item": "stone×64"
+  },
+  {
+   "tick": 419,
+   "ms": 747,
+   "kind": "do",
+   "what": "close",
+   "phase": 0.02
+  },
+  {
+   "tick": 419,
+   "ms": 772,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.962149977684021
+  },
+  {
+   "tick": 419,
+   "ms": 772,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "shulker_box"
+  },
+  {
+   "tick": 427,
+   "ms": 1147,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0.02
+  },
+  {
+   "tick": 427,
+   "ms": 1172,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9348099827766418
+  },
+  {
+   "tick": 427,
+   "ms": 1172,
+   "kind": "window",
+   "type": "20",
+   "title": "container.shulkerBox"
+  },
+  {
+   "tick": 427,
+   "ms": 1172,
+   "kind": "slots",
+   "items": "26:diamond×3 61:stone×8 62:stone×64"
+  },
+  {
+   "tick": 427,
+   "ms": 1172,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "shulker_box[facing=up]"
+  },
+  {
+   "tick": 427,
+   "ms": 1172,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 427,
+   "ms": 1172,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "shulker_box"
+  },
+  {
+   "tick": 429,
+   "ms": 1246,
+   "kind": "do",
+   "what": "window_click {\"slot\":26,\"button\":1,\"mode\":1}",
+   "phase": 0
+  },
+  {
+   "tick": 429,
+   "ms": 1273,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 26,
+   "item": "пусто"
+  },
+  {
+   "tick": 429,
+   "ms": 1273,
+   "kind": "slot",
+   "window": "окно",
+   "slot": 60,
+   "item": "diamond×3"
+  },
+  {
+   "tick": 442,
+   "ms": 1897,
+   "kind": "do",
+   "what": "close",
+   "phase": 0.02
+  },
+  {
+   "tick": 442,
+   "ms": 1922,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.983489990234375
+  },
+  {
+   "tick": 442,
+   "ms": 1922,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "shulker_box"
+  },
+  {
+   "tick": 452,
+   "ms": 2396,
+   "kind": "do",
+   "what": "click 0,0,0",
+   "phase": 0
+  },
+  {
+   "tick": 452,
+   "ms": 2422,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.open",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9419999718666077
+  },
+  {
+   "tick": 452,
+   "ms": 2422,
+   "kind": "window",
+   "type": "20",
+   "title": "container.shulkerBox"
+  },
+  {
+   "tick": 452,
+   "ms": 2422,
+   "kind": "slots",
+   "items": "60:diamond×3 61:stone×8 62:stone×64"
+  },
+  {
+   "tick": 452,
+   "ms": 2423,
+   "kind": "block",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "shulker_box[facing=up]"
+  },
+  {
+   "tick": 452,
+   "ms": 2423,
+   "kind": "block",
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "air"
+  },
+  {
+   "tick": 452,
+   "ms": 2423,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 1,
+   "block": "shulker_box"
+  },
+  {
+   "tick": 467,
+   "ms": 3146,
+   "kind": "do",
+   "what": "close",
+   "phase": 0
+  },
+  {
+   "tick": 467,
+   "ms": 3172,
+   "kind": "sound",
+   "at": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "sound": "minecraft:block.shulker_box.close",
+   "category": "block",
+   "volume": 0.5,
+   "pitch": 0.9424499869346619
+  },
+  {
+   "tick": 467,
+   "ms": 3172,
+   "kind": "action",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "a": 1,
+   "b": 0,
+   "block": "shulker_box"
+  }
+ ]
+}

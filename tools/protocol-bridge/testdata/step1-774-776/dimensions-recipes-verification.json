@@ -1,0 +1,162 @@
+{
+  "timestamp_utc": "2026-10-23T12:50:34.365338+00:00",
+  "full_task_complete": false,
+  "checks": {
+    "rust": {
+      "passed": 2910,
+      "ignored": 82
+    },
+    "protocol": {
+      "passed": 206,
+      "ignored": 5
+    },
+    "python": {
+      "passed": 221
+    },
+    "clippy": "pass",
+    "release": "pass",
+    "public_rejection": {
+      "passed": 8
+    }
+  },
+  "public_admission": {
+    "775": {
+      "774": "closed",
+      "776": "closed"
+    },
+    "777": {
+      "774": "closed",
+      "776": "closed"
+    }
+  },
+  "blockers": {
+    "776": [
+      "remaining entity layouts (only five observed), item components/actions and block-entity data (only empty chest) incomplete",
+      "chat password fallback absent; online-mode unproven",
+      "End travel and cross-dimension persistence not proven"
+    ],
+    "774": [
+      "full Play codecs/dynamic registries, gameplay, restart and authentication missing on both primaries"
+    ]
+  },
+  "scenarios": {
+    "dimensions-recipes-v3-776-primary775": {
+      "status": "pass",
+      "checks": [
+        "login-configuration-play",
+        "complete-primary-recipe-book-translates-and-decodes",
+        "recipe-ghost-autofill-result-and-consumption",
+        "nether-portal-out-and-back-respawn-chunks-short-ack"
+      ],
+      "server_exit": 0,
+      "binary_sha256": "36fcda3bd42e3911aaef3f6b7c3ee73d13a50fdc530a6a50f0c3e25b72fed50f",
+      "runner_sha256": "1f542354483052aa5ca411cbae9f5b56825b81ba00accf9038a8309ce4d654a6",
+      "exit_codes": null
+    },
+    "dimensions-recipes-v2-776-primary777": {
+      "status": "pass",
+      "checks": [
+        "login-configuration-play",
+        "complete-primary-recipe-book-translates-and-decodes",
+        "recipe-ghost-autofill-result-and-consumption",
+        "nether-portal-out-and-back-respawn-chunks-short-ack"
+      ],
+      "server_exit": 0,
+      "binary_sha256": "36fcda3bd42e3911aaef3f6b7c3ee73d13a50fdc530a6a50f0c3e25b72fed50f",
+      "runner_sha256": "1f542354483052aa5ca411cbae9f5b56825b81ba00accf9038a8309ce4d654a6",
+      "exit_codes": null
+    },
+    "password-dialog-776-primary775": {
+      "status": "pass",
+      "checks": [
+        "password-clears-dialog-before-finish",
+        "login-configuration-play",
+        "password-register-before-player-created",
+        "password-clears-dialog-before-finish",
+        "password-relog-wrong-rejected-correct-enters"
+      ],
+      "server_exit": 0,
+      "binary_sha256": "36fcda3bd42e3911aaef3f6b7c3ee73d13a50fdc530a6a50f0c3e25b72fed50f",
+      "runner_sha256": "a2a49292999c9c758e55741d6f3feedb5cc1dcd8940a55af11e96a6b2b5f1f44",
+      "exit_codes": null
+    },
+    "password-dialog-776-primary777": {
+      "status": "pass",
+      "checks": [
+        "password-clears-dialog-before-finish",
+        "login-configuration-play",
+        "password-register-before-player-created",
+        "password-clears-dialog-before-finish",
+        "password-relog-wrong-rejected-correct-enters"
+      ],
+      "server_exit": 0,
+      "binary_sha256": "36fcda3bd42e3911aaef3f6b7c3ee73d13a50fdc530a6a50f0c3e25b72fed50f",
+      "runner_sha256": "a2a49292999c9c758e55741d6f3feedb5cc1dcd8940a55af11e96a6b2b5f1f44",
+      "exit_codes": null
+    },
+    "official-777-dimensions-continuation": {
+      "status": "pass",
+      "checks": [
+        "public777-login-configuration-play-chunks",
+        "survival-player-attack-reduces-peer-health",
+        "death-event-respawn-health20-teleport-ack",
+        "survival-new-block-placement-consumes-one",
+        "survival-mining-drop-and-tool-damage1",
+        "inventory-authoritative-click-moves-stack",
+        "logout-login-preserves-new-items"
+      ],
+      "server_exit": null,
+      "binary_sha256": null,
+      "runner_sha256": "e7d258b78a54e91ce540734cdb3c053e0552eaf8443c784329034dca26f7a906",
+      "exit_codes": [
+        143
+      ]
+    }
+  },
+  "production_binary_sha256": "785a6e9cfad592f8ca71705dd7928e8ebbcb51a0ba52a4b67374ece10ca5a4fa",
+  "committed": false,
+  "ports_verified_closed": [
+    26028,
+    26192,
+    26193,
+    26194,
+    26195
+  ],
+  "sha256": {
+    "admission-dimensions-recipes.json": "fc5fff3906ef8c5de6e2b05320caba3cba0bf808a844d7cc693e21ac5cf91169",
+    "dimensions-recipes-776-primary775/result.json": "f1c3e864ac506500938fec708632ba8c0dad41f96b045fb705601ed460ca2489",
+    "dimensions-recipes-776-primary775/server.log": "ce34652b5e4a55034e4a7d6fe15d99efa80ec1074cc22fbdfb5d770b7b1d15b9",
+    "dimensions-recipes-776-primary777/result.json": "1526dc177ac360ac9c3b72e5264164f55d43e44db9dde3f0818ce1e1f5f6ef11",
+    "dimensions-recipes-776-primary777/server.log": "2fd65032db7416fb12874196a7d729831b61faa881c29c6a41cff92fe5b69233",
+    "dimensions-recipes-v2-776-primary775/result.json": "19c6981b0f61dc528c2ca9e604519a0563eaa7ac360d630af159d3e8c9e35f01",
+    "dimensions-recipes-v2-776-primary775/server.log": "15b98e824bfcd3201d0ea36d03fa8ba36bb644f67c0aa06c76853340e95951cc",
+    "dimensions-recipes-v2-776-primary777/result.json": "00bb471f143a242a8190bec1c6fe01041be7aab50eb5d56bdd0898a0d0e66a47",
+    "dimensions-recipes-v2-776-primary777/server.log": "62efee96bd489885acbd7e640294181955d44bda2e06dd7c9ea165a4f47f903e",
+    "dimensions-recipes-v3-776-primary775/result.json": "0165db64a68415eb6ccebd46d5a4c8529d4308b31e0b7b794a1243bd626c3997",
+    "dimensions-recipes-v3-776-primary775/server.log": "253d6a76043b0779c261e0cb92b1558c9e5d4bfced5ba87e22bc87d9fdb65b4b",
+    "dimensions-recipes-verification/build-tests.log": "fbd24cdad76a2eba35fe8f05677bb880154f51a8d2a880e2e9f769346df96c84",
+    "dimensions-recipes-verification/build.log": "38ccc1bb37bc616bf1f83541365fbc2794f91efad3a8d30d1ee2731741a44ca9",
+    "dimensions-recipes-verification/clippy.log": "8a5b9606739efff8dbdf1dcf62776f2d6cf110a2231b045fec27d5361dd57496",
+    "dimensions-recipes-verification/protocol.log": "acae9f082ea0c48d91a0d58cf329b6c193be3e9698a28f212e74cc8d162c69cc",
+    "dimensions-recipes-verification/python-first-failure.log": "74a854da406d0ab70a3975e7e313a343fc8b47055c985409ff46d20e8fc3c5da",
+    "dimensions-recipes-verification/python.log": "e63828ef13768c1adaf54b31b1156d3ca63025fa81daf63da6ad14cd6cb9ecbc",
+    "dimensions-recipes-verification/rust.log": "eda44f235ba212e39f0d9fbcc0ae140aecc9d7b7f3cbaa05b160e16f8be0bc86",
+    "official-777-dimensions-continuation/result.json": "a65a0c10a7a9386b463421256521959cd277c0120c079bfc658eb28e367228c8",
+    "official-777-dimensions-continuation/server-1.log": "d4ddeb0456686d7479f6403672d1d9ef5d0b96f7dfeec8a407a869b6cd71208e",
+    "password-dialog-776-primary775/result.json": "27534c2cf374734663da539148cb529e591045c3fbbb0f19588da36da77e50b4",
+    "password-dialog-776-primary775/server.log": "fb6bf35521dbc2a762beb58acfbd5e91c35a01f2fd538f6b804c24e96798b6eb",
+    "password-dialog-776-primary777/result.json": "851950d7957877f3db6456f9022312800702eca6c67ffabd56c58bae63e16ec1",
+    "password-dialog-776-primary777/server.log": "46a4cb9a863168060892d76b713ed39867e1f0eaaa39e57d9274d8a3ea18f27c"
+  },
+  "source_sha256": {
+    "src/main.rs": "228410327d9c4d442f0db3c765e97f924cac9927bf18fd22f314581c0e7dd882",
+    "src/network/gameplay_probe.rs": "63659ac1180096e81a2e8401f4c3b1a62bddc11eaed9d65053c005be996824f9",
+    "tools/protocol-bridge/src/wire.rs": "e3b28e09f374b74d9ffe07dcb0a279ffb5cc8d10ece1f5a5131222946fac904a",
+    "tools/protocol-bridge/src/probe_776_tests.rs": "6ed010d135b0db13ba751fcdec67e944e35ed7e8a98934ed3ecaacf0f61028db",
+    "tools/protocol-bridge/probe_gameplay.py": "056d6e6c2d486c216beb46b29ac006377c38e147ed3ad70a4fa9816e566193cb",
+    "tools/protocol-bridge/probe_step1_dimensions_recipes_776.py": "1f542354483052aa5ca411cbae9f5b56825b81ba00accf9038a8309ce4d654a6",
+    "tools/protocol-bridge/test_step1_dimensions_recipes_776.py": "cb1b55afd31a666235993ea33a479a79a29547b6fe3483f758a3563f644e1984",
+    "docs/multiversion-plan.md": "30d7fb54adb959474e04f2f32e1a8eb167504a1c36875deefa0ac1d9510fd1e2",
+    "docs/java-26.3-content.md": "907e5f7fe347d2c91fa279e3ff0a98e9f6d01b120963939efb1ac7ba5c40f6da"
+  }
+}

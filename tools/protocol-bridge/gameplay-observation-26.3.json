@@ -1,0 +1,163 @@
+{
+  "checks": [
+    {
+      "login": "play-loaded-teleport-ack"
+    },
+    {
+      "block": "stone",
+      "state": 1
+    },
+    {
+      "block": "oak_log",
+      "state": 140
+    },
+    {
+      "block": "poplar_log",
+      "state": 167
+    },
+    {
+      "block": "poplar_stairs",
+      "state": 14150
+    },
+    {
+      "block": "white_wool_slab",
+      "state": 3708
+    },
+    {
+      "block": "cinnabar",
+      "state": 29283
+    },
+    {
+      "block": "sulfur",
+      "state": 28044
+    },
+    {
+      "block": "red_shrub",
+      "state": 2367
+    },
+    {
+      "item": "stone",
+      "id": 1
+    },
+    {
+      "item": "diamond_sword",
+      "id": 1050
+    },
+    {
+      "item": "poplar_log",
+      "id": 172
+    },
+    {
+      "item": "white_wool_slab",
+      "id": 282
+    },
+    {
+      "item": "cinnabar",
+      "id": 40
+    },
+    {
+      "item": "sulfur",
+      "id": 26
+    }
+  ],
+  "movements": [
+    {
+      "commanded_position": [
+        2.01,
+        80,
+        2
+      ],
+      "packets": [
+        {
+          "name": "rel_entity_move",
+          "id": 54,
+          "size": 9,
+          "entity": 2,
+          "movement_hex": "0202f8290000f800"
+        }
+      ]
+    },
+    {
+      "commanded_position": [
+        2.1,
+        80,
+        2
+      ],
+      "packets": [
+        {
+          "name": "rel_entity_move",
+          "id": 54,
+          "size": 9,
+          "entity": 2,
+          "movement_hex": "0202017100000000"
+        }
+      ]
+    },
+    {
+      "commanded_position": [
+        3.1,
+        80,
+        2
+      ],
+      "packets": [
+        {
+          "name": "rel_entity_move",
+          "id": 54,
+          "size": 9,
+          "entity": 2,
+          "movement_hex": "0201100000000000"
+        }
+      ]
+    },
+    {
+      "commanded_position": [
+        3.11,
+        80,
+        2
+      ],
+      "packets": [
+        {
+          "name": "rel_entity_move",
+          "id": 54,
+          "size": 9,
+          "entity": 2,
+          "movement_hex": "0203002900000000"
+        }
+      ]
+    },
+    {
+      "commanded_position": [
+        3.0,
+        80,
+        2
+      ],
+      "packets": [
+        {
+          "name": "rel_entity_move",
+          "id": 54,
+          "size": 9,
+          "entity": 2,
+          "movement_hex": "0203fe3d00000000"
+        }
+      ]
+    },
+    {
+      "commanded_position": [
+        2.0,
+        80,
+        2
+      ],
+      "packets": [
+        {
+          "name": "rel_entity_move",
+          "id": 54,
+          "size": 9,
+          "entity": 2,
+          "movement_hex": "0202f00000000000"
+        }
+      ]
+    }
+  ],
+  "source_commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+  "server_exit": 0
+}

@@ -1,0 +1,327 @@
+{
+  "status": "failed",
+  "primary": 775,
+  "protocol": 774,
+  "collect_only": false,
+  "runner_sha256": "723d88edf541a88cee22e89158ddfb17fb4cc751bebc775be17677318e1056cf",
+  "binary_sha256": "37b7be9e85e232b406bd59883b3fd2e05c7bbb084c656081dfdc845d76514bd7",
+  "packets": [
+    {
+      "direction": "toClient",
+      "name": "position",
+      "stage": "login",
+      "hex": "013fe000000000000040500000000000003fe00000000000000000000000000000000000000000000000000000000000000000000041f0000000000000"
+    },
+    {
+      "direction": "toClient",
+      "name": "entity_metadata",
+      "stage": "login",
+      "hex": "010000000614000f260110007fff"
+    },
+    {
+      "direction": "toClient",
+      "name": "window_items",
+      "stage": "login",
+      "hex": "00012e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "authoritative_hands": {
+        "mainhand": null,
+        "offhand": null
+      }
+    },
+    {
+      "direction": "toClient",
+      "name": "system_chat",
+      "stage": "login",
+      "hex": "0800264d63736150726f626520d0b7d0b0d188d191d0bb20d0bdd0b020d181d0b5d180d0b2d0b5d18000"
+    },
+    {
+      "direction": "toServer",
+      "name": "player_loaded",
+      "stage": "login",
+      "hex": ""
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ff5f6fd1eb8523fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404fe21858af5fd53fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404fc4966cf437a03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f9da2926170e43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f6d6d24c522a83fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404f34258854d95e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ef1fa2ea1476e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404ea7189b709b2e3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404e53ad697ffc1c3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404df7e44f2cae8f3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404d93e823055a873fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404d27e2e043efcd3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404cb3fdab309f203fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404c3860d56e5dc23fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404bb533e23166643fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404b2a9d8a6028253fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000404a98c3c09f12133fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004049ffcbb547a7653fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040495fd9da4b46833fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004048b911e7020ad03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040480b96dbe62f0b3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004047578b063c54233fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040469d1003a90e4d3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004045dc46c5b418423fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004045154f95398a943fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004044484a15c973313fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004043755548f627503fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040429c8f9191a8383fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004041be16b6da71843fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004040da07e79805e03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403fe0ff7a4f1ad03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403e03347cf1ae973fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403c1ae5c5f81d2c3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403a28492b00e0ff3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040382b936e08a1fd3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403624f842ed71c43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000403414aa54d5ce4b3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004031fadb4b7bfb8d3fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402faf77a0bc83a03fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402b56f727a936a13fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000004026ec92a418b2b43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000402270a5afd48c213fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe0000000000000401bc7141f4f16483fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040128b2f797dd9b43fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe000000000000040025c93b76e77243fe000000000000000"
+    },
+    {
+      "direction": "toServer",
+      "name": "position",
+      "stage": "login",
+      "hex": "3fe00000000000003ff00000000000003fe000000000000001"
+    }
+  ],
+  "commands": [],
+  "checks": [],
+  "screenshots": [],
+  "error": "AssertionError()",
+  "client_exit": -15,
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

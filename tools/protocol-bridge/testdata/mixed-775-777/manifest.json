@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "save_format": {
+    "region_layout": 1,
+    "playerdata_layout": 11
+  },
+  "registry_id": "mcsa-catalog-v1:sha256:87ef40d7b5b846a34b4cacb78a9a1c1d4ebcba13cf6e1f09946faffd5710e3b4",
+  "gameplay_version": "26.3",
+  "snapshot_id": "668340ef58c57eb78b1a78e719d20204"
+}

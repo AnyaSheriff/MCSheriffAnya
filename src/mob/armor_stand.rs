@@ -27,14 +27,19 @@ impl State {
         out.extend(self.disabled.to_be_bytes());
         for s in self.equipment { out.push(u8::from(s.is_some())); if let Some(s)=s { out.extend(s.stored_item().to_be_bytes()); out.extend(s.count.to_be_bytes()); s.write_extras(out); } }
     }
-    pub fn read(bytes:&mut &[u8])->Option<Self> {
+    #[cfg(test)]
+pub fn read(bytes:&mut &[u8])->Option<Self> {
+    Self::read_with_legacy_metadata(bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes:&mut &[u8], legacy_metadata: bool)->Option<Self> {
         let mut take=|n| {let (a,b)=bytes.split_at_checked(n)?;*bytes=b;Some(a)};
         let f=take(1)?[0]; let mut s=Self{small:f&1!=0,arms:f&4!=0,no_base:f&8!=0,marker:f&16!=0,invisible:f&32!=0,no_gravity:f&64!=0,..Self::default()};
         for p in &mut s.pose {for v in p { *v=f32::from_be_bytes(take(4)?.try_into().ok()?);if !v.is_finite(){return None;} }}
         s.disabled=i32::from_be_bytes(take(4)?.try_into().ok()?);
         for slot in &mut s.equipment {if take(1)?[0]!=0 {
             let raw=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let mut stack=Stack::from_stored(raw,count); if let Some(data)=Stack::read_extras(raw,&mut take)? {stack=stack.with_extras(data);} *slot=Some(stack);
+            let extra=Stack::read_extras_strict_with_legacy_metadata(raw,&mut take, legacy_metadata)?; *slot=Some(Stack::from_stored_strict(raw,count,extra)?);
         }} Some(s)
     }
 }

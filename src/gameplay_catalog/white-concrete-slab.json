@@ -1,0 +1,152 @@
+{
+  "scope": "Selected pinned JSON candidate, not gameplay observation. No recipe for this item in this pinned recipes table; do not invent one.",
+  "sources": {
+    "blocks.json": {
+      "sha256": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+      "bytes": 976252,
+      "commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+      "path": "data/pc/26.3/blocks.json"
+    },
+    "items.json": {
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+      "bytes": 207286,
+      "commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+      "path": "data/pc/26.3/items.json"
+    },
+    "blockCollisionShapes.json": {
+      "sha256": "3dcb8f07c528975a50c27c091351678d22ef64ceb64b08a71c83839924d6047e",
+      "bytes": 1864249,
+      "commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+      "path": "data/pc/26.3/blockCollisionShapes.json"
+    },
+    "recipes.json": {
+      "sha256": "173c3b7cfbf1cc9e2a189fe5a3384c22a536d8b90a659850da336739eca38a6d",
+      "bytes": 412775,
+      "commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+      "path": "data/pc/26.3/recipes.json"
+    }
+  },
+  "block": {
+    "id": 800,
+    "name": "white_concrete_slab",
+    "displayName": "White Concrete Slab",
+    "hardness": 1.8,
+    "resistance": 1.8,
+    "stackSize": 64,
+    "diggable": true,
+    "material": "mineable/pickaxe",
+    "transparent": false,
+    "emitLight": 0,
+    "filterLight": 0,
+    "defaultState": 18310,
+    "minStateId": 18307,
+    "maxStateId": 18312,
+    "states": [
+      {
+        "name": "type",
+        "type": "enum",
+        "num_values": 3,
+        "values": [
+          "top",
+          "bottom",
+          "double"
+        ]
+      },
+      {
+        "name": "waterlogged",
+        "type": "bool",
+        "num_values": 2
+      }
+    ],
+    "drops": [
+      721
+    ],
+    "boundingBox": "block",
+    "harvestTools": {
+      "1027": true,
+      "1032": true,
+      "1037": true,
+      "1042": true,
+      "1047": true,
+      "1052": true,
+      "1057": true
+    }
+  },
+  "item": {
+    "id": 721,
+    "name": "white_concrete_slab",
+    "displayName": "White Concrete Slab",
+    "stackSize": 64
+  },
+  "collision_by_state": [
+    [
+      [
+        0.0,
+        0.5,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.0,
+        0.5,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.5,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.5,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    ]
+  ],
+  "recipe": null,
+  "internal_reservation": {
+    "namespace": "mcsa-catalog-v1",
+    "item": 1506,
+    "block": 1168,
+    "first_state": 29873,
+    "last_state": 29878,
+    "default_state": 29876
+  }
+}

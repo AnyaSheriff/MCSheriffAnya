@@ -693,6 +693,18 @@ pub struct Plan {
 }
 
 impl Ticking {
+    /// Пауза по реальному времени не входит в TPS и длительность разгона.
+    /// Сам freeze, оставшиеся step и sprint при этом не меняются.
+    pub fn resumed_after_idle(&mut self, paused: Duration) {
+        self.last_start = None;
+        if let Some(sprint) = &mut self.sprint {
+            let now = Instant::now();
+            let started_pause = now.checked_sub(paused).unwrap_or(now);
+            sprint.started = if sprint.started >= started_pause { now }
+                else { sprint.started.checked_add(paused).unwrap_or(now) };
+        }
+    }
+
     pub fn metrics(&self) -> (f32, f32) {
         let mspt = self.spent.iter().sum::<f32>() / self.spent.len().max(1) as f32;
         let elapsed = if self.intervals.is_empty() { mspt } else { self.intervals.iter().sum::<f32>() / self.intervals.len() as f32 };
@@ -1032,13 +1044,13 @@ fn player_arg(name: &str) -> Arg {
 
 /// Цель команды: игрок или моб.
 #[derive(Clone, Debug)]
-enum Target {
+pub(crate) enum Target {
     Player { uuid: [u8; 16], name: String, entity_id: i32, dimension: Dimension, at: (f64, f64, f64) },
     Mob { entity_id: i32, kind: crate::mob::Kind, dimension: Dimension, at: (f64, f64, f64) },
 }
 
 impl Target {
-    fn entity_id(&self) -> i32 {
+    pub(crate) fn entity_id(&self) -> i32 {
         match self {
             Target::Player { entity_id, .. } | Target::Mob { entity_id, .. } => *entity_id,
         }
@@ -1076,7 +1088,7 @@ impl Target {
 }
 
 /// Цели по записи: игроки (`find_targets`) и мобы (`@e[…]`, `@n[…]`).
-fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
+pub(crate) fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
     let players: Vec<crate::players::Member> = shared.players.lock().expect("список игроков захвачен другим потоком").members().to_vec();
     let player_target = |uuid: &[u8; 16]| {
         players.iter().find(|member| &member.uuid == uuid).map(|member| Target::Player {
@@ -1085,6 +1097,10 @@ fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
             entity_id: member.entity_id,
             dimension: member.dimension,
             at: (member.position.x, member.position.y, member.position.z),
+        }).or_else(|| {
+            let dimension = crate::commands::dimension_of(source, shared);
+            let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            items.mobs().iter().find(|m| m.uuid == *uuid && !m.is_dead()).map(|m| Target::Mob { entity_id: m.entity_id, kind: m.kind, dimension, at: (m.x,m.y,m.z) })
         })
     };
 
@@ -1554,6 +1570,7 @@ fn attribute(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     // но ещё не исполненные правки; vanilla-cmd-attribute.json даёт 0.3.
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком");
     let snapshot = known.entry(*uuid).or_default();
+    snapshot.current.set_catalog(shared.catalog());
     let attributes = snapshot.projected();
     let entry = attributes.get(attribute).cloned().unwrap_or(crate::attributes::Attribute { id: attribute, base: crate::attributes::player_base(attribute), modifiers: Vec::new() });
     let scaled = |value: f64, scale: Option<&&str>| -> Result<f64, Answer> {
@@ -1569,8 +1586,8 @@ fn attribute(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     };
 
     match rest {
-        ["get", scale @ ..] if scale.len() <= 1 => match scaled(entry.value(), scale.first()) {
-            Ok(_) => tr("commands.attribute.value.get.success", &[attribute_arg, target.plain_name(), Arg::Double(entry.value())]),
+        ["get", scale @ ..] if scale.len() <= 1 => match scaled(attributes.value(attribute), scale.first()) {
+            Ok(_) => tr("commands.attribute.value.get.success", &[attribute_arg, target.plain_name(), Arg::Double(attributes.value(attribute))]),
             Err(answer) => answer,
         },
         ["base", "get", scale @ ..] if scale.len() <= 1 => match scaled(entry.base, scale.first()) {
@@ -1734,10 +1751,10 @@ pub(crate) fn replace_equipment(named: &str, slot: u8, stack: Option<crate::inve
                     && crate::mob::equipment::set_slot(mob, slot, stack) { changed += 1; }
             }
             Target::Player { uuid, .. } => {
-                let order = if slot == 0 { Order::Hold { stack } } else {
-                    Order::SetSlot { slot: match slot { 1 => crate::inventory::OFFHAND, 2 => 8, 3 => 7, 4 => 6, _ => 5 }, stack }
-                };
-                shared.players.lock().expect("игроки").order(&uuid, order);
+                if slot == 0 { shared.order_mainhand(&uuid, stack); } else {
+                    shared.players.lock().expect("игроки").order(&uuid,
+                        Order::SetSlot { slot: match slot { 1 => crate::inventory::OFFHAND, 2 => 8, 3 => 7, 4 => 6, _ => 5 }, stack });
+                }
                 changed += 1;
             }
         }
@@ -1850,7 +1867,7 @@ fn chunk_pos(x: i32, z: i32) -> String {
 
 fn forceload(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let dimension = crate::commands::dimension_of(source, shared);
-    let dimension_arg = s(format!("minecraft:{}", dimension.name()));
+    let dimension_arg = s(dimension.name());
     let origin = crate::commands::origin_of(source, shared);
     let column = |x: &str, z: &str| -> Option<(i32, i32)> { Some((block_coordinate(x, origin.0)?.div_euclid(16), block_coordinate(z, origin.2)?.div_euclid(16))) };
     let mut forced = shared.world_cmd.forced.lock().expect("удержанные чанки захвачены другим потоком");
@@ -2543,7 +2560,9 @@ fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         ["biome", name] => {
             let short = name.strip_prefix("minecraft:").unwrap_or(name);
 
-            if !crate::world::terrain::Biome::ALL.iter().any(|biome| biome.name() == short) {
+            let preview = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
+
+            if crate::world::terrain::Biome::by_name(short, preview).is_none() {
                 return fail("argument.resource.not_found", &[s(*name), s("minecraft:worldgen/biome")]);
             }
 
@@ -2607,10 +2626,12 @@ fn fillbiome(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return bad_syntax();
     };
 
+    let dimension = crate::commands::dimension_of(source, shared);
+    let preview = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
     let number = |name: &str| {
         let short = name.strip_prefix("minecraft:").unwrap_or(name);
 
-        crate::world::terrain::Biome::ALL.iter().find(|biome| biome.name() == short).map(|biome| biome.number() as crate::world::BiomeId)
+        crate::world::terrain::Biome::by_name(short, preview).map(|biome| biome.number() as crate::world::BiomeId)
     };
 
     let Some(biome_number) = number(biome) else {
@@ -2636,7 +2657,6 @@ fn fillbiome(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return fail("commands.fillbiome.toobig", &[Arg::Int(BLOCK_LIMIT), Arg::Int(volume)]);
     }
 
-    let dimension = crate::commands::dimension_of(source, shared);
     let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
     for chunk_x in low.0 >> 4..=high.0 >> 4 {
@@ -2785,6 +2805,10 @@ fn loot_answer(single: &str, multiple: &str, stacks: &[crate::inventory::Stack])
 /// Английские шаблоны ответов (языковая таблица en_us 26.1 из
 /// minecraft-data) — для консоли, журнала и Bedrock.
 const TEMPLATES: &[(&str, &str)] = &[
+    ("argument.entity.options.limit.toosmall", "Limit must be at least 1"),
+    ("commands.data.entity.query", "%s has the following entity data: %s"),
+    ("argument.nbtpath.nothing_found", "Found no elements matching %s"),
+    ("commands.generic.permission", "You do not have permission to use this command"),
     ("argument.block.id.invalid", "Unknown block type '%s'"),
     ("argument.dimension.invalid", "Unknown dimension '%s'"),
     ("argument.double.big", "Double must not be more than %s: found %s"),
@@ -2908,6 +2932,38 @@ const TEMPLATES: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_resume_preserves_freeze_steps_sprint_and_resets_wall_metrics() {
+        let now = Instant::now();
+        let mut ticking = Ticking {
+            frozen: true, step_left: 7,
+            sprint: Some(Sprint { left: 123, done: 17, started: now - Duration::from_secs(10) }),
+            last_start: Some(now - Duration::from_secs(10)),
+            ..Default::default()
+        };
+        let started = ticking.sprint.as_ref().unwrap().started;
+        ticking.resumed_after_idle(Duration::from_secs(5));
+        assert!(ticking.frozen);
+        assert_eq!(ticking.step_left,7);
+        let sprint = ticking.sprint.as_ref().unwrap();
+        assert_eq!((sprint.left,sprint.done),(123,17));
+        assert_eq!(sprint.started,started + Duration::from_secs(5));
+        assert!(ticking.last_start.is_none());
+        ticking.note_start(Instant::now());
+        assert!(ticking.intervals.is_empty(),"пауза не попала в TPS");
+    }
+
+    #[test]
+    fn sprint_started_during_idle_does_not_get_future_start_time() {
+        let mut ticking = Ticking {
+            sprint: Some(Sprint { left: 11, done: 0, started: Instant::now() }),
+            ..Default::default()
+        };
+        ticking.resumed_after_idle(Duration::from_secs(300));
+        assert!(ticking.sprint.as_ref().unwrap().started <= Instant::now());
+        assert_eq!(ticking.sprint.as_ref().unwrap().left,11);
+    }
 
     #[test]
     fn numbers_are_rounded_half_up_like_java() {

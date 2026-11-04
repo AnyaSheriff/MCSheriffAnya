@@ -1,0 +1,23 @@
+   Compiling tokio v1.54.1
+   Compiling cranelift-codegen v0.136.2
+   Compiling wasmtime-environ v49.0.2
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv5/tools/protocol-bridge)
+   Compiling tokio-util v0.7.20
+   Compiling tokio-rustls v0.26.6
+   Compiling h2 v0.4.20
+   Compiling tower v0.5.3
+   Compiling tower-http v0.6.11
+   Compiling hyper v1.12.0
+   Compiling hyper-util v0.1.21
+   Compiling wasmtime-internal-fiber v49.0.2
+   Compiling hyper-rustls v0.27.10
+   Compiling reqwest v0.13.5
+   Compiling wasmtime-internal-unwinder v49.0.2
+   Compiling cranelift-frontend v0.136.2
+   Compiling cranelift-native v0.136.2
+   Compiling wasmtime-internal-cranelift v49.0.2
+   Compiling wasmtime v49.0.2
+   Compiling wasmtime-wasi-io v49.0.2
+   Compiling wasmtime-wasi v49.0.2
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv5)
+    Finished `release` profile [optimized] target(s) in 1m 50s

@@ -48,6 +48,7 @@ pub fn placed(world: &mut World, p: Pos, here: i32, face: i32) -> i32 {
         let next = rule.with(here, "waterlogged", if wet { "true" } else { "false" }).unwrap_or(here);
         if wet && matches!(rule.name, "campfire" | "soul_campfire") { rule.with(next, "lit", "false").unwrap_or(next) } else { next }
     } else { here };
+    if let Some(next) = crate::sulfur_spike::placed(world, p, here, face) { return next; }
     let n = name(here);
     if n == "pointed_dripstone" { return crate::dripstone::placed(world, p, here, face); }
     if n == "scaffolding" { return crate::scaffolding::placed(world, p, here); }
@@ -84,6 +85,7 @@ pub fn bucket_water(state: i32, filled: bool) -> Option<i32> {
 /// Общая проверка опоры коралла при установке и обновлении формы.
 /// [проверить]: неполные боковые грани; используем существующий solid_top.
 pub fn supported(world: &World, p: Pos, here: i32) -> bool {
+    if crate::sulfur_spike::is_spike(here) { return crate::sulfur_spike::supported(world, p, here); }
     let n = name(here);
     if let Some(supported) = crate::vegetation::supported(world, p, here) { return supported; }
     if matches!(n, "cave_vines" | "cave_vines_plant") { return crate::farming::cave_vine_supported(world, p); }
@@ -113,6 +115,7 @@ pub fn supported(world: &World, p: Pos, here: i32) -> bool {
 pub fn shape_changed(world: &mut World, p: Pos, loud: bool) -> bool {
     let here = at(world, p);
     if crate::vegetation::vine_changed(world, p) { return true; }
+    if crate::sulfur_spike::is_spike(here) { crate::sulfur_spike::changed(world, p); return true; }
     if name(here) == "pointed_dripstone" { crate::dripstone::changed(world, p); return true; }
     if matches!(name(here), "cave_vines" | "cave_vines_plant") { crate::farming::cave_vine_changed(world, p); return true; }
     if !supported(world, p, here) {
@@ -135,6 +138,7 @@ fn coral_wet(world: &World, p: Pos) -> bool {
 pub fn changed(world: &mut World, p: Pos) {
     if crate::vegetation::vine_changed(world, p) { return; }
     let here = at(world, p);
+    if crate::sulfur_spike::is_spike(here) { crate::sulfur_spike::changed(world, p); return; }
     match name(here) {
         n if (n == "candle" || n.ends_with("_candle"))
             && property(here, "waterlogged") == Some("true") && property(here, "lit") == Some("true") => {
@@ -253,6 +257,7 @@ fn update_column(world: &mut World, mut p: Pos) {
 pub fn ticked(world: &mut World, p: Pos) -> bool {
     if crate::vegetation::ticked(world, p) { return true; }
     let here = at(world, p);
+    if crate::sulfur_spike::is_spike(here) { crate::sulfur_spike::ticked(world, p); return true; }
     match name(here) {
         "pointed_dripstone" => crate::dripstone::ticked(world, p),
         "frosted_ice" => crate::frost::ticked(world, p),

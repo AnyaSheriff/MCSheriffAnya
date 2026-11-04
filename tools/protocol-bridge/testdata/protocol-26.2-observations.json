@@ -1,0 +1,717 @@
+{
+  "attributes": {
+    "attribute_suggestions": [
+      "minecraft:air_drag_modifier",
+      "minecraft:armor",
+      "minecraft:armor_toughness",
+      "minecraft:attack_damage",
+      "minecraft:attack_knockback",
+      "minecraft:attack_speed",
+      "minecraft:below_name_distance",
+      "minecraft:block_break_speed",
+      "minecraft:block_interaction_range",
+      "minecraft:bounciness",
+      "minecraft:burning_time",
+      "minecraft:camera_distance",
+      "minecraft:entity_interaction_range",
+      "minecraft:explosion_knockback_resistance",
+      "minecraft:fall_damage_multiplier",
+      "minecraft:flying_speed",
+      "minecraft:follow_range",
+      "minecraft:friction_modifier",
+      "minecraft:gravity",
+      "minecraft:jump_strength",
+      "minecraft:knockback_resistance",
+      "minecraft:luck",
+      "minecraft:max_absorption",
+      "minecraft:max_health",
+      "minecraft:mining_efficiency",
+      "minecraft:movement_efficiency",
+      "minecraft:movement_speed",
+      "minecraft:name_tag_distance",
+      "minecraft:oxygen_bonus",
+      "minecraft:safe_fall_distance",
+      "minecraft:scale",
+      "minecraft:sneaking_speed",
+      "minecraft:spawn_reinforcements",
+      "minecraft:step_height",
+      "minecraft:submerged_mining_speed",
+      "minecraft:sweeping_damage_ratio",
+      "minecraft:tempt_range",
+      "minecraft:water_movement_efficiency",
+      "minecraft:waypoint_receive_range",
+      "minecraft:waypoint_transmit_range"
+    ],
+    "cases": [
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:air_drag_modifier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:air_drag_modifier",
+        "slot_hex": "01ce0701001001000a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:armor\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:armor",
+        "slot_hex": "01ce0701001001010a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:armor_toughness\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:armor_toughness",
+        "slot_hex": "01ce0701001001020a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:attack_damage",
+        "slot_hex": "01ce0701001001030a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_knockback\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:attack_knockback",
+        "slot_hex": "01ce0701001001040a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:attack_speed",
+        "slot_hex": "01ce0701001001050a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:below_name_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:below_name_distance",
+        "slot_hex": "01ce0701001001060a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:block_break_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:block_break_speed",
+        "slot_hex": "01ce0701001001070a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:block_interaction_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:block_interaction_range",
+        "slot_hex": "01ce0701001001080a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:bounciness\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:bounciness",
+        "slot_hex": "01ce0701001001090a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:burning_time\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:burning_time",
+        "slot_hex": "01ce07010010010a0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:camera_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:camera_distance",
+        "slot_hex": "01ce07010010010b0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:entity_interaction_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:entity_interaction_range",
+        "slot_hex": "01ce07010010010d0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:explosion_knockback_resistance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:explosion_knockback_resistance",
+        "slot_hex": "01ce07010010010c0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:fall_damage_multiplier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:fall_damage_multiplier",
+        "slot_hex": "01ce07010010010e0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:flying_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:flying_speed",
+        "slot_hex": "01ce07010010010f0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:follow_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:follow_range",
+        "slot_hex": "01ce0701001001100a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:friction_modifier\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:friction_modifier",
+        "slot_hex": "01ce0701001001110a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:gravity\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:gravity",
+        "slot_hex": "01ce0701001001120a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:jump_strength\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:jump_strength",
+        "slot_hex": "01ce0701001001130a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:knockback_resistance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:knockback_resistance",
+        "slot_hex": "01ce0701001001140a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:luck\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:luck",
+        "slot_hex": "01ce0701001001150a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:max_absorption\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:max_absorption",
+        "slot_hex": "01ce0701001001160a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:max_health\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:max_health",
+        "slot_hex": "01ce0701001001170a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:mining_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:mining_efficiency",
+        "slot_hex": "01ce0701001001180a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:movement_efficiency",
+        "slot_hex": "01ce0701001001190a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:movement_speed",
+        "slot_hex": "01ce07010010011a0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:name_tag_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:name_tag_distance",
+        "slot_hex": "01ce07010010011b0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:oxygen_bonus\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:oxygen_bonus",
+        "slot_hex": "01ce07010010011c0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:safe_fall_distance\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:safe_fall_distance",
+        "slot_hex": "01ce07010010011d0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:scale\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:scale",
+        "slot_hex": "01ce07010010011e0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:sneaking_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:sneaking_speed",
+        "slot_hex": "01ce07010010011f0a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:spawn_reinforcements\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:spawn_reinforcements",
+        "slot_hex": "01ce0701001001200a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:step_height\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:step_height",
+        "slot_hex": "01ce0701001001210a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:submerged_mining_speed\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:submerged_mining_speed",
+        "slot_hex": "01ce0701001001220a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:sweeping_damage_ratio\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:sweeping_damage_ratio",
+        "slot_hex": "01ce0701001001230a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:tempt_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:tempt_range",
+        "slot_hex": "01ce0701001001240a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:water_movement_efficiency\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:water_movement_efficiency",
+        "slot_hex": "01ce0701001001250a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:waypoint_receive_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:waypoint_receive_range",
+        "slot_hex": "01ce0701001001270a6d6373613a70726f62653ff0000000000000000100"
+      },
+      {
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:waypoint_transmit_range\",id:\"mcsa:probe\",amount:1,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "name": "minecraft:waypoint_transmit_range",
+        "slot_hex": "01ce0701001001260a6d6373613a70726f62653ff0000000000000000100"
+      }
+    ],
+    "exit_code": 0,
+    "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+    "protocol": 776,
+    "provenance": {
+      "candidate_sources": {
+        "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json": {
+          "bytes": 88789,
+          "sha256": "6ea2d04f7f78ea56fa3db8453dd62c4b6021b5eef01994e24e3e3e5f6c28295d",
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json"
+        },
+        "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json": {
+          "bytes": 339684,
+          "sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c",
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json"
+        }
+      },
+      "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+      "metadata_requirement": "version metadata must be obtained through the official launcher manifest",
+      "metadata_sha256": "8d009c6ed0b7b8c65bfff515a1ff8b12cc8df72627bb0e355ecbce9f7bc34f9c",
+      "server_url": "https://piston-data.mojang.com/v1/objects/823e2250d24b3ddac457a60c92a6a941943fcd6a/server.jar"
+    }
+  },
+  "format": 1,
+  "login": {
+    "handshake_protocol": 776,
+    "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+    "packets": [
+      {
+        "phase": "status",
+        "version": {
+          "name": "26.2",
+          "protocol": 776
+        }
+      },
+      {
+        "id": 2,
+        "phase": "login",
+        "sha256": "175b50abd47e5eb054799368df639247f22c93c671207c90c95308961dd8bc94",
+        "size": 43,
+        "test_profile_payload_hex": "f0856c057f7739b1b6005719f4e70be8094d63736150726f626500fb4324cde96640f786c45269f2330c87"
+      },
+      {
+        "id": 1,
+        "phase": "configuration",
+        "sha256": "cc5fc2907d8768f85026bc28f4458ce61f275b92a43749b2c3b50d35f1c5e187",
+        "size": 24
+      },
+      {
+        "id": 12,
+        "phase": "configuration",
+        "sha256": "77dae5f6d821757486b2af93050102274d4d008de84228ccc8dad83bcb7b82bc",
+        "size": 19
+      },
+      {
+        "id": 14,
+        "known_packs_hypothesis": [
+          [
+            "minecraft",
+            "core",
+            "26.2"
+          ]
+        ],
+        "phase": "configuration",
+        "sha256": "cb2b6c537a3b553c10cf5c14a81e3a1132a30233405dba44fff2e8a922adee6d",
+        "size": 21
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "6bd5e9ce93dc997cc737749cead1bdc0f323c2741c6b84455cfa879dda74a0c5",
+        "size": 1611
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "3f50bfc19ee3e385b315c90919a4ea6a41c71254a0a0a80517eb59a3a4277bb8",
+        "size": 223
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "c4bf28c2d73210824fd49b58231f9a0b2788dba01cbc80811d8b366324ea7547",
+        "size": 326
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "08afbe4c951645cef8b9f84334907798550d31983bd06212a1f988a5f6ff3355",
+        "size": 226
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "14274ad0c23ae4c95ad7a3e4eaca03f7c5d90b747304795f5401b7b8f285eb2d",
+        "size": 183
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "4776e0c8fe4aadbf4aa1e044c81952e4a588e76e91c9afab7b68e01e8ee35677",
+        "size": 148
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "4e6066e9bc9584b8b229b4eccad884cf0d65ba1922a04da479f6144bf7c029b5",
+        "size": 76
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "ad0d31ddb962e548595a59f6a923906bf601c74d8e5a32f3f3c9e897283e5c3a",
+        "size": 79
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "b13df01955347d2fdb8934dc4a8bd1ba825a0a636fe861b4d88a8aa254407506",
+        "size": 77
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "fa9da921f75ab7084137916074b70bac272dc599ffb3471b7ba6a76c3933fda8",
+        "size": 232
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "866720efdb560edd931e72fb75e18a688035e1e458239a402d228a889050c8a5",
+        "size": 65
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "b1fc69914693febf948128217348019b44183ebddcd564e400b2f1aabec9b771",
+        "size": 65
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "9a64dbe5b387ee950403269eb516ca14cc3419eab735a0f726ed67b3947495da",
+        "size": 76
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "9e0c4166b55291204b815772006996e6318dd8131af65e02eeb280ad8d77cecd",
+        "size": 69
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "e509cd2a60580885ba3b41e3e26d23514b8f1fbb843a77cd8bc8af32fcbea438",
+        "size": 80
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "ba166744ab8e962dd7dfd4d29774c33ed4e0e69dc734c47d70a08bf4314b6258",
+        "size": 72
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "c45cb2a70a1bcdce5abdea34ee61621135cfd0f38857ff8842eb1932a0d8b9f8",
+        "size": 979
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "e1728faeae546d7c9652478212f13f3fd6ca1fab1fc51b39874b9cb89e7a6d82",
+        "size": 281
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "783c0f84cebe0491d6606e6a5b671ce8cd0dd189310e64e92475b1ec0096eee5",
+        "size": 115
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "4480e479c0769f7436d2b9181e03c1cd222474e655567f3d31118e6cfbdc3d70",
+        "size": 1142
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "9671ec3318adb7e1a3eed3acc4f6537af165356ae5d8d659ef6ab25a09e21598",
+        "size": 1035
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "117d3c940f010640227f814ea9ef5053ea202ea94674e849b3c1ac7a3461470a",
+        "size": 967
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "3dfc60928b631b58e20f59b1b174d82f198ac6dfa63a31cb98acd5eac8449399",
+        "size": 415
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "6a7f0314fe8288b5fbd3704b7a80ca84080c4a8677415699eb1da1a4a449fde6",
+        "size": 236
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "7344ec6ac587e3a4f73b996709f63bf0a9af3ecf9f8b23db6b3917ca78f29d67",
+        "size": 47
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "389c44a2bc4fd2fb11a17f966271f5f17ba2d0a7fa28e4be1f87cb431c39ae26",
+        "size": 48
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "a72d02aff51e58c3c4da24b0c415e1ba06dc834cb39bbdd377d1861379bab0a4",
+        "size": 93
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "cb99cc88120906cd519e031e3dea81a4e0a1be018c489c6a9c539386df50c449",
+        "size": 63
+      },
+      {
+        "id": 7,
+        "phase": "configuration",
+        "sha256": "390de08a8aee2cc8a0450c5ca10363a72464390a6e557691ac4409d997474970",
+        "size": 102
+      },
+      {
+        "id": 13,
+        "phase": "configuration",
+        "sha256": "492fc28300491fa6f782f1645d890622d29d3f7a8125f7f2df1f00635bf9d73d",
+        "size": 35203
+      },
+      {
+        "id": 3,
+        "phase": "configuration",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      {
+        "id": 49,
+        "phase": "play",
+        "sha256": "c5d180cee912fcb0ab523118cae996da542316d06834db9c18c74bb301f13cae",
+        "size": 113,
+        "test_play_login_hex": "31000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657202020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c00ff00010000c1ffffff0f0000"
+      }
+    ],
+    "scope": "wire observation only; no gameplay compatibility claim",
+    "server_exit": 0
+  },
+  "official_download": {
+    "downloaded": true,
+    "executed": false,
+    "jar_unpacked": false,
+    "manifest_sha256": "ac37f92737df1a9d7660047136fedd3edebd90bd6e552f53ddc3f222079bc8fa",
+    "manifest_url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+    "metadata_sha1": "91ef51b7d36ca092c5c02aba42f0f40c7cc1db84",
+    "metadata_sha256": "8d009c6ed0b7b8c65bfff515a1ff8b12cc8df72627bb0e355ecbce9f7bc34f9c",
+    "recorded_before_probe_execution": true,
+    "server": {
+      "sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+      "size": 60894273,
+      "url": "https://piston-data.mojang.com/v1/objects/823e2250d24b3ddac457a60c92a6a941943fcd6a/server.jar"
+    },
+    "server_sha256": "cdacdfb25898de5e4b4b0e5ddcc2722f77067e46605709c2d886c000ebb63ec5",
+    "version": "26.2",
+    "version_entry": {
+      "complianceLevel": 1,
+      "id": "26.2",
+      "releaseTime": "2026-06-16T12:03:33+00:00",
+      "sha1": "91ef51b7d36ca092c5c02aba42f0f40c7cc1db84",
+      "time": "2026-10-13T06:42:01+00:00",
+      "type": "release",
+      "url": "https://piston-meta.mojang.com/v1/packages/91ef51b7d36ca092c5c02aba42f0f40c7cc1db84/26.2.json"
+    }
+  },
+  "scope": "Own commands and raw protocol packets for the synthetic McsaProbe player; no JAR contents, mappings or registry/datapack dumps.",
+  "sessions": {
+    "entities": [],
+    "exit_code": 0,
+    "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+    "login_after_switch_hex": "31000000060003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000100010000c1ffffff0f0000",
+    "login_initial_hex": "31000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c01ff00010000c1ffffff0f0000",
+    "provenance": {
+      "candidate_sources": {
+        "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json": {
+          "bytes": 88789,
+          "sha256": "6ea2d04f7f78ea56fa3db8453dd62c4b6021b5eef01994e24e3e3e5f6c28295d",
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/entities.json"
+        },
+        "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json": {
+          "bytes": 339684,
+          "sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c",
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json"
+        }
+      },
+      "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+      "metadata_requirement": "version metadata must be obtained through the official launcher manifest",
+      "metadata_sha256": "8d009c6ed0b7b8c65bfff515a1ff8b12cc8df72627bb0e355ecbce9f7bc34f9c",
+      "server_url": "https://piston-data.mojang.com/v1/objects/823e2250d24b3ddac457a60c92a6a941943fcd6a/server.jar"
+    },
+    "respawns": [
+      {
+        "body": "5203146d696e6563726166743a7468655f6e6574686572a63f41d436a19f7c0001000100002003",
+        "dimension": "the_nether",
+        "mode": "survival",
+        "name": "respawn"
+      },
+      {
+        "body": "5202116d696e6563726166743a7468655f656e64a63f41d436a19f7c0100000100000003",
+        "dimension": "the_end",
+        "mode": "creative",
+        "name": "respawn"
+      },
+      {
+        "body": "5200136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c030100010000c1ffffff0f03",
+        "dimension": "overworld",
+        "mode": "spectator",
+        "name": "respawn"
+      },
+      {
+        "body": "5203146d696e6563726166743a7468655f6e6574686572a63f41d436a19f7c0203000100002003",
+        "dimension": "the_nether",
+        "mode": "adventure",
+        "name": "respawn"
+      }
+    ],
+    "version": 776
+  },
+  "verified": {
+    "attribute_count": 40,
+    "attribute_ids": {
+      "minecraft:air_drag_modifier": 0,
+      "minecraft:armor": 1,
+      "minecraft:armor_toughness": 2,
+      "minecraft:attack_damage": 3,
+      "minecraft:attack_knockback": 4,
+      "minecraft:attack_speed": 5,
+      "minecraft:below_name_distance": 6,
+      "minecraft:block_break_speed": 7,
+      "minecraft:block_interaction_range": 8,
+      "minecraft:bounciness": 9,
+      "minecraft:burning_time": 10,
+      "minecraft:camera_distance": 11,
+      "minecraft:entity_interaction_range": 13,
+      "minecraft:explosion_knockback_resistance": 12,
+      "minecraft:fall_damage_multiplier": 14,
+      "minecraft:flying_speed": 15,
+      "minecraft:follow_range": 16,
+      "minecraft:friction_modifier": 17,
+      "minecraft:gravity": 18,
+      "minecraft:jump_strength": 19,
+      "minecraft:knockback_resistance": 20,
+      "minecraft:luck": 21,
+      "minecraft:max_absorption": 22,
+      "minecraft:max_health": 23,
+      "minecraft:mining_efficiency": 24,
+      "minecraft:movement_efficiency": 25,
+      "minecraft:movement_speed": 26,
+      "minecraft:name_tag_distance": 27,
+      "minecraft:oxygen_bonus": 28,
+      "minecraft:safe_fall_distance": 29,
+      "minecraft:scale": 30,
+      "minecraft:sneaking_speed": 31,
+      "minecraft:spawn_reinforcements": 32,
+      "minecraft:step_height": 33,
+      "minecraft:submerged_mining_speed": 34,
+      "minecraft:sweeping_damage_ratio": 35,
+      "minecraft:tempt_range": 36,
+      "minecraft:water_movement_efficiency": 37,
+      "minecraft:waypoint_receive_range": 39,
+      "minecraft:waypoint_transmit_range": 38
+    },
+    "attribute_ids_dense_from_zero": true,
+    "cases": [
+      {
+        "case": "initial",
+        "dimension": "minecraft:overworld",
+        "dimension_type": 0,
+        "enforces_secure_chat": false,
+        "mode": 1,
+        "online_mode": false,
+        "packet_id": 49,
+        "previous_mode": null,
+        "previous_raw": 255
+      },
+      {
+        "case": "reconnect_after_survival",
+        "dimension": "minecraft:overworld",
+        "dimension_type": 0,
+        "enforces_secure_chat": false,
+        "mode": 0,
+        "online_mode": false,
+        "packet_id": 49,
+        "previous_mode": 1,
+        "previous_raw": 1
+      },
+      {
+        "case": "the_nether",
+        "dimension": "minecraft:the_nether",
+        "dimension_type": 3,
+        "flags": 3,
+        "mode": 0,
+        "packet_id": 82,
+        "previous_mode": 1,
+        "previous_raw": 1
+      },
+      {
+        "case": "the_end",
+        "dimension": "minecraft:the_end",
+        "dimension_type": 2,
+        "flags": 3,
+        "mode": 1,
+        "packet_id": 82,
+        "previous_mode": 0,
+        "previous_raw": 0
+      },
+      {
+        "case": "overworld",
+        "dimension": "minecraft:overworld",
+        "dimension_type": 0,
+        "flags": 3,
+        "mode": 3,
+        "packet_id": 82,
+        "previous_mode": 1,
+        "previous_raw": 1
+      },
+      {
+        "case": "the_nether",
+        "dimension": "minecraft:the_nether",
+        "dimension_type": 3,
+        "flags": 3,
+        "mode": 2,
+        "packet_id": 82,
+        "previous_mode": 3,
+        "previous_raw": 3
+      }
+    ],
+    "input_sha256": {
+      "attributes": "4e0379c2af82ae1c02f5582ee5f85d1f7fbbba7afb04d3f1a41807dbd984605e",
+      "login": "787d5cb523827305a44c19ab786b3a7b7330615302019568a101db1c0cec1807",
+      "sessions": "52863d635496695a0231b095b8e431ad3f24cdc3f74fc6a0ab9ad6c5a3c899c4"
+    },
+    "jar_sha1": "823e2250d24b3ddac457a60c92a6a941943fcd6a",
+    "login_success": {
+      "player_uuid": "f0856c05-7f77-39b1-b600-5719f4e70be8",
+      "properties": 0,
+      "session_uuid": "fb4324cd-e966-40f7-86c4-5269f2330c87",
+      "username": "McsaProbe"
+    },
+    "protocol": 776,
+    "rejected_spawn_info_hypotheses": {
+      "optional_varint": "Неверный игровой режим"
+    },
+    "scope": "Observed offline Login/Join/Respawn and attributes only; online=true and full gameplay not verified",
+    "spawn_info_encoding": "legacy_byte"
+  }
+}

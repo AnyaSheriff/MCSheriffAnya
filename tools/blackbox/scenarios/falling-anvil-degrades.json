@@ -1,0 +1,26 @@
+{
+  "name": "falling-anvil-degrades",
+  "about": "Высота 24: гарантированный износ каждой ступени наковальни и разрушение последней.",
+  "blocks": [],
+  "pad_up": 32,
+  "setup": [
+    "setblock $(0,24,0) stone",
+    "fill $(-1,24,0) $(-1,24,0) anvil strict",
+    "fill $(1,24,0) $(1,24,0) chipped_anvil strict",
+    "fill $(0,24,1) $(0,24,1) damaged_anvil strict"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          0,
+          24,
+          0
+        ],
+        "state": "air"
+      }
+    }
+  ],
+  "record_ticks": 80
+}

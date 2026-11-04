@@ -1,0 +1,282 @@
+{
+  "source": "Read-only measurements of existing official 26.3 regions; pass 2 MCSA census before U3. Fixed equal-seed footprints; feature densities normalized by each side biome volume. Tree counts are rooted-dirt/oak-log adjacency estimators, not official feature starts.",
+  "samples": [
+    {
+      "label": "owner",
+      "seed": 1792932773345722119,
+      "chunks": 37249,
+      "official_surface_azalea_estimate": 14,
+      "official_root_lengths": [
+        6,
+        17,
+        3,
+        6,
+        10,
+        3,
+        4,
+        8,
+        3,
+        19,
+        10,
+        3,
+        28,
+        6
+      ],
+      "rows": [
+        {
+          "metric": "feature_biome/bamboo_jungle/azalea_leaves",
+          "ours": 425.857831,
+          "vanilla": 2.796553,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/dark_forest/azalea_leaves",
+          "ours": 407.694732,
+          "vanilla": 3.062576,
+          "tolerance": 5
+        },
+        {
+          "metric": "blocks/azalea_leaves",
+          "ours": 2.60764,
+          "vanilla": 0.024027,
+          "tolerance": 0.1
+        },
+        {
+          "metric": "feature_biome/bamboo_jungle/flowering_azalea_leaves",
+          "ours": 211.305543,
+          "vanilla": 0.843078,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/dark_forest/flowering_azalea_leaves",
+          "ours": 205.584743,
+          "vanilla": 1.339877,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/jungle/azalea_leaves",
+          "ours": 132.307268,
+          "vanilla": 0.979498,
+          "tolerance": 5
+        },
+        {
+          "metric": "blocks/flowering_azalea_leaves",
+          "ours": 1.310693,
+          "vanilla": 0.008618,
+          "tolerance": 0.1
+        },
+        {
+          "metric": "feature_biome/sparse_jungle/azalea_leaves",
+          "ours": 112.583881,
+          "vanilla": 2.208171,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/jungle/flowering_azalea_leaves",
+          "ours": 67.800512,
+          "vanilla": 0.395046,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/sparse_jungle/flowering_azalea_leaves",
+          "ours": 56.216864,
+          "vanilla": 0.7661,
+          "tolerance": 5
+        },
+        {
+          "metric": "cave_component_volume/p99",
+          "ours": 3666.0,
+          "vanilla": 5418.0,
+          "tolerance": 1083.6000000000001
+        },
+        {
+          "metric": "ore/copper_ore/y48",
+          "ours": 19.183575,
+          "vanilla": 15.250369,
+          "tolerance": 3.050073827485302
+        },
+        {
+          "metric": "ore/coal_ore/y48",
+          "ours": 26.239228,
+          "vanilla": 22.204193,
+          "tolerance": 4.440838680233027
+        },
+        {
+          "metric": "blocks/budding_amethyst",
+          "ours": 1.459959,
+          "vanilla": 1.277752,
+          "tolerance": 0.25555048457676716
+        },
+        {
+          "metric": "blocks/amethyst_block",
+          "ours": 16.061156,
+          "vanilla": 14.095627,
+          "tolerance": 2.8191253456468632
+        },
+        {
+          "metric": "cave_component_volume/p95",
+          "ours": 1748.0,
+          "vanilla": 1755.0,
+          "tolerance": 351.0
+        }
+      ],
+      "bounds": [
+        -129,
+        -90,
+        63,
+        102
+      ]
+    },
+    {
+      "label": "second",
+      "seed": 100554032945340,
+      "chunks": 37249,
+      "official_surface_azalea_estimate": 28,
+      "official_root_lengths": [
+        4,
+        3,
+        4,
+        1,
+        4,
+        2,
+        3,
+        4,
+        13,
+        3,
+        1,
+        18,
+        20,
+        2,
+        10,
+        2,
+        6,
+        5,
+        14,
+        4,
+        4,
+        19,
+        3,
+        4,
+        3,
+        1,
+        14,
+        11
+      ],
+      "rows": [
+        {
+          "metric": "feature_biome/dark_forest/azalea_leaves",
+          "ours": 448.071708,
+          "vanilla": 6.312505,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/bamboo_jungle/azalea_leaves",
+          "ours": 386.164897,
+          "vanilla": 4.209081,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/eroded_badlands/amethyst_block",
+          "ours": 302.459878,
+          "vanilla": 0.0,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/dark_forest/flowering_azalea_leaves",
+          "ours": 220.800165,
+          "vanilla": 1.877426,
+          "tolerance": 5
+        },
+        {
+          "metric": "blocks/azalea_leaves",
+          "ours": 2.05082,
+          "vanilla": 0.051357,
+          "tolerance": 0.1
+        },
+        {
+          "metric": "feature_biome/bamboo_jungle/flowering_azalea_leaves",
+          "ours": 183.499089,
+          "vanilla": 1.699821,
+          "tolerance": 5
+        },
+        {
+          "metric": "blocks/flowering_azalea_leaves",
+          "ours": 1.016672,
+          "vanilla": 0.017128,
+          "tolerance": 0.1
+        },
+        {
+          "metric": "feature_biome/jungle/azalea_leaves",
+          "ours": 88.069118,
+          "vanilla": 0.0,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/sparse_jungle/azalea_leaves",
+          "ours": 64.351921,
+          "vanilla": 0.93197,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/jungle/flowering_azalea_leaves",
+          "ours": 44.043202,
+          "vanilla": 0.0,
+          "tolerance": 5
+        },
+        {
+          "metric": "feature_biome/sparse_jungle/flowering_azalea_leaves",
+          "ours": 31.997241,
+          "vanilla": 0.338318,
+          "tolerance": 5
+        },
+        {
+          "metric": "ore/coal_ore/y48",
+          "ours": 23.946307,
+          "vanilla": 17.372547,
+          "tolerance": 3.474509382802223
+        },
+        {
+          "metric": "ore/copper_ore/y48",
+          "ours": 17.234181,
+          "vanilla": 12.984698,
+          "tolerance": 2.5969395151547694
+        },
+        {
+          "metric": "cave_component_volume/p99",
+          "ours": 3822.0,
+          "vanilla": 5529.0,
+          "tolerance": 1105.8
+        },
+        {
+          "metric": "blocks/amethyst_block",
+          "ours": 16.631856,
+          "vanilla": 15.21018,
+          "tolerance": 3.042036027812827
+        },
+        {
+          "metric": "blocks/budding_amethyst",
+          "ours": 1.506322,
+          "vanilla": 1.390615,
+          "tolerance": 0.2781229026282585
+        },
+        {
+          "metric": "cave_component_volume/p95",
+          "ours": 1855.0,
+          "vanilla": 1764.0,
+          "tolerance": 352.8
+        }
+      ],
+      "bounds": [
+        -67,
+        -98,
+        125,
+        94
+      ]
+    }
+  ],
+  "component_reference": {
+    "count": 10404,
+    "p95": 1794.2500000000018,
+    "p99": 4779.609999999926
+  }
+}

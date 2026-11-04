@@ -16,6 +16,15 @@ pub enum Value {
 }
 
 impl Value {
+    /// Обратная запись для вложенных компонент командного предмета.
+    pub fn text(&self) -> String {
+        match self {
+            Self::Num(n) => n.to_string(),
+            Self::Str(s) => serde_json::to_string(s).unwrap(),
+            Self::List(v) => format!("[{}]",v.iter().map(Self::text).collect::<Vec<_>>().join(",")),
+            Self::Map(v) => format!("{{{}}}",v.iter().map(|(k,v)|format!("{}:{}",serde_json::to_string(k).unwrap(),v.text())).collect::<Vec<_>>().join(",")),
+        }
+    }
     pub fn as_f64(&self) -> Option<f64> {
         match self {
             Value::Num(number) => Some(*number),

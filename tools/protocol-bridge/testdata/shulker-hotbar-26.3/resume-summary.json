@@ -1,0 +1,74 @@
+[
+  {
+    "name": "shift-final-777",
+    "passed": 34,
+    "total": 34,
+    "exit_code": 0,
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "relogin_pass": true
+  },
+  {
+    "name": "shift-head-777",
+    "passed": 28,
+    "total": 34,
+    "exit_code": 1,
+    "binary_sha256": "c22304573fbe132f5359fecf340c5203360487da21c8d1d553f54bd56282ae0f",
+    "relogin_pass": true
+  },
+  {
+    "name": "shift-official-777",
+    "passed": 34,
+    "total": 34,
+    "exit_code": 0,
+    "binary_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "relogin_pass": true
+  },
+  {
+    "name": "shift-final-775",
+    "passed": 34,
+    "total": 34,
+    "exit_code": 0,
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "relogin_pass": true
+  },
+  {
+    "name": "final-777",
+    "passed": 172,
+    "total": 172,
+    "exit_code": 0,
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "relogin_pass": true
+  },
+  {
+    "name": "final-775",
+    "passed": 172,
+    "total": 172,
+    "exit_code": 0,
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "relogin_pass": true
+  },
+  {
+    "name": "ground-final-777",
+    "passed": 6,
+    "total": 6,
+    "exit_code": 0,
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "relogin_pass": true
+  },
+  {
+    "name": "ground-final-775",
+    "passed": 6,
+    "total": 6,
+    "exit_code": 0,
+    "binary_sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758",
+    "relogin_pass": true
+  },
+  {
+    "name": "ground-official-777",
+    "passed": 6,
+    "total": 6,
+    "exit_code": 0,
+    "binary_sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "relogin_pass": true
+  }
+]

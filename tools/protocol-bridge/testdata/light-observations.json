@@ -1,0 +1,74 @@
+[
+  {
+    "file": "light-26.1.2-placed.bin",
+    "sha256": "3edf693899f6fd0a76c984382b303a7cacdc77cfb271f0ddc29cf0241d9f00e9",
+    "protocol": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "source_packet": "map_chunk",
+    "torch_cell_level": 14,
+    "chunk": [
+      -1,
+      -1
+    ],
+    "masks": [
+      1798,
+      768,
+      1,
+      1031
+    ]
+  },
+  {
+    "file": "light-26.1.2-removed.bin",
+    "sha256": "33d7ab342e8b1c14251f2c5bba40a68877e5a18d139b07dac63313b1c911215f",
+    "protocol": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "source_packet": "map_chunk",
+    "torch_cell_level": 0,
+    "chunk": [
+      -1,
+      -1
+    ],
+    "masks": [
+      1798,
+      768,
+      1,
+      1031
+    ]
+  },
+  {
+    "file": "light-26.3-placed.bin",
+    "sha256": "61361c74fdd56d91b6f86a1234fd6d2e25bb56ff9a22e3a771de480ac93ee13b",
+    "protocol": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "source_packet": "map_chunk",
+    "torch_cell_level": 14,
+    "chunk": [
+      -1,
+      -1
+    ],
+    "masks": [
+      1798,
+      768,
+      1,
+      1031
+    ]
+  },
+  {
+    "file": "light-26.3-removed.bin",
+    "sha256": "cba65c3e43b06af764920fdfa04ff71f1171242f7790727c99b39f3cda432d12",
+    "protocol": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "source_packet": "map_chunk",
+    "torch_cell_level": 0,
+    "chunk": [
+      -1,
+      -1
+    ],
+    "masks": [
+      1798,
+      768,
+      1,
+      1031
+    ]
+  }
+]

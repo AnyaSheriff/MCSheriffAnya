@@ -1,0 +1,578 @@
+[
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "grass_block",
+    "origin": [
+      4108,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "dirt",
+    "origin": [
+      4108,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "stone",
+    "origin": [
+      4108,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "gravel",
+    "origin": [
+      4108,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "sand",
+    "origin": [
+      4108,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "glass",
+    "origin": [
+      4108,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "water",
+    "origin": [
+      4108,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "oak_leaf_litter",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4108,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "grass_block",
+    "origin": [
+      4136,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "dirt",
+    "origin": [
+      4136,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "stone",
+    "origin": [
+      4136,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "gravel",
+    "origin": [
+      4136,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "sand",
+    "origin": [
+      4136,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "glass",
+    "origin": [
+      4136,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "water",
+    "origin": [
+      4136,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "fancy_oak_leaf_litter",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4136,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "grass_block",
+    "origin": [
+      4164,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "dirt",
+    "origin": [
+      4164,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "stone",
+    "origin": [
+      4164,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "gravel",
+    "origin": [
+      4164,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "sand",
+    "origin": [
+      4164,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "glass",
+    "origin": [
+      4164,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "water",
+    "origin": [
+      4164,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "birch_leaf_litter",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4164,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "grass_block",
+    "origin": [
+      4192,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "dirt",
+    "origin": [
+      4192,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "stone",
+    "origin": [
+      4192,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "gravel",
+    "origin": [
+      4192,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "sand",
+    "origin": [
+      4192,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "glass",
+    "origin": [
+      4192,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "water",
+    "origin": [
+      4192,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "dark_oak_leaf_litter",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4192,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "grass_block",
+    "origin": [
+      4220,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "dirt",
+    "origin": [
+      4220,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "stone",
+    "origin": [
+      4220,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "gravel",
+    "origin": [
+      4220,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "sand",
+    "origin": [
+      4220,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "glass",
+    "origin": [
+      4220,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "water",
+    "origin": [
+      4220,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "yellow_poplar",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4220,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "grass_block",
+    "origin": [
+      4248,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "dirt",
+    "origin": [
+      4248,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "stone",
+    "origin": [
+      4248,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "gravel",
+    "origin": [
+      4248,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "sand",
+    "origin": [
+      4248,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "glass",
+    "origin": [
+      4248,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "water",
+    "origin": [
+      4248,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "orange_poplar",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4248,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "grass_block",
+    "origin": [
+      4276,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "dirt",
+    "origin": [
+      4276,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "stone",
+    "origin": [
+      4276,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "gravel",
+    "origin": [
+      4276,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "sand",
+    "origin": [
+      4276,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "glass",
+    "origin": [
+      4276,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "water",
+    "origin": [
+      4276,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "red_poplar",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4276,
+      200,
+      4304
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "grass_block",
+    "origin": [
+      4304,
+      200,
+      4108
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "dirt",
+    "origin": [
+      4304,
+      200,
+      4136
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "stone",
+    "origin": [
+      4304,
+      200,
+      4164
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "gravel",
+    "origin": [
+      4304,
+      200,
+      4192
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "sand",
+    "origin": [
+      4304,
+      200,
+      4220
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "glass",
+    "origin": [
+      4304,
+      200,
+      4248
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "water",
+    "origin": [
+      4304,
+      200,
+      4276
+    ]
+  },
+  {
+    "feature": "oak",
+    "surface": "oak_leaves[persistent=true]",
+    "origin": [
+      4304,
+      200,
+      4304
+    ]
+  }
+]

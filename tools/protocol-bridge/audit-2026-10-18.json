@@ -1,0 +1,48 @@
+{
+  "checked_at": "2026-10-18T05:47:38.165946+00:00",
+  "latest_release": "26.3",
+  "native_core": "26.1.2",
+  "sources": {
+    "mojang_versions": {
+      "url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+      "sha256": "ac37f92737df1a9d7660047136fedd3edebd90bd6e552f53ddc3f222079bc8fa"
+    },
+    "protocol_versions": {
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/common/protocolVersions.json",
+      "sha256": "23cbf0750f45f076b2e2bf61b47b35bf2202dee9d7fe325c1f5d83216184b594"
+    },
+    "data_paths": {
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/dataPaths.json",
+      "sha256": "ec79172719a76eba50ab674da727e268a4ffb45d076315b894a98bca62e090d1"
+    }
+  },
+  "versions": [
+    {
+      "version": "26.1.2",
+      "type": "release",
+      "released": "2026-04-09T10:12:23+00:00",
+      "protocol": 775,
+      "data_version": 4790,
+      "exact_data_paths": null,
+      "adapter_enabled": false
+    },
+    {
+      "version": "26.2",
+      "type": "release",
+      "released": "2026-06-16T12:03:33+00:00",
+      "protocol": 776,
+      "data_version": 4903,
+      "exact_data_paths": null,
+      "adapter_enabled": false
+    },
+    {
+      "version": "26.3",
+      "type": "release",
+      "released": "2026-09-15T11:23:02+00:00",
+      "protocol": 777,
+      "data_version": 5023,
+      "exact_data_paths": null,
+      "adapter_enabled": false
+    }
+  ]
+}

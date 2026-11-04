@@ -595,16 +595,20 @@ pub fn write(state: &State, out: &mut Vec<u8>) {
     out.push(u8::from(state.mouth.is_some()));
     if let Some(stack)=state.mouth { out.extend_from_slice(&stack.stored_item().to_be_bytes()); stack.write_extras(out); }
 }
+#[cfg(test)]
 pub fn read(bytes: &mut &[u8]) -> Option<State> {
+    read_with_legacy_metadata(bytes, false)
+}
+
+pub(crate) fn read_with_legacy_metadata(bytes: &mut &[u8], legacy_metadata: bool) -> Option<State> {
     fn take<'a>(bytes: &mut &'a [u8], n: usize) -> Option<&'a [u8]> { let (a,b)=bytes.split_at_checked(n)?; *bytes=b; Some(a) }
     let len=u32::from_be_bytes(take(bytes,4)?.try_into().ok()?) as usize;
     if len>65536 { return None; }
     let mut state: State=serde_json::from_slice(take(bytes,len)?).ok()?;
     if take(bytes,1)?[0]!=0 {
         let id=i32::from_be_bytes(take(bytes,4)?.try_into().ok()?);
-        let extras=Stack::read_extras(id,|n|take(bytes,n))?;
-        let mut stack=Stack::from_stored(id,1);
-        stack.data=extras.and_then(crate::stackdata::intern); state.mouth=Some(stack);
+        let extras=Stack::read_extras_strict_with_legacy_metadata(id,|n|take(bytes,n), legacy_metadata)?;
+        state.mouth=Some(Stack::from_stored_strict(id,1,extras)?);
     }
     Some(state)
 }

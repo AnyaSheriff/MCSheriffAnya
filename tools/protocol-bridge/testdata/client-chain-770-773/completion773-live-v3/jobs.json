@@ -1,0 +1,29 @@
+[
+  {
+    "name": "773-gui775",
+    "argv": [
+      "python3",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv11/tools/protocol-bridge/probe_776_action_client.py",
+      "--test-binary",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsheriffanya-b5a369944de6d5e0",
+      "--protocol",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/client-chain-json/773/protocol.json",
+      "--client",
+      "773",
+      "--primary",
+      "775",
+      "--output",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv11/tools/protocol-bridge/testdata/client-chain-770-773/completion773-live-v3/773-gui775",
+      "--client-dir",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.10",
+      "--block-entities",
+      "--payloads",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv11/tools/protocol-bridge/testdata/client-chain-770-773/payload-live-773.json"
+    ],
+    "exit": 1,
+    "seconds": 30.93,
+    "status": "failed",
+    "checks": 0,
+    "result_sha256": "31dbcc9cbcfc76c033b0010ec02daa9913b27581d351a70ba1e42b058533d613"
+  }
+]

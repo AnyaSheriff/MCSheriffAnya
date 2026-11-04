@@ -72,13 +72,13 @@ fn update_shoulders(items: &mut items::Items, player: &mut PlayerState, now: u64
             // Чёрный ящик parrot-shoulder: попугай садится и на падающего игрока.
 
             let free=player.shoulders.iter().filter(|s| s.is_none()).count();
-            let mut picked=0;
-            let parrots=items.remove_mobs(|m| {
-                let yes=picked < free && m.kind == Kind::Parrot && !m.is_dead() && !m.no_ai && m.ticks > 100
+            let candidates: Vec<_> = items.mobs().iter().filter(|m| {
+                m.kind == Kind::Parrot && !m.is_dead() && !m.no_ai && m.ticks > 100
                     && m.tame.owner == Some(player.uuid) && !m.tame.ordered_sit && m.leash.is_none()
-                    && (m.x-player.x).abs()<0.6 && (m.z-player.z).abs()<0.6 && (m.y-player.y).abs()<1.5;
-                if yes { picked+=1; } yes
-            });
+                    && (m.x-player.x).abs()<0.6 && (m.z-player.z).abs()<0.6 && (m.y-player.y).abs()<1.5
+                    && m.validate_item_storage().is_ok()
+            }).take(free).map(|m| m.entity_id).collect();
+            let parrots=items.remove_mobs(|m| candidates.contains(&m.entity_id));
             for mob in parrots {
                 if let Some(slot)=player.shoulders.iter_mut().find(|s| s.is_none()) {
                     let mut bytes=Vec::new(); mob.write(&mut bytes); *slot=Some(bytes); player.shoulder_since=now;
@@ -143,4 +143,29 @@ mod tests {
         update_shoulders(&mut items,&mut player,61,false,&mut ||101);
         assert_eq!(variants(&player.shoulders),[-1,-1]);
     }
+
+    #[test]
+    fn unrepresentable_parrot_is_not_removed_or_counted_as_a_free_shoulder_pick() {
+        let mut player=PlayerState::new([7;16],"test".into(),None,None,0x7f,1,(0.5,1.0,0.5));
+        player.on_ground=true;
+        let mut bad=Mob::new(1,Kind::Parrot,(0.5,1.0,0.5));
+        bad.tame.owner=Some(player.uuid); bad.ticks=101;
+        let stack=crate::inventory::Stack::new(crate::blocks::item_named("stone").unwrap(),2)
+            .with_extras(crate::stackdata::Data { name:Some("я".repeat(40_000)),..Default::default() });
+        bad.h.trial_gear=Some([Some(stack),None,None]);
+        assert!(bad.validate_item_storage().is_err());
+        let mut good=Mob::new(2,Kind::Parrot,(0.5,1.0,0.5));
+        good.tame.owner=Some(player.uuid); good.ticks=101;
+        let mut items=items::Items::new(); items.add_mob(bad); items.add_mob(good);
+        update_shoulders(&mut items,&mut player,30,false,&mut ||100);
+        assert_eq!(items.mobs().len(),1);
+        assert_eq!(items.mobs()[0].entity_id,1);
+        assert_eq!(items.mobs()[0].h.trial_gear.unwrap()[0],Some(stack));
+        assert_eq!(player.shoulders.iter().flatten().count(),1);
+        assert_eq!(player.shoulder_since,30);
+        let loaded=Mob::read(&mut player.shoulders[0].as_ref().unwrap().as_slice()).unwrap();
+        assert_eq!(loaded.kind,Kind::Parrot);
+        assert!(loaded.h.trial_gear.is_none());
+    }
+
 }

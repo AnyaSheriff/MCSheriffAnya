@@ -18,10 +18,10 @@
 // Mirror нет). Сундуки — с таблицами по месту (поле LootTable у экземпляров:
 // в носу — припасы, в корме — карта и сокровище).
 //
-// Высота (замер: TPY против дна вокруг, 70 кораблей): низ рамки — на
-// срединной высоте дна под рамкой (TPY − медиана дна в рамке+6: −1…+2 у
-// большинства) [проверить: у оригинала — своё правило «height_adjusted»].
-// У выброшенных на берег — то же по верху суши.
+// Высота океанских кораблей 26.3: среднее первой свободной клетки над дном
+// по неповёрнутому размеру от TP. Проверено 35 окнами без структур и
+// четырьмя дополнительными контролями. Старые профили и береговые корабли
+// сохраняют медиану и прежнее заглубление [проверить].
 //
 // Зарытое сокровище (вики, Buried Treasure; Structure set: spacing 1,
 // «probability of 1%», locate_offset 9, 0, 9): в чанке пляжа с долей 1 %
@@ -57,6 +57,44 @@ pub fn library() -> &'static [Template] {
     LIBRARY.get_or_init(|| template::parse(include_str!("shipwreck.txt")))
 }
 
+/// Порядок выбора снят с полей Template/Rot сохранённых начал 26.3.
+/// minecraft.wiki/w/Shipwreck: «upright, keeled sideways, or upside-down».
+const OCEAN_POOL: [&str; 20] = [
+    "with_mast", "upsidedown_full", "upsidedown_fronthalf", "upsidedown_backhalf",
+    "sideways_full", "sideways_fronthalf", "sideways_backhalf", "rightsideup_full",
+    "rightsideup_fronthalf", "rightsideup_backhalf", "with_mast_degraded",
+    "upsidedown_full_degraded", "upsidedown_fronthalf_degraded", "upsidedown_backhalf_degraded",
+    "sideways_full_degraded", "sideways_fronthalf_degraded", "sideways_backhalf_degraded",
+    "rightsideup_full_degraded", "rightsideup_fronthalf_degraded", "rightsideup_backhalf_degraded",
+];
+
+const BEACHED_POOL: [&str; 11] = [
+    "with_mast", "sideways_full", "sideways_fronthalf", "sideways_backhalf", "rightsideup_full",
+    "rightsideup_fronthalf", "rightsideup_backhalf", "with_mast_degraded",
+    "rightsideup_full_degraded", "rightsideup_fronthalf_degraded", "rightsideup_backhalf_degraded",
+];
+
+fn selection(seed: i64, x: i32, z: i32, beached: bool) -> (usize, Orient) {
+    let mut random = template::StructureRandom::for_chunk(seed, x, z);
+    let orient = Orient { turns: random.below(4) as u8, mirror: false };
+    let pool: &[&str] = if beached { &BEACHED_POOL } else { &OCEAN_POOL };
+    let name = pool[random.below(pool.len() as i32) as usize];
+    let index = library().iter().position(|t| t.name.strip_prefix("shipwreck/") == Some(name)).expect("образец корабля");
+    (index, orient)
+}
+
+/// Поворот рамки вокруг (4, 15), подтверждён BB/TPX/TPZ всех измеренных
+/// кораблей: Orient принимает нижний угол, а сохранённый TP — опорную точку.
+fn frame_corner(x: i32, z: i32, t: &Template, turns: u8) -> (i32, i32) {
+    let (dx, dz) = match turns % 4 {
+        0 => (0, 0),
+        1 => (20 - t.length, 11),
+        2 => (9 - t.width, 31 - t.length),
+        _ => (-11, 20 - t.width),
+    };
+    (x + dx, z + dz)
+}
+
 /// Корабль области: образец, поворот, угол рамки, дерево, на берегу ли.
 #[derive(Clone, Copy, Debug)]
 pub struct Ship {
@@ -75,8 +113,19 @@ impl Ship {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Вид по биому: Some(false) — на дне, Some(true) — на берегу.
 pub fn kind_of(biome: super::terrain::Biome) -> Option<bool> {
@@ -91,12 +140,12 @@ pub fn kind_of(biome: super::terrain::Biome) -> Option<bool> {
 
 /// Корабль области обычного мира.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Ship> {
-    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<Ship>>>;
+    type Starts = Mutex<HashMap<(i64, u8, i32, i32), Option<Ship>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -104,28 +153,39 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let found = kind_of(terrain.column_in(x + 8, z + 8, None).biome).map(|beached| {
         let dice = template::roll(seed, chunk_x, chunk_z, SALT ^ 0x5419);
         let template = (dice % library().len() as u64) as usize;
         let orient = Orient { turns: ((dice >> 16) % 4) as u8, mirror: false };
+        let (template, orient) = if terrain.generation_profile() & 2 != 0 {
+            selection(seed, chunk_x, chunk_z, beached)
+        } else { (template, orient) };
+        let (x, z) = if terrain.generation_profile() & 2 != 0 {
+            frame_corner(x, z, &library()[template], orient.turns)
+        } else { (x, z) };
         let woods = WOODS[((dice >> 24) % WOODS.len() as u64) as usize];
-        let (sx, sz) = library()[template].footprint(orient);
-        let mut heights = Vec::new();
-
-        // Срединная высота дна (суши у берега) по рамке, через 2 блока.
-        for dx in (0..sx).step_by(2) {
-            for dz in (0..sz).step_by(2) {
-                let height = terrain.column_at(x + dx, z + dz).height;
-
-                heights.push(if beached { height.max(super::terrain::SEA) } else { height });
+        let y = if terrain.generation_profile() & 2 != 0 && !beached {
+            let t = &library()[template];
+            let (tx, tz) = (chunk_x * 16, chunk_z * 16);
+            let grid = (terrain.style() == super::terrain::Style::Vanilla)
+                .then(|| terrain.relief_grid(tx, tz, tx + t.width - 1, tz + t.length - 1));
+            ocean_height(tx, tz, t.width, t.length, &|wx, wz| terrain.column_in(wx, wz, grid.as_ref()).height)
+        } else {
+            let (sx, sz) = library()[template].footprint(orient);
+            let mut heights = Vec::new();
+            // Прежний профиль и береговые корабли сохраняют старое заглубление [проверить].
+            for dx in (0..sx).step_by(2) {
+                for dz in (0..sz).step_by(2) {
+                    let height = terrain.column_at(x + dx, z + dz).height;
+                    heights.push(if beached { height.max(super::terrain::SEA) } else { height });
+                }
             }
-        }
-
-        heights.sort_unstable();
-        let median = heights.get(heights.len() / 2).copied().unwrap_or(super::terrain::SEA);
-        let y = placement_height(median,library()[template].height,beached,dice);
+            heights.sort_unstable();
+            let median = heights.get(heights.len() / 2).copied().unwrap_or(super::terrain::SEA);
+            placement_height(median, library()[template].height, beached, dice)
+        };
 
         Ship { template, orient, origin: (x, y, z), woods, beached, chunk: (chunk_x, chunk_z) }
     });
@@ -133,6 +193,20 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
+}
+
+/// minecraft.wiki/w/Heightmap: «OCEAN_FLOOR_WG». Контроль без структур
+/// отделяет дно от кораллов и корабля. 39 естественных начал подтверждают
+/// среднее первой свободной клетки по НЕповёрнутому размеру от TP, а не
+/// медиану по повёрнутой рамке; диапазоны не включают дальний край size.
+fn ocean_height(x: i32, z: i32, width: i32, length: i32, ground: &dyn Fn(i32, i32) -> i32) -> i32 {
+    let mut sum = 0i64;
+    for dx in 0..width {
+        for dz in 0..length {
+            sum += i64::from(ground(x + dx, z + dz)) + 1;
+        }
+    }
+    (sum / (i64::from(width) * i64::from(length))) as i32
 }
 
 /// Дерево образца (дуб — основное, ель — второе) → дерево корабля.
@@ -231,7 +305,10 @@ const TREASURE_DEPTH: [i32; 3] = [1, 2, 3];
 pub fn treasure_in(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Option<i32> {
     use super::terrain::Biome;
 
-    if template::chance(terrain.seed(), chunk_x, 0, chunk_z, 0) >= TREASURE_SHARE {
+    let chance = if terrain.generation_profile() & 2 != 0 {
+        f64::from(template::placement_random(terrain.seed(), chunk_x, chunk_z, 10_387_320).float())
+    } else { template::chance(terrain.seed(), chunk_x, 0, chunk_z, 0) };
+    if chance >= TREASURE_SHARE {
         return None;
     }
 
@@ -470,4 +547,71 @@ fn beached_ship_is_partly_buried_and_preserves_its_loot() {
         assert_eq!(back.containers.len(),c.containers.len());
     }}
     assert!(chest_count>0);
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+mod r2_tests {
+    use super::*;
+
+    #[test]
+    fn measured_ship_templates_rotations_and_pivots() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r2.json")).unwrap();
+        let rows = fixture["ships"].as_array().unwrap();
+        assert_eq!(rows.len(), 107);
+        for row in rows {
+            let seed = row["seed"].as_i64().unwrap();
+            let x = row["chunk"][0].as_i64().unwrap() as i32;
+            let z = row["chunk"][1].as_i64().unwrap() as i32;
+            let (index, orient) = selection(seed, x, z, row["beached"].as_bool().unwrap());
+            let t = &library()[index];
+            assert_eq!(t.name, row["template"].as_str().unwrap(), "{seed} {x}/{z}");
+            assert_eq!(i64::from(orient.turns), row["turns"].as_i64().unwrap());
+            let corner = frame_corner(x * 16, z * 16, t, orient.turns);
+            assert_eq!(corner, (row["box"][0].as_i64().unwrap() as i32, row["box"][2].as_i64().unwrap() as i32));
+            let (sx, sz) = t.footprint(orient);
+            assert_eq!(i64::from(sx), row["box"][3].as_i64().unwrap() - row["box"][0].as_i64().unwrap() + 1);
+            assert_eq!(i64::from(sz), row["box"][5].as_i64().unwrap() - row["box"][2].as_i64().unwrap() + 1);
+        }
+    }
+
+    /// Проверка постановки в настоящем чанке, а не только выбора плана.
+    #[test]
+    fn rotated_ship_is_present_in_its_persisted_frame() {
+        use super::super::{Chunk, Generator, terrain::{Terrain, Style}};
+        let terrain = Terrain::new(1_792_932_773_345_722_119, Style::Vanilla).with_preview(true);
+        let ship = start_in(&terrain, (-31i32).div_euclid(SPACING), 49i32.div_euclid(SPACING)).unwrap();
+        assert_eq!(ship.chunk, (-31, 49));
+        assert!(library()[ship.template].name.ends_with("sideways_backhalf"));
+        let generator = Generator::Normal(terrain);
+        let (sx, sz) = ship.footprint();
+        let mut wood = 0;
+        for cx in ship.origin.0.div_euclid(16)..=(ship.origin.0 + sx - 1).div_euclid(16) {
+            for cz in ship.origin.2.div_euclid(16)..=(ship.origin.2 + sz - 1).div_euclid(16) {
+                let chunk = Chunk::generated(&generator, cx, cz);
+                for y in ship.origin.1..ship.origin.1 + library()[ship.template].height {
+                    for z in 0..16 { for x in 0..16 {
+                        if blocks::block_at_state(chunk.block(x,y,z)).is_some_and(|n| n.ends_with("_planks")) { wood += 1; }
+                    }}
+                }
+            }
+        }
+        assert!(wood > 100, "{wood}");
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn ocean_ship_height_uses_the_unrotated_first_free_mean() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../testdata/world-profile/genaudit-26.3/overworld-pieces-r3.json")).unwrap();
+    for row in fixture["ship_ground_controls"].as_array().unwrap() {
+        let x = row["position"][0].as_i64().unwrap() as i32;
+        let z = row["position"][1].as_i64().unwrap() as i32;
+        let width = row["size"][0].as_i64().unwrap() as i32;
+        let length = row["size"][1].as_i64().unwrap() as i32;
+        let bytes: Vec<_> = row["ground_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+            .map(|s| i32::from(u8::from_str_radix(std::str::from_utf8(s).unwrap(), 16).unwrap()) - 64).collect();
+        assert_eq!(bytes.len(), (width * length) as usize);
+        let height = ocean_height(x, z, width, length, &|wx, wz| bytes[((wx - x) * length + wz - z) as usize]);
+        assert_eq!(i64::from(height), row["expected_y"].as_i64().unwrap(), "{row}");
+    }
 }

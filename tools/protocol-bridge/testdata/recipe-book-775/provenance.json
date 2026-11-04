@@ -1,0 +1,13 @@
+{
+  "protocol": 775,
+  "catalog": "Preview26_3",
+  "initial_display_id": 171,
+  "initial_result": "crafting_table",
+  "recording": "direct socket, new flat world; give wool/poplar, recipe give *",
+  "former_idset_builder": "synthetic reconstruction from the former builder format and the recorded ingredients; not the owner crash packet",
+  "binary_sha256": "7e4d93708f3a727db1649bfb4593c5386373f214fa99f1bcd89c9461a64dda97",
+  "files": {
+    "initial-crafting-table.bin": "24ded2fd3a782bc9596af94ee089f0389bddfc60b10e9accd61e5b145a01280e",
+    "former-idset-builder.bin": "18de1443dd07aecbc86181be6dcdff18d5404644037ca467e6ffa858ba2fb861"
+  }
+}

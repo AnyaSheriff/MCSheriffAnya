@@ -1,0 +1,28 @@
+
+running 1 test
+MCSA gameplay probe ready on 26028
+[21:04:59] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[21:04:59] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[21:04:59] [Server thread/INFO]: McsaProbe[/127.0.0.1:39186 → localhost:26028] вошёл с номером сущности 1 в (0.5, 64.0, 0.5)
+[21:05:02] [Server thread/INFO]: McsaProbe зашёл на сервер
+[21:05:02] [Server thread/INFO]: Правило spawn_mobs: false
+[21:05:02] [Server thread/INFO]: [Server] MCSA_CORE_DIG_1
+[21:05:02] [Server thread/INFO]: Игроку McsaProbe установлен режим: творческий
+[21:05:02] [Server thread/INFO]: [Server] MCSA_CORE_DIG_2
+[21:05:03] [Server thread/INFO]: Заполнено блоков: 90
+[21:05:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_3
+[21:05:03] [Server thread/INFO]: McsaProbe перенесён в 0.5 65 0.5
+[21:05:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_4
+[21:05:03] [Server thread/INFO]: Рецепты: take * — McsaProbe
+[21:05:03] [Server thread/INFO]: [Server] MCSA_CORE_DIG_5
+[21:05:04] [Server thread/INFO]: Рецепты: give * — McsaProbe
+[21:05:04] [Server thread/INFO]: [Server] MCSA_CORE_DIG_6
+MCSA play probe failure: Перевод Java-пакета: Item(Id(MissingTarget(313)))
+[21:05:04] [Server thread/INFO]: McsaProbe потерял соединение: invalid data
+[21:05:04] [Server thread/INFO]: Останавливаю сервер
+[21:05:04] [Server thread/INFO]: McsaProbe вышел
+[21:05:04] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+test gameplay_probe::serve_java_1_21_8_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2992 filtered out; finished in 6.03s
+

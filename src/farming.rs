@@ -102,6 +102,7 @@ fn ticks_randomly(state: u16) -> bool {
     TABLE.get_or_init(|| {
         (0..=u16::MAX as i32)
             .map(|state| {
+                if crate::sulfur_spike::is_spike(state) { return true; }
                 let Some(name) = blocks::block_at_state(state) else {
                     return false;
                 };
@@ -248,6 +249,10 @@ fn tickable_sections(world: &mut World, cx: i32, cz: i32) -> Option<u32> {
 
 /// Ход одного блока по случайному такту.
 pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
+    if crate::sulfur_spike::is_spike(state) {
+        crate::sulfur_spike::random_tick(world, pos, state);
+        return;
+    }
     let name = name_of(state);
 
     if crate::copper::ticks_randomly(state) {
@@ -260,6 +265,7 @@ pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
         "lava" => crate::fire::lava_tick(world, pos),
         "farmland" => farmland_tick(world, pos, state),
         "snow" => crate::vegetation::snow_tick(world, pos),
+        "ice" => crate::vegetation::ice_tick(world, pos),
         "frosted_ice" => crate::frost::ticked(world, pos),
         "sugar_cane" | "cactus" => column_tick(world, pos, state, name),
         "kelp" => kelp_tick(world, pos, state),
@@ -724,18 +730,24 @@ fn mushroom_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) {
 // Трава и мицелий
 // ---------------------------------------------------------------------------
 
-/// Пропускает ли блок над дёрном свет и жизнь: не жидкость и не полный
-/// непрозрачный блок (снежный слой в один блок тоже не мешает).
-fn lets_live(state: i32) -> bool {
+/// Вики, Grass Block: «light-blocking side(s) ... facing the dirt block»;
+/// Snow: «Thicker layers ... revert to plain dirt». Нижняя грань плиты
+/// закрывает дёрн даже при нулевом поглощении света.
+fn lets_live(world: &World, state: i32) -> bool {
     if state == AIR {
         return true;
     }
 
-    if fluids::fluid_at(state).is_some() || value(state, "waterlogged") == Some("true") {
+    if name_of(state) == "snow" {
+        return number(state, "layers") == 1;
+    }
+    if fluids::fluid_at(state).is_some() || value(state, "waterlogged") == Some("true")
+        || world.catalog().waterlogged(state).ok().flatten() == Some(true) {
         return false;
     }
 
-    name_of(state) == "snow" && number(state, "layers") == 1 || crate::world::light::filter(state) < 15
+    let (filter, faces) = crate::world::light::cover_properties(world.catalog(), state);
+    filter < 15 && faces & 1 == 0
 }
 
 /// Трава и мицелий: под непрозрачным блоком гибнут в землю; при свете над
@@ -744,7 +756,7 @@ fn lets_live(state: i32) -> bool {
 fn spread_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32, name: &str) {
     let above = world.get_block(x, y + 1, z);
 
-    if !lets_live(above) {
+    if !lets_live(world, above) {
         world.set_block(x, y, z, state_of("dirt"));
         return;
     }
@@ -762,7 +774,7 @@ fn spread_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32, name: 
 
         let over = world.get_block(tx, ty + 1, tz);
 
-        if lets_live(over) && light(world, tx, ty + 1, tz) >= 4 {
+        if lets_live(world, over) {
             let snowy = name_of(over) == "snow";
             let grown = with(state_of(name), "snowy", snowy).unwrap_or(state);
 
@@ -986,13 +998,23 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         },
     };
 
+    if world.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+        tree = tree.in_preview_sapling(seed);
+    }
+
     // Вики, Bee: саженец дуба/берёзы у цветка, «5% chance» гнезда.
     if matches!(name,"oak_sapling"|"birch_sapling") {
         let nearby=(-2..=2).any(|dx|(-2..=2).any(|dz|(0..=1).any(|dy|crate::mob::wildlife::pollinatable(world.get_block(x+dx,y+dy,z+dz)))));
         tree.bees=nearby && world.random_unit()<0.05;
     }
     let ground = y - 1;
-    let parts = tree.blocks_in(seed, origin.0, origin.1);
+    let preview = world.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3;
+    let mut parts = tree.blocks_in(seed, origin.0, origin.1);
+    if preview {
+        parts.retain(|&(dx,dy,dz,part)| !crate::world::tree_leaf(part)
+            || tree_may_replace(world.get_block(origin.0+dx,ground+dy,origin.1+dz)));
+        parts = crate::world::supported_tree_blocks(parts);
+    }
 
     // Ствол должен пройти: брёвна только сквозь воздух, листву и саженцы.
     for (dx, dy, dz, part) in &parts {
@@ -1008,7 +1030,8 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         world.set_block_silently(origin.0 + dx, y, origin.1 + dz, AIR);
     }
 
-    let distances = crate::world::leaf_distances(&parts);
+    let distances = if preview { crate::world::supported_leaf_distances(&parts) }
+        else { tree.leaf_distances_in(seed, origin.0, origin.1, &parts) };
     let log_state = |axis: &trees::Axis| {
         let axis = match axis {
             trees::Axis::X => "x",
@@ -1039,6 +1062,10 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
 
                 blocks::state_from_text(&format!("{}[distance={}]", tree.leaves, distance))
                     .or_else(|| blocks::state_from_text(tree.leaves))
+            }
+            Part::Block(text) if here == AIR && preview && text.ends_with("_leaves") => {
+                let distance = distances.get(&(*dx,*dy,*dz)).copied().unwrap_or(7);
+                blocks::state_from_text(&format!("{text}[distance={distance},persistent=false]"))
             }
             Part::Block(text) if here == AIR => blocks::state_from_text(text),
             _ => None,
@@ -1212,6 +1239,26 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<Vec<St
             world.note_level_event(x, y, z, BONE_MEAL_EVENT, 3);
             grass_bloom(world, pos);
         }
+        // Полочный гриб 26.3: мука делает маленький большим; у большого она не тратится
+        // (официальный сервер 26.3, раздатчик с костной мукой: age 0 → 1, мука ушла; age 1 — мука осталась).
+        "shelf_mushroom" if value(state, "age") == Some("0") => {
+            grow_to(world, pos, with(state, "age", 1));
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
+        // Красный куст 26.3: один новый куст на случайном из четырёх соседних по горизонтали мест
+        // (воздух над подходящей почвой); равномерно по 80 пробам. Нет места — мука не тратится.
+        // [проверить] соседи по вертикали и заменяемые блоки вроде травы: в пробе вверх/вниз не росло.
+        "red_shrub" => {
+            let shrub = state_of("red_shrub");
+            let free: Vec<(i32, i32)> = [(1, 0), (-1, 0), (0, 1), (0, -1)].into_iter()
+                .map(|(dx, dz)| (x + dx, z + dz))
+                .filter(|&(nx, nz)| world.get_block(nx, y, nz) == AIR && crate::plants::can_place(world, shrub, nx, y, nz))
+                .collect();
+            if free.is_empty() { return None; }
+            let (nx, nz) = free[roll(world, free.len() as i32) as usize];
+            world.set_block(nx, y, nz, shrub);
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
         _ => return bonemeal::apply(world, pos),
     }
 
@@ -1367,6 +1414,42 @@ mod tests {
 
     fn state(text: &str) -> i32 {
         blocks::state_from_text(text).unwrap_or_else(|| panic!("нет состояния {}", text))
+    }
+
+    #[test]
+    fn covered_grass_random_ticks_reach_negative_and_high_sections() {
+        for y in [-63, 0, 64, 141, 300] {
+            let mut world = World::in_memory();
+            for x in 0..16 {
+                world.set_block_silently(x, y, -1, state("grass_block"));
+                world.set_block_silently(x, y + 1, -1, state("stone"));
+            }
+            // Прогреваем кэш и проверяем выключенное правило.
+            random_ticks(&mut world, &[(0, -1)], 0, 0);
+            assert_eq!(name_of(world.get_block(0, y, -1)), "grass_block");
+            for _ in 0..16 { random_ticks(&mut world, &[(0, -1)], 0, 4096); }
+            assert!((0..16).all(|x| name_of(world.get_block(x, y, -1)) == "dirt"));
+        }
+    }
+
+    #[test]
+    fn grass_cover_obeys_bottom_faces_snow_and_preview_catalog() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        for (text, survives) in [
+            ("stone", false), ("oak_planks", false), ("glass", true),
+            ("stone_slab[type=bottom]", false), ("stone_slab[type=top]", true),
+            ("stone_slab[type=double]", false), ("stone_slab[type=top,waterlogged=true]", false),
+            ("snow[layers=1]", true), ("snow[layers=2]", false), ("snow[layers=8]", false),
+            ("water", false), ("poplar_planks", false),
+        ] {
+            let cover = catalog.default_state(text).ok().flatten().filter(|_| !text.contains('['))
+                .or_else(|| blocks::state_from_text(text)).unwrap();
+            world.set_block_silently(0, 64, 0, state("grass_block"));
+            world.set_block_silently(0, 65, 0, cover);
+            random_tick(&mut world, (0, 64, 0), state("grass_block"));
+            assert_eq!(name_of(world.get_block(0, 64, 0)), if survives { "grass_block" } else { "dirt" }, "{text}");
+        }
     }
 
     /// Пол из земли на высоте 0, 9×9.

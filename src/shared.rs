@@ -19,6 +19,28 @@ use crate::world::World;
 /// Место в мире: x, y, z.
 pub type Place = (f64, f64, f64);
 
+/// Поручение /item удерживает границу только до публикации новой руки.
+/// Arc допускает клонирование Order; finish/Drop освобождают счётчик один раз.
+#[derive(Debug)]
+pub struct CommandEquipmentCompletion {
+    waiting: Arc<[std::sync::atomic::AtomicUsize; 2]>,
+    index: usize,
+    until: u64,
+    active: std::sync::atomic::AtomicBool,
+}
+
+impl CommandEquipmentCompletion {
+    pub(crate) fn finish(&self) {
+        if self.active.swap(false, Ordering::AcqRel) {
+            self.waiting[self.index].fetch_sub(1, Ordering::AcqRel);
+        }
+    }
+}
+
+impl Drop for CommandEquipmentCompletion {
+    fn drop(&mut self) { self.finish(); }
+}
+
 /// То, что видят все подключения сразу.
 ///
 /// **Порядок замков.** Если нужно держать несколько замков сразу, брать их
@@ -28,7 +50,9 @@ pub type Place = (f64, f64, f64);
 /// или поздно застынет вместе с тактом — а за ними встанет весь сервер
 /// (так и было: вход игрока брал игроков раньше мира).
 pub struct Shared {
+    catalog: crate::gameplay_catalog::Catalog,
     pub auth: Option<std::sync::Arc<crate::auth::Service>>,
+    pub premium: crate::auth::premium::Detector,
     /// Миры измерений по порядку `Dimension::ALL`: блоки, такты, события.
     worlds: [Mutex<World>; 3],
 
@@ -82,6 +106,7 @@ pub struct Shared {
     /// прочитанное сразу после сигнала начала `T`, ляжет в `T + 1`, и ждать
     /// его такту незачем — раньше он терял на этом всё терпение.
     pub waiting_for_tick: Arc<[std::sync::atomic::AtomicUsize; 2]>,
+    command_equipment: Mutex<Vec<std::sync::Weak<CommandEquipmentCompletion>>>,
 
     /// Номер, который достанется следующей сущности.
     ///
@@ -150,6 +175,7 @@ pub struct Shared {
 
     /// Правило `announce_advancements` (прежнее announceAdvancements): писать ли
     /// в чат о полученных достижениях.
+    pub advancement_states: Mutex<std::collections::HashMap<[u8; 16], (crate::advancements::AdvState, u64)>>,
     pub announce_advancements: std::sync::atomic::AtomicBool,
 
     /// Правило `natural_health_regeneration`: лечит ли сытость.
@@ -178,6 +204,47 @@ pub struct Shared {
 }
 
 impl Shared {
+    /// Только /item weapon.mainhand в основном профиле 26.3. Профиль 26.1.2,
+    /// Bedrock и другие ячейки сохраняют прежнюю очередь. Замков через await нет.
+    pub(crate) fn order_mainhand(&self, uuid: &[u8; 16], stack: Option<crate::inventory::Stack>) {
+        let java = self.players.lock().expect("игроки").has_java_waker(uuid);
+        let order = if java && self.catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+            let completed = *self.ticks.borrow();
+            let started = *self.tick_starts.borrow();
+            let until = started.max(completed.saturating_add(1));
+            let index = (until.wrapping_sub(1) % 2) as usize;
+            let completion = {
+                let mut pending = self.command_equipment.lock().expect("поручения экипировки");
+                pending.retain(|weak| weak.upgrade().is_some_and(|ticket| ticket.active.load(Ordering::Acquire)));
+                // Не растим отдельный registry без границы. При перегрузке
+                // поручение остаётся в FIFO и будит владельца, но такт не ждёт.
+                if pending.len() >= 1024 { None } else {
+                    self.waiting_for_tick[index].fetch_add(1, Ordering::AcqRel);
+                    let ticket = Arc::new(CommandEquipmentCompletion {
+                        waiting: self.waiting_for_tick.clone(), index, until,
+                        active: std::sync::atomic::AtomicBool::new(true),
+                    });
+                    pending.push(Arc::downgrade(&ticket));
+                    Some(ticket)
+                }
+            };
+            crate::players::Order::CommandHold { stack, completion }
+        } else { crate::players::Order::Hold { stack } };
+        self.players.lock().expect("игроки").order(uuid, order);
+    }
+
+    /// После прежних 5 мс такт продолжает работу. Поздний владелец применит
+    /// поручение, но уже не удержит следующий такт той же чётности.
+    pub(crate) fn expire_command_equipment(&self, tick: u64) {
+        self.command_equipment.lock().expect("поручения экипировки").retain(|weak| {
+            let Some(ticket) = weak.upgrade() else { return false; };
+            if ticket.until <= tick { ticket.finish(); }
+            ticket.active.load(Ordering::Acquire)
+        });
+    }
+
+    pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
+
     /// Мир этого измерения.
     pub fn world_in(&self, dimension: Dimension) -> &Mutex<World> {
         &self.worlds[dimension.index()]
@@ -223,7 +290,8 @@ impl Shared {
         ops: Ops,
         skin_settings: crate::skins::Settings,
     ) -> Self {
-        Self::with_end(world, nether, World::in_memory(), playerdata, skins, properties, ops, skin_settings)
+        let world_catalog = world.catalog();
+        Self::with_end(world, nether, World::in_memory_with_catalog(world_catalog), playerdata, skins, properties, ops, skin_settings)
     }
 
     /// Заводит общее состояние сервера.
@@ -238,12 +306,16 @@ impl Shared {
         ops: Ops,
         skin_settings: crate::skins::Settings,
     ) -> Self {
+        let catalog = world.catalog();
+        assert_eq!(catalog, nether.catalog(), "измерения должны иметь один каталог");
+        assert_eq!(catalog, end.catalog(), "измерения должны иметь один каталог");
         let difficulty = std::sync::atomic::AtomicU8::new(properties.difficulty);
         let maps = Arc::new(Mutex::new(crate::maps::Maps::default()));
         let (mut world, mut nether, mut end) = (world, nether, end);
         for world in [&mut world, &mut nether, &mut end] { world.maps = Arc::clone(&maps); }
 
         Self {
+            catalog,
             difficulty,
             limited_crafting: std::sync::atomic::AtomicBool::new(false),
             keep_inventory: std::sync::atomic::AtomicBool::new(false),
@@ -258,6 +330,7 @@ impl Shared {
             raids: std::sync::atomic::AtomicBool::new(true),
             spawn_patrols: std::sync::atomic::AtomicBool::new(true),
             block_drops: std::sync::atomic::AtomicBool::new(true),
+            advancement_states: Mutex::new(std::collections::HashMap::new()),
             announce_advancements: std::sync::atomic::AtomicBool::new(true),
             freeze_damage: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),
@@ -270,18 +343,20 @@ impl Shared {
             players: Mutex::new(Players::new()),
             sessions: crate::sessions::Sessions::default(),
             chat: Mutex::new(Chat::new()),
-            items: [Mutex::new(Items::new()), Mutex::new(Items::new()), Mutex::new(Items::new())],
+            items: std::array::from_fn(|_| Mutex::new(Items::with_catalog(catalog))),
             arrows: Mutex::new(crate::arrow::Arrows::new()),
             thrown: Mutex::new(crate::thrown::Thrown::new()),
             fishing: Mutex::new(Vec::new()),
             maps,
             riding: Mutex::new(crate::riding::Riding::new()),
             auth: None,
+            premium: crate::auth::premium::Detector::default(),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             publication: Mutex::new(()),
             tick_starts: tokio::sync::watch::channel(0).0,
             waiting_for_tick: Arc::new([std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0)]),
+            command_equipment: Mutex::new(Vec::new()),
             // Номера начинаются с единицы: ноль клиент понимает как «никого».
             entity_ids: AtomicI32::new(1),
             readers: AtomicU64::new(1),
@@ -290,8 +365,45 @@ impl Shared {
             skins,
             properties,
             skin_settings,
-            settings: Default::default(),
+            // Каталог переданного мира определяет начальные настройки и для старых
+            // фикстур/миграции. Основной запуск отдельно проверяет конфиг и заменяет их.
+            settings: crate::config::mcsheriffanya::Settings {
+                java_version: Some(match catalog.profile() {
+                    crate::gameplay_catalog::Profile::Java26_1_2 => mcsa_protocol::JavaVersion::V26_1_2,
+                    crate::gameplay_catalog::Profile::Preview26_3 => mcsa_protocol::JavaVersion::V26_3,
+                }),
+                ..Default::default()
+            },
             world_cmd: Default::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn constructor_settings_match_all_world_catalogs() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for (profile, version) in [
+            (Profile::Java26_1_2, mcsa_protocol::JavaVersion::V26_1_2),
+            (Profile::Preview26_3, mcsa_protocol::JavaVersion::V26_3),
+        ] {
+            let catalog = Catalog::new(profile);
+            let shared = Shared::new(
+                World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                PathBuf::new(), PathBuf::new(), Default::default(),
+                Ops::open(std::path::Path::new("tmp/shared-catalog-fixture/ops.json")),
+                Default::default(),
+            );
+            assert_eq!(shared.settings.java_version, Some(version));
+            assert_eq!(Catalog::for_version(shared.settings.java_version.unwrap()), shared.catalog());
+            for dimension in [Dimension::Overworld, Dimension::Nether, Dimension::End] {
+                assert_eq!(shared.world_in(dimension).lock().unwrap().catalog(), catalog);
+            }
+        }
+        assert_eq!(crate::config::mcsheriffanya::Settings::default().java_version,
+            Some(mcsa_protocol::JavaVersion::V26_3));
     }
 }

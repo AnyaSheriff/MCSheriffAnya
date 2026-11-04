@@ -1,0 +1,24 @@
+{
+ "name": "join-saturation-probe",
+ "about": "Насыщение второго игрока сразу после входа: копится ли оно в мирной паузе до начала сценария и переносится ли через перезаход.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "track_second": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "gamemode survival $(bot2)",
+  "difficulty normal"
+ ],
+ "actions": [
+  {"after": 0, "cmd": "damage $(bot2) 1"}
+ ],
+ "record_ticks": 5,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot2)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

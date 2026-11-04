@@ -1,0 +1,517 @@
+{
+ "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+ "console": {
+  "summon_plain": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3",
+    "out": "[21:45:04] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:05] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 1, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -1337430440, -1386594133, -1768374154, 139130719], Age: 0, Motion: [0.03267649468059707d, -0.30153472366278034d, 0.055545095618555425d], wasOnGround: 0b, Health: 8.0f, LeftHanded: 0b, fall_distance: 0.45546773821115494d, Air: 300s, OnGround: 0b, Rotation: [328.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.8786787299200942d, 64.79673560066871d, 4.2215636939996894d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 1b, attributes: [{id: \"minecraft:follow_range\", modifiers: [{amount: 0.010660454464967408d, id: \"minecraft:random_spawn_bonus\", operation: \"add_multiplied_base\"}], bas"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:05] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 8.0"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:scale get",
+    "out": "[21:45:05] [Server thread/INFO]: System chat: The value of attribute Scale for entity Sulfur Cube is 1.0"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:06] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.4000000059604645"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:jump_strength get",
+    "out": "[21:45:06] [Server thread/INFO]: System chat: The value of attribute Jump Strength for entity Sulfur Cube is 0.41999998688697815"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:gravity get",
+    "out": "[21:45:06] [Server thread/INFO]: System chat: The value of attribute Gravity for entity Sulfur Cube is 0.08"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:step_height get",
+    "out": "[21:45:06] [Server thread/INFO]: System chat: The value of attribute Step Height for entity Sulfur Cube is 0.6"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:knockback_resistance get",
+    "out": "[21:45:06] [Server thread/INFO]: System chat: The value of attribute Knockback Resistance for entity Sulfur Cube is 0.0"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:attack_damage get",
+    "out": "[21:45:07] [Server thread/INFO]: System chat: Entity Sulfur Cube has no attribute Attack Damage"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:follow_range get",
+    "out": "[21:45:07] [Server thread/INFO]: System chat: The value of attribute Mob Follow Range for entity Sulfur Cube is 16.170567271439477"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:safe_fall_distance get",
+    "out": "[21:45:07] [Server thread/INFO]: System chat: The value of attribute Safe Fall Distance for entity Sulfur Cube is 3.0"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:armor get",
+    "out": "[21:45:07] [Server thread/INFO]: System chat: The value of attribute Armor for entity Sulfur Cube is 0.0"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] Health",
+    "out": "[21:45:08] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: 8.0f"
+   }
+  ],
+  "idle6s": [
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] Pos",
+    "out": "[21:45:14] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: [2.0662767315180646d, 64.0d, 7.402342118744449d]"
+   }
+  ],
+  "size_try": [
+   {
+    "cmd": "data modify entity @e[type=minecraft:sulfur_cube,limit=1] Size set value 1",
+    "out": "[21:45:14] [Server thread/INFO]: System chat: Nothing changed. The specified properties already have these values"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] Size",
+    "out": "[21:45:15] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: 1"
+   },
+   {
+    "cmd": "data modify entity @e[type=minecraft:sulfur_cube,limit=1] Age set value -100",
+    "out": "[21:45:15] [Server thread/INFO]: System chat: Modified entity data of Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] Age",
+    "out": "[21:45:15] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: -92"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:16] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 8.0"
+   }
+  ],
+  "kill_plain": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:16] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   }
+  ],
+  "after_kill_split": [
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:17] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -493170270, 1027360970, -1784375790, -1542461252], Age: -24000, Motion: [0.0d, 0.0d, 0.0d], wasOnGround: 0b, Health: 4.0f, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 0b, Rotation: [80.105286f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [1.949686114365937d, 64.5d, 6.081541048284949d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 1b, attributes: [{id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecraft:max_health\", base: 4.0d}], HurtTime: 0s}"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:17] [Server thread/INFO]: System chat: Killed 2 entities"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:18] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_stone": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:stone\",count:1}}}",
+    "out": "[21:45:19] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:20] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; 75756412, -2009316227, -1279407279, 1357937426], Age: 0, Motion: [0.0d, -0.07964000225067139d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:stone\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecraft:"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:20] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:stone\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:20] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:20] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_stone": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:22] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:23] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_tnt": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:tnt\",count:1}}}",
+    "out": "[21:45:23] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:24] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; 964545509, 16337846, -2132243363, 1552244651], Age: 0, Motion: [0.0d, -0.07783999919891357d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:tnt\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecraft:fric"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:24] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:tnt\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:25] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:25] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_tnt": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:27] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:28] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_magma_block": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:magma_block\",count:1}}}",
+    "out": "[21:45:28] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:29] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -2018888202, 616843317, -2082702957, 1413184445], Age: 0, Motion: [0.0d, -0.07927999973297119d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:magma_block\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"min"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:29] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:magma_block\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:29] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:29] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_magma_block": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:31] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:32] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_white_wool": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:white_wool\",count:1}}}",
+    "out": "[21:45:32] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:33] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -2029375246, -1410317025, -1173883216, 1607961956], Age: 0, Motion: [0.0d, -0.06704000473022462d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:white_wool\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"mi"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:33] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:white_wool\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:34] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:34] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_white_wool": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:36] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:37] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_packed_ice": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:packed_ice\",count:1}}}",
+    "out": "[21:45:37] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:38] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -1799945960, 478494945, -2137634369, -116478001], Age: 0, Motion: [0.0d, -0.07992800235748292d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:packed_ice\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"mine"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:38] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:packed_ice\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:38] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:38] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_packed_ice": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:40] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:41] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_dirt": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:dirt\",count:1}}}",
+    "out": "[21:45:42] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:42] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -1964042148, 1579831011, -1491593378, -461420569], Age: 0, Motion: [0.0d, -0.07927999973297119d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:dirt\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecraft"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:43] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:dirt\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:43] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:43] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_dirt": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:45] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:46] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_soul_sand": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:soul_sand\",count:1}}}",
+    "out": "[21:45:46] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:47] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; 49253098, 376852288, -1610952663, -1596204681], Age: 0, Motion: [0.0d, -0.07992800235748292d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:soul_sand\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecra"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:47] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:soul_sand\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:47] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:47] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_soul_sand": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:49] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:50] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_honeycomb_block": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:honeycomb_block\",count:1}}}",
+    "out": "[21:45:51] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:51] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -995606821, 2067612611, -1687249751, -1778896794], Age: 0, Motion: [0.0d, -0.07992800235748292d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:honeycomb_block\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id:"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:52] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:honeycomb_block\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:52] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:52] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_honeycomb_block": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:54] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:55] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_iron_block": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:iron_block\",count:1}}}",
+    "out": "[21:45:55] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:45:56] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -874717548, -1980870870, -1550056391, 1481289972], Age: 0, Motion: [0.0d, -0.07927999973297119d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:iron_block\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:explosion_knockback_resistance\", base: 0.0d}, {id: \"minecraft:knockback_resistance\", base: 0.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"min"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:45:56] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:iron_block\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:45:56] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:45:57] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_iron_block": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:45:58] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:45:59] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "body_sand": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:sand\",count:1}}}",
+    "out": "[21:46:00] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:46:01] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {AgeLocked: 0b, Brain: {memories: {}}, Size: 0, Invulnerable: 0b, FallFlying: 0b, ForcedAge: 0, PortalCooldown: 0, AbsorptionAmount: 0.0f, fuse: -1, DeathTime: 0s, pickup_timer: 0, PersistenceRequired: 0b, UUID: [I; -1002829134, -1949743866, -1591986621, 1500513845], Age: 0, Motion: [0.0d, -0.0728000020980835d, 0.0d], wasOnGround: 1b, Health: 4.0f, equipment: {body: {count: 1, id: \"minecraft:sand\"}}, LeftHanded: 0b, fall_distance: 0.0d, Air: 300s, OnGround: 1b, Rotation: [0.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.5d, 64.0d, 3.5d], from_bucket: 0b, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecraft:max_health\", base: 4.0d}], HurtTime: 0s}"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:46:01] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:sand\"}}"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:movement_speed get",
+    "out": "[21:46:01] [Server thread/INFO]: System chat: The value of attribute Speed for entity Sulfur Cube is 0.30000001192092896"
+   },
+   {
+    "cmd": "attribute @e[type=minecraft:sulfur_cube,limit=1] minecraft:max_health get",
+    "out": "[21:46:01] [Server thread/INFO]: System chat: The value of attribute Max Health for entity Sulfur Cube is 4.0"
+   }
+  ],
+  "kill_sand": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:46:03] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:46:04] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "absorb_item": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3",
+    "out": "[21:46:04] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "summon minecraft:item 0.5 64.5 3 {Item:{id:\"minecraft:stone\",count:1}}",
+    "out": "[21:46:05] [Server thread/INFO]: System chat: Summoned new Stone"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] equipment",
+    "out": "[21:46:08] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: {body: {count: 1, id: \"minecraft:stone\"}}"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:sulfur_cube,limit=1] pickup_timer",
+    "out": "[21:46:08] [Server thread/INFO]: System chat: Sulfur Cube has the following entity data: 0"
+   }
+  ],
+  "kill_absorbed": [
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:46:09] [Server thread/INFO]: System chat: Killed Sulfur Cube"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:sulfur_cube]",
+    "out": "[21:46:10] [Server thread/INFO]: System chat: Killed 2 entities"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:item]",
+    "out": "[21:46:11] [Server thread/INFO]: System chat: Killed Stone"
+   }
+  ],
+  "loot_none": [
+   {
+    "cmd": "loot spawn 0.5 64 3 kill @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:46:11] [Server thread/INFO]: System chat: No entity was found"
+   }
+  ],
+  "loot": [
+   {
+    "cmd": "summon minecraft:sulfur_cube 0.5 64 3 {equipment:{body:{id:\"minecraft:stone\",count:1}}}",
+    "out": "[21:46:11] [Server thread/INFO]: System chat: Summoned new Sulfur Cube"
+   },
+   {
+    "cmd": "loot spawn 0.5 64 3 kill @e[type=minecraft:sulfur_cube,limit=1]",
+    "out": "[21:46:12] [Server thread/INFO]: System chat: Dropped 0 items from loot table minecraft:entities/sulfur_cube"
+   }
+  ],
+  "items": [
+   {
+    "cmd": "give McsaProbe minecraft:sulfur_cube_bucket",
+    "out": "[21:46:13] [Server thread/INFO]: System chat: Gave 1 [Bucket of Sulfur Cube] to McsaProbe"
+   },
+   {
+    "cmd": "give McsaProbe minecraft:sulfur_cube_spawn_egg",
+    "out": "[21:46:13] [Server thread/INFO]: System chat: Gave 1 [Sulfur Cube Spawn Egg] to McsaProbe"
+   }
+  ],
+  "magma_cube": [
+   {
+    "cmd": "summon minecraft:magma_cube 0.5 64 3",
+    "out": "[21:46:13] [Server thread/INFO]: System chat: Summoned new Magma Cube"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:magma_cube,limit=1]",
+    "out": "[21:46:14] [Server thread/INFO]: System chat: Magma Cube has the following entity data: {Motion: [-0.08712842313128182d, -0.1245333507507844d, 0.038763916774486894d], Brain: {memories: {}}, wasOnGround: 0b, Health: 16.0f, Size: 3, Invulnerable: 0b, FallFlying: 0b, LeftHanded: 0b, fall_distance: 0.04707484692335129d, Air: 300s, OnGround: 0b, PortalCooldown: 0, AbsorptionAmount: 0.0f, Rotation: [2.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [-1.4409900997811036d, 68.10667025710391d, 3.739795846775648d], DeathTime: 0s, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:attack_damage\", base: 4.0d}, {id: \"minecraft:follow_range\", modifiers: [{amount: 0.002172335257100405d, id: \"minecraft:random_spawn_bonus\", operation: \"add_multiplied_base\"}], base: 16.0d}, {id: \"minecraft:armor\", base: 12.0d}, {id: \"minecraft:movement_speed\", base: 0.6000000238418579d}, {id: \"minecraf"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:magma_cube]",
+    "out": "[21:46:14] [Server thread/INFO]: System chat: Killed Magma Cube"
+   }
+  ],
+  "slime": [
+   {
+    "cmd": "summon minecraft:slime 0.5 64 3",
+    "out": "[21:46:15] [Server thread/INFO]: System chat: Summoned new Slime"
+   },
+   {
+    "cmd": "data get entity @e[type=minecraft:slime,limit=1]",
+    "out": "[21:46:15] [Server thread/INFO]: System chat: Slime has the following entity data: {Motion: [0.009842504541953272d, -0.3739040364667221d, 0.02920043004119603d], Brain: {memories: {}}, wasOnGround: 0b, Health: 1.0f, Size: 0, Invulnerable: 0b, FallFlying: 0b, LeftHanded: 0b, fall_distance: 0.7570024505257607d, Air: 300s, OnGround: 0b, PortalCooldown: 0, AbsorptionAmount: 0.0f, Rotation: [320.0f, 0.0f], current_impulse_context_reset_grace_time: 0, Pos: [0.3264627208549844d, 64.49520087700593d, 3.9277705373119423d], DeathTime: 0s, Fire: 0s, CanPickUpLoot: 0b, attributes: [{id: \"minecraft:attack_damage\", base: 1.0d}, {id: \"minecraft:follow_range\", modifiers: [{amount: -0.05364307091160395d, id: \"minecraft:random_spawn_bonus\", operation: \"add_multiplied_base\"}], base: 16.0d}, {id: \"minecraft:movement_speed\", base: 0.30000001192092896d}, {id: \"minecraft:max_health\", base: 1.0d}], PersistenceReq"
+   },
+   {
+    "cmd": "kill @e[type=minecraft:slime]",
+    "out": "[21:46:16] [Server thread/INFO]: System chat: Killed Slime"
+   }
+  ]
+ }
+}

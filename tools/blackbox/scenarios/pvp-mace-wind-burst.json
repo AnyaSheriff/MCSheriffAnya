@@ -1,5 +1,6 @@
 {
  "name": "pvp-mace-wind-burst",
+ "attr_phase": true,
  "about": "Удар булавой с «порывом ветра» I с падения 4 блока: после сокрушающего удара нападающего подбрасывает (взрыв ветра, звук wind_burst, частицы gust_emitter). Жертва в алмазных нагруднике и поножах — чтобы пережила удар.",
  "second": true,
  "track_self": true,
@@ -16,6 +17,7 @@
   "clear $(bot2)",
   "kill $(bot)",
   "!wait 30",
+  "!syncattrs",
   "item replace entity $(bot) armor.chest with minecraft:diamond_chestplate",
   "item replace entity $(bot) armor.legs with minecraft:diamond_leggings",
   "give $(bot2) minecraft:mace[enchantments={wind_burst:1}] 1",

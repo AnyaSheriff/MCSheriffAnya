@@ -1,0 +1,1114 @@
+{
+  "source_commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+  "native": "26.1.2",
+  "target": "26.3",
+  "implemented_gameplay": false,
+  "new": {
+    "blocks": [
+      {
+        "name": "poplar_planks",
+        "target_id": 23
+      },
+      {
+        "name": "poplar_sapling",
+        "target_id": 35
+      },
+      {
+        "name": "poplar_log",
+        "target_id": 60
+      },
+      {
+        "name": "stripped_poplar_log",
+        "target_id": 73
+      },
+      {
+        "name": "poplar_wood",
+        "target_id": 83
+      },
+      {
+        "name": "stripped_poplar_wood",
+        "target_id": 93
+      },
+      {
+        "name": "red_poplar_leaves",
+        "target_id": 103
+      },
+      {
+        "name": "orange_poplar_leaves",
+        "target_id": 104
+      },
+      {
+        "name": "yellow_poplar_leaves",
+        "target_id": 105
+      },
+      {
+        "name": "straw_bed",
+        "target_id": 135
+      },
+      {
+        "name": "red_shrub",
+        "target_id": 144
+      },
+      {
+        "name": "white_wool_stairs",
+        "target_id": 167
+      },
+      {
+        "name": "orange_wool_stairs",
+        "target_id": 168
+      },
+      {
+        "name": "magenta_wool_stairs",
+        "target_id": 169
+      },
+      {
+        "name": "light_blue_wool_stairs",
+        "target_id": 170
+      },
+      {
+        "name": "yellow_wool_stairs",
+        "target_id": 171
+      },
+      {
+        "name": "lime_wool_stairs",
+        "target_id": 172
+      },
+      {
+        "name": "pink_wool_stairs",
+        "target_id": 173
+      },
+      {
+        "name": "gray_wool_stairs",
+        "target_id": 174
+      },
+      {
+        "name": "light_gray_wool_stairs",
+        "target_id": 175
+      },
+      {
+        "name": "cyan_wool_stairs",
+        "target_id": 176
+      },
+      {
+        "name": "purple_wool_stairs",
+        "target_id": 177
+      },
+      {
+        "name": "blue_wool_stairs",
+        "target_id": 178
+      },
+      {
+        "name": "brown_wool_stairs",
+        "target_id": 179
+      },
+      {
+        "name": "green_wool_stairs",
+        "target_id": 180
+      },
+      {
+        "name": "red_wool_stairs",
+        "target_id": 181
+      },
+      {
+        "name": "black_wool_stairs",
+        "target_id": 182
+      },
+      {
+        "name": "white_wool_slab",
+        "target_id": 183
+      },
+      {
+        "name": "orange_wool_slab",
+        "target_id": 184
+      },
+      {
+        "name": "magenta_wool_slab",
+        "target_id": 185
+      },
+      {
+        "name": "light_blue_wool_slab",
+        "target_id": 186
+      },
+      {
+        "name": "yellow_wool_slab",
+        "target_id": 187
+      },
+      {
+        "name": "lime_wool_slab",
+        "target_id": 188
+      },
+      {
+        "name": "pink_wool_slab",
+        "target_id": 189
+      },
+      {
+        "name": "gray_wool_slab",
+        "target_id": 190
+      },
+      {
+        "name": "light_gray_wool_slab",
+        "target_id": 191
+      },
+      {
+        "name": "cyan_wool_slab",
+        "target_id": 192
+      },
+      {
+        "name": "purple_wool_slab",
+        "target_id": 193
+      },
+      {
+        "name": "blue_wool_slab",
+        "target_id": 194
+      },
+      {
+        "name": "brown_wool_slab",
+        "target_id": 195
+      },
+      {
+        "name": "green_wool_slab",
+        "target_id": 196
+      },
+      {
+        "name": "red_wool_slab",
+        "target_id": 197
+      },
+      {
+        "name": "black_wool_slab",
+        "target_id": 198
+      },
+      {
+        "name": "poplar_shelf",
+        "target_id": 233
+      },
+      {
+        "name": "poplar_sign",
+        "target_id": 263
+      },
+      {
+        "name": "poplar_wall_sign",
+        "target_id": 278
+      },
+      {
+        "name": "poplar_hanging_sign",
+        "target_id": 291
+      },
+      {
+        "name": "poplar_wall_hanging_sign",
+        "target_id": 302
+      },
+      {
+        "name": "poplar_pressure_plate",
+        "target_id": 318
+      },
+      {
+        "name": "poplar_trapdoor",
+        "target_id": 374
+      },
+      {
+        "name": "shelf_mushroom",
+        "target_id": 447
+      },
+      {
+        "name": "potted_poplar_sapling",
+        "target_id": 472
+      },
+      {
+        "name": "poplar_button",
+        "target_id": 504
+      },
+      {
+        "name": "poplar_stairs",
+        "target_id": 574
+      },
+      {
+        "name": "poplar_slab",
+        "target_id": 662
+      },
+      {
+        "name": "poplar_fence_gate",
+        "target_id": 690
+      },
+      {
+        "name": "poplar_fence",
+        "target_id": 700
+      },
+      {
+        "name": "poplar_door",
+        "target_id": 710
+      },
+      {
+        "name": "white_concrete_stairs",
+        "target_id": 784
+      },
+      {
+        "name": "orange_concrete_stairs",
+        "target_id": 785
+      },
+      {
+        "name": "magenta_concrete_stairs",
+        "target_id": 786
+      },
+      {
+        "name": "light_blue_concrete_stairs",
+        "target_id": 787
+      },
+      {
+        "name": "yellow_concrete_stairs",
+        "target_id": 788
+      },
+      {
+        "name": "lime_concrete_stairs",
+        "target_id": 789
+      },
+      {
+        "name": "pink_concrete_stairs",
+        "target_id": 790
+      },
+      {
+        "name": "gray_concrete_stairs",
+        "target_id": 791
+      },
+      {
+        "name": "light_gray_concrete_stairs",
+        "target_id": 792
+      },
+      {
+        "name": "cyan_concrete_stairs",
+        "target_id": 793
+      },
+      {
+        "name": "purple_concrete_stairs",
+        "target_id": 794
+      },
+      {
+        "name": "blue_concrete_stairs",
+        "target_id": 795
+      },
+      {
+        "name": "brown_concrete_stairs",
+        "target_id": 796
+      },
+      {
+        "name": "green_concrete_stairs",
+        "target_id": 797
+      },
+      {
+        "name": "red_concrete_stairs",
+        "target_id": 798
+      },
+      {
+        "name": "black_concrete_stairs",
+        "target_id": 799
+      },
+      {
+        "name": "white_concrete_slab",
+        "target_id": 800
+      },
+      {
+        "name": "orange_concrete_slab",
+        "target_id": 801
+      },
+      {
+        "name": "magenta_concrete_slab",
+        "target_id": 802
+      },
+      {
+        "name": "light_blue_concrete_slab",
+        "target_id": 803
+      },
+      {
+        "name": "yellow_concrete_slab",
+        "target_id": 804
+      },
+      {
+        "name": "lime_concrete_slab",
+        "target_id": 805
+      },
+      {
+        "name": "pink_concrete_slab",
+        "target_id": 806
+      },
+      {
+        "name": "gray_concrete_slab",
+        "target_id": 807
+      },
+      {
+        "name": "light_gray_concrete_slab",
+        "target_id": 808
+      },
+      {
+        "name": "cyan_concrete_slab",
+        "target_id": 809
+      },
+      {
+        "name": "purple_concrete_slab",
+        "target_id": 810
+      },
+      {
+        "name": "blue_concrete_slab",
+        "target_id": 811
+      },
+      {
+        "name": "brown_concrete_slab",
+        "target_id": 812
+      },
+      {
+        "name": "green_concrete_slab",
+        "target_id": 813
+      },
+      {
+        "name": "red_concrete_slab",
+        "target_id": 814
+      },
+      {
+        "name": "black_concrete_slab",
+        "target_id": 815
+      },
+      {
+        "name": "sulfur",
+        "target_id": 1088
+      },
+      {
+        "name": "potent_sulfur",
+        "target_id": 1089
+      },
+      {
+        "name": "sulfur_slab",
+        "target_id": 1090
+      },
+      {
+        "name": "sulfur_stairs",
+        "target_id": 1091
+      },
+      {
+        "name": "sulfur_wall",
+        "target_id": 1092
+      },
+      {
+        "name": "polished_sulfur",
+        "target_id": 1093
+      },
+      {
+        "name": "polished_sulfur_slab",
+        "target_id": 1094
+      },
+      {
+        "name": "polished_sulfur_stairs",
+        "target_id": 1095
+      },
+      {
+        "name": "polished_sulfur_wall",
+        "target_id": 1096
+      },
+      {
+        "name": "sulfur_bricks",
+        "target_id": 1097
+      },
+      {
+        "name": "sulfur_brick_slab",
+        "target_id": 1098
+      },
+      {
+        "name": "sulfur_brick_stairs",
+        "target_id": 1099
+      },
+      {
+        "name": "sulfur_brick_wall",
+        "target_id": 1100
+      },
+      {
+        "name": "chiseled_sulfur",
+        "target_id": 1101
+      },
+      {
+        "name": "cinnabar",
+        "target_id": 1102
+      },
+      {
+        "name": "cinnabar_slab",
+        "target_id": 1103
+      },
+      {
+        "name": "cinnabar_stairs",
+        "target_id": 1104
+      },
+      {
+        "name": "cinnabar_wall",
+        "target_id": 1105
+      },
+      {
+        "name": "polished_cinnabar",
+        "target_id": 1106
+      },
+      {
+        "name": "polished_cinnabar_slab",
+        "target_id": 1107
+      },
+      {
+        "name": "polished_cinnabar_stairs",
+        "target_id": 1108
+      },
+      {
+        "name": "polished_cinnabar_wall",
+        "target_id": 1109
+      },
+      {
+        "name": "cinnabar_bricks",
+        "target_id": 1110
+      },
+      {
+        "name": "cinnabar_brick_slab",
+        "target_id": 1111
+      },
+      {
+        "name": "cinnabar_brick_stairs",
+        "target_id": 1112
+      },
+      {
+        "name": "cinnabar_brick_wall",
+        "target_id": 1113
+      },
+      {
+        "name": "chiseled_cinnabar",
+        "target_id": 1114
+      },
+      {
+        "name": "sulfur_spike",
+        "target_id": 1224
+      }
+    ],
+    "items": [
+      {
+        "name": "sulfur",
+        "target_id": 26
+      },
+      {
+        "name": "potent_sulfur",
+        "target_id": 27
+      },
+      {
+        "name": "sulfur_slab",
+        "target_id": 28
+      },
+      {
+        "name": "sulfur_stairs",
+        "target_id": 29
+      },
+      {
+        "name": "sulfur_wall",
+        "target_id": 30
+      },
+      {
+        "name": "polished_sulfur",
+        "target_id": 31
+      },
+      {
+        "name": "polished_sulfur_slab",
+        "target_id": 32
+      },
+      {
+        "name": "polished_sulfur_stairs",
+        "target_id": 33
+      },
+      {
+        "name": "polished_sulfur_wall",
+        "target_id": 34
+      },
+      {
+        "name": "sulfur_bricks",
+        "target_id": 35
+      },
+      {
+        "name": "sulfur_brick_slab",
+        "target_id": 36
+      },
+      {
+        "name": "sulfur_brick_stairs",
+        "target_id": 37
+      },
+      {
+        "name": "sulfur_brick_wall",
+        "target_id": 38
+      },
+      {
+        "name": "chiseled_sulfur",
+        "target_id": 39
+      },
+      {
+        "name": "cinnabar",
+        "target_id": 40
+      },
+      {
+        "name": "cinnabar_slab",
+        "target_id": 41
+      },
+      {
+        "name": "cinnabar_stairs",
+        "target_id": 42
+      },
+      {
+        "name": "cinnabar_wall",
+        "target_id": 43
+      },
+      {
+        "name": "polished_cinnabar",
+        "target_id": 44
+      },
+      {
+        "name": "polished_cinnabar_slab",
+        "target_id": 45
+      },
+      {
+        "name": "polished_cinnabar_stairs",
+        "target_id": 46
+      },
+      {
+        "name": "polished_cinnabar_wall",
+        "target_id": 47
+      },
+      {
+        "name": "cinnabar_bricks",
+        "target_id": 48
+      },
+      {
+        "name": "cinnabar_brick_slab",
+        "target_id": 49
+      },
+      {
+        "name": "cinnabar_brick_stairs",
+        "target_id": 50
+      },
+      {
+        "name": "cinnabar_brick_wall",
+        "target_id": 51
+      },
+      {
+        "name": "chiseled_cinnabar",
+        "target_id": 52
+      },
+      {
+        "name": "poplar_planks",
+        "target_id": 72
+      },
+      {
+        "name": "poplar_sapling",
+        "target_id": 86
+      },
+      {
+        "name": "poplar_log",
+        "target_id": 172
+      },
+      {
+        "name": "stripped_poplar_log",
+        "target_id": 187
+      },
+      {
+        "name": "stripped_poplar_wood",
+        "target_id": 199
+      },
+      {
+        "name": "poplar_wood",
+        "target_id": 212
+      },
+      {
+        "name": "red_poplar_leaves",
+        "target_id": 224
+      },
+      {
+        "name": "orange_poplar_leaves",
+        "target_id": 225
+      },
+      {
+        "name": "yellow_poplar_leaves",
+        "target_id": 226
+      },
+      {
+        "name": "red_shrub",
+        "target_id": 241
+      },
+      {
+        "name": "white_wool_stairs",
+        "target_id": 266
+      },
+      {
+        "name": "orange_wool_stairs",
+        "target_id": 267
+      },
+      {
+        "name": "magenta_wool_stairs",
+        "target_id": 268
+      },
+      {
+        "name": "light_blue_wool_stairs",
+        "target_id": 269
+      },
+      {
+        "name": "yellow_wool_stairs",
+        "target_id": 270
+      },
+      {
+        "name": "lime_wool_stairs",
+        "target_id": 271
+      },
+      {
+        "name": "pink_wool_stairs",
+        "target_id": 272
+      },
+      {
+        "name": "gray_wool_stairs",
+        "target_id": 273
+      },
+      {
+        "name": "light_gray_wool_stairs",
+        "target_id": 274
+      },
+      {
+        "name": "cyan_wool_stairs",
+        "target_id": 275
+      },
+      {
+        "name": "purple_wool_stairs",
+        "target_id": 276
+      },
+      {
+        "name": "blue_wool_stairs",
+        "target_id": 277
+      },
+      {
+        "name": "brown_wool_stairs",
+        "target_id": 278
+      },
+      {
+        "name": "green_wool_stairs",
+        "target_id": 279
+      },
+      {
+        "name": "red_wool_stairs",
+        "target_id": 280
+      },
+      {
+        "name": "black_wool_stairs",
+        "target_id": 281
+      },
+      {
+        "name": "white_wool_slab",
+        "target_id": 282
+      },
+      {
+        "name": "orange_wool_slab",
+        "target_id": 283
+      },
+      {
+        "name": "magenta_wool_slab",
+        "target_id": 284
+      },
+      {
+        "name": "light_blue_wool_slab",
+        "target_id": 285
+      },
+      {
+        "name": "yellow_wool_slab",
+        "target_id": 286
+      },
+      {
+        "name": "lime_wool_slab",
+        "target_id": 287
+      },
+      {
+        "name": "pink_wool_slab",
+        "target_id": 288
+      },
+      {
+        "name": "gray_wool_slab",
+        "target_id": 289
+      },
+      {
+        "name": "light_gray_wool_slab",
+        "target_id": 290
+      },
+      {
+        "name": "cyan_wool_slab",
+        "target_id": 291
+      },
+      {
+        "name": "purple_wool_slab",
+        "target_id": 292
+      },
+      {
+        "name": "blue_wool_slab",
+        "target_id": 293
+      },
+      {
+        "name": "brown_wool_slab",
+        "target_id": 294
+      },
+      {
+        "name": "green_wool_slab",
+        "target_id": 295
+      },
+      {
+        "name": "red_wool_slab",
+        "target_id": 296
+      },
+      {
+        "name": "black_wool_slab",
+        "target_id": 297
+      },
+      {
+        "name": "shelf_mushroom",
+        "target_id": 319
+      },
+      {
+        "name": "poplar_slab",
+        "target_id": 350
+      },
+      {
+        "name": "poplar_shelf",
+        "target_id": 385
+      },
+      {
+        "name": "poplar_fence",
+        "target_id": 426
+      },
+      {
+        "name": "poplar_stairs",
+        "target_id": 524
+      },
+      {
+        "name": "white_concrete_stairs",
+        "target_id": 705
+      },
+      {
+        "name": "orange_concrete_stairs",
+        "target_id": 706
+      },
+      {
+        "name": "magenta_concrete_stairs",
+        "target_id": 707
+      },
+      {
+        "name": "light_blue_concrete_stairs",
+        "target_id": 708
+      },
+      {
+        "name": "yellow_concrete_stairs",
+        "target_id": 709
+      },
+      {
+        "name": "lime_concrete_stairs",
+        "target_id": 710
+      },
+      {
+        "name": "pink_concrete_stairs",
+        "target_id": 711
+      },
+      {
+        "name": "gray_concrete_stairs",
+        "target_id": 712
+      },
+      {
+        "name": "light_gray_concrete_stairs",
+        "target_id": 713
+      },
+      {
+        "name": "cyan_concrete_stairs",
+        "target_id": 714
+      },
+      {
+        "name": "purple_concrete_stairs",
+        "target_id": 715
+      },
+      {
+        "name": "blue_concrete_stairs",
+        "target_id": 716
+      },
+      {
+        "name": "brown_concrete_stairs",
+        "target_id": 717
+      },
+      {
+        "name": "green_concrete_stairs",
+        "target_id": 718
+      },
+      {
+        "name": "red_concrete_stairs",
+        "target_id": 719
+      },
+      {
+        "name": "black_concrete_stairs",
+        "target_id": 720
+      },
+      {
+        "name": "white_concrete_slab",
+        "target_id": 721
+      },
+      {
+        "name": "orange_concrete_slab",
+        "target_id": 722
+      },
+      {
+        "name": "magenta_concrete_slab",
+        "target_id": 723
+      },
+      {
+        "name": "light_blue_concrete_slab",
+        "target_id": 724
+      },
+      {
+        "name": "yellow_concrete_slab",
+        "target_id": 725
+      },
+      {
+        "name": "lime_concrete_slab",
+        "target_id": 726
+      },
+      {
+        "name": "pink_concrete_slab",
+        "target_id": 727
+      },
+      {
+        "name": "gray_concrete_slab",
+        "target_id": 728
+      },
+      {
+        "name": "light_gray_concrete_slab",
+        "target_id": 729
+      },
+      {
+        "name": "cyan_concrete_slab",
+        "target_id": 730
+      },
+      {
+        "name": "purple_concrete_slab",
+        "target_id": 731
+      },
+      {
+        "name": "blue_concrete_slab",
+        "target_id": 732
+      },
+      {
+        "name": "brown_concrete_slab",
+        "target_id": 733
+      },
+      {
+        "name": "green_concrete_slab",
+        "target_id": 734
+      },
+      {
+        "name": "red_concrete_slab",
+        "target_id": 735
+      },
+      {
+        "name": "black_concrete_slab",
+        "target_id": 736
+      },
+      {
+        "name": "poplar_button",
+        "target_id": 867
+      },
+      {
+        "name": "poplar_pressure_plate",
+        "target_id": 884
+      },
+      {
+        "name": "poplar_door",
+        "target_id": 898
+      },
+      {
+        "name": "poplar_trapdoor",
+        "target_id": 920
+      },
+      {
+        "name": "poplar_fence_gate",
+        "target_id": 941
+      },
+      {
+        "name": "poplar_boat",
+        "target_id": 993
+      },
+      {
+        "name": "poplar_chest_boat",
+        "target_id": 994
+      },
+      {
+        "name": "poplar_sign",
+        "target_id": 1111
+      },
+      {
+        "name": "poplar_hanging_sign",
+        "target_id": 1124
+      },
+      {
+        "name": "sulfur_cube_bucket",
+        "target_id": 1140
+      },
+      {
+        "name": "white_cushion",
+        "target_id": 1170
+      },
+      {
+        "name": "orange_cushion",
+        "target_id": 1171
+      },
+      {
+        "name": "magenta_cushion",
+        "target_id": 1172
+      },
+      {
+        "name": "light_blue_cushion",
+        "target_id": 1173
+      },
+      {
+        "name": "yellow_cushion",
+        "target_id": 1174
+      },
+      {
+        "name": "lime_cushion",
+        "target_id": 1175
+      },
+      {
+        "name": "pink_cushion",
+        "target_id": 1176
+      },
+      {
+        "name": "gray_cushion",
+        "target_id": 1177
+      },
+      {
+        "name": "light_gray_cushion",
+        "target_id": 1178
+      },
+      {
+        "name": "cyan_cushion",
+        "target_id": 1179
+      },
+      {
+        "name": "purple_cushion",
+        "target_id": 1180
+      },
+      {
+        "name": "blue_cushion",
+        "target_id": 1181
+      },
+      {
+        "name": "brown_cushion",
+        "target_id": 1182
+      },
+      {
+        "name": "green_cushion",
+        "target_id": 1183
+      },
+      {
+        "name": "red_cushion",
+        "target_id": 1184
+      },
+      {
+        "name": "black_cushion",
+        "target_id": 1185
+      },
+      {
+        "name": "straw_bed",
+        "target_id": 1235
+      },
+      {
+        "name": "ocean_monument_map",
+        "target_id": 1239
+      },
+      {
+        "name": "woodland_mansion_map",
+        "target_id": 1240
+      },
+      {
+        "name": "buried_trial_chambers_map",
+        "target_id": 1241
+      },
+      {
+        "name": "jungle_pyramid_map",
+        "target_id": 1242
+      },
+      {
+        "name": "swamp_hut_map",
+        "target_id": 1243
+      },
+      {
+        "name": "desert_village_map",
+        "target_id": 1244
+      },
+      {
+        "name": "plains_village_map",
+        "target_id": 1245
+      },
+      {
+        "name": "savanna_village_map",
+        "target_id": 1246
+      },
+      {
+        "name": "snowy_village_map",
+        "target_id": 1247
+      },
+      {
+        "name": "taiga_village_map",
+        "target_id": 1248
+      },
+      {
+        "name": "buried_treasure_map",
+        "target_id": 1249
+      },
+      {
+        "name": "buried_ancient_city_map",
+        "target_id": 1250
+      },
+      {
+        "name": "buried_mineshaft_map",
+        "target_id": 1251
+      },
+      {
+        "name": "desert_pyramid_map",
+        "target_id": 1252
+      },
+      {
+        "name": "abandoned_camp_map",
+        "target_id": 1253
+      },
+      {
+        "name": "warm_ocean_ruins_map",
+        "target_id": 1254
+      },
+      {
+        "name": "sulfur_cube_spawn_egg",
+        "target_id": 1316
+      },
+      {
+        "name": "music_disc_bounce",
+        "target_id": 1463
+      },
+      {
+        "name": "sulfur_spike",
+        "target_id": 1572
+      }
+    ],
+    "entities": [
+      {
+        "name": "cushion",
+        "target_id": 33
+      },
+      {
+        "name": "poplar_boat",
+        "target_id": 106
+      },
+      {
+        "name": "poplar_chest_boat",
+        "target_id": 107
+      },
+      {
+        "name": "sulfur_cube",
+        "target_id": 133
+      }
+    ]
+  },
+  "changed_metadata": [
+    "magma_cube",
+    "slime"
+  ]
+}

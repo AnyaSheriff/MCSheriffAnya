@@ -1,0 +1,96 @@
+---- Minecraft Crash Report ----
+// I bet Cylons wouldn't have this problem.
+
+Time: 2026-10-23 19:29:17
+Description: Initializing game
+
+java.lang.NullPointerException: Initializing game
+	at org.lwjgl.system.Checks.check(Checks.java:188)
+	at org.lwjgl.glfw.GLFW.nglfwSetPreeditCallback(GLFW.java:1911)
+	at org.lwjgl.glfw.GLFW.glfwSetPreeditCallback(GLFW.java:1920)
+	at com.mojang.blaze3d.platform.InputConstants.setupKeyboardCallbacks(InputConstants.java:473)
+	at net.minecraft.client.KeyboardHandler.setup(KeyboardHandler.java:629)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:578)
+	at net.minecraft.client.main.Main.main(Main.java:278)
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Stacktrace:
+	at org.lwjgl.system.Checks.check(Checks.java:188)
+	at org.lwjgl.glfw.GLFW.nglfwSetPreeditCallback(GLFW.java:1911)
+	at org.lwjgl.glfw.GLFW.glfwSetPreeditCallback(GLFW.java:1920)
+	at com.mojang.blaze3d.platform.InputConstants.setupKeyboardCallbacks(InputConstants.java:473)
+	at net.minecraft.client.KeyboardHandler.setup(KeyboardHandler.java:629)
+	at net.minecraft.client.Minecraft.<init>(Minecraft.java:578)
+
+-- Initialization --
+Details:
+	Modules: 
+Stacktrace:
+	at net.minecraft.client.main.Main.main(Main.java:278)
+
+-- System Details --
+Details:
+	Minecraft Version: 26.2
+	Minecraft Version ID: 26.2
+	Operating System: Linux (amd64) version 7.2.11-1-cachyos
+	Java Version: 25.0.5, Arch Linux
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Arch Linux
+	Memory: 77332456 bytes (73 MiB) / 298844160 bytes (285 MiB) up to 1073741824 bytes (1024 MiB)
+	Memory (heap): init: 250MiB, used: 210MiB, committed: 285MiB, max: 1024MiB
+	Memory (non-head): init: 007MiB, used: 105MiB, committed: 106MiB, max: 000MiB
+	CPUs: 12
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 5 3600 6-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 6
+	Number of logical CPUs: 12
+	Graphics card #0 name: TU116 [GeForce GTX 1660 SUPER]
+	Graphics card #0 vendor: NVIDIA Corporation (0x10de)
+	Graphics card #0 VRAM (MiB): 288.00
+	Graphics card #0 deviceId: 0x21c4
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MiB): 24336.55
+	Virtual memory used (MiB): 9912.30
+	Swap memory total (MiB): 16384.00
+	Swap memory used (MiB): 4952.50
+	Space in storage for jna.tmpdir (MiB): available: 7849.82, total: 7952.55
+	Space in storage for org.lwjgl.system.SharedLibraryExtractPath (MiB): available: 7849.82, total: 7952.55
+	Space in storage for io.netty.native.workdir (MiB): available: 7849.82, total: 7952.55
+	Space in storage for java.io.tmpdir (MiB): available: 7849.82, total: 7952.55
+	Space in storage for workdir (MiB): available: 7849.82, total: 7952.55
+	Operating System Version: GNU/Linux Arch Linux unknown (unknown) build 7.2.11-1-cachyos
+	Process Elevated: false
+	Process Loads: Uptime: 6s, user: 16s (266.49%), kernel: 0s (7.28%), total: 17s (273.77%)
+	Process Virtual Size (MiB): 4113.95
+	Process Resident Size (MiB): 649.40
+	JVM Flags: 2 total; -Xmx1G -XX:StackShadowPages=32
+	Debug Flags: 0 total; 
+	Launched Version: 26.2
+	Launcher name: mcsa-probe
+	Backend library: LWJGL version 3.4.1+2
+	Window size: <not initialized>
+	Surface Info: <no surface>
+	GFLW Platform: x11
+	Graphics Device: llvmpipe (LLVM 23.1.3, 256 bits)
+	Graphics Backend: OpenGL
+	Graphics Vendor: Mesa
+	Graphics Drivers: 4.6 (Core Profile) Mesa 26.2.5-arch1.1
+	Graphics Device Extensions: GL_ARB_multi_draw_indirect, GL_ARB_buffer_storage, GL_ARB_shader_draw_parameters, GL_ARB_base_instance, GL_KHR_debug, GL_ARB_draw_indirect, GL_ARB_clip_control, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access, GL_EXT_texture_filter_anisotropic
+	Graphics Device Type: CPU
+	Graphics Device Features: DeviceFeatures[shaderDrawParameters=true, multiDrawDirectInterleaved=false, multiDrawDirectSeparate=true, multiDrawIndirect=true, drawIndirect=true, nonZeroFirstInstance=true, persistentMapping=true]
+	GL debug messages: 
+	Is Modded: Probably not. Client jar signature and brand is untouched
+	Universe: 404
+	Type: Client
+	Locale: en
+	System encoding: UTF-8
+	File encoding: UTF-8
+	CPU: 12x AMD Ryzen 5 3600 6-Core Processor

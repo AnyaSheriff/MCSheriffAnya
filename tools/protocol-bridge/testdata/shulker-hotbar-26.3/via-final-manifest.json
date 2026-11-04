@@ -1,0 +1,41 @@
+{
+  "primary": "26.3",
+  "scenarios": [
+    "shulker-hotbar-quick-move",
+    "shulker-hotbar-drag-left",
+    "shulker-hotbar-drag-right",
+    "shulker-open",
+    "shulker-break",
+    "shulker-stand",
+    "shulker-ai",
+    "chest-open",
+    "chest-slots",
+    "bundle-chest-select",
+    "craft-inventory-planks",
+    "ender-chest-open"
+  ],
+  "repeat": 1,
+  "port": 26170,
+  "ours_port": 26270,
+  "official_heap": "768M",
+  "translation": true,
+  "official_recordings": null,
+  "binary": {
+    "path": "/tmp/shulker-core",
+    "sha256": "399071303eef836f7a6ddf6596aec195ab747481bd873f2c80148906fa93e758"
+  },
+  "jar": {
+    "path": "/home/lenox/.local/share/mcsa-java-26.3-probe/server.jar",
+    "sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64"
+  },
+  "proxy": {
+    "path": "/home/lenox/.cache/mcsheriffanya/viaproxy/ViaProxy-3.4.14.jar",
+    "sha256": "2894bbfb2f4342f8fde887af6c689313efd5b0e46a8006775eea0e21e2948ab5"
+  },
+  "scripts": {
+    "bot.js": "4e3ff5920289351e64ccd232b96e0697d92a3088bd9857e83e16157ebd7e1f26",
+    "compare.js": "eb18ea7919be79fda3982e9b2a8e85a348a9c414dc315168952120a11e5c5279",
+    "via_ticks.js": "dc843abab9eb50d050d4fb1a944379c8d476dc1a96b212db7a37b6c13b64c1ab",
+    "../protocol-bridge/probe_gameplay.py": "a1b8959e923f86d3776bfd941a7252a6e26813f50635db42bcf43ea1fd204057"
+  }
+}

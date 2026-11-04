@@ -1,0 +1,13 @@
+{
+  "base_commit": "82ed437",
+  "test_command": "CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=2 cargo test --release --workspace",
+  "passed": 3352,
+  "failed": 0,
+  "ignored": 108,
+  "nested_subprocess_tests_excluded_from_total": 1,
+  "clippy_command": "CARGO_BUILD_JOBS=6 cargo clippy --release --all-targets --workspace -- -D warnings",
+  "clippy_exit": 0,
+  "initial_default_concurrency_failure": "plugins::tests::custom_tablist_reload_commands_chat_and_all_hud_features; passed on subsequent complete runs with RUST_TEST_THREADS=2",
+  "official_heap_for_actual_recordings": "3G",
+  "final_replay_starts_no_official_server": true
+}

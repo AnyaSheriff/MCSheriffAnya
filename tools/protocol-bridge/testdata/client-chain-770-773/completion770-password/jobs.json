@@ -1,0 +1,7 @@
+[
+  {
+    "primary": 777,
+    "exit": 1,
+    "error": "EOFError('missing VarInt')"
+  }
+]

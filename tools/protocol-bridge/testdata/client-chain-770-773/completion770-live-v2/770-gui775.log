@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_776_action_client.py", line 311, in <module>
+    main()
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/probe_776_action_client.py", line 158, in main
+    client=launch(a.client_dir.resolve(),game,relay_port,clog,version='1.21.5' if a.client==770 else '1.21.6' if a.client==771 else '1.21.8' if a.client==772 else '1.21.10' if a.client==773 else '1.21.11' if a.client==774 else '26.2',gui_scale=2,pause_on_lost_focus=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge/live_client.py", line 15, in launch
+    assert version in CLIENT_SHA1
+           ^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -1,0 +1,1240 @@
+{
+  "schema": 1,
+  "baseline_commit": "ad6ea44",
+  "all_remaining_items_closed": false,
+  "method": {
+    "seeds": [
+      1792932773345722119,
+      100554032945340,
+      20261025
+    ],
+    "artifact_directory": "~/.cache/mcsheriffanya/gen-audit-263/genA2",
+    "full_grid": "595984 cells per seed, step 4. Ours: density-grid terrain top plus hoodoos, before cave cuts and decoration. Official owner/second: natural substrate read from existing region files. These height definitions are distinct.",
+    "native_samples": "3618 fresh complete chunks, exported by the release test binary, paired with existing official regions. 576+576+2304+81+81; no official process was started.",
+    "physical_coast": "4-block grid, dry natural substrate at Y>=62; censored by unknown sample edges.",
+    "cold_biomes": "No threshold fit. Independent named octave streams replace the shared lattice phase; cold bands remain in wide holdout tests.",
+    "coordinate_matching_is_not_acceptance": true
+  },
+  "pooled_surface_shares": {
+    "badlands": {
+      "before": 0.872423,
+      "after": 1.10758,
+      "vanilla": 1.108083,
+      "within_1pp": true
+    },
+    "bamboo_jungle": {
+      "before": 0.789115,
+      "after": 0.970832,
+      "vanilla": 0.969993,
+      "within_1pp": true
+    },
+    "beach": {
+      "before": 2.088059,
+      "after": 3.222402,
+      "vanilla": 3.221059,
+      "within_1pp": true
+    },
+    "birch_forest": {
+      "before": 1.606923,
+      "after": 1.663971,
+      "vanilla": 1.664139,
+      "within_1pp": true
+    },
+    "cherry_grove": {
+      "before": 0.538353,
+      "after": 0.047233,
+      "vanilla": 0.046898,
+      "within_1pp": true
+    },
+    "cold_ocean": {
+      "before": 4.062441,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "dappled_forest": {
+      "before": 0.904639,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "dark_forest": {
+      "before": 1.94074,
+      "after": 2.217174,
+      "vanilla": 2.216083,
+      "within_1pp": true
+    },
+    "deep_cold_ocean": {
+      "before": 2.675575,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "deep_frozen_ocean": {
+      "before": 0.636679,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "deep_lukewarm_ocean": {
+      "before": 3.986013,
+      "after": 4.559435,
+      "vanilla": 4.558511,
+      "within_1pp": true
+    },
+    "deep_ocean": {
+      "before": 1.339549,
+      "after": 0.260493,
+      "vanilla": 0.260578,
+      "within_1pp": true
+    },
+    "desert": {
+      "before": 7.549532,
+      "after": 7.992077,
+      "vanilla": 7.989477,
+      "within_1pp": true
+    },
+    "dripstone_caves": {
+      "before": 0,
+      "after": 0.0,
+      "vanilla": 0.025924,
+      "within_1pp": true
+    },
+    "eroded_badlands": {
+      "before": 0.154534,
+      "after": 0.028608,
+      "vanilla": 0.028608,
+      "within_1pp": true
+    },
+    "flower_forest": {
+      "before": 0.688358,
+      "after": 2.117422,
+      "vanilla": 2.115661,
+      "within_1pp": true
+    },
+    "forest": {
+      "before": 9.345804,
+      "after": 10.599949,
+      "vanilla": 10.630738,
+      "within_1pp": true
+    },
+    "frozen_ocean": {
+      "before": 2.411306,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "frozen_peaks": {
+      "before": 0.039514,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "frozen_river": {
+      "before": 0.153696,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "grove": {
+      "before": 0.317122,
+      "after": 0.010403,
+      "vanilla": 0.010571,
+      "within_1pp": true
+    },
+    "jungle": {
+      "before": 4.789474,
+      "after": 5.136044,
+      "vanilla": 5.132101,
+      "within_1pp": true
+    },
+    "lukewarm_ocean": {
+      "before": 6.673501,
+      "after": 8.306179,
+      "vanilla": 8.303915,
+      "within_1pp": true
+    },
+    "lush_caves": {
+      "before": 0,
+      "after": 0.0,
+      "vanilla": 0.005369,
+      "within_1pp": true
+    },
+    "mangrove_swamp": {
+      "before": 0.995412,
+      "after": 2.297713,
+      "vanilla": 2.297293,
+      "within_1pp": true
+    },
+    "meadow": {
+      "before": 0.370396,
+      "after": 0.487849,
+      "vanilla": 0.483486,
+      "within_1pp": true
+    },
+    "mushroom_fields": {
+      "before": 0.238261,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "ocean": {
+      "before": 2.596462,
+      "after": 4.633681,
+      "vanilla": 4.634856,
+      "within_1pp": true
+    },
+    "old_growth_birch_forest": {
+      "before": 1.933692,
+      "after": 2.422381,
+      "vanilla": 2.413991,
+      "within_1pp": true
+    },
+    "old_growth_pine_taiga": {
+      "before": 0.241617,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "old_growth_spruce_taiga": {
+      "before": 0.092033,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "pale_garden": {
+      "before": 0.027937,
+      "after": 0.192119,
+      "vanilla": 0.188428,
+      "within_1pp": true
+    },
+    "plains": {
+      "before": 6.009641,
+      "after": 6.699006,
+      "vanilla": 6.697747,
+      "within_1pp": true
+    },
+    "river": {
+      "before": 5.713576,
+      "after": 8.179918,
+      "vanilla": 8.157685,
+      "within_1pp": true
+    },
+    "savanna": {
+      "before": 7.563206,
+      "after": 8.343093,
+      "vanilla": 8.3342,
+      "within_1pp": true
+    },
+    "savanna_plateau": {
+      "before": 0.459072,
+      "after": 0.150676,
+      "vanilla": 0.150424,
+      "within_1pp": true
+    },
+    "snowy_plains": {
+      "before": 0.345898,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "snowy_slopes": {
+      "before": 0.077016,
+      "after": 0.072066,
+      "vanilla": 0.072318,
+      "within_1pp": true
+    },
+    "snowy_taiga": {
+      "before": 0.353617,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "sparse_jungle": {
+      "before": 2.411642,
+      "after": 3.147484,
+      "vanilla": 3.146561,
+      "within_1pp": true
+    },
+    "stony_peaks": {
+      "before": 0.065522,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "stony_shore": {
+      "before": 0.542968,
+      "after": 0.781313,
+      "vanilla": 0.780978,
+      "within_1pp": true
+    },
+    "sulfur_caves": {
+      "before": 0,
+      "after": 0.0,
+      "vanilla": 0.006712,
+      "within_1pp": true
+    },
+    "sunflower_plains": {
+      "before": 0.904554,
+      "after": 0.470315,
+      "vanilla": 0.470147,
+      "within_1pp": true
+    },
+    "swamp": {
+      "before": 0.394558,
+      "after": 0.13893,
+      "vanilla": 0.139685,
+      "within_1pp": true
+    },
+    "taiga": {
+      "before": 1.326378,
+      "after": 0.0,
+      "vanilla": 0.0,
+      "within_1pp": true
+    },
+    "warm_ocean": {
+      "before": 11.299129,
+      "after": 11.28193,
+      "vanilla": 11.278491,
+      "within_1pp": true
+    },
+    "windswept_forest": {
+      "before": 0.172571,
+      "after": 0.023071,
+      "vanilla": 0.023071,
+      "within_1pp": true
+    },
+    "windswept_hills": {
+      "before": 0.061243,
+      "after": 0.293716,
+      "vanilla": 0.294639,
+      "within_1pp": true
+    },
+    "windswept_savanna": {
+      "before": 0.925612,
+      "after": 0.175005,
+      "vanilla": 0.175089,
+      "within_1pp": true
+    },
+    "wooded_badlands": {
+      "before": 1.314633,
+      "after": 1.969936,
+      "vanilla": 1.966495,
+      "within_1pp": true
+    }
+  },
+  "full_grid": {
+    "owner": {
+      "before_height_quantiles": {
+        "0": 32.0,
+        "5": 38.0,
+        "25": 47.0,
+        "50": 62.0,
+        "75": 68.0,
+        "95": 93.0,
+        "99": 117.0,
+        "100": 216.0
+      },
+      "after_height_quantiles": {
+        "0": 27.0,
+        "5": 38.0,
+        "25": 52.0,
+        "50": 62.0,
+        "75": 66.0,
+        "95": 88.0,
+        "99": 114.0,
+        "100": 208.0
+      },
+      "surface_percent": {
+        "bamboo_jungle": 1.55474,
+        "beach": 5.278665,
+        "birch_forest": 2.400064,
+        "cherry_grove": 0.082553,
+        "dark_forest": 2.104083,
+        "deep_lukewarm_ocean": 7.173515,
+        "deep_ocean": 0.13054,
+        "desert": 1.061773,
+        "forest": 16.024423,
+        "jungle": 5.378668,
+        "lukewarm_ocean": 9.377265,
+        "mangrove_swamp": 4.469919,
+        "meadow": 0.067451,
+        "ocean": 5.032518,
+        "old_growth_birch_forest": 4.167897,
+        "plains": 5.935898,
+        "river": 9.42777,
+        "savanna": 12.970986,
+        "savanna_plateau": 0.262927,
+        "sparse_jungle": 1.859949,
+        "stony_shore": 0.400011,
+        "swamp": 0.27786,
+        "warm_ocean": 3.619392,
+        "windswept_forest": 0.046142,
+        "windswept_hills": 0.587432,
+        "windswept_savanna": 0.307559
+      },
+      "desert_patch_p50_before": 3952.0,
+      "desert_patch_p50_after": 5072.0,
+      "river_width_after": {
+        "n": 55229,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 16.0,
+          "75": 25.29822,
+          "95": 50.59644,
+          "99": 68.35203,
+          "100": 100.23971
+        }
+      },
+      "mushroom_percent_before": 0,
+      "mushroom_percent_after": 0,
+      "vanilla_height_quantiles": {
+        "0": -45.0,
+        "5": 38.0,
+        "25": 51.0,
+        "50": 62.0,
+        "75": 67.0,
+        "95": 85.0,
+        "99": 110.0,
+        "100": 210.0
+      },
+      "height_p5_p50_p95_p99_max_within_4_blocks": true,
+      "desert_patch_p50_vanilla": 5024.0,
+      "warm_coast_biome_p50": {
+        "before": 116.0,
+        "after": 107.62899,
+        "vanilla": 107.62899
+      },
+      "warm_coast_physical_p50": {
+        "before": 110.63453,
+        "after": 120.06665,
+        "vanilla": 132.2422
+      },
+      "river_width_before": {
+        "n": 27814,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 11.31371,
+          "75": 17.88854,
+          "95": 35.77709,
+          "99": 56.0,
+          "100": 96.66437
+        }
+      },
+      "river_width_vanilla": {
+        "n": 55294,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 16.0,
+          "75": 25.29822,
+          "95": 50.59644,
+          "99": 68.35203,
+          "100": 100.23971
+        }
+      },
+      "mushroom_percent_vanilla": 0
+    },
+    "second": {
+      "before_height_quantiles": {
+        "0": 25.0,
+        "5": 37.0,
+        "25": 52.0,
+        "50": 64.0,
+        "75": 69.0,
+        "95": 91.0,
+        "99": 119.17,
+        "100": 215.0
+      },
+      "after_height_quantiles": {
+        "0": 29.0,
+        "5": 37.0,
+        "25": 49.0,
+        "50": 62.0,
+        "75": 69.0,
+        "95": 99.0,
+        "99": 121.0,
+        "100": 168.0
+      },
+      "surface_percent": {
+        "badlands": 2.21516,
+        "bamboo_jungle": 0.386923,
+        "beach": 1.166139,
+        "birch_forest": 0.927877,
+        "cherry_grove": 0.011913,
+        "dark_forest": 2.330264,
+        "deep_lukewarm_ocean": 1.945354,
+        "deep_ocean": 0.390447,
+        "desert": 14.92238,
+        "eroded_badlands": 0.057216,
+        "flower_forest": 4.234845,
+        "forest": 5.175475,
+        "grove": 0.020806,
+        "jungle": 4.89342,
+        "lukewarm_ocean": 7.235094,
+        "mangrove_swamp": 0.125507,
+        "meadow": 0.908246,
+        "ocean": 4.234845,
+        "old_growth_birch_forest": 0.676864,
+        "pale_garden": 0.384239,
+        "plains": 7.462113,
+        "river": 6.932065,
+        "savanna": 3.7152,
+        "savanna_plateau": 0.038424,
+        "snowy_slopes": 0.144131,
+        "sparse_jungle": 4.435018,
+        "stony_shore": 1.162615,
+        "sunflower_plains": 0.940629,
+        "warm_ocean": 18.944468,
+        "windswept_savanna": 0.042451,
+        "wooded_badlands": 3.939871
+      },
+      "desert_patch_p50_before": 4456.0,
+      "desert_patch_p50_after": 64.0,
+      "river_width_after": {
+        "n": 40579,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 16.0,
+          "75": 22.62742,
+          "95": 40.79216,
+          "99": 60.92618,
+          "100": 96.0
+        }
+      },
+      "mushroom_percent_before": 0.476523,
+      "mushroom_percent_after": 0,
+      "vanilla_height_quantiles": {
+        "0": -19.0,
+        "5": 38.0,
+        "25": 49.0,
+        "50": 62.0,
+        "75": 69.0,
+        "95": 98.0,
+        "99": 118.0,
+        "100": 168.0
+      },
+      "height_p5_p50_p95_p99_max_within_4_blocks": true,
+      "desert_patch_p50_vanilla": 64.0,
+      "warm_coast_biome_p50": {
+        "before": 128.06248,
+        "after": 82.36504,
+        "vanilla": 82.46211
+      },
+      "warm_coast_physical_p50": {
+        "before": 131.20976,
+        "after": 108.66462,
+        "vanilla": 101.98039
+      },
+      "river_width_before": {
+        "n": 39314,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 16.0,
+          "75": 24.0,
+          "95": 50.59644,
+          "99": 78.79086,
+          "100": 136.0
+        }
+      },
+      "river_width_vanilla": {
+        "n": 40248,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 16.0,
+          "75": 22.62742,
+          "95": 40.79216,
+          "99": 60.92618,
+          "100": 96.0
+        }
+      },
+      "mushroom_percent_vanilla": 0
+    },
+    "fresh": {
+      "before_height_quantiles": {
+        "0": 29.0,
+        "5": 37.0,
+        "25": 51.0,
+        "50": 63.0,
+        "75": 68.0,
+        "95": 95.0,
+        "99": 148.0,
+        "100": 224.0
+      },
+      "after_height_quantiles": {
+        "0": 30.0,
+        "5": 40.0,
+        "25": 59.0,
+        "50": 65.0,
+        "75": 78.0,
+        "95": 120.0,
+        "99": 151.0,
+        "100": 200.0
+      },
+      "surface_percent": {
+        "bamboo_jungle": 0.63005,
+        "beach": 2.238818,
+        "birch_forest": 6.186575,
+        "cherry_grove": 0.60958,
+        "cold_ocean": 4.951979,
+        "dappled_forest": 0.928884,
+        "dark_forest": 4.544921,
+        "deep_cold_ocean": 2.159286,
+        "deep_lukewarm_ocean": 0.000168,
+        "deep_ocean": 1.575881,
+        "flower_forest": 1.142145,
+        "forest": 17.829002,
+        "frozen_peaks": 0.849855,
+        "grove": 1.567492,
+        "jagged_peaks": 0.190441,
+        "jungle": 2.636312,
+        "lukewarm_ocean": 0.484241,
+        "meadow": 0.728207,
+        "ocean": 8.983463,
+        "old_growth_birch_forest": 5.00953,
+        "old_growth_pine_taiga": 1.461281,
+        "old_growth_spruce_taiga": 0.625856,
+        "pale_garden": 0.318129,
+        "plains": 15.725254,
+        "river": 7.802894,
+        "savanna": 2.084116,
+        "savanna_plateau": 0.13591,
+        "snowy_slopes": 0.289773,
+        "sparse_jungle": 1.855755,
+        "stony_peaks": 0.082888,
+        "stony_shore": 2.296035,
+        "sunflower_plains": 1.375037,
+        "swamp": 0.006376,
+        "taiga": 2.333452,
+        "windswept_gravelly_hills": 0.105036,
+        "windswept_hills": 0.224167,
+        "windswept_savanna": 0.031209
+      },
+      "desert_patch_p50_before": 3360.0,
+      "desert_patch_p50_after": null,
+      "river_width_after": {
+        "n": 46122,
+        "twice_nearest_bank_distance": {
+          "0": 8.0,
+          "5": 8.0,
+          "25": 8.0,
+          "50": 16.0,
+          "75": 24.0,
+          "95": 46.64762,
+          "99": 80.0,
+          "100": 139.71399
+        }
+      },
+      "mushroom_percent_before": 0,
+      "mushroom_percent_after": 0
+    }
+  },
+  "native_samples": {
+    "owner": {
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 576,
+            "requested": 576,
+            "chunk_sha256": "faa4097e8bc3d57c261560b36da3c1dae4f0d1174c22e03c41d37366a878bf7b",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -84,
+              -68,
+              19,
+              67
+            ]
+          },
+          "vanilla": {
+            "chunks": 576,
+            "requested": 576,
+            "chunk_sha256": "faa4097e8bc3d57c261560b36da3c1dae4f0d1174c22e03c41d37366a878bf7b",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -84,
+              -68,
+              19,
+              67
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "height_quantiles": {
+        "ours": {
+          "0": 21.0,
+          "5": 36.0,
+          "25": 46.0,
+          "50": 62.0,
+          "75": 73.0,
+          "95": 97.0,
+          "99": 102.0,
+          "100": 107.0
+        },
+        "vanilla": {
+          "0": -9.0,
+          "5": 35.0,
+          "25": 48.0,
+          "50": 62.0,
+          "75": 70.0,
+          "95": 108.0,
+          "99": 115.0,
+          "100": 117.0
+        }
+      },
+      "outside_batch_a_before": 214,
+      "outside_batch_a_after": 157,
+      "remaining_height_rows": [
+        {
+          "metric": "height/p99",
+          "ours": 102.0,
+          "vanilla": 115.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height/p95",
+          "ours": 97.0,
+          "vanilla": 108.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height/p100",
+          "ours": 107.0,
+          "vanilla": 117.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height_mean/lukewarm_ocean",
+          "ours": 40.511628,
+          "vanilla": 51.231167,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/warm_ocean",
+          "ours": 45.366715,
+          "vanilla": 36.11351,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/savanna",
+          "ours": 69.512019,
+          "vanilla": 62.007212,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/ocean",
+          "ours": 38.959745,
+          "vanilla": 46.38971,
+          "tolerance": 5
+        }
+      ]
+    },
+    "second": {
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 576,
+            "requested": 576,
+            "chunk_sha256": "e231d1c602c905f8a0afb8883c632a2cc47a9fadc7263251555d420f249758e7",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -52,
+              -68,
+              83,
+              67
+            ]
+          },
+          "vanilla": {
+            "chunks": 576,
+            "requested": 576,
+            "chunk_sha256": "e231d1c602c905f8a0afb8883c632a2cc47a9fadc7263251555d420f249758e7",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -52,
+              -68,
+              83,
+              67
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "height_quantiles": {
+        "ours": {
+          "0": 30.0,
+          "5": 35.0,
+          "25": 45.0,
+          "50": 55.0,
+          "75": 65.0,
+          "95": 87.0,
+          "99": 94.0,
+          "100": 101.0
+        },
+        "vanilla": {
+          "0": 18.0,
+          "5": 35.0,
+          "25": 47.0,
+          "50": 53.0,
+          "75": 67.0,
+          "95": 93.0,
+          "99": 102.0,
+          "100": 116.0
+        }
+      },
+      "outside_batch_a_before": 235,
+      "outside_batch_a_after": 196,
+      "remaining_height_rows": [
+        {
+          "metric": "height/p100",
+          "ours": 101.0,
+          "vanilla": 116.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height/p99",
+          "ours": 94.0,
+          "vanilla": 102.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height/p95",
+          "ours": 87.0,
+          "vanilla": 93.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height_mean/beach",
+          "ours": 55.62358,
+          "vanilla": 48.478693,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/flower_forest",
+          "ours": 83.305603,
+          "vanilla": 88.352539,
+          "tolerance": 5
+        }
+      ]
+    },
+    "fresh": {
+      "coverage": [
+        {
+          "dimension": "overworld",
+          "ours": {
+            "chunks": 2304,
+            "requested": 2304,
+            "chunk_sha256": "dcd203fe0482775616e0f48808818404d99cfa11d2856f1ff1d643999be35bd6",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -72,
+              -72,
+              71,
+              71
+            ]
+          },
+          "vanilla": {
+            "chunks": 2304,
+            "requested": 2304,
+            "chunk_sha256": "dcd203fe0482775616e0f48808818404d99cfa11d2856f1ff1d643999be35bd6",
+            "missing_first20": [],
+            "bounds_chunks": [
+              -72,
+              -72,
+              71,
+              71
+            ]
+          },
+          "same_chunks": true,
+          "complete": true
+        },
+        {
+          "dimension": "the_nether",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        },
+        {
+          "dimension": "the_end",
+          "ours": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "vanilla": {
+            "chunks": 0,
+            "requested": 0
+          },
+          "same_chunks": true,
+          "complete": true,
+          "status": "not requested by this plan"
+        }
+      ],
+      "height_quantiles": {
+        "ours": {
+          "0": 32.0,
+          "5": 42.0,
+          "25": 52.0,
+          "50": 63.0,
+          "75": 73.0,
+          "95": 129.0,
+          "99": 155.0,
+          "100": 172.0
+        },
+        "vanilla": {
+          "0": -15.0,
+          "5": 46.0,
+          "25": 54.0,
+          "50": 63.0,
+          "75": 71.0,
+          "95": 119.0,
+          "99": 158.0,
+          "100": 178.0
+        }
+      },
+      "outside_batch_a_before": 293,
+      "outside_batch_a_after": 229,
+      "remaining_height_rows": [
+        {
+          "metric": "height_mean/jagged_peaks",
+          "ours": 129.115489,
+          "vanilla": 95.827778,
+          "tolerance": 5
+        },
+        {
+          "metric": "height/p95",
+          "ours": 129.0,
+          "vanilla": 119.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height_mean/deep_cold_ocean",
+          "ours": 34.494343,
+          "vanilla": 43.912446,
+          "tolerance": 5
+        },
+        {
+          "metric": "height/p100",
+          "ours": 172.0,
+          "vanilla": 178.0,
+          "tolerance": 4
+        },
+        {
+          "metric": "height_mean/deep_ocean",
+          "ours": 47.564531,
+          "vanilla": 38.251719,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/jungle",
+          "ours": 85.48447,
+          "vanilla": 76.233388,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/bamboo_jungle",
+          "ours": 82.408769,
+          "vanilla": 74.862924,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/stony_peaks",
+          "ours": 147.48125,
+          "vanilla": 154.958599,
+          "tolerance": 5
+        },
+        {
+          "metric": "height_mean/dappled_forest",
+          "ours": 71.752464,
+          "vanilla": 77.044852,
+          "tolerance": 5
+        }
+      ]
+    }
+  },
+  "targets": {
+    "dappled": {
+      "ours": {
+        "chunks": 81,
+        "biome_surface_columns": 7664,
+        "biome_surface_percent": 36.95987654320987,
+        "biome_volume_blocks": 2942976,
+        "height_quantiles": {
+          "0": 46.0,
+          "5": 50.0,
+          "25": 57.0,
+          "50": 62.0,
+          "75": 64.0,
+          "95": 69.0,
+          "99": 72.0,
+          "100": 73.0
+        },
+        "poplar_logs_all": 1329,
+        "poplar_logs_per_million_biome_blocks": 448.865366
+      },
+      "vanilla": {
+        "chunks": 81,
+        "biome_surface_columns": 7645,
+        "biome_surface_percent": 36.86824845679013,
+        "biome_volume_blocks": 2742976,
+        "height_quantiles": {
+          "0": 13.0,
+          "5": 49.0,
+          "25": 58.0,
+          "50": 62.0,
+          "75": 65.0,
+          "95": 68.0,
+          "99": 70.0,
+          "100": 71.0
+        },
+        "poplar_logs_all": 1114,
+        "poplar_logs_per_million_biome_blocks": 400.659721
+      },
+      "before_poplar_logs_per_million_biome_blocks": 484.14849,
+      "after_relative_error_percent": 12.031567555551703
+    },
+    "mushroom": {
+      "ours": {
+        "chunks": 81,
+        "biome_surface_columns": 832,
+        "biome_surface_percent": 4.012345679012346,
+        "biome_volume_blocks": 319488,
+        "height_quantiles": {
+          "0": 28.0,
+          "5": 29.0,
+          "25": 32.0,
+          "50": 34.0,
+          "75": 38.0,
+          "95": 53.0,
+          "99": 61.0,
+          "100": 65.0
+        },
+        "mushroom_height_quantiles": {
+          "0": 50.0,
+          "5": 53.0,
+          "25": 57.0,
+          "50": 59.0,
+          "75": 61.0,
+          "95": 63.0,
+          "99": 64.0,
+          "100": 65.0
+        },
+        "mycelium_surface_columns": 147
+      },
+      "vanilla": {
+        "chunks": 81,
+        "biome_surface_columns": 816,
+        "biome_surface_percent": 3.935185185185185,
+        "biome_volume_blocks": 305408,
+        "height_quantiles": {
+          "0": 9.0,
+          "5": 31.0,
+          "25": 38.0,
+          "50": 39.0,
+          "75": 42.0,
+          "95": 51.0,
+          "99": 60.0,
+          "100": 65.0
+        },
+        "mushroom_height_quantiles": {
+          "0": 47.0,
+          "5": 51.0,
+          "25": 54.0,
+          "50": 56.0,
+          "75": 60.0,
+          "95": 63.0,
+          "99": 64.0,
+          "100": 65.0
+        },
+        "mycelium_surface_columns": 117
+      }
+    }
+  },
+  "spawn": {
+    "owner": {
+      "before": [
+        -272,
+        48
+      ],
+      "after": [
+        16,
+        -48
+      ],
+      "vanilla": [
+        16,
+        -48
+      ]
+    },
+    "second": {
+      "before": [
+        240,
+        16
+      ],
+      "after": [
+        -48,
+        112
+      ],
+      "vanilla": [
+        -240,
+        16
+      ]
+    },
+    "fresh": {
+      "before": [
+        400,
+        -304
+      ],
+      "after": [
+        -16,
+        96
+      ],
+      "vanilla": [
+        0,
+        112
+      ]
+    }
+  },
+  "remaining": [
+    "Native saved-window height tails and biome-conditioned height distributions remain outside tolerance; full-frame aggregate height quantiles passing is not equivalent.",
+    "Native surface layers, cliff slopes, and some conditioned coasts remain outside tolerance; see counts and height metrics below.",
+    "Second and control seed spawn positions differ from official. Exact final spawn scan order is unverified.",
+    "Global mushroom rarity outside the measured regions and bitwise float32 equivalence of climate remain unverified.",
+    "The displaced pinned potion codec fixture needs an ownership exception before editing codec_catalog_tests.rs. A 5059-byte snapshot from our pre-change generator and a proposed patch are prepared outside the repository."
+  ],
+  "verification": {
+    "clippy_release_all_targets_workspace_deny_warnings": true,
+    "workspace_test_run": {
+      "passed": 3395,
+      "failed": 1,
+      "ignored": 111,
+      "nested_child_counted_twice": false,
+      "remaining_failure": "world::codec::catalog_tests::repro_8_9_regeneration_potions_save_and_reload_without_loss",
+      "reason": "Pinned generated chest disappeared when its climate changed; codec test file is outside Batch A ownership. Proposed snapshot fixture patch awaits permission."
+    },
+    "fresh_exported_chunks": 3618
+  },
+  "outside_pooled_shares_before": [
+    "beach",
+    "cold_ocean",
+    "deep_cold_ocean",
+    "deep_ocean",
+    "flower_forest",
+    "forest",
+    "frozen_ocean",
+    "lukewarm_ocean",
+    "mangrove_swamp",
+    "ocean",
+    "river",
+    "taiga"
+  ],
+  "outside_pooled_shares_after": [],
+  "generator_sha256": {
+    "src/world/terrain.rs": "99e2120fd7903ecd892b0fb8281bb386142ed8ac49477c9d2d3f51242d900a15",
+    "src/world/climate_noise.rs": "6f646f9589a0cbe581a57c2555bc5a615a23b9e9c2aaf8be5ae050ceb54ebfc9",
+    "src/world/biome_distribution.rs": "0c5aff2d3bf08857c015d19c2438f8ec95be66f363aefb2ff833bff50f14dc29",
+    "src/world/spawn_search.rs": "4f20f533d55542e204e82a1f50079e0c1feb1f1497ec9e7fbf7a4e99aaf50509",
+    "src/world/mod.rs": "eeaed8409d84cb13d1ff3bef7d08a0ef3239f4d62ac3d2ac5a98882014ee056d",
+    "src/world/seedmap.rs": "ef4b209288435a15e6140ffe3c28b805c394e5bb0b6229cbf17dcc638072b75a"
+  },
+  "report_sha256": {
+    "reports/owner.json": "373e2ac7e24505db66bc831507fab8ba1afdd3c260e021adb59eabe36ee65658",
+    "reports/second.json": "f5f6168d86cceb1fde97f3f6c47f4f1dac5c6c916d75e03804769e2146a6b815",
+    "reports/fresh.json": "3963ad7903c661ce4c57b1ef670cb03d494b9b3257322b22bea412ee9cf54fb3",
+    "reports/dappled.json": "0c6850ead0c7bb2670cd92f1ad5b4916112eb8d86865bae13f193ed2a60982c9",
+    "reports/mushroom.json": "70dd069e63db00f0ee1143b2ffa8723a07b649dbbe429434360ef1f8e6a9d420"
+  },
+  "changed_files": [
+    "src/world/climate_noise.rs",
+    "src/world/terrain.rs",
+    "src/world/biome_distribution.rs",
+    "src/world/spawn_search.rs",
+    "src/world/mod.rs",
+    "src/world/seedmap.rs",
+    "src/world/badlands_ocean_tests.rs",
+    "src/world/terrain_263_tests.rs",
+    "tools/measure/batch_a_263.py",
+    "testdata/world-profile/genaudit-26.3/batch-a.json",
+    "testdata/world-profile/genaudit-26.3/batch-a-plan.json",
+    "testdata/world-profile/genaudit-26.3/batch-a-mushroom.json",
+    "testdata/world-profile/genaudit-26.3/batch-a-phase.json",
+    "testdata/world-profile/genaudit-26.3/batch-a2-measurements.json",
+    "docs/java-26.3-content.md"
+  ]
+}

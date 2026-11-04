@@ -2,25 +2,43 @@
 // Таблица твёрдости и допустимых инструментов — только minecraft-data JSON.
 
 use crate::{blocks, inventory::Stack};
+use crate::gameplay_catalog::{Catalog, Profile};
+
+const BASE: Catalog = Catalog::new(Profile::Java26_1_2);
 
 mod drops;
 pub use drops::{block_drops, experience};
 
 pub fn properties(state: i32) -> (f32, &'static str, &'static [i32]) {
+    // Тополь 26.3 берёт твёрдость и инструменты у дубового двойника (src/poplar.rs).
+    let state = crate::poplar::twin_state(state);
     let table = crate::hardness_table::MINING;
     let index = table.partition_point(|&(_, high, ..)| high < state);
     table.get(index).filter(|&&(low, ..)| low <= state)
         .map_or((-1.0, "default", &[]), |&(_, _, hardness, material, tools)| (hardness, material, tools))
 }
 
+pub fn properties_with_catalog(catalog: Catalog, state: i32) -> (f32, &'static str, &'static [i32]) {
+    catalog.mining_properties(state).unwrap_or((-1.0, "default", &[]))
+}
+
 pub fn harvests(state: i32, tool: Option<Stack>) -> bool {
-    let (_, _, tools) = properties(state);
+    harvests_with_catalog(BASE, state, tool)
+}
+
+pub fn harvests_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>) -> bool {
+    let tools = match catalog.mining_properties(state) {
+        Ok((_, _, tools)) => tools,
+        // Тополь существует только в профиле Preview; в обычном нет и его состояний.
+        Err(_) if crate::poplar::row_of_state(state).is_some() => properties(state).2,
+        Err(_) => return false,
+    };
     tools.is_empty() || tool.is_some_and(|stack| tools.contains(&stack.item))
 }
 
-fn tool_speed(state: i32, tool: Option<Stack>) -> f32 {
+fn tool_speed(catalog: Catalog, state: i32, tool: Option<Stack>) -> f32 {
     let Some(name) = tool.and_then(|stack| crate::combat::item_name(stack.item)) else { return 1.0; };
-    let (_, material, _) = properties(state);
+    let (_, material, _) = properties_with_catalog(catalog, state);
     let block = blocks::block_at_state(state).unwrap_or("");
     if name == "shears" {
         return if block == "cobweb" || material.contains("leaves") { 15.0 }
@@ -56,18 +74,23 @@ pub struct Conditions {
 }
 
 /// Доля блока за такт: speed / hardness / (30 или 100).
+#[cfg(test)]
 pub fn progress(state: i32, tool: Option<Stack>, env: Conditions) -> f32 {
-    let (hardness, _, _) = properties(state);
+    progress_with_catalog(BASE, state, tool, env)
+}
+
+pub fn progress_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>, env: Conditions) -> f32 {
+    let (hardness, _, _) = properties_with_catalog(catalog, state);
     if hardness < 0.0 { return 0.0; }
-    if crate::hardness_table::INSTANT.iter().any(|&(low, high)| (low..=high).contains(&state)) || hardness == 0.0 { return 1.0; }
-    let mut speed = tool_speed(state, tool);
+    if crate::hardness_table::INSTANT.iter().any(|&(low, high)| (low..=high).contains(&crate::poplar::twin_state(state))) || hardness == 0.0 { return 1.0; }
+    let mut speed = tool_speed(catalog, state, tool);
     if speed > 1.0 { speed += env.efficiency; }
     speed *= 1.0 + 0.2 * env.haste.max(0) as f32;
     speed *= match env.fatigue { 0 => 1.0, 1 => 0.3, 2 => 0.09, 3 => 0.0027, _ => 0.00081 };
     speed *= env.block_speed;
     if env.underwater { speed *= env.submerged_speed; }
     if !env.on_ground { speed /= 5.0; }
-    speed / hardness / if harvests(state, tool) { 30.0 } else { 100.0 }
+    speed / hardness / if harvests_with_catalog(catalog, state, tool) { 30.0 } else { 100.0 }
 }
 
 /// [проверить] Порог FINISH 70% — из задания; первый такт входит в счёт.
@@ -76,19 +99,60 @@ pub fn finished(progress: f32, since: u64) -> bool {
 }
 
 pub fn wear(state: i32, tool: Stack) -> i32 {
-    if properties(state).0 <= 0.0 { return 0; }
+    wear_with_catalog(BASE, state, tool)
+}
+
+pub fn wear_with_catalog(catalog: Catalog, state: i32, tool: Stack) -> i32 {
+    if properties_with_catalog(catalog, state).0 <= 0.0 { return 0; }
     let name = crate::combat::item_name(tool.item).unwrap_or("");
     if name.ends_with("_sword") { 2 }
     else if ["_pickaxe", "_axe", "_shovel", "_hoe"].iter().any(|suffix| name.ends_with(suffix)) || name == "shears" { 1 }
     else { 0 }
 }
 
+/// Бетонные плиты используют общий расчёт инструмента; особые старые выпадения
+/// (листва, Silk Touch и Fortune) остаются в прежнем обработчике.
+pub fn block_drops_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>, mut roll: impl FnMut() -> f32) -> Vec<Stack> {
+    match catalog.block_entry(state) {
+        // Тополь идёт общим путём (листва, Silk Touch, Fortune), как дубовые двойники.
+        Ok(Some(_)) if crate::poplar::row_of_state(state).is_some() => block_drops(state, tool, roll),
+        Ok(Some(_)) => catalog.drops_by_luck(state, tool.map(|stack| stack.item), roll()).ok().flatten().into_iter().collect(),
+        Ok(None) => block_drops(state, tool, roll),
+        Err(_) => Vec::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gameplay_catalog::{WHITE_SLAB_FIRST_STATE, WHITE_SLAB_LAST_STATE};
     fn state(name: &str) -> i32 { blocks::state_by_name(name).unwrap() }
     fn tool(name: &str) -> Option<Stack> { Some(Stack::new(blocks::item_named(name).unwrap(), 1)) }
     fn env() -> Conditions { Conditions { haste: 0, fatigue: 0, underwater: false, on_ground: true, efficiency: 0.0, block_speed: 1.0, submerged_speed: 0.2 } }
+
+    #[test]
+    fn preview_slab_uses_shared_mining_and_guarded_drops() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let pickaxe = tool("iron_pickaxe");
+        assert!(!harvests_with_catalog(catalog, i32::MAX, pickaxe));
+        let concrete = state("white_concrete");
+        for slab in WHITE_SLAB_FIRST_STATE..=WHITE_SLAB_LAST_STATE {
+            assert_eq!(progress_with_catalog(catalog, slab, pickaxe, env()), progress(concrete, pickaxe, env()));
+            assert_eq!(progress_with_catalog(catalog, slab, None, env()), progress(concrete, None, env()));
+            assert!(harvests_with_catalog(catalog, slab, pickaxe));
+            assert!(!harvests_with_catalog(catalog, slab, None));
+            assert_eq!(wear_with_catalog(catalog, slab, pickaxe.unwrap()), 1);
+            let drops = block_drops_with_catalog(catalog, slab, pickaxe, || 0.5);
+            assert_eq!(drops.len(), 1);
+            assert_eq!(drops[0].item, crate::gameplay_catalog::WHITE_SLAB_ITEM);
+            assert_eq!(drops[0].count, if slab >= WHITE_SLAB_FIRST_STATE + 4 { 2 } else { 1 });
+            assert!(block_drops_with_catalog(catalog, slab, None, || 0.5).is_empty());
+            assert_eq!(progress_with_catalog(BASE, slab, pickaxe, env()), 0.0);
+            assert!(!harvests_with_catalog(BASE, slab, pickaxe));
+            assert_eq!(wear_with_catalog(BASE, slab, pickaxe.unwrap()), 0);
+            assert!(block_drops_with_catalog(BASE, slab, pickaxe, || 0.5).is_empty());
+        }
+    }
 
     #[test]
     fn tools_tiers_and_harvest_penalty() {
@@ -128,7 +192,7 @@ mod tests {
         assert_eq!(wear(state("stone"), tool("iron_sword").unwrap()), 2);
         assert_eq!(wear(state("torch"), tool("iron_pickaxe").unwrap()), 0);
         assert_eq!(wear(state("stone"), tool("bow").unwrap()), 0);
-        assert_eq!(tool_speed(state("cobweb"), tool("shears")), 15.0);
+        assert_eq!(tool_speed(BASE, state("cobweb"), tool("shears")), 15.0);
         assert_eq!(progress(state("bamboo"), tool("iron_sword"), env()), 1.0);
     }
 }

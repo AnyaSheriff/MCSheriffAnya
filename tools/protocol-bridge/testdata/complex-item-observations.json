@@ -1,0 +1,556 @@
+{
+  "old": {
+    "protocol": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "cases": [
+      {
+        "name": "potion_water",
+        "command": "potion[potion_contents={potion:\"minecraft:water\"}]",
+        "slot_hex": "01e2080100330100000000"
+      },
+      {
+        "name": "potion_mundane",
+        "command": "potion[potion_contents={potion:\"minecraft:mundane\"}]",
+        "slot_hex": "01e2080100330101000000"
+      },
+      {
+        "name": "potion_thick",
+        "command": "potion[potion_contents={potion:\"minecraft:thick\"}]",
+        "slot_hex": "01e2080100330102000000"
+      },
+      {
+        "name": "potion_awkward",
+        "command": "potion[potion_contents={potion:\"minecraft:awkward\"}]",
+        "slot_hex": "01e2080100330103000000"
+      },
+      {
+        "name": "potion_night_vision",
+        "command": "potion[potion_contents={potion:\"minecraft:night_vision\"}]",
+        "slot_hex": "01e2080100330104000000"
+      },
+      {
+        "name": "potion_long_night_vision",
+        "command": "potion[potion_contents={potion:\"minecraft:long_night_vision\"}]",
+        "slot_hex": "01e2080100330105000000"
+      },
+      {
+        "name": "potion_invisibility",
+        "command": "potion[potion_contents={potion:\"minecraft:invisibility\"}]",
+        "slot_hex": "01e2080100330106000000"
+      },
+      {
+        "name": "potion_long_invisibility",
+        "command": "potion[potion_contents={potion:\"minecraft:long_invisibility\"}]",
+        "slot_hex": "01e2080100330107000000"
+      },
+      {
+        "name": "potion_leaping",
+        "command": "potion[potion_contents={potion:\"minecraft:leaping\"}]",
+        "slot_hex": "01e2080100330108000000"
+      },
+      {
+        "name": "potion_long_leaping",
+        "command": "potion[potion_contents={potion:\"minecraft:long_leaping\"}]",
+        "slot_hex": "01e2080100330109000000"
+      },
+      {
+        "name": "potion_strong_leaping",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_leaping\"}]",
+        "slot_hex": "01e208010033010a000000"
+      },
+      {
+        "name": "potion_fire_resistance",
+        "command": "potion[potion_contents={potion:\"minecraft:fire_resistance\"}]",
+        "slot_hex": "01e208010033010b000000"
+      },
+      {
+        "name": "potion_long_fire_resistance",
+        "command": "potion[potion_contents={potion:\"minecraft:long_fire_resistance\"}]",
+        "slot_hex": "01e208010033010c000000"
+      },
+      {
+        "name": "potion_swiftness",
+        "command": "potion[potion_contents={potion:\"minecraft:swiftness\"}]",
+        "slot_hex": "01e208010033010d000000"
+      },
+      {
+        "name": "potion_long_swiftness",
+        "command": "potion[potion_contents={potion:\"minecraft:long_swiftness\"}]",
+        "slot_hex": "01e208010033010e000000"
+      },
+      {
+        "name": "potion_strong_swiftness",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_swiftness\"}]",
+        "slot_hex": "01e208010033010f000000"
+      },
+      {
+        "name": "potion_slowness",
+        "command": "potion[potion_contents={potion:\"minecraft:slowness\"}]",
+        "slot_hex": "01e2080100330110000000"
+      },
+      {
+        "name": "potion_long_slowness",
+        "command": "potion[potion_contents={potion:\"minecraft:long_slowness\"}]",
+        "slot_hex": "01e2080100330111000000"
+      },
+      {
+        "name": "potion_strong_slowness",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_slowness\"}]",
+        "slot_hex": "01e2080100330112000000"
+      },
+      {
+        "name": "potion_turtle_master",
+        "command": "potion[potion_contents={potion:\"minecraft:turtle_master\"}]",
+        "slot_hex": "01e2080100330113000000"
+      },
+      {
+        "name": "potion_long_turtle_master",
+        "command": "potion[potion_contents={potion:\"minecraft:long_turtle_master\"}]",
+        "slot_hex": "01e2080100330114000000"
+      },
+      {
+        "name": "potion_strong_turtle_master",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_turtle_master\"}]",
+        "slot_hex": "01e2080100330115000000"
+      },
+      {
+        "name": "potion_water_breathing",
+        "command": "potion[potion_contents={potion:\"minecraft:water_breathing\"}]",
+        "slot_hex": "01e2080100330116000000"
+      },
+      {
+        "name": "potion_long_water_breathing",
+        "command": "potion[potion_contents={potion:\"minecraft:long_water_breathing\"}]",
+        "slot_hex": "01e2080100330117000000"
+      },
+      {
+        "name": "potion_healing",
+        "command": "potion[potion_contents={potion:\"minecraft:healing\"}]",
+        "slot_hex": "01e2080100330118000000"
+      },
+      {
+        "name": "potion_strong_healing",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_healing\"}]",
+        "slot_hex": "01e2080100330119000000"
+      },
+      {
+        "name": "potion_harming",
+        "command": "potion[potion_contents={potion:\"minecraft:harming\"}]",
+        "slot_hex": "01e208010033011a000000"
+      },
+      {
+        "name": "potion_strong_harming",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_harming\"}]",
+        "slot_hex": "01e208010033011b000000"
+      },
+      {
+        "name": "potion_poison",
+        "command": "potion[potion_contents={potion:\"minecraft:poison\"}]",
+        "slot_hex": "01e208010033011c000000"
+      },
+      {
+        "name": "potion_long_poison",
+        "command": "potion[potion_contents={potion:\"minecraft:long_poison\"}]",
+        "slot_hex": "01e208010033011d000000"
+      },
+      {
+        "name": "potion_strong_poison",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_poison\"}]",
+        "slot_hex": "01e208010033011e000000"
+      },
+      {
+        "name": "potion_regeneration",
+        "command": "potion[potion_contents={potion:\"minecraft:regeneration\"}]",
+        "slot_hex": "01e208010033011f000000"
+      },
+      {
+        "name": "potion_long_regeneration",
+        "command": "potion[potion_contents={potion:\"minecraft:long_regeneration\"}]",
+        "slot_hex": "01e2080100330120000000"
+      },
+      {
+        "name": "potion_strong_regeneration",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_regeneration\"}]",
+        "slot_hex": "01e2080100330121000000"
+      },
+      {
+        "name": "potion_strength",
+        "command": "potion[potion_contents={potion:\"minecraft:strength\"}]",
+        "slot_hex": "01e2080100330122000000"
+      },
+      {
+        "name": "potion_long_strength",
+        "command": "potion[potion_contents={potion:\"minecraft:long_strength\"}]",
+        "slot_hex": "01e2080100330123000000"
+      },
+      {
+        "name": "potion_strong_strength",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_strength\"}]",
+        "slot_hex": "01e2080100330124000000"
+      },
+      {
+        "name": "potion_weakness",
+        "command": "potion[potion_contents={potion:\"minecraft:weakness\"}]",
+        "slot_hex": "01e2080100330125000000"
+      },
+      {
+        "name": "potion_long_weakness",
+        "command": "potion[potion_contents={potion:\"minecraft:long_weakness\"}]",
+        "slot_hex": "01e2080100330126000000"
+      },
+      {
+        "name": "potion_luck",
+        "command": "potion[potion_contents={potion:\"minecraft:luck\"}]",
+        "slot_hex": "01e2080100330127000000"
+      },
+      {
+        "name": "potion_slow_falling",
+        "command": "potion[potion_contents={potion:\"minecraft:slow_falling\"}]",
+        "slot_hex": "01e2080100330128000000"
+      },
+      {
+        "name": "potion_long_slow_falling",
+        "command": "potion[potion_contents={potion:\"minecraft:long_slow_falling\"}]",
+        "slot_hex": "01e2080100330129000000"
+      },
+      {
+        "name": "potion_wind_charged",
+        "command": "potion[potion_contents={potion:\"minecraft:wind_charged\"}]",
+        "slot_hex": "01e208010033012a000000"
+      },
+      {
+        "name": "potion_weaving",
+        "command": "potion[potion_contents={potion:\"minecraft:weaving\"}]",
+        "slot_hex": "01e208010033012b000000"
+      },
+      {
+        "name": "potion_oozing",
+        "command": "potion[potion_contents={potion:\"minecraft:oozing\"}]",
+        "slot_hex": "01e208010033012c000000"
+      },
+      {
+        "name": "potion_infested",
+        "command": "potion[potion_contents={potion:\"minecraft:infested\"}]",
+        "slot_hex": "01e208010033012d000000"
+      },
+      {
+        "name": "attribute_attack",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:9,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01b30701001001020a6d6373613a70726f62654022000000000000000100"
+      },
+      {
+        "name": "attribute_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_speed\",id:\"mcsa:probe\",amount:0.25,operation:\"add_multiplied_total\",slot:\"offhand\"}]]",
+        "slot_hex": "01b30701001001160a6d6373613a70726f62653fd0000000000000020200"
+      },
+      {
+        "name": "potion_custom",
+        "command": "tipped_arrow[potion_contents={potion:\"minecraft:poison\",custom_color:1193046,custom_effects:[{id:\"minecraft:slowness\",amplifier:2,duration:803}]}] 5",
+        "slot_hex": "058e0a010033011c0100123456010102a3060001010000"
+      },
+      {
+        "name": "potion_scale",
+        "command": "potion[potion_contents={potion:\"minecraft:swiftness\"},potion_duration_scale=1.5]",
+        "slot_hex": "01e208020033010d000000343fc00000"
+      },
+      {
+        "name": "writable",
+        "command": "writable_book[writable_book_content={pages:[\"First page\",\"Вторая страница\"]}]",
+        "slot_hex": "01c509010036020a46697273742070616765001dd092d182d0bed180d0b0d18f20d181d182d180d0b0d0bdd0b8d186d0b000"
+      },
+      {
+        "name": "written",
+        "command": "written_book[written_book_content={title:\"Story\",author:\"Alex\",pages:[\"First page\"]}]",
+        "slot_hex": "01c6090100370553746f72790004416c6578000108000a466972737420706167650000"
+      },
+      {
+        "name": "tooltip",
+        "command": "paper[tooltip_display={hide_tooltip:false,hidden_components:[\"minecraft:damage\",\"minecraft:writable_book_content\"]}]",
+        "slot_hex": "01850801001200020336"
+      },
+      {
+        "name": "food",
+        "command": "apple[food={nutrition:7,saturation:2.5,can_always_eat:true}]",
+        "slot_hex": "01fe06010017074020000001"
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "protocol": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "cases": [
+      {
+        "name": "potion_water",
+        "command": "potion[potion_contents={potion:\"minecraft:water\"}]",
+        "slot_hex": "01f7090100350100000000"
+      },
+      {
+        "name": "potion_mundane",
+        "command": "potion[potion_contents={potion:\"minecraft:mundane\"}]",
+        "slot_hex": "01f7090100350101000000"
+      },
+      {
+        "name": "potion_thick",
+        "command": "potion[potion_contents={potion:\"minecraft:thick\"}]",
+        "slot_hex": "01f7090100350102000000"
+      },
+      {
+        "name": "potion_awkward",
+        "command": "potion[potion_contents={potion:\"minecraft:awkward\"}]",
+        "slot_hex": "01f7090100350103000000"
+      },
+      {
+        "name": "potion_night_vision",
+        "command": "potion[potion_contents={potion:\"minecraft:night_vision\"}]",
+        "slot_hex": "01f7090100350104000000"
+      },
+      {
+        "name": "potion_long_night_vision",
+        "command": "potion[potion_contents={potion:\"minecraft:long_night_vision\"}]",
+        "slot_hex": "01f7090100350105000000"
+      },
+      {
+        "name": "potion_invisibility",
+        "command": "potion[potion_contents={potion:\"minecraft:invisibility\"}]",
+        "slot_hex": "01f7090100350106000000"
+      },
+      {
+        "name": "potion_long_invisibility",
+        "command": "potion[potion_contents={potion:\"minecraft:long_invisibility\"}]",
+        "slot_hex": "01f7090100350107000000"
+      },
+      {
+        "name": "potion_leaping",
+        "command": "potion[potion_contents={potion:\"minecraft:leaping\"}]",
+        "slot_hex": "01f7090100350108000000"
+      },
+      {
+        "name": "potion_long_leaping",
+        "command": "potion[potion_contents={potion:\"minecraft:long_leaping\"}]",
+        "slot_hex": "01f7090100350109000000"
+      },
+      {
+        "name": "potion_strong_leaping",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_leaping\"}]",
+        "slot_hex": "01f709010035010a000000"
+      },
+      {
+        "name": "potion_fire_resistance",
+        "command": "potion[potion_contents={potion:\"minecraft:fire_resistance\"}]",
+        "slot_hex": "01f709010035010b000000"
+      },
+      {
+        "name": "potion_long_fire_resistance",
+        "command": "potion[potion_contents={potion:\"minecraft:long_fire_resistance\"}]",
+        "slot_hex": "01f709010035010c000000"
+      },
+      {
+        "name": "potion_swiftness",
+        "command": "potion[potion_contents={potion:\"minecraft:swiftness\"}]",
+        "slot_hex": "01f709010035010d000000"
+      },
+      {
+        "name": "potion_long_swiftness",
+        "command": "potion[potion_contents={potion:\"minecraft:long_swiftness\"}]",
+        "slot_hex": "01f709010035010e000000"
+      },
+      {
+        "name": "potion_strong_swiftness",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_swiftness\"}]",
+        "slot_hex": "01f709010035010f000000"
+      },
+      {
+        "name": "potion_slowness",
+        "command": "potion[potion_contents={potion:\"minecraft:slowness\"}]",
+        "slot_hex": "01f7090100350110000000"
+      },
+      {
+        "name": "potion_long_slowness",
+        "command": "potion[potion_contents={potion:\"minecraft:long_slowness\"}]",
+        "slot_hex": "01f7090100350111000000"
+      },
+      {
+        "name": "potion_strong_slowness",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_slowness\"}]",
+        "slot_hex": "01f7090100350112000000"
+      },
+      {
+        "name": "potion_turtle_master",
+        "command": "potion[potion_contents={potion:\"minecraft:turtle_master\"}]",
+        "slot_hex": "01f7090100350113000000"
+      },
+      {
+        "name": "potion_long_turtle_master",
+        "command": "potion[potion_contents={potion:\"minecraft:long_turtle_master\"}]",
+        "slot_hex": "01f7090100350114000000"
+      },
+      {
+        "name": "potion_strong_turtle_master",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_turtle_master\"}]",
+        "slot_hex": "01f7090100350115000000"
+      },
+      {
+        "name": "potion_water_breathing",
+        "command": "potion[potion_contents={potion:\"minecraft:water_breathing\"}]",
+        "slot_hex": "01f7090100350116000000"
+      },
+      {
+        "name": "potion_long_water_breathing",
+        "command": "potion[potion_contents={potion:\"minecraft:long_water_breathing\"}]",
+        "slot_hex": "01f7090100350117000000"
+      },
+      {
+        "name": "potion_healing",
+        "command": "potion[potion_contents={potion:\"minecraft:healing\"}]",
+        "slot_hex": "01f7090100350118000000"
+      },
+      {
+        "name": "potion_strong_healing",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_healing\"}]",
+        "slot_hex": "01f7090100350119000000"
+      },
+      {
+        "name": "potion_harming",
+        "command": "potion[potion_contents={potion:\"minecraft:harming\"}]",
+        "slot_hex": "01f709010035011a000000"
+      },
+      {
+        "name": "potion_strong_harming",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_harming\"}]",
+        "slot_hex": "01f709010035011b000000"
+      },
+      {
+        "name": "potion_poison",
+        "command": "potion[potion_contents={potion:\"minecraft:poison\"}]",
+        "slot_hex": "01f709010035011c000000"
+      },
+      {
+        "name": "potion_long_poison",
+        "command": "potion[potion_contents={potion:\"minecraft:long_poison\"}]",
+        "slot_hex": "01f709010035011d000000"
+      },
+      {
+        "name": "potion_strong_poison",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_poison\"}]",
+        "slot_hex": "01f709010035011e000000"
+      },
+      {
+        "name": "potion_regeneration",
+        "command": "potion[potion_contents={potion:\"minecraft:regeneration\"}]",
+        "slot_hex": "01f709010035011f000000"
+      },
+      {
+        "name": "potion_long_regeneration",
+        "command": "potion[potion_contents={potion:\"minecraft:long_regeneration\"}]",
+        "slot_hex": "01f7090100350120000000"
+      },
+      {
+        "name": "potion_strong_regeneration",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_regeneration\"}]",
+        "slot_hex": "01f7090100350121000000"
+      },
+      {
+        "name": "potion_strength",
+        "command": "potion[potion_contents={potion:\"minecraft:strength\"}]",
+        "slot_hex": "01f7090100350122000000"
+      },
+      {
+        "name": "potion_long_strength",
+        "command": "potion[potion_contents={potion:\"minecraft:long_strength\"}]",
+        "slot_hex": "01f7090100350123000000"
+      },
+      {
+        "name": "potion_strong_strength",
+        "command": "potion[potion_contents={potion:\"minecraft:strong_strength\"}]",
+        "slot_hex": "01f7090100350124000000"
+      },
+      {
+        "name": "potion_weakness",
+        "command": "potion[potion_contents={potion:\"minecraft:weakness\"}]",
+        "slot_hex": "01f7090100350125000000"
+      },
+      {
+        "name": "potion_long_weakness",
+        "command": "potion[potion_contents={potion:\"minecraft:long_weakness\"}]",
+        "slot_hex": "01f7090100350126000000"
+      },
+      {
+        "name": "potion_luck",
+        "command": "potion[potion_contents={potion:\"minecraft:luck\"}]",
+        "slot_hex": "01f7090100350127000000"
+      },
+      {
+        "name": "potion_slow_falling",
+        "command": "potion[potion_contents={potion:\"minecraft:slow_falling\"}]",
+        "slot_hex": "01f7090100350128000000"
+      },
+      {
+        "name": "potion_long_slow_falling",
+        "command": "potion[potion_contents={potion:\"minecraft:long_slow_falling\"}]",
+        "slot_hex": "01f7090100350129000000"
+      },
+      {
+        "name": "potion_wind_charged",
+        "command": "potion[potion_contents={potion:\"minecraft:wind_charged\"}]",
+        "slot_hex": "01f709010035012a000000"
+      },
+      {
+        "name": "potion_weaving",
+        "command": "potion[potion_contents={potion:\"minecraft:weaving\"}]",
+        "slot_hex": "01f709010035012b000000"
+      },
+      {
+        "name": "potion_oozing",
+        "command": "potion[potion_contents={potion:\"minecraft:oozing\"}]",
+        "slot_hex": "01f709010035012c000000"
+      },
+      {
+        "name": "potion_infested",
+        "command": "potion[potion_contents={potion:\"minecraft:infested\"}]",
+        "slot_hex": "01f709010035012d000000"
+      },
+      {
+        "name": "attribute_attack",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:9,operation:\"add_value\",slot:\"mainhand\"}]]",
+        "slot_hex": "01a40801001001030a6d6373613a70726f62654022000000000000000100"
+      },
+      {
+        "name": "attribute_speed",
+        "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_speed\",id:\"mcsa:probe\",amount:0.25,operation:\"add_multiplied_total\",slot:\"offhand\"}]]",
+        "slot_hex": "01a408010010011a0a6d6373613a70726f62653fd0000000000000020200"
+      },
+      {
+        "name": "potion_custom",
+        "command": "tipped_arrow[potion_contents={potion:\"minecraft:poison\",custom_color:1193046,custom_effects:[{id:\"minecraft:slowness\",amplifier:2,duration:803}]}] 5",
+        "slot_hex": "05a40b010035011c0100123456010102a3060001010000"
+      },
+      {
+        "name": "potion_scale",
+        "command": "potion[potion_contents={potion:\"minecraft:swiftness\"},potion_duration_scale=1.5]",
+        "slot_hex": "01f709020035010d000000363fc00000"
+      },
+      {
+        "name": "writable",
+        "command": "writable_book[writable_book_content={pages:[\"First page\",\"Вторая страница\"]}]",
+        "slot_hex": "01db0a010038020a46697273742070616765001dd092d182d0bed180d0b0d18f20d181d182d180d0b0d0bdd0b8d186d0b000"
+      },
+      {
+        "name": "written",
+        "command": "written_book[written_book_content={title:\"Story\",author:\"Alex\",pages:[\"First page\"]}]",
+        "slot_hex": "01dc0a0100390553746f72790004416c6578000108000a466972737420706167650000"
+      },
+      {
+        "name": "tooltip",
+        "command": "paper[tooltip_display={hide_tooltip:false,hidden_components:[\"minecraft:damage\",\"minecraft:writable_book_content\"]}]",
+        "slot_hex": "01f90801001200020338"
+      },
+      {
+        "name": "food",
+        "command": "apple[food={nutrition:7,saturation:2.5,can_always_eat:true}]",
+        "slot_hex": "01ef07010017074020000001"
+      }
+    ],
+    "exit_code": 0
+  }
+}

@@ -89,7 +89,7 @@ fn attributes_at(mob: &Mob) -> u64 {
         Kind::Vex => 1,
         // Кристаллу и дракону атрибуты не шлются вовсе (чёрный ящик,
         // end-crystal-explode, dragon-summon).
-        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs => u64::MAX,
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs | Kind::Cushion => u64::MAX,
         _ => 3,
     }
 }
@@ -179,6 +179,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
     // Свечение (0x40): у разбойников после звона колокола (raid.rs);
     // невидимость (0x20): торговец, выпивший зелье.
     let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 } | if mob.land.invisible || mob.vitals.has_effect(crate::survival::EffectKind::Invisibility) { 0x20 } else { 0 };
+
+    // Подушка наследует Entity: поля живого моба9/12/15 ей не принадлежат.
+    if mob.kind==Kind::Cushion {
+        return vec![(0,TYPE_BYTE,vec![fire]),(2,TYPE_OPT_COMPONENT,custom_name(mob)),
+            (4,TYPE_BOOL,vec![u8::from(mob.silent)]),(8,TYPE_INT,encode_varint(i32::from(mob.color)))];
+    }
 
     // Кристалл Края — не живое: флаги, тишина, цель луча (11 — Optional
     // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
@@ -270,6 +276,15 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     match mob.kind {
         Kind::ArmorStand => {},
+        // Куб серы 26.3 (наблюдение, индексы 777): baby 16, age_locked 17, size 18 (= Size + 1; по умолчанию 1), from_bucket 20.
+        Kind::SulfurCube => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.size <= crate::mob::sulfur_cube::SMALL)]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.age_locked)]));
+            out.push((18, TYPE_INT, encode_varint(mob.nether.size.max(1))));
+            out.push((20, TYPE_BOOL, vec![u8::from(mob.sulfur.from_bucket)]));
+        }
+        // Подушка 26.3: цвет в metadata с индексом 8 (minecraft-data 26.3, entities.json); тип — [проверить].
+        Kind::Cushion => unreachable!("подушка обработана до living metadata"),
         Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
             let s = &mob.land;
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
@@ -659,6 +674,8 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (16, Kind::Phantom) => value.as_slice() == [0],
         (5 | 16 | 17, Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vindicator | Kind::Ravager | Kind::Vex) => value.iter().all(|byte| *byte == 0),
         (16, Kind::MagmaCube | Kind::Slime) => value.as_slice() == encode_varint(1).as_slice(),
+        (16 | 17 | 20, Kind::SulfurCube) => value.as_slice() == [0],
+        (18, Kind::SulfurCube) => value.as_slice() == encode_varint(1).as_slice(),
         (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
@@ -690,6 +707,9 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
 
 /// Пакет свойств: перечисленные записи.
 async fn send_properties(stream: &mut Outgoing<'_>, entity_id: i32, entries: &[&Property]) -> io::Result<()> {
+    send_properties_at(stream,entity_id,entries,None).await
+}
+async fn send_properties_at(stream: &mut Outgoing<'_>, entity_id: i32, entries: &[&Property],clock:Option<i64>) -> io::Result<()> {
     if entries.is_empty() {
         return Ok(());
     }
@@ -705,7 +725,7 @@ async fn send_properties(stream: &mut Outgoing<'_>, entity_id: i32, entries: &[&
     }
 
     data.push(PROPERTIES_END);
-    write_body(stream, data).await
+    stream.send_entity_properties(&data,clock).await
 }
 
 /// Появление моба: Add Entity и свойства не по умолчанию.
@@ -734,7 +754,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     let properties = properties(mob);
     let changed: Vec<&Property> = properties.iter().filter(|entry| !is_default(entry, mob.kind)).collect();
 
-    send_properties(stream, mob.entity_id, &changed).await?;
+    send_properties_at(stream, mob.entity_id, &changed, Some(mob.tame.clock)).await?;
 
     if crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0 {
         send_horse_attributes(stream, mob, true).await?;
@@ -803,6 +823,11 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         mouth: mob.wild.mouth,
         held: mob.small.held,
     })
+}
+
+#[cfg(test)]
+pub(super) async fn send_compatibility_probe(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    send_mob(stream, mob).await.map(|_| ())
 }
 
 /// Номер полосы босса иссушителя — его собственный UUID.
@@ -948,6 +973,16 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         let size = f64::from(mob.nether.size.max(1));
 
         body.extend_from_slice(&encode_varint(if mob.kind == Kind::MagmaCube { 3 } else { 2 }));
+        // Куб серы (777): сначала здоровье 4·размер, затем скорость (наблюдение).
+        if mob.kind == Kind::SulfurCube {
+            body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
+            push_f64(&mut body, f64::from(mob.vitals.max_health));
+            super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
+            body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
+            push_f64(&mut body, crate::mob::slime::speed(mob.nether.size));
+            super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, None);
+            return write_body(stream, body).await;
+        }
         if mob.kind == Kind::MagmaCube {
             body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
             push_f64(&mut body, 3.0 * size);
@@ -1199,7 +1234,7 @@ pub(super) async fn send_mob_event(
             let item = (*kind == crate::mob::Particle::ItemBreak).then(|| crate::blocks::item_named("wolf_armor").unwrap_or(0));
             send_particles(stream, kind.id(), item, *place, *offset, *speed, *count).await?
         }
-        Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) => {}
+        Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) | Event::Bounce => {}
     }
 
     Ok(())
@@ -1209,6 +1244,11 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    // Куб серы: поглощённый блок — слот тела (6); пустой слот шлётся только при смене (наблюдение: пакет 06 + предмет).
+    if mob.kind == Kind::SulfurCube {
+        let body = mob.sulfur.body.map(|item| Stack::new(item, 1));
+        return if body.is_some() || changed { send_equipment(stream, mob.entity_id, &[(6, body)]).await } else { Ok(()) };
+    }
     if mob.equipment.is_some() {
         let gear = crate::mob::equipment::all(mob);
         let mut slots: Vec<_> = gear.iter().enumerate().filter(|(_, stack)| changed || stack.is_some()).map(|(index, stack)| (index as u8, *stack)).collect();
@@ -1430,9 +1470,9 @@ pub(super) async fn send_particles(
 
     if let Some(block) = block {
         if particle == 47 {
-            // «item»: данные — предмет (число, номер, без компонентов).
-            body.extend_from_slice(&encode_varint(1));
+            // ItemStackTemplate: номер ПЕРЕД числом; подтверждено официальной пробой.
             body.extend_from_slice(&encode_varint(block));
+            body.extend_from_slice(&encode_varint(1));
             body.extend_from_slice(&encode_varint(0));
             body.extend_from_slice(&encode_varint(0));
         } else {
@@ -1610,7 +1650,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             now.iter().filter(|entry| !shown.properties.contains(entry) || (mob.kind == Kind::Dolphin && entry.0 == 1) || (entry.0 == 10 && mob.vitals.effect_gives != shown.effect_gives)).collect()
         };
 
-        send_properties(stream, mob.entity_id, &changed).await?;
+        send_properties_at(stream, mob.entity_id, &changed, Some(mob.tame.clock)).await?;
         shown.properties = now;
         shown.effect_gives = mob.vitals.effect_gives;
 
@@ -1649,7 +1689,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         // Разбойник: арбалет заряжен или выстрелил — снаряжение заново
         // (чёрный ящик, pillager-crossbow: charged_projectiles, затем damage).
-        let land_gear = mob.kind==Kind::ArmorStand && shown.attr_changes!=mob.attr_changes || (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
+        let land_gear = mob.kind==Kind::SulfurCube && shown.attr_changes != mob.attr_changes || mob.kind==Kind::ArmorStand && shown.attr_changes!=mob.attr_changes || (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
         let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
 
         // Стойка: уходят только изменившиеся ячейки, пустая — ничего (чёрный ящик armorstand-equip-break).
@@ -1974,6 +2014,21 @@ mod slime_tests {
     }
 
     #[test]
+    fn sulfur_cube_metadata_matches_the_official_777_run() {
+        // Большой: здоровье 8, size 18 = 2 (09 03 41000000 12 01 02); малый: здоровье 4 и baby 16 = true, size по умолчанию.
+        let mut big = Mob::new(1, Kind::SulfurCube, (0.0, 0.0, 0.0));
+        crate::mob::sulfur_cube::initialize(&mut big);
+        let shown: Vec<_> = properties(&big).into_iter().filter(|e| !is_default(e, Kind::SulfurCube)).collect();
+        assert!(shown.contains(&(9, TYPE_FLOAT, float(8.0))) && shown.contains(&(18, TYPE_INT, encode_varint(2))));
+        assert!(!shown.iter().any(|e| e.0 == 16));
+        let mut small = Mob::new(2, Kind::SulfurCube, (0.0, 0.0, 0.0));
+        crate::mob::sulfur_cube::set_size(&mut small, crate::mob::sulfur_cube::SMALL);
+        let shown: Vec<_> = properties(&small).into_iter().filter(|e| !is_default(e, Kind::SulfurCube)).collect();
+        assert!(shown.contains(&(9, TYPE_FLOAT, float(4.0))) && shown.contains(&(16, TYPE_BOOL, vec![1])));
+        assert!(!shown.iter().any(|e| e.0 == 18));
+    }
+
+    #[test]
     fn slime_metadata_uses_size_not_baby_and_omits_aggressive_flag() {
         let mut mob = Mob::new(1, Kind::Slime, (0.0, 0.0, 0.0));
         crate::mob::slime::set_size(&mut mob, 4);
@@ -2117,5 +2172,25 @@ mod orb_pickup_tests {
         assert_eq!(metadata.id, SET_ENTITY_DATA);
         assert_eq!(metadata.payload(), &[42, ORB_VALUE_KEY, TYPE_INT as u8, 5, 255]);
         assert!(input.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod catalog_view_tests {
+    use super::*;
+    #[tokio::test]
+    async fn real_cushion_and_cube_metadata_translate_for_both_clients() {
+        let content=mcsa_protocol::content::ContentCodec::white_slab_preview();
+        for version in [mcsa_protocol::JavaVersion::V26_1_2,mcsa_protocol::JavaVersion::V26_3] {
+            let mut out=Outgoing::capture_content(version,content);
+            for (index,kind) in [Kind::Cushion,Kind::SulfurCube].into_iter().enumerate() {
+                let mut mob=Mob::new(index as i32+50,kind,(0.0,65.0,0.0));mob.color=7;
+                if kind==Kind::SulfurCube {crate::mob::sulfur_cube::initialize(&mut mob);}
+                send_mob(&mut out,&mob).await.unwrap();
+                let all=properties(&mob);let refs:Vec<_>=all.iter().collect();
+                send_properties(&mut out,mob.entity_id,&refs).await.unwrap();
+                if kind==Kind::Cushion {assert!(all.iter().all(|row|row.0<=8));assert_eq!(attributes_at(&mob),u64::MAX);}
+            }
+        }
     }
 }

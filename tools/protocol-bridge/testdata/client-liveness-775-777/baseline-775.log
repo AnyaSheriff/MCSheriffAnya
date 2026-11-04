@@ -1,0 +1,32 @@
+0.4 play:login
+0.5 play:abilities
+0.5 play:position
+0.5 play:declare_commands
+0.5 play:declare_recipes
+0.5 play:player_info
+0.5 play:entity_metadata
+0.5 play:initialize_world_border
+0.5 play:set_ticking_state
+0.5 play:step_tick
+0.5 play:spawn_position
+0.5 play:update_health
+0.5 SPAWN
+0.5 play:game_state_change
+0.5 play:update_time
+0.5 play:update_view_position
+4.0 play:map_chunk
+10.0 play:spawn_entity
+10.0 play:entity_update_attributes
+10.0 play:window_items
+10.0 play:held_item_slot
+10.0 play:keep_alive
+OUT keep_alive {"keepAliveId":[0,1]}
+19.7 play:system_chat
+19.7 play:playerlist_header
+27.9 play:recipe_book_settings
+27.9 play:recipe_book_add
+27.9 play:advancements
+27.9 play:kick_disconnect
+27.9 !! play:kick_disconnect {"reason":{"type":"compound","value":{"translate":{"type":"string","value":"disconnect.timeout"}}}}
+27.9 KICK {"type":"compound","value":{"translate":{"type":"string","value":"disconnect.timeout"}}}
+27.9 END socketClosed

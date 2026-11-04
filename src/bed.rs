@@ -116,6 +116,27 @@ pub fn is_bed(state: i32) -> bool {
     blocks::block_at_state(state).is_some_and(|name| name.ends_with("_bed"))
 }
 
+/// Соломенная кровать ли это (26.3). Вики, Straw Bed: точку возрождения не ставит, одноразовая
+/// (ломается, когда встанешь), не подпрыгивает, в Незере и Энде просто исчезает без взрыва и без предмета.
+pub fn is_straw(state: i32) -> bool {
+    blocks::block_at_state(state) == Some("straw_bed")
+}
+
+/// Убрать обе половины кровати молча, без предмета (одноразовая соломенная кровать после сна,
+/// исчезновение в Незере и Энде). Эффект слома (2001) — у изножья, как у взрыва обычной кровати
+/// [проверить] частицы и звук соломенной кровати у официального сервера.
+pub fn remove_both(world: &mut World, head: Pos) {
+    let foot = foot_of(world, head);
+    world.set_block(head.0, head.1, head.2, crate::world::AIR);
+    if let Some(foot) = foot {
+        let state = world.get_block(foot.0, foot.1, foot.2);
+        if is_bed(state) {
+            world.note_level_event(foot.0, foot.1, foot.2, 2001, state);
+            world.set_block(foot.0, foot.1, foot.2, crate::world::AIR);
+        }
+    }
+}
+
 /// Якорь ли это.
 pub fn is_anchor(state: i32) -> bool {
     blocks::block_at_state(state) == Some("respawn_anchor")

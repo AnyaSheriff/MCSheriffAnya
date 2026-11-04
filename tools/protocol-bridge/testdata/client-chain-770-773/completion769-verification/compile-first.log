@@ -1,0 +1,82 @@
+    Updating crates.io index
+     Locking 322 packages to latest Rust 1.98.1 compatible versions
+      Adding aes v0.8.4 (available: v0.9.3)
+      Adding argon2 v0.5.3 (available: v0.6.0)
+      Adding cfb8 v0.8.1 (available: v0.9.1)
+      Adding cranelift-bforest v0.136.2 (available: v0.136.4)
+      Adding cranelift-bitset v0.136.2 (available: v0.136.4)
+      Adding cranelift-codegen v0.136.2 (available: v0.136.4)
+      Adding cranelift-codegen-meta v0.136.2 (available: v0.136.4)
+      Adding cranelift-entity v0.136.2 (available: v0.136.4)
+      Adding cranelift-frontend v0.136.2 (available: v0.136.4)
+      Adding cranelift-isle v0.136.2 (available: v0.136.4)
+      Adding cranelift-native v0.136.2 (available: v0.136.4)
+      Adding generic-array v0.14.7 (available: v0.14.9)
+      Adding hmac v0.12.1 (available: v0.13.0)
+      Adding js-sys v0.3.81 (available: v0.3.106)
+      Adding md-5 v0.10.6 (available: v0.11.0)
+      Adding png v0.17.16 (available: v0.18.1)
+      Adding pulley-interpreter v49.0.2 (available: v49.0.4)
+      Adding pulley-macros v49.0.2 (available: v49.0.4)
+      Adding sha1 v0.10.7 (available: v0.11.0)
+      Adding sha2 v0.10.9 (available: v0.11.1)
+      Adding toml v0.8.23 (available: v1.1.8+spec-1.1.0)
+      Adding wasm-bindgen v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-futures v0.4.54 (available: v0.4.79)
+      Adding wasm-bindgen-macro v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-macro-support v0.2.104 (available: v0.2.129)
+      Adding wasm-bindgen-shared v0.2.104 (available: v0.2.129)
+      Adding wasmtime v49.0.2 (available: v49.0.4)
+      Adding wasmtime-environ v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-component-macro v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-component-util v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-core v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-cranelift v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-fiber v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-jit-debug v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-jit-icache-coherence v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-unwinder v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-versioned-export-macros v49.0.2 (available: v49.0.4)
+      Adding wasmtime-internal-wit-bindgen v49.0.2 (available: v49.0.4)
+      Adding wasmtime-wasi v49.0.2 (available: v49.0.4)
+      Adding wasmtime-wasi-io v49.0.2 (available: v49.0.4)
+      Adding web-sys v0.3.81 (available: v0.3.106)
+      Adding zstd v0.13.3 (available: v0.14.3)
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/seedmap)
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge)
+error[E0369]: no implementation for `JavaVersion | JavaVersion`
+  --> tools/protocol-bridge/src/ids.rs:19:73
+   |
+19 |     if registry==RegistryKind::Attribute && (from==JavaVersion::V1_21_4 | JavaVersion::V1_21_5 || to==JavaVersion::V1_21_5) {
+   |                                                    -------------------- ^ -------------------- JavaVersion
+   |                                                    |
+   |                                                    JavaVersion
+   |
+note: an implementation of `BitOr` might be missing for `JavaVersion`
+  --> tools/protocol-bridge/src/lib.rs:74:1
+   |
+74 | pub enum JavaVersion { V1_21_4, V1_21_5, V1_21_6, V1_21_8, V1_21_9, V1_21_11, V1_12_2, V26_1_2, V26_2, V26_3 }
+   | ^^^^^^^^^^^^^^^^^^^^ must implement `BitOr`
+note: the trait `BitOr` must be implemented
+  --> /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/ops/bit.rs:254:0
+
+error[E0369]: no implementation for `JavaVersion | JavaVersion`
+   --> tools/protocol-bridge/src/items.rs:233:48
+    |
+233 |     if kind==32 && (from==JavaVersion::V1_21_4 | JavaVersion::V1_21_5 || to==JavaVersion::V1_21_5) {
+    |                           -------------------- ^ -------------------- JavaVersion
+    |                           |
+    |                           JavaVersion
+    |
+note: an implementation of `BitOr` might be missing for `JavaVersion`
+   --> tools/protocol-bridge/src/lib.rs:74:1
+    |
+ 74 | pub enum JavaVersion { V1_21_4, V1_21_5, V1_21_6, V1_21_8, V1_21_9, V1_21_11, V1_12_2, V26_1_2, V26_2, V26_3 }
+    | ^^^^^^^^^^^^^^^^^^^^ must implement `BitOr`
+note: the trait `BitOr` must be implemented
+   --> /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/ops/bit.rs:254:0
+
+For more information about this error, try `rustc --explain E0369`.
+error: could not compile `mcsa-protocol` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `mcsa-protocol` (lib test) due to 2 previous errors

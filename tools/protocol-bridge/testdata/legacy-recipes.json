@@ -1,0 +1,108 @@
+{
+  "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+  "protocol": 340,
+  "recipe_ids": {
+    "crafting_table": 360,
+    "stick": 60,
+    "oak_planks": 163
+  },
+  "observations": [
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 5,
+      "sha256": "8855508aade16ec573d21e6a485dfd0a7624085c1a14b5ecdd6485de0c6839a4",
+      "payload": "0000000000",
+      "action": 0,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [],
+      "highlights": []
+    },
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 4,
+      "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+      "payload": "01000000",
+      "action": 1,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [],
+      "highlights": []
+    },
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 6,
+      "sha256": "94682f42b1c316c0c02af3f819e0f2a20290479170632c973eaf157c27c316f0",
+      "payload": "01000001e802",
+      "action": 1,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [
+        360
+      ],
+      "highlights": []
+    },
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 4,
+      "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+      "payload": "01000000",
+      "action": 1,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [],
+      "highlights": []
+    },
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 5,
+      "sha256": "be1189895ff449dbaa0c00abf1f570e313de8ae9db3a4622f9a66001af97b790",
+      "payload": "010000013c",
+      "action": 1,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [
+        60
+      ],
+      "highlights": []
+    },
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 4,
+      "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+      "payload": "01000000",
+      "action": 1,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [],
+      "highlights": []
+    },
+    {
+      "phase": "play",
+      "name": "unlock_recipes",
+      "id": 49,
+      "size": 6,
+      "sha256": "d394e3956e6277a3a78c6fcbb6e6a6bea754413ff1f12a09b8d6cdd398138f9c",
+      "payload": "01000001a301",
+      "action": 1,
+      "opened": 0,
+      "filtering": 0,
+      "recipes": [
+        163
+      ],
+      "highlights": []
+    }
+  ]
+}

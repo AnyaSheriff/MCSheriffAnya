@@ -19,6 +19,7 @@ mod config;
 mod world;
 mod blocks;
 mod blocks_table;
+mod gameplay_catalog;
 mod hardness_table;
 mod mining;
 mod placing;
@@ -34,6 +35,8 @@ mod copper;
 mod compost;
 mod scaffolding;
 mod dripstone;
+mod sulfur_spike;
+mod poplar;
 mod entity;
 mod player;
 mod fluids;
@@ -136,7 +139,6 @@ use network::configuration::{
     send_brand, send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
 };
 use network::handshake::read_handshake;
-use network::{PROTOCOL_VERSION, VERSION_NAME};
 use network::login::{
     format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_disconnect_json, send_login_success,
     valid_name,
@@ -153,6 +155,33 @@ const SERVER_PROPERTIES_PATH: &str = "config/server.properties";
 const WORLD_PATH: &str = "world";
 
 fn main() -> io::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        let args: Vec<_> = std::env::args_os().collect();
+        if args.get(1).is_some_and(|v| v == "--upgrade-world-26.3") {
+            return match args.as_slice() {
+                [_, _, world] => world::migration::upgrade(Path::new(world)),
+                [_, _, source, world] if source == "--from-main-26.1.2" =>
+                    world::migration::upgrade_from_main_26_1_2(Path::new(world)),
+                _ => Err(io::Error::new(io::ErrorKind::InvalidInput,
+                    "usage: --upgrade-world-26.3 [--from-main-26.1.2] WORLD")),
+            };
+        }
+    }
+    let prepared = config::first_start::prepare(Path::new("."))?;
+    let first_start = prepared.first_start;
+    // Проверяем настройки до загрузки мира; stdin для первоначальной настройки не нужен.
+    let settings = prepared.settings.clone();
+    settings.validate()?;
+    // Проверяем мир до создания каталогов, слушателей и фоновых писателей.
+    // Замок живёт дольше runtime; session.lock измерений остаются отдельными.
+    let world_guard = world::startup::prepare_for_version(Path::new(WORLD_PATH), settings.java_version.expect("проверенная версия"))
+        .map_err(|error| io::Error::new(error.kind(), format!("{error}. Для переноса старого мира сохраните резервную копию и выполните mcsheriffanya --upgrade-world-26.3 world; затем укажите java-version=26.3")))?;
+    prepared.save()?;
+    log_debug!("Проверка заявленного профиля мира: {:?}", world_guard.check);
+    if !world_guard.has_exclusive_lock() {
+        log_warn!("На этой платформе доступна только читающая проверка профиля мира; общий межпроцессный замок пока не реализован");
+    }
     // Такту отводится отдельное ядро, всё остальное делит оставшиеся: сеть,
     // складывание чанков, скины. Если ядро всего одно, делить нечего —
     // работаем как придётся.
@@ -174,14 +203,14 @@ fn main() -> io::Result<()> {
         })
         .build()?;
 
-    runtime.block_on(server())
+    runtime.block_on(server(settings, first_start))
 }
 
-async fn server() -> io::Result<()> {
+async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool) -> io::Result<()> {
     let started = Instant::now();
 
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
-    log_info!("Запуск сервера MCSheriffAnya (Minecraft 26.1.2, протокол 775)");
+    log_info!("Запуск сервера MCSheriffAnya");
 
     match tick::tick_core() {
         Some(core) => log_info!(
@@ -199,7 +228,11 @@ async fn server() -> io::Result<()> {
 
     // Свои настройки — отдельно от server.properties: тот должен выглядеть
     // как у обычного сервера.
-    let mut settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
+    let primary = settings.java_version.expect("проверенная версия");
+    log_info!("Основная версия игры: Minecraft Java {} (протокол {})", primary.name(), primary.protocol());
+    if let Some(warning) = reports::first_start_warning(first_start, settings.send_error_reports) {
+        log_warn!("{}", warning);
+    }
     log::set_debug(settings.debug);
     log::set_console_colors(settings.console_colors);
     world::ORE_RETENTION_PERCENT.store(settings.ore_retention_percent, std::sync::atomic::Ordering::Relaxed);
@@ -210,7 +243,7 @@ async fn server() -> io::Result<()> {
         log_info!("Подробный лог включён (config/mcsa.properties)");
     }
 
-    // Отчёты об ошибках — только если владелец их включил.
+    // Сохранённое false всегда отключает отчёты.
     reports::start(settings.send_error_reports);
 
     // Образец таблицы «кому чей скин» — чтобы было видно, что писать.
@@ -230,7 +263,7 @@ async fn server() -> io::Result<()> {
 
     viaproxy::configure(&mut settings, &mut properties)?;
     network::packet::set_compression_threshold(properties.compression_threshold);
-    if properties.online_mode || (settings.auth_enabled && settings.auth_premium) {
+    if settings.verify_license(properties.online_mode) {
         network::online::initialize().await?;
     }
 
@@ -246,18 +279,34 @@ async fn server() -> io::Result<()> {
     // Всё, что подключения делят между собой: мир, список игроков и чат.
     // Обычный мир и Незер: у Незера своя папка внутри папки мира, как у
     // оригинала, и то же семя.
-    let overworld = World::open(WORLD_PATH, properties.level_seed, properties.world_kind)?;
-    let nether = World::open(
-        Dimension::Nether.folder(Path::new(WORLD_PATH)),
+    let catalog = gameplay_catalog::Catalog::for_version(primary);
+    let open_world = |path: &Path, seed, kind| {
+        if primary == network::NATIVE_VERSION { World::open(path, seed, kind) }
+        else { World::open_with_catalog(path, seed, kind, catalog) }
+    };
+    let overworld = open_world(Path::new(WORLD_PATH), properties.level_seed, properties.world_kind)?;
+    // Структуры для достижений используют ленивый неизменяемый кэш.
+    // Прогреваем его в своём потоке: расчёт стартов занимает секунды, и
+    // запуск сервера его не ждёт.
+    let warming = std::time::Instant::now();
+    let spawn = overworld.spawn_position();
+    overworld.warm_structures((spawn.0.floor() as i32, spawn.1.floor() as i32, spawn.2.floor() as i32));
+    if std::env::var_os("MCSA_NET_TIMING").is_some() {
+        eprintln!("NET_TIMING stage=startup_progression us={}", warming.elapsed().as_micros());
+    }
+    let nether = open_world(
+        &Dimension::Nether.folder(Path::new(WORLD_PATH)),
         Some(overworld.seed()),
         WorldKind::Nether,
     )?;
-    let end = World::open(
-        Dimension::End.folder(Path::new(WORLD_PATH)),
+    let end = open_world(
+        &Dimension::End.folder(Path::new(WORLD_PATH)),
         Some(overworld.seed()),
         WorldKind::End,
     )?;
 
+    let mut skin_settings = skins::Settings::load(Path::new(skins::SETTINGS_FILE));
+    settings.apply_skin_policy(properties.online_mode, &mut skin_settings);
     let mut shared = Shared::with_end(
         overworld,
         nether,
@@ -266,7 +315,7 @@ async fn server() -> io::Result<()> {
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),
         ops::Ops::open(std::path::Path::new(ops::FILE)),
-        skins::Settings::load(Path::new(skins::SETTINGS_FILE)),
+        skin_settings,
     );
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings.clone();
@@ -510,10 +559,17 @@ fn ensure_directories(dirs: &[&str]) -> io::Result<()> {
 /// Сначала читает пакет Handshake, затем в зависимости от поля
 /// next_state переходит в соответствующее состояние протокола.
 async fn handle_connection(
-    mut socket: TcpStream,
+    socket: TcpStream,
     addr: std::net::SocketAddr,
     properties: Arc<ServerProperties>,
     shared: Arc<Shared>,
+) -> io::Result<()> {
+    handle_connection_inner(socket, addr, properties, shared, false).await
+}
+
+async fn handle_connection_inner(
+    mut socket: TcpStream, addr: std::net::SocketAddr, properties: Arc<ServerProperties>,
+    shared: Arc<Shared>, _probe_776: bool,
 ) -> io::Result<()> {
     let addr = if shared.settings.proxy_protocol {
         let forwarded = network::proxy_protocol::read(&mut socket, addr, &shared.settings.proxy_protocol_trusted_sources).await?;
@@ -534,6 +590,8 @@ async fn handle_connection(
     }
 
     let mut socket = network::connection::Connection::new(socket);
+    // Каталог нужен уже Configuration, до входа в Play.
+    socket.content = shared.catalog().content_codec();
     let handshake = read_handshake(&mut socket).await?;
 
     log_debug!(
@@ -562,6 +620,7 @@ async fn handle_connection(
                 &properties.motd,
                 online as i32,
                 properties.max_players,
+                shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3),
             )
             .await?;
         }
@@ -572,20 +631,44 @@ async fn handle_connection(
             // в невнятную «ошибку сетевого протокола» — вместо этого сразу
             // говорим человеку, в чём дело.
             //
-            // Пока ядро понимает одну версию. Когда появится свой перевод
-            // между версиями, здесь будет не отказ, а выбор переводчика.
-            if handshake.protocol_version != PROTOCOL_VERSION {
+            // Клиентская и внутренняя версии разделены; допуск задаётся
+            // отдельно для проверенных сочетаний клиента и основного.
+            // 769/770/771/772/773/774/776 прошли прежний checklist на обоих основных: CONTINUED.md.
+            // Это клиентский codec canonical775, а не отдельные игровые правила.
+            let negotiated = if matches!(handshake.protocol_version,769|770|771|772|773|774|776) && matches!(shared.catalog().profile(),
+                gameplay_catalog::Profile::Java26_1_2 | gameplay_catalog::Profile::Preview26_3) {
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("769/770/771/772/773/774/776"),native:network::NATIVE_VERSION})
+            } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 && handshake.protocol_version == 775 {
+                mcsa_protocol::Negotiated::native_only(775, network::NATIVE_VERSION)
+            } else if shared.catalog().profile() == gameplay_catalog::Profile::Preview26_3 {
+                mcsa_protocol::Negotiated::native_only(handshake.protocol_version, mcsa_protocol::JavaVersion::V26_3)
+                    .map(|mut route| { route.native = network::NATIVE_VERSION; route })
+            } else { mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION) };
+            // Только отдельный тестовый бинарник может исследовать ещё закрытый маршрут.
+            #[cfg(test)]
+            let negotiated = if (shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3)
+                || (_probe_776 && addr.ip().is_loopback() && !properties.online_mode && !shared.settings.auth_enabled && shared.auth.is_none()))
+                && handshake.protocol_version==777 {
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_3,native:network::NATIVE_VERSION})
+            } else if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V1_12_2) && handshake.protocol_version==340 {
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})
+            } else if _probe_776 && matches!(handshake.protocol_version,769|770|771|772|773|774|776) && addr.ip().is_loopback()
+                && !properties.online_mode {
+                Ok(mcsa_protocol::Negotiated { client: mcsa_protocol::JavaVersion::from_protocol(handshake.protocol_version).expect("769/770/771/772/773/774/776"), native: network::NATIVE_VERSION })
+            } else {negotiated};
+            if negotiated.is_err() {
                 log_info!(
                     "Вход отклонён: версия клиента (протокол {}) не подходит, ядру нужен протокол {}",
                     handshake.protocol_version,
-                    PROTOCOL_VERSION
+                    shared.settings.java_version.expect("проверенная версия").protocol()
                 );
 
                 send_login_disconnect(
                     &mut socket,
                     &format!(
                         "Ваша версия не подходит под ядро сервера\nНужен Minecraft {} (протокол {})",
-                        VERSION_NAME, PROTOCOL_VERSION
+                        shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3).name(),
+                        shared.settings.java_version.unwrap_or(mcsa_protocol::JavaVersion::V26_3).protocol()
                     ),
                 )
                 .await?;
@@ -593,6 +676,24 @@ async fn handle_connection(
                 return Ok(());
             }
 
+            socket.protocol = negotiated.ok();
+            log_debug!("Login: согласован протокол {} ({}), каталог {:?}, адрес {}", socket.client_version().protocol(), socket.client_version().name(), shared.catalog().profile(), addr);
+            #[cfg(test)]
+            { socket.probe_776 = matches!(socket.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2); }
+            let legacy = socket.client_version() == mcsa_protocol::JavaVersion::V1_12_2;
+            if legacy {
+                // В340 нет Configuration-диалога. До реализации старого
+                // интерфейса нельзя обходить парольный барьер.
+                if shared.settings.auth_enabled || shared.auth.is_some() {
+                    send_login_disconnect(&mut socket, "Вход с 1.12.2 при включённой защите паролем ещё не поддерживается").await?;
+                    return Ok(());
+                }
+                let state = mcsa_protocol::legacy_play::Session::new(
+                    mcsa_protocol::legacy_chunk::HeightWindow::new(-64).map_err(|error| io::Error::other(format!("Окно340: {error:?}")))?,
+                    properties.difficulty,
+                ).map_err(|error| io::Error::other(format!("Состояние340: {error:?}")))?;
+                socket.legacy = Some(Arc::new(std::sync::Mutex::new(state)));
+            }
             let mut login = read_login_start(&mut socket).await?;
 
             // Ник — как у оригинала. Иначе длинный ник отключил бы всех
@@ -608,9 +709,9 @@ async fn handle_connection(
                 send_login_disconnect(&mut socket, auth::BLOCKED).await?;
                 return Ok(());
             }
-            let try_premium = if let Some(auth) = password_auth {
-                shared.settings.auth_premium && auth.premium.should_verify(&login.username, addr.ip()).await
-            } else { false };
+            let try_premium = !properties.online_mode
+                && shared.settings.verify_license(false)
+                && shared.premium.should_verify(&login.username, addr.ip()).await;
             let authenticated = if properties.online_mode || try_premium {
                 let auth = network::online::Authenticator::get()?;
                 let ip = properties.prevent_proxy_connections.then_some(addr.ip());
@@ -622,7 +723,7 @@ async fn handle_connection(
                     }
                     Err(error) => {
                         if try_premium {
-                            password_auth.expect("auth").premium.failed(&login.username, addr.ip(), auth::now());
+                            shared.premium.failed(&login.username, addr.ip(), auth::now());
                             let _ = send_login_disconnect(&mut socket, auth::premium::RETRY).await;
                             return Ok(());
                         }
@@ -690,7 +791,17 @@ async fn handle_connection(
             send_login_success(&mut socket, &login.username, &login.uuid, authenticated.as_ref().and_then(|profile| profile.skin.as_ref()), properties.compression_threshold).await?;
             log_debug!("Login Success отправлен игроку {}", login.username);
 
+            if legacy {
+                // Старый протокол сразу переходит в Play. Проверки личности,
+                // запретов и вместимости выше — те же, что у родного клиента.
+                play_session(&mut socket, &login.username, &login.uuid,
+                    network::configuration::ClientLook::DEFAULT, &shared,
+                    (&came_from, &came_to, None), authenticated.map(|profile| profile.skin)).await?;
+                return Ok(());
+            }
+
             // Один срок на согласование Configuration и ввод пароля.
+            let probe_776 = socket.probe_776_enabled();
             let config_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(90);
             let negotiation = async {
                 // Фаза Configuration.
@@ -725,7 +836,7 @@ async fn handle_connection(
                 log_debug!("Update Tags отправлен (теги minecraft:damage_type)");
                 Ok::<_, io::Error>(look_from_settings)
             };
-            let look_from_settings = if password_auth.is_some() {
+            let look_from_settings = if password_auth.is_some() || probe_776 {
                 match tokio::time::timeout_at(config_deadline, negotiation).await {
                     Ok(result) => result?,
                     Err(_) => {
@@ -738,9 +849,11 @@ async fn handle_connection(
             // Парольный барьер: до Finish Configuration нет игрока, прав,
             // плагиновых join-событий или чтения playerdata. Старую личность
             // при auth-enabled вообще не переносим, включая Ops::adopt.
-            let chat_auth = password_auth.is_some() && (shared.settings.proxy_protocol || shared.settings.auth_mode == "chat");
-            let mut _auth_session = if let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
-                if !chat_auth && !auth::dialog::authenticate(&mut socket, auth, identity, addr.ip(), &shared.ops, verified_uuid, config_deadline).await? {
+            let chat_auth = password_auth.is_some() && (auth::needs_chat_login(socket.client_version())
+                || shared.settings.proxy_protocol || shared.settings.auth_mode == "chat");
+            let _auth_session = if !chat_auth
+                && let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
+                if !auth::dialog::authenticate(&mut socket, auth, identity, addr.ip(), &shared.ops, verified_uuid, config_deadline).await? {
                     return Ok(());
                 }
                 let is_op = shared.ops.lock().expect("ops").level_of(&login.uuid) > 0;
@@ -748,7 +861,7 @@ async fn handle_connection(
                     auth::dialog::disconnect(&mut socket, &plain).await?;
                     return Ok(());
                 }
-                if chat_auth { None } else { Some(auth.session(identity)) }
+                Some(auth.session(identity))
             } else { None };
 
             // Завершение фазы. Какие ещё реестры потребует клиент — покажет
@@ -756,27 +869,47 @@ async fn handle_connection(
             send_finish_configuration(&mut socket).await?;
             log_debug!("Finish Configuration отправлен");
 
-            let look = read_and_log_configuration_packets(&mut socket, look_from_settings).await?;
+            let mut look = if probe_776 {
+                tokio::time::timeout_at(config_deadline, read_and_log_configuration_packets(&mut socket, look_from_settings)).await
+                    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "776 Configuration ACK не получен"))??
+            } else { read_and_log_configuration_packets(&mut socket, look_from_settings).await? };
             log_debug!("Configuration: чтение пакетов клиента завершено");
+
+            // Клиент без dialogs получает только отдельный замороженный мир.
+            let _chat_auth_session = if look.is_some() && chat_auth
+                && let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
+                if !network::play::chat_login(&mut socket, &shared, identity, addr.ip(), verified_uuid, config_deadline).await? {
+                    return Ok(());
+                }
+                let is_op = shared.ops.lock().expect("ops").level_of(&login.uuid) > 0;
+                if let Some((_, plain)) = commands_admin::login_refusal(&login.username, &login.uuid, addr.ip(), is_op) {
+                    auth::dialog::disconnect(&mut socket, &plain).await?;
+                    return Ok(());
+                }
+                let session = auth.session(identity);
+                // ACK возврата уже прочитан лимбо; реестры согласуются заново.
+                look = tokio::time::timeout_at(config_deadline, async {
+                    send_brand(&mut socket).await?;
+                    send_known_packs(&mut socket).await?;
+                    let (_, settings) = read_known_packs(&mut socket).await?;
+                    send_registry_data(&mut socket).await?;
+                    send_update_tags(&mut socket).await?;
+                    send_finish_configuration(&mut socket).await?;
+                    read_and_log_configuration_packets(&mut socket, settings).await
+                }).await.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, auth::dialog::TIMEOUT))??;
+                Some(session)
+            } else { None };
 
             // Фаза Play: вводим игрока в мир.
             // Если клиент отключился, не подтвердив фазу, входить некуда.
             if let Some(look) = look {
-                let mut limbo_entity = None;
-                if chat_auth {
-                    let identity = auth_identity.as_ref().expect("identity");
-                    let service = password_auth.expect("auth");
-                    limbo_entity = network::play::chat_authenticate(&mut socket, &shared, identity, addr.ip(), verified_uuid).await?;
-                    if limbo_entity.is_none() { return Ok(()); }
-                    _auth_session = Some(service.session(identity));
-                }
                 let entered = play_session(
                     &mut socket,
                     &login.username,
                     &login.uuid,
                     look,
                     &shared,
-                    (&came_from, &came_to, limbo_entity),
+                    (&came_from, &came_to, None),
                     authenticated.map(|profile| profile.skin),
                 )
                 .await;
@@ -815,3 +948,11 @@ fn save_scoreboard(shared: &Shared) {
         log_warn!("Табло не записано ({}): {}", file.display(), error);
     }
 }
+
+#[cfg(test)]
+#[path = "network/gameplay_probe.rs"]
+mod gameplay_probe;
+
+#[cfg(test)]
+#[path = "network/catalog_preview_probe.rs"]
+mod catalog_preview_probe;

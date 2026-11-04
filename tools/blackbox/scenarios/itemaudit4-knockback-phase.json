@@ -1,5 +1,6 @@
 {
   "name": "itemaudit4-knockback-phase",
+  "attr_phase": true,
   "about": "[проверить] 26.1.2 attacker attribute tracker phase: identical durability changes at both odd/even intervals. Compare repeated vanilla recordings; no fixed one-tick delay assumed.",
   "blocks": [],
   "setup": [

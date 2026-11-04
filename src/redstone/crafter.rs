@@ -124,7 +124,7 @@ pub fn craft(world: &mut World, pos: Pos) {
         return;
     };
 
-    let result = crate::crafting::craft(&grid).and_then(|result| {
+    let result = crate::crafting::craft_for_catalog(world.catalog(), &grid).and_then(|result| {
         if result.extras().map_post != Some(1) { return Some(result); }
         let mut data = result.extras(); data.map_post = None;
         world.maps.lock().expect("карты").cartography(result.with_extras(data), Stack::new(blocks::item_named("paper")?, 1), true)
@@ -338,6 +338,193 @@ mod tests {
             let maps = world.maps.lock().unwrap(); assert_eq!(maps.maps.len(),if works {2} else {1});
             assert_eq!(world.container(0,70,0).unwrap().slots[0].is_none(),works);
             if works { assert_eq!(maps.maps[&(id+1)].scale,1); }
+        }
+    }
+
+    fn slab_world(profile: crate::gameplay_catalog::Profile, slots: &[(usize, i32)]) -> World {
+        let mut world = World::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(profile));
+        world.set_block(0, 70, 0, blocks::state_by_name("crafter").unwrap());
+        let concrete = blocks::item_named("white_concrete").unwrap();
+        world.with_container(0, 70, 0, |container| {
+            for &(slot, count) in slots { container.slots[slot] = Some(Stack::new(concrete, count)); }
+        });
+        world
+    }
+
+    #[test]
+    fn profile_slab_crafter_consumes_each_slot_once_and_repeats() {
+        use crate::gameplay_catalog::{Profile, WHITE_SLAB_ITEM};
+        // Все три допустимых ряда; неодинаковые стопки выявляют лишний расход.
+        for row in 0..3 {
+            let mut world = slab_world(Profile::Preview26_3, &[(row * 3, 2), (row * 3 + 1, 3), (row * 3 + 2, 4)]);
+            for (pass, expected) in [(1, [Some(1), Some(2), Some(3)]), (2, [None, Some(1), Some(2)])] {
+                craft(&mut world, (0, 70, 0));
+                let slots = &world.container(0, 70, 0).unwrap().slots;
+                for (slot, stack) in slots.iter().enumerate() {
+                    if (row * 3..row * 3 + 3).contains(&slot) {
+                        assert_eq!(stack.map(|stack| stack.count), expected[slot - row * 3], "ряд{row}, проход{pass}, ячейка{slot}");
+                    } else { assert!(stack.is_none()); }
+                }
+                let thrown = world.take_ejected();
+                assert_eq!(thrown.len(), 1);
+                assert_eq!(thrown[0].2, Stack::new(WHITE_SLAB_ITEM, 6));
+                assert_eq!(world.container(0, 70, 0).unwrap().crafting, CRAFTING_TICKS);
+            }
+            // После исчерпания одной клетки рецепт исчезает: остатки не расходуются.
+            let before = world.container(0, 70, 0).unwrap().slots.clone();
+            craft(&mut world, (0, 70, 0));
+            assert_eq!(world.container(0, 70, 0).unwrap().slots, before);
+            assert!(world.take_ejected().is_empty());
+        }
+    }
+
+    #[test]
+    fn slab_crafter_refuses_vertical_grid_and_native_profile_without_consumption() {
+        use crate::gameplay_catalog::Profile;
+        for (profile, slots) in [
+            (Profile::Preview26_3, vec![(0, 2), (3, 3), (6, 4)]),
+            (Profile::Java26_1_2, vec![(3, 2), (4, 3), (5, 4)]),
+        ] {
+            let mut world = slab_world(profile, &slots);
+            let before = world.container(0, 70, 0).unwrap().clone();
+            craft(&mut world, (0, 70, 0));
+            assert_eq!(world.container(0, 70, 0).unwrap(), &before);
+            assert!(world.take_ejected().is_empty());
+        }
+    }
+
+    #[test]
+    fn slab_crafter_conserves_output_when_receiver_is_empty_partial_or_full() {
+        use crate::gameplay_catalog::{Profile, WHITE_SLAB_ITEM};
+        for capacity in [0, 2, 6] {
+            let mut world = slab_world(Profile::Preview26_3, &[(0, 1), (1, 1), (2, 1)]);
+            let state = world.get_block(0, 70, 0);
+            let direction = containers::facing_offset(front(state).unwrap()).unwrap();
+            let target = (direction.0, 70 + direction.1, direction.2);
+            world.set_block(target.0, target.1, target.2, blocks::state_by_name("chest").unwrap());
+            let stone = blocks::item_named("stone").unwrap();
+            world.with_container(target.0, target.1, target.2, |container| {
+                container.slots.fill(Some(Stack::new(stone, 64)));
+                container.slots[0] = if capacity == 6 { None } else { Some(Stack::new(WHITE_SLAB_ITEM, 64 - capacity)) };
+            });
+            let before = world.container(target.0, target.1, target.2).unwrap().slots.iter().flatten().filter(|stack| stack.item == WHITE_SLAB_ITEM).map(|stack| stack.count).sum::<i32>();
+            craft(&mut world, (0, 70, 0));
+            assert!(world.container(0, 70, 0).unwrap().slots.iter().all(Option::is_none));
+            let after = world.container(target.0, target.1, target.2).unwrap().slots.iter().flatten().filter(|stack| stack.item == WHITE_SLAB_ITEM).map(|stack| stack.count).sum::<i32>();
+            let thrown = world.take_ejected();
+            assert!(thrown.iter().all(|item| item.2.item == WHITE_SLAB_ITEM));
+            let spilled = thrown.iter().map(|item| item.2.count).sum::<i32>();
+            assert_eq!(after - before, capacity);
+            assert_eq!(spilled, 6 - capacity);
+            assert_eq!(after - before + spilled, 6);
+        }
+    }
+
+    #[test]
+    fn every_slab_color_autocrafts_all_rows_and_consumes_exactly_once() {
+        use crate::gameplay_catalog::{Profile, SlabFamily, slabs};
+        for color in slabs() {
+            for row in 0..3 {
+                let mut world = slab_world(Profile::Preview26_3, &[]);
+                world.with_container(0, 70, 0, |container| {
+                    for offset in 0..3 { container.slots[row * 3 + offset] = Some(Stack::new(color.input_item, offset as i32 + 1)); }
+                });
+                craft(&mut world, (0, 70, 0));
+                let slots = &world.container(0, 70, 0).unwrap().slots;
+                for (index, stack) in slots.iter().enumerate() {
+                    let expected = if index == row * 3 + 1 { Some(Stack::new(color.input_item, 1)) }
+                        else if index == row * 3 + 2 { Some(Stack::new(color.input_item, 2)) } else { None };
+                    assert_eq!(*stack, expected, "{} ряд{row} слот{index}", color.name);
+                }
+                let thrown = world.take_ejected();
+                assert_eq!(thrown.len(), 1);
+                assert_eq!(thrown[0].2, Stack::new(color.item, 6), "{} ряд{row}", color.name);
+                let before = world.container(0, 70, 0).unwrap().slots.clone();
+                craft(&mut world, (0, 70, 0));
+                match color.family {
+                    SlabFamily::Concrete => {
+                        assert_eq!(world.container(0, 70, 0).unwrap().slots, before);
+                        assert!(world.take_ejected().is_empty());
+                    }
+                    SlabFamily::Mineral | SlabFamily::Poplar => unreachable!("slabs() не содержит серу и тополь"),
+                    SlabFamily::Wool => {
+                        // Оставшиеся две соседние клетки — прежний рецепт ковра,
+                        // а не ещё одна плита: его нельзя запрещать новым семейством.
+                        let carpet = blocks::item_named(&format!("{}_carpet", color.input_name.strip_suffix("_wool").unwrap())).unwrap();
+                        let thrown = world.take_ejected();
+                        assert_eq!(thrown.len(), 1);
+                        assert_eq!(thrown[0].2, Stack::new(carpet, 3), "{} ряд{row}", color.name);
+                        let mut remaining = vec![None; 9];
+                        remaining[row * 3 + 2] = Some(Stack::new(color.input_item, 1));
+                        assert_eq!(world.container(0, 70, 0).unwrap().slots, remaining);
+                        craft(&mut world, (0, 70, 0));
+                        assert_eq!(world.container(0, 70, 0).unwrap().slots, remaining);
+                        assert!(world.take_ejected().is_empty());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn colored_output_never_merges_with_another_color_in_receiving_chest() {
+        use crate::gameplay_catalog::{Profile, slabs};
+        let colors: Vec<_> = slabs().collect();
+        for (index, color) in colors.iter().enumerate() {
+            for room in [false, true] {
+                // Та же семья/другой цвет и другая семья/тот же цвет.
+                for other in [colors[index / 16 * 16 + (index + 1) % 16], colors[(index + 16) % 32]] {
+                let mut world = slab_world(Profile::Preview26_3, &[]);
+                world.with_container(0, 70, 0, |container| {
+                    container.slots[..3].fill(Some(Stack::new(color.input_item, 1)));
+                });
+                let direction = containers::facing_offset(front(world.get_block(0, 70, 0)).unwrap()).unwrap();
+                let target = (direction.0, 70 + direction.1, direction.2);
+                world.set_block(target.0, target.1, target.2, blocks::state_by_name("chest").unwrap());
+                world.with_container(target.0, target.1, target.2, |container| {
+                    container.slots.fill(Some(Stack::new(blocks::item_named("stone").unwrap(), 64)));
+                    container.slots[0] = Some(Stack::new(other.item, 60));
+                    if room { container.slots[1] = None; }
+                });
+                craft(&mut world, (0, 70, 0));
+                assert!(world.container(0, 70, 0).unwrap().slots.iter().all(Option::is_none));
+                let chest = &world.container(target.0, target.1, target.2).unwrap().slots;
+                assert_eq!(chest[0], Some(Stack::new(other.item, 60)), "{} / {}", color.name, other.name);
+                let inserted: i32 = chest.iter().flatten().filter(|stack| stack.item == color.item).map(|stack| stack.count).sum();
+                assert_eq!(inserted, if room { 6 } else { 0 });
+                let thrown = world.take_ejected();
+                assert!(thrown.iter().all(|item| item.2.item == color.item));
+                let spilled: i32 = thrown.iter().map(|item| item.2.count).sum();
+                assert_eq!(inserted + spilled, 6);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn both_slab_families_refuse_native_vertical_and_mixed_family_grid_without_consumption() {
+        use crate::gameplay_catalog::{Profile, slabs};
+        let colors: Vec<_> = slabs().collect();
+        for (index, color) in colors.iter().enumerate() {
+            for case in 0..4 {
+                let profile = if case == 0 { Profile::Java26_1_2 } else { Profile::Preview26_3 };
+                let mut world = slab_world(profile, &[]);
+                world.with_container(0, 70, 0, |container| {
+                    let cells = if case == 1 { [0, 3, 6] } else { [0, 1, 2] };
+                    for slot in cells { container.slots[slot] = Some(Stack::new(color.input_item, 2)); }
+                    if case == 2 {
+                        let other_family = colors[(index + 16) % 32];
+                        container.slots[1] = Some(Stack::new(other_family.input_item, 2));
+                    } else if case == 3 {
+                        let other_color = colors[index / 16 * 16 + (index + 1) % 16];
+                        container.slots[1] = Some(Stack::new(other_color.input_item, 2));
+                    }
+                });
+                let before = world.container(0, 70, 0).unwrap().clone();
+                craft(&mut world, (0, 70, 0));
+                assert_eq!(world.container(0, 70, 0).unwrap(), &before, "{} case{case}", color.name);
+                assert!(world.take_ejected().is_empty());
+            }
         }
     }
 

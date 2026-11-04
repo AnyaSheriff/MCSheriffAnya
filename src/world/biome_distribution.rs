@@ -60,6 +60,9 @@ pub const CALIBRATED: [f64; 45] = [
     -0.026647, 0.713323,
 ];
 
+// 26.3 использует исходный климат именованных октав (climate_noise.rs).
+// Прежние переносы порогов остаются только у профиля 26.1.2.
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,6 +79,27 @@ mod tests {
             let out=mapped(&c,&CALIBRATED);
             assert!([out.continent,out.temperature,out.humidity,out.erosion,out.weirdness].iter().all(|v|v.is_finite()));
         }
+    }
+
+    /// Два тёплых квадрата не должны удалять холодные моря за их пределами.
+    #[test]
+    fn preview_keeps_all_ocean_temperature_bands_on_holdout_seeds() {
+        let mut counts = [0usize; 5];
+        for seed in [7,314_159,987_654_321,-20_261_010] {
+            let terrain = Terrain::new(seed,Style::Vanilla).with_preview(true);
+            for z in (-8192..8192).step_by(64) { for x in (-8192..8192).step_by(64) {
+                let band = match terrain.biome_at(x+2,z+2) {
+                    Biome::FrozenOcean | Biome::DeepFrozenOcean => Some(0),
+                    Biome::ColdOcean | Biome::DeepColdOcean => Some(1),
+                    Biome::Ocean | Biome::DeepOcean => Some(2),
+                    Biome::LukewarmOcean | Biome::DeepLukewarmOcean => Some(3),
+                    Biome::WarmOcean => Some(4),
+                    _ => None,
+                };
+                if let Some(band) = band { counts[band] += 1; }
+            } }
+        }
+        assert!(counts.iter().all(|&count|count>100),"исчез температурный пояс: {counts:?}");
     }
 
     #[test]

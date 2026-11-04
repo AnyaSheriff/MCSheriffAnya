@@ -1,7 +1,7 @@
 // Книга на кафедре: содержимое хранится вместе со стопкой (Wiki, Lectern).
 // [проверить] богатый текст подписанных страниц пока представлен текстом.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
-pub struct Book { pub pages: Vec<String>, pub title: Option<String>, pub author: String, pub generation: i32 }
+pub struct Book { pub pages: Vec<String>, pub title: Option<String>, pub author: String, pub generation: i32, pub resolved: bool }
 impl Book {
     pub fn parse(value: &crate::snbt::Value, written: bool) -> Option<Self> {
         use crate::snbt::Value;
@@ -17,6 +17,12 @@ impl Book {
             book.title=Some(value.get("title").and_then(|v|v.as_str().or_else(||v.get("raw").and_then(Value::as_str))).unwrap_or("").to_owned());
             book.author=value.get("author").and_then(Value::as_str).unwrap_or("").to_owned();
             book.generation=value.get("generation").and_then(Value::as_f64).unwrap_or(0.0) as i32;
+            book.resolved=match value.get("resolved") {
+                None=>false,
+                Some(Value::Num(value)) if *value==0.0=>false,
+                Some(Value::Num(value)) if *value==1.0=>true,
+                _=>return None,
+            };
         }
         Some(book)
     }
@@ -29,7 +35,7 @@ impl Book {
             if self.title.is_some() { out.extend(crate::network::nbt::text_component(page)); } else { out.extend(encode_string(page)); }
             out.push(0);
         }
-        if self.title.is_some() { out.push(1); }
+        if self.title.is_some() { out.push(u8::from(self.resolved)); }
         out
     }
 }
@@ -47,4 +53,15 @@ impl Book {
         }
         assert!(Book::parse(&crate::snbt::Value::Map(vec![("pages".into(),crate::snbt::Value::List(vec![crate::snbt::Value::Str("x".into());101]))]),false).is_none());
     }
+    #[test]
+    fn written_book_resolution_flag_survives_network_and_saved_data() {
+        for (value,resolved) in [("false",false),("0b",false),("true",true),("1b",true)] {
+            let (_,data)=crate::stackdata::parse_item_spec(&format!(r#"written_book[written_book_content={{title:"Story",author:"Alex",pages:["First page"],resolved:{value}}}]"#)).unwrap();
+            let book=data.book.as_ref().unwrap();assert_eq!(book.resolved,resolved);
+            assert_eq!(book.encode().last(),Some(&u8::from(resolved)));
+            let mut wire=crate::stackdata::Data::default();crate::stackdata::read_component(55,&book.encode(),&mut wire);
+            assert_eq!(wire,data);assert_eq!(crate::stackdata::from_bytes(&crate::stackdata::to_bytes(&data)),Some(data));
+        }
+    }
+
 }

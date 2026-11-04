@@ -1,0 +1,492 @@
+{
+  "26.1.2": {
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "handshake_protocol": 775,
+    "scope": "wire observation only; no gameplay compatibility claim",
+    "packets": [
+      {
+        "phase": "status",
+        "version": {
+          "name": "26.1.2",
+          "protocol": 775
+        }
+      },
+      {
+        "phase": "login",
+        "id": 2,
+        "size": 27,
+        "sha256": "4a3785f2356d0849f36a7a27e055d0ccd96dc3f9a9f77e7c17d46ecf4e86b870",
+        "test_profile_payload_hex": "f0856c057f7739b1b6005719f4e70be8094d63736150726f626500"
+      },
+      {
+        "phase": "configuration",
+        "id": 1,
+        "size": 24,
+        "sha256": "cc5fc2907d8768f85026bc28f4458ce61f275b92a43749b2c3b50d35f1c5e187"
+      },
+      {
+        "phase": "configuration",
+        "id": 12,
+        "size": 19,
+        "sha256": "77dae5f6d821757486b2af93050102274d4d008de84228ccc8dad83bcb7b82bc"
+      },
+      {
+        "phase": "configuration",
+        "id": 14,
+        "size": 23,
+        "sha256": "c930414c9830d3800307b24e6e61fa32a8bea38650f891a78fe6f35983968068",
+        "known_packs_hypothesis": [
+          [
+            "minecraft",
+            "core",
+            "26.1.2"
+          ]
+        ]
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 1587,
+        "sha256": "868d7f1ddce8a98b791fabde9426e04dae07ae38740810f0f438704f6a603e64"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 223,
+        "sha256": "3f50bfc19ee3e385b315c90919a4ea6a41c71254a0a0a80517eb59a3a4277bb8"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 326,
+        "sha256": "c4bf28c2d73210824fd49b58231f9a0b2788dba01cbc80811d8b366324ea7547"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 226,
+        "sha256": "08afbe4c951645cef8b9f84334907798550d31983bd06212a1f988a5f6ff3355"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 183,
+        "sha256": "14274ad0c23ae4c95ad7a3e4eaca03f7c5d90b747304795f5401b7b8f285eb2d"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 148,
+        "sha256": "4776e0c8fe4aadbf4aa1e044c81952e4a588e76e91c9afab7b68e01e8ee35677"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 76,
+        "sha256": "4e6066e9bc9584b8b229b4eccad884cf0d65ba1922a04da479f6144bf7c029b5"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 79,
+        "sha256": "ad0d31ddb962e548595a59f6a923906bf601c74d8e5a32f3f3c9e897283e5c3a"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 77,
+        "sha256": "b13df01955347d2fdb8934dc4a8bd1ba825a0a636fe861b4d88a8aa254407506"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 232,
+        "sha256": "fa9da921f75ab7084137916074b70bac272dc599ffb3471b7ba6a76c3933fda8"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 65,
+        "sha256": "866720efdb560edd931e72fb75e18a688035e1e458239a402d228a889050c8a5"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 65,
+        "sha256": "b1fc69914693febf948128217348019b44183ebddcd564e400b2f1aabec9b771"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 76,
+        "sha256": "9a64dbe5b387ee950403269eb516ca14cc3419eab735a0f726ed67b3947495da"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 69,
+        "sha256": "9e0c4166b55291204b815772006996e6318dd8131af65e02eeb280ad8d77cecd"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 80,
+        "sha256": "e509cd2a60580885ba3b41e3e26d23514b8f1fbb843a77cd8bc8af32fcbea438"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 72,
+        "sha256": "ba166744ab8e962dd7dfd4d29774c33ed4e0e69dc734c47d70a08bf4314b6258"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 979,
+        "sha256": "c45cb2a70a1bcdce5abdea34ee61621135cfd0f38857ff8842eb1932a0d8b9f8"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 115,
+        "sha256": "783c0f84cebe0491d6606e6a5b671ce8cd0dd189310e64e92475b1ec0096eee5"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 1115,
+        "sha256": "1643996658ff3b6d2b98ebdc940a1ea117ee1827ae514eeab4c040b95a808f5f"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 1035,
+        "sha256": "9671ec3318adb7e1a3eed3acc4f6537af165356ae5d8d659ef6ab25a09e21598"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 967,
+        "sha256": "117d3c940f010640227f814ea9ef5053ea202ea94674e849b3c1ac7a3461470a"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 397,
+        "sha256": "3c8e44958e56e8e8331c3e32aa1f6a95e1c2e4189842e9458ad532e7213ab79c"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 236,
+        "sha256": "6a7f0314fe8288b5fbd3704b7a80ca84080c4a8677415699eb1da1a4a449fde6"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 47,
+        "sha256": "7344ec6ac587e3a4f73b996709f63bf0a9af3ecf9f8b23db6b3917ca78f29d67"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 48,
+        "sha256": "389c44a2bc4fd2fb11a17f966271f5f17ba2d0a7fa28e4be1f87cb431c39ae26"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 93,
+        "sha256": "a72d02aff51e58c3c4da24b0c415e1ba06dc834cb39bbdd377d1861379bab0a4"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 63,
+        "sha256": "cb99cc88120906cd519e031e3dea81a4e0a1be018c489c6a9c539386df50c449"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 102,
+        "sha256": "390de08a8aee2cc8a0450c5ca10363a72464390a6e557691ac4409d997474970"
+      },
+      {
+        "phase": "configuration",
+        "id": 13,
+        "size": 32316,
+        "sha256": "c992cac18663aa86449cc5e9502854e31f3d564498d83b496a6540d3ee936f53"
+      },
+      {
+        "phase": "configuration",
+        "id": 3,
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "phase": "play",
+        "id": 49,
+        "size": 112,
+        "sha256": "104127d1a2fdf3a80a0f16d720458221a6d3e406f43abffc1ce2ae9a5c5b94be"
+      }
+    ],
+    "server_exit": 0
+  },
+  "26.3": {
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "handshake_protocol": 777,
+    "scope": "wire observation only; no gameplay compatibility claim",
+    "packets": [
+      {
+        "phase": "status",
+        "version": {
+          "name": "26.3",
+          "protocol": 777
+        }
+      },
+      {
+        "phase": "login",
+        "id": 2,
+        "size": 43,
+        "sha256": "07d730f6eda868b42257d43c7b93f4d3808dde97c39c480a8b31e4433416c7af",
+        "test_profile_payload_hex": "f0856c057f7739b1b6005719f4e70be8094d63736150726f6265000c37a4cf9493459ca3f74e34250a70cf"
+      },
+      {
+        "phase": "configuration",
+        "id": 1,
+        "size": 24,
+        "sha256": "cc5fc2907d8768f85026bc28f4458ce61f275b92a43749b2c3b50d35f1c5e187"
+      },
+      {
+        "phase": "configuration",
+        "id": 13,
+        "size": 19,
+        "sha256": "77dae5f6d821757486b2af93050102274d4d008de84228ccc8dad83bcb7b82bc"
+      },
+      {
+        "phase": "configuration",
+        "id": 15,
+        "size": 21,
+        "sha256": "a847df6698425dc7f850afd2d7e1d56ed7cdd6dc5017e8a6ed0f5a31ba2e9f76",
+        "known_packs_hypothesis": [
+          [
+            "minecraft",
+            "core",
+            "26.3"
+          ]
+        ]
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 1637,
+        "sha256": "bd0a42ddef6fbe1b3ae5f68c15a8ba9a2eb234d883fdb3c5c2a92f0545d46781"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 223,
+        "sha256": "3f50bfc19ee3e385b315c90919a4ea6a41c71254a0a0a80517eb59a3a4277bb8"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 326,
+        "sha256": "c4bf28c2d73210824fd49b58231f9a0b2788dba01cbc80811d8b366324ea7547"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 226,
+        "sha256": "08afbe4c951645cef8b9f84334907798550d31983bd06212a1f988a5f6ff3355"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 183,
+        "sha256": "14274ad0c23ae4c95ad7a3e4eaca03f7c5d90b747304795f5401b7b8f285eb2d"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 148,
+        "sha256": "4776e0c8fe4aadbf4aa1e044c81952e4a588e76e91c9afab7b68e01e8ee35677"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 76,
+        "sha256": "4e6066e9bc9584b8b229b4eccad884cf0d65ba1922a04da479f6144bf7c029b5"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 79,
+        "sha256": "ad0d31ddb962e548595a59f6a923906bf601c74d8e5a32f3f3c9e897283e5c3a"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 77,
+        "sha256": "b13df01955347d2fdb8934dc4a8bd1ba825a0a636fe861b4d88a8aa254407506"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 232,
+        "sha256": "fa9da921f75ab7084137916074b70bac272dc599ffb3471b7ba6a76c3933fda8"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 65,
+        "sha256": "866720efdb560edd931e72fb75e18a688035e1e458239a402d228a889050c8a5"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 65,
+        "sha256": "b1fc69914693febf948128217348019b44183ebddcd564e400b2f1aabec9b771"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 76,
+        "sha256": "9a64dbe5b387ee950403269eb516ca14cc3419eab735a0f726ed67b3947495da"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 69,
+        "sha256": "9e0c4166b55291204b815772006996e6318dd8131af65e02eeb280ad8d77cecd"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 80,
+        "sha256": "e509cd2a60580885ba3b41e3e26d23514b8f1fbb843a77cd8bc8af32fcbea438"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 72,
+        "sha256": "ba166744ab8e962dd7dfd4d29774c33ed4e0e69dc734c47d70a08bf4314b6258"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 979,
+        "sha256": "c45cb2a70a1bcdce5abdea34ee61621135cfd0f38857ff8842eb1932a0d8b9f8"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 281,
+        "sha256": "e1728faeae546d7c9652478212f13f3fd6ca1fab1fc51b39874b9cb89e7a6d82"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 115,
+        "sha256": "783c0f84cebe0491d6606e6a5b671ce8cd0dd189310e64e92475b1ec0096eee5"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 1142,
+        "sha256": "4480e479c0769f7436d2b9181e03c1cd222474e655567f3d31118e6cfbdc3d70"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 1035,
+        "sha256": "9671ec3318adb7e1a3eed3acc4f6537af165356ae5d8d659ef6ab25a09e21598"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 967,
+        "sha256": "117d3c940f010640227f814ea9ef5053ea202ea94674e849b3c1ac7a3461470a"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 415,
+        "sha256": "3dfc60928b631b58e20f59b1b174d82f198ac6dfa63a31cb98acd5eac8449399"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 236,
+        "sha256": "6a7f0314fe8288b5fbd3704b7a80ca84080c4a8677415699eb1da1a4a449fde6"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 47,
+        "sha256": "7344ec6ac587e3a4f73b996709f63bf0a9af3ecf9f8b23db6b3917ca78f29d67"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 48,
+        "sha256": "389c44a2bc4fd2fb11a17f966271f5f17ba2d0a7fa28e4be1f87cb431c39ae26"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 93,
+        "sha256": "a72d02aff51e58c3c4da24b0c415e1ba06dc834cb39bbdd377d1861379bab0a4"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 63,
+        "sha256": "cb99cc88120906cd519e031e3dea81a4e0a1be018c489c6a9c539386df50c449"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 102,
+        "sha256": "390de08a8aee2cc8a0450c5ca10363a72464390a6e557691ac4409d997474970"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 443,
+        "sha256": "f191cc7943fe9532305ee4fedb2c4f5532738df916cf38d41425a72fb366e12c"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 77,
+        "sha256": "395a2b1a252845728806467c34820ab8a30da7208fea83ad18eae57f256fd745"
+      },
+      {
+        "phase": "configuration",
+        "id": 7,
+        "size": 266,
+        "sha256": "8a7ebb82ce5fa83ffd167392aa4549f6142477c26e43ff8da47810df924268f5"
+      },
+      {
+        "phase": "configuration",
+        "id": 14,
+        "size": 58754,
+        "sha256": "f8cea71443daf9d3cfbfc4b543617acb0372634799ad4d956c4e1590c794b65d"
+      },
+      {
+        "phase": "configuration",
+        "id": 3,
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "phase": "play",
+        "id": 50,
+        "size": 113,
+        "sha256": "b0c797bd3a3d83a76c81b3d39694fe600a57dfa69a9160f6c585524f1f1eedd8"
+      }
+    ],
+    "server_exit": 0
+  }
+}

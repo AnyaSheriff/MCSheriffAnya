@@ -1,0 +1,28 @@
+{
+  "client_protocol": 774,
+  "source_protocol": 775,
+  "policy": "Visual projection only; never restore a server identity from a client substitute.",
+  "entries": [
+    {
+      "name": "golden_dandelion",
+      "substitute": "dandelion"
+    },
+    {
+      "name": "potted_golden_dandelion",
+      "substitute": "potted_dandelion"
+    }
+  ],
+  "state_substitutes": [
+    {
+      "name": "note_block",
+      "property": "instrument",
+      "values": [
+        "trumpet",
+        "trumpet_exposed",
+        "trumpet_weathered",
+        "trumpet_oxidized"
+      ],
+      "substitute": "harp"
+    }
+  ]
+}

@@ -58,5 +58,6 @@ fn map_matches_biome_cells_in_generated_chunks() {
 #[test]
 fn palette_covers_the_server_registry() {
     assert_eq!(super::terrain::biome_registry_size(), 65);
+    assert_eq!(super::terrain::biome_registry_size_preview(), 67);
     for id in 0..65 { assert_eq!(seedmap::color(id), extracted::color(id)); }
 }

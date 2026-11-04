@@ -1,0 +1,182 @@
+{
+  "method": "Official 26.3 black-box world creation, console seed confirmation, save-all flush and stop; only saved level.dat read. Two census seeds plus 17 independent controls, including seeds chosen to distinguish competing climate weights; five further seeds held out until the weight was frozen. No game archives or generation definitions inspected.",
+  "data_version": 5023,
+  "tolerance_blocks": 16,
+  "effective_climate_weight": 1000000,
+  "exact_official_fitness_units": "unverified",
+  "cases": [
+    {
+      "seed": 1792932773345722119,
+      "vanilla": [
+        16,
+        -48
+      ]
+    },
+    {
+      "seed": 100554032945340,
+      "vanilla": [
+        -240,
+        16
+      ]
+    },
+    {
+      "seed": 20261025,
+      "vanilla": [
+        0,
+        112
+      ]
+    },
+    {
+      "seed": 42,
+      "vanilla": [
+        -32,
+        0
+      ]
+    },
+    {
+      "seed": 12345,
+      "vanilla": [
+        96,
+        -32
+      ]
+    },
+    {
+      "seed": 8675309,
+      "vanilla": [
+        16,
+        80
+      ]
+    },
+    {
+      "seed": 987654321,
+      "vanilla": [
+        0,
+        0
+      ]
+    },
+    {
+      "seed": 1,
+      "vanilla": [
+        160,
+        160
+      ]
+    },
+    {
+      "seed": 6,
+      "vanilla": [
+        -64,
+        512
+      ]
+    },
+    {
+      "seed": 7,
+      "vanilla": [
+        208,
+        528
+      ]
+    },
+    {
+      "seed": 12,
+      "vanilla": [
+        -16,
+        -48
+      ]
+    },
+    {
+      "seed": 14,
+      "vanilla": [
+        368,
+        400
+      ]
+    },
+    {
+      "seed": 27,
+      "vanilla": [
+        -64,
+        512
+      ]
+    },
+    {
+      "seed": 57,
+      "vanilla": [
+        -352,
+        -480
+      ]
+    },
+    {
+      "seed": 58,
+      "vanilla": [
+        0,
+        -32
+      ]
+    },
+    {
+      "seed": 73,
+      "vanilla": [
+        -1136,
+        128
+      ]
+    },
+    {
+      "seed": 88,
+      "vanilla": [
+        16,
+        0
+      ]
+    },
+    {
+      "seed": 153,
+      "vanilla": [
+        -688,
+        2
+      ]
+    },
+    {
+      "seed": 318,
+      "vanilla": [
+        0,
+        0
+      ]
+    },
+    {
+      "seed": 20261026,
+      "vanilla": [
+        0,
+        0
+      ],
+      "held_out": true
+    },
+    {
+      "seed": 998244353,
+      "vanilla": [
+        48,
+        -32
+      ],
+      "held_out": true
+    },
+    {
+      "seed": 123456789,
+      "vanilla": [
+        64,
+        -48
+      ],
+      "held_out": true
+    },
+    {
+      "seed": 0,
+      "vanilla": [
+        -32,
+        0
+      ],
+      "held_out": true
+    },
+    {
+      "seed": 13579,
+      "vanilla": [
+        -96,
+        32
+      ],
+      "held_out": true
+    }
+  ]
+}

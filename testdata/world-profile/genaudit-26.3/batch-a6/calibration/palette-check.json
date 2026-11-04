@@ -1,0 +1,175 @@
+{
+  "index_formula": "(Y + integer_noise_shift).rem_euclid(192), equivalent to the wiki (noiseValue + Y + 192) % 192 for the measured positive Y range; there is no Y-63 offset.",
+  "finding": "The existing eight randomly positioned red stripes have the wrong visible phase/layout on the second seed. Their source RNG/layout is unchanged by the router. Altering Y would contradict the documented index and was not used as a fix. A seed-general palette repair remains unverified.",
+  "seeds": {
+    "owner": {
+      "own_red_indices": [
+        16,
+        17,
+        18,
+        43,
+        44,
+        45,
+        46,
+        85,
+        86,
+        97,
+        150,
+        159,
+        160,
+        187
+      ],
+      "layout_size": 192,
+      "red_blocks_by_biome_y16": {
+        "vanilla": {
+          "savanna/red_terracotta": {
+            "48": 6,
+            "64": 12
+          },
+          "jungle/red_terracotta": {
+            "48": 20
+          },
+          "river/red_terracotta": {
+            "48": 14
+          },
+          "mangrove_swamp/red_terracotta": {
+            "48": 22
+          }
+        },
+        "default": {
+          "savanna/red_terracotta": {
+            "64": 31
+          },
+          "windswept_savanna/red_terracotta": {
+            "32": 21
+          },
+          "jungle/red_terracotta": {
+            "32": 1,
+            "48": 10
+          },
+          "river/red_terracotta": {
+            "48": 2
+          }
+        },
+        "prototype": {
+          "savanna/red_terracotta": {
+            "64": 11,
+            "80": 20
+          },
+          "windswept_savanna/red_terracotta": {
+            "48": 21
+          },
+          "jungle/red_terracotta": {
+            "48": 11
+          },
+          "river/red_terracotta": {
+            "48": 2
+          }
+        }
+      }
+    },
+    "second": {
+      "own_red_indices": [
+        82,
+        83,
+        84,
+        88,
+        89,
+        90,
+        93,
+        94,
+        95,
+        104,
+        105,
+        180,
+        181,
+        187
+      ],
+      "layout_size": 192,
+      "red_blocks_by_biome_y16": {
+        "vanilla": {
+          "wooded_badlands/red_terracotta": {
+            "32": 3695,
+            "96": 18651
+          },
+          "desert/red_terracotta": {
+            "32": 42
+          },
+          "river/red_terracotta": {
+            "32": 285
+          },
+          "jungle/red_terracotta": {
+            "48": 29
+          },
+          "badlands/red_terracotta": {
+            "96": 33666,
+            "32": 504
+          },
+          "forest/red_terracotta": {
+            "96": 28
+          }
+        },
+        "default": {
+          "wooded_badlands/red_terracotta": {
+            "80": 286748,
+            "96": 32906
+          },
+          "desert/red_terracotta": {
+            "80": 2360,
+            "96": 141
+          },
+          "jungle/red_terracotta": {
+            "80": 319
+          },
+          "badlands/red_terracotta": {
+            "80": 424295,
+            "96": 114057,
+            "64": 28
+          },
+          "eroded_badlands/red_terracotta": {
+            "80": 21157,
+            "96": 2203
+          },
+          "sparse_jungle/red_terracotta": {
+            "80": 28
+          },
+          "forest/red_terracotta": {
+            "80": 598,
+            "96": 86
+          }
+        },
+        "prototype": {
+          "wooded_badlands/red_terracotta": {
+            "80": 749588,
+            "96": 42180,
+            "64": 287
+          },
+          "sparse_jungle/red_terracotta": {
+            "80": 542
+          },
+          "desert/red_terracotta": {
+            "80": 308
+          },
+          "badlands/red_terracotta": {
+            "80": 444028,
+            "96": 123495,
+            "64": 103
+          },
+          "eroded_badlands/red_terracotta": {
+            "80": 11175,
+            "96": 579
+          },
+          "forest/red_terracotta": {
+            "80": 475,
+            "96": 100
+          },
+          "jungle/red_terracotta": {
+            "80": 2076,
+            "96": 14,
+            "64": 3
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "protocol": 777,
+    "role": "nonop",
+    "capture": "s26-cmdtree-final-wire777",
+    "core_nodes": 26,
+    "queries": 101,
+    "node_mismatches": 0,
+    "suggestion_mismatches": 0,
+    "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24"
+  },
+  {
+    "protocol": 777,
+    "role": "op4",
+    "capture": "s26-cmdtree-final-wire777",
+    "core_nodes": 2264,
+    "queries": 215,
+    "node_mismatches": 0,
+    "suggestion_mismatches": 0,
+    "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24"
+  },
+  {
+    "protocol": 775,
+    "role": "nonop",
+    "capture": "s26-cmdtree-final-wire775",
+    "core_nodes": 26,
+    "queries": 101,
+    "node_mismatches": 0,
+    "suggestion_mismatches": 0,
+    "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24"
+  },
+  {
+    "protocol": 775,
+    "role": "op4",
+    "capture": "s26-cmdtree-final-wire775",
+    "core_nodes": 1917,
+    "queries": 215,
+    "node_mismatches": 0,
+    "suggestion_mismatches": 0,
+    "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24"
+  },
+  {
+    "protocol": 777,
+    "role": "nonop",
+    "capture": "s26-cmdtree-final-wire-heldout",
+    "core_nodes": 26,
+    "queries": 17,
+    "node_mismatches": 0,
+    "suggestion_mismatches": 0,
+    "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24"
+  },
+  {
+    "protocol": 777,
+    "role": "op4",
+    "capture": "s26-cmdtree-final-wire-heldout",
+    "core_nodes": 2264,
+    "queries": 17,
+    "node_mismatches": 0,
+    "suggestion_mismatches": 0,
+    "binary_sha256": "afbaeb7b19b0ff38dc33a59d7379abc323338830b224f906e02ec8cab79a1e24"
+  }
+]

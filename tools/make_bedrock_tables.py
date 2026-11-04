@@ -489,7 +489,9 @@ def write_tables(state_count):
         body = re.search(r"pub const " + group + r": \[Biome; \d+\] = \[(.*?)\];", terrain, re.S).group(1)
         return [names_by_variant[v] for v in re.findall(r"Biome::(\w+)", body)]
     # Порядок match больше не равен порядку реестра: End идёт ПОСЛЕ Незера.
-    ours = ordered("ALL") + ["autumn_forest"] + ordered("NETHER") + ordered("END")
+    ours = ordered("ALL") + ["autumn_forest"] + ordered("NETHER") + ordered("END") + ordered("PREVIEW")
+    # Биомы 26.3/26.2: в таблице Bedrock 1.26.10 их нет, номера — по вики (Dappled Forest 195, Sulfur Caves 194).
+    ids = {**ids, "dappled_forest": 195, "sulfur_caves": 194}
 
     numbers = []
     names = []
@@ -509,7 +511,10 @@ def write_tables(state_count):
         "",
         "/// Номер биома Bedrock для каждого нашего: по порядку `Biome::ALL`, затем",
         "/// свои (`CUSTOM_BIOMES`), затем Незер (`Biome::NETHER`) и Энд (`Biome::END`).",
-        f"pub const BIOMES: [u32; {len(numbers)}] = {numbers};",
+        f"pub const BIOMES: [u32; {len(numbers) - 2}] = {numbers[:-2]};",
+        "",
+        "/// Биомы профиля Preview26_3 (`Biome::PREVIEW`) идут после `BIOMES`: пятнистый лес и серные пещеры.",
+        f"pub const PREVIEW_BIOMES: [u32; 2] = {numbers[-2:]};",
         "",
     ]
     (OUT / "tables.rs").write_text("\n".join(lines), encoding="utf8")

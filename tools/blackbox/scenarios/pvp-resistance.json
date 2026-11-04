@@ -1,5 +1,6 @@
 {
  "name": "pvp-resistance",
+ "attr_phase": true,
  "about": "Сопротивление II у жертвы: −40 % урона (вики, Resistance).",
  "second": true,
  "track_self": true,
@@ -15,6 +16,7 @@
   "clear $(bot2)",
   "kill $(bot)",
   "!wait 30",
+  "!syncattrs",
   "tp $(bot) $(3.5,0,3.5) 180 0",
   "tp $(bot2) $(3.5,0,1.5) 0 0",
   "give $(bot2) minecraft:diamond_sword 1",

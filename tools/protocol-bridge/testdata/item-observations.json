@@ -1,0 +1,173 @@
+[
+  {
+    "protocol": 340,
+    "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+    "cases": [
+      {
+        "name": "stone",
+        "command": "stone 3 0",
+        "slot_hex": "000103000000"
+      },
+      {
+        "name": "granite",
+        "command": "stone 4 1",
+        "slot_hex": "000104000100"
+      },
+      {
+        "name": "red_wool",
+        "command": "wool 5 14",
+        "slot_hex": "002305000e00"
+      },
+      {
+        "name": "sword",
+        "command": "diamond_sword 1 7 {Unbreakable:1b,RepairCost:2,ench:[{id:16s,lvl:5s}]}",
+        "slot_hex": "01140100070a0000090004656e63680a000000010200036c766c0005020002696400100001000b556e627265616b61626c650103000a526570616972436f73740000000200"
+      },
+      {
+        "name": "book",
+        "command": "enchanted_book 1 0 {StoredEnchantments:[{id:34s,lvl:3s}]}",
+        "slot_hex": "01930100000a000009001253746f726564456e6368616e746d656e74730a000000010200036c766c0003020002696400220000"
+      },
+      {
+        "name": "name",
+        "command": "paper 1 0 {display:{Name:\"MCSA probe\",Lore:[\"Line one\",\"Line two\"]}}",
+        "slot_hex": "01530100000a00000a0007646973706c61790900044c6f7265080000000200084c696e65206f6e6500084c696e652074776f0800044e616d65000a4d4353412070726f62650000"
+      },
+      {
+        "name": "leather",
+        "command": "leather_chestplate 1 9 {display:{color:16711680}}",
+        "slot_hex": "012b0100090a00000a0007646973706c6179030005636f6c6f7200ff00000000"
+      },
+      {
+        "name": "map",
+        "command": "filled_map 1 23",
+        "slot_hex": "016601001700"
+      },
+      {
+        "name": "white_banner",
+        "command": "banner 2 15",
+        "slot_hex": "01a902000f00"
+      },
+      {
+        "name": "empty",
+        "command": "air 1",
+        "slot_hex": "ffff"
+      }
+    ],
+    "exit_code": 0
+  },
+  {
+    "protocol": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "cases": [
+      {
+        "name": "stone",
+        "command": "stone 3",
+        "slot_hex": "03010000"
+      },
+      {
+        "name": "granite",
+        "command": "granite 4",
+        "slot_hex": "04020000"
+      },
+      {
+        "name": "red_wool",
+        "command": "red_wool 5",
+        "slot_hex": "05e3010000"
+      },
+      {
+        "name": "sword",
+        "command": "diamond_sword[damage=7,unbreakable={},repair_cost=2,enchantments={sharpness:5}]",
+        "slot_hex": "01a907040003070413020d012105"
+      },
+      {
+        "name": "book",
+        "command": "enchanted_book[stored_enchantments={unbreaking:3}]",
+        "slot_hex": "01dd0901002a012803"
+      },
+      {
+        "name": "name",
+        "command": "paper[custom_name=\"MCSA probe\",lore=[\"Line one\",\"Line two\"]]",
+        "slot_hex": "01850802000608000a4d4353412070726f62650b020800084c696e65206f6e650800084c696e652074776f"
+      },
+      {
+        "name": "leather",
+        "command": "leather_chestplate[damage=9,dyed_color=16711680]",
+        "slot_hex": "01bc07020003092c00ff0000"
+      },
+      {
+        "name": "map",
+        "command": "filled_map[map_id=23]",
+        "slot_hex": "01d10801002e17"
+      },
+      {
+        "name": "white_banner",
+        "command": "white_banner 2",
+        "slot_hex": "02f3090000"
+      },
+      {
+        "name": "empty",
+        "command": "air",
+        "slot_hex": "00"
+      }
+    ],
+    "exit_code": 0
+  },
+  {
+    "protocol": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "cases": [
+      {
+        "name": "stone",
+        "command": "stone 3",
+        "slot_hex": "03010000"
+      },
+      {
+        "name": "granite",
+        "command": "granite 4",
+        "slot_hex": "04020000"
+      },
+      {
+        "name": "red_wool",
+        "command": "red_wool 5",
+        "slot_hex": "0588020000"
+      },
+      {
+        "name": "sword",
+        "command": "diamond_sword[damage=7,unbreakable={},repair_cost=2,enchantments={sharpness:5}]",
+        "slot_hex": "019a08040003070413020d012105"
+      },
+      {
+        "name": "book",
+        "command": "enchanted_book[stored_enchantments={unbreaking:3}]",
+        "slot_hex": "01f30a01002d012803"
+      },
+      {
+        "name": "name",
+        "command": "paper[custom_name=\"MCSA probe\",lore=[\"Line one\",\"Line two\"]]",
+        "slot_hex": "01f90802000608000a4d4353412070726f62650b020800084c696e65206f6e650800084c696e652074776f"
+      },
+      {
+        "name": "leather",
+        "command": "leather_chestplate[damage=9,dyed_color=16711680]",
+        "slot_hex": "01ad08020003092f00ff0000"
+      },
+      {
+        "name": "map",
+        "command": "filled_map[map_id=23]",
+        "slot_hex": "01d60901003017"
+      },
+      {
+        "name": "white_banner",
+        "command": "white_banner 2",
+        "slot_hex": "02890b0000"
+      },
+      {
+        "name": "empty",
+        "command": "air",
+        "slot_hex": "00"
+      }
+    ],
+    "exit_code": 0
+  }
+]

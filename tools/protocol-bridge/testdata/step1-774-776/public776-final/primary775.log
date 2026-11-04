@@ -1,0 +1,36 @@
+[17:36:53] [Server thread/INFO]: config/mcsa.properties: дописаны новые настройки: viaproxy, viaproxy-memory, console-colors, offline-license-mode, tab-tps, debug, prefetch-at-once, bedrock-online-mode, bedrock-show-coordinates, autumn-forests, pink-cherry-groves, text-info, portal-delay, portal-min-width, portal-min-height, portal-max-width, portal-max-height
+[17:36:53] [Server thread/INFO]: Запуск сервера MCSheriffAnya
+[17:36:53] [Server thread/INFO]: Ядер: 12. Такту отведено ядро 11, остальные — сети и складыванию мира
+[17:36:53] [Server thread/INFO]: Загрузка настроек
+[17:36:53] [Server thread/INFO]: Создана директория: world
+[17:36:53] [Server thread/INFO]: Создана директория: logs
+[17:36:53] [Server thread/INFO]: Создана директория: world/playerdata
+[17:36:53] [Server thread/INFO]: Создана директория: skins
+[17:36:53] [Server thread/INFO]: Основная версия игры: Minecraft Java 26.1.2 (протокол 775)
+[17:36:53] [Server thread/INFO]: Сервер запущен на *:26184
+[17:36:53] [Server thread/INFO]: Подготовка мира "world"
+[17:36:53] [Server thread/INFO]: Семя мира: 1
+[17:36:53] [Server thread/INFO]: Тип мира: minecraft:flat
+[17:36:53] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_nether"
+[17:36:53] [Server thread/INFO]: Семя мира: 1
+[17:36:53] [Server thread/INFO]: Тип мира: minecraft:the_nether
+[17:36:53] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_end"
+[17:36:53] [Server thread/INFO]: Семя мира: 1
+[17:36:53] [Server thread/INFO]: Тип мира: minecraft:the_end
+[17:36:53] [Server thread/INFO]: Скины: в config/skins.toml дописаны настройки скинов Bedrock
+[17:36:53] [Server thread/INFO]: Плагины: папки plugins/ и modules/ пусты
+[17:36:53] [Server thread/INFO]: Готово (0.001 с)! Чтобы узнать команды, набери help
+[17:36:53] [Server thread/INFO]: Вход отклонён: версия клиента (протокол 774) не подходит, ядру нужен протокол 775
+[17:36:53] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[17:36:53] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[17:36:53] [Server thread/INFO]: Точка появления: 0.5 63 0.5
+[17:36:53] [Server thread/INFO]: McsaProbe[/127.0.0.1:49074 → localhost:26184] вошёл с номером сущности 1 в (0.5, 63.0, 0.5)
+[17:36:53] [Server thread/INFO]: McsaProbe зашёл на сервер
+[17:36:54] [Server thread/INFO]: [Server] MCSA_CORE_DIG_900001
+[17:36:54] [Server thread/INFO]: McsaProbe потерял соединение: отключился
+[17:36:54] [Server thread/INFO]: Останавливаю сервер
+[17:36:54] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[17:36:54] [Server thread/INFO]: Остановка сервера
+[17:36:54] [Server thread/INFO]: Сохранение игроков
+[17:36:54] [Server thread/INFO]: Сохранение мира
+[17:36:54] [Server thread/INFO]: Мир сохранён

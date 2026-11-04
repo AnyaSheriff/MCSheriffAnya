@@ -1,0 +1,359 @@
+{
+  "protocol": 777,
+  "statuses": {
+    "release_use": 6,
+    "jab": 8
+  },
+  "scope": "actual official777 GUI bow release/spear lunge jab; observed enums only",
+  "source_sha256": "1a647a569081c25b36c9c32a81f14bda1cd400dbf712fb852bc9616fa7abcf23",
+  "scenario_sha256": "6d82739386f6ff1d3ef153bf20de45edcf8de9d6f8f16f0762c345c925ba91d4",
+  "runner_sha256": "aeb8192410f28b3dc062e0d9b33f45388e9a5c84f0d267f5617f2b41d2c6f4a2",
+  "server_log_sha256": "5d8c3a13b636792227cec5dc9a3bc83e1df48dc5ed32eaf0cd6f525b49670442",
+  "visual_review_sha256": "78a334ff4eff6f6599c12cd022b57e9ea083a485c8b8c0eaa430a979b6d0e11d",
+  "visual_review_status": "PASS",
+  "images": {
+    "bow-after.png": "0b563b7a74efb11f9a3d89cd6c91f716eaebb392d5ba0e2bb443928fe2060b2f",
+    "bow-before.png": "c2acf0f312c7dd8a27cb58d06b772939473041358f66bff256e65309ca32f4d2",
+    "spear-after.png": "a8b5d31511ad3291a0077ed28865ad58114bf2d22f104c457ed3c08ece83ff19",
+    "spear-before.png": "3df835f9339a2a4d263bcb8241ba5b24b08a48d10ac7a43956b02b7bb6dcbf65"
+  },
+  "tables_sha256": {
+    "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+    "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+    "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+    "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+  },
+  "fixtures": {
+    "bow": 1008,
+    "arrow": 1009,
+    "iron_spear": 1450,
+    "arrow_entity": 6,
+    "bow_hold_seconds": 1.3
+  },
+  "observations": [
+    {
+      "action": {
+        "direction": "toServer",
+        "phase": "play",
+        "id": 41,
+        "bytes": 11,
+        "elapsed": 48.03023187399998,
+        "stage": "bow-action",
+        "name": "block_dig",
+        "status": 6,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "face": 0,
+        "sequence": 0,
+        "payload_hex": "0600000000000000000000",
+        "pose": [
+          0.5,
+          65.0,
+          0.5,
+          -90.0,
+          -5.0
+        ]
+      },
+      "case": "bow",
+      "input": {
+        "case": "bow",
+        "press_requested": 46.593094356999984,
+        "release_requested": 47.967321604999995,
+        "release_completed": 47.99188060199998
+      },
+      "use_item": [
+        {
+          "direction": "toServer",
+          "phase": "play",
+          "name": "use_item",
+          "id": 67,
+          "bytes": 10,
+          "elapsed": 46.63776139400005,
+          "stage": "bow-action",
+          "hand": 0,
+          "sequence": 1,
+          "rotation": [
+            -90.0,
+            -5.0
+          ],
+          "payload_hex": "0001c2b40000c0a00000"
+        }
+      ],
+      "acknowledgements": [
+        {
+          "direction": "toClient",
+          "phase": "play",
+          "id": 4,
+          "bytes": 1,
+          "elapsed": 46.674742847000005,
+          "stage": "bow-action",
+          "name": "acknowledge_player_digging",
+          "sequence": 1
+        }
+      ],
+      "arrow_spawns": [
+        {
+          "direction": "toClient",
+          "phase": "play",
+          "name": "spawn_entity",
+          "id": 1,
+          "bytes": 52,
+          "elapsed": 48.07849706899998,
+          "stage": "bow-action",
+          "entity": 2,
+          "entity_type": 6,
+          "position": [
+            0.5,
+            66.52000000327826,
+            0.5
+          ]
+        }
+      ],
+      "hand_updates": [
+        {
+          "direction": "toClient",
+          "phase": "play",
+          "name": "set_slot",
+          "id": 20,
+          "bytes": 11,
+          "elapsed": 48.092096692999974,
+          "stage": "bow-action",
+          "revision": 5,
+          "mainhand": {
+            "item": 1008,
+            "count": 1,
+            "damage": 1
+          }
+        },
+        {
+          "direction": "toClient",
+          "phase": "play",
+          "name": "set_slot",
+          "id": 20,
+          "bytes": 9,
+          "elapsed": 48.092123844000014,
+          "stage": "bow-action",
+          "revision": 6,
+          "offhand": {
+            "item": 1009,
+            "count": 2
+          }
+        }
+      ],
+      "positive_console_predicates": [
+        {
+          "token": "MCSA_USE_bow_AFTER_MAIN",
+          "command": "execute if data entity McsaProbe SelectedItem{count:1,id:\"minecraft:bow\",components:{\"minecraft:damage\":1}} run say MCSA_USE_bow_AFTER_MAIN",
+          "server_line": "[08:41:46] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_bow_AFTER_MAIN"
+        },
+        {
+          "token": "MCSA_USE_bow_AFTER_AMMO",
+          "command": "execute if data entity McsaProbe equipment.offhand{count:2,id:\"minecraft:arrow\"} run say MCSA_USE_bow_AFTER_AMMO",
+          "server_line": "[08:41:46] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_bow_AFTER_AMMO"
+        }
+      ],
+      "before_console_predicates": [
+        {
+          "token": "MCSA_USE_bow_BEFORE_MAIN",
+          "command": "execute if data entity McsaProbe SelectedItem{count:1,id:\"minecraft:bow\"} run say MCSA_USE_bow_BEFORE_MAIN",
+          "server_line": "[08:41:28] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_bow_BEFORE_MAIN"
+        },
+        {
+          "token": "MCSA_USE_bow_BEFORE_SURVIVAL",
+          "command": "execute if entity @a[name=McsaProbe,gamemode=survival] run say MCSA_USE_bow_BEFORE_SURVIVAL",
+          "server_line": "[08:41:28] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_bow_BEFORE_SURVIVAL"
+        },
+        {
+          "token": "MCSA_USE_bow_BEFORE_UNDAMAGED",
+          "command": "execute if items entity McsaProbe weapon.mainhand minecraft:bow[minecraft:damage=0] run say MCSA_USE_bow_BEFORE_UNDAMAGED",
+          "server_line": "[08:41:28] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_bow_BEFORE_UNDAMAGED"
+        },
+        {
+          "token": "MCSA_USE_bow_BEFORE_AMMO",
+          "command": "execute if data entity McsaProbe equipment.offhand{count:3,id:\"minecraft:arrow\"} run say MCSA_USE_bow_BEFORE_AMMO",
+          "server_line": "[08:41:28] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_bow_BEFORE_AMMO"
+        }
+      ],
+      "calibration": {
+        "case": "bow",
+        "waiting_for": "calibration-bow.json",
+        "screenshot": "bow-before.png",
+        "screenshot_sha256": "c2acf0f312c7dd8a27cb58d06b772939473041358f66bff256e65309ca32f4d2",
+        "expected_hands": {
+          "mainhand": {
+            "item": 1008,
+            "count": 1,
+            "damage": 0
+          },
+          "offhand": {
+            "item": 1009,
+            "count": 3
+          }
+        },
+        "mouse_not_pressed": true,
+        "required": [
+          "ground_hud_verified",
+          "inventory_counts_verified",
+          "crosshair_air_verified"
+        ],
+        "ground_hud_verified": true,
+        "inventory_counts_verified": true,
+        "crosshair_air_verified": true
+      }
+    },
+    {
+      "action": {
+        "direction": "toServer",
+        "phase": "play",
+        "id": 41,
+        "bytes": 11,
+        "elapsed": 66.132214239,
+        "stage": "spear-action",
+        "name": "block_dig",
+        "status": 8,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "face": 0,
+        "sequence": 0,
+        "payload_hex": "0800000000000000000000",
+        "pose": [
+          0.5,
+          65.0,
+          0.5,
+          -90.0,
+          0.0
+        ]
+      },
+      "case": "spear",
+      "input": {
+        "case": "spear",
+        "press_requested": 66.07158216300007,
+        "release_requested": 66.15219295700007,
+        "release_completed": 66.18440670900003
+      },
+      "use_item": [],
+      "acknowledgements": [],
+      "arrow_spawns": [],
+      "hand_updates": [
+        {
+          "direction": "toClient",
+          "phase": "play",
+          "name": "set_slot",
+          "id": 20,
+          "bytes": 15,
+          "elapsed": 66.18126708100004,
+          "stage": "spear-action",
+          "revision": 11,
+          "mainhand": {
+            "item": 1450,
+            "count": 1,
+            "enchantments": [
+              {
+                "id": 21,
+                "level": 1
+              }
+            ],
+            "damage": 1
+          }
+        }
+      ],
+      "positive_console_predicates": [
+        {
+          "token": "MCSA_USE_spear_AFTER_MAIN",
+          "command": "execute if data entity McsaProbe SelectedItem{count:1,id:\"minecraft:iron_spear\",components:{\"minecraft:damage\":1}} run say MCSA_USE_spear_AFTER_MAIN",
+          "server_line": "[08:42:04] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_AFTER_MAIN"
+        },
+        {
+          "token": "MCSA_USE_spear_AFTER_OFF",
+          "command": "execute unless data entity McsaProbe equipment.offhand run say MCSA_USE_spear_AFTER_OFF",
+          "server_line": "[08:42:04] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_AFTER_OFF"
+        }
+      ],
+      "displacement": {
+        "initial_pose": [
+          0.5,
+          65.0,
+          0.5,
+          -90.0,
+          0.0
+        ],
+        "first_positive_movement": {
+          "direction": "toServer",
+          "phase": "play",
+          "id": 30,
+          "bytes": 25,
+          "elapsed": 66.19901031600006,
+          "stage": "spear-action",
+          "name": "position",
+          "motion": {
+            "pose": [
+              0.9579747299029482,
+              65.0,
+              0.5,
+              -90.0,
+              0.0
+            ],
+            "ground": true
+          }
+        },
+        "delta_x": 0.4579747299029482
+      },
+      "before_console_predicates": [
+        {
+          "token": "MCSA_USE_spear_BEFORE_MAIN",
+          "command": "execute if data entity McsaProbe SelectedItem{count:1,id:\"minecraft:iron_spear\"} run say MCSA_USE_spear_BEFORE_MAIN",
+          "server_line": "[08:41:50] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_BEFORE_MAIN"
+        },
+        {
+          "token": "MCSA_USE_spear_BEFORE_SURVIVAL",
+          "command": "execute if entity @a[name=McsaProbe,gamemode=survival] run say MCSA_USE_spear_BEFORE_SURVIVAL",
+          "server_line": "[08:41:50] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_BEFORE_SURVIVAL"
+        },
+        {
+          "token": "MCSA_USE_spear_BEFORE_UNDAMAGED",
+          "command": "execute if items entity McsaProbe weapon.mainhand minecraft:iron_spear[minecraft:damage=0] run say MCSA_USE_spear_BEFORE_UNDAMAGED",
+          "server_line": "[08:41:50] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_BEFORE_UNDAMAGED"
+        },
+        {
+          "token": "MCSA_USE_spear_BEFORE_OFF",
+          "command": "execute unless data entity McsaProbe equipment.offhand run say MCSA_USE_spear_BEFORE_OFF",
+          "server_line": "[08:41:50] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_BEFORE_OFF"
+        },
+        {
+          "token": "MCSA_USE_spear_BEFORE_FOOD",
+          "command": "execute if data entity McsaProbe {foodLevel:20} run say MCSA_USE_spear_BEFORE_FOOD",
+          "server_line": "[08:41:50] [Server thread/INFO]: [Not Secure] [Server] MCSA_USE_spear_BEFORE_FOOD"
+        }
+      ],
+      "calibration": {
+        "case": "spear",
+        "waiting_for": "calibration-spear.json",
+        "screenshot": "spear-before.png",
+        "screenshot_sha256": "3df835f9339a2a4d263bcb8241ba5b24b08a48d10ac7a43956b02b7bb6dcbf65",
+        "expected_hands": {
+          "mainhand": {
+            "item": 1450,
+            "count": 1,
+            "damage": 0
+          },
+          "offhand": null
+        },
+        "mouse_not_pressed": true,
+        "required": [
+          "ground_hud_verified",
+          "inventory_counts_verified",
+          "crosshair_air_verified"
+        ],
+        "ground_hud_verified": true,
+        "inventory_counts_verified": true,
+        "crosshair_air_verified": true
+      }
+    }
+  ]
+}

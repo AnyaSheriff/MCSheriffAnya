@@ -1,0 +1,12 @@
+
+running 7 tests
+test client_770::tests::adjacent770_inventory_alias_and_main_hand_roundtrip_without_new_gameplay ... ok
+test client_770::tests::particle770_parameters_follow_the_named_pinned_variants ... ok
+test client_770::tests::profile770_keeps_partial_identity_and_properties_in_its_old_envelope ... ok
+test client_770::tests::spawn_and_velocity770_use_trailing_three_shorts_and_check_bounds ... ok
+test client_770::tests::lava_chicken_disc_has_explicit_view_and_never_reconstructs_from_substitute ... ok
+test client_770::tests::all_canonical_content_has_explicit_770_views_without_changing_ids ... ok
+test client_770::tests::removed_shelf_and_statue_are_visual_blocks_and_not_invalid_block_entities ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 272 filtered out; finished in 0.03s
+

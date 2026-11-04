@@ -188,8 +188,19 @@ impl Mansion {
 }
 
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    template::triangular_attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
+}
+
+fn legacy_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     template::attempt(seed, region_x, region_z, SPACING, SEPARATION, SALT)
 }
+
+/// Мир 26.1.2 сохраняет прежнюю сетку; исправление относится к 26.3.
+pub(super) fn attempt_for(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(terrain.seed(), region_x, region_z) }
+    else { legacy_attempt(terrain.seed(), region_x, region_z) }
+}
+
 
 /// Подходит ли биом (вики: тёмный лес и бледный сад).
 pub fn biome_fits(biome: super::terrain::Biome) -> bool {
@@ -206,12 +217,12 @@ fn floor_height(height: &dyn Fn(i32, i32) -> i32, chunk_x: i32, chunk_z: i32, ro
 
 /// Особняк области обычного мира.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Mansion> {
-    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<Mansion>>>;
+    type Starts = Mutex<HashMap<(i64, u8, i32, i32), Option<Mansion>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -219,7 +230,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     }
 
     let seed = terrain.seed();
-    let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
+    let (chunk_x, chunk_z) = attempt_for(terrain, region_x, region_z);
     let found = biome_fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)
         .then(|| place(seed, chunk_x, chunk_z, &|x, z| terrain.column_at(x, z).height));
 

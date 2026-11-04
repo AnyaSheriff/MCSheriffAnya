@@ -1,0 +1,2 @@
+Независимо закодированные байты прежнего формата: narrow species header, без item-annex. Созданы по собственным прежним write layouts, без вызова нового Mob::write. Fox JSON {} использует существующие serde defaults; mouth stone, неявный count1. Villager flags0 сохраняет plain buy stone2/sell granite3 без новых gossip/summon хвостов. Cow служит следующей записью для проверки точного потребления. Никаких внешних исходников.
+Panda и WanderingTrader: прежнее land-тело с UUIDнулём/chestfalse и старым component-tail (3пустые записи). land.held в этом формате отсутствует.

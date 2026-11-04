@@ -1,0 +1,25 @@
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv11/tools/protocol-bridge)
+error[E0277]: can't compare `Vec<u8>` with `std::borrow::Cow<'_, [u8]>`
+   --> tools/protocol-bridge/src/client_773_tests.rs:212:9
+    |
+212 |         assert_eq!(translate_play(Direction::Clientbound,UPPER,&upper,context).unwrap(),lower);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no implementation for `Vec<u8> == std::borrow::Cow<'_, [u8]>`
+    |
+    = help: the trait `PartialEq<std::borrow::Cow<'_, [u8]>>` is not implemented for `Vec<u8>`
+help: `Vec<u8>` implements trait `PartialEq<Rhs>`
+   --> /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/core/src/bstr/traits.rs:56:8
+    |
+    = note: `PartialEq<ByteStr>`
+    |
+    = note: `PartialEq<ByteString>`
+   --> /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/bstr.rs:519:0
+    |
+    = note: in this macro invocation
+   ::: /rustc/48a229ceaefd4985c50990b14116b6d856af0985/library/alloc/src/bstr.rs:663:0
+    |
+    = note: in this macro invocation
+    = note: this error originates in the macro `assert_eq` which comes from the expansion of the macro `impl_partial_eq` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `mcsa-protocol` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

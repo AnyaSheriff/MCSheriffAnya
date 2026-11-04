@@ -3,12 +3,10 @@
 // Отвечает за приём подключений, чтение/запись пакетов протокола Minecraft
 // и управление состояниями соединения (handshake, status, login, play).
 
-/// Версия игры, под которую сделано ядро, и номер её протокола.
-///
-/// Лежат здесь, а не в одном только ответе списку серверов: по ним же
-/// решается, пускать ли клиента, и по ним же объясняется отказ.
-pub const PROTOCOL_VERSION: i32 = 775;
-pub const VERSION_NAME: &str = "26.1.2";
+/// Внутренний формат игровых пакетов для адаптеров разных клиентов.
+/// Основная версия мира задаётся проверенными настройками и каталогом,
+/// а не этой исторической константой протокола775.
+pub const NATIVE_VERSION: mcsa_protocol::JavaVersion = mcsa_protocol::JavaVersion::V26_1_2;
 
 pub mod listener;
 pub mod varint;
@@ -29,4 +27,5 @@ pub mod keep_alive;
 pub mod connection;
 pub mod online;
 
+mod inbound_runtime;
 pub mod proxy_protocol;

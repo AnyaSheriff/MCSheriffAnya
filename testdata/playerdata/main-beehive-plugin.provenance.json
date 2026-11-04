@@ -1,0 +1,28 @@
+{
+  "source": "Own main 3bb895ee Mob/write, wildlife/write, leash/write_tail, hive/Data/bytes, stackdata/to_bytes; independently assembled Python; no current runtime writer calls",
+  "source_hashes": {
+    "src/mob/mod.rs": "9cefee9fdefa0e501e3acfc6e07ce53bd1b7a047ea8e06353e6878646b16d879",
+    "src/mob/save.rs": "3ad24ae48c4a0ff6f6be9fe3d81c5b38ca286107278b70dba74b3c3f4de40fcf",
+    "src/mob/wildlife.rs": "50817a207206b2ccbbcd7e62f6a5b7ae55567a27c2c3f1244da9ef01005accb4",
+    "src/mob/leash.rs": "26d4bb55b903602149d59a963246ef28390e74ddf0d8334d4cc9d9cdee43bb99",
+    "src/mob/plugin_attributes.rs": "11c7800e539c22b24fea140c8f9c42a41de0fad91bf44df08d598b72d775fc8f",
+    "src/hive.rs": "31c3a52226a1bff7054de371fb6620c6f37f0d9a0fc73c980359141900fa5605",
+    "src/stackdata.rs": "dd2188228cecc29138aab8f419150607d2af47bd870e39fa12c5a8c12e48d170"
+  },
+  "sha256": {
+    "main-bee-plugin.bin": "00c43449e91f10f94e678513feb98b571bf37a4dd8986f386e72519be8ddea26",
+    "main-beehive-plugin.json": "1225c31f84928e3807f5db71b6305583450c18ac2da0b3d9108173eec589dfb1",
+    "main-beehive-plugin.stackdata": "79deccb030fe67e0fe7650e5f72517fccc2ea3701c77807276e719abf9f5b218"
+  },
+  "expected": {
+    "uuid_byte": 71,
+    "name": "Frozen Bee",
+    "health": 29.0,
+    "max_health": 40.0,
+    "age": -123,
+    "nectar": true,
+    "occupant_ticks": 120,
+    "occupant_minimum": 2400
+  },
+  "construction": "script frozen externally in handoff/mainmerge-20261102/freeze-main-hive-fixtures-20261104.py; source fields match pinned own source; fixture is data, not a Minecraft source/report"
+}

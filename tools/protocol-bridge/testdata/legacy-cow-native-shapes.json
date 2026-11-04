@@ -1,0 +1,220 @@
+{
+  "source": "Source-derived shapes of our own properties(), is_default(), send_mob(), send_mob_ticks(); NOT a network recording",
+  "source_file": "src/network/play/mobs.rs",
+  "source_sha256": "0e0c6e6d9f20e763142cfd71f36d92e7ca2f6fde44c0fc9066b8b46524a9f716",
+  "native_protocol": 775,
+  "entity": 47,
+  "cases": [
+    {
+      "name": "ordinary-adult",
+      "properties": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value_hex": "00"
+        },
+        {
+          "index": 2,
+          "serializer": 6,
+          "value_hex": "00"
+        },
+        {
+          "index": 4,
+          "serializer": 8,
+          "value_hex": "00"
+        },
+        {
+          "index": 6,
+          "serializer": 20,
+          "value_hex": "00"
+        },
+        {
+          "index": 9,
+          "serializer": 3,
+          "value_hex": "41200000"
+        },
+        {
+          "index": 10,
+          "serializer": 17,
+          "value_hex": "00"
+        },
+        {
+          "index": 12,
+          "serializer": 1,
+          "value_hex": "00"
+        },
+        {
+          "index": 15,
+          "serializer": 0,
+          "value_hex": "00"
+        },
+        {
+          "index": 17,
+          "serializer": 8,
+          "value_hex": "00"
+        },
+        {
+          "index": 16,
+          "serializer": 8,
+          "value_hex": "00"
+        },
+        {
+          "index": 18,
+          "serializer": 23,
+          "value_hex": "00"
+        },
+        {
+          "index": 19,
+          "serializer": 24,
+          "value_hex": "00"
+        }
+      ],
+      "all_properties_body": "2f0000000206000408000614000903412000000a11000c01000f0000110800100800121700131800ff",
+      "initial_filtered_body": "2f090341200000ff",
+      "expected_initial_packet": "3c2f070241200000ff"
+    },
+    {
+      "name": "silent-noai-adult",
+      "properties": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value_hex": "00"
+        },
+        {
+          "index": 2,
+          "serializer": 6,
+          "value_hex": "00"
+        },
+        {
+          "index": 4,
+          "serializer": 8,
+          "value_hex": "01"
+        },
+        {
+          "index": 6,
+          "serializer": 20,
+          "value_hex": "00"
+        },
+        {
+          "index": 9,
+          "serializer": 3,
+          "value_hex": "41200000"
+        },
+        {
+          "index": 10,
+          "serializer": 17,
+          "value_hex": "00"
+        },
+        {
+          "index": 12,
+          "serializer": 1,
+          "value_hex": "00"
+        },
+        {
+          "index": 15,
+          "serializer": 0,
+          "value_hex": "01"
+        },
+        {
+          "index": 17,
+          "serializer": 8,
+          "value_hex": "00"
+        },
+        {
+          "index": 16,
+          "serializer": 8,
+          "value_hex": "00"
+        },
+        {
+          "index": 18,
+          "serializer": 23,
+          "value_hex": "00"
+        },
+        {
+          "index": 19,
+          "serializer": 24,
+          "value_hex": "00"
+        }
+      ],
+      "all_properties_body": "2f0000000206000408010614000903412000000a11000c01000f0001110800100800121700131800ff",
+      "initial_filtered_body": "2f0408010903412000000f0001ff",
+      "expected_initial_packet": "3c2f0406010702412000000b0001ff"
+    },
+    {
+      "name": "silent-noai-baby",
+      "properties": [
+        {
+          "index": 0,
+          "serializer": 0,
+          "value_hex": "00"
+        },
+        {
+          "index": 2,
+          "serializer": 6,
+          "value_hex": "00"
+        },
+        {
+          "index": 4,
+          "serializer": 8,
+          "value_hex": "01"
+        },
+        {
+          "index": 6,
+          "serializer": 20,
+          "value_hex": "00"
+        },
+        {
+          "index": 9,
+          "serializer": 3,
+          "value_hex": "41200000"
+        },
+        {
+          "index": 10,
+          "serializer": 17,
+          "value_hex": "00"
+        },
+        {
+          "index": 12,
+          "serializer": 1,
+          "value_hex": "00"
+        },
+        {
+          "index": 15,
+          "serializer": 0,
+          "value_hex": "01"
+        },
+        {
+          "index": 17,
+          "serializer": 8,
+          "value_hex": "00"
+        },
+        {
+          "index": 16,
+          "serializer": 8,
+          "value_hex": "01"
+        },
+        {
+          "index": 18,
+          "serializer": 23,
+          "value_hex": "00"
+        },
+        {
+          "index": 19,
+          "serializer": 24,
+          "value_hex": "00"
+        }
+      ],
+      "all_properties_body": "2f0000000206000408010614000903412000000a11000c01000f0001110800100801121700131800ff",
+      "initial_filtered_body": "2f0408010903412000000f0001100801ff",
+      "expected_initial_packet": "3c2f0406010702412000000b00010c0601ff"
+    }
+  ],
+  "zero_reset_body": "2f0614000a11000c0100110800ff",
+  "expected_zero_reset_packet": "3c2fff",
+  "limits": [
+    "Full properties vector is not initial wire: is_default removes defaults before sending",
+    "Variants18/19 are always omitted by current sender and remain unsupported if present in input",
+    "zero_reset models changed path; this is not evidence of a live spawn bug"
+  ]
+}

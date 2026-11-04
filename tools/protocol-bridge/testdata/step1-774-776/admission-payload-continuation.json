@@ -1,0 +1,67 @@
+{
+  "binary_sha256": "39d6e46a61a8272aa94e706b29a92d69697d43d7129ab71c96c3873deb910acd",
+  "checks": [
+    "26.1.2/client774: honest status775",
+    "26.1.2/client774: rejected before LoginStart",
+    "26.1.2/client776: honest status775",
+    "26.1.2/client776: rejected before LoginStart",
+    "26.3/client774: honest status777",
+    "26.3/client774: rejected before LoginStart",
+    "26.3/client776: honest status777",
+    "26.3/client776: rejected before LoginStart"
+  ],
+  "scope": "Admission guard only; gameplay774/776 is unproven and closed",
+  "sessions": [
+    {
+      "primary": "26.1.2",
+      "client": 774,
+      "port": 26190,
+      "status_hex": "00747b226465736372697074696f6e223a7b2274657874223a224d79205275737420536572766572227d2c22706c6179657273223a7b226d6178223a32302c226f6e6c696e65223a307d2c2276657273696f6e223a7b226e616d65223a2232362e312e32222c2270726f746f636f6c223a3737357d7d",
+      "disconnect_hex": "0089017b2274657874223a22d092d0b0d188d0b020d0b2d0b5d180d181d0b8d18f20d0bdd0b520d0bfd0bed0b4d185d0bed0b4d0b8d18220d0bfd0bed0b420d18fd0b4d180d0be20d181d0b5d180d0b2d0b5d180d0b05c6ed09dd183d0b6d0b5d0bd204d696e6563726166742032362e312e322028d0bfd180d0bed182d0bed0bad0bed0bb2037373529227d",
+      "disconnect": "{\"text\":\"Ваша версия не подходит под ядро сервера\\nНужен Minecraft 26.1.2 (протокол 775)\"}",
+      "gameplay_checks": "not run: admission closed"
+    },
+    {
+      "primary": "26.1.2",
+      "client": 776,
+      "port": 26190,
+      "status_hex": "00747b226465736372697074696f6e223a7b2274657874223a224d79205275737420536572766572227d2c22706c6179657273223a7b226d6178223a32302c226f6e6c696e65223a307d2c2276657273696f6e223a7b226e616d65223a2232362e312e32222c2270726f746f636f6c223a3737357d7d",
+      "disconnect_hex": "0089017b2274657874223a22d092d0b0d188d0b020d0b2d0b5d180d181d0b8d18f20d0bdd0b520d0bfd0bed0b4d185d0bed0b4d0b8d18220d0bfd0bed0b420d18fd0b4d180d0be20d181d0b5d180d0b2d0b5d180d0b05c6ed09dd183d0b6d0b5d0bd204d696e6563726166742032362e312e322028d0bfd180d0bed182d0bed0bad0bed0bb2037373529227d",
+      "disconnect": "{\"text\":\"Ваша версия не подходит под ядро сервера\\nНужен Minecraft 26.1.2 (протокол 775)\"}",
+      "gameplay_checks": "not run: admission closed"
+    },
+    {
+      "primary": "26.3",
+      "client": 774,
+      "port": 26191,
+      "status_hex": "00727b226465736372697074696f6e223a7b2274657874223a224d79205275737420536572766572227d2c22706c6179657273223a7b226d6178223a32302c226f6e6c696e65223a307d2c2276657273696f6e223a7b226e616d65223a2232362e33222c2270726f746f636f6c223a3737377d7d",
+      "disconnect_hex": "0087017b2274657874223a22d092d0b0d188d0b020d0b2d0b5d180d181d0b8d18f20d0bdd0b520d0bfd0bed0b4d185d0bed0b4d0b8d18220d0bfd0bed0b420d18fd0b4d180d0be20d181d0b5d180d0b2d0b5d180d0b05c6ed09dd183d0b6d0b5d0bd204d696e6563726166742032362e332028d0bfd180d0bed182d0bed0bad0bed0bb2037373729227d",
+      "disconnect": "{\"text\":\"Ваша версия не подходит под ядро сервера\\nНужен Minecraft 26.3 (протокол 777)\"}",
+      "gameplay_checks": "not run: admission closed"
+    },
+    {
+      "primary": "26.3",
+      "client": 776,
+      "port": 26191,
+      "status_hex": "00727b226465736372697074696f6e223a7b2274657874223a224d79205275737420536572766572227d2c22706c6179657273223a7b226d6178223a32302c226f6e6c696e65223a307d2c2276657273696f6e223a7b226e616d65223a2232362e33222c2270726f746f636f6c223a3737377d7d",
+      "disconnect_hex": "0087017b2274657874223a22d092d0b0d188d0b020d0b2d0b5d180d181d0b8d18f20d0bdd0b520d0bfd0bed0b4d185d0bed0b4d0b8d18220d0bfd0bed0b420d18fd0b4d180d0be20d181d0b5d180d0b2d0b5d180d0b05c6ed09dd183d0b6d0b5d0bd204d696e6563726166742032362e332028d0bfd180d0bed182d0bed0bad0bed0bb2037373729227d",
+      "disconnect": "{\"text\":\"Ваша версия не подходит под ядро сервера\\nНужен Minecraft 26.3 (протокол 777)\"}",
+      "gameplay_checks": "not run: admission closed"
+    }
+  ],
+  "shutdown": [
+    {
+      "primary": "26.1.2",
+      "pid": 34,
+      "exit": 0,
+      "method": "stop-and-stdin-eof"
+    },
+    {
+      "primary": "26.3",
+      "pid": 51,
+      "exit": 0,
+      "method": "stop-and-stdin-eof"
+    }
+  ],
+  "status": "pass"
+}

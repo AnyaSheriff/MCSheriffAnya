@@ -164,7 +164,20 @@ fn fertilize_vine(w: &mut World, mut p: Pos) -> bool {
 
 /// Снежные слои тают только от блочного света, не от солнца.
 pub fn snow_tick(w: &mut World, p: Pos) {
-    if w.light_full(p.0, p.1, p.2).1 > 11 { set(w, p, AIR); }
+    if w.light_full(p.0, p.1, p.2).1 > 11 {
+        set(w, p, AIR);
+        // [проверить] Частота 12: вики подтверждает обнаружение, но не частоту таяния.
+        if w.catalog().changed_rules() { crate::redstone::game_event(w, p, crate::redstone::FREQ_DESTROY); }
+    }
+}
+
+/// 26.3: таяние обычного льда также слышно скалку.
+pub fn ice_tick(w: &mut World, p: Pos) {
+    if !w.catalog().changed_rules() || w.light_full(p.0, p.1, p.2).1 <= 11 { return; }
+    let next = if w.is_nether() { AIR } else { fluids::state_of(fluids::Kind::Water, fluids::SOURCE) };
+    set(w, p, next);
+    // [проверить] Частота 12, как у исчезнувшего слоя снега.
+    crate::redstone::game_event(w, p, crate::redstone::FREQ_DESTROY);
 }
 
 /// Сломанное подводное растение оставляет источник, а не воздушный карман.
@@ -394,6 +407,25 @@ mod tests {
         put(&mut w, (1, 10, 0), "glowstone");
         crate::farming::random_tick(&mut w, p, state("snow"));
         assert_eq!(at(&w, p), AIR, "блочный свет >11 топит весь слой без дропа");
+    }
+
+    #[test]
+    fn melting_emits_a_sculk_event_only_in_preview() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for block in ["snow", "ice"] {
+                let mut w = World::in_memory_with_catalog(Catalog::new(profile));
+                let p = (0,10,0);
+                put(&mut w, (0,9,0), "stone");
+                put(&mut w, p, block);
+                put(&mut w, (1,10,0), "glowstone");
+                w.redstone.sculk.events.clear();
+                if block == "snow" { snow_tick(&mut w, p); } else { ice_tick(&mut w, p); }
+                let preview = profile == Profile::Preview26_3;
+                assert_eq!(w.redstone.sculk.events.iter().any(|e| e.frequency == crate::redstone::FREQ_DESTROY), preview);
+                assert_eq!(name(at(&w,p)), if block == "snow" { "air" } else if preview { "water" } else { "ice" });
+            }
+        }
     }
 
     fn carpet(n: &'static str) {

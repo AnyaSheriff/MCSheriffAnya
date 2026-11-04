@@ -1,0 +1,37 @@
+{
+  "method": "Official birch base columns near natural surface; nearest other surface biome in a 16-block radius; diagnostic, not origin attribution",
+  "bounds_chunks": [
+    12,
+    -51,
+    24,
+    -42
+  ],
+  "bases": [
+    {
+      "base": [
+        332,
+        90,
+        -747
+      ],
+      "nearest_other_biome": [
+        1,
+        "old_growth_birch_forest",
+        331,
+        -748
+      ]
+    },
+    {
+      "base": [
+        268,
+        78,
+        -735
+      ],
+      "nearest_other_biome": [
+        2,
+        "old_growth_birch_forest",
+        266,
+        -737
+      ]
+    }
+  ]
+}

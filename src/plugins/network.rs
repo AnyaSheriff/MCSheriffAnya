@@ -94,7 +94,15 @@ static ACTIVE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::
 struct Budget;
 impl Budget {
     fn acquire() -> Result<Self,String> {
-        ACTIVE.fetch_update(std::sync::atomic::Ordering::Relaxed,std::sync::atomic::Ordering::Relaxed,|value| (value<64).then_some(value+1)).map(|_| Self).map_err(|_| "HTTPS: общий лимит запросов".into())
+        use std::sync::atomic::Ordering::Relaxed;
+        let mut value = ACTIVE.load(Relaxed);
+        while value < 64 {
+            match ACTIVE.compare_exchange_weak(value, value + 1, Relaxed, Relaxed) {
+                Ok(_) => return Ok(Self),
+                Err(current) => value = current,
+            }
+        }
+        Err("HTTPS: общий лимит запросов".into())
     }
 }
 impl Drop for Budget {fn drop(&mut self){ACTIVE.fetch_sub(1,std::sync::atomic::Ordering::Relaxed);}}
@@ -134,7 +142,14 @@ mod tests {
     use super::*;
     #[test]
     fn global_request_budget_is_bounded_and_released() {
-        let budgets: Vec<_> = (0..64).map(|_| Budget::acquire().unwrap()).collect();assert!(Budget::acquire().is_err());drop(budgets);assert!(Budget::acquire().is_ok());
+        let workers: Vec<_> = (0..8).map(|_| std::thread::spawn(|| {
+            (0..16).filter_map(|_| Budget::acquire().ok()).collect::<Vec<_>>()
+        })).collect();
+        let budgets: Vec<_> = workers.into_iter().flat_map(|worker| worker.join().unwrap()).collect();
+        assert_eq!(budgets.len(), 64);
+        assert!(Budget::acquire().is_err());
+        drop(budgets);
+        assert!(Budget::acquire().is_ok());
     }
     #[test]
     fn declaration_needs_explicit_approval_and_exact_host() {

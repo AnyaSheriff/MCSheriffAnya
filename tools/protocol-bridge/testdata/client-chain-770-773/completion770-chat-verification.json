@@ -1,0 +1,412 @@
+{
+  "client_translation_only": true,
+  "no_old_gameplay_profiles": true,
+  "no_new_checklist_items": true,
+  "public_admission": {
+    "775": {
+      "769": "closed",
+      "770": "open",
+      "771": "open",
+      "772": "open",
+      "773": "open",
+      "774": "open",
+      "775": "open",
+      "776": "open"
+    },
+    "777": {
+      "769": "closed",
+      "770": "open",
+      "771": "open",
+      "772": "open",
+      "773": "open",
+      "774": "open",
+      "776": "open",
+      "777": "open"
+    }
+  },
+  "checks": {
+    "rust": 3197,
+    "ignored": 100,
+    "python": 237,
+    "public": 28,
+    "full_regression_sessions": 40,
+    "shared_encrypted_login": true
+  },
+  "evidence": {
+    "770/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-live-v3/770-gui775/result.json",
+        "sha256": "7cabcd82e88fad740ab892af92054e48b47c054ec7f9b76021f4a008c09470b0",
+        "checks": 6,
+        "binary_sha256": "b6f45e0e11509d9762c9de703e94c8d76e2ea864f36e7ec3bc4648c9bdb85051"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-live-v3/770-gameplay775/result.json",
+        "sha256": "d2b76f0c5ed9bbba814bd5dfa58456b4b3172d93e99020cfcda6a9eb32135393",
+        "checks": 11,
+        "binary_sha256": "41a76ba284fd154b1ab8069b677347c1f8152536f758d1f97adbe83728070d66"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-live-v3/770-dimensions775/result.json",
+        "sha256": "83310d7405d7429efed4ae5716c1dac80e4dcbc61be5121dd199c810a9c37fc6",
+        "checks": 5,
+        "binary_sha256": "41a76ba284fd154b1ab8069b677347c1f8152536f758d1f97adbe83728070d66"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-live-v2/770-password775/result.json",
+        "sha256": "568979f249b182612f17d3759b3d81350f0b0579218c62d3240f6ee2a2422bda"
+      },
+      "auth-gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-live-v2/770-auth-gui775/result.json",
+        "sha256": "1d9dced941ce14f9cf138d0ef973864b35597cfb46417e68d2b6c0b17a4ed10a"
+      },
+      "production_auth": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-production-auth/770-password775/result.json",
+        "sha256": "af919285e97f80da30e2d6dacce3295f8015eb897f91ba58f72b29c84c0ac3fc"
+      }
+    },
+    "770/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-live-v3/770-gui777/result.json",
+        "sha256": "db1a8010141731a9f3f3e4d61476239a711196243dc4a179a83c7f9445dcd5e2",
+        "checks": 6,
+        "binary_sha256": "b6f45e0e11509d9762c9de703e94c8d76e2ea864f36e7ec3bc4648c9bdb85051"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-live-v3/770-gameplay777/result.json",
+        "sha256": "191ee8f5eecb529dd8fac2dad565918fa92ab16fd00fe9624daa7aa52a28a83d",
+        "checks": 11,
+        "binary_sha256": "41a76ba284fd154b1ab8069b677347c1f8152536f758d1f97adbe83728070d66"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-live-v3/770-dimensions777/result.json",
+        "sha256": "10d4f178d2f4fb9f1a189bb4bfdaab6e9ad56459c452026967cf211cdc55d6aa",
+        "checks": 5,
+        "binary_sha256": "41a76ba284fd154b1ab8069b677347c1f8152536f758d1f97adbe83728070d66"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-live-v2/770-password777/result.json",
+        "sha256": "974b7f0e6ab301d5c5588376f5e7d62a20e1cff2f3220f2eb2e9750b8bb47690"
+      },
+      "auth-gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-live-v2/770-auth-gui777/result.json",
+        "sha256": "5a301e31382cf2f747286cb16c9634f15d88e398ab13d215df468ae325c06ea2"
+      },
+      "production_auth": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-production-auth/770-password777/result.json",
+        "sha256": "39fa98540a78998590e6cbfa11119dc3dd1373a508757892af792f74de544b93"
+      }
+    },
+    "771/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-gui775/result.json",
+        "sha256": "40dcee73f40a02983556a98392de17a14627a62e7869444a699e72ccebe3f59b",
+        "checks": 6,
+        "binary_sha256": "29b60a64bc1ef5fe51a7388f15e12f657e74b85c0550f7c15c30103a00cdd60e"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-gameplay775/result.json",
+        "sha256": "f151f0808823b41cba17023cd479d7f402d51beadded8db1e39ba19fdf9f9447",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-dimensions775/result.json",
+        "sha256": "9b9853a69c5eb4be38e77e10fbeec087a3b1da34e6161ef711bd3f1d3a75bc10",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-password775/result.json",
+        "sha256": "d9a007ade52003babfc829a98cea4dbcc0887039811b667497fc7546824cfe56",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "771/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-gui777/result.json",
+        "sha256": "1929056ff9c5d784c1e735e103ecfcbb7611edf7e73c01e9214d4d35595d6191",
+        "checks": 6,
+        "binary_sha256": "29b60a64bc1ef5fe51a7388f15e12f657e74b85c0550f7c15c30103a00cdd60e"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-gameplay777/result.json",
+        "sha256": "11262702e54459ff23ad8246fef99efd50d5f4cde6548f97137ab9d9f105c1e0",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-dimensions777/result.json",
+        "sha256": "4d93101502398d6729985a9f6622c986b72e68161abff6a5406e0f6459512639",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/771-password777/result.json",
+        "sha256": "bb6408abce4ef06dd59eb78bf1510a6a724ff77e1fff646029ce0bf0afe391fe",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "772/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-gui775/result.json",
+        "sha256": "cdd5ff91e3e64db02fb1d87baa698e5cd4659c87f45923582938357b3573f4c4",
+        "checks": 6,
+        "binary_sha256": "29b60a64bc1ef5fe51a7388f15e12f657e74b85c0550f7c15c30103a00cdd60e"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-gameplay775/result.json",
+        "sha256": "ea7b49b401d5d289a082f8d72c166bf34483fddfc7f7a34f191453b300ef49f4",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-dimensions775/result.json",
+        "sha256": "3f24f9b8af9059b653da207098cea1e4cb4f0d74de31298fc93b485f81e27bec",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-password775/result.json",
+        "sha256": "0f99606f99b32f731cbd1943e863c8a40277983efa0e7915e0d763c5589ce7bd",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "772/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-gui777/result.json",
+        "sha256": "8790de74dbbe78c9c02a10f85e42238ebb20687b33f3e5505efd63097ecd12c8",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-gameplay777/result.json",
+        "sha256": "b4a4e695e4174a4bed6cbeffa6f6c502874cd0ffb6fe0b5471320157c49e8ff2",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-dimensions777/result.json",
+        "sha256": "cda37d773ad3b6307be3962f7735ca956f6966ed702588b12cf7a6ea0825ac78",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/772-password777/result.json",
+        "sha256": "c4eeda232d34bd24d79b790a5e127f5172f8775e0acc12148e504fe4398dd8a0",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "773/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-gui775/result.json",
+        "sha256": "8f07659aae23d3339c7aeb6e40d51a94612317f581b60216811cb5d15fbf897e",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-gameplay775/result.json",
+        "sha256": "d332825710fc83be632b238bd6b7015df2815db21787e15126d974f79234cd41",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-dimensions775/result.json",
+        "sha256": "db3361a336bce8e7df1050b7926e05885d201d44741607e3cab2b1cd130fd059",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-password775/result.json",
+        "sha256": "75874e6e2f06cdc15760f26a4936f7675bd608c46b457617691a395c6428839e",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "773/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-gui777/result.json",
+        "sha256": "c1f87cb57907a61a10b1c3fc575e350c41fc3fa943a1e8923eec98a8a1367c5c",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-gameplay777/result.json",
+        "sha256": "a7d0085a3bd058112a581c2e312bb89d84737ab129f2785e3f16fdf7bdfafc36",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-dimensions777/result.json",
+        "sha256": "141eafdabeaf52b4deb6834fc62f7c40e8540c3e6267113d32494c77a59d7aa3",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/773-password777/result.json",
+        "sha256": "093149e0ec77bb79d7ef645f179526a26acd2645a6bec3f8eb983e13695f9185",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "774/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-gui775/result.json",
+        "sha256": "10ebf3a950d3222535dc282236abaa70f6d7708d3e498edea81b522280a0ceb7",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-gameplay775/result.json",
+        "sha256": "a2c5df6d952a386fa58df06a88a252651fe24115d73f8b77079740c2ee48e948",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-dimensions775/result.json",
+        "sha256": "7bc411e6c57f075bc4e3198f0315c08626fd3177de614095a81d926b062576b0",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-password775/result.json",
+        "sha256": "744f5dc58ea089f9dd2f86e1040a1f27a277b8df73410062f98c993615a30277",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "774/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-gui777/result.json",
+        "sha256": "091f5ead173f25c7cde5c9d68dd327c4a15cc453428ca228461244be8f7e5a56",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-gameplay777/result.json",
+        "sha256": "0e5f86818df2948bb42663aaa85bc1d2716bc52d1db41480ca3f783432e6e18c",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-dimensions777/result.json",
+        "sha256": "1e739f67e79b6c45ff1381655139693e8962d2fe91845e607c7819b98daf08fe",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/774-password777/result.json",
+        "sha256": "c5f044c42e6cd3207fa95ed8ea9b81866422226b201e215f7fd332dc1d7f63db",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "776/775": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-gui775/result.json",
+        "sha256": "74ed6ce4432ed5627734fd92e4a17530fba409e795ba730f35ae4aca5d565b7e",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-gameplay775/result.json",
+        "sha256": "b479f6e4453553b0fd30e918150ad62de2848ab3d1899adcfc2e78f9047f59bd",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-dimensions775/result.json",
+        "sha256": "1ba45fb54a7f41edc27c8a359e52bfc5a8c3432595ce51ceacd5a6a1711b1988",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-password775/result.json",
+        "sha256": "d4400b43772df48a2b0b1254a25a1f14a54d1b5ac4f4a0f8ed0d4440b9b681f9",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    },
+    "776/777": {
+      "gui": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-gui777/result.json",
+        "sha256": "d34615b0772e69d9ffd30a80e481c6fdee4656f47d6bbf4369323a12e19857a3",
+        "checks": 6,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "gameplay": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-gameplay777/result.json",
+        "sha256": "a5aa201c03e3764065a4c01076fbe0b1a51c6e605a2c00705901806cd1891059",
+        "checks": 11,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "dimensions": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-dimensions777/result.json",
+        "sha256": "85db48c66819804e439bc0f45362a7b369b22df38da3b1b90d95ce3a8e307b12",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      },
+      "password": {
+        "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-regression/776-password777/result.json",
+        "sha256": "f2689699b6e39825485842f10c9fa12c3acf431beab86c9673263ffd6a66927c",
+        "checks": 5,
+        "binary_sha256": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+      }
+    }
+  },
+  "public": {
+    "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-public-final/result.json",
+    "sha256": "a9e7de38e0cd97be5b39df4d7ddfc822a94d4a24f90c5caec45e0a5046851ade"
+  },
+  "fixtures": {
+    "770": "c30a16c84b00725d61a6db1f6395bc1f93396b1d5616ef32dda472502d2713d3",
+    "771": "03b797cfd7010a7e2c3a952a95e587acef5c59d009c1a51a7ea3b81bf34a75ec",
+    "772": "42c126826ec4e2a39e40fb70e475de7fd2baa81f3aedd7a3deb3a97ec6ccc2ac",
+    "773": "b255ed7c945da6168045a3bfd8c874e0df1a941303a055cd924aba4e55e879ec",
+    "774": "f49c99cd5a0d5e41bf07a95be35ca2c18ddca5e1c5759d80afedd9dce872da41",
+    "776": "b315a5d410c666ec1b0bc4b8a38635ec38c765693decc46f15ed82752810bab3"
+  },
+  "final_binaries": {
+    "release": "f8d6d8a6644e4d33214575f9f263347e74a4d042e7b6a7e254b402df0fcba20f",
+    "test": "77e478111f28dd03581e97a1c24af446578c06a3745951c1536fe72149591460"
+  },
+  "source_sha256": {
+    "docs/java-26.3-content.md": "ed93774be638f2137d788b82dd51ce8cfd60ee401a79fcf3cb0c7d512ae10bca",
+    "docs/multiversion-plan.md": "aa8439d8fc36d32facda6563266ef709bfdb6f80af55d013fd5125593ca54ea3",
+    "src/auth/mod.rs": "dd1a45673ac9d9aa47704689d28832b8abc7d9367f35ad93294c2a8898f94355",
+    "src/auth/tests.rs": "d4175ce5c20c267d8a861036c4ba70f23ea940220960c5539402f086871806ee",
+    "src/main.rs": "b0ce0d939ab9700f063e64dc4fbe06753c8a800193dbedfadd427286d0760cc1",
+    "src/network/play.rs": "a3d7e5ad65a60c7a281ea260a9bc6dca27221055149864bd14b62f4abb0e059b",
+    "src/world/mod.rs": "cbf8ba399bd2986b90ce1d42cf9307b2e669ef2430b448bd14d6814c23bb2dff",
+    "tools/protocol-bridge/probe_public_776.py": "40309a5911874ebc056dccfa92eda77a1983f64502c7f3850298846e72313d78",
+    "tools/protocol-bridge/src/client_770_tests.rs": "4c7783f75f2f552133e441b57bfb22e59bbabfe425dd2717666dab2b17fcc094",
+    "tools/protocol-bridge/src/wire.rs": "444067ba1b21c08e1f48697b77710de64c87f57401360fac55ffa77d458dcdf7",
+    "tools/protocol-bridge/testdata/client-chain-770-773/CONTINUED.md": "2e2e20256896da2a466eef8b441c383929a1091b25da62534aac0594dca50737",
+    "tools/protocol-bridge/testdata/step1-774-776/CONTINUED.md": "ea5b3178d562568390ab75e553fb360eac615cec884809c7ba1b1403219472e3",
+    "src/network/play/auth_limbo.rs": "72e8f5740cde601908905d0b75266c589e529ad98019ca67fa9bef6430a992a8",
+    "tools/protocol-bridge/probe_chat_login_770.py": "41445af7bb8a1bdf88a14fe0824db6d920af2373eb15e811cc2bc06f3c6c21e7",
+    "tools/protocol-bridge/probe_chat_login_client_770.py": "e61dd2c17d93834e1ebbcc6e7b7775a7578f9085e8bfaf2cc6e9fb9039c2e6b7"
+  },
+  "failed_reference": {
+    "path": "tools/protocol-bridge/testdata/client-chain-770-773/completion770-chat-official777-reference/result.json",
+    "sha256": "1217d18b5b4fa0d977da2955bce907a28379a8f0769bda4ad766bbc962a7d947"
+  },
+  "notes": [
+    "770 GUI/Play/content/gameplay/recipes/dimensions proof is retained from completion770-live-v3; typed codecs and fixture bytes are unchanged apart from strict empty Configuration-reset controls.",
+    "770 password registration, three wrong attempts, wrong/correct relogin and post-login credential privacy pass on both primaries; opaque1.21.5 GUI registration/wrong/relogin also passes on both.",
+    "Frozen isolated spectator world never creates a shared player, loads playerdata, grants permissions or calls plugins; credentials go only to the existing password service. After success, Configuration resets before real Play.",
+    "771/772/773/774/776 freshly repeat all40 unchanged checklist sessions; original payload files remain byte-for-byte unchanged.",
+    "769 tables/adapter/Play/live checklist remain unfinished; admission retains the existing Russian refusal. Nether/End disk persistence, arbitrary custom forms and exhaustive entity/attribute semantics remain unclaimed.",
+    "One authorized copied official26.3 run, Java25/DEVNULL/26190\u201326191,stopped by PID(exit143),copied world removed.3 preliminary reference checks pass but the later existing slab observer has no target update; this failed run is not used as770 evidence.",
+    "No implementation sources,JAR unpacking,reports,secrets,commit,push or25565 listener."
+  ],
+  "retained_failures": [
+    "completion770-chat-live-v1: isolated negative Login entity ID rejected by existing tracker; use a positive per-connection ID before Configuration reset.",
+    "completion770-chat-official777-reference: existing slab observer IndexError, no target update; no repeated official run.",
+    "Network403 interrupted rust-final and772-gui777; completed artifacts retained, partial logs/folder marked network-interrupted and only incomplete verification resumed."
+  ]
+}

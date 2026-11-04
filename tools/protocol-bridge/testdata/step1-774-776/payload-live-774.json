@@ -1,0 +1,789 @@
+{
+  "packets": [
+    {
+      "hex": "6a0001e1080100310100000000",
+      "label": "complex-item:\"potion_water\""
+    },
+    {
+      "hex": "6a0001e1080100310101000000",
+      "label": "complex-item:\"potion_mundane\""
+    },
+    {
+      "hex": "6a0001e1080100310102000000",
+      "label": "complex-item:\"potion_thick\""
+    },
+    {
+      "hex": "6a0001e1080100310103000000",
+      "label": "complex-item:\"potion_awkward\""
+    },
+    {
+      "hex": "6a0001e1080100310104000000",
+      "label": "complex-item:\"potion_night_vision\""
+    },
+    {
+      "hex": "6a0001e1080100310105000000",
+      "label": "complex-item:\"potion_long_night_vision\""
+    },
+    {
+      "hex": "6a0001e1080100310106000000",
+      "label": "complex-item:\"potion_invisibility\""
+    },
+    {
+      "hex": "6a0001e1080100310107000000",
+      "label": "complex-item:\"potion_long_invisibility\""
+    },
+    {
+      "hex": "6a0001e1080100310108000000",
+      "label": "complex-item:\"potion_leaping\""
+    },
+    {
+      "hex": "6a0001e1080100310109000000",
+      "label": "complex-item:\"potion_long_leaping\""
+    },
+    {
+      "hex": "6a0001e108010031010a000000",
+      "label": "complex-item:\"potion_strong_leaping\""
+    },
+    {
+      "hex": "6a0001e108010031010b000000",
+      "label": "complex-item:\"potion_fire_resistance\""
+    },
+    {
+      "hex": "6a0001e108010031010c000000",
+      "label": "complex-item:\"potion_long_fire_resistance\""
+    },
+    {
+      "hex": "6a0001e108010031010d000000",
+      "label": "complex-item:\"potion_swiftness\""
+    },
+    {
+      "hex": "6a0001e108010031010e000000",
+      "label": "complex-item:\"potion_long_swiftness\""
+    },
+    {
+      "hex": "6a0001e108010031010f000000",
+      "label": "complex-item:\"potion_strong_swiftness\""
+    },
+    {
+      "hex": "6a0001e1080100310110000000",
+      "label": "complex-item:\"potion_slowness\""
+    },
+    {
+      "hex": "6a0001e1080100310111000000",
+      "label": "complex-item:\"potion_long_slowness\""
+    },
+    {
+      "hex": "6a0001e1080100310112000000",
+      "label": "complex-item:\"potion_strong_slowness\""
+    },
+    {
+      "hex": "6a0001e1080100310113000000",
+      "label": "complex-item:\"potion_turtle_master\""
+    },
+    {
+      "hex": "6a0001e1080100310114000000",
+      "label": "complex-item:\"potion_long_turtle_master\""
+    },
+    {
+      "hex": "6a0001e1080100310115000000",
+      "label": "complex-item:\"potion_strong_turtle_master\""
+    },
+    {
+      "hex": "6a0001e1080100310116000000",
+      "label": "complex-item:\"potion_water_breathing\""
+    },
+    {
+      "hex": "6a0001e1080100310117000000",
+      "label": "complex-item:\"potion_long_water_breathing\""
+    },
+    {
+      "hex": "6a0001e1080100310118000000",
+      "label": "complex-item:\"potion_healing\""
+    },
+    {
+      "hex": "6a0001e1080100310119000000",
+      "label": "complex-item:\"potion_strong_healing\""
+    },
+    {
+      "hex": "6a0001e108010031011a000000",
+      "label": "complex-item:\"potion_harming\""
+    },
+    {
+      "hex": "6a0001e108010031011b000000",
+      "label": "complex-item:\"potion_strong_harming\""
+    },
+    {
+      "hex": "6a0001e108010031011c000000",
+      "label": "complex-item:\"potion_poison\""
+    },
+    {
+      "hex": "6a0001e108010031011d000000",
+      "label": "complex-item:\"potion_long_poison\""
+    },
+    {
+      "hex": "6a0001e108010031011e000000",
+      "label": "complex-item:\"potion_strong_poison\""
+    },
+    {
+      "hex": "6a0001e108010031011f000000",
+      "label": "complex-item:\"potion_regeneration\""
+    },
+    {
+      "hex": "6a0001e1080100310120000000",
+      "label": "complex-item:\"potion_long_regeneration\""
+    },
+    {
+      "hex": "6a0001e1080100310121000000",
+      "label": "complex-item:\"potion_strong_regeneration\""
+    },
+    {
+      "hex": "6a0001e1080100310122000000",
+      "label": "complex-item:\"potion_strength\""
+    },
+    {
+      "hex": "6a0001e1080100310123000000",
+      "label": "complex-item:\"potion_long_strength\""
+    },
+    {
+      "hex": "6a0001e1080100310124000000",
+      "label": "complex-item:\"potion_strong_strength\""
+    },
+    {
+      "hex": "6a0001e1080100310125000000",
+      "label": "complex-item:\"potion_weakness\""
+    },
+    {
+      "hex": "6a0001e1080100310126000000",
+      "label": "complex-item:\"potion_long_weakness\""
+    },
+    {
+      "hex": "6a0001e1080100310127000000",
+      "label": "complex-item:\"potion_luck\""
+    },
+    {
+      "hex": "6a0001e1080100310128000000",
+      "label": "complex-item:\"potion_slow_falling\""
+    },
+    {
+      "hex": "6a0001e1080100310129000000",
+      "label": "complex-item:\"potion_long_slow_falling\""
+    },
+    {
+      "hex": "6a0001e108010031012a000000",
+      "label": "complex-item:\"potion_wind_charged\""
+    },
+    {
+      "hex": "6a0001e108010031012b000000",
+      "label": "complex-item:\"potion_weaving\""
+    },
+    {
+      "hex": "6a0001e108010031012c000000",
+      "label": "complex-item:\"potion_oozing\""
+    },
+    {
+      "hex": "6a0001e108010031012d000000",
+      "label": "complex-item:\"potion_infested\""
+    },
+    {
+      "hex": "6a0001b20701001001020a6d6373613a70726f62654022000000000000000100",
+      "label": "complex-item:\"attribute_attack\""
+    },
+    {
+      "hex": "6a0001b20701001001160a6d6373613a70726f62653fd0000000000000020200",
+      "label": "complex-item:\"attribute_speed\""
+    },
+    {
+      "hex": "6a00058d0a010031011c0100123456010102a3060001010000",
+      "label": "complex-item:\"potion_custom\""
+    },
+    {
+      "hex": "6a0001e108020031010d000000323fc00000",
+      "label": "complex-item:\"potion_scale\""
+    },
+    {
+      "hex": "6a0001c409010034020a46697273742070616765001dd092d182d0bed180d0b0d18f20d181d182d180d0b0d0bdd0b8d186d0b000",
+      "label": "complex-item:\"writable\""
+    },
+    {
+      "hex": "6a0001c5090100350553746f72790004416c6578000108000a466972737420706167650000",
+      "label": "complex-item:\"written\""
+    },
+    {
+      "hex": "6a0001840801001200020334",
+      "label": "complex-item:\"tooltip\""
+    },
+    {
+      "hex": "6a0001fd06010017074020000001",
+      "label": "complex-item:\"food\""
+    },
+    {
+      "hex": "6a00010101000501003f800000",
+      "label": "component:5"
+    },
+    {
+      "hex": "6a0001010100073f400000",
+      "label": "component:7"
+    },
+    {
+      "hex": "6a00010101000a0178",
+      "label": "component:10"
+    },
+    {
+      "hex": "6a000101010011013f800000010101017801ffffffff",
+      "label": "component:17"
+    },
+    {
+      "hex": "6a000101010022",
+      "label": "component:34"
+    },
+    {
+      "hex": "6a0001010100440000000000000000",
+      "label": "component:70"
+    },
+    {
+      "hex": "6a0001010100060a0800047465787400014109000565787472610a0000000108000474657874000142010004626f6c6401000a000b686f7665725f6576656e74080006616374696f6e000973686f775f7465787408000576616c7565000c4d43534120746f6f6c7469700000",
+      "label": "rich-name"
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000704",
+      "label": "particle:\"cloud\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007011b",
+      "label": "particle:\"block\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007021b",
+      "label": "particle:\"block_marker\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000071d1b",
+      "label": "particle:\"falling_dust\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000076d1b",
+      "label": "particle:\"dust_pillar\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007711b",
+      "label": "particle:\"block_crumble\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070effff7f3f3fc00000",
+      "label": "particle:\"dust\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000070fffff0000ff0000ff3fc00000",
+      "label": "particle:\"dust_color_transition\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000715ffff7f3f",
+      "label": "particle:\"entity_effect\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072f05e3010000",
+      "label": "particle:\"item\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072f01a80701000307",
+      "label": "particle:\"item_damage\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007263f000000",
+      "label": "particle:\"sculk_charge\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000076707",
+      "label": "particle:\"shriek\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007300000000080000020500a",
+      "label": "particle:\"vibration_block\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000073140000000000000004054000000000000400000000000000000ff00000a",
+      "label": "particle:\"trail\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072400ff0000",
+      "label": "particle:\"tinted_leaves\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e00000000000007083f000000",
+      "label": "particle:\"dragon_breath\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000071000ff00003f000000",
+      "label": "particle:\"effect\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072e00ff00003f000000",
+      "label": "particle:\"instant_effect\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e000000000000072affff7f3f",
+      "label": "particle:\"flash\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000004",
+      "label": "particle:\"cloud_zero\""
+    },
+    {
+      "hex": "2e01003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000104",
+      "label": "particle:\"cloud_one\""
+    },
+    {
+      "hex": "2e00003ff8000000000000405440000000000040040000000000003e8000003f0000003f4000003e0000000000000704",
+      "label": "particle:\"cloud_normal\""
+    },
+    {
+      "hex": "01f02e0606060606060606060606060606060653400c0000000000004050000000000000400c0000000000000000000000",
+      "label": "mannequin-spawn"
+    },
+    {
+      "hex": "61f02e11250000000000000000ff",
+      "label": "serializer41"
+    },
+    {
+      "hex": "4b01f02e",
+      "label": "mannequin-remove"
+    },
+    {
+      "hex": "06fffffe3fffff2040290a00",
+      "label": "block-entity:\"suspicious_sand\""
+    },
+    {
+      "hex": "06fffffdffffff2040280a010015616c69676e5f6974656d735f746f5f626f74746f6d000900054974656d73000000000000",
+      "label": "block-entity:\"oak_shelf\""
+    },
+    {
+      "hex": "06fffffcffffff1040140a0a000a636f6d706f6e656e74730000",
+      "label": "block-entity:\"white_banner\""
+    },
+    {
+      "hex": "06fffffdbfffff2040270a00",
+      "label": "block-entity:\"chiseled_bookshelf\""
+    },
+    {
+      "hex": "06fffffdffffff1040180a00",
+      "label": "block-entity:\"shulker_box\""
+    },
+    {
+      "hex": "06fffffcffffff2040240a00",
+      "label": "block-entity:\"calibrated_sculk_sensor\""
+    },
+    {
+      "hex": "06ffffff3fffff00400d0a00",
+      "label": "block-entity:\"enchanting_table\""
+    },
+    {
+      "hex": "06fffffcbfffff2040230a00",
+      "label": "block-entity:\"sculk_sensor\""
+    },
+    {
+      "hex": "06fffffc3fffff0040000a00",
+      "label": "block-entity:\"furnace\""
+    },
+    {
+      "hex": "06ffffffffffff1040200a0800056a6f696e740008726f6c6c61626c650800046e616d65000f6d696e6563726166743a656d707479080004706f6f6c000f6d696e6563726166743a656d70747908000b66696e616c5f7374617465000d6d696e6563726166743a616972030012706c6163656d656e745f7072696f726974790000000003001273656c656374696f6e5f7072696f7269747900000000080006746172676574000f6d696e6563726166743a656d70747900",
+      "label": "block-entity:\"jigsaw\""
+    },
+    {
+      "hex": "06ffffffbfffff10401f0a00",
+      "label": "block-entity:\"bell\""
+    },
+    {
+      "hex": "06ffffff7fffff10401e0a00",
+      "label": "block-entity:\"lectern\""
+    },
+    {
+      "hex": "06ffffff3fffff10401d0a00",
+      "label": "block-entity:\"blast_furnace\""
+    },
+    {
+      "hex": "06fffffeffffff10401c0a00",
+      "label": "block-entity:\"smoker\""
+    },
+    {
+      "hex": "06fffffd7fffff0040050a00",
+      "label": "block-entity:\"dispenser\""
+    },
+    {
+      "hex": "06fffffc3fffff1040110a00",
+      "label": "block-entity:\"daylight_detector\""
+    },
+    {
+      "hex": "06ffffff7fffff00400e0a00",
+      "label": "block-entity:\"end_portal\""
+    },
+    {
+      "hex": "06ffffffffffff0040100a00",
+      "label": "block-entity:\"skeleton_skull\""
+    },
+    {
+      "hex": "06fffffcbfffff1040130a00",
+      "label": "block-entity:\"comparator\""
+    },
+    {
+      "hex": "06fffffe7fffff0040090a0200114d61784e6561726279456e74697469657300060200135265717569726564506c6179657252616e6765001002000a537061776e436f756e74000402000d4d6178537061776e44656c6179032002000a537061776e52616e6765000402000544656c6179001402000d4d696e537061776e44656c617900c800",
+      "label": "block-entity:\"spawner\""
+    },
+    {
+      "hex": "06fffffdbfffff1040170a00",
+      "label": "block-entity:\"command_block\""
+    },
+    {
+      "hex": "06fffffd3fffff1040150a0800086d6574616461746100000800066d6972726f7200044e4f4e4501000e69676e6f7265456e74697469657301010007706f776572656400040004736565640000000000000000080006617574686f720000080008726f746174696f6e00044e4f4e45030004706f7358000000000800046d6f646500044c4f4144030004706f73590000000103000573697a655800000000030004706f735a00000000050009696e746567726974793f80000001000773686f77616972000800046e616d6500000100067374726963740003000573697a65590000000003000573697a655a0000000001000f73686f77626f756e64696e67626f780100",
+      "label": "block-entity:\"structure_block\""
+    },
+    {
+      "hex": "06fffffdffffff0040070a0a00096261636b5f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000001000869735f7761786564000a000a66726f6e745f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d657373616765730800000004000a4d4353412070726f62650000000000000000",
+      "label": "block-entity:\"oak_sign\""
+    },
+    {
+      "hex": "06fffffeffffff00400c0a00",
+      "label": "block-entity:\"brewing_stand\""
+    },
+    {
+      "hex": "06fffffc7fffff0040010a00",
+      "label": "block-entity:\"chest\""
+    },
+    {
+      "hex": "06fffffcbfffff0040020a00",
+      "label": "block-entity:\"trapped_chest\""
+    },
+    {
+      "hex": "06fffffd3fffff0040040a00",
+      "label": "block-entity:\"jukebox\""
+    },
+    {
+      "hex": "06fffffcffffff0040030a00",
+      "label": "block-entity:\"ender_chest\""
+    },
+    {
+      "hex": "06fffffe3fffff0040080a0a00096261636b5f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000001000869735f7761786564000a000a66726f6e745f746578740100106861735f676c6f77696e675f7465787400080005636f6c6f720005626c61636b0900086d65737361676573080000000400000000000000000000",
+      "label": "block-entity:\"oak_hanging_sign\""
+    },
+    {
+      "hex": "06fffffe7fffff10401a0a00",
+      "label": "block-entity:\"conduit\""
+    },
+    {
+      "hex": "06fffffebfffff10401b0a00",
+      "label": "block-entity:\"barrel\""
+    },
+    {
+      "hex": "06fffffdbfffff0040060a00",
+      "label": "block-entity:\"dropper\""
+    },
+    {
+      "hex": "06fffffc7fffff1040120a00",
+      "label": "block-entity:\"hopper\""
+    },
+    {
+      "hex": "06ffffffbfffff00400f0a0300064c6576656c730000000000",
+      "label": "block-entity:\"beacon\""
+    },
+    {
+      "hex": "06fffffe7fffff20402a0a00",
+      "label": "block-entity:\"decorated_pot\""
+    },
+    {
+      "hex": "06fffffd7fffff1040160a040003416765000000000000001a00",
+      "label": "block-entity:\"end_gateway\""
+    },
+    {
+      "hex": "06fffffc7fffff2040220a00",
+      "label": "block-entity:\"beehive\""
+    },
+    {
+      "hex": "06fffffd7fffff2040260a00",
+      "label": "block-entity:\"sculk_shrieker\""
+    },
+    {
+      "hex": "06fffffd3fffff2040250a00",
+      "label": "block-entity:\"sculk_catalyst\""
+    },
+    {
+      "hex": "06fffffc3fffff2040210a0900054974656d73000000000000",
+      "label": "block-entity:\"campfire\""
+    },
+    {
+      "hex": "06ffffff3fffff20402d0a0a000b7368617265645f646174610000",
+      "label": "block-entity:\"vault\""
+    },
+    {
+      "hex": "06fffffeffffff20402c0a0a000a737061776e5f646174610a0006656e74697479000000",
+      "label": "block-entity:\"trial_spawner\""
+    },
+    {
+      "hex": "06fffffebfffff20402b0a00",
+      "label": "block-entity:\"crafter\""
+    },
+    {
+      "hex": "06fffffdffffff2040280a0900054974656d730a00000001030005636f756e74000000010800026964000f6d696e6563726166743a73746f6e65010004536c6f74000000",
+      "label": "populated-block-entity:oak_shelf"
+    },
+    {
+      "hex": "06fffffc3fffff2040210a0900054974656d730a00000001030005636f756e7400000001080002696400116d696e6563726166743a636869636b656e010004536c6f74000000",
+      "label": "populated-block-entity:campfire"
+    },
+    {
+      "hex": "06ffffff3fffff20402d0a0a000b7368617265645f646174610a000c646973706c61795f6974656d030005636f756e7400000001080002696400116d696e6563726166743a6469616d6f6e64000000",
+      "label": "populated-block-entity:vault"
+    },
+    {
+      "hex": "06fffffe7fffff0040090a0a0009537061776e446174610a0006656e746974790800026964000d6d696e6563726166743a706967000000",
+      "label": "populated-block-entity:spawner"
+    },
+    {
+      "hex": "06fffffeffffff20402c0a0a000a737061776e5f646174610a0006656e746974790800026964000d6d696e6563726166743a706967000000",
+      "label": "populated-block-entity:trial_spawner"
+    },
+    {
+      "hex": "6a000101010033011607",
+      "label": "primary-component:53"
+    },
+    {
+      "hex": "6a0001010100360101",
+      "label": "primary-component:56"
+    },
+    {
+      "hex": "6a0001010100370a0800116d696e6563726166743a6f616b5f6c6f6700046178697300",
+      "label": "primary-component:57"
+    },
+    {
+      "hex": "6a0001010100390a030003416765000000000500064865616c7468412000000100044e6f41490000",
+      "label": "primary-component:59"
+    },
+    {
+      "hex": "6a00010101003b0101",
+      "label": "primary-component:61"
+    },
+    {
+      "hex": "6a00010101004009080000000100146d696e6563726166743a6f616b5f706c616e6b73",
+      "label": "primary-component:66"
+    },
+    {
+      "hex": "6a000101010042020100ff0000000101",
+      "label": "primary-component:68"
+    },
+    {
+      "hex": "6a0001010100430101020100ff0000000101",
+      "label": "primary-component:69"
+    },
+    {
+      "hex": "6a00010101004601010f",
+      "label": "primary-component:72"
+    },
+    {
+      "hex": "6a0001010100480401010101",
+      "label": "primary-component:74"
+    },
+    {
+      "hex": "6a00010101004a010b686f6e65795f6c6576656c0135",
+      "label": "primary-component:76"
+    },
+    {
+      "hex": "6a00010101004b010a0800026964000d6d696e6563726166743a626565030003416765000000000014e012",
+      "label": "primary-component:77"
+    },
+    {
+      "hex": "6a00010101005401",
+      "label": "primary-component:86"
+    },
+    {
+      "hex": "6a00010101005602",
+      "label": "primary-component:88"
+    },
+    {
+      "hex": "6a00010101005703",
+      "label": "primary-component:89"
+    },
+    {
+      "hex": "6a00010101005804",
+      "label": "primary-component:90"
+    },
+    {
+      "hex": "6a00010101006301",
+      "label": "primary-component:104"
+    },
+    {
+      "hex": "06fffffc3fffff3040300a00",
+      "label": "block-entity:copper_golem_statue"
+    },
+    {
+      "hex": "01d42fdd708f9d8704439b88afaad9b2d7b315054004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"armor_stand\":0"
+    },
+    {
+      "hex": "61d42f050801090341a000000f000510094120000041a0000041f00000ff",
+      "label": "entity:\"armor_stand\":1"
+    },
+    {
+      "hex": "61d42f050801090341a000000f000510094120000041a0000041f00000ff",
+      "label": "entity:\"armor_stand\":2"
+    },
+    {
+      "hex": "01d52f788f5482f4e84cd0b4acedc14e6149a81e4004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"cow\":0"
+    },
+    {
+      "hex": "61d52f0206010800084d43534120636f770308010903412000000f0001100801ff",
+      "label": "entity:\"cow\":1"
+    },
+    {
+      "hex": "61d52f0206010800084d43534120636f770308010903412000000f0001100801ff",
+      "label": "entity:\"cow\":2"
+    },
+    {
+      "hex": "01d62fb7f4f0a70b6b4260945b248a8bd5a389754004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"slime\":0"
+    },
+    {
+      "hex": "61d62f0903418000000f0001100104ff",
+      "label": "entity:\"slime\":1"
+    },
+    {
+      "hex": "61d62f0903418000000f0001100104ff",
+      "label": "entity:\"slime\":2"
+    },
+    {
+      "hex": "01d72f5314770d6d2c41d98c10057de3f72281504004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"magma_cube\":0"
+    },
+    {
+      "hex": "61d72f0903411000000f0001100103ff",
+      "label": "entity:\"magma_cube\":1"
+    },
+    {
+      "hex": "61d72f0903411000000f0001100103ff",
+      "label": "entity:\"magma_cube\":2"
+    },
+    {
+      "hex": "01d82f204423be5b584cc0bb6788c385062a7033400400000000000040540000000000004004000000000000000000008801",
+      "label": "entity:\"falling_block\":0"
+    },
+    {
+      "hex": "61d82f050801ff",
+      "label": "entity:\"falling_block\":1"
+    },
+    {
+      "hex": "61d82f050801ff",
+      "label": "entity:\"falling_block\":2"
+    },
+    {
+      "hex": "01d92f4d89d2ad66d24daab7c5a2b455453bb7474004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"item\":0"
+    },
+    {
+      "hex": "61d92f050801080705e3010000ff",
+      "label": "entity:\"item\":1"
+    },
+    {
+      "hex": "61d92f050801080705e3010000ff",
+      "label": "entity:\"item\":2"
+    },
+    {
+      "hex": "01da2f66fae6a72fd943e6b5ec9cbf1756b9020640040000000000004054000000000000400400000000000019057ffefffe00000000",
+      "label": "entity:\"arrow\":0"
+    },
+    {
+      "hex": "61da2f050801ff",
+      "label": "entity:\"arrow\":1"
+    },
+    {
+      "hex": "61da2f050801ff",
+      "label": "entity:\"arrow\":2"
+    },
+    {
+      "hex": "01db2fddb0d91a11474fc087bb946b4f8cebdd5d4000000000000000405400000000000040000000000000000000800002",
+      "label": "entity:\"painting\":0"
+    },
+    {
+      "hex": "61db2f080c02091e19ff",
+      "label": "entity:\"painting\":1"
+    },
+    {
+      "hex": "61db2f080c02091e19ff",
+      "label": "entity:\"painting\":2"
+    },
+    {
+      "hex": "01dc2fd029492d27514a73a51914bbba811e1294014004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"wolf\":0"
+    },
+    {
+      "hex": "61dc2f0903410000000f0001110005120d0100000001000000020000000300000004ff",
+      "label": "entity:\"wolf\":1"
+    },
+    {
+      "hex": "61dc2f0903410000000f0001110005120d0100000001000000020000000300000004ff",
+      "label": "entity:\"wolf\":2"
+    },
+    {
+      "hex": "01dd2f6eae8159e1dd4c469e418a97efdc5dea294004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"enderman\":0"
+    },
+    {
+      "hex": "61dd2f0903422000000f0001100f1bff",
+      "label": "entity:\"enderman\":1"
+    },
+    {
+      "hex": "61dd2f0903422000000f0001100f1bff",
+      "label": "entity:\"enderman\":2"
+    },
+    {
+      "hex": "01de2fd36706a68fec4369933d41fd7693cb1f0f4004000000000000405400000000000040040000000000000000000000",
+      "label": "entity:\"block_display\":0"
+    },
+    {
+      "hex": "61de2f170e1bff",
+      "label": "entity:\"block_display\":1"
+    },
+    {
+      "hex": "61de2f080100170e1bff",
+      "label": "entity:\"block_display\":2"
+    },
+    {
+      "hex": "4b0bd42fd52fd62fd72fd82fd92fda2fdb2fdc2fdd2fde2f",
+      "label": "entity-samples-remove"
+    },
+    {
+      "hex": "01b8302828282828282828282828282828282859400c000000000000405000000000000040160000000000000000000000",
+      "label": "preview-entity:157:spawn"
+    },
+    {
+      "hex": "61b830000001ff",
+      "label": "preview-entity:157:metadata"
+    },
+    {
+      "hex": "01b930292929292929292929292929292929295a400c0000000000004050000000000000401a0000000000000000000000",
+      "label": "preview-entity:158:spawn"
+    },
+    {
+      "hex": "61b930000001ff",
+      "label": "preview-entity:158:metadata"
+    },
+    {
+      "hex": "01ba302a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a05400c0000000000004050000000000000401e0000000000000000000000",
+      "label": "preview-entity:159:spawn"
+    },
+    {
+      "hex": "61ba30ff",
+      "label": "preview-entity:159:metadata"
+    },
+    {
+      "hex": "01bb302b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b75400c000000000000405000000000000040210000000000000000000000",
+      "label": "preview-entity:160:spawn"
+    },
+    {
+      "hex": "61bb30100102ff",
+      "label": "preview-entity:160:metadata"
+    },
+    {
+      "hex": "4b04b830b930ba30bb30",
+      "label": "preview-entities-remove"
+    }
+  ],
+  "protocol": 774
+}

@@ -1,0 +1,42 @@
+[23:56:39] [Server thread/INFO]: config/mcsa.properties: дописаны новые настройки: viaproxy, viaproxy-memory, console-colors, offline-license-mode, tab-tps, debug, prefetch-at-once, bedrock-online-mode, bedrock-show-coordinates, autumn-forests, pink-cherry-groves, text-info, portal-delay, portal-min-width, portal-min-height, portal-max-width, portal-max-height
+[23:56:39] [Server thread/INFO]: Запуск сервера MCSheriffAnya
+[23:56:39] [Server thread/INFO]: Ядер: 12. Такту отведено ядро 11, остальные — сети и складыванию мира
+[23:56:39] [Server thread/INFO]: Загрузка настроек
+[23:56:39] [Server thread/INFO]: Создана директория: world
+[23:56:39] [Server thread/INFO]: Создана директория: logs
+[23:56:39] [Server thread/INFO]: Создана директория: world/playerdata
+[23:56:39] [Server thread/INFO]: Создана директория: skins
+[23:56:39] [Server thread/INFO]: Основная версия игры: Minecraft Java 26.1.2 (протокол 775)
+[23:56:39] [Server thread/INFO]: Сервер запущен на *:26127
+[23:56:39] [Server thread/INFO]: Подготовка мира "world"
+[23:56:39] [Server thread/INFO]: Семя мира: 1
+[23:56:39] [Server thread/INFO]: Тип мира: minecraft:flat
+[23:56:39] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_nether"
+[23:56:39] [Server thread/INFO]: Семя мира: 1
+[23:56:39] [Server thread/INFO]: Тип мира: minecraft:the_nether
+[23:56:39] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_end"
+[23:56:39] [Server thread/INFO]: Семя мира: 1
+[23:56:39] [Server thread/INFO]: Тип мира: minecraft:the_end
+[23:56:39] [Server thread/INFO]: Скины: в config/skins.toml дописаны настройки скинов Bedrock
+[23:56:39] [Server thread/INFO]: Плагины: папки plugins/ и modules/ пусты
+[23:56:39] [Server thread/INFO]: Готово (0.033 с)! Чтобы узнать команды, набери help
+[23:56:39] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:56:39] [Server thread/INFO]: Скины: скина McsaProbe нет ни в одном источнике
+[23:56:39] [Server thread/INFO]: Точка появления: 0.5 63 0.5
+[23:56:39] [Server thread/INFO]: McsaProbe[/127.0.0.1:42174 → localhost:26127] вошёл с номером сущности 1 в (0.5, 63.0, 0.5)
+[23:56:40] [Server thread/INFO]: McsaProbe потерял соединение: broken pipe
+[23:56:40] [Server thread/INFO]: McsaProbe зашёл на сервер
+[23:56:40] [Server thread/INFO]: McsaProbe вышел
+[23:56:40] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:56:41] [Server thread/INFO]: Опознаватель игрока McsaProbe — f0856c05-7f77-39b1-b600-5719f4e70be8
+[23:56:41] [Server thread/INFO]: McsaProbe[/127.0.0.1:60562 → localhost:26127] вошёл с номером сущности 3 в (0.5, 63.0, 0.5)
+[23:56:42] [Server thread/INFO]: McsaProbe зашёл на сервер
+[23:56:42] [Server thread/INFO]: Останавливаю сервер
+[23:56:42] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[23:56:42] [Server thread/INFO]: Остановка сервера
+[23:56:42] [Server thread/INFO]: Сохранение игроков
+[23:56:42] [Server thread/INFO]: McsaProbe выгнан: Сервер остановлен
+[23:56:42] [Server thread/INFO]: McsaProbe потерял соединение: broken pipe
+[23:56:42] [Server thread/INFO]: McsaProbe вышел
+[23:56:42] [Server thread/INFO]: Сохранение мира
+[23:56:42] [Server thread/INFO]: Мир сохранён

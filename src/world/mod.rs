@@ -18,6 +18,13 @@
 // терять постройки при падении не хочется.
 
 mod codec;
+pub mod profile;
+mod sulfur_caves;
+pub mod abandoned_camp;
+pub(crate) mod startup;
+#[cfg(target_os = "linux")]
+pub(crate) mod migration;
+pub(crate) mod snapshot;
 mod plugin_controls;
 /// Настройка ядра применяется только к вновь сгенерированным чанкам.
 pub static ORE_RETENTION_PERCENT: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(100);
@@ -57,9 +64,12 @@ pub mod ocean;
 pub mod region;
 pub mod terrain;
 pub mod trees;
+mod tree_shapes_26_3;
 pub mod underground;
 mod writer;
 pub mod vegetation;
+
+type GatewayExit = (i32,i32,i32,bool);
 
 use std::cell::Cell;
 use std::cmp::Reverse;
@@ -473,6 +483,8 @@ pub(crate) struct Chunk {
     hives: HashMap<(i32, i32, i32), crate::hive::Data>,
     archaeology: HashMap<(i32,i32,i32),crate::archaeology::Data>,
     pots: HashMap<(i32,i32,i32), [i32; 4]>,
+    gateways: HashMap<(i32,i32,i32), GatewayExit>,
+    pot_details: HashMap<(i32,i32,i32), crate::stackdata::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -571,12 +583,18 @@ impl Chunk {
             hives: HashMap::new(),
             archaeology: HashMap::new(),
             pots: HashMap::new(),
+            gateways: HashMap::new(),
+            pot_details: HashMap::new(),
         }
     }
 
     /// Считает собственный свет чанка по его нынешним блокам.
     fn light_up(&mut self) {
         self.light = Some((self.revision, Arc::new(light::chunk_light(&self.sections))));
+    }
+
+    fn light_up_with_catalog(&mut self, catalog: crate::gameplay_catalog::Catalog) {
+        self.light = Some((self.revision, Arc::new(light::chunk_light_with_catalog(&self.sections, catalog))));
     }
 
     /// Собственный свет, если он не устарел.
@@ -679,14 +697,24 @@ impl Chunk {
                         surface,
                         matches!(generator, Generator::Normal(_)).then_some(&middle),
                     );
+
+                    // Серные пещеры 26.2 (только профиль Preview26_3) занимают клетки поверх
+                    // обычных пещерных биомов.
+                    if let Generator::Normal(terrain) = generator
+                        && terrain.preview()
+                    {
+                        chunk.fill_sulfur_column((local_x / 4) as usize, (local_z / 4) as usize, terrain, &middle, x + 2, z + 2);
+                    }
                 }
             }
         }
 
         // Руда и пятна камня — после рельефа и пещер: им надо знать, где
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
+        underground::prepare_ore_hosts(generator, &mut chunk, chunk_x, chunk_z);
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
+        sulfur_caves::decorate(generator, &mut chunk, chunk_x, chunk_z);
         chunk
     }
 
@@ -694,7 +722,6 @@ impl Chunk {
         // У Незера пол и потолок — он складывается целиком своим путём.
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
-            nether_fossil::build(nether, &mut chunk, chunk_x, chunk_z);
 
             // Разрушенные порталы Незера (ruined_portal.rs).
             ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);
@@ -752,6 +779,8 @@ impl Chunk {
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         structure_terrain::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Заброшенные лагеря кладутся после подгонки рельефа, чтобы она не стёрла пол и добычу.
+        abandoned_camp::build(generator, &mut chunk, chunk_x, chunk_z);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
         // Лесные особняки — после деревьев: воздух комнат вырезает деревья
         // в рамке, фундамент заливает стволы под полом (mansion.rs).
@@ -811,6 +840,19 @@ impl Chunk {
                 .map_or(surface, |cave| cave.number() as BiomeId);
 
             self.biomes[biome_cell(layer, cell_x, cell_z)] = biome;
+        }
+    }
+
+    /// Серные пещеры в столбце клеток 4×4: клетка с серой берёт номер `sulfur_caves`.
+    fn fill_sulfur_column(&mut self, cell_x: usize, cell_z: usize, terrain: &Terrain, column: &terrain::Column, x: i32, z: i32) {
+        let number = terrain::Biome::SulfurCaves.number() as BiomeId;
+
+        for layer in 0..BIOME_LAYERS {
+            let y = MIN_Y + layer as i32 * 4 + 2;
+
+            if terrain.sulfur_cell(column, x, y, z) {
+                self.biomes[biome_cell(layer, cell_x, cell_z)] = number;
+            }
         }
     }
 
@@ -985,7 +1027,8 @@ impl Chunk {
             }
         }
 
-        if crate::blocks::block_at_state(state) != Some("decorated_pot") { self.pots.remove(&(x,y,z)); }
+        if crate::blocks::block_at_state(state) != Some("end_gateway") { self.gateways.remove(&(x,y,z)); }
+        if crate::blocks::block_at_state(state) != Some("decorated_pot") { self.pots.remove(&(x,y,z)); self.pot_details.remove(&(x,y,z)); }
         if crate::hive::is_hive(state) != crate::hive::is_hive(old) {
             let place=(x.rem_euclid(CHUNK_SIZE),y,z.rem_euclid(CHUNK_SIZE));
             if crate::hive::is_hive(state) { self.hives.insert(place,crate::hive::Data::default()); }
@@ -1210,7 +1253,8 @@ const REGIONS: &str = "region";
 /// Четвёртая версия — палитры с битовыми номерами (codec.rs); файл региона
 /// `.mcs` сжимает её ещё и zstd. Первые три версии писались в `.rcw`, их
 /// читает только перенос мира (legacy.rs).
-const CHUNK_VERSION: u8 = 4;
+// Пятая версия допускает дополнение предметов моба; четвёртая читается без потерь.
+const CHUNK_VERSION: u8 = 5;
 
 /// Вторая версия: состояния по два байта, биом один на столбец клетки 4×4.
 /// Такие чанки читаются, их биом растягивается на всю высоту.
@@ -1224,6 +1268,7 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    catalog: crate::gameplay_catalog::Catalog,
     pub plugin_events_enabled: bool,
     pub plugin_game_events: Vec<crate::redstone::sculk_family::GameEvent>,
     /// Предел монстров по владельцам; последняя правка действует до выгрузки.
@@ -1546,10 +1591,40 @@ fn chunk_in_limits(chunk_x: i32, chunk_z: i32) -> bool {
 }
 
 impl World {
+    #[cfg(test)]
+    pub(crate) fn palette_test_world(seed: i64, dimension: usize) -> Self {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = Self::in_memory_with_catalog(catalog);
+        world.seed = seed;
+        world.generator = Arc::new(match dimension {
+            0 => Generator::Normal(Terrain::new(seed, Style::Vanilla).with_preview(true)),
+            1 => Generator::Nether(nether::Nether::new(seed)),
+            2 => Generator::End(the_end::End::new(seed)),
+            _ => panic!("неизвестное измерение"),
+        });
+        world
+    }
+
+    #[cfg(test)]
+    pub(crate) fn palette_test_generate(&mut self, x: i32, z: i32) {
+        // Один чанк в памяти: большой обход не удерживает целый мир.
+        self.chunks.clear();
+        self.chunks.insert((x, z), Chunk::generated(&self.generator, x, z));
+    }
+
+    /// Каталог принадлежит миру, а не версии подключившегося клиента.
+    pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
+
     /// Пустой мир без файла на диске — только для проверок.
     #[cfg(test)]
     pub fn in_memory() -> Self {
+        Self::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    // Изолированный мир без диска для парольного лимбо и сетевых проверок.
+    pub fn in_memory_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
         Self {
+            catalog,
             plugin_monster_limits: Vec::new(),
             plugin_game_events: Vec::new(),
             plugin_events_enabled: false,
@@ -1629,6 +1704,15 @@ impl World {
         directory: impl AsRef<Path>,
         wanted_seed: Option<i64>,
         wanted_kind: WorldKind,
+    ) -> io::Result<Self> {
+        Self::open_with_catalog(directory, wanted_seed, wanted_kind,
+            crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    /// Каталог выбирается до чтения чанков и отложенных действий.
+    pub fn open_with_catalog(
+        directory: impl AsRef<Path>, wanted_seed: Option<i64>, wanted_kind: WorldKind,
+        catalog: crate::gameplay_catalog::Catalog,
     ) -> io::Result<Self> {
         let path = directory.as_ref().to_path_buf();
 
@@ -1711,7 +1795,10 @@ impl World {
 
         log_info!("Тип мира: {}", kind.name());
 
+        // Профиль мира; 26.3-генерация (пятнистый лес, серные пещеры, лагеря) — только при Preview26_3.
+        let preview = catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3;
         let mut world = Self {
+            catalog,
             plugin_monster_limits: Vec::new(),
             plugin_game_events: Vec::new(),
             plugin_events_enabled: false,
@@ -1747,8 +1834,8 @@ impl World {
             kind,
             generator: Arc::new(match kind {
                 WorldKind::Flat => Generator::Flat,
-                WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla)),
-                WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth)),
+                WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla).with_preview(preview)),
+                WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth).with_preview(preview)),
                 WorldKind::Nether => Generator::Nether(nether::Nether::new(seed)),
                 WorldKind::End => Generator::End(the_end::End::new(seed)),
             }),
@@ -1854,6 +1941,14 @@ impl World {
         self.save(true);
     }
 
+    /// Перед паузой — полный снимок без ожидания диска под замком мира.
+    /// Не теряем мобов из чанков, принятых асинхронно после последнего такта:
+    /// они ещё в loaded_mobs, а в Items попадут только при возобновлении.
+    pub fn save_before_idle(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs(mobs);
+        self.save_with_flush(true, false);
+    }
+
     /// Записывает мир, если с прошлой записи прошла секунда; иначе ничего не
     /// делает — изменения и так уйдут с ближайшей общей записью в такте.
     ///
@@ -1869,6 +1964,10 @@ impl World {
     }
 
     fn save(&mut self, everything: bool) {
+        self.save_with_flush(everything, everything);
+    }
+
+    fn save_with_flush(&mut self, everything: bool, flush: bool) {
         if self.path.as_os_str().is_empty() {
             self.dirty.clear();
             self.fresh.clear();
@@ -1899,6 +1998,12 @@ impl World {
                 continue;
             };
 
+            if let Err(error) = chunk.validate_catalog(self.catalog) {
+                log_error!("Чанк {} {} не записан: {}", chunk_x, chunk_z, error);
+                self.dirty.insert((chunk_x, chunk_z));
+                continue;
+            }
+
             by_region
                 .entry(region::region_of(chunk_x, chunk_z))
                 .or_default()
@@ -1925,7 +2030,8 @@ impl World {
         self.save_level();
 
         // При остановке — дождаться, пока всё ляжет на диск.
-        if everything {
+        // Пауза только ставит снимки в очередь, чтобы не задерживать вход.
+        if flush {
             writer::flush();
         }
     }
@@ -2016,7 +2122,7 @@ impl World {
 
         // Номер состояния, не влезающий в хранение, — ошибка того, кто его
         // прислал; падать из-за неё под замком мира нельзя.
-        if Packed::try_from(state).is_err() {
+        if Packed::try_from(state).is_err() || self.catalog.name(crate::gameplay_catalog::Kind::State, state).is_err() {
             log_warn!("Мир: состояние {} в {} {} {} не поставлено — такого номера нет", state, x, y, z);
             return false;
         }
@@ -2126,9 +2232,29 @@ impl World {
     /// заменяется тем, кто в нём сейчас стоит. Чанк без мобов, у которого их
     /// и не было, не трогается — не переписывается зря.
     pub fn store_mobs(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs_inner(mobs, false);
+    }
+
+    /// Во время паузы не переписываем одинаковые записи мобов каждую секунду.
+    /// Сравниваем только сохраняемые поля; обычный активный такт этой работы
+    /// не делает. Сериализация целого чанка для сравнения не нужна.
+    pub fn store_mobs_if_changed(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs_inner(mobs, true);
+    }
+
+    fn store_mobs_inner(&mut self, mobs: &[crate::mob::Mob], only_if_changed: bool) {
         let mut by_chunk: HashMap<(i32, i32), Vec<crate::mob::Mob>> = HashMap::new();
 
-        for mob in mobs.iter().filter(|mob| !mob.is_dead() && mob.persistent) {
+        // Общая защита нужна и сохранению при stop/save-all: ещё не
+        // установленные мобы остаются в loaded_mobs до следующего такта.
+        // Текущий Items важнее старого снимка при совпадении UUID, даже если
+        // моб уже мёртв или перестал сохраняться: не воскрешаем старую копию.
+        let mut seen = std::collections::HashSet::new();
+        for mob in mobs.iter().chain(self.loaded_mobs.iter()) {
+            // Записи с диска до установки имеют entity_id0. Их временный
+            // UUID не считаем доказательством общей личности: сохраняем все.
+            let identified = mob.entity_id != 0;
+            if (identified && !seen.insert(mob.uuid)) || mob.is_dead() || !mob.persistent { continue; }
             let (x, z) = mob.chunk();
 
             by_chunk.entry((x, z)).or_default().push(mob.clone());
@@ -2139,8 +2265,20 @@ impl World {
         for (key, chunk) in &mut self.chunks {
             let now = by_chunk.remove(key).unwrap_or_default();
 
-            if now.is_empty() && chunk.mobs.is_empty() {
-                continue;
+            if now.is_empty() && chunk.mobs.is_empty() { continue; }
+            if only_if_changed && now.len() == chunk.mobs.len() {
+                let records = |mobs: &[crate::mob::Mob]| -> Option<Vec<Vec<u8>>> {
+                    let mut records = Vec::with_capacity(mobs.len());
+                    for mob in mobs {
+                        mob.validate_item_storage().ok()?;
+                        let mut record = Vec::new(); mob.write(&mut record);
+                        records.push(record);
+                    }
+                    records.sort_unstable();
+                    Some(records)
+                };
+                if let (Some(now), Some(previous)) = (records(&now), records(&chunk.mobs))
+                    && now == previous { continue; }
             }
 
             chunk.mobs = now;
@@ -2189,7 +2327,7 @@ impl World {
 
         if container.slots != before {
             // Печь начинает плавку заново, если вход сменили.
-            crate::furnace::after_slots_changed(container, &before);
+            crate::furnace::after_slots_changed(container, &before, self.catalog);
             self.contents_changed.push((x, y, z));
         }
 
@@ -2223,18 +2361,58 @@ impl World {
     pub fn pot(&self, at: (i32,i32,i32)) -> Option<[i32;4]> {
         if crate::blocks::block_at_state(self.get_block(at.0,at.1,at.2)) != Some("decorated_pot") { return None; }
         Some(self.chunks.get(&chunk_key(at.0,at.2))?.pots.get(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))
-            .copied().unwrap_or([crate::blocks::item_named("brick")?;4]))
+            .copied().unwrap_or([if self.catalog.changed_rules() { 0 } else { crate::blocks::item_named("brick")? };4]))
     }
     pub fn set_pot(&mut self, at: (i32,i32,i32), sides: [i32;4]) {
+        self.set_pot_with_details(at, sides, Default::default());
+    }
+    pub fn set_gateway(&mut self, at: (i32,i32,i32), exit: (i32,i32,i32,bool)) {
+        if crate::blocks::block_at_state(self.get_block(at.0,at.1,at.2)) != Some("end_gateway") { return; }
+        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().gateways.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)),exit);
+        self.dirty.insert(chunk_key(at.0,at.2));
+    }
+    pub fn gateway_exit(&self, at: (f64,f64,f64)) -> Option<(f64,f64,f64)> {
+        if !self.catalog.changed_rules() { return None; }
+        let cell = (at.0.floor() as i32,at.1.floor() as i32,at.2.floor() as i32);
+        if crate::blocks::block_at_state(self.get_block(cell.0,cell.1,cell.2)) != Some("end_gateway") { return None; }
+        let &(x,y,z,exact) = self.chunks.get(&chunk_key(cell.0,cell.2))?.gateways.get(&(cell.0.rem_euclid(16),cell.1,cell.2.rem_euclid(16)))?;
+        if exact { return Some((x as f64+0.5,y as f64+0.5,z as f64+0.5)); }
+        // Вики, End gateway: поиск сверху, при равенстве северо-запад первым.
+        for py in (0..=255).rev() { for dx in -5i32..=5 { for dz in -5i32..=5 {
+            if dx.abs() <= 1 && dz.abs() <= 1 { continue; }
+            let state = self.get_block(x+dx,py,z+dz);
+            if crate::blocks::full_cube(state) && crate::blocks::block_at_state(state) != Some("bedrock") {
+                return Some(((x+dx) as f64+0.5,py as f64+1.0,(z+dz) as f64+0.5));
+            }
+        } } }
+        Some((x as f64+0.5,y as f64+2.0,z as f64+0.5))
+    }
+    pub fn pot_details(&self, at: (i32,i32,i32)) -> crate::stackdata::Data {
+        self.chunks.get(&chunk_key(at.0,at.2)).and_then(|c| c.pot_details.get(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))).cloned().unwrap_or_default()
+    }
+    /// Стороны и довески меняются вместе: клиент получает одно актуальное обновление.
+    pub fn set_pot_with_details(&mut self, at: (i32,i32,i32), sides: [i32;4], data: crate::stackdata::Data) {
         if self.pot(at).is_none() { return; }
-        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().pots.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)),sides);
+        let nbt = if self.catalog.changed_rules() { crate::pottery::preview_nbt(sides, &data) }
+            else { crate::pottery::nbt(sides) };
+        let local = (at.0.rem_euclid(16),at.1,at.2.rem_euclid(16));
+        let chunk = self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap();
+        chunk.pots.insert(local, sides);
+        chunk.pot_details.insert(local, data);
         self.dirty.insert(chunk_key(at.0,at.2));
         if let Some(kind) = crate::redstone::block_entity_type(self.get_block(at.0,at.1,at.2)) {
-            self.note_block_entity(at.0,at.1,at.2,kind,crate::pottery::nbt(sides));
+            self.note_block_entity(at.0,at.1,at.2,kind,nbt);
         }
     }
     pub fn chunk_pots(&self, cx: i32, cz: i32) -> Vec<((i32,i32,i32),Vec<u8>)> {
-        self.chunks.get(&(cx,cz)).map(|c| c.pots.iter().map(|(at,sides)| (*at,crate::pottery::nbt(*sides))).collect()).unwrap_or_default()
+        self.chunks.get(&(cx,cz)).map(|c| c.pots.iter().map(|(at,sides)| {
+            let nbt = if self.catalog.changed_rules() {
+                let data = c.pot_details.get(at).cloned().unwrap_or_default();
+                let encoded = crate::pottery::preview_nbt(*sides, &data);
+                if encoded == [10,0] { vec![0] } else { encoded }
+            } else { crate::pottery::nbt(*sides) };
+            (*at,nbt)
+        }).collect()).unwrap_or_default()
     }
 
     pub fn hive(&self, x: i32, y: i32, z: i32) -> Option<&crate::hive::Data> {
@@ -2692,7 +2870,7 @@ impl World {
         let biome = if number == terrain::autumn_forest_number() {
             Some(terrain::Biome::Forest)
         } else {
-            terrain::Biome::ALL.get(usize::from(number)).copied()
+            terrain::Biome::by_number(usize::from(number))
         };
 
         biome.is_some_and(|biome| biome.climate().0 < 2.0 && !biome.snows_at(y))
@@ -2721,7 +2899,7 @@ impl World {
         }
 
         let number = chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
-        let biome = if number == terrain::autumn_forest_number() { Some(terrain::Biome::Forest) } else { terrain::Biome::ALL.get(usize::from(number)).copied() };
+        let biome = if number == terrain::autumn_forest_number() { Some(terrain::Biome::Forest) } else { terrain::Biome::by_number(usize::from(number)) };
 
         biome.map_or(0.8, |biome| biome.climate().0 - 0.00125 * ((y - 80).max(0) as f32))
     }
@@ -2981,7 +3159,7 @@ impl World {
 
         self.published_props = places
             .iter()
-            .filter_map(|&(x, y, z)| Some(((x, y, z), crate::furnace::properties(self.container(x, y, z)?))))
+            .filter_map(|&(x, y, z)| Some(((x, y, z), crate::furnace::properties_for_catalog(self.container(x, y, z)?, self.catalog()))))
             .filter(|(_, props)| !props.is_empty())
             .collect();
 
@@ -3084,6 +3262,7 @@ impl World {
         self.chunks.get(&(chunk_x, chunk_z))?;
 
         Some(light::LightJob {
+            catalog: self.catalog,
             chunks: std::array::from_fn(|slot| {
                 let place = (chunk_x + slot as i32 % 3 - 1, chunk_z + slot as i32 / 3 - 1);
                 let chunk = self.chunks.get(&place)?;
@@ -3096,6 +3275,38 @@ impl World {
                 })
             }),
         })
+    }
+
+    /// Проверяются все девять входов, в том числе отсутствие соседа и кеш.
+    /// Общие секции отличают повторно загруженный чанк с тем же revision.
+    pub fn light_is_current(&self, prepared: &light::PreparedLight) -> bool {
+        prepared.inputs.iter().enumerate().all(|(slot, input)| {
+            let place = (prepared.center.0 + slot as i32 % 3 - 1, prepared.center.1 + slot as i32 / 3 - 1);
+            match (input, self.chunks.get(&place)) {
+                (None, None) => true,
+                (Some(input), Some(chunk)) => input.revision == chunk.revision
+                    && input.sections.len() == chunk.sections.len()
+                    && input.sections.iter().zip(&chunk.sections).all(|(a, b)| match (a, b) {
+                        (None, None) => true,
+                        (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+                        _ => false,
+                    }),
+                _ => false,
+            }
+        })
+    }
+
+    /// Публикует готовый свет только при совпадении всех девяти входов.
+    /// Итог с соседями нужен и случайным тактам: повторно сшивать его не надо.
+    pub fn accept_prepared_light(&mut self, prepared: &mut light::PreparedLight) -> bool {
+        if !self.light_is_current(prepared) { return false; }
+        let revisions = std::array::from_fn(|slot| {
+            prepared.inputs[slot].as_ref().map_or(u32::MAX, |input| input.revision)
+        });
+        self.store_light(std::mem::take(&mut prepared.recounted));
+        // Mixed-секции разделяют Arc: массивы уровней света не копируются.
+        self.sky_cache.insert(prepared.center, (revisions, Arc::new(prepared.light.clone())));
+        true
     }
 
     /// Кладёт в чанки пересчитанный собственный свет — если их блоки с тех
@@ -3180,6 +3391,7 @@ impl World {
     /// замок мира нельзя, иначе встанет такт.
     pub fn source(&self) -> ChunkSource {
         ChunkSource {
+            catalog: self.catalog,
             path: self.path.clone(),
             generator: Arc::clone(&self.generator),
             epoch: self.unload_epoch,
@@ -3209,15 +3421,18 @@ impl World {
         if !self.accept_prepared(chunk_x,chunk_z,ready) {self.ensure(chunk_x,chunk_z);}
     }
 
-    // Возврат false требует повторной подготовки вне замка мира.
-    pub(crate) fn accept_prepared(&mut self,chunk_x:i32,chunk_z:i32,ready:ReadyChunk)->bool {
-        let key=(chunk_x,chunk_z);
-        if self.chunks.contains_key(&key) {return true;}
-        let stale=ready.epoch+UNLOAD_MEMORY<self.unload_epoch||self.unloaded.get(&key).is_some_and(|at|*at>ready.epoch);
-        match ready.taken {
-            Taken::Loaded {chunk,from_disk,wake} if !stale => {self.insert_chunk(chunk_x,chunk_z,chunk,from_disk,&wake);true},
-            _ => false,
+    /// Приём фоновой подготовки никогда не читает диск и не генерирует.
+    /// Возврат false требует повторной подготовки вне замка мира.
+    pub fn accept_prepared(&mut self, x: i32, z: i32, ready: ReadyChunk) -> bool {
+        let key = (x, z);
+        if self.chunks.contains_key(&key) { return true; }
+        let stale = ready.epoch + UNLOAD_MEMORY < self.unload_epoch
+            || self.unloaded.get(&key).is_some_and(|at| *at > ready.epoch);
+        if !stale && let Taken::Loaded { chunk, from_disk, wake } = ready.taken {
+            self.insert_chunk(x, z, chunk, from_disk, &wake);
+            return true;
         }
+        false
     }
 
     /// Кладёт чанк в мир и делает всё, что следует за его появлением.
@@ -3253,6 +3468,16 @@ impl World {
             frame
         }));
         self.loaded_mobs.extend(chunk.mobs.iter().cloned());
+        // Ревизия нового экземпляра снова начинается с нуля; маска старого
+        // чанка при том же номере ревизии больше не описывает его секции.
+        self.random_sections.remove(&key);
+        // Тот же номер ревизии после загрузки не означает те же секции.
+        // Готовый свет всех девяти центров мог использовать прежний экземпляр.
+        for dx in -1..=1 {
+            for dz in -1..=1 {
+                self.sky_cache.remove(&(chunk_x + dx, chunk_z + dz));
+            }
+        }
         self.chunks.insert(key, chunk);
         self.unloaded.remove(&key);
 
@@ -3375,7 +3600,7 @@ impl World {
             return false;
         }
 
-        match take_chunk(&self.path, &self.generator, chunk_x, chunk_z) {
+        match take_chunk(&self.path, &self.generator, self.catalog, chunk_x, chunk_z) {
             Taken::Loaded { chunk, from_disk, wake } => {
                 self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
                 true
@@ -3428,6 +3653,7 @@ impl World {
         // Ждать пересчёта в выгруженных чанках больше некому.
         self.redstone.forget_outside(|x, z| self.chunks.contains_key(&chunk_key(x, z)));
         self.sky_cache.retain(|key, _| self.chunks.contains_key(key));
+        self.random_sections.retain(|key, _| self.chunks.contains_key(key));
 
         before - self.chunks.len()
     }
@@ -3700,7 +3926,7 @@ impl World {
         // исполняется прежний (вики, Tick, 18w10c).
         // Прежний такт был заведён для другой жидкости (раздатчик забрал
         // источник ведром): он пропадёт вместе с ней, и новый не ждёт его.
-        let fluid = fluid_type(self.get_block(x, y, z));
+        let fluid = fluid_type(self.get_block(x, y, z), self.catalog);
 
         if self.waits_ahead((x, y, z), TickKind::Fluid)
             && self
@@ -3744,7 +3970,7 @@ impl World {
         let order = self.next_order;
         self.next_order += 1;
 
-        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2)) } else { 0 };
+        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2), self.catalog) } else { 0 };
 
         self.waiting.insert((place, kind), WaitingTick { due, order, priority, fluid });
         self.scheduled.push(Reverse(Scheduled {
@@ -3767,7 +3993,7 @@ impl World {
             let (x, y, z) = (x + dx, y + dy, z + dz);
             let state = self.get_block(x, y, z);
 
-            if !wet(state) {
+            if !wet(state, self.catalog) {
                 continue;
             }
 
@@ -3786,7 +4012,7 @@ impl World {
     pub fn fluid_tick_holds(&self, place: (i32, i32, i32)) -> bool {
         self.waiting
             .get(&(place, TickKind::Fluid))
-            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2)))
+            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2), self.catalog))
     }
 
     /// Двигает время мира на такт вперёд и отдаёт места, которым пора, —
@@ -4061,13 +4287,24 @@ impl World {
 
     /// Вики, Advancement: «Enter a ...» — внутри рамки строения, а не рядом
     /// с похожими блоками. Рамки нашей генерации; [проверить] границы оригинала.
-    pub fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
-        match &*self.generator {
-            Generator::Nether(nether) => nether.progress_structure(x, y, z),
-            Generator::Normal(terrain) if stronghold::contains(terrain, x, y, z) => Some("story/follow_ender_eye"),
-            Generator::End(end) if end.in_city(x, y, z) => Some("end/find_end_city"),
-            _ => None,
-        }
+    /// Снимок генератора без замка мира: вызывающий считает его в фоновом пуле.
+    pub fn progress_structure_check(&self, x: i32, y: i32, z: i32) -> impl FnOnce() -> Option<&'static str> + Send + 'static + use<> {
+        let generator = Arc::clone(&self.generator);
+        move || generator.progress_structure(x, y, z)
+    }
+
+    /// Прогрев ленивых кэшей построек для достижений (кольца крепостей Края
+    /// считаются секунды) — в своём потоке, чтобы не держать на нём запуск
+    /// сервера. Кэши общие по семени, поэтому замок мира не нужен.
+    pub fn warm_structures(&self, (x, y, z): (i32, i32, i32)) {
+        let generator = Arc::clone(&self.generator);
+
+        std::thread::spawn(move || {
+            let warming = std::time::Instant::now();
+            let _ = generator.progress_structure(x, y, z);
+
+            log_debug!("Кэш построек для достижений прогрет за {:.3} с", warming.elapsed().as_secs_f64());
+        });
     }
 
     /// Биом поверхности столбца по генератору (команда `locate biome`):
@@ -4086,7 +4323,7 @@ impl World {
     pub fn mob_biome(&self, x: i32, y: i32, z: i32) -> &'static str {
         if (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y)
             && let Some(chunk) = self.chunks.get(&(x.div_euclid(CHUNK_SIZE), z.div_euclid(CHUNK_SIZE)))
-            && let Some(biome) = terrain::Biome::ALL.get(usize::from(chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))))
+            && let Some(biome) = terrain::Biome::by_number(usize::from(chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))))
         {
             return biome.name();
         }
@@ -4158,6 +4395,11 @@ impl World {
         // Лесные особняки — по областям 80×80 чанков (mansion.rs).
         if let (Generator::Normal(terrain), "mansion") = (&*self.generator, name) {
             return mansion::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / mansion::SPACING + 1);
+        }
+
+        // Заброшенные лагеря 26.3 — по областям 37×37 чанка (abandoned_camp.rs).
+        if let (Generator::Normal(terrain), "abandoned_camp") = (&*self.generator, name) {
+            return abandoned_camp::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / abandoned_camp::SPACING + 1);
         }
 
         // Руины тропы — по областям 34×34 чанка (trail_ruins.rs).
@@ -4527,8 +4769,9 @@ enum Taken {
 /// «Нет на диске» и «не читается» — разные вещи. Нет — складываем. Запись
 /// испорчена — сперва откладываем её байты в сторону (`set_aside`), и только
 /// потом складываем чанк заново: он ляжет на её место. Диск не ответил —
-/// не делаем ничего, чанк попробуют прочитать снова.
-fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) -> Taken {
+/// не делаем ничего, чанк попробуют прочитать снова. Неподдержанные раскладка
+/// или состояние каталога тоже дают отказ, без corrupt-copy и новой генерации.
+fn take_chunk(path: &Path, generator: &Generator, catalog: crate::gameplay_catalog::Catalog, chunk_x: i32, chunk_z: i32) -> Taken {
     if !chunk_in_limits(chunk_x, chunk_z) {
         log_debug!("Мир: чанк {} {} за пределами мира", chunk_x, chunk_z);
         return Taken::Unavailable;
@@ -4550,17 +4793,31 @@ fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) ->
     let directory = path.join(REGIONS);
 
     let (raw, why) = match region::read_stored(&directory, chunk_x, chunk_z) {
-        Ok(region::Stored::Missing) => return generated(),
-        Ok(region::Stored::Found(bytes)) => match Chunk::from_bytes(&bytes) {
+        Ok(region::Stored::Missing) => match legacy::pending_region(&directory, chunk_x, chunk_z) {
+            Ok(false) => return generated(),
+            Ok(true) => {
+                log_error!("Чанк {} {} не загружен: старый регион не перенесён, новая генерация запрещена", chunk_x, chunk_z);
+                return Taken::Unavailable;
+            }
+            Err(error) => {
+                log_error!("Не удалось проверить старый регион чанка {} {}: {} — новая генерация запрещена", chunk_x, chunk_z, error);
+                return Taken::Unavailable;
+            }
+        },
+        Ok(region::Stored::Found(bytes)) => match Chunk::decode_for_load_with_catalog(&bytes, catalog) {
             // Свет на диске не хранится: он считается заново по блокам.
-            Some(mut chunk) => {
-                chunk.light_up();
+            Ok(mut chunk) => {
+                chunk.light_up_with_catalog(catalog);
 
                 let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
                 return Taken::Loaded { chunk, from_disk: true, wake };
             }
-            None => (bytes, "содержимое чанка не разбирается"),
+            Err(codec::DecodeError::Damaged) => (bytes, "содержимое чанка не разбирается"),
+            Err(incompatible) => {
+                log_error!("Чанк {} {} не поддержан ({}): загрузка остановлена, исходная запись не изменена", chunk_x, chunk_z, incompatible);
+                return Taken::Unavailable;
+            }
         },
         Ok(region::Stored::Damaged { raw, why }) => (raw, why),
         Err(e) => {
@@ -4634,6 +4891,7 @@ pub struct ReadyChunk {
 /// Живёт отдельно от мира нарочно: пока чанк читается с диска или
 /// складывается заново, замок мира держать нельзя — такт не должен ждать.
 pub struct ChunkSource {
+    catalog: crate::gameplay_catalog::Catalog,
     path: PathBuf,
     generator: Arc<Generator>,
 
@@ -4642,12 +4900,16 @@ pub struct ChunkSource {
 }
 
 impl ChunkSource {
+    pub fn preparation_key(&self, x: i32, z: i32) -> (PathBuf, i32, i32) {
+        (self.path.clone(), x, z)
+    }
+
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
         self.take_with(chunk_x,chunk_z,crate::plugins::active(),crate::plugins::populate)
     }
     fn take_with(&self,chunk_x:i32,chunk_z:i32,enabled:bool,populate:impl FnOnce(crate::dimension::Dimension,i32,i32,i64,Chunk)->Chunk)->ReadyChunk {
-        let mut taken=take_chunk(&self.path,&self.generator,chunk_x,chunk_z);
+        let mut taken=take_chunk(&self.path,&self.generator,self.catalog,chunk_x,chunk_z);
         if enabled && let Taken::Loaded {chunk,from_disk:false,..}=&mut taken {
             let (dimension,seed)=match self.generator.as_ref() {Generator::Normal(t)=>(crate::dimension::Dimension::Overworld,t.seed()),Generator::Nether(t)=>(crate::dimension::Dimension::Nether,t.seed()),Generator::End(t)=>(crate::dimension::Dimension::End,t.seed()),Generator::Flat=>(crate::dimension::Dimension::Overworld,0)};
             *chunk=populate(dimension,chunk_x,chunk_z,seed,chunk.clone());
@@ -4705,13 +4967,25 @@ impl World {
             return (f64::from(x) + 0.5, f64::from(y + 1), f64::from(z) + 0.5);
         }
 
-        let place = spawn_search::find(|x, z| self.generator.column_at(x, z));
+        let column_at = |x, z| self.generator.column_at(x, z);
+        let place = if matches!(&*self.generator, Generator::Normal(terrain) if terrain.preview()) {
+            spawn_search::find_preview(column_at)
+        } else { spawn_search::find(column_at) };
         log_info!("Точка появления: {} {} {}", place.0, place.1, place.2);
         place
     }
 }
 
 impl Generator {
+    fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
+        match self {
+            Generator::Nether(nether) => nether.progress_structure(x, y, z),
+            Generator::Normal(terrain) if stronghold::contains(terrain, x, y, z) => Some("story/follow_ender_eye"),
+            Generator::End(end) if end.in_city(x, y, z) => Some("end/find_end_city"),
+            _ => None,
+        }
+    }
+
     /// Всё про столбец в этом месте: высота поверхности и биом. Считается
     /// один раз на место — дальше столбец заполняется по нему.
     fn column_at(&self, x: i32, z: i32) -> Column {
@@ -4815,6 +5089,7 @@ impl Generator {
         ];
         let water = terrain::block_named("water");
         let lava = terrain::block_named("lava");
+        let tuff = terrain::block_named("tuff");
 
         for (x, y, z, placement) in terrain.ore_blocks_in(chunk_x, chunk_z, chunk.highest()) {
             let (local_x, local_z) = (x - chunk_x * CHUNK_SIZE, z - chunk_z * CHUNK_SIZE);
@@ -4825,7 +5100,9 @@ impl Generator {
 
             let here = chunk.block(local_x, y, local_z);
 
-            if !takes.contains(&here) {
+            // В 26.3 туф исключён из обеих целей руд: «Removed tuff».
+            // https://minecraft.wiki/w/Java_Edition_26.3_Snapshot_3
+            if !takes.contains(&here) || (terrain.preview() && placement.has_deep && here == tuff) {
                 continue;
             }
 
@@ -4846,7 +5123,10 @@ impl Generator {
                     (0..CHUNK_SIZE).contains(&nx)
                         && (0..CHUNK_SIZE).contains(&nz)
                         && (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&ny)
-                        && [AIR, water, lava].contains(&chunk.block(nx, ny, nz))
+                        // «Skipped when air exposed» не включает воду и лаву.
+                        // https://minecraft.wiki/w/Ore_(feature)
+                        && if terrain.preview() { chunk.block(nx, ny, nz) == AIR }
+                            else { [AIR, water, lava].contains(&chunk.block(nx, ny, nz)) }
                 });
 
                 if open && terrain::chance_at(terrain.seed(), x, y, z, placement.air_skip) {
@@ -4854,8 +5134,9 @@ impl Generator {
                 }
             }
 
-            // Под нулём — в глубинном сланце — у руды своя разновидность.
-            let deep = placement.has_deep && (here == deepslate || y < 0);
+            // В 26.3 разновидность определяет порода, а не высота: гранит,
+            // диорит и андезит у границы сланца сохраняют обычную руду.
+            let deep = placement.has_deep && (here == deepslate || (!terrain.preview() && y < 0));
             let name = if deep {
                 format!("deepslate_{}", placement.block)
             } else {
@@ -4881,7 +5162,7 @@ impl Generator {
             return;
         };
 
-        let ground = TreeGround { seed: terrain.seed(), ..TreeGround::new() };
+        let ground = TreeGround { seed: terrain.seed(), terrain: terrain.preview().then_some(terrain), ..TreeGround::new() };
         let near = TreeColumns::new(self, chunk_x, chunk_z, columns);
 
         for local_x in -REACH..(CHUNK_SIZE + REACH) {
@@ -4919,6 +5200,9 @@ impl Generator {
                 }
 
                 draw_tree(chunk, &tree, local_x, local_z, column.height, x, z, &ground);
+                if terrain.preview() {
+                    vegetation::tree_litter(terrain, chunk, &tree, (local_x, local_z), (x, column.height, z), column.biome);
+                }
             }
         }
 
@@ -5067,7 +5351,7 @@ impl<'a> TreeColumns<'a> {
 
 /// Что дерево видит под собой: воду и землю, которую может заменить.
 /// Ищется по имени один раз на чанк.
-struct TreeGround {
+struct TreeGround<'a> {
     water: i32,
     /// Земля, которую дерево может заменить подзолом или корнями.
     soil: Vec<(i32, i32)>,
@@ -5079,12 +5363,16 @@ struct TreeGround {
     dirt: i32,
     /// Семя мира: форма дерева своя в каждом мире.
     seed: i64,
+    terrain: Option<&'a terrain::Terrain>,
+    heights: std::cell::RefCell<std::collections::HashMap<(i32, i32), i32>>,
 }
 
-impl TreeGround {
-    fn new() -> TreeGround {
+impl TreeGround<'_> {
+    fn new() -> Self {
         TreeGround {
             seed: 0,
+            terrain: None,
+            heights: Default::default(),
             water: terrain::block_named("water"),
             snow: crate::blocks::states_of("snow"),
             dirt: terrain::block_named("dirt"),
@@ -5166,6 +5454,32 @@ pub(crate) fn leaf_distances(blocks: &[(i32, i32, i32, terrain::Part)]) -> std::
     distance
 }
 
+/// Цветущая азалия — тоже проводящая расстояние листва, хотя записана
+/// отдельным блоком. Брёвна в общих клетках имеют приоритет над листьями.
+pub(crate) fn tree_leaf(part: terrain::Part) -> bool {
+    part == terrain::Part::Leaves || matches!(part, terrain::Part::Block(name) if name.ends_with("_leaves"))
+}
+
+fn mushroom_tree(tree: &trees::Tree) -> bool { tree.leaves.contains("mushroom_block") }
+
+pub(crate) fn supported_leaf_distances(blocks: &[trees::TreeBlock]) -> std::collections::HashMap<(i32, i32, i32), i32> {
+    let logs: std::collections::HashSet<_> = blocks.iter().filter(|b| matches!(b.3, terrain::Part::Log(_))).map(|b| (b.0,b.1,b.2)).collect();
+    let geometry: Vec<_> = blocks.iter().filter_map(|&(x,y,z,part)| {
+        if matches!(part, terrain::Part::Log(_)) { Some((x,y,z,part)) }
+        else if tree_leaf(part) && !logs.contains(&(x,y,z)) { Some((x,y,z,terrain::Part::Leaves)) }
+        else { None }
+    }).collect();
+    leaf_distances(&geometry)
+}
+
+/// Не маскируем распад persistent=true: убираем только клетки без пути
+/// длиной до шести через настоящую листву к настоящему бревну.
+pub(crate) fn supported_tree_blocks(mut blocks: Vec<trees::TreeBlock>) -> Vec<trees::TreeBlock> {
+    let distances = supported_leaf_distances(&blocks);
+    blocks.retain(|b| !tree_leaf(b.3) || distances.get(&(b.0,b.1,b.2)).is_some_and(|d| *d < 7));
+    blocks
+}
+
 /// Рисует в чанке ту часть дерева, что попала в него. Ствол стоит в (x, z)
 /// — местные (local_x, local_z) — на земле высоты `height`.
 #[allow(clippy::too_many_arguments)]
@@ -5210,7 +5524,24 @@ fn draw_tree(
         log(terrain::Axis::Y),
         log(terrain::Axis::Z),
     ];
-    let blocks = tree.blocks_in(ground.seed, x, z);
+    let mut blocks = if ground.terrain.is_some() { tree.blocks_in_preview(ground.seed, x, z) }
+        else { tree.blocks_in(ground.seed, x, z) };
+    if let Some(terrain) = ground.terrain {
+        // Опора считается по реально доступной кроне: склон может вырезать
+        // промежуточный лист или ветвь. Полная форма проверяется и за краем
+        // чанка, чтобы обе стороны границы принимали одно решение.
+        blocks.retain(|&(dx, dy, dz, part)| {
+            if !tree_leaf(part) && !matches!(part, terrain::Part::Log(_)) { return true; }
+            let top = *ground.heights.borrow_mut().entry((x + dx, z + dz))
+                .or_insert_with(|| terrain.column_at(x + dx, z + dz).height);
+            let above = height + dy > top || (matches!(part, terrain::Part::Log(_)) && dy <= 1);
+            if !above || !inside(local_x+dx,height+dy,local_z+dz) { return above; }
+            let here = chunk.block(local_x+dx,height+dy,local_z+dz);
+            if matches!(part, terrain::Part::Log(_)) { ground.holds_log(here,dy) }
+            else { here == AIR || here == water || crate::blocks::block_at_state(here).is_some_and(|n| n.ends_with("_leaves") || n.ends_with("_log") || n.ends_with("_wood")) }
+        });
+        if !mushroom_tree(tree) { blocks = supported_tree_blocks(blocks); }
+    }
 
     // Земля под деревом — первой: пока над ней не выросли ни
     // корни, ни ствол, её верх виден сразу. Где нашлась земля, запоминаем:
@@ -5280,13 +5611,15 @@ fn draw_tree(
     // листва считалась бы оторванной и осыпалась бы, как только появится
     // опадание. Считается по блокам самого дерева, поэтому чанки на стыке
     // решают одинаково.
-    let distances = if mushroom { std::collections::HashMap::new() } else { leaf_distances(&blocks) };
+    let distances = if mushroom { std::collections::HashMap::new() }
+        else if ground.terrain.is_some() { supported_leaf_distances(&blocks) }
+        else { tree.leaf_distances_in(ground.seed, x, z, &blocks) };
     let leaf_state = |distance: i32, wet: bool| {
         crate::blocks::state_from_text(&format!("{}[distance={},waterlogged={}]", tree.leaves, distance, wet))
     };
 
     for (dx, dy, dz, part) in &blocks {
-        if *part == terrain::Part::Leaves {
+        if *part == terrain::Part::Leaves || (ground.terrain.is_some() && tree_leaf(*part)) {
             let (bx, by, bz) = (local_x + dx, height + dy, local_z + dz);
 
             if !inside(bx, by, bz) {
@@ -5295,7 +5628,9 @@ fn draw_tree(
 
             let here = chunk.block(bx, by, bz);
             let distance = distances.get(&(*dx, *dy, *dz)).copied().unwrap_or(7);
-            let state = if mushroom {
+            let state = if let terrain::Part::Block(name) = part {
+                crate::blocks::state_from_text(&format!("{name}[distance={distance},persistent=false,waterlogged={}]", here == water))
+            } else if mushroom {
                 Some(cap(tree.leaves, (*dx, *dy, *dz)).unwrap_or(leaves))
             } else {
                 leaf_state(distance, here == water).or(Some(leaves))
@@ -5361,6 +5696,7 @@ fn draw_tree(
         let terrain::Part::Block(text) = part else {
             continue;
         };
+        if ground.terrain.is_some() && text.ends_with("_leaves") { continue; }
         let hanging = text.starts_with("vine") || text.starts_with("pale_hanging_moss");
 
         if hanging && after_cut == Some((*dx, *dy + 1, *dz)) {
@@ -5384,6 +5720,13 @@ fn draw_tree(
             continue;
         }
 
+        if ground.terrain.is_some() && matches!(*text,"moss_carpet"|"pale_moss_carpet") {
+            if by <= MIN_Y { continue; }
+            let below = crate::blocks::block_at_state(chunk.block(bx,by-1,bz)).unwrap_or("");
+            let supported = if *text == "moss_carpet" { matches!(below,"mangrove_roots"|"moss_block") }
+                else { matches!(below,"pale_moss_block"|"pale_moss_carpet") };
+            if !supported { continue; }
+        }
         let here = chunk.block(bx, by, bz);
         let state = if here == AIR && mushroom && text.contains("mushroom_block") {
             cap(text, (*dx, dy, *dz))
@@ -5863,25 +6206,24 @@ const AROUND: [(i32, i32, i32); 7] = [(0, 0, 0), (0, 1, 0), (0, -1, 0), (-1, 0, 
 /// Какая жидкость в блоке — для такта жидкости: 0 — никакой, 1 — источник
 /// воды (и залитый водой блок), 2 — текущая вода, 3 — источник лавы,
 /// 4 — текущая лава.
-fn fluid_type(state: i32) -> u8 {
+fn fluid_type(state: i32, catalog: crate::gameplay_catalog::Catalog) -> u8 {
     match fluids::fluid_at(state) {
         Some((fluids::Kind::Water, fluids::SOURCE)) => 1,
         Some((fluids::Kind::Water, _)) => 2,
         Some((fluids::Kind::Lava, fluids::SOURCE)) => 3,
         Some((fluids::Kind::Lava, _)) => 4,
-        None if wet(state) => 1,
+        None if wet(state, catalog) => 1,
         None => 0,
     }
 }
 
 /// Есть ли в блоке жидкость: вода, лава или залитый водой блок.
-fn wet(state: i32) -> bool {
+fn wet(state: i32, catalog: crate::gameplay_catalog::Catalog) -> bool {
     if state == AIR {
         return false;
     }
 
-    fluids::fluid_at(state).is_some()
-        || crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "waterlogged")) == Some("true")
+    fluids::source_at_with_catalog(state, catalog).is_some()
 }
 
 /// Ключ чанка по мировым координатам блока.
@@ -6005,6 +6347,117 @@ mod mushroom_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_snapshot_preserves_live_and_not_yet_installed_chunk_mobs() {
+        let mut world = World::in_memory();
+        world.ensure(0,0);
+        let mut live = crate::mob::Mob::new(10,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        live.persistent = true;
+        let mut loaded = crate::mob::Mob::new(11,crate::mob::Kind::Pig,(1.5,64.0,0.5));
+        loaded.persistent = true;
+        let ids = [live.uuid,loaded.uuid];
+        world.queue_water_hatch(loaded);
+        let clock = world.clock();
+        world.save_before_idle(&[live]);
+        let stored = &world.chunks.get(&(0,0)).unwrap().mobs;
+        assert_eq!(stored.len(),2);
+        for id in ids { assert!(stored.iter().any(|m| m.uuid == id)); }
+        assert_eq!(world.loaded_mobs.len(),1,"очередь остаётся для первого такта после входа");
+        assert_eq!(world.clock(),clock,"снимок не делает игровой такт");
+    }
+
+    #[test]
+    fn idle_stop_save_all_preserves_pending_mobs_and_maintenance_updates_only_changes() {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-idle-mobs-save-{}",std::process::id()));
+        assert!(!path.exists(),"папка только этой проверки");
+        let mut world = World::open(&path,Some(1),WorldKind::Flat).unwrap();
+        world.ensure(0,0);
+        let mut pending = crate::mob::Mob::new(21,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        pending.persistent = true;
+        let read_pending = |mob: crate::mob::Mob| {
+            let mut bytes = Vec::new(); mob.write(&mut bytes);
+            crate::mob::Mob::read(&mut bytes.as_slice()).unwrap()
+        };
+        let pending = read_pending(pending);
+        let second = read_pending(crate::mob::Mob::new(24,crate::mob::Kind::Sheep,(2.5,64.0,0.5)));
+        assert_eq!((pending.entity_id,second.entity_id),(0,0),"дисковые мобы ещё не установлены в runtime");
+        world.queue_water_hatch(pending); world.queue_water_hatch(second);
+        let mut live = crate::mob::Mob::new(22,crate::mob::Kind::Pig,(1.5,64.0,0.5));
+        live.persistent = true;
+        // Тот же путь, что main::stop и команда save-all: только Items в аргументе.
+        world.store_mobs(&[live.clone()]);
+        world.save_all();
+        assert_eq!(world.loaded_mobs.len(),2,"сохранение не запускает мобов");
+        live.vitals.health = 4.0; // как изменение моба консольной командой
+        world.store_mobs_if_changed(&[live.clone()]);
+        assert!(world.dirty.contains(&(0,0)));
+        world.save_if_needed();
+        world.store_mobs_if_changed(&[live.clone()]);
+        assert!(!world.dirty.contains(&(0,0)),"одинаковое не переписывается в паузе");
+        drop(world);
+        let mut reopened = World::open(&path,None,WorldKind::Flat).unwrap();
+        reopened.ensure(0,0);
+        let loaded = reopened.take_loaded_mobs();
+        assert_eq!(loaded.len(),3,"оба анонимных pending-моба и текущий Items сохранены");
+        assert!(loaded.iter().any(|mob| mob.kind == crate::mob::Kind::Cow));
+        assert!(loaded.iter().any(|mob| mob.kind == crate::mob::Kind::Sheep));
+        assert_eq!(loaded.iter().find(|mob| mob.kind == crate::mob::Kind::Pig).unwrap().vitals.health,4.0);
+        drop(reopened);
+        fs::remove_dir_all(path).unwrap();
+    }
+
+    #[test]
+    fn idle_pending_mob_merge_prefers_live_and_does_not_duplicate_or_resurrect() {
+        let mut world = World::in_memory(); world.ensure(0,0);
+        let mut live = crate::mob::Mob::new(23,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        live.persistent = true;
+        world.queue_water_hatch(live.clone());
+        live.vitals.health = 4.0;
+        world.store_mobs_if_changed(&[live.clone()]);
+        let stored = &world.chunks.get(&(0,0)).unwrap().mobs;
+        assert_eq!(stored.len(),1); assert_eq!(stored[0].vitals.health,4.0);
+        live.die();
+        world.store_mobs_if_changed(&[live]);
+        assert!(world.chunks.get(&(0,0)).unwrap().mobs.is_empty());
+        assert_eq!(world.loaded_mobs.len(),1,"очередь ещё не потреблена тактом");
+    }
+
+    #[test]
+    fn idle_uninstalled_mobs_are_not_merged_even_with_synthetic_equal_uuid() {
+        let mut world = World::in_memory(); world.ensure(0,0);
+        for kind in [crate::mob::Kind::Cow,crate::mob::Kind::Sheep] {
+            let mut pending = crate::mob::Mob::new(0,kind,(0.5,64.0,0.5));
+            pending.uuid = [0x42;16]; // намеренное совпадение, не свойство чтения диска
+            world.queue_water_hatch(pending);
+        }
+        world.store_mobs(&[]);
+        assert_eq!(world.chunks.get(&(0,0)).unwrap().mobs.len(),2);
+        assert_eq!(world.loaded_mobs.len(),2);
+    }
+
+    #[test]
+    fn idle_snapshot_keeps_failed_chunk_write_for_retry() {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-idle-save-retry-{}",std::process::id()));
+        assert!(!path.exists(),"новая папка только этой проверки");
+        let mut world = World::open(&path,Some(1),WorldKind::Flat).unwrap();
+        world.ensure(0,0);
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        world.set_block(0,64,0,stone);
+        let region = region::path_for(&path.join(REGIONS),0,0);
+        fs::create_dir_all(&region).unwrap(); // запись намеренно невозможна
+        world.save_before_idle(&[]);
+        assert!(writer::waiting(&path.join(REGIONS),0,0).is_some(),"снимок не потерян при ошибке диска");
+        fs::remove_dir(&region).unwrap();
+        writer::flush();
+        assert!(writer::waiting(&path.join(REGIONS),0,0).is_none());
+        drop(world);
+        let mut reopened = World::open(&path,None,WorldKind::Flat).unwrap();
+        reopened.ensure(0,0);
+        assert_eq!(reopened.get_block(0,64,0),stone);
+        drop(reopened);
+        fs::remove_dir_all(path).unwrap();
+    }
 
     #[test]
     fn trial_presence_matches_places_after_changes_and_unload() {
@@ -7503,7 +7956,7 @@ mod speed {
         // WORLD=<папка мира> — брать сохранённые чанки оттуда (например, мир
         // тестового сервера), а не свежую генерацию.
         let path = std::env::var("WORLD").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir().join("mcsheriffanya-no-such-world"));
-        let source = ChunkSource { path, generator, epoch: 0 };
+        let source = ChunkSource { path, generator, catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), epoch: 0 };
 
         for dx in -2..=2 {
             for dz in -2..=2 {
@@ -8197,30 +8650,189 @@ mod structures_audit;
 #[cfg(test)]
 mod structure_fix_tests;
 
+#[cfg(test)]
+mod incompatible_load_tests;
+
+#[cfg(test)]
+mod catalog_tests;
+
+#[cfg(all(test, not(seedmap_core)))]
+mod preview_tests;
+
+#[cfg(test)]
+mod decoration_tests;
+
+#[cfg(test)]
+mod prepared_light_regressions {
+    use super::*;
+
+    #[test]
+    fn accepted_prepared_light_reuses_final_cache_and_invalidates_on_neighbour_change() {
+        let mut world = World::in_memory();
+        world.ensure(0, 0);
+        world.ensure(1, 0);
+        let torch = crate::blocks::state_by_name("torch").unwrap();
+        world.set_block(16, 10, 0, torch);
+        let mut prepared = world.light_job(0, 0).unwrap().prepare();
+        let expected = prepared.light.at(15, 10, 0);
+        assert!(world.accept_prepared_light(&mut prepared));
+        assert!(prepared.recounted.is_empty());
+        let cached = world.sky_cache[&(0, 0)].1.clone();
+        assert_eq!(*cached, prepared.light);
+        assert_eq!(world.light_full(15, 10, 0), expected);
+        assert!(Arc::ptr_eq(&cached, &world.sky_cache[&(0, 0)].1));
+        world.set_block(16, 10, 0, AIR);
+        assert_ne!(world.light_full(15, 10, 0).1, expected.1);
+        assert!(!Arc::ptr_eq(&cached, &world.sky_cache[&(0, 0)].1));
+    }
+
+    #[test]
+    fn reloaded_neighbour_with_same_revision_invalidates_accepted_final_light() {
+        let mut world = World::in_memory();
+        world.ensure(0, 0);
+        world.ensure(1, 0);
+        let mut prepared = world.light_job(0, 0).unwrap().prepare();
+        assert!(world.accept_prepared_light(&mut prepared));
+        let old = world.sky_cache[&(0, 0)].1.clone();
+        assert_eq!(world.light_full(15, 10, 0).1, 0);
+        let revision = world.chunk_revision(1, 0).unwrap();
+        let mut replacement = Chunk::flat();
+        replacement.set(16, 10, 0, crate::blocks::state_by_name("torch").unwrap());
+        replacement.revision = revision;
+        world.chunks.remove(&(1, 0));
+        let ready = ReadyChunk {
+            taken: Taken::Loaded { chunk: replacement, from_disk: true, wake: Vec::new() },
+            epoch: world.unload_epoch,
+        };
+        assert!(world.accept_prepared(1, 0, ready));
+        assert_eq!(world.chunk_revision(1, 0), Some(revision));
+        assert!(!world.sky_cache.contains_key(&(0, 0)));
+        assert!(!world.light_is_current(&prepared));
+        assert_eq!(world.light_full(15, 10, 0).1, 13);
+        assert!(!Arc::ptr_eq(&old, &world.sky_cache[&(0, 0)].1));
+    }
+
+    #[test]
+    fn rejected_prepared_light_preserves_recounted_and_existing_cache() {
+        for change in 0..3 {
+            let mut world = World::in_memory();
+            world.ensure(0, 0);
+            world.ensure(1, 0);
+            // Сгенерированный плоский чанк уже имеет готовый собственный свет.
+            // Правка делает его устаревшим, чтобы результат действительно нёс пересчёт.
+            world.set_block(0, 10, 0, crate::blocks::state_by_name("stone").unwrap());
+            assert!(world.chunks[&(0, 0)].fresh_light().is_none());
+            let mut prepared = world.light_job(0, 0).unwrap().prepare();
+            let recounted = prepared.recounted.len();
+            assert!(recounted > 0);
+            let cache = Arc::new(light::ChunkLight::open_sky());
+            world.sky_cache.insert((0, 0), ([u32::MAX; 9], cache.clone()));
+            match change {
+                0 => { world.set_block(16, 10, 0, crate::blocks::state_by_name("torch").unwrap()); }
+                1 => { world.chunks.remove(&(1, 0)); }
+                _ => {
+                    let revision = world.chunk_revision(1, 0).unwrap();
+                    world.chunks.remove(&(1, 0));
+                    world.ensure(1, 0);
+                    assert_eq!(world.chunk_revision(1, 0), Some(revision));
+                }
+            }
+            assert!(!world.accept_prepared_light(&mut prepared), "изменение {change}");
+            assert_eq!(prepared.recounted.len(), recounted);
+            if change == 2 {
+                // Загрузка нового экземпляра уже сбросила соседний кеш;
+                // отклонённый результат не должен восстановить старый свет.
+                assert!(!world.sky_cache.contains_key(&(0, 0)));
+            } else {
+                assert!(Arc::ptr_eq(&cache, &world.sky_cache[&(0, 0)].1));
+            }
+            assert!(world.chunks[&(0, 0)].fresh_light().is_none());
+        }
+    }
+
+    #[test]
+    fn newer_b_light_publication_invalidates_older_a_including_cache_reuse() {
+        for cached in [false, true] {
+            let mut world = World::in_memory();
+            for x in -1..=1 { for z in -1..=1 { world.ensure(x, z); } }
+            if cached {
+                let (_, recounted) = world.light_job(0, 0).unwrap().finish();
+                world.store_light(recounted);
+            }
+            let a = world.light_job(0, 0).unwrap().prepare();
+            assert!(world.light_is_current(&a));
+            if cached { assert!(a.recounted.is_empty()); }
+            // А снял старый свет, затем факел в соседнем чанке и публикация Б.
+            let torch = crate::blocks::state_by_name("torch").unwrap();
+            world.set_block(16, 10, 0, torch);
+            let mut b = world.light_job(0, 0).unwrap().prepare();
+            assert!(world.light_is_current(&b));
+            world.store_light(std::mem::take(&mut b.recounted));
+            assert!(!world.light_is_current(&a));
+            assert!(world.light_is_current(&b));
+            assert_ne!(a.light.at(15, 10, 0).1, b.light.at(15, 10, 0).1);
+        }
+    }
+
+    #[test]
+    fn every_input_revision_and_absent_neighbour_are_validated() {
+        for slot in 0..9 {
+            let mut world = World::in_memory();
+            for x in -1..=1 { for z in -1..=1 { world.ensure(x, z); } }
+            let prepared = world.light_job(0, 0).unwrap().prepare();
+            let (x, z) = (slot % 3 - 1, slot / 3 - 1);
+            world.set_block(x * 16, 10, z * 16, crate::blocks::state_by_name("torch").unwrap());
+            assert!(!world.light_is_current(&prepared), "вход {slot}");
+        }
+        let mut world = World::in_memory();
+        world.ensure(0, 0);
+        let prepared = world.light_job(0, 0).unwrap().prepare();
+        world.ensure(1, 1);
+        assert!(!world.light_is_current(&prepared));
+    }
+
+    #[test]
+    fn unavailable_and_stale_accept_never_prepare_under_world_lock() {
+        let mut world = World::in_memory();
+        assert!(!world.accept_prepared(0, 0, ReadyChunk { taken: Taken::Unavailable, epoch: 0 }));
+        assert!(!world.has_chunk(0, 0));
+        let ready = world.source().take(0, 0);
+        world.unloaded.insert((0, 0), 1);
+        assert!(!world.accept_prepared(0, 0, ready));
+        assert!(!world.has_chunk(0, 0));
+    }
+}
+
 type PopulationLoot = Vec<((i32,i32,i32),Vec<Option<crate::inventory::Stack>>)>;
 impl Chunk {
     pub(crate) fn population_loot(&self) -> PopulationLoot {let mut containers:Vec<_>=self.containers.iter().filter(|(_,c)|c.slots.iter().any(Option::is_some)).map(|(pos,c)|(*pos,c.slots.clone())).collect();containers.sort_by_key(|(p,_)|*p);containers}
     pub(crate) fn replace_population_loot(&mut self, pos: (i32,i32,i32), slots: Vec<Option<crate::inventory::Stack>>) {if let Some(container)=self.containers.get_mut(&pos) {container.slots=slots;}}
-    pub(crate) fn population_snapshot(&self) -> (Vec<String>,Vec<u32>) {
+    pub(crate) fn population_snapshot(&self, catalog: crate::gameplay_catalog::Catalog) -> (Vec<String>,Vec<u32>) {
         let mut palette=Vec::new();let mut indices=std::collections::HashMap::new();let mut runs=Vec::<u32>::new();
         for x in 0..16 {for z in 0..16 {for y in MIN_Y..MIN_Y+WORLD_HEIGHT {
-            let name=crate::blocks::block_at_state(self.block(x,y,z)).unwrap_or("air");
+            let name=catalog.name(crate::gameplay_catalog::Kind::State, self.block(x,y,z)).unwrap_or("air");
             let index=*indices.entry(name).or_insert_with(||{let id=palette.len() as u32;palette.push(name.to_string());id});
             let n=runs.len();if n>=2&&runs[n-1]==index {runs[n-2]+=1;}else {runs.extend([1,index]);}
         }}}
         (palette,runs)
     }
-    pub(crate) fn apply_population(&mut self, edits: Vec<String>) -> Result<(),String> {
+    pub(crate) fn apply_population(&mut self, catalog: crate::gameplay_catalog::Catalog, edits: Vec<String>) -> Result<(),String> {
         if edits.len()>98304 {return Err("Слишком много изменений генерации".into());}
         let mut changes=Vec::with_capacity(edits.len());for edit in edits {
             let (index,name)=edit.split_once(' ').ok_or("Неверное изменение генерации")?;let index=index.parse::<i32>().map_err(|_|"Неверный индекс генерации")?;
             if !(0..98304).contains(&index) {return Err("За пределами области генерации".into());}
-            let state=crate::blocks::state_by_name(name).ok_or("Неизвестный блок генерации")?;changes.push((index,state));
+            let state=catalog.default_state(name).map_err(|_| "Неизвестный блок генерации")?.ok_or("Неизвестный блок генерации")?;changes.push((index,state));
         }
         for (index,state) in changes {self.set(index/384/16,index%384+MIN_Y,index/384%16,state);}
-        self.light_up();Ok(())
+        self.light_up_with_catalog(catalog);Ok(())
     }
 }
+
+#[cfg(test)]
+mod terrain_263_tests;
+
+#[cfg(test)]
+mod badlands_ocean_tests;
 
 #[cfg(test)]
 mod plugin_population_tests {
@@ -8230,20 +8842,44 @@ mod plugin_population_tests {
         let path=std::env::temp_dir().join(format!("mcsa-population-sync-{}",std::process::id()));let _=std::fs::remove_dir_all(&path);
         let mut world=World::open(&path,Some(1),crate::config::server_properties::WorldKind::Flat).unwrap();
         let source=world.source();let mut calls=0;
-        let ready=source.take_with(7,-8,true,|_,x,z,_,mut chunk| {calls+=1;assert_eq!((x,z),(7,-8));chunk.apply_population(vec!["0 diamond_block".into()]).unwrap();chunk});
+        let ready=source.take_with(7,-8,true,|_,x,z,_,mut chunk| {calls+=1;assert_eq!((x,z),(7,-8));chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 diamond_block".into()]).unwrap();chunk});
         assert_eq!(calls,1);assert!(!world.has_chunk(7,-8));assert!(world.accept_prepared(7,-8,ready));assert_eq!(crate::blocks::block_at_state(world.get_block(112,-64,-128)),Some("diamond_block"));
         world.save_if_needed();drop(world);
         let world=World::open(&path,Some(1),crate::config::server_properties::WorldKind::Flat).unwrap();
         let _ready=world.source().take_with(7,-8,true,|_,_,_,_,_|panic!("сохранённый чанк попал в популятор"));drop(world);let _=std::fs::remove_dir_all(path);
     }
     #[test]
+    fn population_263_keeps_existing_blocks_and_rejects_unknown_edits_atomically() {
+        use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_NAME};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let legacy = Catalog::new(Profile::Java26_1_2);
+        let state = catalog.state_from_text(&format!("{WHITE_SLAB_NAME}[type=top,waterlogged=true]")).unwrap().unwrap();
+        let mut chunk = Chunk::new();
+        chunk.set(0, MIN_Y, 0, state);
+        let (palette, runs) = chunk.population_snapshot(catalog);
+        assert_eq!(palette[runs[1] as usize], WHITE_SLAB_NAME);
+        assert!(chunk.apply_population(catalog, vec!["1 stone".into(), "2 not_a_real_block".into()]).is_err());
+        assert_eq!(chunk.block(0, MIN_Y, 0), state);
+        assert_eq!(chunk.block(0, MIN_Y + 1, 0), 0);
+        assert!(chunk.apply_population(legacy, vec![format!("0 {WHITE_SLAB_NAME}")]).is_err());
+        assert_eq!(chunk.block(0, MIN_Y, 0), state);
+        chunk.apply_population(catalog, vec![format!("1 {WHITE_SLAB_NAME}"), "2 stone".into()]).unwrap();
+        assert_eq!(chunk.block(0, MIN_Y, 0), state);
+        assert_eq!(chunk.block(0, MIN_Y + 1, 0), catalog.default_state(WHITE_SLAB_NAME).unwrap().unwrap());
+        assert!(chunk.fresh_light().is_some());
+        let (palette, runs) = chunk.population_snapshot(catalog);
+        assert_eq!(runs.as_chunks::<2>().0.iter().map(|row| row[0]).sum::<u32>(), 98304);
+        assert!(palette.iter().any(|name| name == WHITE_SLAB_NAME));
+    }
+
+    #[test]
     fn population_edits_are_bounded_atomic_and_cover_negative_height() {
         let mut chunk=Chunk::new();let old=chunk.block(0,-64,0);
-        assert!(chunk.apply_population(vec!["0 diamond_block".into(),"98304 stone".into()]).is_err());
+        assert!(chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 diamond_block".into(),"98304 stone".into()]).is_err());
         assert_eq!(chunk.block(0,-64,0),old);
-        assert!(chunk.apply_population(vec!["0 not_a_real_block".into()]).is_err());
-        chunk.apply_population(vec!["0 diamond_block".into(),"98303 gold_block".into()]).unwrap();
+        assert!(chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 not_a_real_block".into()]).is_err());
+        chunk.apply_population(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), vec!["0 diamond_block".into(),"98303 gold_block".into()]).unwrap();
         assert_eq!(crate::blocks::block_at_state(chunk.block(0,-64,0)),Some("diamond_block"));assert_eq!(crate::blocks::block_at_state(chunk.block(15,319,15)),Some("gold_block"));
-        let (palette,runs)=chunk.population_snapshot();assert_eq!(runs.as_chunks::<2>().0.iter().map(|r|r[0]).sum::<u32>(),98304);assert_eq!(palette[runs[1] as usize],"diamond_block");
+        let (palette,runs)=chunk.population_snapshot(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));assert_eq!(runs.as_chunks::<2>().0.iter().map(|r|r[0]).sum::<u32>(),98304);assert_eq!(palette[runs[1] as usize],"diamond_block");
     }
 }

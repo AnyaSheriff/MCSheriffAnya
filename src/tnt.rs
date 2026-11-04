@@ -17,7 +17,7 @@
 // Чего вики не говорит прямо, помечено «[проверить]» — это сверит чёрный
 // ящик (сценарии tnt-lever, tnt-chain, tnt-dispenser).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::blocks;
 use crate::custom_tnt::{self, KindId};
@@ -500,6 +500,32 @@ fn rays(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option<f32>
     rays_with(world, centre, power, cap, true)
 }
 
+/// Геометрия лучей неизменна; сохраняем исходный порядок i/j/k и порядок
+/// операций f64. Случайная сила по-прежнему выбирается отдельно для каждого луча.
+fn ray_steps() -> &'static [(f64, f64, f64)] {
+    static STEPS: std::sync::OnceLock<Vec<(f64, f64, f64)>> = std::sync::OnceLock::new();
+    STEPS.get_or_init(|| {
+        let mut steps = Vec::with_capacity(1352);
+        let edge = |n: i32| n == 0 || n == GRID - 1;
+        let last = (GRID - 1) as f64;
+        for i in 0..GRID {
+            for j in 0..GRID {
+                for k in 0..GRID {
+                    if !(edge(i) || edge(j) || edge(k)) { continue; }
+                    let raw = (
+                        i as f64 / last * 2.0 - 1.0,
+                        j as f64 / last * 2.0 - 1.0,
+                        k as f64 / last * 2.0 - 1.0,
+                    );
+                    let length = (raw.0 * raw.0 + raw.1 * raw.1 + raw.2 * raw.2).sqrt();
+                    steps.push((raw.0 / length * RAY_STEP, raw.1 / length * RAY_STEP, raw.2 / length * RAY_STEP));
+                }
+            }
+        }
+        steps
+    })
+}
+
 /// Лучи; `resist` — гасят ли их блоки. Лучи заряда ветра блоками не
 /// гасятся: у оригинала взрыв силой 1,2 у люка задел 60–66 клеток, а с
 /// гашением задел бы одну (чёрный ящик, wind-charge-throw) [проверить:
@@ -512,62 +538,47 @@ fn rays_with(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option
     // огонь взрыва с огнём.
     let mut touched = Vec::new();
     let mut doomed = Vec::new();
-    let edge = |n: i32| n == 0 || n == GRID - 1;
-    let last = (GRID - 1) as f64;
+    for &step in ray_steps() {
+        let mut intensity = power * (0.7 + world.random_unit() * 0.6);
+        let mut at = centre;
 
-    for i in 0..GRID {
-        for j in 0..GRID {
-            for k in 0..GRID {
-                if !(edge(i) || edge(j) || edge(k)) {
-                    continue;
+        while intensity > 0.0 {
+            let cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+
+            // За краем мира блоков нет — луч дальше не идёт.
+            if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&cell.1) {
+                break;
+            }
+
+            let state = world.get_block(cell.0, cell.1, cell.2);
+
+            if state != AIR && resist {
+                // Синий череп иссушителя: прочность не больше 0,8, кроме
+                // неразрушимого (mob/wither.rs).
+                let Ok(own_resistance) = world.catalog().blast_resistance(state) else {
+                    // Неизвестный профильный блок нельзя считать воздухом или ломать.
+                    break;
+                };
+                let resistance = match cap {
+                    Some(cap) if !crate::mob::wither::wither_immune(state) => own_resistance.min(cap),
+                    _ => own_resistance,
+                };
+
+                intensity -= (resistance + 0.3) * 0.3;
+            }
+
+            if intensity > 0.0 {
+                if reached.insert(cell) {
+                    touched.push(cell);
                 }
 
-                let raw = (
-                    i as f64 / last * 2.0 - 1.0,
-                    j as f64 / last * 2.0 - 1.0,
-                    k as f64 / last * 2.0 - 1.0,
-                );
-                let length = (raw.0 * raw.0 + raw.1 * raw.1 + raw.2 * raw.2).sqrt();
-                let step = (raw.0 / length * RAY_STEP, raw.1 / length * RAY_STEP, raw.2 / length * RAY_STEP);
-
-                let mut intensity = power * (0.7 + world.random_unit() * 0.6);
-                let mut at = centre;
-
-                while intensity > 0.0 {
-                    let cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
-
-                    // За краем мира блоков нет — луч дальше не идёт.
-                    if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&cell.1) {
-                        break;
-                    }
-
-                    let state = world.get_block(cell.0, cell.1, cell.2);
-
-                    if state != AIR && resist {
-                        // Синий череп иссушителя: прочность не больше 0,8, кроме
-                        // неразрушимого (mob/wither.rs).
-                        let resistance = match cap {
-                            Some(cap) if !crate::mob::wither::wither_immune(state) => blocks::blast_resistance(state).min(cap),
-                            _ => blocks::blast_resistance(state),
-                        };
-
-                        intensity -= (resistance + 0.3) * 0.3;
-                    }
-
-                    if intensity > 0.0 {
-                        if reached.insert(cell) {
-                            touched.push(cell);
-                        }
-
-                        if can_blow_up(state) && seen.insert(cell) {
-                            doomed.push(cell);
-                        }
-                    }
-
-                    at = (at.0 + step.0, at.1 + step.1, at.2 + step.2);
-                    intensity -= RAY_FADE;
+                if can_blow_up(world.catalog(), state) && seen.insert(cell) {
+                    doomed.push(cell);
                 }
             }
+
+            at = (at.0 + step.0, at.1 + step.1, at.2 + step.2);
+            intensity -= RAY_FADE;
         }
     }
 
@@ -598,8 +609,9 @@ fn set_fires(world: &mut World, touched: &[Pos]) {
 /// Можно ли взорвать блок. Воздух — нечего; служебный блок едущего поршня
 /// не трогаем: его убирает сам ход. [проверить] у оригинала. Прочее держит
 /// лучи своей стойкостью (бедрок, барьер — 3 600 000).
-fn can_blow_up(state: i32) -> bool {
-    state != AIR && blocks::block_at_state(state) != Some("moving_piston")
+fn can_blow_up(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    state != AIR && catalog.name(crate::gameplay_catalog::Kind::State, state)
+        .is_ok_and(|name| name != "moving_piston")
 }
 
 /// Толкает и ранит сущности в радиусе 2 · сила (вики, Explosion):
@@ -621,6 +633,18 @@ fn push_entities(
     centre: (f64, f64, f64),
     power: f32,
 ) -> (Pushes, Vec<Impact>) {
+    let mut cells = ExposureCells::new(world);
+    push_entities_with_cells(&mut cells, items, players, centre, power)
+}
+
+fn push_entities_with_cells(
+    cells: &mut ExposureCells<'_>,
+    items: &mut Items,
+    players: &[Target],
+    centre: (f64, f64, f64),
+    power: f32,
+) -> (Pushes, Vec<Impact>) {
+    let world = cells.world;
     let reach = 2.0 * power as f64;
     let nether_star = blocks::item_named("nether_star");
 
@@ -631,7 +655,7 @@ fn push_entities(
         };
         let eyes = if item.fuse.is_some() { 0.0 } else { height * EYES_SHARE };
 
-        let Some(impact) = impact(world, centre, reach, (item.x, item.y, item.z), (width, height)) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (item.x, item.y, item.z), (width, height)) else {
             continue;
         };
         let Some(push) = push_towards(centre, (item.x, item.y + eyes, item.z), impact) else {
@@ -657,7 +681,7 @@ fn push_entities(
     for cart in items.carts_mut().iter_mut().filter(|cart| cart.blast.is_none()) {
         let size = (crate::minecart::WIDTH, crate::minecart::HEIGHT);
 
-        let Some(impact) = impact(world, centre, reach, (cart.x, cart.y, cart.z), size) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (cart.x, cart.y, cart.z), size) else {
             continue;
         };
         let Some(push) = push_towards(centre, (cart.x, cart.y + size.1 * EYES_SHARE, cart.z), impact) else {
@@ -674,7 +698,7 @@ fn push_entities(
     for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn && !(mob.kind == crate::mob::Kind::Wither && mob.entity_id == source)) {
         let size = mob.size();
 
-        let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (mob.x, mob.y, mob.z), size) else {
             continue;
         };
 
@@ -712,7 +736,7 @@ fn push_entities(
 
     for player in players {
         let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
-        let Some(impact) = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
+        let Some(impact) = impact_with_cells(cells, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
             continue;
         };
 
@@ -731,12 +755,18 @@ fn push_entities(
 /// высота): `(1 − distance/reach) · exposure`. None — дальше радиуса.
 fn impact(world: &World, centre: (f64, f64, f64), reach: f64, feet: (f64, f64, f64), size: (f64, f64)) -> Option<f64> {
     let distance = distance(centre, feet) / reach;
+    if distance > 1.0 { return None; }
+    Some((1.0 - distance) * exposure(world, centre, feet, size))
+}
+
+fn impact_with_cells(cells: &mut ExposureCells<'_>, centre: (f64, f64, f64), reach: f64, feet: (f64, f64, f64), size: (f64, f64)) -> Option<f64> {
+    let distance = distance(centre, feet) / reach;
 
     if distance > 1.0 {
         return None;
     }
 
-    Some((1.0 - distance) * exposure(world, centre, feet, size))
+    Some((1.0 - distance) * exposure_with_cells(cells, centre, feet, size))
 }
 
 /// Прибавка к скорости: длиной `impact`, от центра к точке `towards`.
@@ -779,6 +809,44 @@ fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
 }
 
+/// Только одна неизменяемая фаза взрыва: следующий взрыв видит новые блоки.
+/// Вытеснения нет: после предела новые клетки идут прежним путём, старые hits
+/// продолжают работать. HashMap не выделяет память до первой вставки.
+struct ExposureCells<'w> {
+    world: &'w World,
+    cells: HashMap<Pos, bool, CoordHash>,
+    limit: usize,
+    #[cfg(test)]
+    misses: usize,
+}
+
+impl<'w> ExposureCells<'w> {
+    fn new(world: &'w World) -> Self { Self::with_limit(world, 4096) }
+
+    fn with_limit(world: &'w World, limit: usize) -> Self {
+        Self { world, cells: HashMap::default(), limit, #[cfg(test)] misses: 0 }
+    }
+
+    fn block_has_box(&mut self, pos: Pos) -> bool {
+        if let Some(&value) = self.cells.get(&pos) { return value; }
+        #[cfg(test)]
+        { self.misses += 1; }
+        let state = self.world.get_block(pos.0, pos.1, pos.2);
+        let value = exposure_block_has_box(self.world.catalog(), state);
+        if self.cells.len() < self.limit { self.cells.insert(pos, value); }
+        value
+    }
+}
+
+fn exposure_block_has_box(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    // Сохраняем full-cell policy и прежний fail-closed для неизвестных состояний.
+    match catalog.block_entry(state) {
+        Ok(Some(_)) => true,
+        Ok(None) => blocks::has_box(state),
+        Err(_) => true,
+    }
+}
+
 /// Открытость сущности взрыву — доля лучей от точек в её ящике к центру,
 /// которые не упёрлись в блок (вики, Explosion, «Exposure»). Точки — сетка
 /// ⌈2·ширина+1⌉ × ⌈2·высота+1⌉ × ⌈2·длина+1⌉ с шагом ширина/(2·ширина+1);
@@ -788,7 +856,11 @@ fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
 /// Луч заслоняет любой блок с ящиком столкновений, как целый куб.
 /// [проверить]: у оригинала неполные блоки (плиты, ступени) заслоняют
 /// только своей формой.
-pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), (width, height): (f64, f64)) -> f64 {
+pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), size: (f64, f64)) -> f64 {
+    exposure_with_cells(&mut ExposureCells::new(world), centre, feet, size)
+}
+
+fn exposure_with_cells(cells: &mut ExposureCells<'_>, centre: (f64, f64, f64), feet: (f64, f64, f64), (width, height): (f64, f64)) -> f64 {
     let step_x = 1.0 / (width * 2.0 + 1.0);
     let step_y = 1.0 / (height * 2.0 + 1.0);
     let shift = (1.0 - (1.0 / step_x).floor() * step_x) / 2.0;
@@ -807,7 +879,7 @@ pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), (
             while fz <= 1.0 {
                 let point = (low.0 + fx * width + shift, low.1 + fy * height, low.2 + fz * width + shift);
 
-                if !ray_blocked(world, point, centre) {
+                if !ray_blocked_with_cells(cells, point, centre) {
                     open += 1;
                 }
 
@@ -826,7 +898,12 @@ pub fn exposure(world: &World, centre: (f64, f64, f64), feet: (f64, f64, f64), (
 
 /// Упирается ли отрезок от `from` до `to` в блок с ящиком: проход по
 /// клеткам, через которые он идёт, по порядку.
+#[cfg(test)]
 fn ray_blocked(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> bool {
+    ray_blocked_with_cells(&mut ExposureCells::new(world), from, to)
+}
+
+fn ray_blocked_with_cells(cells: &mut ExposureCells<'_>, from: (f64, f64, f64), to: (f64, f64, f64)) -> bool {
     let cell = |v: f64| v.floor() as i32;
     let mut at = [cell(from.0), cell(from.1), cell(from.2)];
     let end = [cell(to.0), cell(to.1), cell(to.2)];
@@ -852,9 +929,7 @@ fn ray_blocked(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> boo
     // Отрезок короче радиуса взрыва — клеток на пути немного; предел на
     // всякий случай.
     for _ in 0..256 {
-        if blocks::has_box(world.get_block(at[0], at[1], at[2])) {
-            return true;
-        }
+        if cells.block_has_box((at[0], at[1], at[2])) { return true; }
 
         if at == end {
             return false;
@@ -895,7 +970,7 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
     for &(x, y, z) in doomed {
         let state = world.get_block(x, y, z);
 
-        if state == AIR {
+        if !can_blow_up(world.catalog(), state) {
             continue;
         }
 
@@ -917,10 +992,26 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
 
         let luck = world.random_unit();
 
-        if let Some(stack) = blocks::explosion_drops(state, luck) {
+        if world.catalog().changed_rules() && let Some(sides) = world.pot((x,y,z)) {
+            let data = world.pot_details((x,y,z));
+            let tool = crate::inventory::Stack::new(crate::blocks::item_named("diamond_pickaxe").unwrap(),1);
+            // Взрыв разбивает стороны; пустая сторона ничего не создаёт.
+            for stack in crate::pottery::drops_with_data(sides,data,Some(tool)) {
+                dropped.push((stack,(x as f64+0.5,y as f64+0.25,z as f64+0.5)));
+            }
+            world.set_block(x,y,z,AIR);
+            crate::redstone::settle(world);
+            drop_fallen_off(world,items,next_id);
+            continue;
+        }
+        let Ok(stack) = world.catalog().explosion_drops(state, luck) else {
+            // Ошибка каталога не разрешает удалить блок без его предмета.
+            continue;
+        };
+        if let Some(stack) = stack {
             let joined = dropped
                 .iter_mut()
-                .find(|(pile, _)| pile.item == stack.item && pile.count + stack.count <= pile.limit());
+                .find(|(pile, _)| pile.stacks_with(&stack) && pile.count + stack.count <= pile.limit());
 
             match joined {
                 Some((pile, _)) => pile.count += stack.count,
@@ -1329,6 +1420,21 @@ mod tests {
         assert!(items.items().iter().any(|item| Some(item.stack.item) == cobblestone));
     }
 
+    #[test]
+    fn preview_pot_explosion_keeps_named_side_and_does_not_merge_it_with_plain_bricks() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        let mut items = Items::with_catalog(catalog);
+        for x in [0,1] {
+            world.set_block(x,70,0,state("decorated_pot"));
+            crate::pottery::apply_snbt(&mut world,(x,70,0),if x==0 { r#"{sherds:{back:{id:"minecraft:brick",components:{"minecraft:custom_name":"side"}}}}"# } else { r#"{sherds:{back:"minecraft:brick"}}"# });
+        }
+        destroy_blocks(&mut world,&mut items,&[(0,70,0),(1,70,0)],&mut ids());
+        assert_eq!(items.items().len(),2);
+        assert_eq!(items.items().iter().map(|i|i.stack.count).sum::<i32>(),2);
+        assert_eq!(items.items().iter().filter(|i|i.stack.extras().name.as_deref()==Some("side")).count(),1);
+    }
+
     /// Пакет взрыва уходит после разрушения, а отвалившийся без опоры рычаг
     /// выпадает сразу, до добычи взрыва (чёрный ящик, tnt-powered-place).
     #[test]
@@ -1662,3 +1768,113 @@ mod tests {
         assert_eq!(exposure(&world, (0.5, 64.06, 0.5), (-2.5, 64.0, 0.5), (SIZE, SIZE)), 1.0);
     }
 }
+
+
+#[cfg(test)]
+mod catalog_resistance_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog,Profile,CONCRETE_SLABS,WOOL_SLABS,SlabHalf};
+
+    fn filled(state: i32, catalog: Catalog) -> World {
+        let mut world=World::in_memory_with_catalog(catalog);
+        for x in -3..=3 { for y in 61..=67 { for z in -3..=3 { world.set_block(x,y,z,state); } } }
+        world
+    }
+
+    #[test]
+    fn real_rays_match_base_material_resistance_for_dry_and_waterlogged_slabs() {
+        let catalog=Catalog::new(Profile::Preview26_3);
+        let water=blocks::state_by_name("water").unwrap();
+        for row in [&CONCRETE_SLABS[0],&WOOL_SLABS[0]] {
+            for half in [SlabHalf::Bottom,SlabHalf::Top,SlabHalf::Double] {
+                for wet in [false,true] {
+                    let slab=catalog.slab_state_for(row,half,wet).unwrap();
+                    let base=if wet {water} else {blocks::state_by_name(row.input_name).unwrap()};
+                    assert_eq!(catalog.blast_resistance(slab),Ok(blocks::blast_resistance(base)));
+                    let mut actual=filled(slab,catalog);
+                    let mut expected=filled(base,Catalog::new(Profile::Java26_1_2));
+                    assert_eq!(actual.random_bits(),expected.random_bits(),"одинаковый генератор до лучей");
+                    assert_eq!(rays(&mut actual,(0.5,64.5,0.5),4.0,None),rays(&mut expected,(0.5,64.5,0.5),4.0,None));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn known_catalog_policy_prevents_unknown_or_disabled_states_from_becoming_doomed() {
+        let native=Catalog::new(Profile::Java26_1_2);
+        let preview=Catalog::new(Profile::Preview26_3);
+        for state in [-1,i32::MAX,65535] { assert!(!can_blow_up(preview,state)); }
+        assert!(!can_blow_up(native,WOOL_SLABS[0].default_state));
+        assert!(can_blow_up(preview,WOOL_SLABS[0].default_state));
+        assert!(!can_blow_up(preview,blocks::state_by_name("moving_piston").unwrap()));
+        assert!(!can_blow_up(preview,AIR));
+    }
+}
+
+
+#[cfg(test)]
+mod catalog_drop_exposure_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog,Profile,slabs,SlabHalf,WOOL_SLABS};
+
+    #[test]
+    fn actual_destroy_path_drops_own_single_or_double_item_for_all_32_slabs() {
+        let catalog=Catalog::new(Profile::Preview26_3);
+        for row in slabs() {
+            for half in [SlabHalf::Bottom,SlabHalf::Top,SlabHalf::Double] {
+                let mut world=World::in_memory_with_catalog(catalog);
+                let state=catalog.slab_state_for(row,half,false).unwrap();
+                assert!(world.set_block_silently(0,64,0,state));
+                let mut items=Items::new(); let mut id=100;
+                destroy_blocks(&mut world,&mut items,&[(0,64,0)],&mut || {id+=1;id});
+                assert_eq!(world.get_block(0,64,0),AIR);
+                let stacks: Vec<_>=items.items().iter().map(|drop|drop.stack).collect();
+                assert_eq!(stacks,vec![crate::inventory::Stack::new(row.item,if half==SlabHalf::Double {2}else{1})]);
+            }
+        }
+    }
+
+    #[test]
+    fn disabled_and_unknown_content_cannot_enter_or_be_removed_by_destroy_policy() {
+        let catalog=Catalog::new(Profile::Java26_1_2);
+        let mut world=World::in_memory_with_catalog(catalog);
+        for state in [WOOL_SLABS[0].default_state,i32::MAX,-1] {
+            assert!(catalog.explosion_drops(state,0.5).is_err());
+            assert!(!can_blow_up(catalog,state));
+            assert!(!world.set_block_silently(0,64,0,state));
+        }
+        let piston=blocks::state_by_name("moving_piston").unwrap();
+        world.set_block_silently(1,64,0,piston);
+        let mut items=Items::new(); destroy_blocks(&mut world,&mut items,&[(0,64,0),(1,64,0)],&mut ||100);
+        assert_eq!(world.get_block(0,64,0),AIR);
+        assert_eq!(world.get_block(1,64,0),piston);
+        assert!(items.items().is_empty());
+    }
+
+    #[test]
+    fn actual_exposure_double_slab_wall_matches_base_full_cell_policy() {
+        let catalog=Catalog::new(Profile::Preview26_3);
+        let base=blocks::state_by_name("stone").unwrap();
+        for row in slabs() {
+            let slab=catalog.slab_state_for(row,SlabHalf::Double,false).unwrap();
+            let mut actual=World::in_memory_with_catalog(catalog); let mut control=World::in_memory();
+            for y in 62..=67 { for z in -3..=3 { actual.set_block_silently(1,y,z,slab); control.set_block_silently(1,y,z,base); } }
+            for centre in [(0.5,64.5,0.5),(0.5,68.5,0.5)] {
+                let a=exposure(&actual,centre,(3.5,64.0,0.5),(0.6,1.8));
+                let b=exposure(&control,centre,(3.5,64.0,0.5),(0.6,1.8));
+                assert!((0.0..=1.0).contains(&a)); assert_eq!(a,b);
+            }
+            assert!(ray_blocked(&actual,(0.5,64.5,0.5),(3.5,64.5,0.5)));
+            assert!(!ray_blocked(&actual,(0.5,68.5,0.5),(3.5,68.5,0.5)));
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "tnt/exposure_cache_tests.rs"]
+mod exposure_cache_tests;
+
+#[cfg(test)]
+#[path = "tnt/ray_direction_tests.rs"]
+mod ray_direction_tests;

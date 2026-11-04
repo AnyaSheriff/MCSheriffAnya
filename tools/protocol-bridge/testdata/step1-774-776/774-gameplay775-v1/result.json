@@ -1,0 +1,14 @@
+{
+  "primary": 775,
+  "client": 774,
+  "peer": 777,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "scenario": "all",
+  "runner_sha256": "9f4d1ebe97e07f642c86a6d108240d58318cc4111dc6521a0c300be3c54bcce3",
+  "binary_sha256": "18d0c2128895238ce87e9042c4d7a3bec5eec30a932ff6cc263099ddc70f791e",
+  "error": "AssertionError: startup timeout",
+  "sessions": []
+}

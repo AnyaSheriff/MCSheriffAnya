@@ -1,5 +1,6 @@
 // Вики, Player.dat_format: «abilities» сохраняет разрешение и состояние полёта.
 use super::*;
+use mcsa_protocol::JavaVersion;
 
 fn shared() -> Shared {
     Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
@@ -15,13 +16,13 @@ fn player(mode: i32) -> PlayerState {
 fn client_flags(p: &mut PlayerState, shared: &Shared, flags: &[u8]) {
     let mut body = encode_varint(SERVERBOUND_ABILITIES);
     body.extend_from_slice(flags);
-    handle_client_packet(&PacketInfo { id: SERVERBOUND_ABILITIES, length: body.len() as i32, body }, p, shared);
+    handle_client_packet(&PacketInfo { id: SERVERBOUND_ABILITIES, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }, p, shared);
 }
 
 fn reconnect(p: &mut PlayerState, label: &str) -> PlayerState {
     let directory = std::env::temp_dir().join(format!("mc_abilities_{label}"));
     std::fs::create_dir_all(&directory).unwrap();
-    p.save(&directory);
+    p.save_with_catalog(&directory, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));
     let saved = playerdata::load(&directory, &p.uuid).unwrap();
     let joined = PlayerState::new(p.uuid, p.name.clone(), Some(saved), None, 0x7f, 0, p.spawn_point);
     std::fs::remove_dir_all(directory).unwrap();
@@ -167,10 +168,10 @@ async fn self_command_sends_abilities_after_state_was_applied_before_queued_orde
     shared.ops.lock().unwrap().give(&p.uuid, &p.name, 4);
     let mut body = encode_varint(SERVERBOUND_CHAT_COMMAND);
     body.extend_from_slice(&encode_string("gamemode creative"));
-    handle_client_packet(&PacketInfo { id: SERVERBOUND_CHAT_COMMAND, length: body.len() as i32, body }, &mut p, &shared);
+    handle_client_packet(&PacketInfo { id: SERVERBOUND_CHAT_COMMAND, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None }, &mut p, &shared);
     assert_eq!(p.game_mode, 1);
     let orders = shared.players.lock().unwrap().take_orders(&p.uuid);
-    assert!(matches!(orders.as_slice(), [Order::GameMode { mode: 1 }]));
+    assert!(matches!(orders.as_slice(), [Order::GameMode { mode: 1, .. }]));
     let mut out = Outgoing::capture();
     vitals::game_mode_order(&mut out, &mut p, 1, 10).await.unwrap();
     let mut bytes = out.queued();
@@ -251,4 +252,28 @@ fn saved_abilities_changes_trigger_save_and_publish_for_explosions() {
     let targets = crate::tick::blast_targets(&shared, p.dimension);
     assert_eq!(targets.len(), 1);
     assert!(targets[0].flying_creative);
+}
+
+#[tokio::test]
+async fn saved_abilities_cross_both_primary_wire_profiles() {
+    use mcsa_protocol::content::ContentCodec;
+    let mut p = player(1);
+    p.abilities.flying = true;
+    p.abilities.fly_speed = 0.125;
+    p.abilities.walk_speed = 0.25;
+    let p = reconnect(&mut p, "wire_profiles");
+    for content in [ContentCodec::default(), ContentCodec::white_slab_preview()] {
+        for version in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+            let mut out = Outgoing::capture_content(version, content);
+            send_player_abilities(&mut out, &p).await.unwrap();
+            let mut bytes = out.queued();
+            let packet = read_packet(&mut bytes).await.unwrap();
+            assert_eq!(packet.id, if version == JavaVersion::V26_3 { 0x41 } else { 0x40 });
+            let mut expected = vec![15];
+            push_f32(&mut expected, 0.125);
+            push_f32(&mut expected, 0.25);
+            assert_eq!(packet.payload(), expected);
+            assert!(bytes.is_empty());
+        }
+    }
 }

@@ -1,0 +1,12 @@
+{
+  "exit": 1,
+  "stdout": "[14:47:43] [Server thread/INFO]: config/mcsa.properties: дописаны новые настройки: console-colors, auth-enabled, auth-premium, offline-license-mode, tab-tps, debug, prefetch-chunks, prefetch-at-once, bedrock-port, bedrock-online-mode, bedrock-show-coordinates, autumn-forests, pink-cherry-groves, text-info, portal-delay, portal-min-width, portal-min-height, portal-max-width, portal-max-height\n",
+  "stderr": "Error: Custom { kind: InvalidInput, error: \"config/mcsa.properties: при viaproxy=true требуется viaproxy-memory не менее 320M (по умолчанию 512M)\" }\n",
+  "world_created": false,
+  "binary_sha256": "62908e0d9134a3799f4e895c429bb48565839494d3723555049ce3fd65b9e0ac",
+  "probe_ports_released": [
+    26028,
+    26186,
+    26187
+  ]
+}

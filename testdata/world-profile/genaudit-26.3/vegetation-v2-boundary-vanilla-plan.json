@@ -1,0 +1,32 @@
+{
+  "seed": 1792932773345722119,
+  "windows": {
+    "overworld": [
+      [
+        -21,
+        -3,
+        -13,
+        5
+      ],
+      [
+        15,
+        -47,
+        23,
+        -39
+      ],
+      [
+        163,
+        -195,
+        171,
+        -187
+      ]
+    ],
+    "the_nether": [],
+    "the_end": []
+  },
+  "targets": [
+    "old_growth_birch_forest",
+    "plains",
+    "snowy_taiga"
+  ]
+}

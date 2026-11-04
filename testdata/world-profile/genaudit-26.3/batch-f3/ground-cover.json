@@ -1,0 +1,40 @@
+{
+  "seeds": [
+    0,
+    31
+  ],
+  "unit": "plant blocks per thousand eligible grass columns; tall grass counts both halves",
+  "samples": [
+    {
+      "biome": "beach",
+      "limits": {
+        "short_grass": [
+          120,
+          180
+        ]
+      }
+    },
+    {
+      "biome": "swamp",
+      "limits": {
+        "short_grass": [
+          85,
+          115
+        ]
+      }
+    },
+    {
+      "biome": "windswept_forest",
+      "limits": {
+        "short_grass": [
+          38,
+          55
+        ],
+        "tall_grass": [
+          4.5,
+          10
+        ]
+      }
+    }
+  ]
+}

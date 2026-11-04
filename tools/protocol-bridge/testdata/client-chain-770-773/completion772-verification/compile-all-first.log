@@ -1,0 +1,41 @@
+ Downloading crates ...
+  Downloaded smallvec v1.16.4
+   Compiling smallvec v1.16.4
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/seedmap)
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv12/tools/protocol-bridge)
+   Compiling parking_lot_core v0.9.12
+   Compiling regalloc2 v0.15.2
+   Compiling parking_lot v0.12.5
+   Compiling tokio v1.54.1
+   Compiling cranelift-codegen v0.136.2
+   Compiling wasmtime-environ v49.0.2
+   Compiling icu_normalizer v2.4.0
+   Compiling idna_adapter v1.2.2
+   Compiling tokio-util v0.7.20
+   Compiling idna v1.1.0
+   Compiling tokio-rustls v0.26.6
+   Compiling h2 v0.4.20
+   Compiling url v2.5.8
+   Compiling tower v0.5.3
+   Compiling tower-http v0.6.11
+   Compiling hyper v1.12.0
+   Compiling num-bigint-dig v0.8.6
+   Compiling hyper-util v0.1.21
+   Compiling rsa v0.9.10
+   Compiling wasmtime-internal-fiber v49.0.2
+   Compiling hyper-rustls v0.27.10
+   Compiling reqwest v0.13.5
+   Compiling cranelift-frontend v0.136.2
+   Compiling cranelift-native v0.136.2
+   Compiling wasmtime-internal-unwinder v49.0.2
+   Compiling wasmtime-internal-cranelift v49.0.2
+   Compiling wasmtime v49.0.2
+   Compiling wasmtime-wasi-io v49.0.2
+   Compiling wasmtime-wasi v49.0.2
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv12)
+    Finished `release` profile [optimized] target(s) in 2m 46s
+  Executable unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-be36ca87248fd34f)
+  Executable unittests src/main.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsheriffanya-12cfc85e9e96ee73)
+  Executable unittests src/bin/seedmap.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/seedmap-18595666e9ae7379)
+  Executable tests/world_startup.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/world_startup-25c2363fa11a149b)
+  Executable unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/seedmap_core-ae404b20effa358b)

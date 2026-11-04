@@ -220,10 +220,11 @@ pub(super) fn village_uuid(mob: &Mob) -> Option<[u8;16]> {
 /// Хвост записи моба: имя, «не исчезать», поводок.
 pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
     let name = mob.name.as_deref().unwrap_or("");
+    let item_overlay = super::item_storage::encode(mob).expect("предметы моба проверены до записи");
 
     let nether = matches!(mob.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
     // Бит 16 — «не взрослеть» (AgeLocked), без своих байтов.
-    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3) | (u8::from(mob.age_locked) << 4) | (u8::from(village_uuid(mob).is_some()) << 5) | (u8::from(mob.equipment.is_some()) << 6) | (u8::from(!mob.plugin_attributes.is_empty()) << 7));
+    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3) | (u8::from(mob.age_locked) << 4) | (u8::from(village_uuid(mob).is_some()) << 5) | (u8::from(mob.equipment.is_some()) << 6) | (u8::from(item_overlay.is_some() || !mob.plugin_attributes.is_empty()) << 7));
     out.extend_from_slice(&(name.len() as u16).to_be_bytes());
     out.extend_from_slice(name.as_bytes());
 
@@ -251,11 +252,24 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
         super::equipment::write(&super::equipment::all(mob),out);
         for chance in mob.equipment_drop_chances {out.extend(chance.to_be_bytes());}
     }
-    if !mob.plugin_attributes.is_empty() {super::plugin_attributes::write(mob,out);}
+    // Отдельный заголовок не пересекается с длиной старого дополнения (до 16 МиБ).
+    if !mob.plugin_attributes.is_empty() {
+        out.extend([0xff; 4]);
+        out.push(u8::from(item_overlay.is_some()));
+        if let Some(items) = item_overlay {
+            out.extend(u32::try_from(items.len()).expect("дополнение ограничено").to_be_bytes());
+            out.extend(items);
+        }
+        super::plugin_attributes::write(mob, out);
+    } else if let Some(items) = item_overlay {
+        out.extend(u32::try_from(items.len()).expect("дополнение ограничено").to_be_bytes());
+        out.extend(items);
+    }
 }
 
 /// Прочитанный хвост.
 pub struct Tail {
+    item_overlay: Option<super::item_storage::Overlay>,
     uuid: Option<[u8;16]>,
     name: Option<String>,
     persistent: bool,
@@ -269,7 +283,12 @@ pub struct Tail {
 }
 
 /// Читает хвост `write_tail`; None — испорчен.
+#[cfg(test)]
 pub fn read_tail(bytes: &mut &[u8]) -> Option<Tail> {
+    read_tail_with_storage_context(bytes, false, false)
+}
+
+pub(super) fn read_tail_with_storage_context(bytes: &mut &[u8], legacy_plugin_tail: bool, legacy_metadata: bool) -> Option<Tail> {
     let mut take = |count: usize| -> Option<&[u8]> {
         let (head, rest) = bytes.split_at_checked(count)?;
         *bytes = rest;
@@ -296,15 +315,44 @@ pub fn read_tail(bytes: &mut &[u8]) -> Option<Tail> {
 
     let nether=if flags & 4 != 0 {Some((i32::from_be_bytes(take(4)?.try_into().ok()?),take(1)?[0]!=0))} else {None};
     let mut uuid=if flags & 32 != 0 {Some(take(16)?.try_into().ok()?)} else {None};
-    let trial_gear=if flags & 8 != 0 {Some(super::trial_gear::read(bytes)?)} else {None};
-    let equipment=if flags & 64 != 0 {Some(super::equipment::read(bytes)?)} else {None};
+    let trial_gear=if flags & 8 != 0 {Some(super::trial_gear::read_with_legacy_metadata(bytes, legacy_metadata)?)} else {None};
+    let equipment=if flags & 64 != 0 {Some(super::equipment::read_with_legacy_metadata(bytes, legacy_metadata)?)} else {None};
     let equipment_drop_chances=if flags & 64 != 0 {super::equipment::read_chances(bytes)?} else {[super::DEFAULT_DROP;6]};
-    let attributes=if flags & 128 != 0 {let (head,rest)=bytes.split_at_checked(16)?;uuid=Some(head.try_into().ok()?);*bytes=rest;super::plugin_attributes::read(bytes)?} else {Vec::new()};
-    Some(Tail { attributes, uuid, trial_gear, equipment, equipment_drop_chances, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, age_locked: flags & 16 != 0, leash, nether })
+    let mut item_overlay = None;
+    let mut attributes = Vec::new();
+    if flags & 128 != 0 {
+        if legacy_plugin_tail {
+            let (head, rest) = bytes.split_at_checked(16)?;
+            uuid = Some(head.try_into().ok()?);
+            *bytes = rest;
+            attributes = super::plugin_attributes::read(bytes)?;
+        } else if bytes.starts_with(&[0xff; 4]) {
+            *bytes = &bytes[4..];
+            let (&has_items, rest) = bytes.split_first()?;
+            *bytes = rest;
+            match has_items {
+                0 => {},
+                1 => item_overlay = Some(super::item_storage::read(bytes)?),
+                _ => return None,
+            }
+            let (head, rest) = bytes.split_at_checked(16)?;
+            uuid = Some(head.try_into().ok()?);
+            *bytes = rest;
+            attributes = super::plugin_attributes::read(bytes)?;
+        } else {
+            item_overlay = Some(super::item_storage::read(bytes)?);
+        }
+    }
+    Some(Tail { attributes, item_overlay, uuid, trial_gear, equipment, equipment_drop_chances, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, age_locked: flags & 16 != 0, leash, nether })
 }
 
 /// Кладёт прочитанный хвост в моба.
+#[cfg(test)]
 pub fn apply_tail(mob: &mut Mob, tail: Tail) {
+    apply_tail_checked(mob, tail).expect("хвост соответствует виду моба");
+}
+
+pub(super) fn apply_tail_checked(mob: &mut Mob, tail: Tail) -> Option<()> {
     if let Some(uuid)=tail.uuid {mob.uuid=uuid;mob.land.saved_uuid=Some(uuid);}
     mob.h.trial_gear=tail.trial_gear;
     mob.plugin_attributes=tail.attributes;
@@ -316,6 +364,8 @@ pub fn apply_tail(mob: &mut Mob, tail: Tail) {
     mob.age_locked = tail.age_locked;
     mob.leash = tail.leash;
     if let Some((outside,immune))=tail.nether {mob.newmobs.outside=outside;mob.nether.immune=immune;}
+    if let Some(overlay) = tail.item_overlay { super::item_storage::apply(mob, overlay)?; }
+    Some(())
 }
 
 /// Бирка: имя мобу (вики, Name Tag: «renames the mob»; чёрный ящик, name-tag:
@@ -333,4 +383,42 @@ pub fn name_tag(mob: &mut Mob, name: Option<&str>) -> bool {
     mob.name = Some(name.to_string());
     mob.persistent_tag = true;
     true
+}
+
+#[cfg(test)]
+mod merged_tail_tests {
+    use super::*;
+    use crate::commands_world::AttributeEdit;
+
+    #[test]
+    fn full_items_and_plugin_attributes_share_tail_without_losing_either() {
+        for kind in [Kind::Zombie, Kind::Fox, Kind::Llama] {
+            let mut mob = Mob::new(711, kind, (0.0, 64.0, 0.0));
+            mob.edit_plugin_attribute(&AttributeEdit::SetBase {
+                attribute: crate::attributes::MAX_HEALTH, value: 36.0,
+            }).unwrap();
+            mob.vitals.health = 33.0;
+            let mut bytes = Vec::new();
+            mob.write(&mut bytes);
+            let mut input = bytes.as_slice();
+            let loaded = Mob::read(&mut input).unwrap();
+            assert!(input.is_empty());
+            assert_eq!(loaded.uuid, mob.uuid);
+            assert_eq!(loaded.plugin_attributes, mob.plugin_attributes);
+            assert_eq!(loaded.vitals.health, 33.0);
+            assert_eq!(loaded.vitals.max_health, 36.0);
+        }
+    }
+
+    #[test]
+    fn old_overlay_without_attributes_still_reads() {
+        let mob = Mob::new(712, Kind::Fox, (0.0, 64.0, 0.0));
+        let mut bytes = Vec::new();
+        write_tail(&mob, &mut bytes);
+        let mut input = bytes.as_slice();
+        let tail = read_tail(&mut input).unwrap();
+        assert!(input.is_empty());
+        assert!(tail.item_overlay.is_some());
+        assert!(tail.attributes.is_empty());
+    }
 }

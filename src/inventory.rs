@@ -126,8 +126,13 @@ impl Stack {
     /// Дописывает довески стопки, если они есть: длина и запись
     /// (`stackdata::to_bytes`). Читает их `read_stored`.
     pub fn write_extras(&self, out: &mut Vec<u8>) {
+        self.write_extras_with_legacy_metadata(out, false);
+    }
+
+    pub(crate) fn write_extras_with_legacy_metadata(&self, out: &mut Vec<u8>, legacy: bool) {
         if let Some(data) = self.data {
-            let bytes = crate::stackdata::to_bytes(&crate::stackdata::get(data));
+            let data = crate::stackdata::get(data);
+            let bytes = if legacy { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
 
             out.extend_from_slice(&(bytes.len() as u16).to_be_bytes());
             out.extend_from_slice(&bytes);
@@ -136,14 +141,18 @@ impl Stack {
 
     /// Довески к стопке из `from_stored`, если её номер их обещал: берёт их
     /// из `take` (длина и запись). None — запись испорчена.
-    pub fn read_extras<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+    pub fn read_extras<'a>(stored: i32, take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+        Self::read_extras_with_legacy_metadata(stored, take, false)
+    }
+
+    pub(crate) fn read_extras_with_legacy_metadata<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>, legacy: bool) -> Option<Option<crate::stackdata::Data>> {
         if stored >= 0 {
             return Some(None);
         }
 
         let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
 
-        Some(Some(crate::stackdata::from_bytes(take(length)?)?))
+        Some(Some(crate::stackdata::from_bytes_with_legacy_metadata(take(length)?, legacy)?))
     }
 
     /// Стопка из записи `stored_item`. Неизвестный номер особого динамита
@@ -157,6 +166,32 @@ impl Stack {
             tnt: crate::custom_tnt::by_id(tnt).map(|kind| kind.id),
             data: None,
         }
+    }
+
+    /// Строгий путь записей мобов: проверяем сырые данные до нормализации.
+    /// Каталог и предел стопки проверяет вызывающий код после полного чтения.
+    pub fn from_stored_strict(stored: i32, count: i32, extras: Option<crate::stackdata::Data>) -> Option<Self> {
+        if count <= 0 || stored & 0x00ff_ffff == 0 || (stored < 0) != extras.is_some() { return None; }
+        let tag = ((stored >> 24) & 0x7f) as u8;
+        let mut stack = Self::from_stored(stored, count);
+        if tag != 0 && (stack.tnt.map(|kind| kind.0) != Some(tag)
+            || blocks::item_name(stack.item) != Some("tnt")) { return None; }
+        if let Some(data) = extras { stack = stack.with_extras(data); }
+        (stack.stored_item() == stored).then_some(stack)
+    }
+
+    /// Проверяет именно записанные байты компонентов, включая лишний хвост.
+    pub fn read_extras_strict<'a>(stored: i32, take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+        Self::read_extras_strict_with_legacy_metadata(stored, take, false)
+    }
+
+    pub(crate) fn read_extras_strict_with_legacy_metadata<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>, legacy: bool) -> Option<Option<crate::stackdata::Data>> {
+        if stored >= 0 { return Some(None); }
+        let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
+        let bytes = take(length)?;
+        let data = crate::stackdata::from_bytes_with_legacy_metadata(bytes, legacy)?;
+        let canonical = if legacy { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
+        (canonical == bytes).then_some(Some(data))
     }
 
     /// Сколько таких предметов помещается в одну стопку.
@@ -341,8 +376,10 @@ impl Inventory {
             .chain(FIRST_MAIN..=LAST_MAIN)
             .collect();
 
-        // Сперва доложить в начатые стопки.
-        for slot in &order {
+        // Сперва доложить в начатые стопки, включая вторую руку.
+        // Наблюдение official775: полный рюкзак + offhand pumpkin7,
+        // give pumpkin1 → offhand8. Пустую вторую руку не заполняем.
+        for slot in order.iter().chain(std::iter::once(&OFFHAND)) {
             if left <= 0 {
                 break;
             }
@@ -485,10 +522,18 @@ impl Inventory {
         match mode {
             0 => self.pick_up(slot, button),
             1 => Click { understood: self.quick_move(slot), thrown: None },
-            2 => Click { understood: self.swap(slot, button), thrown: None },
+            2 => self.swap(slot, button),
             4 => self.throw_away(slot, button),
             _ => Click::default(),
         }
+    }
+
+    /// Броня принимает только свой тип экипировки и ровно одну вещь.
+    /// Официальные340/775/777: bedrock в слот шлема не помещается.
+    fn slot_limit(slot: i32, stack: Stack) -> i32 {
+        if (5..=8).contains(&slot) {
+            i32::from(crate::combat::info(stack.item).is_some_and(|info| i32::from(info.equip_slot) == 12 - slot))
+        } else { stack.limit() }
     }
 
     /// Обычный щелчок: взять стопку в курсор, положить её или поменять местами.
@@ -514,6 +559,9 @@ impl Inventory {
             return Click::default();
         };
 
+        if self.cursor.is_some_and(|held| Self::slot_limit(slot, held) == 0) {
+            return Click { understood: true, thrown: None };
+        }
         if index != 0 && crate::bundle::click(&mut self.cursor, &mut self.slots[index], button) {
             return Click { understood: true, thrown: None };
         }
@@ -537,8 +585,9 @@ impl Inventory {
 
             // В курсоре что-то есть, слот пуст — кладём всё или одну штуку.
             (Some(held), None, 0) => {
-                self.slots[index] = Some(held);
-                self.cursor = None;
+                let moved = held.count.min(Self::slot_limit(slot, held));
+                self.slots[index] = Some(held.with_count(moved));
+                self.cursor = remainder(held, held.count - moved);
             }
             (Some(held), None, _) => {
                 self.slots[index] = Some(held.with_count(1));
@@ -547,7 +596,7 @@ impl Inventory {
 
             // Тот же предмет — досыпаем, сколько влезет.
             (Some(held), Some(there), button) if held.stacks_with(&there) => {
-                let room = (there.limit() - there.count).max(0);
+                let room = (Self::slot_limit(slot, there) - there.count).max(0);
                 let moved = if button == 0 { room.min(held.count) } else { room.min(1) };
 
                 self.slots[index] = Some(there.with_count(there.count.saturating_add(moved)));
@@ -556,6 +605,7 @@ impl Inventory {
 
             // Разные предметы — меняем местами.
             (Some(held), Some(there), _) => {
+                if held.count > Self::slot_limit(slot, held) { return Click { understood: true, thrown: None }; }
                 self.slots[index] = Some(held);
                 self.cursor = Some(there);
             }
@@ -564,7 +614,7 @@ impl Inventory {
         Click { understood: true, thrown: None }
     }
 
-    /// Щелчок с Shift: стопка перекладывается между рюкзаком и панелью.
+    /// Щелчок с Shift: сначала свободная экипировка, затем рюкзак/панель.
     fn quick_move(&mut self, slot: i32) -> bool {
         let Some(index) = self.index(slot) else {
             return false;
@@ -573,6 +623,24 @@ impl Inventory {
         let Some(stack) = self.slots[index] else {
             return true;
         };
+
+        let mut left = stack.count;
+        // Вики, Controls: «corresponding armor slot». Наблюдение777:
+        // из pumpkin8 надевается одна, остальные семь тем же щелчком
+        // уходят в противоположную часть инвентаря; из offhand тоже надеваем.
+        // Сетка крафта и уже надетая броня идут сразу в обычные слоты.
+        if (FIRST_MAIN..=OFFHAND).contains(&slot)
+            && let Some(target) = crate::combat::info(stack.item).and_then(|info| match info.equip_slot {
+                2 => Some(OFFHAND),
+                4..=7 => Some(12 - i32::from(info.equip_slot)),
+                _ => None,
+            })
+            && target != slot && self.slots[target as usize].is_none()
+        {
+            let moved = left.min(Self::slot_limit(target, stack));
+            self.slots[target as usize] = remainder(stack, moved);
+            left -= moved;
+        }
 
         // Из панели вещь уходит в рюкзак, из рюкзака — в панель, из брони
         // и второй руки — куда придётся.
@@ -585,8 +653,6 @@ impl Inventory {
         };
 
         self.slots[index] = None;
-
-        let mut left = stack.count;
 
         // Сперва досыпаем в начатые стопки того же предмета.
         for target in &targets {
@@ -628,20 +694,35 @@ impl Inventory {
 
     /// Щелчок с цифрой: слот меняется местами со слотом панели (или со второй
     /// рукой, если нажата клавиша второй руки).
-    fn swap(&mut self, slot: i32, button: i8) -> bool {
+    fn swap(&mut self, slot: i32, button: i8) -> Click {
         let other = match button {
             SWAP_OFFHAND => OFFHAND,
             0..=8 => FIRST_HOTBAR + button as i32,
-            _ => return false,
+            _ => return Click::default(),
         };
 
         let (Some(here), Some(there)) = (self.index(slot), self.index(other)) else {
-            return false;
+            return Click::default();
         };
+        let unchanged = Click { understood: true, thrown: None };
+        if here == there { return unchanged; }
 
+        if let Some(incoming) = self.slots[there] {
+            let limit = Self::slot_limit(slot, incoming);
+            if limit == 0 { return unchanged; }
+            if incoming.count > limit {
+                // Вики, Inventory: «hotbar keys». Официальные340/775:
+                // из стопки тыкв надевается одна, прежний шлем возвращается
+                // в рюкзак; при полном инвентаре выпадает ровно остаток.
+                let displaced = self.slots[here].replace(incoming.with_count(limit));
+                self.slots[there] = remainder(incoming, incoming.count - limit);
+                return Click { understood: true, thrown: displaced.and_then(|stack| self.put(stack).1) };
+            }
+        }
+        if self.slots[here].is_some_and(|stack| stack.count > Self::slot_limit(other, stack)) { return unchanged; }
         self.slots.swap(here, there);
 
-        true
+        unchanged
     }
 
     /// Выброс: предмет из слота летит на землю — одна штука или вся стопка.
@@ -678,6 +759,10 @@ impl Inventory {
     /// Пустые слоты не пишутся: их подавляющее большинство, и незачем занимать
     /// ими место. Поэтому запись — это список «слот, предмет, сколько».
     pub fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes_with_legacy_metadata(false)
+    }
+
+    pub(crate) fn to_bytes_with_legacy_metadata(&self, legacy: bool) -> Vec<u8> {
         let filled: Vec<(usize, Stack)> = self
             .slots
             .iter()
@@ -695,7 +780,7 @@ impl Inventory {
             out.push(slot as u8);
             out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.extend_from_slice(&stack.count.to_be_bytes());
-            stack.write_extras(&mut out);
+            stack.write_extras_with_legacy_metadata(&mut out, legacy);
         }
 
         // Хвост: сколько и какие атрибуты когда-либо имели модификаторы.
@@ -705,14 +790,54 @@ impl Inventory {
         }
         if !self.retained_drops.is_empty() {
             out.extend(b"PDRO");out.extend((self.retained_drops.len() as u32).to_be_bytes());
-            for stack in &self.retained_drops {out.extend(stack.stored_item().to_be_bytes());out.extend(stack.count.to_be_bytes());stack.write_extras(&mut out);}
+            for stack in &self.retained_drops {out.extend(stack.stored_item().to_be_bytes());out.extend(stack.count.to_be_bytes());stack.write_extras_with_legacy_metadata(&mut out, legacy);}
         }
 
         out
     }
 
+    /// Строгий путь сохранений: неизвестное/усечённое не становится пустой ячейкой.
+    pub fn from_bytes_for_catalog(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog) -> Result<Self, crate::gameplay_catalog::StackError> {
+        Self::from_bytes_for_catalog_with_legacy_metadata(bytes, catalog, false)
+    }
+
+    /// Явный импорт main: сравнение со старым писателем20, без ослабления канона.
+    pub(crate) fn from_bytes_for_catalog_with_legacy_metadata(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog, legacy: bool) -> Result<Self, crate::gameplay_catalog::StackError> {
+        use crate::gameplay_catalog::{StackError, StackProblem};
+        let malformed = || StackError { path: Vec::new(), problem: StackProblem::MalformedEncoding };
+        let mut inventory = if legacy { Self::from_bytes_with_legacy_metadata(bytes,true) } else { Self::from_bytes(bytes) }.ok_or_else(malformed)?;
+        // Включая выбранный слот, custom TNT, компоненты и хвост атрибутов.
+        // Старый декодер может обрезать/пропустить запись — это не успех.
+        let canonical = inventory.to_bytes_with_legacy_metadata(legacy);
+        // Прежний писатель мог явно записывать пустой хвост атрибутов.
+        let legacy_empty_tail = inventory.seen_attributes.is_empty()
+            && bytes.strip_suffix(&[0]) == Some(canonical.as_slice());
+        if canonical != bytes && !legacy_empty_tail { return Err(malformed()); }
+        if legacy {
+            for stack in inventory.slots.iter_mut().flatten().chain(inventory.retained_drops.iter_mut()) {
+                crate::stackdata::main_import::stack(stack).ok_or_else(malformed)?;
+            }
+        }
+        catalog.validate_inventory(&inventory)?;
+        Ok(inventory)
+    }
+
+    /// Явный профиль проверяет предел до установки; общий каталог775 не меняется.
+    #[cfg(test)]
+    pub fn set_for_catalog(&mut self, slot: usize, stack: Option<Stack>, catalog: crate::gameplay_catalog::Catalog) -> Result<(), crate::gameplay_catalog::StackError> {
+        use crate::gameplay_catalog::{StackError, StackLocation, StackProblem};
+        let target = self.slots.get_mut(slot).ok_or_else(|| StackError { path: vec![StackLocation::Slot(slot)], problem: StackProblem::MalformedEncoding })?;
+        if let Some(stack) = &stack { catalog.validate_stack(stack)?; }
+        *target = stack;
+        Ok(())
+    }
+
     /// Читает инвентарь из файла игрока. None — запись испорчена.
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        Self::from_bytes_with_legacy_metadata(bytes, false)
+    }
+
+    fn from_bytes_with_legacy_metadata(bytes: &[u8], legacy: bool) -> Option<Self> {
         let selected = *bytes.first()?;
         let filled = *bytes.get(1)? as usize;
 
@@ -732,7 +857,7 @@ impl Inventory {
             let slot = take(1)?[0] as i32;
             let item = i32::from_be_bytes(take(4)?.try_into().ok()?);
             let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let extras = Stack::read_extras(item, &mut take)?;
+            let extras = Stack::read_extras_with_legacy_metadata(item, &mut take, legacy)?;
             let mut stack = Stack::from_stored(item, count);
 
             if let Some(extras) = extras {
@@ -758,7 +883,7 @@ impl Inventory {
             if count>bytes.len()/8 {return None;}
             for _ in 0..count {
                 let item=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
-                let extras=Stack::read_extras(item,&mut take)?;let mut stack=Stack::from_stored(item,count);if let Some(data)=extras {stack=stack.with_extras(data);}
+                let extras=Stack::read_extras_with_legacy_metadata(item,&mut take,legacy)?;let mut stack=Stack::from_stored(item,count);if let Some(data)=extras {stack=stack.with_extras(data);}
                 if count<=0||count>stack.limit() {return None;}inventory.retained_drops.push(stack);
             }
         }
@@ -789,6 +914,72 @@ mod tests {
         restored.set(super::FIRST_MAIN,None);assert!(restored.restore_retained());assert_eq!(restored.slot(super::FIRST_MAIN),Some(kit));assert!(!restored.restore_retained());
     }
     #[test]
+    fn shift_equipment_matches_24_official_777_inventory_snapshots() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/inventory-shift-777.json")).unwrap();
+        assert_eq!(fixture["protocol"], 777);
+        assert_eq!(fixture["cases"].as_array().unwrap().len(), 24);
+        let read = |value: &serde_json::Value| {
+            let mut inventory = Inventory::new();
+            for (slot, stack) in value.as_object().unwrap() {
+                inventory.set(slot.parse().unwrap(), Some(Stack::new(
+                    blocks::item_named(stack["item"].as_str().unwrap()).unwrap(), stack["count"].as_i64().unwrap() as i32)));
+            }
+            inventory
+        };
+        for case in fixture["cases"].as_array().unwrap() {
+            let mut inventory = read(&case["before"]);
+            let expected = read(&case["after"]);
+            let before: i32 = inventory.slots().iter().flatten().map(|s| s.count).sum();
+            let result = inventory.click(case["slot"].as_i64().unwrap() as i32, 0, 1);
+            assert!(result.understood && result.thrown.is_none(), "{}", case["name"]);
+            assert_eq!(inventory.slots(), expected.slots(), "{}", case["name"]);
+            assert!(inventory.cursor().is_none());
+            assert_eq!(inventory.slots().iter().flatten().map(|s| s.count).sum::<i32>(), before);
+        }
+    }
+
+    #[test]
+    fn shift_equipment_preserves_components_binding_and_full_inventory_remainders() {
+        let pumpkin = Stack::new(blocks::item_named("carved_pumpkin").unwrap(), 8);
+        let stone = Stack::new(blocks::item_named("stone").unwrap(), 64);
+        for source in [FIRST_MAIN, FIRST_HOTBAR] {
+            let mut inventory = Inventory::new();
+            for slot in FIRST_MAIN..=LAST_HOTBAR { inventory.set(slot, Some(stone)); }
+            let mut data = crate::stackdata::Data::default();
+            data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+            let stack = pumpkin.with_extras(data);
+            inventory.set(source, Some(stack));
+            inventory.set_cursor(Some(Stack::new(blocks::item_named("diamond").unwrap(), 3)));
+            let cursor = inventory.cursor();
+            let result = inventory.click(source, 0, 1);
+            assert!(result.understood && result.thrown.is_none());
+            assert_eq!(inventory.slot(5), Some(stack.with_count(1)));
+            assert_eq!(inventory.slot(source), Some(stack.with_count(7)));
+            assert_eq!(inventory.cursor(), cursor);
+            // Нельзя вытащить надетую проклятую вещь следующей Shift-командой.
+            let equipped = inventory.clone();
+            inventory.click(5, 0, 1);
+            assert_eq!(inventory, equipped);
+            // При занятом шлеме и полной противоположной части всё остаётся.
+            inventory.click(source, 0, 1);
+            assert_eq!(inventory, equipped);
+        }
+    }
+
+    #[test]
+    fn strict_inventory_accepts_legacy_optional_empty_attribute_tail() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        let inventory = Inventory::new();
+        let canonical = inventory.to_bytes();
+        assert_eq!(Inventory::from_bytes_for_catalog(&canonical, catalog), Ok(inventory.clone()));
+        let mut legacy = canonical;
+        legacy.push(0);
+        assert_eq!(Inventory::from_bytes_for_catalog(&legacy, catalog), Ok(inventory));
+        legacy.push(0);
+        assert!(Inventory::from_bytes_for_catalog(&legacy, catalog).is_err());
+    }
+
+    #[test]
     fn binding_blocks_every_supported_way_out_of_an_armor_slot() {
         let mut data = crate::stackdata::Data::default();
         data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
@@ -817,6 +1008,112 @@ mod tests {
         inventory.click(5, 0, 0);
         assert_eq!(inventory.slot(5), Some(helmet));
         assert_eq!(inventory.cursor(), None);
+    }
+
+    #[test]
+    fn armor_slots_reject_wrong_items_and_limit_wearables() {
+        let stone = Stack::new(crate::blocks::item_named("bedrock").unwrap(),8);
+        let helmet = Stack::new(crate::blocks::item_named("diamond_helmet").unwrap(),1);
+        for slot in 5..=8 {
+            for creative in [false, true] {
+                let mut inv = Inventory::new(); inv.set_cursor(Some(stone));
+                inv.click_in_mode(slot, 0, 0, creative);
+                assert_eq!(inv.slot(slot),None); assert_eq!(inv.cursor(),Some(stone));
+                inv.set_cursor(None); inv.set(36,Some(stone));
+                inv.click_in_mode(slot,0,2,creative);
+                assert_eq!(inv.slot(slot),None); assert_eq!(inv.slot(36),Some(stone));
+            }
+        }
+        let mut inv = Inventory::new(); inv.set_cursor(Some(helmet));
+        inv.click(6,0,0); assert_eq!(inv.slot(6),None); assert_eq!(inv.cursor(),Some(helmet));
+        inv.click(5,0,0); assert_eq!(inv.slot(5),Some(helmet)); assert_eq!(inv.cursor(),None);
+        let pumpkin = Stack::new(crate::blocks::item_named("carved_pumpkin").unwrap(),8);
+        for mode in [0,2] {
+            let mut inv = Inventory::new();
+            if mode == 0 { inv.set_cursor(Some(pumpkin)); } else { inv.set(36,Some(pumpkin)); }
+            inv.click(5,0,mode); assert_eq!(inv.slot(5),Some(pumpkin.with_count(1)));
+            assert_eq!(if mode == 0 {inv.cursor()} else {inv.slot(36)},Some(pumpkin.with_count(7)));
+        }
+    }
+
+    #[test]
+    fn put_merges_existing_offhand_without_filling_an_empty_one() {
+        let pumpkin = Stack::new(crate::blocks::item_named("carved_pumpkin").unwrap(), 7);
+        let bedrock = Stack::new(crate::blocks::item_named("bedrock").unwrap(), 64);
+        let mut inventory = Inventory::new();
+        for slot in FIRST_MAIN..=LAST_HOTBAR { inventory.set(slot, Some(bedrock)); }
+        inventory.set(OFFHAND, Some(pumpkin));
+        assert_eq!(inventory.put(pumpkin.with_count(1)), (vec![OFFHAND], None));
+        assert_eq!(inventory.slot(OFFHAND), Some(pumpkin.with_count(8)));
+
+        inventory.set(OFFHAND, Some(pumpkin.with_count(63)));
+        assert_eq!(inventory.put(pumpkin.with_count(3)), (vec![OFFHAND], Some(pumpkin.with_count(2))));
+        assert_eq!(inventory.slot(OFFHAND), Some(pumpkin.with_count(64)));
+
+        inventory.set(OFFHAND, None);
+        assert_eq!(inventory.put(pumpkin), (vec![], Some(pumpkin)));
+        assert_eq!(inventory.slot(OFFHAND), None);
+
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+        let distinct = pumpkin.with_extras(data);
+        inventory.set(OFFHAND, Some(distinct));
+        assert_eq!(inventory.put(pumpkin), (vec![], Some(pumpkin)));
+        assert_eq!(inventory.slot(OFFHAND), Some(distinct));
+    }
+
+    #[test]
+    fn armor_number_keys_match_official_snapshots_and_conserve_every_item() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../tools/protocol-bridge/testdata/inventory-armor-edges.json")).unwrap();
+        let stack = |value: &serde_json::Value| {
+            (!value.is_null()).then(|| Stack::new(crate::blocks::item_named(value["item"].as_str().unwrap()).unwrap(), value["count"].as_i64().unwrap() as i32))
+        };
+        let totals = |inventory: &Inventory, dropped: &[Stack]| {
+            let mut counts = std::collections::BTreeMap::<i32, i32>::new();
+            for item in inventory.slots().iter().flatten().chain(inventory.cursor().as_ref()).chain(dropped) {
+                *counts.entry(item.item).or_default() += item.count;
+            }
+            counts
+        };
+        for case in fixture["cases"].as_array().unwrap() {
+            let name = case["name"].as_str().unwrap();
+            let mut inventory = Inventory::new();
+            for (index, value) in case["before"].as_array().unwrap().iter().enumerate() { inventory.set(index as i32, stack(value)); }
+            let before = totals(&inventory, &[]);
+            let button = case["button"].as_i64().unwrap() as i8;
+            let click = inventory.click(5, button, 2);
+            let dropped: Vec<_> = click.thrown.into_iter().collect();
+            assert!(click.understood, "{name}");
+            let expected: Vec<_> = case["after"].as_array().unwrap().iter().map(stack).collect();
+            assert_eq!(inventory.slots(), expected, "{name}");
+            assert_eq!(inventory.cursor(), stack(&case["cursor"]), "{name}");
+            assert_eq!(dropped, case["dropped"].as_array().unwrap().iter().filter_map(stack).collect::<Vec<_>>(), "{name}");
+            assert_eq!(totals(&inventory, &dropped), before, "{name}: потеря или дюп");
+            // Повтор одного действия не должен повторно выбрасывать уже
+            // вытесненный шлем, даже если клиент повторит запрос много раз.
+            for _ in 0..16 {
+                assert_eq!(inventory.click(5, button, 2).thrown, None, "{name}: повторный дроп");
+                assert_eq!(totals(&inventory, &dropped), before, "{name}: повторный щелчок");
+            }
+        }
+    }
+
+    #[test]
+    fn bound_armor_rolls_back_displacement_and_overflow_drop() {
+        let mut inventory = Inventory::new();
+        let bedrock = Stack::new(crate::blocks::item_named("bedrock").unwrap(), 64);
+        for slot in 9..=44 { inventory.set(slot, Some(bedrock)); }
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+        inventory.set(5, Some(Stack::new(crate::blocks::item_named("iron_helmet").unwrap(), 1).with_extras(data)));
+        inventory.set(36, Some(Stack::new(crate::blocks::item_named("carved_pumpkin").unwrap(), 8)));
+        let before = inventory.clone();
+        for _ in 0..16 {
+            let click = inventory.click(5, 0, 2);
+            assert!(click.understood); assert_eq!(click.thrown, None);
+            assert_eq!(inventory.slots(), before.slots());
+            assert_eq!(inventory.cursor(), before.cursor());
+        }
     }
 
     use super::*;
@@ -1168,5 +1465,126 @@ mod tests {
 
         assert_eq!(inventory.held(), Some(Stack::new(STONE, 9)));
         assert_eq!(inventory.slot(FIRST_MAIN + 2), Some(held));
+    }
+}
+
+#[cfg(test)]
+mod strict_mob_storage_tests {
+    use super::*;
+    use crate::mob::{self, Kind, Mob};
+
+    // Только сохранённая стопка сравнивается целиком, не нормализуемое тело моба.
+    fn record(family: usize, stack: Stack) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let mut mob = Mob::new(71, Kind::Llama, (0.0, 64.0, 0.0));
+        match family {
+            0 => { let mut gear = [None; 6]; gear[0] = Some(stack); mob::equipment::write(&gear, &mut bytes); }
+            1 => { let mut gear = [None; 3]; gear[0] = Some(stack); mob::trial_gear::write(&gear, &mut bytes); }
+            2 => { mob.stand.equipment[0] = Some(stack); mob.stand.write(&mut bytes); }
+            3 => { mob.horse.slots[0] = Some(stack); mob::horse::write(&mob, &mut bytes); }
+            4 => { mob.land.chest = true; mob.land.strength = 1; mob.land.cargo = vec![Some(stack), None, None]; mob::land::write(&mob, &mut bytes); }
+            5 => { mob.small.held = Some(stack); mob::small::write(&mob, &mut bytes); }
+            6 => { mob.wild.mouth = Some(stack); mob::wildlife::write(&mob.wild, &mut bytes); }
+            7 => { mob.newmobs.cargo = Some(stack); mob::newmobs::write(&mob.newmobs, &mut bytes); }
+            _ => unreachable!(),
+        }
+        bytes
+    }
+
+    fn read(family: usize, bytes: &mut &[u8]) -> Option<Stack> {
+        match family {
+            0 => mob::equipment::read(bytes)?[0],
+            1 => mob::trial_gear::read(bytes)?[0],
+            2 => mob::armor_stand::State::read(bytes)?.equipment[0],
+            3 => { let mut mob = Mob::new(72, Kind::Llama, (0.0, 64.0, 0.0)); mob::horse::read(&mut mob, bytes)?; mob.horse.slots[0] }
+            4 => mob::land::read(bytes)?.0.cargo[0],
+            5 => mob::small::read(bytes)?.0.held,
+            6 => mob::wildlife::read(bytes)?.mouth,
+            7 => mob::newmobs::read(bytes)?.cargo,
+            _ => unreachable!(),
+        }
+    }
+
+    fn change_item(bytes: &mut [u8], old: i32, new: i32) {
+        let needle = old.to_be_bytes();
+        let offsets: Vec<_> = bytes.windows(4).enumerate().filter_map(|(i, b)| (b == needle).then_some(i)).collect();
+        assert_eq!(offsets.len(), 1, "одна выбранная запись предмета");
+        bytes[offsets[0]..offsets[0]+4].copy_from_slice(&new.to_be_bytes());
+    }
+
+    #[test]
+    fn strict_storage_decodes_writer_records_and_refuses_tnt_tag_normalization_in_every_family() {
+        let stone = blocks::item_named("stone").unwrap();
+        let tnt = blocks::item_named("tnt").unwrap();
+        for family in 0..8 {
+            let stack = Stack::new(stone, 1).with_extras(crate::stackdata::Data { name: Some("Сохранённая стопка".into()), ..Default::default() });
+            let valid = record(family, stack);
+            let mut concatenated = valid.clone(); concatenated.extend([0xab, 0xcd]);
+            let mut tail = concatenated.as_slice();
+            assert_eq!(read(family, &mut tail), Some(stack), "семейство{family}");
+            assert_eq!(tail, &[0xab, 0xcd]);
+            for raw in [stack.stored_item() | (127 << 24), stack.stored_item() | (1 << 24)] {
+                let mut bad = valid.clone(); change_item(&mut bad, stack.stored_item(), raw);
+                assert!(read(family, &mut bad.as_slice()).is_none(), "семейство{family}, raw{raw}");
+            }
+            let item_at = valid.windows(4).position(|b| b == stack.stored_item().to_be_bytes()).unwrap();
+            let extra_at = item_at + if matches!(family, 1 | 6) { 4 } else { 8 };
+            let length = u16::from_be_bytes(valid[extra_at..extra_at+2].try_into().unwrap());
+            let mut bad_extra = valid.clone();
+            bad_extra[extra_at..extra_at+2].copy_from_slice(&(length + 1).to_be_bytes());
+            bad_extra.insert(extra_at + 2 + usize::from(length), 0);
+            assert!(read(family, &mut bad_extra.as_slice()).is_none(), "лишний хвост компонентов семейство{family}");
+            let custom = Stack { tnt: Some(crate::custom_tnt::KindId(1)), ..Stack::new(tnt, 1) };
+            let bytes = record(family, custom);
+            assert_eq!(read(family, &mut bytes.as_slice()), Some(custom), "известный TNT семейство{family}");
+        }
+    }
+
+    #[test]
+    fn present_zero_and_negative_counts_are_errors_not_empty_horse_or_cargo_slots() {
+        let item = blocks::item_named("stone").unwrap();
+        for family in [0, 2, 3, 4, 5, 7] {
+            let valid = record(family, Stack::new(item, 7));
+            for count in [0i32, -1] {
+                let mut needle = item.to_be_bytes().to_vec(); needle.extend(7_i32.to_be_bytes());
+                let offsets: Vec<_> = valid.windows(8).enumerate().filter_map(|(i, b)| (b == needle).then_some(i)).collect();
+                assert_eq!(offsets.len(), 1);
+                let mut bad = valid.clone();
+                bad[offsets[0]+4..offsets[0]+8].copy_from_slice(&count.to_be_bytes());
+                assert!(read(family, &mut bad.as_slice()).is_none(), "семейство{family}, count{count}");
+            }
+        }
+    }
+
+    #[test]
+    fn strict_extras_refuse_trailing_component_bytes_and_empty_flag_normalization() {
+        let stack = Stack::new(blocks::item_named("stone").unwrap(), 1).with_extras(crate::stackdata::Data { name: Some("Имя".into()), ..Default::default() });
+        let mut extra = Vec::new(); stack.write_extras(&mut extra);
+        let length = u16::from_be_bytes(extra[..2].try_into().unwrap());
+        extra[..2].copy_from_slice(&(length + 1).to_be_bytes()); extra.push(0);
+        let mut tail = extra.as_slice();
+        assert!(Stack::read_extras_strict(stack.stored_item(), |n| { let (a,b) = tail.split_at_checked(n)?; tail = b; Some(a) }).is_none());
+        assert!(Stack::from_stored_strict(stack.item | i32::MIN, 1, Some(Default::default())).is_none());
+        assert!(Stack::from_stored_strict(stack.item, 1, Some(stack.extras())).is_none());
+    }
+}
+
+#[cfg(test)]
+mod main_metadata_import_tests {
+    use super::*;
+    #[test]
+    fn legacy_metadata_canonical_check_is_explicit_and_preserves_nested_items() {
+        let catalog=crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        let extra=crate::stackdata::Data { plugin_meta:Some(r#"{"fixture":"nested"}"#.into()), ..Default::default() };
+        let stone=Stack::new(crate::blocks::item_named("stone").unwrap(),7).with_extras(extra);
+        let nested=crate::stackdata::Data {contents:vec![crate::stackdata::Content {slot:2,item:stone.item,count:stone.count,data:stone.data}], ..Default::default()};
+        let shulker=Stack::new(crate::blocks::item_named("shulker_box").unwrap(),1).with_extras(nested);
+        let mut inventory=Inventory::new();inventory.set(36,Some(shulker));inventory.set(37,Some(stone));
+        let old=inventory.to_bytes_with_legacy_metadata(true);
+        assert!(Inventory::from_bytes_for_catalog(&old,catalog).is_err());
+        assert_eq!(Inventory::from_bytes_for_catalog_with_legacy_metadata(&old,catalog,true),Ok(inventory.clone()));
+        assert_eq!(Inventory::from_bytes_for_catalog(&inventory.to_bytes(),catalog),Ok(inventory));
+        for end in 0..old.len() {assert!(Inventory::from_bytes_for_catalog_with_legacy_metadata(&old[..end],catalog,true).is_err());}
+        let mut extra=old.clone();extra.push(1);assert!(Inventory::from_bytes_for_catalog_with_legacy_metadata(&extra,catalog,true).is_err());
     }
 }

@@ -64,8 +64,8 @@ impl Kind {
     fn salt(self) -> u64 {
         match self {
             Kind::DesertPyramid => 14_357_617,
-            Kind::JunglePyramid => 0x7E3D_0002,
-            Kind::SwampHut => 0x7E3D_0003,
+            Kind::JunglePyramid => 14_357_619,
+            Kind::SwampHut => 14_357_620,
         }
     }
 
@@ -184,11 +184,24 @@ fn roll(seed: i64, x: i32, z: i32, salt: u64) -> u64 {
 
 /// Чанк попытки в области: линейный сдвиг 0…23 по каждой оси.
 pub fn attempt(kind: Kind, seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
-    let dice = roll(seed, region_x, region_z, kind.salt());
+    super::template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, kind.salt())
+}
+fn legacy_attempt(kind: Kind, seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    let dice = roll(seed, region_x, region_z, legacy_salt(kind));
     let span = (SPACING - SEPARATION) as u64;
 
     (region_x * SPACING + (dice % span) as i32, region_z * SPACING + ((dice >> 20) % span) as i32)
 }
+
+fn legacy_salt(kind: Kind) -> u64 {
+    match kind { Kind::DesertPyramid => 14_357_617, Kind::JunglePyramid => 0x7E3D_0002, Kind::SwampHut => 0x7E3D_0003 }
+}
+
+fn attempt_for(kind: Kind, terrain: &super::terrain::Terrain, x: i32, z: i32) -> (i32, i32) {
+    if terrain.generation_profile() & 2 != 0 { attempt(kind, terrain.seed(), x, z) }
+    else { legacy_attempt(kind, terrain.seed(), x, z) }
+}
+
 
 /// Постройка: чанк старта, сторона и низ рамки.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -231,12 +244,12 @@ impl Start {
 
 /// Стоит ли постройка вида в области.
 pub fn start_in(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Start> {
-    type Starts = Mutex<HashMap<(Kind, i64, bool, i32, i32), Option<Start>>>;
+    type Starts = Mutex<HashMap<(Kind, i64, u8, i32, i32), Option<Start>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (kind, terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
+    let key = (kind, terrain.seed(), terrain.generation_profile(), region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -258,12 +271,20 @@ pub fn start_in(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, re
 }
 
 fn decide(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Start> {
-    let chunk = attempt(kind, terrain.seed(), region_x, region_z);
-    let facing = (roll(terrain.seed(), chunk.0, chunk.1, kind.salt() ^ 0xFACE) % 4) as u8;
+    let chunk = attempt_for(kind, terrain, region_x, region_z);
+    let facing = (roll(terrain.seed(), chunk.0, chunk.1, (if terrain.generation_profile() & 2 != 0 { kind.salt() } else { legacy_salt(kind) }) ^ 0xFACE) % 4) as u8;
     let mut start = Start { kind, chunk, facing, y: 0 };
     let [x0, z0, x1, z1] = start.area();
 
     if !kind.biome_fits(terrain.column_in((x0 + x1) / 2, (z0 + z1) / 2, None).biome) {
+        return None;
+    }
+
+    // minecraft.wiki/w/Desert_Pyramid: «no longer able to generate above
+    // water sources». Нельзя поднимать мокрые углы до уровня моря и затем
+    // принимать получившуюся сухую рамку за пригодную площадку.
+    if terrain.generation_profile() & 2 != 0 && kind == Kind::DesertPyramid
+        && [x0, x1].iter().any(|&x| [z0, z1].iter().any(|&z| terrain.column_at(x, z).height <= super::terrain::SEA)) {
         return None;
     }
 
@@ -297,7 +318,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<St
     for kind in Kind::ALL {
         for region_x in (chunk_x - 2).div_euclid(SPACING)..=chunk_x.div_euclid(SPACING) {
             for region_z in (chunk_z - 2).div_euclid(SPACING)..=chunk_z.div_euclid(SPACING) {
-                let (x, z) = attempt(kind, terrain.seed(), region_x, region_z);
+                let (x, z) = attempt_for(kind, terrain, region_x, region_z);
 
                 if !(x..=x + 1).contains(&chunk_x) || !(z..=z + 1).contains(&chunk_z) {
                     continue;
@@ -447,7 +468,11 @@ fn igloo_library() -> &'static HashMap<&'static str, Template> {
     LIBRARY.get_or_init(|| parse(include_str!("igloo.txt"), &["top", "middle", "bottom"]))
 }
 
-const IGLOO_SALT: u64 = 0x7E3D_0004;
+const IGLOO_SALT: u64 = 14_357_618;
+
+pub fn igloo_attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
+    super::template::grid_attempt(seed, region_x, region_z, SPACING, SEPARATION, IGLOO_SALT)
+}
 
 /// Иглу: чанк старта, поворот, точка образца верха (клетка a = 0, b = 0),
 /// высота пола и звеньев шахты (0 — без подвала).
@@ -498,10 +523,13 @@ pub fn igloo_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     use super::terrain::Biome;
 
     let seed = terrain.seed();
-    let dice = roll(seed, region_x, region_z, IGLOO_SALT);
-    let span = (SPACING - SEPARATION) as u64;
-    let chunk = (region_x * SPACING + (dice % span) as i32, region_z * SPACING + ((dice >> 20) % span) as i32);
-    let more = roll(seed, chunk.0, chunk.1, IGLOO_SALT ^ 0xFACE);
+    let salt = if terrain.generation_profile() & 2 != 0 { IGLOO_SALT } else { 0x7E3D_0004 };
+    let chunk = if terrain.generation_profile() & 2 != 0 { igloo_attempt(seed, region_x, region_z) } else {
+        let dice = roll(seed, region_x, region_z, salt);
+        let span = (SPACING - SEPARATION) as u64;
+        (region_x * SPACING + (dice % span) as i32, region_z * SPACING + ((dice >> 20) % span) as i32)
+    };
+    let more = roll(seed, chunk.0, chunk.1, salt ^ 0xFACE);
     let rot = (more % 4) as u8;
     let top = igloo_library().get("top")?;
     let (sx, sz) = if rot.is_multiple_of(2) { (top.width, top.depth) } else { (top.depth, top.width) };
@@ -991,4 +1019,17 @@ fn desert_pyramid_uses_the_documented_set_and_only_desert() {
     assert!(Kind::DesertPyramid.biome_fits(super::terrain::Biome::Desert));
     assert!(!Kind::DesertPyramid.biome_fits(super::terrain::Biome::Badlands));
     assert!(!Kind::DesertPyramid.biome_fits(super::terrain::Biome::Savanna));
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn preview_pyramid_rejects_water_and_has_its_own_cache() {
+    use super::terrain::{Terrain, Style};
+    let seed = 100_554_032_945_340;
+    let old = Terrain::new(seed,Style::Vanilla);
+    let t = Terrain::new(seed,Style::Vanilla).with_preview(true);
+    let _ = start_in(Kind::DesertPyramid,&old,1,0);
+    assert_eq!(start_in(Kind::DesertPyramid,&t,1,0).unwrap().chunk,(48,2));
+    assert!(start_in(Kind::DesertPyramid,&t,(-62i32).div_euclid(SPACING),36i32.div_euclid(SPACING)).is_none());
+    assert_eq!(start_in(Kind::DesertPyramid,&t,1,0).unwrap().chunk,(48,2));
 }

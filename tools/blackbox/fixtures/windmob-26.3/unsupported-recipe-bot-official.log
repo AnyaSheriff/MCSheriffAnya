@@ -1,0 +1,22 @@
+внимание: робот отстаёт от сервера, времена в записи неточные
+  чат: Successfully filled 289 block(s)
+  чат: Successfully filled 289 block(s)
+  чат: No blocks were filled
+  чат: No blocks were filled
+  чат: No blocks were filled
+  чат: No blocks were filled
+  чат: Game rule spawn_mobs is already set to false
+  чат: Game rule advance_time is already set to true
+  чат: Set the weather to clear
+  чат: Killed 17 entities
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+  чат: Changed the block at 8, -59, 8
+калибровка: начало такта на -1 мс от сетки часов, доли 1 0 0 0 49 0
+  чат: Could not set the block
+  чат: Set own game mode to Survival Mode
+Error: Нет рецепта crafting_table
+    at EventEmitter.<anonymous> (/home/lenox/.cache/mcsheriffanya/work/s26-windmob/tools/blackbox/bot.js:810:43)

@@ -423,7 +423,10 @@ impl BedrockWorld {
         // измерение, место, поворот, режим игры, инвентарь. Впервые зашедший
         // появляется в точке появления обычного мира в творческом режиме,
         // как игрок Java.
-        let saved = crate::playerdata::load(&shared.playerdata, &identity.uuid);
+        let saved = match crate::playerdata::load_checked_for_catalog(&shared.playerdata, &identity.uuid, shared.catalog()) {
+            Ok(saved) => saved,
+            Err(error) => { log_warn!("Вход Bedrock остановлен: {}", error); return None; }
+        };
         let dimension = saved.as_ref().map(|data| data.dimension).unwrap_or_default();
         let world_spawn = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").spawn_position();
         let spawn = saved.as_ref().map_or(world_spawn, |data| (data.x, data.y, data.z));
@@ -431,7 +434,7 @@ impl BedrockWorld {
         let game_mode = saved.as_ref().map_or(crate::commands::GAME_MODE_CREATIVE, |data| data.game_mode);
         let bag = Bag::new(saved.as_ref().map(|data| data.inventory.clone()).unwrap_or_else(crate::inventory::Inventory::new));
 
-        let health = health::Health::new(saved.as_ref().map(|data| &data.vitals));
+        let health = health::Health::new_with_effects(saved.as_ref().map(|data| &data.vitals), &saved.as_ref().map(|data| data.effects.clone()).unwrap_or_default());
         let entity_id = shared.next_entity_id();
         let runtime_id = entity_id as u64;
         let position = (spawn.0 as f32, spawn.1 as f32 + EYES, spawn.2 as f32);
@@ -616,7 +619,7 @@ impl BedrockWorld {
         let mut body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
         body.restore_respawn(saved.as_ref().and_then(|data| data.respawn));
         let mut player = BedrockWorld {
-            progress: crate::progress::Progress::load(&identity.uuid),
+            progress: crate::progress::Progress::load_for_catalog(&identity.uuid, shared.catalog()),
             shared,
             dimension,
             identity,
@@ -1066,11 +1069,13 @@ impl BedrockWorld {
 
         for order in orders {
             match order {
+                // [Bedrock: потом] Общие настройки полёта пока доступны Java.
+                crate::players::Order::PluginFlight { .. } => {},
                 // Пользовательские сундуки доступны только подключениям Java со снимком UI.
                 crate::players::Order::PluginOpen { .. } | crate::players::Order::PluginClose { .. } => {}
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 // API set-health допускает только игроков со снимком Java UI.
-                crate::players::Order::Health { .. } | crate::players::Order::PluginSpawn { .. } | crate::players::Order::PluginFire { .. } | crate::players::Order::PluginVelocity { .. } | crate::players::Order::PluginFlight { .. } | crate::players::Order::PluginSilent { .. } => {}
+                crate::players::Order::Health { .. } | crate::players::Order::PluginSpawn { .. } | crate::players::Order::PluginFire { .. } | crate::players::Order::PluginVelocity { .. } | crate::players::Order::PluginSilent { .. } => {}
                 // [Bedrock: потом] Атрибуция команды; само здоровье обновляется.
                 crate::players::Order::CommandDamage { amount, source, .. } => self.health.hurt(amount, source),
                 crate::players::Order::MagicHit { amount, from, .. } => self.health.hurt(amount, if from.is_some() { crate::survival::Source::IndirectMagic } else { crate::survival::Source::Magic }),
@@ -1190,7 +1195,7 @@ impl BedrockWorld {
                     self.bag.inventory.set(slot, stack); self.bag.touched(&[slot]); packets.extend(self.bag.slot_packet(slot));
                 }
                 crate::players::Order::SetEnderSlot { .. } => {}
-                crate::players::Order::Hold { stack } => {
+                crate::players::Order::Hold { stack } | crate::players::Order::CommandHold { stack, .. } => {
                     let slot = crate::inventory::FIRST_HOTBAR + self.bag.inventory.selected();
 
                     self.bag.inventory.set(slot, stack);
@@ -1920,7 +1925,10 @@ impl BedrockWorld {
             return;
         }
 
-        self.health.respawned();
+        // Как у Java: читаем правило в момент возрождения. Смена правила
+        // между смертью и возрождением отдельно не сопоставлена.
+        let keep = self.shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
+        self.health.respawned_with_keep_inventory(keep);
         self.body.respawned();
 
         let spawn = self.shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").spawn_position();
@@ -2186,6 +2194,7 @@ impl BedrockWorld {
                 }
                 // Особый динамит помнит свой вид до слома: выпадет он же.
                 let pot = world.pot((x,y,z));
+    let pot_data = world.pot_details((x,y,z));
                 let custom = world.custom_tnt_at((x, y, z));
                 let tool = self.bag.inventory.held();
                 let original = world.get_block(x, y, z);
@@ -2247,7 +2256,7 @@ impl BedrockWorld {
 
                 if let Some(sides) = pot {
                     if !self.creative() && self.shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
-                        for stack in crate::pottery::drops(sides,tool) {
+                        for stack in crate::pottery::drops_with_data(sides,pot_data,tool) {
                             self.shared.items_in(self.dimension).lock().expect("предметы").drop_item(self.shared.next_entity_id(),stack,(x as f64+0.5,y as f64+0.25,z as f64+0.5),(0.0,0.2,0.0),crate::items::MINED_DELAY);
                         }
                     }
@@ -3918,6 +3927,7 @@ impl BedrockWorld {
             inventory: self.bag.inventory_with_cursor(),
             dimension: self.dimension,
             vitals: self.health.vit.saved(),
+            effects: self.health.vit.saved_effects(),
             // Точку возрождения Bedrock-игрок пока не ставит: сохраняем прежнюю.
             respawn: self.body.respawn_point(),
             ender: self.ender.clone(),
@@ -3928,12 +3938,18 @@ impl BedrockWorld {
     fn save_if_changed(&mut self) {
         self.progress.save(&self.identity.uuid);
         let data = self.player_data();
+        let mut compared = data.clone();
+        // Длительности меняются каждый такт: отдельно сохраняем их раз в 100 тактов.
+        if let Some(saved) = &self.saved
+            && !saved.effects.needs_save(&data.effects) {
+            compared.effects = saved.effects.clone();
+        }
 
-        if self.saved.as_ref() == Some(&data) {
+        if self.saved.as_ref() == Some(&compared) {
             return;
         }
 
-        match crate::playerdata::save(&self.shared.playerdata, &self.identity.uuid, &data) {
+        match crate::playerdata::save_for_catalog(&self.shared.playerdata, &self.identity.uuid, &data, self.shared.catalog()) {
             Ok(()) => self.saved = Some(data),
             Err(error) => log_warn!("Bedrock: файл игрока {} не записан: {}", self.identity.name, error),
         }
@@ -4801,7 +4817,7 @@ fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u1
                         Dimension::End => THE_END,
                         Dimension::Overworld => 1,
                     };
-                    let biome = super::tables::BIOMES.get(ours).copied().unwrap_or(fallback);
+                    let biome = super::tables::BIOMES.get(ours).or_else(|| super::tables::PREVIEW_BIOMES.get(ours.wrapping_sub(super::tables::BIOMES.len()))).copied().unwrap_or(fallback);
                     let at = *known.entry(biome).or_insert_with(|| {
                         palette.push(biome);
                         (palette.len() - 1) as u16

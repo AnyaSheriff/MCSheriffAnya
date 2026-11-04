@@ -46,6 +46,8 @@ pub fn block_drops(state: i32, tool: Option<Stack>, mut roll: impl FnMut() -> f3
         "mangrove_leaves" => None,
         "azalea_leaves" => Some("azalea".to_owned()),
         "flowering_azalea_leaves" => Some("flowering_azalea".to_owned()),
+        // Тополь: три цвета листвы, один саженец; яблок нет (вики, Poplar).
+        _ if name.ends_with("_poplar_leaves") => Some("poplar_sapling".to_owned()),
         _ => Some(format!("{}_sapling", name.trim_end_matches("_leaves"))),
     };
     if let Some(sapling) = sapling && roll() < sapling_chance[level] { add(&sapling, 1); }

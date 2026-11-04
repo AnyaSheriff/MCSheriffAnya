@@ -1,0 +1,22 @@
+   Compiling seedmap-core v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/seedmap)
+   Compiling mcsa-protocol v0.1.0 (/home/lenox/.cache/mcsheriffanya/work/s26-mv14/tools/protocol-bridge)
+warning: unreachable pattern
+   --> tools/protocol-bridge/src/entities.rs:222:9
+    |
+218 | ...   JavaVersion::V1_21_5 => crate::generated_payload_770::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Erro...
+    |       -------------------- matches all the relevant values
+...
+222 | ...   JavaVersion::V1_21_5 | JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+    |       ^^^^^^^^^^^^^^^^^^^^ no value can reach this
+    |
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mcsa-protocol` (lib) generated 1 warning
+   Compiling mcsheriffanya v0.2.7-alpha (/home/lenox/.cache/mcsheriffanya/work/s26-mv14)
+warning: `mcsa-protocol` (lib test) generated 1 warning (1 duplicate)
+    Finished `release` profile [optimized] target(s) in 2m 23s
+  Executable unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsa_protocol-be36ca87248fd34f)
+  Executable unittests src/main.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/mcsheriffanya-12cfc85e9e96ee73)
+  Executable unittests src/bin/seedmap.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/seedmap-18595666e9ae7379)
+  Executable tests/world_startup.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/world_startup-25c2363fa11a149b)
+  Executable unittests src/lib.rs (/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv5-target/release/deps/seedmap_core-ae404b20effa358b)

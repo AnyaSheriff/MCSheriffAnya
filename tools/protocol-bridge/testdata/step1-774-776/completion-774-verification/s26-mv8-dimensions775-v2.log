@@ -1,0 +1,1 @@
+{"status": "pass", "checks": ["login-configuration-play", "complete-primary-recipe-book-translates-and-decodes", "recipe-ghost-autofill-result-and-consumption", "nether-portal-out-and-back-respawn-chunks-short-ack"], "error": null, "server_exit": 0}

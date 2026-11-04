@@ -116,6 +116,8 @@ save_kinds! {
     HappyGhast => 109,
     CopperGolem => 110,
     ArmorStand => 111,
+    Cushion => 112,
+    SulfurCube => 113,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;
@@ -227,8 +229,11 @@ mod tests {
                 mob.persistent_tag = extended;
                 let mut bytes = Vec::new();
                 mob.write(&mut bytes);
-                // Хоглин и пиглины всегда пишут общий хвост (таймер превращения и иммунитет).
-                let tailed = extended || matches!(kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
+                // Помимо превращения, общий хвост теперь несёт полные предметы
+                // торговцев, лисы и наземных животных даже при пустом инвентаре.
+                let tailed = extended || matches!(kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute
+                    | Kind::Villager | Kind::ZombieVillager | Kind::WanderingTrader | Kind::Fox)
+                    || super::super::land::animal(kind);
                 assert_eq!(bytes[0], if tailed { 0xff } else { 0x7f });
                 let mut rest = bytes.as_slice();
                 let loaded = Mob::read(&mut rest).expect("новая запись читается");

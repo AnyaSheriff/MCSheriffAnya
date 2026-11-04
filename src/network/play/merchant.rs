@@ -39,7 +39,7 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
 
     let wandering = mob.kind == crate::mob::Kind::WanderingTrader;
     if wandering && mob.villager.offers.is_empty() {
-        mob.villager.offers = crate::mob::trader::offers(&mut crate::mob::Rng::new(mob.entity_id as u64 ^ mob.ticks));
+        mob.villager.offers = crate::mob::trader::offers_for_catalog(shared.catalog(), &mut crate::mob::Rng::new(mob.entity_id as u64 ^ mob.ticks));
     }
     // С жителем уже торгуют [проверить: у оригинала второму отказ молча].
     if mob.villager.trading.is_some() {
@@ -132,12 +132,31 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         crafter: false,
         kind: None,
         props: Vec::new(),
-        merchant: Some(Merchant::new(villager_id)),
+        merchant: Some(Merchant { sent_offer_count: state.offers.len(), ..Merchant::new(villager_id) }),
         station: None,
         plugin_chest: None, ender: false,
     });
-    send_window_content(stream, player).await?;
+    send_window_content(stream, player, shared.catalog()).await?;
     write_body(stream, offers_packet(id, &state, wandering)).await
+}
+
+/// 26.3: повышение уровня обновляет уже открытый список сделок.
+pub(super) async fn refresh_open_offers(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    let Some(window) = &player.window else { return Ok(()); };
+    let Some(merchant) = &window.merchant else { return Ok(()); };
+    let update = shared.items_in(player.dimension).lock().expect("торговец").mobs().iter()
+        .find(|m| m.entity_id == merchant.villager && m.villager.offers.len() != merchant.sent_offer_count)
+        .map(|m| (m.villager.clone(), m.kind == crate::mob::Kind::WanderingTrader));
+    if let Some((state, wandering)) = update {
+        let packet = offers_packet(window.id, &state, wandering);
+        if let Some(merchant) = player.window.as_mut().and_then(|w| w.merchant.as_mut()) {
+            merchant.sent_offer_count = state.offers.len();
+            merchant.update_result(&state.offers);
+        }
+        write_body(stream, packet).await?;
+        send_window_content(stream, player, shared.catalog()).await?;
+    }
+    Ok(())
 }
 
 /// Merchant Offers (minecraft-data 26.1, `trade_list`): сделки с ценой без
@@ -204,6 +223,17 @@ fn store(player: &mut PlayerState, merchant: Merchant) {
     if let Some(window) = player.window.as_mut() {
         window.shown = merchant.slots.to_vec();
         window.merchant = Some(merchant);
+    }
+}
+
+/// Выход — только предпросмотр актуальной сделки, не право получить вещь.
+/// Пересчёт без звука нужен и при смене выбора с прежней оплатой, и перед
+/// выдачей: житель мог изменить предложения после прошлого обновления окна.
+fn refresh_result(items: &crate::items::Items, merchant: &mut Merchant) {
+    if let Some(mob) = items.mobs().iter().find(|mob| mob.entity_id == merchant.villager) {
+        merchant.update_result(&mob.villager.offers);
+    } else {
+        merchant.slots[RESULT] = None;
     }
 }
 
@@ -338,7 +368,7 @@ pub(super) fn select_trade(shared: &Shared, player: &mut PlayerState, payload: &
 
     merchant.selected = index as usize;
 
-    let result = merchant.slots[RESULT].take();
+    merchant.slots[RESULT] = None;
     let targets: Vec<usize> = (SLOTS..SLOTS + window::PLAYER_SLOTS).rev().collect();
     let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None, horse: None };
     let cleared = window.move_to(0, &targets) && window.move_to(1, &targets);
@@ -367,7 +397,9 @@ pub(super) fn select_trade(shared: &Shared, player: &mut PlayerState, payload: &
         }
     }
 
-    merchant.slots[RESULT] = result;
+    // Автозаполнение может вернуть те же 64 изумруда в ту же ячейку,
+    // хотя выбран совсем другой товар. Старый выход в этом случае опасен.
+    refresh_result(&items, &mut merchant);
 
     if merchant.slots[..RESULT] != before[..RESULT] {
         payments_changed(&mut items, &mut merchant);
@@ -468,6 +500,7 @@ pub(super) fn click(
 /// товаром, если влезет), Shift — товар в инвентарь, сделка за сделкой
 /// (чёрный ящик, villager-trade: три сделки одним щелчком).
 fn take_result(shared: &Shared, items: &mut crate::items::Items, player: &mut PlayerState, merchant: &mut Merchant, mode: i32) {
+    refresh_result(items, merchant);
     let Some(result) = merchant.slots[RESULT] else {
         return;
     };

@@ -102,6 +102,48 @@ impl Window<'_> {
         }
     }
 
+    /// Три фазы перетаскивания: начало, выбор ячеек, распределение.
+    /// Состояние привязано к номеру окна; запреты ячеек те же, что у щелчка.
+    pub fn drag(&mut self, state: &mut Option<(i32, i8, Vec<i32>)>, window: i32, slot: i32, button: i8, creative: bool) -> Click {
+        let kind = button >> 2;
+        let phase = button & 3;
+        let Some(held) = self.inventory.cursor() else { *state = None; return Click::default(); };
+        if !(0..=2).contains(&kind) || kind == 2 && !creative {
+            *state = None;
+            return Click::default();
+        }
+        if phase == 0 {
+            *state = Some((window, kind, Vec::new()));
+            return Click { understood: true, thrown: None };
+        }
+        let Some((id, started, mut selected)) = state.take().filter(|(id,k,_)| *id == window && *k == kind) else {
+            return Click::default();
+        };
+        let allowed = |view: &Self, index| view.may_place(index, held.item)
+            && view.get(index).is_none_or(|s| s.stacks_with(&held) && s.count < view.limit(index, &held));
+        if phase == 1 {
+            if let Some(index) = self.index(slot)
+                && !selected.contains(&slot) && (kind == 2 || selected.len() < held.count as usize)
+                && allowed(self, index)
+            { selected.push(slot); }
+            *state = Some((id, started, selected));
+        } else if phase == 2 && !selected.is_empty() {
+            let each = if kind == 0 { held.count / selected.len() as i32 } else if kind == 1 { 1 } else { held.limit() };
+            let mut left = held.count;
+            for target in selected {
+                let Some(index) = self.index(target).filter(|&i| allowed(self, i)) else { continue; };
+                let count = self.get(index).map_or(0, |s| s.count);
+                let moved = each.min((self.limit(index, &held) - count).max(0)).min(if kind == 2 { held.limit() } else { left });
+                if moved > 0 {
+                    self.set(index, Some(held.with_count(count + moved)));
+                    left -= moved;
+                }
+            }
+            self.inventory.set_cursor(remainder(held, left));
+        }
+        Click { understood: true, thrown: None }
+    }
+
     /// Номер слота окна как индекс; None — такого слота нет.
     fn index(&self, slot: i32) -> Option<usize> {
         usize::try_from(slot).ok().filter(|slot| *slot < self.len())

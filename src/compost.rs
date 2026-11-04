@@ -11,7 +11,7 @@ pub fn chance(item: &str) -> Option<u32> {
         | "flowering_azalea" | "torchflower" | "pitcher_plant" => 85,
         "apple" | "beetroot" | "carrot" | "potato" | "wheat" | "cocoa_beans"
         | "melon" | "pumpkin" | "carved_pumpkin" | "nether_wart" | "brown_mushroom"
-        | "red_mushroom" | "crimson_fungus" | "warped_fungus" | "crimson_roots"
+        | "red_mushroom" | "shelf_mushroom" | "crimson_fungus" | "warped_fungus" | "crimson_roots"
         | "warped_roots" | "shroomlight" | "fern" | "large_fern" | "lily_pad"
         | "sea_pickle" | "spore_blossom" | "moss_block" | "azalea" | "big_dripleaf"
         | "dandelion" | "poppy" | "blue_orchid" | "allium" | "azure_bluet"
@@ -25,7 +25,7 @@ pub fn chance(item: &str) -> Option<u32> {
         | "torchflower_seeds" | "pitcher_pod" | "sweet_berries" | "glow_berries"
         | "dried_kelp" | "kelp" | "seagrass" | "short_grass" | "hanging_roots"
         | "mangrove_roots" | "mangrove_propagule" | "moss_carpet" | "small_dripleaf"
-        | "pink_petals" => 30,
+        | "pink_petals" | "red_shrub" => 30,
         n if n.ends_with("_leaves") || n.ends_with("_sapling") && n != "bamboo_sapling" => 30,
         _ => return None,
     })

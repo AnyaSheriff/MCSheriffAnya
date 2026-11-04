@@ -1,0 +1,14 @@
+[
+  {
+    "url": "https://deb.debian.org/debian/pool/main/g/glfw3/libglfw3_3.4-3_amd64.deb",
+    "sha256": "1e0e03e688f33f5e9b9114c7abe5a860fda498cb198cf0959fea9842cf30fec4"
+  },
+  {
+    "url": "https://deb.debian.org/debian/pool/main/x/xdotool/libxdo3_3.20160805.1-5.1_amd64.deb",
+    "sha256": "d634e25d2b50af140ee9f44bab507fcfb665f3556fd483faefdb56e85598cc12"
+  },
+  {
+    "url": "https://deb.debian.org/debian/pool/main/x/xdotool/xdotool_3.20160805.1-5.1_amd64.deb",
+    "sha256": "98ac8681533b01020c7288fb2e9de403d586747dab48cfd58e04cb00d0c44fb1"
+  }
+]

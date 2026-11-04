@@ -22,6 +22,12 @@ use crate::world::World;
 /// сравнителя. None — предмет не пластинка.
 pub fn jukebox_song(item: i32) -> Option<(i32, u64, u8)> {
     let name = blocks::item_name(item)?.strip_prefix("music_disc_")?;
+    // Bounce (26.2/26.3, вики Music Disc: 3:54, сигнал 7) дописана в конец реестра песен (configuration.rs),
+    // поэтому её номер — длина общего списка. [проверить] сигнал: пробой на официальном сервере не снят.
+    if name == "bounce" {
+        let count = crate::network::configuration::REQUIRED_REGISTRIES.iter().find(|(registry, _)| *registry == "minecraft:jukebox_song")?.1.len();
+        return Some((count as i32, 234 * 20, 7));
+    }
     let (length, comparator) = crate::network::registries::jukebox_song(name)?;
     let number = crate::network::configuration::REQUIRED_REGISTRIES
         .iter()

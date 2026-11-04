@@ -1,0 +1,1814 @@
+{
+  "probe": "tools/protocol-bridge/probe_inventory_edges.py",
+  "sources": [
+    {
+      "protocol": 340,
+      "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+      "result_sha256": "e3fbe2c5582923adfba85331918b699439e06cc91625c29830289e8e362e85f6"
+    },
+    {
+      "protocol": 775,
+      "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+      "result_sha256": "61e82cf411337147212b8c6c4b8c2c6c8169baf63f4d2ae5168b33ba99cc6bb2"
+    }
+  ],
+  "cases": [
+    {
+      "name": "empty-helmet-hotbar-stack",
+      "observed_protocols": [
+        340,
+        775
+      ],
+      "button": 0,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 7
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null,
+      "dropped": []
+    },
+    {
+      "name": "occupied-helmet-hotbar-stack",
+      "observed_protocols": [
+        340,
+        775
+      ],
+      "button": 0,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 7
+        },
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cursor": null,
+      "dropped": []
+    },
+    {
+      "name": "occupied-helmet-full-inventory-stack",
+      "observed_protocols": [
+        340,
+        775
+      ],
+      "button": 0,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 7
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null
+      ],
+      "cursor": null,
+      "dropped": [
+        {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "occupied-helmet-full-inventory-single",
+      "observed_protocols": [
+        340,
+        775
+      ],
+      "button": 0,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null
+      ],
+      "cursor": null,
+      "dropped": []
+    },
+    {
+      "name": "oversized-pumpkin-helmet-full-inventory-stack",
+      "observed_protocols": [
+        340,
+        775
+      ],
+      "button": 0,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 15
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        null
+      ],
+      "cursor": null,
+      "dropped": []
+    },
+    {
+      "name": "empty-helmet-offhand-stack",
+      "observed_protocols": [
+        775
+      ],
+      "button": 40,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        }
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 7
+        }
+      ],
+      "cursor": null,
+      "dropped": []
+    },
+    {
+      "name": "occupied-helmet-offhand-stack",
+      "observed_protocols": [
+        775
+      ],
+      "button": 40,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        }
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 7
+        }
+      ],
+      "cursor": null,
+      "dropped": []
+    },
+    {
+      "name": "occupied-helmet-offhand-full-inventory-stack",
+      "observed_protocols": [
+        775
+      ],
+      "button": 40,
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "iron_helmet",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 8
+        }
+      ],
+      "after": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "item": "carved_pumpkin",
+          "count": 1
+        },
+        null,
+        null,
+        null,
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "bedrock",
+          "count": 64
+        },
+        {
+          "item": "carved_pumpkin",
+          "count": 7
+        }
+      ],
+      "cursor": null,
+      "dropped": [
+        {
+          "item": "iron_helmet",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

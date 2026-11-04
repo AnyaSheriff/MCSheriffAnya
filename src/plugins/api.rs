@@ -237,8 +237,8 @@ impl super::PlayerView {
 }
 
 /// Блок с приставкой: `minecraft:stone`.
-fn block_text(state: i32) -> String {
-    format!("minecraft:{}", crate::blocks::block_at_state(state).unwrap_or("air"))
+fn block_text(catalog: crate::gameplay_catalog::Catalog, state: i32) -> String {
+    format!("minecraft:{}", catalog.name(crate::gameplay_catalog::Kind::State, state).unwrap_or("air"))
 }
 
 /// Имя файла в папке данных: без путей, без точки в начале.
@@ -554,7 +554,7 @@ impl mcsa::api::player::Host for PluginCtx {
         }
 
         let spec = stack.item.strip_prefix("minecraft:").unwrap_or(&stack.item).to_string();
-        let stack = crate::commands::stack_from_spec(&spec, stack.count as i32)?.ok_or_else(|| "воздух выдать нельзя".to_string())?;
+        let stack = crate::commands::stack_from_spec_for_catalog(self.shared.catalog(), &spec, stack.count as i32)?.ok_or_else(|| "воздух выдать нельзя".to_string())?;
         let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
 
         if !players.members().iter().any(|member| member.uuid == uuid) {
@@ -572,7 +572,7 @@ impl mcsa::api::player::Host for PluginCtx {
         let Some(member) = players.members().iter().find(|member| member.uuid == uuid) else { return false; };
         if member.game_mode == mode { return true; }
         players.set_game_mode(&uuid, mode);
-        players.order(&uuid, Order::GameMode { mode });
+        players.order(&uuid, Order::GameMode { mode, at: *self.shared.ticks.borrow() });
         true
     }
 
@@ -586,7 +586,7 @@ impl mcsa::api::player::Host for PluginCtx {
         let uuid = parse_uuid(&uuid).ok_or("UUID не разобрать")?;
         if !(9..=44).contains(&slot) { return Err("ячейка: от 9 до 44".into()); }
         let stack = match stack {
-            Some(stack) if stack.count > 0 && stack.count <= 64 => crate::commands::stack_from_spec(&stack.item, stack.count as i32)?,
+            Some(stack) if stack.count > 0 && stack.count <= 64 => crate::commands::stack_from_spec_for_catalog(self.shared.catalog(), &stack.item, stack.count as i32)?,
             Some(_) => return Err("count: от 1 до 64".into()),
             None => None,
         };
@@ -633,7 +633,7 @@ impl mcsa::api::world::Host for PluginCtx {
             let state=world.get_block(cell[0],cell[1],cell[2]);
             let liquid=crate::fluids::fluid_at(state);
             let hit=if let Some((_,level))=liquid { !ignore_passable && (fluids==2 || fluids==1 && level==0) }
-                else if ignore_passable {crate::blocks::has_box(state)} else {!matches!(crate::blocks::block_at_state(state),None|Some("air"|"cave_air"|"void_air"))};
+                else if ignore_passable {crate::blocks::has_box(state)} else {!matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(),None|Some("air"|"cave_air"|"void_air"))};
             if hit {return Ok(Some(mcsa::api::world::RayHit {x:start.x+direction[0]*travelled,y:start.y+direction[1]*travelled,z:start.z+direction[2]*travelled,block:wit::BlockPos {dimension:start.dimension,x:cell[0],y:cell[1],z:cell[2]},face}));}
             let axis=(0..3).min_by(|a,b|next[*a].total_cmp(&next[*b])).unwrap_or(0);travelled=next[axis];if travelled>distance {return Ok(None);}
             cell[axis]+=step[axis];next[axis]+=delta[axis];face=match (axis,step[axis]) {(0,1)=>4,(0,_)=>5,(1,1)=>0,(1,_)=>1,(2,1)=>2,_=>3};
@@ -652,10 +652,10 @@ impl mcsa::api::world::Host for PluginCtx {
             let mut world = self.shared.world_in(dimension).lock().expect("мир");
             if !world.has_chunk(pos.x.div_euclid(16),pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
             let state = world.get_block(pos.x,pos.y,pos.z);
-            if crate::mining::properties(state).0 < 0.0 || matches!(crate::blocks::block_at_state(state),Some("air"|"cave_air"|"void_air")) {return Ok(false);}
+            if crate::mining::properties_with_catalog(world.catalog(), state).0 < 0.0 || matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(),Some("air"|"cave_air"|"void_air")) {return Ok(false);}
             // Шалкер с содержимым уже выпадает через обычную очередь spill_containers.
             let packed = world.container(pos.x,pos.y,pos.z).is_some_and(|c| c.kind == crate::containers::Kind::ShulkerBox);
-            let drops = if packed {Vec::new()} else {crate::mining::block_drops(state,None,||world.random_unit())};
+            let drops = if packed {Vec::new()} else {crate::mining::block_drops_with_catalog(world.catalog(),state,None,||world.random_unit())};
             crate::placing::break_block(&mut world,pos.x,pos.y,pos.z);drops
         };
         let mut items=self.shared.items_in(dimension).lock().expect("предметы");
@@ -670,7 +670,7 @@ impl mcsa::api::world::Host for PluginCtx {
         if !self.load_block_chunk(dimension_from_wit(dimension), x, z) { return Err("Не удалось загрузить чанк".into()); }
         let world = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
         if !world.has_chunk(x.div_euclid(16), z.div_euclid(16)) {return Err("чанк не загружен".into());}
-        Ok((-64..320).rev().find(|y| !matches!(crate::blocks::block_at_state(world.get_block(x, *y, z)), Some("air" | "cave_air" | "void_air"))).unwrap_or(-64))
+        Ok((-64..320).rev().find(|y| !matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, world.get_block(x, *y, z)).ok(), Some("air" | "cave_air" | "void_air"))).unwrap_or(-64))
     }
     fn random_tick_speed(&mut self) -> u32 { crate::farming::random_tick_speed() }
     fn block_details(&mut self, pos: wit::BlockPos) -> Result<mcsa::api::world::BlockState, String> {
@@ -678,9 +678,9 @@ impl mcsa::api::world::Host for PluginCtx {
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
         let state = world.get_block(pos.x, pos.y, pos.z);
-        let mut data = block_text(state);
+        let mut data = block_text(world.catalog(), state);
         let mut age = -1; let mut max_age = -1;
-        if let Some(block) = crate::blocks::orientation_of(state) {
+        if let Some(block) = world.catalog().orientation_of(state).ok().flatten() {
             let props: Vec<_> = block.properties.iter().filter_map(|p| Some(format!("{}={}", p.name, block.value(state, p.name)?))).collect();
             if !props.is_empty() {data.push_str(&format!("[{}]", props.join(",")));}
             if let Some(property) = block.properties.iter().find(|p| p.name == "age") {
@@ -689,17 +689,17 @@ impl mcsa::api::world::Host for PluginCtx {
             }
         }
         let (sky, light) = world.light_full(pos.x, pos.y, pos.z);
-        Ok(mcsa::api::world::BlockState {data, sky, light: sky.max(light), liquid: matches!(crate::blocks::block_at_state(state), Some("water" | "lava")), passable: !crate::blocks::has_box(state), age, max_age})
+        Ok(mcsa::api::world::BlockState {data, sky, light: sky.max(light), liquid: matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(), Some("water" | "lava")), passable: !crate::blocks::has_box(state), age, max_age})
     }
     fn update_block(&mut self, pos: wit::BlockPos, data: String, force: bool, physics: bool) -> Result<bool, String> {
-        let state = crate::blocks::state_from_text(&data).ok_or("неизвестное состояние блока")?;
+        let state = self.shared.catalog().state_from_text(&data).map_err(|_| "неизвестное состояние блока")?.ok_or("неизвестное состояние блока")?;
         if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
         let dimension = dimension_from_wit(pos.dimension);
         {
             let mut world = self.shared.world_in(dimension).lock().expect("мир");
             if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
             let current = world.get_block(pos.x, pos.y, pos.z);
-            if !force && crate::blocks::block_at_state(current) != crate::blocks::block_at_state(state) {return Ok(false);}
+            if !force && world.catalog().name(crate::gameplay_catalog::Kind::State, current) != world.catalog().name(crate::gameplay_catalog::Kind::State, state) {return Ok(false);}
             if !physics {world.set_block(pos.x, pos.y, pos.z, state);return Ok(true);}
         }
         self.set_block(pos, data)?;Ok(true)
@@ -755,7 +755,7 @@ impl mcsa::api::world::Host for PluginCtx {
     fn block_cube(&mut self, start: wit::BlockPos) -> Result<Vec<String>,String> {
         if start.x.abs_diff(0)>30_000_000 || start.z.abs_diff(0)>30_000_000 || !(-2048..=2040).contains(&start.y) {return Err("Куб блоков вне границ мира".into());}
         let world=self.shared.world_in(dimension_from_wit(start.dimension)).lock().expect("мир");let mut result=Vec::with_capacity(512);
-        for x in start.x..start.x+8 {for y in start.y..start.y+8 {for z in start.z..start.z+8 {result.push(if world.has_chunk(x.div_euclid(16),z.div_euclid(16)) {block_text(world.get_block(x,y,z))}else {String::new()});}}}Ok(result)
+        for x in start.x..start.x+8 {for y in start.y..start.y+8 {for z in start.z..start.z+8 {result.push(if world.has_chunk(x.div_euclid(16),z.div_euclid(16)) {block_text(world.catalog(), world.get_block(x,y,z))}else {String::new()});}}}Ok(result)
     }
 
     fn get_block(&mut self, pos: wit::BlockPos) -> Option<String> {
@@ -766,11 +766,11 @@ impl mcsa::api::world::Host for PluginCtx {
             return None;
         }
 
-        Some(block_text(world.get_block(pos.x, pos.y, pos.z)))
+        Some(block_text(world.catalog(), world.get_block(pos.x, pos.y, pos.z)))
     }
 
     fn set_block(&mut self, pos: wit::BlockPos, block: String) -> Result<(), String> {
-        let state = crate::blocks::state_from_text(&block).ok_or_else(|| format!("нет такого блока: {block}"))?;
+        let state = self.shared.catalog().state_from_text(&block).map_err(|_| format!("нет такого блока: {block}"))?.ok_or_else(|| format!("нет такого блока: {block}"))?;
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
 
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {
@@ -956,6 +956,42 @@ impl mcsa::api::privileged::Host for PluginCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plugin_inventory_keeps_primary_263_items_and_metadata() {
+        use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_ITEM};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let shared = Arc::new(Shared::new(
+            crate::world::World::in_memory_with_catalog(catalog),
+            crate::world::World::in_memory_with_catalog(catalog),
+            PathBuf::new(), PathBuf::new(), Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/plugin-catalog-unused-ops.json")),
+            crate::skins::Settings::default(),
+        ));
+        let mut ctx = PluginCtx {
+            native_wait: Default::default(), pending_mobs: Default::default(),
+            network: super::super::network::Access::new(&[], &[]),
+            chests: Default::default(), native_items: Default::default(),
+            name: "catalog-test".into(), trusted: false, shared,
+            folder: PathBuf::new(), wasi: wasmtime_wasi::WasiCtxBuilder::new().build(),
+            table: ResourceTable::new(), limits: wasmtime::StoreLimitsBuilder::new().build(),
+            tick: 0, tasks: Vec::new(), next_handle: 0, commands: Vec::new(),
+            registry: Default::default(), loaded: Default::default(),
+        };
+        let name = catalog.name(crate::gameplay_catalog::Kind::Item, WHITE_SLAB_ITEM).unwrap();
+        let item = mcsa::api::inventory::Item {
+            kind: name.into(), count: 3, metadata: r#"{"name":{"text":"Плита"}}"#.into(),
+        };
+        let stack = ctx.inventory_stack(Some(item)).unwrap().unwrap();
+        assert_eq!(stack.item, WHITE_SLAB_ITEM);
+        let returned = ctx.inventory_items(&[Some(stack)]).pop().flatten().unwrap();
+        assert_eq!(returned.kind, name);
+        assert_eq!(returned.count, 3);
+        assert!(returned.metadata.contains("Плита"));
+        assert_eq!(ctx.inventory_stack(Some(returned)).unwrap(), Some(stack));
+        let state = catalog.default_state(name).unwrap().unwrap();
+        assert_eq!(block_text(catalog, state), format!("minecraft:{name}"));
+    }
 
     #[test]
     fn uuid_parses_both_spellings() {

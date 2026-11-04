@@ -1,0 +1,15 @@
+{
+  "source": "official26.3 network observation,2026-10-24; no JAR contents",
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "wiki": "https://minecraft.wiki/w/Java_Edition_protocol/Packets#Explosion",
+  "packets": [
+    {
+      "client": 0,
+      "hex": "4059e00000000000c04c4bda76fc9b9e4059600000000000406000000000033c010000000000000000bfcf1c2bd9ee820f3fe3c149b56a54a821f10d0001"
+    },
+    {
+      "client": 1,
+      "hex": "4059e00000000000c04c4bda76fc9b9e4059600000000000406000000000033c0100000000000000003ff3333340000000000000000000000021f10d0001"
+    }
+  ]
+}

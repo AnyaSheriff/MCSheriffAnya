@@ -1,0 +1,7031 @@
+{
+  "scope": "Selected independent ordinary777 wool slab observations, no core parity claim from these discovery runs",
+  "source_runs": [
+    {
+      "path": "/home/lenox/.local/share/mcsa-handoff/wool-recipes-family-01/result.json",
+      "sha256": "9fe282141c6c4b509768fad38bc4b6ed7829fb1f465c5f854c0e0db6eeec1cd2",
+      "runner_sha256": "25923de48262de382dc44f226507c16062defa6bad6cf03bc8bfd9d505875683",
+      "server_exit": 0,
+      "group_gone": true,
+      "port_free": true
+    },
+    {
+      "path": "/home/lenox/.local/share/mcsa-handoff/wool-tools-family-01/result.json",
+      "sha256": "83f92f2df730908c235800c52c8f49f0fa03d1623f75c92ee1073f590a2ebca0",
+      "runner_sha256": "25923de48262de382dc44f226507c16062defa6bad6cf03bc8bfd9d505875683",
+      "server_exit": 0,
+      "group_gone": true,
+      "port_free": true
+    }
+  ],
+  "input_pins": {
+    "protocol.json": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+    "blocks.json": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873",
+    "items.json": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb",
+    "entities.json": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+  },
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "survival_mode_events": {
+    "recipes": [
+      {
+        "mode": 1,
+        "payload_hex": "033f800000"
+      },
+      {
+        "mode": 0,
+        "payload_hex": "0300000000"
+      }
+    ],
+    "tools": [
+      {
+        "mode": 1,
+        "payload_hex": "033f800000"
+      },
+      {
+        "mode": 0,
+        "payload_hex": "0300000000"
+      }
+    ]
+  },
+  "colors": [
+    {
+      "color": "white",
+      "name": "white_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 1708,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                250
+              ]
+            },
+            {
+              "items": [
+                250
+              ]
+            },
+            {
+              "items": [
+                250
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "white/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 1708,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  250
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  250
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  250
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "white_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              250
+            ]
+          },
+          {
+            "items": [
+              250
+            ]
+          },
+          {
+            "items": [
+              250
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "white/named/white_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:white_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 1708,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  250
+                ]
+              },
+              {
+                "items": [
+                  250
+                ]
+              },
+              {
+                "items": [
+                  250
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "white/named/white_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:white_wool_slab_from_white_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "white_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "white_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "white_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "white_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "white_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3705
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3706
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3707
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3708
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3709
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3710
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3708
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3708
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 282,
+            "count": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "2": {
+              "item": 282,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410102"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410103"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "3": {
+              "item": 282,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410104"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410105"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "4": {
+              "item": 282,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410106"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410107"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "5": {
+              "item": 282,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410108"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410109"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "6": {
+              "item": 282,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041010a"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041010b"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "7": {
+              "item": 282,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041010c"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041010d"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "orange",
+      "name": "orange_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 1043,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                251
+              ]
+            },
+            {
+              "items": [
+                251
+              ]
+            },
+            {
+              "items": [
+                251
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "orange/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 1043,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  251
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  251
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  251
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "orange_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              251
+            ]
+          },
+          {
+            "items": [
+              251
+            ]
+          },
+          {
+            "items": [
+              251
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "orange/named/orange_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:orange_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 1043,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  251
+                ]
+              },
+              {
+                "items": [
+                  251
+                ]
+              },
+              {
+                "items": [
+                  251
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "orange/named/orange_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:orange_wool_slab_from_orange_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "orange_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "orange_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "orange_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "orange_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "orange_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3711
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3712
+        },
+        "bottom/true": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3713
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3714
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3715
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3716
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3714
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3714
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "8": {
+              "item": 283,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041010f"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410110"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "9": {
+              "item": 283,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410111"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410112"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "10": {
+              "item": 283,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410113"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410114"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "11": {
+              "item": 283,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410115"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410116"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "12": {
+              "item": 283,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410117"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410118"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "13": {
+              "item": 283,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410119"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041011a"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "magenta",
+      "name": "magenta_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 916,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                252
+              ]
+            },
+            {
+              "items": [
+                252
+              ]
+            },
+            {
+              "items": [
+                252
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "magenta/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 916,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  252
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  252
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  252
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "magenta_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              252
+            ]
+          },
+          {
+            "items": [
+              252
+            ]
+          },
+          {
+            "items": [
+              252
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "magenta/named/magenta_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:magenta_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 916,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  252
+                ]
+              },
+              {
+                "items": [
+                  252
+                ]
+              },
+              {
+                "items": [
+                  252
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "magenta/named/magenta_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:magenta_wool_slab_from_magenta_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "magenta_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "magenta_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "magenta_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "magenta_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "magenta_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3717
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3718
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3719
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3720
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3721
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3722
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3720
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3720
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "14": {
+              "item": 284,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041011c"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041011d"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "15": {
+              "item": 284,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041011e"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041011f"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "16": {
+              "item": 284,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410120"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410121"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "17": {
+              "item": 284,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410122"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410123"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "18": {
+              "item": 284,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410124"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410125"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "19": {
+              "item": 284,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410126"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410127"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "light_blue",
+      "name": "light_blue_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 839,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                253
+              ]
+            },
+            {
+              "items": [
+                253
+              ]
+            },
+            {
+              "items": [
+                253
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "light_blue/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 839,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  253
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  253
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  253
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "light_blue_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              253
+            ]
+          },
+          {
+            "items": [
+              253
+            ]
+          },
+          {
+            "items": [
+              253
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "light_blue/named/light_blue_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:light_blue_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 839,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  253
+                ]
+              },
+              {
+                "items": [
+                  253
+                ]
+              },
+              {
+                "items": [
+                  253
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "light_blue/named/light_blue_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:light_blue_wool_slab_from_light_blue_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "light_blue_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "light_blue_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "light_blue_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "light_blue_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "light_blue_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3723
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3724
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3725
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3726
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3727
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3728
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3726
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3726
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "20": {
+              "item": 285,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410129"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041012a"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "21": {
+              "item": 285,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041012b"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041012c"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "22": {
+              "item": 285,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041012d"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041012e"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 285,
+            "count": 2
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "23": {
+              "item": 285,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041012f"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410130"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "24": {
+              "item": 285,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410131"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410132"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "25": {
+              "item": 285,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410133"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410134"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "yellow",
+      "name": "yellow_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 1744,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                254
+              ]
+            },
+            {
+              "items": [
+                254
+              ]
+            },
+            {
+              "items": [
+                254
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "yellow/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 1744,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  254
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  254
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  254
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "yellow_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              254
+            ]
+          },
+          {
+            "items": [
+              254
+            ]
+          },
+          {
+            "items": [
+              254
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "yellow/named/yellow_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:yellow_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 1744,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  254
+                ]
+              },
+              {
+                "items": [
+                  254
+                ]
+              },
+              {
+                "items": [
+                  254
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "yellow/named/yellow_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:yellow_wool_slab_from_yellow_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "yellow_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "yellow_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "yellow_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "yellow_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "yellow_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3729
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3730
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3731
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3732
+        },
+        "double/true": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3733
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3734
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3732
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3732
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "26": {
+              "item": 286,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410136"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410137"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "27": {
+              "item": 286,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410138"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410139"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "28": {
+              "item": 286,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041013a"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041013b"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "29": {
+              "item": 286,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041013c"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041013d"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "30": {
+              "item": 286,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041013e"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041013f"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "31": {
+              "item": 286,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410140"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410141"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "lime",
+      "name": "lime_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 888,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                255
+              ]
+            },
+            {
+              "items": [
+                255
+              ]
+            },
+            {
+              "items": [
+                255
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "lime/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 888,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  255
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  255
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  255
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "lime_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              255
+            ]
+          },
+          {
+            "items": [
+              255
+            ]
+          },
+          {
+            "items": [
+              255
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "lime/named/lime_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:lime_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 888,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  255
+                ]
+              },
+              {
+                "items": [
+                  255
+                ]
+              },
+              {
+                "items": [
+                  255
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "lime/named/lime_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:lime_wool_slab_from_lime_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "lime_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "lime_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "lime_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "lime_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "lime_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3735
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3736
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3737
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3738
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3739
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3740
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3738
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3738
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "32": {
+              "item": 287,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410143"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410144"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "33": {
+              "item": 287,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410145"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410146"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "34": {
+              "item": 287,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410147"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410148"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "35": {
+              "item": 287,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410149"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041014a"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "36": {
+              "item": 287,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041014b"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041014c"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "37": {
+              "item": 287,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041014d"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041014e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "pink",
+      "name": "pink_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 1102,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                256
+              ]
+            },
+            {
+              "items": [
+                256
+              ]
+            },
+            {
+              "items": [
+                256
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "pink/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 1102,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  256
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  256
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  256
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "pink_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              256
+            ]
+          },
+          {
+            "items": [
+              256
+            ]
+          },
+          {
+            "items": [
+              256
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "pink/named/pink_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:pink_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 1102,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  256
+                ]
+              },
+              {
+                "items": [
+                  256
+                ]
+              },
+              {
+                "items": [
+                  256
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "pink/named/pink_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:pink_wool_slab_from_pink_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "pink_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "pink_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "pink_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "pink_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "pink_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3741
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3742
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3743
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3744
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3745
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3746
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3744
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3744
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "38": {
+              "item": 288,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410150"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410151"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "39": {
+              "item": 288,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410152"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410153"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "40": {
+              "item": 288,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410154"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410155"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "41": {
+              "item": 288,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410156"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410157"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "42": {
+              "item": 288,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410158"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410159"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "43": {
+              "item": 288,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041015a"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041015b"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "gray",
+      "name": "gray_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 719,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                257
+              ]
+            },
+            {
+              "items": [
+                257
+              ]
+            },
+            {
+              "items": [
+                257
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "gray/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 719,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  257
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  257
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  257
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "gray_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              257
+            ]
+          },
+          {
+            "items": [
+              257
+            ]
+          },
+          {
+            "items": [
+              257
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "gray/named/gray_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:gray_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 719,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  257
+                ]
+              },
+              {
+                "items": [
+                  257
+                ]
+              },
+              {
+                "items": [
+                  257
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "gray/named/gray_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:gray_wool_slab_from_gray_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "gray_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "gray_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "gray_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "gray_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "gray_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3747
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3748
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3749
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3750
+        },
+        "double/true": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3751
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3752
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3750
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3750
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 289,
+            "count": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "44": {
+              "item": 289,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041015d"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041015e"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "45": {
+              "item": 289,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041015f"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410160"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "46": {
+              "item": 289,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410161"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410162"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "47": {
+              "item": 289,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410163"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410164"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "48": {
+              "item": 289,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410165"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410166"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "49": {
+              "item": 289,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410167"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410168"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "light_gray",
+      "name": "light_gray_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 864,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                258
+              ]
+            },
+            {
+              "items": [
+                258
+              ]
+            },
+            {
+              "items": [
+                258
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "light_gray/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 864,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  258
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  258
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  258
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "light_gray_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              258
+            ]
+          },
+          {
+            "items": [
+              258
+            ]
+          },
+          {
+            "items": [
+              258
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "light_gray/named/light_gray_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:light_gray_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 864,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  258
+                ]
+              },
+              {
+                "items": [
+                  258
+                ]
+              },
+              {
+                "items": [
+                  258
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "light_gray/named/light_gray_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:light_gray_wool_slab_from_light_gray_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "light_gray_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "light_gray_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "light_gray_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "light_gray_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "light_gray_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3753
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3754
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3755
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3756
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3757
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3758
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3756
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3756
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 290,
+            "count": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "50": {
+              "item": 290,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041016a"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041016b"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "51": {
+              "item": 290,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041016c"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041016d"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "52": {
+              "item": 290,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041016e"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041016f"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "53": {
+              "item": 290,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410170"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410171"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "54": {
+              "item": 290,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410172"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410173"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "55": {
+              "item": 290,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410174"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410175"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "cyan",
+      "name": "cyan_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 394,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                259
+              ]
+            },
+            {
+              "items": [
+                259
+              ]
+            },
+            {
+              "items": [
+                259
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "cyan/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 394,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  259
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  259
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  259
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "cyan_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              259
+            ]
+          },
+          {
+            "items": [
+              259
+            ]
+          },
+          {
+            "items": [
+              259
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "cyan/named/cyan_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:cyan_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 394,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  259
+                ]
+              },
+              {
+                "items": [
+                  259
+                ]
+              },
+              {
+                "items": [
+                  259
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "cyan/named/cyan_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:cyan_wool_slab_from_cyan_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "cyan_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "cyan_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "cyan_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "cyan_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "cyan_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3759
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3760
+        },
+        "bottom/true": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3761
+        },
+        "bottom/false": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3762
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3763
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3764
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3762
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3762
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "56": {
+              "item": 291,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410177"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0300000080000000410178"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "57": {
+              "item": 291,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "0000000080000000410179"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041017a"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "58": {
+              "item": 291,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041017b"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041017c"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "59": {
+              "item": 291,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041017d"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041017e"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "60": {
+              "item": 291,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041017f"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018001"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "61": {
+              "item": 291,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018101"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018201"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "purple",
+      "name": "purple_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 1258,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                260
+              ]
+            },
+            {
+              "items": [
+                260
+              ]
+            },
+            {
+              "items": [
+                260
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "purple/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 1258,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  260
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  260
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  260
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "purple_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              260
+            ]
+          },
+          {
+            "items": [
+              260
+            ]
+          },
+          {
+            "items": [
+              260
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "purple/named/purple_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:purple_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 1258,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  260
+                ]
+              },
+              {
+                "items": [
+                  260
+                ]
+              },
+              {
+                "items": [
+                  260
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "purple/named/purple_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:purple_wool_slab_from_purple_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "purple_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "purple_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "purple_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "purple_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "purple_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3765
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3766
+        },
+        "bottom/true": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3767
+        },
+        "bottom/false": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3768
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3769
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3770
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3768
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3768
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 292,
+            "count": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "62": {
+              "item": 292,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018401"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018501"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "63": {
+              "item": 292,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018601"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018701"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "64": {
+              "item": 292,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018801"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018901"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "65": {
+              "item": 292,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018a01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018b01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "66": {
+              "item": 292,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018c01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018d01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "67": {
+              "item": 292,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041018e01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041018f01"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "blue",
+      "name": "blue_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 118,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                261
+              ]
+            },
+            {
+              "items": [
+                261
+              ]
+            },
+            {
+              "items": [
+                261
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "blue/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 118,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  261
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  261
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  261
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "blue_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              261
+            ]
+          },
+          {
+            "items": [
+              261
+            ]
+          },
+          {
+            "items": [
+              261
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "blue/named/blue_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:blue_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 118,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  261
+                ]
+              },
+              {
+                "items": [
+                  261
+                ]
+              },
+              {
+                "items": [
+                  261
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "blue/named/blue_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:blue_wool_slab_from_blue_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "blue_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "blue_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "blue_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "blue_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "blue_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3771
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3772
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3773
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3774
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3775
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3776
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3774
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3774
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 293,
+            "count": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "68": {
+              "item": 293,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019101"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019201"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "69": {
+              "item": 293,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019301"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019401"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "70": {
+              "item": 293,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019501"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019601"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "71": {
+              "item": 293,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019701"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019801"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "72": {
+              "item": 293,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019901"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019a01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "73": {
+              "item": 293,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019b01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019c01"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "brown",
+      "name": "brown_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 159,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                262
+              ]
+            },
+            {
+              "items": [
+                262
+              ]
+            },
+            {
+              "items": [
+                262
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "brown/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 159,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  262
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  262
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  262
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "brown_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              262
+            ]
+          },
+          {
+            "items": [
+              262
+            ]
+          },
+          {
+            "items": [
+              262
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "brown/named/brown_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:brown_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 159,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  262
+                ]
+              },
+              {
+                "items": [
+                  262
+                ]
+              },
+              {
+                "items": [
+                  262
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "brown/named/brown_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:brown_wool_slab_from_brown_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "brown_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "brown_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "brown_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "brown_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "brown_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3777
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3778
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3779
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3780
+        },
+        "double/true": {
+          "name": "multi_block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3781
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3782
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3780
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3780
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "74": {
+              "item": 294,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "000000008000000041019e01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "030000008000000041019f01"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "75": {
+              "item": 294,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101a001"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101a101"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "76": {
+              "item": 294,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101a201"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101a301"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "77": {
+              "item": 294,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101a401"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101a501"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "78": {
+              "item": 294,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101a601"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101a701"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "79": {
+              "item": 294,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101a801"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101a901"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "green",
+      "name": "green_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 740,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                263
+              ]
+            },
+            {
+              "items": [
+                263
+              ]
+            },
+            {
+              "items": [
+                263
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "green/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 740,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  263
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  263
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  263
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "green_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              263
+            ]
+          },
+          {
+            "items": [
+              263
+            ]
+          },
+          {
+            "items": [
+              263
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "green/named/green_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:green_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 740,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  263
+                ]
+              },
+              {
+                "items": [
+                  263
+                ]
+              },
+              {
+                "items": [
+                  263
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "green/named/green_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:green_wool_slab_from_green_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "green_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "green_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "green_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "green_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "green_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3783
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3784
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3785
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3786
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3787
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3788
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3786
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3786
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": {
+            "item": 295,
+            "count": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "80": {
+              "item": 295,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101ab01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101ac01"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "81": {
+              "item": 295,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101ad01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101ae01"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "82": {
+              "item": 295,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101af01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101b001"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "83": {
+              "item": 295,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101b101"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101b201"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "84": {
+              "item": 295,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101b301"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101b401"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "85": {
+              "item": 295,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101b501"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101b601"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "red",
+      "name": "red_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 1327,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                264
+              ]
+            },
+            {
+              "items": [
+                264
+              ]
+            },
+            {
+              "items": [
+                264
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "red/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 1327,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  264
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  264
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  264
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "red_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              264
+            ]
+          },
+          {
+            "items": [
+              264
+            ]
+          },
+          {
+            "items": [
+              264
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "red/named/red_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:red_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 1327,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  264
+                ]
+              },
+              {
+                "items": [
+                  264
+                ]
+              },
+              {
+                "items": [
+                  264
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "red/named/red_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:red_wool_slab_from_red_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "red_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "red_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "red_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "red_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "red_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3789
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3790
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3791
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3792
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3793
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3794
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3792
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3792
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "86": {
+              "item": 296,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101b801"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101b901"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "87": {
+              "item": 296,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101ba01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101bb01"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "88": {
+              "item": 296,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101bc01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101bd01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "89": {
+              "item": 296,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101be01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101bf01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "90": {
+              "item": 296,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101c001"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101c101"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "91": {
+              "item": 296,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101c201"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101c301"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "color": "black",
+      "name": "black_wool_slab",
+      "natural_unlock": [
+        {
+          "display_id": 87,
+          "group_raw": 31,
+          "category": 0,
+          "requirements": [
+            {
+              "items": [
+                265
+              ]
+            },
+            {
+              "items": [
+                265
+              ]
+            },
+            {
+              "items": [
+                265
+              ]
+            }
+          ],
+          "flags": 3,
+          "stage": "black/natural",
+          "replace": false
+        }
+      ],
+      "shaped_entry": {
+        "display_id": 87,
+        "display": {
+          "type": 1,
+          "width": 3,
+          "height": 1,
+          "ingredients": [
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  265
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  265
+                ]
+              }
+            },
+            {
+              "type": 6,
+              "set": {
+                "items": [
+                  265
+                ]
+              }
+            }
+          ],
+          "result": {
+            "type": 5,
+            "stack": {
+              "item": "black_wool_slab",
+              "count": 6
+            }
+          },
+          "station": {
+            "type": 4,
+            "item": 405
+          }
+        },
+        "group_raw": 31,
+        "category": 0,
+        "requirements": [
+          {
+            "items": [
+              265
+            ]
+          },
+          {
+            "items": [
+              265
+            ]
+          },
+          {
+            "items": [
+              265
+            ]
+          }
+        ],
+        "flags": 3,
+        "stage": "black/named/black_wool_slab",
+        "replace": false
+      },
+      "canonical_name": {
+        "candidate": "minecraft:black_wool_slab",
+        "selected_reaward": [
+          {
+            "display_id": 87,
+            "group_raw": 31,
+            "category": 0,
+            "requirements": [
+              {
+                "items": [
+                  265
+                ]
+              },
+              {
+                "items": [
+                  265
+                ]
+              },
+              {
+                "items": [
+                  265
+                ]
+              }
+            ],
+            "flags": 3,
+            "stage": "black/named/black_wool_slab",
+            "replace": false
+          }
+        ],
+        "accepted_selected_target": true
+      },
+      "stonecut_declaration": {
+        "status": "absent",
+        "detail": "selected stone→stone_slab recipe absent"
+      },
+      "candidate_cut_name": {
+        "candidate": "minecraft:black_wool_slab_from_black_wool_stonecutting",
+        "selected_reaward": [],
+        "accepted_selected_target": false
+      },
+      "manual": {
+        "taken_cursor": {
+          "item": "black_wool_slab",
+          "count": 6
+        },
+        "ready": {
+          "slot_count": 46,
+          "occupied": {
+            "0": {
+              "item": "black_wool_slab",
+              "count": 6
+            },
+            "1": {
+              "item": "black_wool",
+              "count": 1
+            },
+            "2": {
+              "item": "black_wool",
+              "count": 1
+            },
+            "3": {
+              "item": "black_wool",
+              "count": 1
+            }
+          }
+        },
+        "taken": {
+          "slot_count": 46,
+          "occupied": {}
+        }
+      },
+      "states": {
+        "top/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3795
+        },
+        "top/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3796
+        },
+        "bottom/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3797
+        },
+        "bottom/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3798
+        },
+        "double/true": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3799
+        },
+        "double/false": {
+          "name": "block_change",
+          "position": [
+            2,
+            65,
+            0
+          ],
+          "state": 3800
+        }
+      },
+      "placement": {
+        "updates": [
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3798
+          },
+          {
+            "name": "block_change",
+            "position": [
+              2,
+              65,
+              0
+            ],
+            "state": 3798
+          }
+        ],
+        "held": null
+      },
+      "tools": [
+        {
+          "half": "bottom",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "92": {
+              "item": 297,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101c501"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101c601"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "93": {
+              "item": 297,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101c701"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101c801"
+            }
+          ]
+        },
+        {
+          "half": "bottom",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "94": {
+              "item": 297,
+              "count": 1
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101c901"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101ca01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "hand",
+          "held_before": null,
+          "held_after": null,
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "95": {
+              "item": 297,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101cb01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101cc01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "shears",
+          "held_before": {
+            "item": 1255,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1255,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "96": {
+              "item": 297,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101cd01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101ce01"
+            }
+          ]
+        },
+        {
+          "half": "double",
+          "tool": "diamond_pickaxe",
+          "held_before": {
+            "item": 1052,
+            "count": 1
+          },
+          "held_after": {
+            "item": 1052,
+            "count": 1,
+            "damage": 1
+          },
+          "air_observed": true,
+          "status": "observed",
+          "drops": {
+            "97": {
+              "item": 297,
+              "count": 2
+            }
+          },
+          "actions": [
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "00000000800000004101cf01"
+            },
+            {
+              "name": "block_dig",
+              "packet_id": 41,
+              "payload_hex": "03000000800000004101d001"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "review_checks": {
+    "recipes": 80,
+    "states": 96,
+    "placements": 16,
+    "tool_cases": 96,
+    "total": 288
+  },
+  "limits": [
+    "connection display/entity/window/sequence IDs are local and not canonical",
+    "group31 common to all16 wool shaped, distinct from prior concrete22",
+    "bare-hand own-drop pickup after spawn may differ by timing",
+    "2s hold proves selected drops/wear, not exact break-time parity",
+    "noGUI/fullpacketorder/stonecutbuttonnegative/wetmining/fire/sculk claim"
+  ]
+}

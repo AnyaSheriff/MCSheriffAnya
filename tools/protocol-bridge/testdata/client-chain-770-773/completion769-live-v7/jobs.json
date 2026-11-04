@@ -1,0 +1,56 @@
+[
+  {
+    "name": "769-gui775",
+    "argv": [
+      "python3",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge/probe_776_action_client.py",
+      "--test-binary",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv16-769-test-v7",
+      "--protocol",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/client-chain-json/769/protocol.json",
+      "--client",
+      "769",
+      "--primary",
+      "775",
+      "--output",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-v7/769-gui775",
+      "--client-dir",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.4",
+      "--block-entities",
+      "--payloads",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge/testdata/client-chain-770-773/payload-live-769.json"
+    ],
+    "exit": 0,
+    "seconds": 64.7,
+    "status": "pass",
+    "checks": 6,
+    "result_sha256": "3f00cabf038ca11880f92466606764c43fe3ecfd8e27bca55733535ed1b129c8"
+  },
+  {
+    "name": "769-gui777",
+    "argv": [
+      "python3",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge/probe_776_action_client.py",
+      "--test-binary",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/s26-mv16-769-test-v7",
+      "--protocol",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/client-chain-json/769/protocol.json",
+      "--client",
+      "769",
+      "--primary",
+      "777",
+      "--output",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge/testdata/client-chain-770-773/completion769-live-v7/769-gui777",
+      "--client-dir",
+      "/home/lenox/.local/share/mcsa-java-26.3-probe/client-1.21.4",
+      "--block-entities",
+      "--payloads",
+      "/home/lenox/.cache/mcsheriffanya/work/s26-mv16/tools/protocol-bridge/testdata/client-chain-770-773/payload-live-769.json"
+    ],
+    "exit": 0,
+    "seconds": 63.59,
+    "status": "pass",
+    "checks": 6,
+    "result_sha256": "24b734cc81f5cdf24fdb56dfb7d9de940f358a79eef22ef89fd5d64cf181bc0e"
+  }
+]

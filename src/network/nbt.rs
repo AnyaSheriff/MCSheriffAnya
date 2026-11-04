@@ -50,6 +50,11 @@ impl Compound {
         self
     }
 
+    /// Добавляет поле-long (например, прежнее fixed_time измерения).
+    pub fn long(mut self, name: &str, value: i64) -> Self {
+        self.bytes.push(4);write_name(&mut self.bytes,name);self.bytes.extend(value.to_be_bytes());self
+    }
+
     /// Добавляет поле-float.
     pub fn float(mut self, name: &str, value: f32) -> Self {
         self.bytes.push(TAG_FLOAT);
@@ -181,11 +186,11 @@ impl Compound {
     }
 }
 
-/// Строковое поле `name` сетевого компаунда верхнего уровня — например,
-/// пометка особого динамита в custom_data предмета от клиента. Разбираются
-/// только строки: поле другого типа прежде искомого — None (его длину мы
-/// не считаем). Имена и строки — ASCII; прочий «modified UTF-8» читается
-/// как есть, с заменой негодного.
+/// Ограниченный помощник тестов: строковое поле сетевого compound.
+/// Рассматривает только последовательность строковых полей; другой тип
+/// завершает поиск. Это не общий декодер NBT/MUTF-8 и не путь приёма данных
+/// клиента; произвольный custom_data читает stackdata::CustomData.
+#[cfg(test)]
 pub fn string_field(bytes: &[u8], name: &str) -> Option<String> {
     let mut rest = bytes.strip_prefix(&[TAG_COMPOUND])?;
 

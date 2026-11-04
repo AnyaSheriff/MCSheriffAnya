@@ -5,6 +5,7 @@
 // в том же виде key=value: подробный лог, складывание мира впрок и порт
 // для Bedrock.
 
+#[cfg(test)]
 use std::fs;
 use std::path::Path;
 
@@ -21,6 +22,22 @@ pub const FILE: &str = "config/mcsa.properties";
 /// переводится в новый — терять настройки из-за смены места незачем.
 pub const OLD_FILES: [&str; 2] = ["config/mcsheriffanya.toml", "config/rustcraft.toml"];
 
+/// Проверка лицензий в Java offline-mode, независимо от парольной защиты.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(rename_all="lowercase")]
+pub enum OfflineLicenseMode { Cosmetics, Disabled, Invalid }
+impl std::str::FromStr for OfflineLicenseMode {
+    type Err = std::convert::Infallible;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Ok(match value { "cosmetics" => Self::Cosmetics, "disabled" => Self::Disabled, _ => Self::Invalid })
+    }
+}
+impl std::fmt::Display for OfflineLicenseMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self { Self::Cosmetics=>"cosmetics", Self::Disabled=>"disabled", Self::Invalid=>"invalid" })
+    }
+}
+
 /// Настройки.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(default)]
@@ -31,19 +48,26 @@ pub struct Settings {
     pub ore_retention_percent: u8,
     /// Явные разрешения HTTPS: имя плагина → точные DNS-имена.
     pub plugin_network_hosts: std::collections::BTreeMap<String, Vec<String>>,
-    /// Require PROXY v1/v2 on Java TCP connections.
+    /// Требовать заголовок PROXY v1/v2 для Java TCP.
     pub proxy_protocol: bool,
-    pub viaproxy: bool,
     pub viaproxy_port: u16,
     pub viaproxy_java: String,
-    pub viaproxy_memory: String,
     pub auth_mode: String,
-    /// Exact TCP peer IPs allowed to supply PROXY headers (no CIDR).
+    /// Точные адреса TCP-прокси, которым разрешён PROXY (без CIDR).
     pub proxy_protocol_trusted_sources: Vec<std::net::IpAddr>,
+    /// Проверяем лимит даже в сборках без запуска внешнего ViaProxy.
+    pub viaproxy: bool,
+    #[serde(deserialize_with="read_viaproxy_memory")]
+    pub viaproxy_memory: u64,
+    /// Неизвестное значение не должно незаметно менять версию существующего мира.
+    #[serde(deserialize_with="read_java_version")]
+    pub java_version: Option<mcsa_protocol::JavaVersion>,
     /// Парольный диалог для Java offline-mode до входа в мир.
     pub auth_enabled: bool,
     /// Пробовать лицензию; неудача разрешает cracked-повторный вход.
     pub auth_premium: bool,
+    /// Имеет приоритет над устаревшим auth-premium.
+    pub offline_license_mode: OfflineLicenseMode,
     /// Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
     /// с клиентом. Нужен только для поиска неполадок.
     pub debug: bool,
@@ -100,6 +124,32 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Ошибка в режиме не должна молча включать обращения к Mojang.
+    pub fn validate(&self) -> std::io::Result<()> {
+        if self.viaproxy && self.viaproxy_memory < 320 * 1024 * 1024 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: при viaproxy=true требуется viaproxy-memory не менее 320M (по умолчанию 512M)"));
+        }
+        if !matches!(self.java_version, Some(mcsa_protocol::JavaVersion::V26_3)) {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: поддерживается только java-version=26.3. Для старого мира сохраните резервную копию, выполните mcsheriffanya --upgrade-world-26.3 world, затем укажите java-version=26.3"));
+        }
+        if self.offline_license_mode == OfflineLicenseMode::Invalid {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: offline-license-mode должен быть cosmetics или disabled"));
+        }
+        Ok(())
+    }
+
+    pub fn verify_license(&self, online_mode: bool) -> bool {
+        online_mode || self.offline_license_mode == OfflineLicenseMode::Cosmetics
+    }
+
+    /// Политика сервера имеет приоритет над источниками в skins.toml.
+    pub fn apply_skin_policy(&self, online_mode: bool, skins: &mut crate::skins::Settings) {
+        skins.mojang &= self.verify_license(online_mode);
+    }
+
     /// Какие проёмы портала в Незер зажигаются.
     pub fn portal_sizes(&self) -> crate::portal::Sizes {
         crate::portal::Sizes {
@@ -118,14 +168,16 @@ impl Default for Settings {
             ore_retention_percent: 100,
             plugin_network_hosts: Default::default(),
             proxy_protocol: false,
-            viaproxy: false,
             viaproxy_port: 26101,
             viaproxy_java: "java".into(),
-            viaproxy_memory: "512M".into(),
             auth_mode: "dialog".into(),
             proxy_protocol_trusted_sources: vec![std::net::Ipv4Addr::LOCALHOST.into()],
+            viaproxy: false,
+            viaproxy_memory: 512 * 1024 * 1024,
+            java_version: Some(mcsa_protocol::JavaVersion::V26_3),
             auth_enabled: true,
             auth_premium: true,
+            offline_license_mode: OfflineLicenseMode::Cosmetics,
             debug: false,
             console_colors: crate::colors::ConsoleColors::Auto,
             tab_tps: true,
@@ -152,6 +204,7 @@ impl Settings {
     /// значения из прежнего файла, если он был) и берёт что есть. Ключ,
     /// который не разобрался, берётся по умолчанию — с предупреждением
     /// в логе.
+    #[cfg(test)]
     pub fn load(path: &Path) -> Self {
         if !path.exists() {
             let settings = OLD_FILES
@@ -181,7 +234,7 @@ impl Settings {
     }
 
     /// Разбирает файл: нет ключа — значение по умолчанию.
-    fn parse(text: &str, path: &Path) -> Self {
+    pub(super) fn parse(text: &str, path: &Path) -> Self {
         let values = parse_properties(text);
         let default = Settings::default();
 
@@ -202,22 +255,28 @@ impl Settings {
             monster_spawn_multiplier: { let value: f64 = take(&values,"monster-spawn-multiplier",1.0,path); if value.is_finite() && (0.0..=16.0).contains(&value) {value} else {log_warn!("monster-spawn-multiplier: нужно число от 0 до 16; беру 1");1.0} },
             ore_retention_percent: { let value: u8 = take(&values,"ore-retention-percent",100,path); if value <= 100 {value} else {log_warn!("ore-retention-percent: нужно число от 0 до 100; беру 100");100} },
             plugin_network_hosts: values.get("plugin-network-hosts").map(|value| value.split(',').filter_map(|entry| entry.split_once(':')).map(|(plugin, hosts)| (plugin.trim().to_string(), hosts.split('|').map(|host| host.trim().to_string()).collect())).collect()).unwrap_or_default(),
-            viaproxy: take(&values, "viaproxy", default.viaproxy, path),
             viaproxy_port: take(&values, "viaproxy-port", default.viaproxy_port, path),
             viaproxy_java: take(&values, "viaproxy-java", default.viaproxy_java, path),
-            viaproxy_memory: take(&values, "viaproxy-memory", default.viaproxy_memory, path),
             auth_mode: take(&values, "auth-mode", default.auth_mode, path),
             proxy_protocol: take(&values, "proxy-protocol", default.proxy_protocol, path),
             proxy_protocol_trusted_sources: values.get("proxy-protocol-trusted-sources")
                 .map(|s| s.split(',').filter(|s| !s.trim().is_empty())
                     .map(|s| s.trim().parse()).collect::<Result<Vec<_>, _>>()
                     .unwrap_or_else(|_| {
-                        log_warn!("Invalid proxy-protocol-trusted-sources: trusting nobody");
+                        log_warn!("proxy-protocol-trusted-sources: неверные адреса, никому не доверяем");
                         Vec::new()
                     }))
                 .unwrap_or(default.proxy_protocol_trusted_sources),
+            viaproxy: take(&values, "viaproxy", default.viaproxy, path),
+            viaproxy_memory: values.get("viaproxy-memory").map_or(default.viaproxy_memory, |value| proxy_memory_bytes(value).unwrap_or(0)),
+            java_version: values.get("java-version").map_or(default.java_version, |value| mcsa_protocol::JavaVersion::from_name(value)),
             auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
+            // Старые настройки не должны неожиданно включить проверку входа.
+            offline_license_mode: take(&values, "offline-license-mode",
+                if take(&values, "auth-premium", true, path) && take(&values, "auth-enabled", true, path) {
+                    OfflineLicenseMode::Cosmetics
+                } else { OfflineLicenseMode::Disabled }, path),
             debug: take(&values, "debug", default.debug, path),
             console_colors: take(&values, "console-colors", default.console_colors, path),
             tab_tps: take(&values, "tab-tps", default.tab_tps, path),
@@ -239,7 +298,7 @@ impl Settings {
     }
 
     /// Файл с пояснениями — чтобы было понятно, что править.
-    fn to_file(&self) -> String {
+    pub(super) fn to_file(&self) -> String {
         let mut text = String::from(HEADER);
 
         for (_, section) in self.sections() {
@@ -252,21 +311,23 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(&self) -> [(&'static str, String); 29] {
+    pub(super) fn sections(&self) -> [(&'static str, String); 31] {
         [
             ("monster-spawn-multiplier", format!("# Предел естественных монстров: множитель 0..16; 1 — обычный предел. Не влияет на спавнеры и команды.\nmonster-spawn-multiplier={}\n",self.monster_spawn_multiplier)),
             ("ore-retention-percent", format!("# Сколько процентов руды оставить в НОВЫХ чанках (0..100); 100 — обычная генерация.\nore-retention-percent={}\n",self.ore_retention_percent)),
             ("plugin-network-hosts", format!("# HTTPS плагинов выключен по умолчанию. Разрешения: plugin:api.example.org|other.example.org,another:api.example.net\nplugin-network-hosts={}\n", self.plugin_network_hosts.iter().map(|(plugin, hosts)| format!("{plugin}:{}", hosts.join("|"))).collect::<Vec<_>>().join(","))),
-            ("viaproxy", format!("# Автозапуск официального ViaProxy; backend принудительно на loopback.\nviaproxy={}\n", self.viaproxy)),
             ("viaproxy-port", format!("viaproxy-port={}\n", self.viaproxy_port)),
             ("viaproxy-java", format!("# Путь к Java 17+ (рекомендуется 21).\nviaproxy-java={}\n", self.viaproxy_java)),
-            ("viaproxy-memory", format!("# Максимальная Java heap, например 512M или 1G.\nviaproxy-memory={}\n", self.viaproxy_memory)),
             ("auth-mode", format!("# dialog или chat; доверенный PROXY всегда использует chat.\nauth-mode={}\n", self.auth_mode)),
             ("proxy-protocol", format!("# Java TCP: требовать PROXY v1/v2; прямые подключения отклоняются.\nproxy-protocol={}\n", self.proxy_protocol)),
             ("proxy-protocol-trusted-sources", format!("# Доверенные TCP-адреса прокси через запятую (точные IP, без CIDR).\n# Пустой список не доверяет никому. Backend закройте от внешнего доступа.\nproxy-protocol-trusted-sources={}\n", self.proxy_protocol_trusted_sources.iter().map(ToString::to_string).collect::<Vec<_>>().join(","))),
+            ("viaproxy", format!("# Автозапуск внешнего ViaProxy; backend принудительно на loopback.\nviaproxy={}\n", self.viaproxy)),
+            ("viaproxy-memory", format!("# Память ViaProxy: минимум 320M при viaproxy=true; по умолчанию 512M.\nviaproxy-memory={}\n", if self.viaproxy_memory.is_multiple_of(1024 * 1024) { format!("{}M", self.viaproxy_memory / (1024 * 1024)) } else { self.viaproxy_memory.to_string() })),
+            ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Поддерживается только 26.3. Перед переносом старого мира\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
-            ("auth-premium", format!("# Проверять лицензию Java; после неудачи повторный вход без лицензии.\n# Действует при auth-enabled=true и online-mode=false.\nauth-premium={}\n", self.auth_premium)),
+            ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
+            ("offline-license-mode", format!("# Только для online-mode=false: cosmetics — проверять лицензию для скинов/плащей;\n# после неудачи можно войти повторно без лицензии. disabled — не проверять\n# лицензию и не искать профили/скины через Mojang. Парольная защита AuthMe независима.\n# Имеет приоритет над auth-premium; действует и при auth-enabled=false.\noffline-license-mode={}\n", self.offline_license_mode)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -354,6 +415,7 @@ send-error-reports={}
     /// прежней версией сервера), — с пояснениями и значениями по умолчанию.
     /// Остальное в файле не трогается. Не записалось — не беда: настройки
     /// всё равно берутся по умолчанию.
+    #[cfg(test)]
     fn add_missing(&self, path: &Path, text: &str) {
         let values = parse_properties(text);
         let missing: Vec<_> = self.sections().into_iter().filter(|(key, _)| !values.contains_key(*key)).collect();
@@ -380,20 +442,54 @@ send-error-reports={}
     }
 }
 
+fn proxy_memory_bytes(value: &str) -> Option<u64> {
+    let value = value.trim();
+    let (number, multiplier) = match value.as_bytes().last()? {
+        b'k' | b'K' => (&value[..value.len()-1], 1024),
+        b'm' | b'M' => (&value[..value.len()-1], 1024 * 1024),
+        b'g' | b'G' => (&value[..value.len()-1], 1024 * 1024 * 1024),
+        _ => (value, 1),
+    };
+    number.parse::<u64>().ok()?.checked_mul(multiplier)
+}
+
+fn read_viaproxy_memory<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<u64, D::Error> {
+    let value = String::deserialize(deserializer)?;
+    Ok(proxy_memory_bytes(&value).unwrap_or(0))
+}
+
+fn read_java_version<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<mcsa_protocol::JavaVersion>, D::Error> {
+    let value = String::deserialize(deserializer)?;
+    Ok(mcsa_protocol::JavaVersion::from_name(&value))
+}
+
 /// Шапка файла.
 const HEADER: &str = "# Настройки MCSheriffAnya, которых нет в server.properties.\n";
 
 /// Имя файла — без папки: прежние файлы лежат там же, где и новый.
+#[cfg(test)]
 fn file_name(path: &str) -> &str {
     Path::new(path).file_name().and_then(|name| name.to_str()).unwrap_or(path)
 }
 
+/// Читающая часть переноса нужна также проверке до изменения мира/конфига.
+pub(super) fn parse_old_text(text: &str) -> Result<Settings, toml::de::Error> {
+    let mut settings: Settings = toml::from_str(text)?;
+    if !text.lines().any(|line| line.trim_start().starts_with("offline_license_mode")) {
+        settings.offline_license_mode = if settings.auth_enabled && settings.auth_premium {
+            OfflineLicenseMode::Cosmetics
+        } else { OfflineLicenseMode::Disabled };
+    }
+    Ok(settings)
+}
+
 /// Читает прежний toml-файл и убирает его: его значения уйдут в новый файл.
 /// Не разобрался — значения по умолчанию, а старый файл остаётся лежать.
+#[cfg(test)]
 fn move_old_file(old: &Path, path: &Path) -> Settings {
     let text = fs::read_to_string(old).unwrap_or_default();
 
-    match toml::from_str::<Settings>(&text) {
+    match parse_old_text(&text) {
         Ok(settings) => {
             match fs::remove_file(old) {
                 Ok(()) => log_info!("Настройки перенесены: {} → {}", old.display(), path.display()),
@@ -412,13 +508,33 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn viaproxy_heap_minimum_is_checked_before_startup() {
+        let path = std::path::Path::new("mcsa.properties");
+        for value in ["0", "128M", "319m", "335544319", "bad", "18446744073709551615G"] {
+            let settings = super::Settings::parse(&format!("viaproxy=true\nviaproxy-memory={value}\n"), path);
+            let error = settings.validate().unwrap_err();
+            assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+            assert!(error.to_string().contains("не менее 320M"));
+            assert!(super::Settings { viaproxy: false, ..settings }.validate().is_ok());
+        }
+        for value in ["320M", "327680K", "335544320", "512M", "1g"] {
+            let settings = super::Settings::parse(&format!("viaproxy=true\nviaproxy-memory={value}\n"), path);
+            assert!(settings.validate().is_ok());
+            assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        }
+        let defaults = super::Settings::parse("viaproxy=true\n", path);
+        assert_eq!(defaults.viaproxy_memory, 512 * 1024 * 1024);
+        assert!(defaults.validate().is_ok());
+    }
+
+    #[test]
     fn plugin_controls_default_to_vanilla_and_network_is_opt_in() {
-        let path=Path::new("mcsa.properties");let defaults=Settings::default();
+        let path=std::path::Path::new("mcsa.properties");let defaults=super::Settings::default();
         assert_eq!((defaults.monster_spawn_multiplier,defaults.ore_retention_percent),(1.0,100));assert!(defaults.plugin_network_hosts.is_empty());
-        let settings=Settings::parse("monster-spawn-multiplier=1.5\nore-retention-percent=40\nplugin-network-hosts=fourlegacy:api.example.org|other.example.org\n",path);
+        let settings=super::Settings::parse("monster-spawn-multiplier=1.5\nore-retention-percent=40\nplugin-network-hosts=fourlegacy:api.example.org|other.example.org\n",path);
         assert_eq!((settings.monster_spawn_multiplier,settings.ore_retention_percent),(1.5,40));assert_eq!(settings.plugin_network_hosts["fourlegacy"],vec!["api.example.org","other.example.org"]);
-        let invalid=Settings::parse("monster-spawn-multiplier=NaN\nore-retention-percent=101\n",path);assert_eq!((invalid.monster_spawn_multiplier,invalid.ore_retention_percent),(1.0,100));
-        assert_eq!(Settings::parse(&settings.to_file(),path),settings);
+        let invalid=super::Settings::parse("monster-spawn-multiplier=NaN\nore-retention-percent=101\n",path);assert_eq!((invalid.monster_spawn_multiplier,invalid.ore_retention_percent),(1.0,100));
+        assert_eq!(super::Settings::parse(&settings.to_file(),path),settings);
     }
 
     #[test]
@@ -452,6 +568,68 @@ mod tests {
         assert!(!old.to_file().contains("auth-provider"));
     }
     use super::*;
+
+    #[test]
+    fn primary_version_never_enables_an_unimplemented_adapter() {
+        let path = Path::new("mcsa.properties");
+        for version in ["1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "unknown", ""] {
+            let settings = Settings::parse(&format!("java-version={version}"), path);
+            assert_eq!(settings.validate().is_ok(), version == "26.3");
+            assert_eq!(Settings::parse(&settings.to_file(), path), settings);
+        }
+        assert!(Settings::parse("", path).validate().is_ok());
+    }
+
+    #[test]
+    fn offline_license_policy_and_legacy_migration() {
+        let path = Path::new("mcsa.properties");
+        for (text, expected) in [
+            ("", OfflineLicenseMode::Cosmetics),
+            ("auth-premium=false", OfflineLicenseMode::Disabled),
+            ("auth-enabled=false", OfflineLicenseMode::Disabled),
+            ("auth-premium=true\noffline-license-mode=disabled", OfflineLicenseMode::Disabled),
+            ("auth-enabled=false\nauth-premium=false\noffline-license-mode=cosmetics", OfflineLicenseMode::Cosmetics),
+        ] {
+            let settings = Settings::parse(text, path);
+            assert_eq!(settings.offline_license_mode, expected);
+            assert_eq!(Settings::parse(&settings.to_file(), path), settings);
+            assert!(settings.validate().is_ok());
+            assert_eq!(settings.verify_license(false), expected == OfflineLicenseMode::Cosmetics);
+            assert!(settings.verify_license(true), "online-mode всегда требует лицензию");
+            let mut skins = crate::skins::Settings::default();
+            settings.apply_skin_policy(false, &mut skins);
+            assert_eq!(skins.mojang, expected == OfflineLicenseMode::Cosmetics);
+            assert!(skins.ely, "Ely не проверяет лицензию Mojang");
+            skins.mojang = false;
+            settings.apply_skin_policy(true, &mut skins);
+            assert!(!skins.mojang, "не включать отключённый владельцем источник");
+        }
+        let invalid = Settings::parse("offline-license-mode=disabeld", path);
+        assert!(invalid.validate().is_err());
+        assert!(!invalid.verify_license(false));
+        let protected = Settings::parse("auth-enabled=true\noffline-license-mode=disabled", path);
+        assert!(protected.auth_enabled);
+    }
+
+    #[test]
+    fn offline_license_mode_survives_config_reload() {
+        let directory = std::env::temp_dir().join(format!("mcsa-offline-mode-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("mcsa.properties");
+        fs::write(&path, "# Старый сервер\nauth-premium=false\n").unwrap();
+        let settings = Settings::load(&path);
+        assert_eq!(settings.offline_license_mode, OfflineLicenseMode::Disabled);
+        let saved = fs::read_to_string(&path).unwrap();
+        assert!(saved.starts_with("# Старый сервер\nauth-premium=false\n"));
+        assert!(saved.contains("offline-license-mode=disabled"));
+        assert_eq!(Settings::load(&path), settings);
+        fs::remove_file(&path).unwrap();
+        fs::write(directory.join("rustcraft.toml"), "auth_premium = false\n").unwrap();
+        let migrated = Settings::load(&path);
+        assert_eq!(migrated.offline_license_mode, OfflineLicenseMode::Disabled);
+        assert_eq!(Settings::load(&path), migrated);
+        fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn console_color_modes_survive_properties_and_legacy_toml() {

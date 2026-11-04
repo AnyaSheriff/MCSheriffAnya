@@ -1,0 +1,49 @@
+{
+  "method": "Matched-biome regression: generated jagged_peaks Y144. Reference is the measured official A5 peak window, 7 air cells / 8999 eligible cells, plus the unchanged two percentage point tolerance. A nonempty denominator and unchanged surface biome selection are required.",
+  "reference": "../batch-a5/measurements.json",
+  "seed": 1792932773345722119,
+  "chunks": [
+    [
+      140,
+      109
+    ],
+    [
+      140,
+      110
+    ],
+    [
+      140,
+      111
+    ],
+    [
+      141,
+      109
+    ],
+    [
+      141,
+      110
+    ],
+    [
+      141,
+      111
+    ],
+    [
+      142,
+      109
+    ],
+    [
+      142,
+      110
+    ],
+    [
+      142,
+      111
+    ]
+  ],
+  "minimum_columns": 64,
+  "minimum_denominator": 128,
+  "maximum_air_percent": 2.0777864207134127,
+  "band_y": 144,
+  "official_air": 7,
+  "official_denominator": 8999
+}

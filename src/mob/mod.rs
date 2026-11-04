@@ -18,6 +18,8 @@ pub mod ai;
 pub mod plugin_attributes;
 pub mod plugin_targets;
 pub mod armor_stand;
+pub mod cushion;
+pub mod sulfur_cube;
 pub mod movement_enchantments;
 pub mod trial_gear;
 pub mod equipment;
@@ -49,6 +51,7 @@ pub mod spawn;
 pub mod slime;
 pub mod skeleton;
 mod save;
+mod item_storage;
 pub mod tame;
 pub mod wildlife;
 pub mod wolf_armor;
@@ -69,6 +72,10 @@ pub enum Kind {
     HappyGhast,
     CopperGolem,
     ArmorStand,
+    /// Подушка 26.3: неподвижная сущность без ИИ, цвет — в `color`, сидеть на ней можно (mob/cushion.rs).
+    Cushion,
+    /// Куб серы 26.3: пассивный прыгающий моб, поглощает блоки (mob/sulfur_cube.rs).
+    SulfurCube,
     Cow,
     Pig,
     Sheep,
@@ -194,7 +201,7 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 89] = [
+    pub const ALL: [Kind; 91] = [
         Kind::Rabbit, Kind::Fox, Kind::Bee,
         Kind::Endermite,
         Kind::Zoglin,
@@ -202,6 +209,8 @@ impl Kind {
         Kind::HappyGhast,
         Kind::CopperGolem,
         Kind::ArmorStand,
+        Kind::Cushion,
+        Kind::SulfurCube,
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -371,6 +380,8 @@ impl Kind {
             "happy_ghast" => Kind::HappyGhast,
             "copper_golem" => Kind::CopperGolem,
             "armor_stand" => Kind::ArmorStand,
+            "cushion" => Kind::Cushion,
+            "sulfur_cube" => Kind::SulfurCube,
             "cow" => Kind::Cow,
             "pig" => Kind::Pig,
             "sheep" => Kind::Sheep,
@@ -466,6 +477,8 @@ impl Kind {
             Kind::HappyGhast => "happy_ghast",
             Kind::CopperGolem => "copper_golem",
             Kind::ArmorStand => "armor_stand",
+            Kind::Cushion => "cushion",
+            Kind::SulfurCube => "sulfur_cube",
             Kind::Cow => "cow",
             Kind::Pig => "pig",
             Kind::Sheep => "sheep",
@@ -561,6 +574,10 @@ impl Kind {
             Kind::HappyGhast => 58,
             Kind::CopperGolem => 28,
             Kind::ArmorStand => 5,
+            // Внутренний номер расширения 26.3 (после 775: 157/158 — лодки тополя); в 777 это 33.
+            Kind::Cushion => 159,
+            // Следующий внутренний номер расширения 26.3; в 777 это 133.
+            Kind::SulfurCube => 160,
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
@@ -668,6 +685,8 @@ impl Kind {
             Kind::HappyGhast => "minecraft:happy_ghast", // [Bedrock: потом] свойства.
             Kind::CopperGolem => "minecraft:copper_golem",
             Kind::ArmorStand => "minecraft:armor_stand", // [Bedrock: потом] свойства.
+            Kind::Cushion => "minecraft:cushion", // [проверить] имя в Bedrock.
+            Kind::SulfurCube => "minecraft:sulfur_cube", // [проверить] имя в Bedrock.
             Kind::Cow => "minecraft:cow",
             Kind::Pig => "minecraft:pig",
             Kind::Sheep => "minecraft:sheep",
@@ -785,6 +804,8 @@ impl Kind {
             Kind::HappyGhast => 4.0,
             Kind::CopperGolem => 0.49,
             Kind::ArmorStand => 0.5,
+            Kind::Cushion => 0.999,
+            Kind::SulfurCube => 0.49,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -862,6 +883,8 @@ impl Kind {
             Kind::HappyGhast => 4.0,
             Kind::CopperGolem => 0.98,
             Kind::ArmorStand => 1.975,
+            Kind::Cushion => 0.249,
+            Kind::SulfurCube => 0.49,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -944,6 +967,8 @@ impl Kind {
             Kind::HappyGhast => 20.0,
             Kind::CopperGolem => 12.0,
             Kind::ArmorStand => 5.0,
+            Kind::Cushion => 1.0,
+            Kind::SulfurCube => 4.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -1030,6 +1055,8 @@ impl Kind {
             Kind::HappyGhast => 0.05,
             Kind::CopperGolem => 0.2,
             Kind::ArmorStand => 0.0,
+            Kind::Cushion => 0.0,
+            Kind::SulfurCube => 0.3,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -1151,6 +1178,9 @@ impl Kind {
             Kind::HappyGhast => ("minecraft:entity.happy_ghast.ambient", "minecraft:entity.happy_ghast.hurt", "minecraft:entity.happy_ghast.death"),
             Kind::CopperGolem => ("", "minecraft:entity.copper_golem.hurt", "minecraft:entity.copper_golem.death"),
             Kind::ArmorStand => ("", "minecraft:entity.armor_stand.hit", "minecraft:entity.armor_stand.break"),
+            Kind::Cushion => ("", "", ""),
+            // [проверить] имена звуков куба серы (в прогоне снят только порядок пакетов).
+            Kind::SulfurCube => ("", "minecraft:entity.sulfur_cube.hurt", "minecraft:entity.sulfur_cube.death"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -1242,6 +1272,8 @@ impl Kind {
             Kind::Creaking => "minecraft:entity.creaking.step",
             Kind::CopperGolem => "minecraft:entity.copper_golem.step",
             Kind::ArmorStand => "",
+            Kind::Cushion => "",
+            Kind::SulfurCube => "",
             Kind::WitherSkeleton => "minecraft:entity.wither_skeleton.step",
             Kind::ZombifiedPiglin => "minecraft:entity.zombified_piglin.step",
             Kind::Piglin => "minecraft:entity.piglin.step",
@@ -1322,6 +1354,7 @@ const EPS: f64 = 1.0e-7;
 
 /// Откуда моб видит мир: блоки и загруженные чанки.
 pub trait View {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2) }
     fn block(&self, x: i32, y: i32, z: i32) -> i32;
     fn loaded(&self, chunk_x: i32, chunk_z: i32) -> bool;
 
@@ -1364,6 +1397,7 @@ pub trait View {
 pub struct LavaFloor<'a>(pub &'a dyn View);
 
 impl View for LavaFloor<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() }
     fn block(&self, x: i32, y: i32, z: i32) -> i32 {
         let state = self.0.block(x, y, z);
 
@@ -1469,6 +1503,8 @@ pub enum Event {
 
     /// Частицы приземления: блок под ногами и их число.
     Landing { block: i32, count: i32 },
+    /// Отскок от опоры; только игровое событие, без отдельного сетевого пакета.
+    Bounce,
 
     /// Частицы осколков блока: состояние, место, разброс, скорость, число (поломка стойки).
     BlockBurst { block: i32, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32 },
@@ -1605,6 +1641,9 @@ pub struct Mob {
 
     /// Сохраняется ли с чанком.
     pub persistent: bool,
+    /// Каталог владельца и состояние транспорта; не являются данными самого моба.
+    pub catalog: crate::gameplay_catalog::Catalog,
+    pub riding: bool,
 
     /// Шаг с оглядкой на цель (скелет): вперёд и влево, в долях скорости;
     /// действует, пока нет пути.
@@ -1689,6 +1728,8 @@ pub struct Mob {
 
     /// Големы: цель, «построен игроком», тыква снежного (mob/golem.rs).
     pub golem: golem::State,
+    /// Куб серы: поглощённый блок, запал, пауза подбора (mob/sulfur_cube.rs).
+    pub sulfur: sulfur_cube::State,
     /// Фантом: размер, якорь кружения, пике (mob/phantom.rs).
     pub phantom: phantom::State,
     /// Бриз: поза, выстрел, прыжок (mob/breeze.rs).
@@ -1743,6 +1784,13 @@ impl Mob {
             nether.size = 1;
         }
 
+        // Куб серы по умолчанию малый (наблюдение: призванный с NBT без Size — Size 0, 4 здоровья).
+        if kind == Kind::SulfurCube {
+            nether.size = sulfur_cube::SMALL;
+            vitals.health = 4.0;
+            vitals.max_health = 4.0;
+        }
+
         // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
         // у всех шалкеров городов Color 16).
         let h = hostile::State { bow: kind.skeleton(), shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
@@ -1785,6 +1833,8 @@ impl Mob {
             brain: ai::Brain::new(entity_id),
             fright: None,
             persistent: true,
+            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
+            riding: false,
             strafe: (0.0, 0.0),
             wall: false,
             h,
@@ -1811,6 +1861,7 @@ impl Mob {
             leash: None,
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
             golem: golem::State::default(),
+            sulfur: sulfur_cube::State::default(),
             phantom: phantom::State::default(),
             breeze: breeze::State::default(),
             guardian: guardian::State::default(),
@@ -1886,11 +1937,21 @@ impl Mob {
 
     /// Ширина и высота ящика: у детёныша вдвое меньше (вики, Baby mobs).
     pub fn size(&self) -> (f64, f64) {
+        if self.kind==Kind::Cushion {return (0.999, 0.249);}
+        if self.kind==Kind::SulfurCube {let w=sulfur_cube::width(self.nether.size); return (w, w);}
         if self.kind==Kind::ArmorStand {return if self.stand.marker {(0.0,0.0)} else if self.stand.small {(0.25,0.9875)} else {(0.5,1.975)};}
         if let Some(size) = water::size(self) { return size; }
 
         if self.kind == Kind::Warden && self.warden.invulnerable() { return (0.9, 1.0); }
         if self.kind == Kind::HappyGhast && self.is_baby() { return (0.95, 0.95); }
+        if self.catalog.changed_rules() && self.is_baby()
+            && let Some(size) = crate::gameplay_catalog::changed_rules::values().baby_sizes.get(self.kind.name())
+        { return (size[0], size[1]); }
+        if self.catalog.changed_rules() && self.is_baby()
+            && matches!(self.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::ZombifiedPiglin | Kind::Villager | Kind::Piglin)
+        {
+            return (self.kind.width() * 0.5, crate::gameplay_catalog::changed_rules::values().baby_humanoid_height);
+        }
 
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
@@ -1908,6 +1969,8 @@ impl Mob {
     /// свои: зомби и скелет 1,74 (чёрный ящик, skeleton-arrow: стрела вылетает
     /// на 1,64 = глаза − 0,1), крипер 1,445, паук 0,65 [проверить].
     pub fn eye(&self) -> f64 {
+        // [проверить] Индивидуальные глаза и точки посадки детёнышей 26.2.
+        if self.catalog.changed_rules() && self.is_baby() { return self.size().1 * 0.85; }
         match self.kind {
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
             // [проверить] высота глаз: ифрит 1,53, иссушитель 2,1, гаст 2,6.
@@ -1988,6 +2051,7 @@ impl Mob {
     /// Такт моба: рост, мысли, движение, урон от падения. Возвращает то, что
     /// случилось вовне (детёныш, съеденная трава, яйцо), — исполняет вызывающий.
     pub fn tick(&mut self, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan {
+        self.catalog = view.catalog();
         if self.wild.fresh {
             self.wild.fresh = false;
             return ai::Plan::default();
@@ -2112,6 +2176,7 @@ impl Mob {
         let was_baby = self.age < 0;
         growth::tick_age(self);
         if was_baby && self.age == 0 && self.kind == Kind::Turtle { water::scute(self); }
+        if was_baby && self.age == 0 && self.kind == Kind::SulfurCube { sulfur_cube::grow(self); }
 
         if self.love > 0 {
             self.love -= 1;
@@ -2149,6 +2214,11 @@ impl Mob {
             if name == Some("lava") { self.vitals.ignite(300); self.hurt(4.0, Source::Lava, None); }
         }
 
+        // Подушка: без ИИ; пропала опора — ломается и роняет предмет (mob/cushion.rs).
+        if self.kind==Kind::Cushion && !self.is_dead() {
+            if !cushion::supported(view, self) { self.vitals.health=0.0; self.vitals.dead=true; self.die(); }
+            return ai::Plan::default();
+        }
         if self.kind==Kind::ArmorStand && !self.is_dead() {
             if !self.stand.marker && !self.stand.no_gravity {self.physics(view,0.0,false);}
             return ai::Plan::default();
@@ -2215,6 +2285,10 @@ impl Mob {
         }
 
         if self.no_ai {
+            // Чёрный ящик 26.3, mob-forced-update-even/odd: NoAI-корова
+            // подаёт cow.ambient; голос не включает движение и цели.
+            if self.kind == Kind::Cow { ai::voice(self, rng); }
+
             // Запал крипера — не мысль, а его такт: подожжённый NoAI взрывается
             // (чёрный ящик, creeper-explode).
             let mut plan = ai::Plan::default();
@@ -2331,6 +2405,7 @@ impl Mob {
         if slime::cube(self.kind) && self.on_ground && !was_on_ground {
             slime::landed(self, rng);
         }
+        if self.kind == Kind::SulfurCube && self.on_ground && !was_on_ground { sulfur_cube::landed(self); }
 
         plan
     }
@@ -2568,7 +2643,13 @@ impl Mob {
 
         if down_hit {
             self.on_ground = true;
-            self.vy = 0.0;
+            let below = view.block(self.x.floor() as i32, (self.y - 0.001).floor() as i32, self.z.floor() as i32);
+            let bed = blocks::block_at_state(below).is_some_and(|n| n.ends_with("_bed") && n != "straw_bed");
+            let slime = blocks::block_at_state(below) == Some("slime_block");
+            if view.catalog().changed_rules() && (bed || slime) {
+                self.vy = -dy * if bed { crate::gameplay_catalog::changed_rules::values().bed_restitution } else { 1.0 };
+                self.events.push(Event::Bounce);
+            } else { self.vy = 0.0; }
         } else {
             self.on_ground = false;
 
@@ -2617,6 +2698,8 @@ impl Mob {
             let damage = if horse::equine(self.kind) { horse::fall_damage(fall) } else { ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil() };
             if horse::equine(self.kind) && self.horse.rider.is_some() { self.horse.rider_fall += damage; }
 
+            let damage = if view.catalog().changed_rules()
+                && blocks::block_at_state(below).is_some_and(|n| n.ends_with("_bed") && n != "straw_bed") { damage * 0.5 } else { damage };
             self.hurt(damage, Source::Fall, None);
         }
     }
@@ -2694,6 +2777,11 @@ impl Mob {
     pub fn hurt_breached(&mut self, amount: f32, source: Source, push: Option<Push>, breach: f32) -> Option<Hit> {
         if crate::frost::protects_boots(equipment::slot(self, 2), source) { return None; }
         if self.kind==Kind::ArmorStand {return armor_stand::hurt(self,amount,source);}
+        if self.kind==Kind::Cushion {return cushion::hurt(self,amount,source);}
+        if self.kind==Kind::SulfurCube && sulfur_cube::resists(self, source) {
+            sulfur_cube::launch(self, amount, push);
+            return None;
+        }
         if horse::undead(self.kind) && source == Source::Drown { return None; }
         if self.is_dead() || (self.fire_immune() && matches!(source, Source::InFire | Source::Campfire | Source::HotFloor | Source::OnFire | Source::Lava | Source::Fireball)) {
             return None;
@@ -2734,7 +2822,7 @@ impl Mob {
         // Дракону вредят только игроки и взрывы (вики, Ender Dragon: «Only
         // explosions and players deal damage»; чёрный ящик, dragon-die:
         // `damage … minecraft:generic` ему нипочём).
-        if self.kind == Kind::EnderDragon && !matches!(source, Source::PlayerAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::GenericKill) {
+        if self.kind == Kind::EnderDragon && !matches!(source, Source::Spear | Source::PlayerAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::GenericKill) {
             return None;
         }
 
@@ -2853,7 +2941,7 @@ impl Mob {
         // ниже половины здоровья с шансом 25 % (вики, Shulker).
         if !self.no_ai && !hit.died {
             match self.kind {
-                Kind::Enderman => self.h.want_teleport = true,
+                Kind::Enderman if !(self.catalog.changed_rules() && self.riding) => self.h.want_teleport = true,
                 Kind::Shulker if self.vitals.health < self.kind.max_health() / 2.0 => {
                     self.h.want_teleport = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5B).below(4) == 0;
                 }
@@ -2874,6 +2962,7 @@ impl Mob {
             // Волк в броне стонет тише (0,4; gaps2-wolf-armor), в том числе когда броня лопнула.
             if !armor_absorbs || self.tame.armor.is_none() {
                 let volume = if armored_wolf { 0.4 } else { self.sound_volume() };
+                ai::cow_hurt_sound(self);
                 self.events.push(Event::Sound { name: hurt, volume, pitch: self.voice_pitch() });
             }
             golem::crack_sound(self, before);
@@ -2912,7 +3001,7 @@ impl Mob {
         // удара мечом — 0).
         // Железный голем не сдвигается: сопротивление отдаче 100 % (вики, Iron
         // Golem; чёрный ящик, iron-golem-heal: скорость после удара 0).
-        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden | Kind::ArmorStand) || (self.kind == Kind::Creaking && self.newmobs.frozen) {
+        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden | Kind::ArmorStand | Kind::Cushion) || (self.kind == Kind::Creaking && self.newmobs.frozen) {
             return;
         }
 
@@ -2959,6 +3048,7 @@ impl Mob {
     /// Вики, Sculk Catalyst: опыт без требования последнего удара игрока.
     pub fn sculk_xp(&self, rng: &mut Rng) -> i32 {
         if self.is_baby() || self.kind.object() || matches!(self.kind, Kind::Villager | Kind::IronGolem | Kind::SnowGolem) { return 0; }
+        if self.kind == Kind::SulfurCube { return sulfur_cube::experience(self, rng); }
         if slime::cube(self.kind) { return self.nether.size; }
         if guardian::guardian(self.kind) { return guardian::XP; }
         if self.kind == Kind::EnderDragon { return 0; }
@@ -2976,6 +3066,14 @@ impl Mob {
         }
 
         if self.dead_for > 0 {
+            return;
+        }
+
+        // Подушка: только предмет, без звука смерти и опыта [проверить звук и частицы].
+        if self.kind == Kind::Cushion {
+            self.dead_for = 1;
+            let drops = loot(self, &mut Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5EED));
+            if !drops.is_empty() { self.events.push(Event::Loot(drops)); }
             return;
         }
 
@@ -3015,6 +3113,8 @@ impl Mob {
 
             self.pending_xp = if matches!(self.kind,Kind::Axolotl | Kind::Tadpole | Kind::Bat | Kind::Allay) {
                 0
+            } else if self.kind == Kind::SulfurCube {
+                sulfur_cube::experience(self, &mut rng)
             } else if slime::cube(self.kind) {
                 // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
                 self.nether.size
@@ -3044,18 +3144,23 @@ impl Mob {
 
     /// Пропал ли труп: 20 тактов после смерти.
     pub fn gone(&self) -> bool {
-        self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else if self.kind==Kind::ArmorStand {0} else { DEATH_TICKS }
+        self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else if matches!(self.kind, Kind::ArmorStand | Kind::Cushion) {0} else { DEATH_TICKS }
     }
 
-    /// Запись для файла региона: вид, место, скорость не пишется, здоровье,
-    /// возраст, любовь, признаки, цвет, яйцо.
+    /// Проверяет длины и полную представимость предметного дополнения до записи.
+    pub fn validate_item_storage(&self) -> Result<(), &'static str> {
+        item_storage::validate(self)
+    }
+
+    /// Запись собственного формата; вызывающий проверяет данные до очереди снимков.
     pub fn write(&self, out: &mut Vec<u8>) {
+        self.validate_item_storage().expect("предметы моба проверены до записи");
         let id = if self.kind == Kind::Skeleton && (self.h.water_ticks != 0 || self.h.converting != 0) {
             save::SNOW_SKELETON
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
+        save::write_head(out, id, !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self));
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -3072,6 +3177,13 @@ impl Mob {
             Kind::Slime => {
                 out.extend_from_slice(&self.nether.size.to_be_bytes());
                 out.push(u8::from(self.silent) | (u8::from(self.nether.persistence_required) << 1));
+            }
+            Kind::SulfurCube => {
+                out.extend_from_slice(&self.nether.size.to_be_bytes());
+                out.push(u8::from(self.silent) | (u8::from(self.sulfur.from_bucket) << 1));
+                out.extend_from_slice(&self.sulfur.body.unwrap_or(-1).to_be_bytes());
+                out.extend_from_slice(&self.sulfur.fuse.to_be_bytes());
+                out.extend_from_slice(&self.sulfur.pickup_timer.to_be_bytes());
             }
             Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
@@ -3100,13 +3212,21 @@ impl Mob {
         if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
+        if !self.plugin_attributes.is_empty() || self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self) {
             leash::write_tail(self, out);
         }
     }
 
     /// Читает запись `write`; None — она испорчена.
     pub fn read(bytes: &mut &[u8]) -> Option<Mob> {
+        Self::read_with_storage_context(bytes, false, false)
+    }
+
+    pub(crate) fn read_with_legacy_plugin_tail(bytes: &mut &[u8], legacy_plugin_tail: bool) -> Option<Mob> {
+        Self::read_with_storage_context(bytes, legacy_plugin_tail, legacy_plugin_tail)
+    }
+
+    pub(crate) fn read_with_storage_context(bytes: &mut &[u8], legacy_plugin_tail: bool, legacy_metadata: bool) -> Option<Mob> {
         let (id, extended) = save::read_head(bytes)?;
         let kind = if id == save::SNOW_SKELETON {
             Kind::Skeleton
@@ -3129,22 +3249,30 @@ impl Mob {
         let flags = take(1)?[0];
         let color = take(1)?[0];
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
+        let carried = if kind == Kind::Enderman {
+            match i32::from_be_bytes(take(4)?.try_into().ok()?) {
+                -1 => None, state if state >= 0 => Some(state), _ => return None,
+            }
+        } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
+        let cube_data = if kind == Kind::SulfurCube {
+            Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0], i32::from_be_bytes(take(4)?.try_into().ok()?),
+                i32::from_be_bytes(take(4)?.try_into().ok()?), i32::from_be_bytes(take(4)?.try_into().ok()?)))
+        } else { None };
         let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
         let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
-        let wild = if wildlife::kind(kind) { Some(wildlife::read(bytes)?) } else { None };
+        let wild = if wildlife::kind(kind) { Some(wildlife::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
         let snow_state = if id == save::SNOW_SKELETON { Some(skeleton::read_snow(bytes)?) } else { None };
-        let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read(bytes)?) } else { None };
+        let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
         let water_state = if water::creature(kind) { Some(water::read(bytes)?) } else { None };
         let mut horse_mob = Mob::new(0, kind, (x, y, z));
-        if horse::equine(kind) { horse::read(&mut horse_mob, bytes)?; }
-        let small_state = if small::kind(kind) { Some(small::read(bytes)?) } else { None };
-        let stand_state = if kind==Kind::ArmorStand {Some(armor_stand::State::read(bytes)?)} else {None};
-        let new_state = if newmobs::new_kind(kind) { Some(newmobs::read(bytes)?) } else { None };
-        let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
+        if horse::equine(kind) { horse::read_with_legacy_metadata(&mut horse_mob, bytes, legacy_metadata)?; }
+        let small_state = if small::kind(kind) { Some(small::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
+        let stand_state = if kind==Kind::ArmorStand {Some(armor_stand::State::read_with_legacy_metadata(bytes, legacy_metadata)?)} else {None};
+        let new_state = if newmobs::new_kind(kind) { Some(newmobs::read_with_legacy_metadata(bytes, legacy_metadata)?) } else { None };
+        let tail = if extended { Some(leash::read_tail_with_storage_context(bytes, legacy_plugin_tail, legacy_metadata)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
@@ -3165,6 +3293,11 @@ impl Mob {
             slime::set_size(&mut mob, size);
             mob.silent = flags & 1 != 0;
             mob.nether.persistence_required = flags & 2 != 0;
+        }
+        if let Some((size, flags, body, fuse, pause)) = cube_data {
+            sulfur_cube::set_size(&mut mob, size);
+            mob.silent = flags & 1 != 0;
+            mob.sulfur = sulfur_cube::State { body: (body >= 0).then_some(body), fuse, pickup_timer: pause, from_bucket: flags & 2 != 0, ..sulfur_cube::State::default() };
         }
         mob.vitals.health = health.clamp(0.5, if kind == Kind::Wolf { tame::TAME_HEALTH } else { mob.vitals.max_health });
         mob.age = age;
@@ -3212,7 +3345,7 @@ impl Mob {
         }
 
         if let Some(tail) = tail {
-            leash::apply_tail(&mut mob, tail);
+            leash::apply_tail_checked(&mut mob, tail)?;
             mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
         }
 
@@ -3311,6 +3444,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Zoglin => give("rotten_flesh", 1, 3, rng),
         Kind::CopperGolem => give("copper_ingot", 1, 3 + mob.looting, rng),
         Kind::ArmorStand => {if !mob.stand.creative_break {give("armor_stand",1,1,rng);}},
+        Kind::Cushion => give(&cushion::item_name(mob.color), 1, 1, rng),
         Kind::Rabbit => {
             give("rabbit_hide", 0, 1, rng);
             give("rabbit", 0, 1, rng);
@@ -3405,6 +3539,10 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             if credited && rng.below(1000) < 25 + 10 * mob.looting as u32 {
                 give("wither_skeleton_skull", 1, 1, rng);
             }
+        }
+        // Куб серы: поглощённый блок (малый — ничего); опыт считает `die`.
+        Kind::SulfurCube => {
+            for stack in sulfur_cube::loot(mob) { drops.push(stack); }
         }
         Kind::Slime => {
             if mob.nether.size == 1 {
@@ -3616,8 +3754,51 @@ fn slide(view: &dyn View, at: &mut (f64, f64, f64), half: f64, height: f64, dx: 
     }
 }
 
+// Форма первого нового блока отделена от прежней физики775.
+// [проверить] Геометрия половин по свойству type; обычная физика26.3 ещё
+// не сравнена с официальным сервером. Старые плиты пока сохраняют прежний долг.
+pub(crate) fn catalog_clip(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, delta: f64, axis: usize) -> Option<f64> {
+    use crate::gameplay_catalog::{Profile, SlabHalf};
+    if view.catalog().profile() == Profile::Java26_1_2 { return None; }
+    let low = [min.0, min.1, min.2];
+    let high = [min.0 + 2.0 * half, min.1 + height, min.2 + 2.0 * half];
+    let mut from = low;
+    let mut to = high;
+    from[axis] += delta.min(0.0);
+    to[axis] += delta.max(0.0);
+    let mut allowed = delta;
+    for x in (from[0] - EPS).floor() as i32..=(to[0] + EPS).floor() as i32 {
+        for y in (from[1] - EPS).floor() as i32..=(to[1] + EPS).floor() as i32 {
+            for z in (from[2] - EPS).floor() as i32..=(to[2] + EPS).floor() as i32 {
+                let state = view.block(x, y, z);
+                let origin = [x as f64, y as f64, z as f64];
+                let mut a = origin;
+                let mut b = [a[0] + 1.0, a[1] + 1.0, a[2] + 1.0];
+                // Ящики клетки: ступени — несколько ящиков, прочее — один.
+                let mut cell: Vec<([f64; 3], [f64; 3])> = Vec::new();
+                if let Ok(Some((half, _))) = view.catalog().slab_properties(state) {
+                    match half { SlabHalf::Top => a[1] += 0.5, SlabHalf::Bottom => b[1] -= 0.5, SlabHalf::Double => {} }
+                    cell.push((a, b));
+                } else if let Ok(Some(stair)) = view.catalog().stair_properties(state) {
+                    cell.extend(stair.boxes().into_iter().map(|(from, to)| ([origin[0] + from[0], origin[1] + from[1], origin[2] + from[2]], [origin[0] + to[0], origin[1] + to[1], origin[2] + to[2]])));
+                } else if !solid(state) { continue; } else { cell.push((a, b)); }
+                for (a, b) in cell {
+                    if (0..3).any(|other| other != axis && (high[other] <= a[other] + EPS || low[other] >= b[other] - EPS)) { continue; }
+                    if delta > 0.0 && high[axis] <= a[axis] + EPS {
+                        allowed = allowed.min((a[axis] - high[axis]).max(0.0));
+                    } else if delta < 0.0 && low[axis] >= b[axis] - EPS {
+                        allowed = allowed.max((b[axis] - low[axis]).min(0.0));
+                    }
+                }
+            }
+        }
+    }
+    Some(allowed)
+}
+
 /// Свободный ход по оси вверх/вниз: насколько можно сдвинуться, не входя в блоки.
 pub(crate) fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dy: f64) -> f64 {
+    if let Some(allowed) = catalog_clip(view, min, half, height, dy, 1) { return allowed; }
     if dy == 0.0 {
         return 0.0;
     }
@@ -3668,6 +3849,7 @@ pub(crate) fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
 }
 
 pub(crate) fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dx: f64) -> f64 {
+    if let Some(allowed) = catalog_clip(view, min, half, height, dx, 0) { return allowed; }
     if dx == 0.0 {
         return 0.0;
     }
@@ -3715,6 +3897,7 @@ pub(crate) fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
 }
 
 pub(crate) fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dz: f64) -> f64 {
+    if let Some(allowed) = catalog_clip(view, min, half, height, dz, 2) { return allowed; }
     if dz == 0.0 {
         return 0.0;
     }
@@ -4355,10 +4538,11 @@ pub fn step_all(
 
     *items.mobs_vec() = mobs;
     wildlife::pickup(items,view.griefing());
+    sulfur_cube::absorb_items(items,view.griefing());
 
     // Тела, пролежавшие своё, уходят облачком.
     for mob in items.mobs_mut() {
-        if mob.gone() && mob.kind != Kind::ArmorStand {
+        if mob.gone() && !matches!(mob.kind, Kind::ArmorStand | Kind::Cushion) {
             mob.events.push(Event::Poof);
         }
     }
@@ -4483,6 +4667,8 @@ pub const DROP_DELAY: u64 = 10;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod changed_rules_tests;
 
 #[cfg(test)]
 mod itemaudit_tests;
@@ -4490,3 +4676,32 @@ mod itemaudit_tests;
 #[cfg(test)]
 #[path = "enchant_loot_tests.rs"]
 mod enchant_loot_tests;
+
+#[cfg(test)]
+mod catalog_collision_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, SlabHalf};
+    struct SlabView { catalog: Catalog, state: i32 }
+    impl View for SlabView {
+        fn catalog(&self) -> Catalog { self.catalog }
+        fn block(&self, x: i32, y: i32, z: i32) -> i32 { if (x,y,z) == (0,0,0) { self.state } else { crate::world::AIR } }
+        fn loaded(&self, _: i32, _: i32) -> bool { true }
+    }
+    #[test]
+    fn preview_slabs_clip_floor_ceiling_and_sides_for_both_water_states() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        for water in [false, true] {
+            for (half, bottom, top) in [(SlabHalf::Bottom, 0.0, 0.5), (SlabHalf::Top, 0.5, 1.0), (SlabHalf::Double, 0.0, 1.0)] {
+                let view = SlabView { catalog, state: catalog.slab_state(half,water).unwrap() };
+                assert!((clip_y(&view,(0.2,2.0,0.2),0.2,0.2,-3.0) - (top-2.0)).abs() < EPS);
+                assert!((clip_y(&view,(0.2,-1.0,0.2),0.2,0.2,3.0) - (bottom+0.8)).abs() < EPS);
+                assert!((clip_x(&view,(-1.0,bottom+0.05,0.2),0.2,0.2,2.0)-0.6).abs() < EPS);
+                assert!((clip_z(&view,(0.2,bottom+0.05,-1.0),0.2,0.2,2.0)-0.6).abs() < EPS);
+                if half == SlabHalf::Bottom { assert_eq!(clip_x(&view,(-1.0,0.6,0.2),0.2,0.2,2.0),2.0); }
+                if half == SlabHalf::Top { assert_eq!(clip_x(&view,(-1.0,0.1,0.2),0.2,0.2,2.0),2.0); }
+            }
+        }
+        let base = SlabView { catalog: Catalog::new(Profile::Java26_1_2), state: catalog.slab_state(SlabHalf::Bottom,false).unwrap() };
+        assert_eq!(catalog_clip(&base,(0.2,2.0,0.2),0.2,0.2,-3.0,1),None);
+    }
+}

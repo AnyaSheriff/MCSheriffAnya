@@ -1,0 +1,26 @@
+{
+  "primary": 777,
+  "client": 776,
+  "peer": null,
+  "public_admission": false,
+  "checks": [],
+  "commands": [],
+  "status": "failed",
+  "scenario": "relog-light",
+  "runner_sha256": "f2731dddb3b44b0267e04e171fc8eb61440ed7c0db609112892dc0252efe23cb",
+  "binary_sha256": "2c2f4ebb3d1a39daffc2647aaf36b704b3e1a148661dd74caacd4b4b34112c1e",
+  "error": "EOFError: missing VarInt",
+  "sessions": [
+    {
+      "version": 776,
+      "records": [],
+      "sent": [],
+      "acks": [],
+      "lights": [],
+      "inventory": {},
+      "health_events": []
+    }
+  ],
+  "shutdown": "stop-and-stdin-eof",
+  "server_exit": 0
+}

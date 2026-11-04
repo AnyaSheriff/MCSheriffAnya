@@ -159,6 +159,8 @@ pub struct Dropped {
     /// воздухом, упирается в землю. Разница в двух вещах — его не поднять,
     /// и, долетев, он снова становится блоком.
     pub block: Option<i32>,
+    /// Пройденное вниз расстояние: износ падающей наковальни.
+    pub fall_distance: f64,
 
     /// Подожжённый динамит — сколько тактов осталось до взрыва; `block` у
     /// него — состояние блока динамита (его клиент и рисует). У прочих —
@@ -284,16 +286,28 @@ pub enum Change {
     },
 }
 
+/// Атомарная граница журнала и, только при потере записей, текущие Dropped.
+/// Остальные семейства общего журнала этим снимком не восстанавливаются.
+pub struct CheckedChanges {
+    pub changes: Vec<Change>,
+    pub end: usize,
+    pub dropped: Option<Vec<Dropped>>,
+}
+
 /// Все предметы, лежащие в мире, и журнал изменений.
 pub type PluginTarget = ([u8;16],usize,Option<i32>,Option<i32>);
 pub type PluginDeath = (String,(f64,f64,f64),bool,Vec<Stack>);
 pub struct Items {
+    catalog: crate::gameplay_catalog::Catalog,
     pub plugin_cart_loot: Vec<(i32,(i32,i32,i32))>,
     pub plugin_targets: Vec<PluginTarget>,
     pub plugin_spawned: Vec<[u8;16]>,
     pub plugin_loaded: Vec<(i32,i32,[u8;16])>,
     pub plugin_deaths: Vec<PluginDeath>,
     items: Vec<Dropped>,
+    /// Только тестовый снимок входа merge: в рабочей сборке отсутствует.
+    #[cfg(test)]
+    merge_due_for_test: Vec<i32>,
 
     /// Вагонетки в порядке появления: у них своя физика (minecart.rs), но
     /// журнал общий с предметами — клиенты узнают о них тем же путём.
@@ -338,12 +352,15 @@ impl Items {
     }
     pub fn new() -> Self {
         Self {
+            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
             plugin_deaths: Vec::new(),
             plugin_cart_loot: Vec::new(),
             plugin_targets: Vec::new(),
             plugin_spawned: Vec::new(),
             plugin_loaded: Vec::new(),
             items: Vec::new(),
+            #[cfg(test)]
+            merge_due_for_test: Vec::new(),
             carts: Vec::new(),
             bolts: Vec::new(),
             frames: Vec::new(),
@@ -366,11 +383,17 @@ impl Items {
     }
 
     /// Ставит моба в мир: клиентам его покажет конец такта (`send_mob_ticks`).
-    pub fn add_loaded_mob(&mut self, mob: crate::mob::Mob) {
+    pub fn with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
+        Self { catalog, ..Self::new() }
+    }
+
+    pub fn add_loaded_mob(&mut self, mut mob: crate::mob::Mob) {
+        mob.catalog = self.catalog;
         if crate::plugins::active() {self.plugin_loaded.push(((mob.x.floor() as i32).div_euclid(16),(mob.z.floor() as i32).div_euclid(16),mob.uuid));}
         self.mobs.push(mob);
     }
-    pub fn add_mob(&mut self, mob: crate::mob::Mob) {
+    pub fn add_mob(&mut self, mut mob: crate::mob::Mob) {
+        mob.catalog = self.catalog;
         if crate::plugins::active() {self.plugin_spawned.push(mob.uuid);}
         self.mobs.push(mob);
     }
@@ -390,6 +413,10 @@ impl Items {
                 self.plugin_deaths.push((crate::network::login::format_uuid(&self.mobs[index].uuid),at,self.mobs[index].kind==crate::mob::Kind::ArmorStand,drops));
             }
             for event in events {
+                if matches!(event, crate::mob::Event::Bounce) {
+                    self.vibrations.push(crate::redstone::sculk_family::GameEvent { at, source: Some(entity_id), frequency: 2, projectile: false });
+                    continue;
+                }
                 if self.mobs[index].kind != crate::mob::Kind::Warden {
                     let frequency = match &event {
                         crate::mob::Event::Hurt { .. } => Some(7),
@@ -460,7 +487,8 @@ impl Items {
 
     /// Ставит моба, родившегося во время хода мобов: клиентам он виден уже
     /// в этом конце такта (появление), первая сверка — со следующего.
-    pub fn add_mob_late(&mut self, mob: crate::mob::Mob) {
+    pub fn add_mob_late(&mut self, mut mob: crate::mob::Mob) {
+        mob.catalog = self.catalog;
         self.mob_view.push(mob.clone());
         self.mobs.push(mob);
     }
@@ -650,6 +678,7 @@ impl Items {
             owner: None,
             ticks: 0,
             block: None,
+            fall_distance: 0.0,
             fuse: None,
             custom: None,
             health: ITEM_HEALTH,
@@ -688,6 +717,7 @@ impl Items {
             owner: None,
             ticks: 0,
             block: Some(state),
+            fall_distance: 0.0,
             fuse: None,
             custom: None,
             health: ITEM_HEALTH,
@@ -731,6 +761,7 @@ impl Items {
             owner: None,
             ticks: 0,
             block: Some(state),
+            fall_distance: 0.0,
             fuse: Some(fuse),
             custom,
             health: ITEM_HEALTH,
@@ -919,7 +950,10 @@ impl Items {
             // Возраст считается уже с этого такта: первая проверка стоящего
             // предмета — на сороковом его такте (чёрный ящик item-merge:
             // предмет, возникший в такте 0, исчезает в такте 39).
-            if (item.ticks + 1).is_multiple_of(if moved_cell { 2 } else { 40 }) {
+            // TNT и падающие блоки не сливаются (merging::mergeable): не
+            // искать их номера в общем списке ради заведомого отказа.
+            if item.fuse.is_none() && item.block.is_none()
+                && (item.ticks + 1).is_multiple_of(if moved_cell { 2 } else { 40 }) {
                 merge_due.push(item.entity_id);
             }
             item.ticks += 1;
@@ -1191,6 +1225,16 @@ impl Items {
     /// Изменения, начиная с записи `from`.
     pub fn changes_since(&mut self, from: usize, reader: Reader) -> (Vec<Change>, usize) {
         (self.changes.since(from, reader), self.changes.count())
+    }
+
+    /// Проверяет потерю ДО чтения: `since` уже освобождает прочитанные записи.
+    /// Вызывать под одним Items lock; кодировать и отправлять после его отпускания.
+    pub fn changes_since_checked(&mut self, from: usize, reader: Reader) -> CheckedChanges {
+        let lagged = self.changes.lagged(from);
+        let end = self.changes.count();
+        let dropped = lagged.then(|| self.items.clone());
+        let changes = self.changes.until(from, end, reader);
+        CheckedChanges { changes, end, dropped }
     }
 
     /// Записывает читателя журнала.
@@ -1479,6 +1523,7 @@ impl Dropped {
 
         if step_y < 0.0 && solid(column.0, next_y.floor() as i32, column.1) {
             // Легли на верх блока.
+            self.fall_distance += (self.y - (next_y.floor() + 1.0)).max(0.0);
             self.y = next_y.floor() + 1.0;
             self.vy = 0.0;
             self.on_ground = true;
@@ -1490,6 +1535,7 @@ impl Dropped {
             return;
         }
 
+        self.fall_distance += (self.y - next_y).max(0.0);
         self.y = next_y;
     }
 }
@@ -2164,6 +2210,128 @@ mod progress_tests {
         items.add_mob(mob);
         items.flush_mob_events(&mut || 100, &mut Rng::new(1));
         assert!(items.take_progress_kills().is_empty());
+    }
+}
+
+#[cfg(test)]
+#[path = "items/gap_tests.rs"]
+mod gap_tests;
+
+#[cfg(test)]
+mod tnt_chunk_characterization_tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    // Характеризация текущего ядра, не контракт vanilla: движение проверяет
+    // исходный чанк, а запал — чанк после движения. [проверить] чёрным ящиком.
+    #[derive(Debug, PartialEq)]
+    struct FrozenState {
+        position: (f64, f64, f64),
+        velocity: (f64, f64, f64),
+        fuse: Option<i32>,
+        ticks: u64,
+    }
+
+    fn state(item: &Dropped) -> FrozenState {
+        FrozenState {
+            position: (item.x, item.y, item.z),
+            velocity: (item.vx, item.vy, item.vz),
+            fuse: item.fuse,
+            ticks: item.ticks,
+        }
+    }
+
+    fn resume_until_explosion(items: &mut Items, id: i32, remaining: i32) {
+        let (_, cursor) = items.changes_since(0, id as u64);
+        for permitted in 1..=remaining {
+            items.step(&|_, _, _| false, &|_, _, _| false, &|_, _| true);
+            let exploded = items.burn_fuses(&|_, _| true);
+            if permitted < remaining {
+                assert!(exploded.is_empty());
+                assert_eq!(items.items.iter().find(|item| item.entity_id == id).unwrap().fuse,
+                    Some(remaining - permitted));
+            } else {
+                assert_eq!(exploded.len(), 1);
+                assert_eq!(exploded[0].entity_id, id);
+                assert_eq!(exploded[0].fuse, Some(0));
+            }
+        }
+        assert!(!items.items.iter().any(|item| item.entity_id == id));
+        assert!(items.burn_fuses(&|_, _| true).is_empty());
+        let (changes, _) = items.changes_since(cursor, id as u64);
+        assert_eq!(changes.iter().filter(|change| matches!(change,
+            Change::Gone { entity_id } if *entity_id == id)).count(), 1);
+    }
+
+    #[test]
+    fn tnt_crossing_loaded_chunk_freezes_until_reload_characterization() {
+        // Положительная, отрицательная и диагональная границы; явная скорость,
+        // без случайного начального толчка. -0.1 должен попасть именно в -1.
+        for (position, velocity, destination) in [
+            ((15.9, 120.0, 8.0), (0.3, 0.0, 0.0), (1, 0)),
+            ((0.1, 120.0, 8.0), (-0.3, 0.0, 0.0), (-1, 0)),
+            ((15.9, 120.0, 15.9), (0.3, 0.0, 0.3), (1, 1)),
+        ] {
+            let mut items = Items::new();
+            items.prime(701, 0, position, velocity, 4, None);
+            let calls = RefCell::new(Vec::new());
+            let loaded = |x, z| {
+                calls.borrow_mut().push((x, z));
+                (x, z) == (0, 0)
+            };
+            items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+            assert!(items.burn_fuses(&loaded).is_empty());
+            assert_eq!(*calls.borrow(), vec![(0, 0), destination]);
+            let crossed = &items.items[0];
+            assert_eq!(((crossed.x.floor() as i32).div_euclid(16),
+                (crossed.z.floor() as i32).div_euclid(16)), destination);
+            assert_ne!((crossed.x, crossed.y, crossed.z), position);
+            assert_eq!(crossed.fuse, Some(4));
+            let frozen = state(crossed);
+            let (_, cursor) = items.changes_since(0, 701);
+            for _ in 0..100 {
+                calls.borrow_mut().clear();
+                items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+                assert!(items.burn_fuses(&loaded).is_empty());
+                assert_eq!(*calls.borrow(), vec![destination, destination]);
+                assert_eq!(state(&items.items[0]), frozen);
+                assert!(items.changes_since(cursor, 701).0.is_empty());
+            }
+            resume_until_explosion(&mut items, 701, 4);
+        }
+    }
+
+    #[test]
+    fn tnt_initially_unloaded_freezes_while_neighbor_burns_characterization() {
+        let mut items = Items::new();
+        items.prime(801, 0, (-0.5, 120.0, 8.0), (0.0, 0.0, 0.0), 3, None);
+        items.prime(802, 0, (8.0, 120.0, 8.0), (0.0, 0.0, 0.0), 3, None);
+        let frozen = state(&items.items[0]);
+        let (_, mut cursor) = items.changes_since(0, 801);
+        let calls = RefCell::new(Vec::new());
+        let loaded = |x, z| {
+            assert!([(0, 0), (-1, 0)].contains(&(x, z)));
+            calls.borrow_mut().push((x, z));
+            (x, z) == (0, 0)
+        };
+        let mut exploded_ids = Vec::new();
+        for tick in 1..=100 {
+            calls.borrow_mut().clear();
+            items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
+            let exploded = items.burn_fuses(&loaded);
+            assert_eq!(exploded.len(), usize::from(tick == 3));
+            exploded_ids.extend(exploded.into_iter().map(|item| item.entity_id));
+            assert_eq!(state(items.items.iter().find(|item| item.entity_id == 801).unwrap()), frozen);
+            assert_eq!(calls.borrow().iter().filter(|&&chunk| chunk == (-1, 0)).count(), 2);
+            let (changes, next) = items.changes_since(cursor, 801);
+            if tick > 3 { assert!(changes.is_empty()); }
+            cursor = next;
+            if tick < 3 {
+                assert_eq!(items.items.iter().find(|item| item.entity_id == 802).unwrap().fuse, Some(3 - tick));
+            }
+        }
+        assert_eq!(exploded_ids, vec![802]);
+        resume_until_explosion(&mut items, 801, 3);
     }
 }
 

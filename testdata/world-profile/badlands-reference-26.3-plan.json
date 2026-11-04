@@ -1,0 +1,26 @@
+{
+  "seed": 1792932773345722119,
+  "vanilla_search_sites": [
+    [
+      10464,
+      -10464
+    ],
+    [
+      -6912,
+      -7104
+    ],
+    [
+      6944,
+      9504
+    ],
+    [
+      -8960,
+      10304
+    ],
+    [
+      16320,
+      -32
+    ]
+  ],
+  "source": "Preselected lowland diagnostic sites, generated afresh by the SHA-256-pinned official 26.3 launcher. Only flushed region files are measured."
+}

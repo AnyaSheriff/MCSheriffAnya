@@ -1,0 +1,239 @@
+[
+  {
+    "scenario": "falling-chain-sand-layer",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      97,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-sand-column",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      25,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-sand-overhang",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-gravel-layer",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      97,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-gravel-column",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      25,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-gravel-overhang",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-layer",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      97,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-column",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      25,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-white_concrete_powder-overhang",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      13,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "falling-chain-anvil-layer",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 1
+    },
+    "status": "capture-open"
+  },
+  {
+    "scenario": "falling-chain-anvil-column",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 1
+    },
+    "status": "capture-open"
+  },
+  {
+    "scenario": "falling-chain-anvil-overhang",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 1
+    },
+    "status": "capture-open"
+  },
+  {
+    "scenario": "sand-into-water",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      15,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "brush-sand",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 1
+    },
+    "status": "capture-open"
+  },
+  {
+    "scenario": "enchant-mining-fortune-gravel",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "mismatch-open",
+    "counts": [
+      29,
+      0,
+      0,
+      2
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "scaffolding-support",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 0
+    },
+    "status": "match",
+    "counts": [
+      35,
+      0,
+      0,
+      0
+    ],
+    "warnings": []
+  },
+  {
+    "scenario": "dripstone-placement-support",
+    "repeat": 0,
+    "exits": {
+      "official": 0,
+      "ours": 1
+    },
+    "status": "capture-open"
+  }
+]

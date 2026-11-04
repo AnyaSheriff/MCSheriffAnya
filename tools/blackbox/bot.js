@@ -4,7 +4,8 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const HOME_MODULES = path.join(process.env.HOME, 'node_modules');
+const HOME_MODULES = process.env.MCSA_BB_NODE_MODULES || path.join(process.env.HOME, 'node_modules');
+const attrPhaseTools = require('./attr-phase');
 const mineflayer = require(path.join(HOME_MODULES, 'mineflayer'));
 const mcData = require(path.join(HOME_MODULES, 'minecraft-data'))('26.1');
 const Vec3 = require(path.join(HOME_MODULES, 'vec3')).Vec3;
@@ -72,6 +73,10 @@ const bot = mineflayer.createBot({ host, port, username: USER, version: '26.1', 
 // поворот. Записывает первый: что он получает сам (`track_self`, он —
 // жертва) и что видит о втором (`track_players`).
 const USER2 = `${USER}b`;
+// Когда сервер принял вход: от него у оригинала идут свои счётчики игрока
+// (например, двухтактовая рассылка атрибутов). Пишется в запись как такт.
+let loginMs = null;
+bot._client.once('login', () => { loginMs = Date.now(); });
 const bot2 = scenario.second ? mineflayer.createBot({ host, port, username: USER2, version: '26.1', auth: 'offline', respawn: true }) : null;
 const events = [];
 let serverAge = null, ageStamp = 0;       // возраст мира из последнего «обновления времени»
@@ -673,6 +678,22 @@ const calibrate = async (times = 6) => {
 
 const sleepTicks = (n) => new Promise(r => setTimeout(r, n * TICK_MS));
 const say = async (cmd) => { bot.chat('/' + cmd); await sleepTicks(2); };
+// Чётность рассылки атрибутов робота `b` (26.3: раз в два такта, отсчёт от
+// входа или возрождения — attr-respawn-*-probe). Меняем ему скорость удара и
+// смотрим, в каком такте пришёл ответ; null — ответа не дождались.
+const attrParity = async (b, name) => {
+  let hook = null;
+  const got = new Promise((r) => {
+    hook = (p) => { if (isSelfOf(b)(p.entityId) && p.properties.some(x => String(x.key).includes('attack_speed') && x.value === 4.5)) r(tickNow()); };
+    b._client.on('entity_update_attributes', hook);
+  });
+  await say(`attribute ${name} minecraft:attack_speed base set 4.5`);
+  const t = await Promise.race([got, sleepTicks(40).then(() => null)]);
+  b._client.removeListener('entity_update_attributes', hook);
+  await say(`attribute ${name} minecraft:attack_speed base reset`);
+  await sleepTicks(6);
+  return t === null ? null : t % 2;
+};
 const setBlock = (b) => say(`setblock ${ORIGIN.x + b.at[0]} ${ORIGIN.y + b.at[1]} ${ORIGIN.z + b.at[2]} ${b.state}`);
 // Команда сценария: `$(dx,dy,dz)` заменяется настоящими координатами точки
 // площадки — так в `cmd` можно звать summon, data, item и прочее. Дробные
@@ -751,9 +772,30 @@ bot.once('spawn', async () => {
     if (clockSamples.length < 2) throw new Error('не удалось сверить часы с сервером: нечем привязывать такты');
     await calibrate();
     await say(`setblock ${ORIGIN.x + PAD} ${ORIGIN.y} ${ORIGIN.z + PAD} minecraft:air`);
+    // Если setup возрождает игрока, синхронизация нужна ПОСЛЕ этого, но ДО
+    // выдачи вещей и расстановки. Явная команда отмечает это место сценария.
+    const measurePhase = i => attrParity(i === 0 ? bot : bot2, i === 0 ? USER : USER2);
+    let phaseRespawns = 0;
+    const syncAttrs = async () => {
+      if (!bot2) return;
+      const result = await attrPhaseTools.synchronize(measurePhase, async extraTicks => {
+        if (extraTicks) await sleepTicks(extraTicks);
+        let spawned;
+        const respawned = new Promise(resolve => { spawned = resolve; bot2.once('spawn', spawned); });
+        try {
+          await say(`kill ${USER2}`);
+          if (!await Promise.race([respawned.then(() => true), sleepTicks(100).then(() => false)])) throw new Error('attr_phase: второй робот не возродился');
+        } finally { bot2.removeListener('spawn', spawned); }
+        await sleepTicks(10);
+      }, 8, (players, attempts) => console.error(`attr_phase: чётность ${players.join(' / ')}, возрождений ${attempts}`));
+      phaseRespawns += result.respawns;
+    };
+    const explicitSync = attrPhaseTools.syncInSetup(scenario);
+    if (scenario.attr_phase && !explicitSync) await syncAttrs();
 
     for (const b of scenario.blocks) await setBlock(b);
     for (const c of scenario.setup || []) {
+      if (c === attrPhaseTools.SYNC_COMMAND) { await syncAttrs(); continue; }
       if (c === '!stopfly') { bot.creative.stopFlying(); await sleepTicks(2); continue; }
       if (c === '!startfly') { bot.creative.startFlying(); await sleepTicks(2); continue; }
       if (c === '!sprint' || c === '!nosprint') { bot.setControlState('sprint', c === '!sprint'); await sleepTicks(2); continue; }
@@ -785,6 +827,11 @@ bot.once('spawn', async () => {
     if (clockSamples.length < 2) throw new Error('не удалось сверить часы с сервером: нечем привязывать такты');
 
     fixedBase = tickBase + clockOffset;
+    // `attr_phase`: начало записи — на такте той же чётности, что и рассылка
+    // атрибутов робота; иначе у двух серверов атрибуты расходятся на такт
+    // наугад (itemaudit4-knockback-phase).
+    const attrPhases = scenario.attr_phase ? await attrPhaseTools.measurePlayers(measurePhase, bot2 ? 2 : 1) : null;
+    const attrPhase = attrPhases ? attrPhaseTools.assertAligned(attrPhases) : null;
     recording = true; t0 = Date.now();
     // Нажатия расставляем по тактам сервера, а не по часам робота: `after` —
     // это такты от первого нажатия. Целимся в середину такта, чтобы промах
@@ -795,6 +842,7 @@ bot.once('spawn', async () => {
     // попадает в случайную фазу относительно действий, и записи двух
     // серверов не сравнить.
     if (scenario.align) baseTick = Math.ceil(baseTick / scenario.align) * scenario.align;
+    if (attrPhase !== null && (baseTick - attrPhase) % 2 !== 0) baseTick += 1;
     for (const a of scenario.actions) {
       // Граница счётного такта — это ровно середина между приходами пакетов,
       // то есть середина настоящего такта сервера: дальше всего от его краёв,
@@ -925,7 +973,8 @@ bot.once('spawn', async () => {
       if (c.startsWith('!wait ')) { await sleepTicks(Number(c.slice(6))); continue; }
       await say(expand(c));
     }
-    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, lane: LANE, window: { first: baseTick, last }, events }, null, 1));
+    const attribute_phase = attrPhases ? { players: attrPhases, base_tick: baseTick, attempts: phaseRespawns } : undefined;
+    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, lane: LANE, window: { first: baseTick, last }, join_tick: loginMs === null ? null : Math.floor((loginMs - fixedBase) / TICK_MS), attribute_phase, events }, null, 1));
     console.log(`записано событий: ${events.length} → ${outFile}`);
     if (bot2) bot2.quit();
     bot.quit();
