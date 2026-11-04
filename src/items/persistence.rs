@@ -1,6 +1,6 @@
 //! Собственный ограниченный файл обычных предметов; не формат чанков Minecraft.
 use super::*;
-use sha2::{Digest, Sha256};
+use aws_lc_rs::digest::{digest, SHA256};
 use std::{collections::HashSet, fs::{self, OpenOptions}, io::{self, Read, Write}, path::Path, sync::atomic::{AtomicU64, Ordering}};
 
 const MAGIC: &[u8; 8] = b"MCSAGND\0";
@@ -77,7 +77,7 @@ impl GroundCheckpoint {
             if bytes.len() > MAX_RECORD || out.len() + 4 + bytes.len() + 32 > MAX_BYTES { return Err(invalid()); }
             out.extend((bytes.len() as u32).to_be_bytes()); out.extend(bytes);
         }
-        let digest = Sha256::digest(&out); out.extend_from_slice(&digest);
+        let digest = digest(&SHA256, &out); out.extend_from_slice(digest.as_ref());
         let parent = path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or_else(|| Path::new("."));
         let nonce = SystemTime::now().duration_since(UNIX_EPOCH).map_err(io::Error::other)?.as_nanos();
         let temporary = parent.join(format!(".mcsa-ground-{}-{nonce}-{}.tmp", std::process::id(), TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)));
@@ -112,7 +112,7 @@ impl Items {
         if bytes.len() > MAX_BYTES { return Err(invalid()); }
         if bytes.len() < 32 { return Err(invalid()); }
         let (payload, checksum) = bytes.split_at(bytes.len() - 32);
-        if &Sha256::digest(payload)[..] != checksum { return Err(invalid()); }
+        if digest(&SHA256, payload).as_ref() != checksum { return Err(invalid()); }
         let mut input = Input(payload);
         if input.take(8)? != MAGIC || input.u32()? != VERSION || input.u8()? != profile(self.catalog) { return Err(invalid()); }
         let count = input.u32()? as usize;
@@ -218,7 +218,7 @@ mod tests {
         let mut oversized = original.clone(); oversized[17..21].copy_from_slice(&((MAX_RECORD + 1) as u32).to_be_bytes()); semantic.push(oversized);
         let mut count = original.clone(); count[13..17].copy_from_slice(&((MAX_ITEMS + 1) as u32).to_be_bytes()); semantic.push(count);
         let mut duplicate = original[..original.len()-32].to_vec(); duplicate[13..17].copy_from_slice(&2u32.to_be_bytes()); duplicate.extend(&original[17..original.len()-32]); duplicate.extend([0;32]); semantic.push(duplicate);
-        for mut bytes in semantic { bytes.truncate(bytes.len()-32); let digest=Sha256::digest(&bytes); bytes.extend_from_slice(&digest); malformed.push(bytes); }
+        for mut bytes in semantic { bytes.truncate(bytes.len()-32); let digest=digest(&SHA256, &bytes); bytes.extend_from_slice(digest.as_ref()); malformed.push(bytes); }
         for bytes in malformed {
             fs::write(&path,bytes).unwrap(); let mut loaded = Items::with_catalog(catalog); let mut calls = 0;
             assert!(loaded.load_ground_items(&path,&mut || {calls+=1; 9}).is_err()); assert_eq!(calls,0); assert!(loaded.items.is_empty()); assert!(!loaded.ground_items_loaded);
