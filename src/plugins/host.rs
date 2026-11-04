@@ -63,7 +63,17 @@ pub(super) struct NativeWait { active: AtomicBool, left: AtomicU64 }
 impl NativeWait {
     fn reset(&self) { self.left.store(NATIVE_WAIT_EPOCHS,Ordering::Relaxed); }
     pub(super) fn enter(&self) -> NativeWaitGuard<'_> { self.active.store(true,Ordering::Relaxed);NativeWaitGuard(self) }
-    fn consume(&self) -> bool { self.active.load(Ordering::Relaxed) && self.left.fetch_update(Ordering::Relaxed,Ordering::Relaxed,|left|left.checked_sub(1)).is_ok() }
+    fn consume(&self) -> bool {
+        if !self.active.load(Ordering::Relaxed) { return false; }
+        let mut left = self.left.load(Ordering::Relaxed);
+        while let Some(next) = left.checked_sub(1) {
+            match self.left.compare_exchange_weak(left, next, Ordering::Relaxed, Ordering::Relaxed) {
+                Ok(_) => return true,
+                Err(current) => left = current,
+            }
+        }
+        false
+    }
 }
 pub(super) struct NativeWaitGuard<'a>(&'a NativeWait);
 impl Drop for NativeWaitGuard<'_> { fn drop(&mut self) { self.0.active.store(false,Ordering::Relaxed); } }
