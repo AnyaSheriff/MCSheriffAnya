@@ -57,9 +57,9 @@ jobs:
         id: pin
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id || '41858213026' }}
-          INPUT_BUILD_HEAD: ${{ inputs.build_head || 'ccccc44bebfabb1922f1f05f274cacbb5b395fd7' }}
-          INPUT_RUNTIME_SHA256: ${{ inputs.runtime_sha256 || 'b1a8d63eb4bcaca579007f947fd5f446b3ca381789bec778e7103b3e6ecd9301' }}
+          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id || '41892001975' }}
+          INPUT_BUILD_HEAD: ${{ inputs.build_head || '93fbd4f4ba54ca3d84636dd49f445a2dcaf34c8e' }}
+          INPUT_RUNTIME_SHA256: ${{ inputs.runtime_sha256 || '033ca5dec2472594bde904c63f78e683517510cd3e6728637af833d59eb0d161' }}
         run: |
           python - <<'PYCODE'
           import os, pathlib, sys
