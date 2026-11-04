@@ -22,6 +22,7 @@ use crate::snbt::{self, Value};
 mod custom_data;
 pub use custom_data::CustomData;
 pub(crate) mod storage_depth;
+pub(crate) mod main_import;
 #[cfg(test)]
 mod storage_depth_tests;
 
@@ -1288,6 +1289,12 @@ fn fireworks_from_bytes(reader: &mut Reader) -> Option<Fireworks> {
 
 /// Довески из файла; None — запись испорчена.
 pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
+    from_bytes_with_legacy_metadata(bytes, false)
+}
+
+// Явный импорт: вложенные ульи проверяются старым Mob reader, но их исходные
+// байты сохраняются до канонической сверки внешней записи.
+pub(crate) fn from_bytes_with_legacy_metadata(bytes: &[u8], legacy: bool) -> Option<Data> {
     let _scope = storage_depth::enter()?;
     let mut reader = Reader { bytes, at: 0, failed: false };
     let damage = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
@@ -1374,7 +1381,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                         let len = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
                         let bytes = reader.take(len)?;
-                        let extra = if len == 0 { None } else { intern(from_bytes(bytes)?) };
+                        let extra = if len == 0 { None } else { intern(from_bytes_with_legacy_metadata(bytes, legacy)?) };
                         data.pot_sides.push(Content { slot, item, count: 1, data: extra });
                     }
                 }
@@ -1414,7 +1421,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         let count=i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                         if !(1..=64).contains(&count) { return None; }
                         let len=u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
-                        let extra=reader.take(len)?; let nested=if len==0 {None} else {intern(from_bytes(extra)?)};
+                        let extra=reader.take(len)?; let nested=if len==0 {None} else {intern(from_bytes_with_legacy_metadata(extra, legacy)?)};
                         data.bundle.push(Content{slot:0,item,count,data:nested});
                     }
                     data.bundle_selected=(usize::from(selected)<data.bundle.len()).then_some(selected);
@@ -1439,7 +1446,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         let count = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                         let length = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
                         let extras = reader.take(length)?;
-                        let nested = if extras.is_empty() { None } else { intern(from_bytes(extras)?) };
+                        let nested = if extras.is_empty() { None } else { intern(from_bytes_with_legacy_metadata(extras, legacy)?) };
 
                         if slot < 27 && count > 0 {
                             data.contents.push(Content { slot, item, count, data: nested });
@@ -1469,7 +1476,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                     data.honey=(honey<=5).then_some(honey);
                     let len=usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
                     data.bees=reader.take(len)?.to_vec();
-                    if !data.bees.is_empty() && crate::hive::Data::from_bytes(&data.bees).is_none() { return None; }
+                    if !data.bees.is_empty() && crate::hive::Data::from_bytes_with_legacy_metadata(&data.bees, legacy).is_none() { return None; }
                 }
                 13 | 14 => {
                     let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
@@ -1485,7 +1492,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                     let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
                     let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
                     let bytes = reader.take(length)?;
-                    let nested = if bytes.is_empty() { None } else { intern(from_bytes(bytes)?) };
+                    let nested = if bytes.is_empty() { None } else { intern(from_bytes_with_legacy_metadata(bytes, legacy)?) };
                     data.charged_arrow = Some(Content { slot: 0, item, count: 1, data: nested });
                 }
                 _ => break,

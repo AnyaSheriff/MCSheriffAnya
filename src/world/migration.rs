@@ -20,8 +20,21 @@ fn convert_main(bytes: &[u8]) -> io::Result<Vec<u8>> {
 }
 fn write_journal(world: &Path, journal: &Journal) -> io::Result<()> {
     let path = journal_path(world);
-    let temp = path.with_extension("json.new");
-    let mut file = OpenOptions::new().write(true).create_new(true).open(&temp)?;
+    // Незавершённый temp после падения сохраняется для разбора, но не блокирует
+    // следующий durable rename. Чужой/старый .json.new не удаляем и не заменяем.
+    let mut created = None;
+    for _ in 0..8 {
+        let mut suffix=[0u8;16];
+        aws_lc_rs::rand::fill(&mut suffix).map_err(|_|io::Error::other("нет случайных данных для журнала перехода"))?;
+        let suffix=suffix.iter().map(|b|format!("{b:02x}")).collect::<String>();
+        let temp=path.with_extension(format!("json.new-{suffix}"));
+        match OpenOptions::new().write(true).create_new(true).open(&temp) {
+            Ok(file)=>{created=Some((temp,file));break;}
+            Err(error) if error.kind()==io::ErrorKind::AlreadyExists=>continue,
+            Err(error)=>return Err(error),
+        }
+    }
+    let (temp,mut file)=created.ok_or_else(||io::Error::new(io::ErrorKind::AlreadyExists,"не удалось выделить временный журнал перехода"))?;
     file.write_all(&serde_json::to_vec(journal).map_err(invalid)?)?; file.sync_all()?;
     fs::rename(temp, path)?; sync(world.parent().unwrap())
 }
@@ -100,8 +113,12 @@ fn validate_source(world: &Path, source: Source) -> io::Result<(u64,u64)> {
                     }
                 }
                 Some("mcrw") if path.file_name().is_some_and(|v|v=="playerdata") => {
-                    let hex=name.trim_end_matches(".mcrw").replace('-',"");
-                    if hex.len()!=32 || !hex.bytes().all(|b|b.is_ascii_hexdigit()) { return Err(invalid("неверное имя playerdata")); }
+                    // Оба наших writer/path_for пишут ровно32 lowercase hex.
+                    // Иначе runtime ищет другое имя и ошибочно создаст нового игрока.
+                    let hex=name.strip_suffix(".mcrw").ok_or_else(||invalid("неверное имя playerdata"))?;
+                    if hex.len()!=32 || !hex.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+                        return Err(invalid("неканоническое имя playerdata: нужны32строчные hex цифры без дефисов"));
+                    }
                     let mut uuid=[0;16];
                     for (i,b) in uuid.iter_mut().enumerate() { *b=u8::from_str_radix(&hex[i*2..i*2+2],16).map_err(invalid)?; }
                     if source == Source::Main26_1_2 { convert_main(&fs::read(&p)?)?; }
@@ -381,7 +398,7 @@ mod tests {
             super::super::region::write_slots(&region,&borrowed).unwrap();
         }
         let bytes=include_bytes!("../../testdata/playerdata/main10-abilities.mcrw").to_vec();
-        let path=f.world().join("playerdata/00000000-0000-0000-0000-000000000001.mcrw");
+        let path=f.world().join("playerdata/00000000000000000000000000000001.mcrw");
         fs::create_dir(path.parent().unwrap()).unwrap();fs::write(&path,&bytes).unwrap();
         (path,bytes)
     }
@@ -505,6 +522,143 @@ mod tests {
         assert_eq!(fs::read(path).unwrap(),convert_main(bytes).unwrap());
         verify_result_for_source(&f.world(),&backup,Source::Main26_1_2).unwrap();
         assert!(startup::prepare_for_version(&f.world(),mcsa_protocol::JavaVersion::V26_3).is_ok());
+    }
+
+    #[test]
+    fn frozen_main_hives_survive_world_import_verified_snapshot_and_restart() {
+        use crate::stackdata::main_import::tests::{HIVE, assert_hive, assert_stack, catalog};
+        let f=Fixture::new();main_player(&f);
+        let source_chunk=super::super::codec::main_hive_import_tests::source_chunk();
+        let region=f.world().join("region/r.0.0.mcs");
+        super::super::region::write_slots(&region,&[(0,&source_chunk)]).unwrap();
+        let source=fs::read(&region).unwrap();
+        upgrade_from_main_26_1_2(&f.world()).unwrap();
+        let manifest=profile::read_manifest(&f.world()).unwrap().unwrap();
+        let backup=snapshot::verify_backup(&f.0.join("backups/world").join(&manifest.snapshot_id)).unwrap();
+        assert_eq!(fs::read(backup.directory().join("world/region/r.0.0.mcs")).unwrap(),source);
+        let (_,previous)=paths(&f.world(),&manifest.snapshot_id);
+        assert_eq!(fs::read(previous.join("region/r.0.0.mcs")).unwrap(),source);
+        let super::super::region::Stored::Found(bytes)=super::super::region::read_slot(&region,0).unwrap() else {panic!("нет чанка")};
+        let chunk=super::super::Chunk::decode_for_load_with_catalog(&bytes,catalog()).unwrap();
+        assert_hive(&chunk.hives[&(1,80,1)]);assert_stack(chunk.containers[&(2,80,1)].slots[0].unwrap());
+        assert_ne!(chunk.hives[&(1,80,1)].bytes(),HIVE);
+        verify_result_for_source(&f.world(),&backup,Source::Main26_1_2).unwrap();
+        assert!(startup::prepare_for_version(&f.world(),mcsa_protocol::JavaVersion::V26_3).is_ok());
+    }
+
+    #[test]
+    fn corrupt_main_plugin_writer_and_hive_keep_source_and_verified_backup() {
+        for corruption in 0..3 {
+            let f=Fixture::new();let (player,_)=main_player(&f);
+            if corruption != 0 {
+                let mut chunk=super::super::codec::main_hive_import_tests::source_chunk();
+                let hive=crate::stackdata::main_import::tests::HIVE;
+                if corruption == 1 { let at=chunk.windows(hive.len()).position(|w|w==hive).unwrap();chunk[at]=b'!'; }
+                else { chunk.push(0x71); }
+                super::super::region::write_slots(&f.world().join("region/r.0.0.mcs"),&[(0,&chunk)]).unwrap();
+            } else { fs::write(&player,include_bytes!("../../testdata/playerdata/main10-plugin-only-writer-bug.mcrw")).unwrap(); }
+            let error=upgrade_from_main_26_1_2(&f.world()).unwrap_err();assert_eq!(error.kind(),io::ErrorKind::InvalidData);
+            assert!(profile::read_manifest(&f.world()).unwrap().is_none());
+            let backups=fs::read_dir(f.0.join("backups/world")).unwrap().collect::<io::Result<Vec<_>>>().unwrap();
+            assert_eq!(backups.len(),1);
+            let backup=snapshot::verify_backup(&backups[0].path()).unwrap();
+            compare_tree(&f.world(),&backup.directory().join("world"),false).unwrap();
+            assert!(!journal_path(&f.world()).exists());
+        }
+    }
+
+    #[test]
+    fn stale_journal_temps_do_not_block_prepared_or_activating_recovery() {
+        for state in ["prepared","activating"] {
+            for partial in [false,true] {
+                let f=Fixture::new();let (player,source)=main_player(&f);
+                upgrade_from_main_26_1_2(&f.world()).unwrap();
+                let manifest=profile::read_manifest(&f.world()).unwrap().unwrap();
+                let backup=snapshot::verify_backup(&f.0.join("backups/world").join(&manifest.snapshot_id)).unwrap();
+                let (candidate,previous)=paths(&f.world(),&manifest.snapshot_id);
+                fs::rename(f.world(),&candidate).unwrap();fs::rename(previous,f.world()).unwrap();
+                write_journal(&f.world(),&Journal{state:state.into(),snapshot:manifest.snapshot_id.clone(),source:Source::Main26_1_2}).unwrap();
+                let stale=if partial {b"{\"state\":".to_vec()} else {
+                    serde_json::to_vec(&Journal{state:state.into(),snapshot:manifest.snapshot_id.clone(),source:Source::Main26_1_2}).unwrap()
+                };
+                let temp=journal_path(&f.world()).with_extension("json.new");fs::write(&temp,&stale).unwrap();
+                // Также сохраняем незавершённый temp новой схемы от прошлого процесса.
+                let unique=journal_path(&f.world()).with_extension("json.new-00000000000000000000000000000000");fs::write(&unique,&stale).unwrap();
+                recover(&f.world()).unwrap();
+                assert_eq!(fs::read(&temp).unwrap(),stale);assert_eq!(fs::read(&unique).unwrap(),stale);
+                snapshot::verify_backup(backup.directory()).unwrap();
+                if state=="prepared" {
+                    assert_eq!(fs::read(player).unwrap(),source);
+                    assert!(profile::read_manifest(&f.world()).unwrap().is_none());
+                    compare_tree(&f.world(),&backup.directory().join("world"),false).unwrap();
+                } else { verify_result_for_source(&f.world(),&backup,Source::Main26_1_2).unwrap(); }
+                let journal:Journal=serde_json::from_slice(&fs::read(journal_path(&f.world())).unwrap()).unwrap();
+                assert_eq!(journal.state,if state=="prepared" {"aborted"} else {"committed"});
+            }
+        }
+    }
+
+    #[test]
+    fn stale_journal_temp_does_not_bypass_source_or_snapshot_checks() {
+        for tamper_snapshot in [false,true] {
+            let f=Fixture::new();let (player,_)=main_player(&f);
+            upgrade_from_main_26_1_2(&f.world()).unwrap();
+            let manifest=profile::read_manifest(&f.world()).unwrap().unwrap();
+            let (candidate,previous)=paths(&f.world(),&manifest.snapshot_id);
+            fs::rename(f.world(),&candidate).unwrap();fs::rename(previous,f.world()).unwrap();
+            write_journal(&f.world(),&Journal{state:"activating".into(),snapshot:manifest.snapshot_id.clone(),source:Source::Main26_1_2}).unwrap();
+            let temp=journal_path(&f.world()).with_extension("json.new");fs::write(&temp,b"{").unwrap();
+            let target=if tamper_snapshot {
+                f.0.join("backups/world").join(&manifest.snapshot_id).join("world/playerdata").join(player.file_name().unwrap())
+            } else {player.clone()};
+            fs::write(&target,b"tampered").unwrap();
+            assert!(recover(&f.world()).is_err());
+            assert_eq!(fs::read(&target).unwrap(),b"tampered");assert!(candidate.is_dir());
+            assert_eq!(fs::read(temp).unwrap(),b"{");
+            let journal:Journal=serde_json::from_slice(&fs::read(journal_path(&f.world())).unwrap()).unwrap();assert_eq!(journal.state,"activating");
+        }
+    }
+
+    #[test]
+    fn main_import_target_loads_canonical_player_uuid_after_restart() {
+        let f=Fixture::new();let (path,_)=main_player(&f);
+        let source=include_bytes!("../../testdata/playerdata/main10-plugin-shoulder.mcrw");
+        fs::write(&path,source).unwrap();
+        upgrade_from_main_26_1_2(&f.world()).unwrap();
+        let manifest=profile::read_manifest(&f.world()).unwrap().unwrap();
+        let backup=snapshot::verify_backup(&f.0.join("backups/world").join(&manifest.snapshot_id)).unwrap();
+        assert_eq!(fs::read(backup.directory().join("world/playerdata").join(path.file_name().unwrap())).unwrap(),source);
+        let _guard=startup::prepare_for_version(&f.world(),mcsa_protocol::JavaVersion::V26_3).unwrap();
+        let mut uuid=[0;16];uuid[15]=1;
+        let loaded=crate::playerdata::load_checked_for_catalog(&f.world().join("playerdata"),&uuid,Catalog::new(Profile::Preview26_3)).unwrap().expect("UUID runtime обязан найти игрока");
+        assert_eq!(crate::playerdata::path_for(&f.world().join("playerdata"),&uuid),path);
+        let stone=loaded.inventory.slot(36).unwrap();
+        assert_eq!((stone.item,stone.count),(1,17));
+        assert_eq!(stone.extras().name.as_deref(),Some("Frozen stone"));
+        assert_eq!(stone.extras().plugin_meta.as_deref(),Some(r#"{"pdc":{"fixture":"main"}}"#));
+        assert_eq!(loaded.inventory.slot(37),Some(crate::inventory::Stack::new(10,5)));
+        assert_eq!(loaded.ender[4],Some(crate::inventory::Stack::new(1,7)));
+        assert_eq!(loaded.vitals.experience_total,42);
+        assert!(loaded.shoulders[0].is_some());
+    }
+
+    #[test]
+    fn noncanonical_player_filenames_refuse_import_without_hiding_or_replacing_data() {
+        for name in ["00000000-0000-0000-0000-000000000001.mcrw", "0000000000000000000000000000000A.mcrw", "00000000000000000000000000000001.mcrw.mcrw"] {
+            for keep_canonical in [false,true] {
+                let f=Fixture::new();let (canonical,bytes)=main_player(&f);
+                let foreign=canonical.with_file_name(name);
+                fs::write(&foreign,&bytes).unwrap();
+                if !keep_canonical { fs::remove_file(&canonical).unwrap(); }
+                let error=upgrade_from_main_26_1_2(&f.world()).unwrap_err();assert!(error.to_string().contains("неканоническое имя playerdata"));
+                assert_eq!(fs::read(&foreign).unwrap(),bytes);
+                if keep_canonical {assert_eq!(fs::read(&canonical).unwrap(),bytes);} else {assert!(!canonical.exists());}
+                assert!(profile::read_manifest(&f.world()).unwrap().is_none());assert!(!journal_path(&f.world()).exists());
+                let backups=fs::read_dir(f.0.join("backups/world")).unwrap().collect::<io::Result<Vec<_>>>().unwrap();assert_eq!(backups.len(),1);
+                let backup=snapshot::verify_backup(&backups[0].path()).unwrap();
+                compare_tree(&f.world(),&backup.directory().join("world"),false).unwrap();
+            }
+        }
     }
 
 }

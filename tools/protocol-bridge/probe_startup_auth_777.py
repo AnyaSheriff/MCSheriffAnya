@@ -42,6 +42,12 @@ def validate_boundary(join_count, listed, before, after):
     require(before == after, 'playerdata changed before password')
 
 
+def validate_default_dialog(packet_id, payload):
+    # Pinned protocol777: ShowDialog=0x13; 0x12 уже ClearDialog.
+    require(packet_id == 0x13, 'expected ShowDialog777, not ClearDialog or canonical775 ID')
+    require(b'mcsheriffanya:register' in payload and b'password' in payload, 'wrong custom dialog')
+
+
 def playerfiles(root):
     return {str(p.relative_to(root)): digest(p) for p in sorted((root/'world/playerdata').glob('*')) if p.is_file()}
 
@@ -99,8 +105,8 @@ def exercise(binary, protocol, output, mode, password, wrong):
                     def configuration(sock, packet_id, payload):
                         result['wire'].append({'phase':'configuration', 'id':packet_id, 'hex':payload.hex()})
                         require(packet_id != 3, 'FinishConfiguration bypassed dialog')
-                        if packet_id == 0x12:
-                            require(b'mcsheriffanya:register' in payload and b'password' in payload, 'wrong custom dialog')
+                        if packet_id in (0x12, 0x13):
+                            validate_default_dialog(packet_id, payload)
                             boundary(baseline)
                             result['checks'].append('default-custom-dialog-before-finish-configuration')
                             raise BoundaryObserved()

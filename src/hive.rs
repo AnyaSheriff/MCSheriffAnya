@@ -69,9 +69,15 @@ impl Data {
     }
     pub fn bytes(&self) -> Vec<u8> { serde_json::to_vec(self).expect("данные улья") }
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        Self::from_bytes_with_legacy_metadata(bytes, false)
+    }
+    pub(crate) fn from_bytes_with_legacy_metadata(bytes: &[u8], legacy: bool) -> Option<Self> {
         let _scope = crate::stackdata::storage_depth::enter()?;
         let data: Self=serde_json::from_slice(bytes).ok()?;
-        if data.bees.len()>3 || data.bees.iter().any(|b|decode_occupant(b).is_none()) { return None; }
+        if data.bees.len()>3 || data.bees.iter().any(|b|decode_occupant_with_legacy_metadata(b, legacy).is_none()) { return None; }
+        // Own main Data/Occupant имели ровно эти поля без defaults и bytes()
+        // писали serde_json::to_vec. Сверяем raw до нормализации entity.
+        if legacy && data.bytes() != bytes { return None; }
         Some(data)
     }
 }
@@ -79,9 +85,27 @@ impl Data {
 /// В записи жильца должен находиться ровно один моб нужного вида.
 /// Остаток нельзя игнорировать: там может быть вторая сущность или неверный хвост.
 pub(crate) fn decode_occupant(occupant: &Occupant) -> Option<Mob> {
+    decode_occupant_with_legacy_metadata(occupant, false)
+}
+
+fn decode_occupant_with_legacy_metadata(occupant: &Occupant, legacy: bool) -> Option<Mob> {
     let mut bytes = occupant.entity.as_slice();
-    let mob = Mob::read(&mut bytes)?;
+    let mob = Mob::read_with_storage_context(&mut bytes, legacy, legacy)?;
     (bytes.is_empty() && mob.kind == Kind::Bee).then_some(mob)
+}
+
+/// Только после сверки исходной записи: преобразует каждый полный старый Mob.
+pub(crate) fn normalize_main_entities(hive: &mut Data) -> Option<()> {
+    let _scope = crate::stackdata::storage_depth::enter()?;
+    for occupant in &mut hive.bees {
+        let mut bee = decode_occupant_with_legacy_metadata(occupant, true)?;
+        crate::stackdata::main_import::mob(&mut bee)?;
+        bee.validate_item_storage().ok()?;
+        crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2).validate_mob(&bee).ok()?;
+        let mut entity = Vec::new(); bee.write(&mut entity);
+        occupant.entity = entity;
+    }
+    Some(())
 }
 
 /// Работа ульев идёт и тогда, когда снаружи не осталось ни одной пчелы.

@@ -302,7 +302,7 @@ fn write_ender_with_legacy_metadata(slots: &[Option<crate::inventory::Stack>], o
 }
 
 /// Читает эндер-сундук из записи без хвоста длины. None — запись испорчена.
-fn read_ender(bytes: &[u8]) -> Option<Vec<Option<crate::inventory::Stack>>> {
+fn read_ender(bytes: &[u8], legacy: bool) -> Option<Vec<Option<crate::inventory::Stack>>> {
     use crate::inventory::Stack;
 
     let mut slots = empty_ender();
@@ -319,7 +319,7 @@ fn read_ender(bytes: &[u8]) -> Option<Vec<Option<crate::inventory::Stack>>> {
         let slot = usize::from(take(1)?[0]);
         let item = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let extras = Stack::read_extras(item, &mut take)?;
+        let extras = Stack::read_extras_with_legacy_metadata(item, &mut take, legacy)?;
         let mut stack = Stack::from_stored(item, count);
 
         if let Some(extras) = extras {
@@ -505,13 +505,16 @@ fn parse_with_catalog_and_legacy_metadata(bytes: &[u8], catalog: Option<Catalog>
                 let length = u32::from_be_bytes(length.try_into().ok()?) as usize;
                 let (rest, stored) = rest.split_at(rest.len().checked_sub(length)?);
 
-                ender = read_ender(stored)?;
+                ender = read_ender(stored, legacy)?;
                 if let Some(catalog) = catalog {
                     // Старый read_ender ограничивает число; сверяем исходные bytes.
                     let mut roundtrip = Vec::new();
                     write_ender_with_legacy_metadata(&ender, &mut roundtrip, legacy);
                     if roundtrip.get(..roundtrip.len().checked_sub(4)?)? != stored { return None; }
-                    for stack in ender.iter().flatten() { catalog.validate_stack(stack).ok()?; }
+                    for stack in ender.iter_mut().flatten() {
+                        if legacy { crate::stackdata::main_import::stack(stack)?; }
+                        catalog.validate_stack(stack).ok()?;
+                    }
                 }
                 tail = rest;
             }
@@ -579,8 +582,9 @@ pub(crate) fn convert_main_playerdata(bytes: &[u8], catalog: Catalog) -> Result<
     if let Some(abilities) = abilities { data.abilities = abilities; }
     for stored in data.shoulders.iter_mut().flatten() {
         let mut rest = stored.as_slice();
-        let mob = crate::mob::Mob::read_with_legacy_plugin_tail(&mut rest, true).ok_or(LoadError::InvalidData)?;
+        let mut mob = crate::mob::Mob::read_with_legacy_plugin_tail(&mut rest, true).ok_or(LoadError::InvalidData)?;
         if !rest.is_empty() || mob.kind != crate::mob::Kind::Parrot { return Err(LoadError::InvalidData); }
+        crate::stackdata::main_import::mob(&mut mob).ok_or(LoadError::InvalidData)?;
         mob.validate_item_storage().map_err(|_| LoadError::InvalidData)?;
         catalog.validate_mob(&mob).map_err(LoadError::IncompatibleInventory)?;
         let mut normalized = Vec::new();
@@ -1537,6 +1541,7 @@ mod explicit_main_import_tests {
         let loaded = parse(&out).unwrap();
         validate_player(&loaded, catalog()).unwrap();
         assert_eq!(loaded.inventory.slot(36).unwrap().count, 17);
+        assert_eq!(loaded.inventory.slot(36).unwrap().extras().name.as_deref(), Some("Frozen stone"));
         assert_eq!(loaded.inventory.slot(36).unwrap().extras().plugin_meta.as_deref(), Some(r#"{"pdc":{"fixture":"main"}}"#));
         assert_eq!(loaded.inventory.slot(37), Some(crate::inventory::Stack::new(10,5)));
         assert_eq!(loaded.ender[4], Some(crate::inventory::Stack::new(1,7)));
@@ -1555,6 +1560,41 @@ mod explicit_main_import_tests {
         assert_eq!(mob.plugin_attributes,expected.plugin_attributes);
         assert_eq!(mob.vitals.max_health,40.0);
         assert_eq!(mob.age,-123);
+    }
+
+    #[test]
+    fn explicit_main_player_hives_in_inventory_and_ender_normalize_before_validation() {
+        use crate::stackdata::main_import::tests::{raw_stack, assert_stack};
+        let hive = raw_stack();
+        let mut inventory = Inventory::new(); inventory.set(36,Some(hive));
+        let mut source = MAIN10[..44].to_vec();
+        source.extend(inventory.to_bytes_with_legacy_metadata(true));
+        // Frozen main10: исходный inventory44..64; измерение начинается в64.
+        let tail = &MAIN10[64..MAIN10.len()-13-4];
+        let (before_shoulders, shoulder_len) = tail.split_at(tail.len()-4);
+        let shoulder_len = u32::from_be_bytes(shoulder_len.try_into().unwrap()) as usize;
+        let (before_shoulders, shoulders) = before_shoulders.split_at(before_shoulders.len()-shoulder_len);
+        let (before_ender, ender_len) = before_shoulders.split_at(before_shoulders.len()-4);
+        let ender_len = u32::from_be_bytes(ender_len.try_into().unwrap()) as usize;
+        source.extend(&before_ender[..before_ender.len()-ender_len]);
+        let mut ender = empty_ender(); ender[4]=Some(hive);
+        write_ender_with_legacy_metadata(&ender,&mut source,true);
+        source.extend(shoulders); source.extend((shoulder_len as u32).to_be_bytes());
+        source.extend(&MAIN10[MAIN10.len()-13-4..]);
+        let converted = convert_main_playerdata(&source,catalog()).unwrap();
+        let actual = parse_with_catalog(&converted,Some(catalog())).unwrap();
+        assert_stack(actual.inventory.slot(36).unwrap()); assert_stack(actual.ender[4].unwrap());
+        validate_player(&actual,catalog()).unwrap();
+        let mut damaged=source.clone();
+        let at=damaged.windows(crate::stackdata::main_import::tests::STACK.len()).position(|w|w==crate::stackdata::main_import::tests::STACK).unwrap();
+        damaged[at+17]=b'!';
+        assert!(convert_main_playerdata(&damaged,catalog()).is_err());
+    }
+
+    #[test]
+    fn actual_main_plugin_only_writer_bug_is_rejected_without_guessing_payload() {
+        let bytes=include_bytes!("../testdata/playerdata/main10-plugin-only-writer-bug.mcrw");
+        assert_eq!(convert_main_playerdata(bytes,catalog()),Err(LoadError::InvalidData));
     }
 
     #[test]

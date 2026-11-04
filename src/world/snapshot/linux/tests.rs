@@ -428,3 +428,25 @@ fn unidentified_storage_receipt_collision_after_verified_backup_never_overwrites
     assert!(!backup.join("world").join(storage_receipt::NAME).exists());
     assert!(!fixture.0.join(format!(".mcsa-storage-{ID}.tmp")).exists());
 }
+
+
+#[test]
+fn nested_player_snapshot_rechecks_independent_directory_cursors_and_cloned_fds() {
+    let fixture=Fixture::new();
+    fs::create_dir_all(fixture.world().join("playerdata/nested/empty")).unwrap();
+    fs::write(fixture.world().join("playerdata/00000000000000000000000000000001.mcrw"),b"opaque-player").unwrap();
+    fs::write(fixture.world().join("playerdata/nested/second"),b"nested-content").unwrap();
+    let original=unchanged_bytes(&fixture.world());let guard=fixture.guard();
+    let root=open_directory(&fixture.world()).unwrap();let cloned=root.try_clone().unwrap();
+    let entries=inventory(&root,MAX_MEMORY).unwrap();
+    for _ in 0..3 {assert_eq!(inventory(&cloned,MAX_MEMORY).unwrap(),entries);check_inventory(&root,&entries,MAX_MEMORY).unwrap();}
+    let backup=create_with(&guard,options(ID),&mut |_|Ok(())).unwrap();
+    assert_eq!(unchanged_bytes(&backup.directory().join("world")),original);
+    assert!(backup.directory().join("world/playerdata/nested/empty").is_dir());
+    let root=open_directory(backup.directory()).unwrap();let cloned=root.try_clone().unwrap();
+    for _ in 0..3 {
+        verify_open(&cloned,ID,backup.directory().to_path_buf(),0).unwrap();
+        verify(backup.directory()).unwrap();
+    }
+    assert_eq!(unchanged_bytes(&fixture.world()),original);
+}

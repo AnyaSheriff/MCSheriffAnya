@@ -547,12 +547,18 @@ impl Chunk {
 
             for _ in 0..count {
                 let original = rest;
-                let (place, container) = containers::Container::read_with_legacy_metadata(&mut rest, 0, 0, legacy_metadata)?;
+                let (place, mut container) = containers::Container::read_with_legacy_metadata(&mut rest, 0, 0, legacy_metadata)?;
                 let mut encoded = Vec::new();
                 container.write_with_legacy_metadata(place, &mut encoded, legacy_metadata);
                 let consumed = original.len().checked_sub(rest.len())?;
+                if encoded != original.get(..consumed)? {
+                    let item=container.slots.iter().flatten().find(|stack| catalog.validate_stack(stack).is_err()).map_or(0, |stack| stack.item);
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile:catalog.profile(), item }));
+                    return None;
+                }
+                if legacy_metadata { for stack in container.slots.iter_mut().flatten() { crate::stackdata::main_import::stack(stack)?; } }
                 let invalid = container.slots.iter().flatten().find(|stack| catalog.validate_stack(stack).is_err());
-                if encoded != original.get(..consumed)? || invalid.is_some() {
+                if invalid.is_some() {
                     incompatible.set(Some(DecodeError::InvalidInventory { profile: catalog.profile(), item: invalid.map_or(0, |stack| stack.item) }));
                     return None;
                 }
@@ -594,14 +600,20 @@ impl Chunk {
 
             for _ in 0..count {
                 let original = rest;
-                let frame = if legacy_metadata {
+                let mut frame = if legacy_metadata {
                     crate::frame::read_with_legacy_metadata(&mut rest, 0, 0, 0, true)
                 } else { crate::frame::read(&mut rest, 0, 0, 0) }?;
                 let mut encoded = Vec::new();
                 crate::frame::write_with_legacy_metadata(&frame, &mut encoded, legacy_metadata);
                 let consumed = original.len().checked_sub(rest.len())?;
+                if encoded != original.get(..consumed)? {
+                    let item=frame.item.as_ref().filter(|stack| catalog.validate_stack(stack).is_err()).map_or(0, |stack| stack.item);
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile:catalog.profile(), item }));
+                    return None;
+                }
+                if legacy_metadata && let Some(stack) = &mut frame.item { crate::stackdata::main_import::stack(stack)?; }
                 let invalid = frame.item.as_ref().filter(|stack| catalog.validate_stack(stack).is_err());
-                if encoded != original.get(..consumed)? || invalid.is_some() {
+                if invalid.is_some() {
                     incompatible.set(Some(DecodeError::InvalidInventory { profile: catalog.profile(), item: invalid.map_or(0, |stack| stack.item) }));
                     return None;
                 }
@@ -617,11 +629,12 @@ impl Chunk {
             rest = &rest[2..];
 
             for _ in 0..count {
-                let mob = crate::mob::Mob::read_with_storage_context(&mut rest, bytes[0] == 4, legacy_metadata).or_else(|| {
+                let mut mob = crate::mob::Mob::read_with_storage_context(&mut rest, bytes[0] == 4, legacy_metadata).or_else(|| {
                     incompatible.set(Some(DecodeError::InvalidMob { profile: catalog.profile() }));
                     None
                 })?;
 
+                if legacy_metadata { crate::stackdata::main_import::mob(&mut mob)?; }
                 chunk.mobs.push(mob);
             }
         }
@@ -701,10 +714,11 @@ impl Chunk {
                     return None;
                 }
                 let (bytes, tail) = tail.split_at_checked(len)?;
-                let hive = crate::hive::Data::from_bytes(bytes).or_else(|| {
+                let mut hive = crate::hive::Data::from_bytes_with_legacy_metadata(bytes, legacy_metadata).or_else(|| {
                     incompatible.set(Some(DecodeError::InvalidHive { profile: catalog.profile() }));
                     None
                 })?;
+                if legacy_metadata { crate::hive::normalize_main_entities(&mut hive)?; }
                 if catalog.validate_hive(&hive).is_err() {
                     incompatible.set(Some(DecodeError::InvalidHive { profile: catalog.profile() }));
                     return None;
@@ -749,9 +763,10 @@ impl Chunk {
                 let len = u32::from_be_bytes(head[3..7].try_into().ok()?) as usize;
                 let (bytes, tail) = rest.split_at_checked(len)?; rest = tail;
                 if !in_bounds(at.1) || !chunk.pots.contains_key(&at) { return None; }
-                let data = crate::stackdata::from_bytes(bytes)?;
+                let mut data = crate::stackdata::from_bytes_with_legacy_metadata(bytes, legacy_metadata)?;
                 let canonical = if legacy_metadata { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
                 if canonical != bytes { return None; }
+                if legacy_metadata { crate::stackdata::main_import::components(&mut data)?; }
                 chunk.pot_details.insert(at, data);
             }
         }
@@ -765,6 +780,9 @@ impl Chunk {
                 chunk.gateways.insert(at,exit);
             }
         }
+        // Импорт не может молча выбросить неизвестный/повреждённый хвост:
+        // точная сверка результата использует этот же декодер исходника.
+        if legacy_metadata && !rest.is_empty() { return None; }
         Some(chunk)
     }
 
@@ -1249,5 +1267,39 @@ mod main_import_catalog_boundaries {
         let loaded = Chunk::decode_for_load_with_catalog(&bytes, catalog).unwrap();
         assert_eq!(loaded.block(1,80,1), state);
         assert_eq!(loaded.to_bytes_with_catalog(catalog).unwrap(), source);
+    }
+}
+
+#[cfg(test)]
+pub(super) mod main_hive_import_tests {
+    use super::*;
+    use crate::stackdata::main_import::tests::{HIVE, raw_stack, assert_hive, assert_stack, catalog};
+
+    pub(crate) fn source_chunk() -> Vec<u8> {
+        let mut chunk=Chunk::flat();
+        chunk.set(1,80,1,crate::blocks::state_by_name("beehive").unwrap());
+        chunk.hives.insert((1,80,1),serde_json::from_slice(HIVE).unwrap());
+        chunk.set(2,80,1,crate::blocks::state_by_name("chest").unwrap());
+        chunk.containers.get_mut(&(2,80,1)).unwrap().slots[0]=Some(raw_stack());
+        // Block-only/raw hive JSON не использует современный Mob writer.
+        let mut bytes=chunk.to_bytes(); bytes[0]=4; bytes
+    }
+
+    #[test]
+    fn explicit_main_chunk_import_normalizes_block_and_container_hives() {
+        let bytes=source_chunk(); let original=bytes.clone();
+        assert!(Chunk::decode_for_load_with_catalog(&bytes,catalog()).is_err());
+        let converted=Chunk::decode_for_main_import_with_catalog(&bytes,catalog()).unwrap();
+        assert_hive(&converted.hives[&(1,80,1)]);
+        assert_stack(converted.containers[&(2,80,1)].slots[0].unwrap());
+        let current=converted.to_bytes_with_catalog(catalog()).unwrap();
+        let loaded=Chunk::decode_for_load_with_catalog(&current,catalog()).unwrap();
+        assert_hive(&loaded.hives[&(1,80,1)]); assert_stack(loaded.containers[&(2,80,1)].slots[0].unwrap());
+        assert_eq!(bytes,original);
+        let mut trailing=bytes.clone();trailing.push(0x71);
+        assert!(Chunk::decode_for_main_import_with_catalog(&trailing,catalog()).is_err());
+        let mut damaged=bytes;
+        let at=damaged.windows(HIVE.len()).position(|w|w==HIVE).unwrap(); damaged[at]=b'!';
+        assert!(Chunk::decode_for_main_import_with_catalog(&damaged,catalog()).is_err());
     }
 }

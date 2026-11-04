@@ -141,14 +141,18 @@ impl Stack {
 
     /// Довески к стопке из `from_stored`, если её номер их обещал: берёт их
     /// из `take` (длина и запись). None — запись испорчена.
-    pub fn read_extras<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+    pub fn read_extras<'a>(stored: i32, take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+        Self::read_extras_with_legacy_metadata(stored, take, false)
+    }
+
+    pub(crate) fn read_extras_with_legacy_metadata<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>, legacy: bool) -> Option<Option<crate::stackdata::Data>> {
         if stored >= 0 {
             return Some(None);
         }
 
         let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
 
-        Some(Some(crate::stackdata::from_bytes(take(length)?)?))
+        Some(Some(crate::stackdata::from_bytes_with_legacy_metadata(take(length)?, legacy)?))
     }
 
     /// Стопка из записи `stored_item`. Неизвестный номер особого динамита
@@ -185,7 +189,7 @@ impl Stack {
         if stored >= 0 { return Some(None); }
         let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
         let bytes = take(length)?;
-        let data = crate::stackdata::from_bytes(bytes)?;
+        let data = crate::stackdata::from_bytes_with_legacy_metadata(bytes, legacy)?;
         let canonical = if legacy { crate::stackdata::to_bytes_main_metadata(&data) } else { crate::stackdata::to_bytes(&data) };
         (canonical == bytes).then_some(Some(data))
     }
@@ -801,8 +805,7 @@ impl Inventory {
     pub(crate) fn from_bytes_for_catalog_with_legacy_metadata(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog, legacy: bool) -> Result<Self, crate::gameplay_catalog::StackError> {
         use crate::gameplay_catalog::{StackError, StackProblem};
         let malformed = || StackError { path: Vec::new(), problem: StackProblem::MalformedEncoding };
-        let inventory = Self::from_bytes(bytes).ok_or_else(malformed)?;
-        catalog.validate_inventory(&inventory)?;
+        let mut inventory = if legacy { Self::from_bytes_with_legacy_metadata(bytes,true) } else { Self::from_bytes(bytes) }.ok_or_else(malformed)?;
         // Включая выбранный слот, custom TNT, компоненты и хвост атрибутов.
         // Старый декодер может обрезать/пропустить запись — это не успех.
         let canonical = inventory.to_bytes_with_legacy_metadata(legacy);
@@ -810,6 +813,12 @@ impl Inventory {
         let legacy_empty_tail = inventory.seen_attributes.is_empty()
             && bytes.strip_suffix(&[0]) == Some(canonical.as_slice());
         if canonical != bytes && !legacy_empty_tail { return Err(malformed()); }
+        if legacy {
+            for stack in inventory.slots.iter_mut().flatten().chain(inventory.retained_drops.iter_mut()) {
+                crate::stackdata::main_import::stack(stack).ok_or_else(malformed)?;
+            }
+        }
+        catalog.validate_inventory(&inventory)?;
         Ok(inventory)
     }
 
@@ -825,6 +834,10 @@ impl Inventory {
 
     /// Читает инвентарь из файла игрока. None — запись испорчена.
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        Self::from_bytes_with_legacy_metadata(bytes, false)
+    }
+
+    fn from_bytes_with_legacy_metadata(bytes: &[u8], legacy: bool) -> Option<Self> {
         let selected = *bytes.first()?;
         let filled = *bytes.get(1)? as usize;
 
@@ -844,7 +857,7 @@ impl Inventory {
             let slot = take(1)?[0] as i32;
             let item = i32::from_be_bytes(take(4)?.try_into().ok()?);
             let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let extras = Stack::read_extras(item, &mut take)?;
+            let extras = Stack::read_extras_with_legacy_metadata(item, &mut take, legacy)?;
             let mut stack = Stack::from_stored(item, count);
 
             if let Some(extras) = extras {
@@ -870,7 +883,7 @@ impl Inventory {
             if count>bytes.len()/8 {return None;}
             for _ in 0..count {
                 let item=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
-                let extras=Stack::read_extras(item,&mut take)?;let mut stack=Stack::from_stored(item,count);if let Some(data)=extras {stack=stack.with_extras(data);}
+                let extras=Stack::read_extras_with_legacy_metadata(item,&mut take,legacy)?;let mut stack=Stack::from_stored(item,count);if let Some(data)=extras {stack=stack.with_extras(data);}
                 if count<=0||count>stack.limit() {return None;}inventory.retained_drops.push(stack);
             }
         }
