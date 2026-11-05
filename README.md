@@ -209,6 +209,11 @@ start creates the config and the world next to the binary. Ports: `25565`
 (Java) and `19132/UDP` (Bedrock). On Windows the console reads whole lines
 (no live input line); on Linux and macOS it has the full line editor.
 
+For Linux ARM64, choose the archive containing `aarch64-unknown-linux-gnu`.
+This build uses glibc (Ubuntu 22.04 or newer, Debian 12 or newer).
+Android/Termux uses Bionic; see [Android/Termux](docs/android.md) for the separate build.
+The ARM64 build includes WASM plugins, just like the regular build.
+
 ## Running
 
 ```sh

@@ -1,0 +1,116 @@
+name: Android ARM64 build
+
+on:
+  push:
+    branches: ["wip/arm64-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "4"
+  ANDROID_API: "24"
+  ANDROID_TARGET: aarch64-linux-android
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          test -n "$ndk"
+          tools="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          cc="$tools/aarch64-linux-android${ANDROID_API}-clang"
+          cxx="$tools/aarch64-linux-android${ANDROID_API}-clang++"
+          test -x "$cc"
+          test -x "$cxx"
+          test -x "$tools/llvm-ar"
+          test -x "$tools/llvm-readelf"
+          {
+            echo "ANDROID_BUILD_NDK=$ndk"
+            echo "ANDROID_READELF=$tools/llvm-readelf"
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$cc"
+            echo "CC_aarch64_linux_android=$cc"
+            echo "CXX_aarch64_linux_android=$cxx"
+            echo "AR_aarch64_linux_android=$tools/llvm-ar"
+          } >> "$GITHUB_ENV"
+          mkdir -p android-evidence
+          {
+            echo "source=$GITHUB_SHA"
+            echo "target=$ANDROID_TARGET"
+            echo "android_api=$ANDROID_API"
+            echo "features=default (plugins enabled)"
+            echo "runtime_test=not performed"
+            echo "runner=$RUNNER_OS/$RUNNER_ARCH"
+            cat "$ndk/source.properties"
+            "$cc" --version
+            rustc -Vv
+            cargo -V
+          } > android-evidence/build-receipt.txt
+
+      - name: Install Rust target
+        run: rustup target add "$ANDROID_TARGET"
+
+      - name: Build with default WebAssembly plugins
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --target "$ANDROID_TARGET" 2>&1 | tee android-evidence/build.log
+          cp Cargo.lock android-evidence/Cargo.lock
+
+      - name: Inspect Android executable and package
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="target/$ANDROID_TARGET/release/mcsheriffanya"
+          "$ANDROID_READELF" --file-header --program-headers --dynamic --version-info "$binary" > android-evidence/elf.txt
+          python3 - "$binary" android-evidence/elf.txt <<'PY'
+          import pathlib, re, struct, sys
+          binary = pathlib.Path(sys.argv[1]).read_bytes()
+          assert binary[:6] == b'\x7fELF\x02\x01', 'Expected ELF64 little endian'
+          assert struct.unpack_from('<H', binary, 16)[0] == 3, 'Expected PIE (ET_DYN)'
+          assert struct.unpack_from('<H', binary, 18)[0] == 183, 'Expected AArch64'
+          text = pathlib.Path(sys.argv[2]).read_text()
+          interpreters = re.findall(r'Requesting program interpreter:\s*([^\]]+)\]', text)
+          assert interpreters == ['/system/bin/linker64'], interpreters
+          needed = re.findall(r'\(NEEDED\).*?\[([^\]]+)\]', text)
+          assert 'libc.so' in needed, needed
+          allowed = {'libc.so', 'libm.so', 'libdl.so', 'liblog.so', 'libandroid.so'}
+          assert set(needed) <= allowed, f'Unexpected shared libraries: {needed}'
+          assert 'GLIBC_' not in text, 'Unexpected glibc symbols'
+          print('PASS: Android AArch64 PIE, Bionic linker and system libraries:', needed)
+          PY
+          name="mcsheriffanya-android-arm64-${GITHUB_SHA::7}"
+          mkdir -p "android-dist/$name"
+          cp "$binary" android-dist/mcsheriffanya-android-arm64
+          cp "$binary" "android-dist/$name/mcsheriffanya"
+          chmod 755 android-dist/mcsheriffanya-android-arm64 "android-dist/$name/mcsheriffanya"
+          cp LICENSE README.md README_ru.md "android-dist/$name/"
+          cp docs/android.md "android-dist/$name/ANDROID.md"
+          sha256sum "$binary" >> android-evidence/build-receipt.txt
+          sha256sum android-evidence/Cargo.lock android-evidence/build.log android-evidence/elf.txt >> android-evidence/build-receipt.txt
+          cp android-evidence/build-receipt.txt "android-dist/$name/"
+          tar -C android-dist -czf "android-dist/$name.tar.gz" "$name"
+          (cd android-dist && sha256sum mcsheriffanya-android-arm64 "$name.tar.gz" > SHA256SUMS)
+          (cd android-evidence && sha256sum Cargo.lock build.log elf.txt build-receipt.txt > SHA256SUMS)
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-arm64-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            android-dist/mcsheriffanya-android-arm64
+            android-dist/*.tar.gz
+            android-dist/SHA256SUMS
+            android-evidence/
+          if-no-files-found: error
