@@ -58,11 +58,11 @@ def fixture(target='official',self_denied_hit=True):
         shooter.append(packet('spawn_entity',spawn,time=stamp+1.21))
         victim.append(packet('tick_end',direction='out',time=stamp))
         if '-self-' in case:
-            for height,offset in [(85,1.25),(70,1.3)]:
+            for height,offset in [(130,1.25),(107,1.3)]:
                 payload=varint(100+index)+b'\0'+struct.pack('>dddffB',.5,height,-5.5,0,0,0)
                 shooter.append(packet('sync_entity_position',payload,time=stamp+offset))
             shooter.append(packet('teleport_confirm',b'\1'+struct.pack('>dddff',.5,65,-5.5,0,-90),'out',stamp+1.4))
-            row['self_aim']={'projectile':100+index,'observed_position':[.5,70.,-5.5],'player_position':[.5,65,-5.5]}
+            row['self_aim']={'projectile':100+index,'observed_position':[.5,107.,-5.5],'player_position':[.5,65,-5.5]}
         hit=not case.endswith('same-denied') and (not case.endswith('self-denied') or self_denied_hit)
         if hit:
             recipient=shooter if '-self-' in case else victim
@@ -77,6 +77,23 @@ def fixture(target='official',self_denied_hit=True):
 
 
 class TeamProjectileTests(unittest.TestCase):
+    def test_self_aim_uses_early_sample_from_failed_native_trajectory(self):
+        # Свежий failed official41989796183, только авторские координаты:
+        # tracker раз в1с. Поздний y72 нельзя выбрать вместо раннего y107.
+        positions=[[.5,66.52000000327826,-5.5],
+                   [.30107313463590846,111.81257956445874,-4.927018978045748],
+                   [.13836944003341664,130.64839389828137,-4.458373734787939],
+                   [.005312799408416641,127.84492710140637,-4.075072953537939],
+                   [-.10355128483755745,107.3428349962047,-3.7615549118764235],
+                   [-.192575743535565,72.36463455795393,-3.5051324058949067],
+                   [-.156198790410565,65.04993729232893,-3.5156304527699067]]
+        aim=probe.self_aim_position(positions)
+        self.assertEqual(aim,positions[4])
+        self.assertLess(abs(positions[-1][0]-aim[0]),.3)
+        self.assertLess(abs(positions[-1][2]-aim[2]),.3)
+        self.assertIsNone(probe.self_aim_position(positions[:4]))
+        self.assertIsNone(probe.self_aim_position(positions[5:]))
+
     def test_existing_own_native_team_layout_evidence(self):
         evidence=json.loads(probe.TEAM_LAYOUT_FILE.read_text())
         state=probe.State({})

@@ -27,13 +27,13 @@ from probe_use_actions_runtime import lpvec, use_slot
 from smoke import read_varint, varint
 
 JAR_SHA1 = '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'
-SCHEMA = 'team-projectiles-777-v1'
+SCHEMA = 'team-projectiles-777-v2'
 CASES = [weapon+'-'+mode for weapon in ('bow', 'trident')
          for mode in ('same-denied', 'same-allowed', 'different-denied')] + ['bow-self-denied','bow-self-allowed']
 CRITERIA = {'version':SCHEMA, 'cases':CASES,
             'forbidden':'same-denied: initial/min/final HP20; no own DamageEvent, nonzero velocity, fire or effects',
             'control':'same-allowed/different-denied/self-allowed: initial HP20, minimum HP<20 and own DamageEvent with direct=projectile+1/cause=shooter+1, exactly one matching projectile spawn',
-            'self':'self-denied has no presumed hit prohibition; one authored tp under own arrow at first descending position below y73 (above y68), timeout10s; compare fresh official hit/health-reduced/sideeffects; self-allowed must genuinely hit',
+            'self':'self-denied has no presumed hit prohibition; input-v2 one authored tp under own arrow at first descending position 80<y<120, timeout10s; compare fresh official hit/health-reduced/sideeffects; self-allowed must genuinely hit',
             'comparison':'same boolean hit/fire/effect/velocity outcomes and observed projectile-past-target; no exact damage, RNG or tick comparison',
             'limits':'two stationary survival players; ordinary bow arrows and unenchanted thrown trident; no Flame/tipped/multishot/Piercing/Bedrock'}
 NAMES = ('McsaArcher', 'McsaTarget')
@@ -291,6 +291,14 @@ def team_assert(state,case):
     assert NAMES[1] in (b if mode == 'different-denied' else a)['members'], 'wrong acknowledged membership'
 
 
+def self_aim_position(positions):
+    # Official41989796183: шаги снаряда раз в20тактов. Поздний y72
+    # доставлен за0.2сдоground; tp ack пришёл уже после ground. На y107
+    # остаётся больше1с, а измеренный остаток по обеим осям меньше0.3блока.
+    return next((position for previous,position in zip(positions,positions[1:])
+                 if position[1]<previous[1] and 80<position[1]<120),None)
+
+
 def summarize(report,row):
     case = row['case']
     kinds = report['entity_kinds']
@@ -329,8 +337,7 @@ def summarize(report,row):
         aim=row.get('self_aim')
         assert isinstance(aim,dict) and aim.get('projectile')==projectile, 'missing self aim evidence'
         at=aim['observed_position']
-        descending=[p for previous,p in zip(positions,positions[1:]) if p[1]<previous[1] and 68<p[1]<73]
-        assert descending and at==descending[0], 'self aim not first bounded descent observation'
+        assert at==self_aim_position(positions) and at is not None, 'self aim not first bounded descent observation'
         target=aim['player_position']
         assert target==[at[0],65,at[2]], 'self aim player position differs'
         receipts=[event['position'] for event in shooter.events if event['name']=='teleport_confirm']
@@ -519,10 +526,8 @@ def main():
                             if not spawns: continue
                             trajectory=[spawns[0]['position']]+[position for event in shooter.state.events[shot_events:]
                                         if event.get('entity')==spawns[0]['entity'] for position in event.get('positions',[])]
-                            descending=[position for previous,position in zip(trajectory,trajectory[1:])
-                                        if position[1]<previous[1] and 68<position[1]<73]
-                            if not relocated and descending:
-                                at=descending[0]
+                            at=self_aim_position(trajectory)
+                            if not relocated and at is not None:
                                 command(f'tp {NAMES[0]} {at[0]:.6f} 65 {at[2]:.6f} 0 -90')
                                 row['self_aim']={'projectile':spawns[0]['entity'],'observed_position':list(at),'player_position':[at[0],65,at[2]]}
                                 relocated=True
