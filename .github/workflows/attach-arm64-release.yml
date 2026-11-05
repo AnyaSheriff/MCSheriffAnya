@@ -1,0 +1,42 @@
+name: Attach verified ARM64 assets to v0.2.9
+
+on:
+  push:
+    branches: [wip/release-arm64-assets-20261105]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: migration-checks-1
+          run-id: 41963915495
+          github-token: ${{ github.token }}
+          path: linux-artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-arm64-build-41965122409-1
+          run-id: 41965122409
+          github-token: ${{ github.token }}
+          path: android-artifact
+      - name: Verify and attach existing builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/attach_arm64_release.py --linux linux-artifact --android android-artifact --output publication
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arm64-release-publication-${{ github.run_id }}
+          path: publication/*.json
+          if-no-files-found: warn
+          retention-days: 30
