@@ -2,7 +2,7 @@ name: Android ARM64 build
 
 on:
   push:
-    branches: ["wip/arm64-*"]
+    branches: ["wip/arm64-*", "wip/android-*"]
   workflow_dispatch:
 
 permissions:
@@ -61,6 +61,10 @@ jobs:
       - name: Install Rust target
         run: rustup target add "$ANDROID_TARGET"
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-arm64-api24-default
+
       - name: Build with default WebAssembly plugins
         shell: bash
         run: |
@@ -113,4 +117,142 @@ jobs:
             android-dist/*.tar.gz
             android-dist/SHA256SUMS
             android-evidence/
+          if-no-files-found: error
+
+  host-http-check:
+    name: Linux HTTP helper tests and strict Clippy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: linux-http-helper-no-default
+      - name: Check helper without changing Linux TLS behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p host-http-evidence
+          cargo clippy --release --all-targets --no-default-features -- -D warnings 2>&1 | tee host-http-evidence/clippy.log
+          cargo test --release --no-default-features http::tests 2>&1 | tee host-http-evidence/tests.log
+          cp Cargo.lock host-http-evidence/Cargo.lock
+          {
+            echo "source=$GITHUB_SHA"
+            echo "scope=host Linux helper tests and no-default all-target Clippy"
+            rustc -Vv
+          } > host-http-evidence/receipt.txt
+          (cd host-http-evidence && sha256sum clippy.log tests.log Cargo.lock receipt.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-http-helper-${{ github.run_id }}-${{ github.run_attempt }}
+          path: host-http-evidence/
+          if-no-files-found: error
+
+  standalone-https:
+    name: Android standalone HTTPS (x86_64 emulator)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      ANDROID_TARGET: x86_64-linux-android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure probe toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          test -n "$ndk"
+          tools="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          test -x "$tools/x86_64-linux-android${ANDROID_API}-clang"
+          {
+            echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$tools/x86_64-linux-android${ANDROID_API}-clang"
+            echo "CC_x86_64_linux_android=$tools/x86_64-linux-android${ANDROID_API}-clang"
+            echo "CXX_x86_64_linux_android=$tools/x86_64-linux-android${ANDROID_API}-clang++"
+            echo "AR_x86_64_linux_android=$tools/llvm-ar"
+          } >> "$GITHUB_ENV"
+          mkdir -p android-http-evidence
+          {
+            echo "source=$GITHUB_SHA"
+            echo "target=$ANDROID_TARGET"
+            echo "ndk_api=$ANDROID_API"
+            echo "emulator_api=35"
+            echo "scope=standalone HTTP helper, not ARM64 server runtime"
+            cat "$ndk/source.properties"
+            rustc -Vv
+          } > android-http-evidence/receipt.txt
+          rustup target add "$ANDROID_TARGET"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-x86_64-api24-http-probe
+
+      - name: Build standalone Android HTTPS probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --no-default-features --example android_http_probe --target "$ANDROID_TARGET" 2>&1 | tee android-http-evidence/build.log
+          cp Cargo.lock android-http-evidence/Cargo.lock
+          sha256sum "target/$ANDROID_TARGET/release/examples/android_http_probe" >> android-http-evidence/receipt.txt
+
+      - name: Prepare self-signed TLS endpoint and emulator acceleration
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=android-http-probe -addext subjectAltName=IP:10.0.2.2 -keyout android-http-evidence/test-key.pem -out android-http-evidence/test-cert.pem
+          cat > android-http-evidence/tls-server.py <<'PY'
+          import http.server, ssl
+          context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+          context.load_cert_chain('android-http-evidence/test-cert.pem', 'android-http-evidence/test-key.pem')
+          server = http.server.HTTPServer(('0.0.0.0', 38443), http.server.BaseHTTPRequestHandler)
+          server.socket = context.wrap_socket(server.socket, server_side=True)
+          server.serve_forever()
+          PY
+          nohup python3 android-http-evidence/tls-server.py > android-http-evidence/tls-server.log 2>&1 &
+          echo "$!" > android-http-evidence/tls-server.pid
+          cat > android-http-evidence/run-probe.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          adb shell getprop ro.build.version.sdk | tee android-http-evidence/device-api.txt
+          adb shell getprop ro.product.cpu.abi | tee android-http-evidence/device-abi.txt
+          test "$(tr -d '\r\n' < android-http-evidence/device-api.txt)" = 35
+          test "$(tr -d '\r\n' < android-http-evidence/device-abi.txt)" = x86_64
+          adb push target/x86_64-linux-android/release/examples/android_http_probe /data/local/tmp/mcsa-http-probe
+          adb shell chmod 755 /data/local/tmp/mcsa-http-probe
+          adb shell /data/local/tmp/mcsa-http-probe https://10.0.2.2:38443/ 2>&1 | tee android-http-evidence/probe.log
+          test "$(grep -c '^PASS:' android-http-evidence/probe.log)" = 3
+          (cd android-http-evidence && sha256sum receipt.txt Cargo.lock build.log probe.log device-api.txt device-abi.txt > SHA256SUMS)
+          SH
+
+      # https://github.com/ReactiveCircus/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: bash android-http-evidence/run-probe.sh
+
+      - name: Stop test TLS endpoint
+        if: always()
+        shell: bash
+        run: |
+          if [ -f android-http-evidence/tls-server.pid ]; then
+            kill "$(cat android-http-evidence/tls-server.pid)" || true
+          fi
+          rm -f android-http-evidence/test-key.pem
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-standalone-https-${{ github.run_id }}-${{ github.run_attempt }}
+          path: android-http-evidence/
           if-no-files-found: error

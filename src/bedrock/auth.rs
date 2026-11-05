@@ -371,7 +371,7 @@ async fn fetch_keys() -> Result<KeySet, Failure> {
 
 fn client() -> Option<&'static reqwest::Client> {
     static CLIENT: std::sync::OnceLock<Option<reqwest::Client>> = std::sync::OnceLock::new();
-    CLIENT.get_or_init(|| reqwest::Client::builder().timeout(WAIT).build().ok()).as_ref()
+    CLIENT.get_or_init(|| crate::http::builder().timeout(WAIT).build().ok()).as_ref()
 }
 
 /// Проверяет вход игрока Bedrock. `token` — жетон `Token` (нет — вход без

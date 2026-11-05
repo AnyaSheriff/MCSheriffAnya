@@ -498,7 +498,7 @@ pub(crate) fn client() -> Option<&'static reqwest::Client> {
     static CLIENT: std::sync::OnceLock<Option<reqwest::Client>> = std::sync::OnceLock::new();
 
     CLIENT
-        .get_or_init(|| reqwest::Client::builder()
+        .get_or_init(|| crate::http::builder()
             .timeout(WAIT)
             .redirect(reqwest::redirect::Policy::custom(|attempt| {
                 // Проверка входа принимает только прямой ответ sessionserver:
@@ -762,7 +762,7 @@ fn mineskin_client() -> Option<&'static reqwest::Client> {
     static CLIENT: std::sync::OnceLock<Option<reqwest::Client>> = std::sync::OnceLock::new();
 
     CLIENT
-        .get_or_init(|| reqwest::Client::builder().timeout(Duration::from_secs(20)).build().ok())
+        .get_or_init(|| crate::http::builder().timeout(Duration::from_secs(20)).build().ok())
         .as_ref()
 }
 

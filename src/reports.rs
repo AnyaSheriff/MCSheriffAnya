@@ -246,7 +246,7 @@ fn prune_sent() {
 fn client() -> Option<&'static reqwest::Client> {
     static CLIENT: OnceLock<Option<reqwest::Client>> = OnceLock::new();
 
-    CLIENT.get_or_init(|| reqwest::Client::builder().timeout(Duration::from_secs(10)).build().ok()).as_ref()
+    CLIENT.get_or_init(|| crate::http::builder().timeout(Duration::from_secs(10)).build().ok()).as_ref()
 }
 
 /// Номер установки: 16 случайных шестнадцатеричных знаков, один раз на

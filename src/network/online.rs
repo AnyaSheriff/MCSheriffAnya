@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn session_query_and_failure_translations() {
-        let client = reqwest::Client::new();
+        let client = crate::http::builder().build().expect("HTTPS-клиент");
         for ip in [None, Some("2001:db8::1234".parse().unwrap())] {
             let request = session_request(&client, "Notch", "-abc", ip).unwrap();
             assert_eq!(request.method(), reqwest::Method::GET);

@@ -70,7 +70,7 @@ async fn request(method: String, url: reqwest::Url, body: Vec<u8>) -> Reply {
     if addresses.is_empty() || addresses.len() > 32 || addresses.iter().any(|addr| !public_ip(addr.ip())) {
         return Err("HTTPS: DNS вернул недопустимый адрес".into());
     }
-    let client = reqwest::Client::builder().https_only(true).no_proxy().redirect(reqwest::redirect::Policy::none()).referer(false)
+    let client = crate::http::builder().https_only(true).no_proxy().redirect(reqwest::redirect::Policy::none()).referer(false)
         .timeout(DEADLINE).connect_timeout(Duration::from_secs(3)).resolve_to_addrs(host, &addresses)
         .no_gzip().no_brotli().no_deflate().no_zstd().build().map_err(|_| "HTTPS: клиент не создан")?;
     let mut response = if method == "GET" { client.get(url) } else { client.post(url).body(body) }.send().await.map_err(|_| "HTTPS: запрос не выполнен")?;

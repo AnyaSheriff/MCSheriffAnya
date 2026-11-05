@@ -13,6 +13,7 @@
 // в точке появления и всё, что построили игроки.
 
 mod network;
+mod http;
 mod colors;
 mod bedrock;
 mod config;

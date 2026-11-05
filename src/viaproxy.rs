@@ -58,7 +58,7 @@ async fn prepare(settings: &Settings, port: u16) -> io::Result<()> {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
             crate::log_info!("ViaProxy: загрузка официального релиза 3.4.14 по HTTPS");
-            let client = reqwest::Client::builder()
+            let client = crate::http::builder()
                 .https_only(true)
                 .timeout(Duration::from_secs(180))
                 .build()
