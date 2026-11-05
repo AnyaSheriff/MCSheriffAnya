@@ -2,5 +2,5 @@
   "build_run_id": "42074828928",
   "head": "b4c6512121101f42f73467db8b44d64c7688f705",
   "runtime_sha256": "da4435cc89626f3f3b2ece33bd0354a00581e1773877457ed460434d7d74d0bc",
-  "note": "Native GNU ARM64 full CI independently verified 556/556 checks: 162 selected common regression tests in both Rust configurations, six default-only tests, three integration tests in both configurations, strict Clippy, isolated startup/auth and ELF/package identity. Includes ten new adaptive block-tick checks; parallelism remains opt-in and limited to random block ticks/block events. Fresh paired combat observations are pending for this runtime."
+  "note": "Native GNU ARM64 full CI independently verified 556/556 checks: 162 selected common regression tests in both Rust configurations, six default-only tests, three integration tests in both configurations, strict Clippy, isolated startup/auth and ELF/package identity. Ten new checks cover opt-in adaptive random block ticks/block events. Fresh combat run42077544220 independently replayed fifteen selected default-mode cases:247/0/0/0, gaps/warnings0;29 within-tick ordering notes preserved. Entity ticks/TNT remain sequential; independent dimension TPS and full gameplay parity are not claimed."
 }
