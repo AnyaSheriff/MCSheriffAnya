@@ -197,6 +197,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: android-x86_64-api24-http-probe
+          cache-on-failure: true
 
       - name: Build standalone Android HTTPS probe
         shell: bash
@@ -243,9 +244,36 @@ jobs:
           adb shell sha256sum /data/local/tmp/mcsa-http-probe | tee android-http-evidence/device-probe.sha256
           test "$(awk '{print $1}' android-http-evidence/device-probe.sha256)" = "$(sha256sum android-http-evidence/android_http_probe | awk '{print $1}')"
           addresses="$(cat android-http-evidence/resolved-addresses.txt)"
-          adb shell /data/local/tmp/mcsa-http-probe https://10.0.2.2:38443/ "$addresses" 2>&1 | tee android-http-evidence/probe.log
-          test "$(grep -c '^PASS:' android-http-evidence/probe.log)" = 3
-          (cd android-http-evidence && sha256sum receipt.txt Cargo.lock build.log probe.log device-api.txt device-abi.txt android_http_probe resolved-addresses.txt device-probe.sha256 > SHA256SUMS)
+          {
+            date -u '+boot-wait-start=%Y-%m-%dT%H:%M:%SZ'
+            adb shell ip route || true
+            sleep 15
+            date -u '+boot-wait-end=%Y-%m-%dT%H:%M:%SZ'
+            adb shell ip route || true
+          } > android-http-evidence/readiness.log 2>&1
+          success=0
+          for attempt in 1 2 3 4 5 6; do
+            attempt_log="android-http-evidence/attempt-$attempt.log"
+            set +e
+            adb shell /data/local/tmp/mcsa-http-probe https://10.0.2.2:38443/ "$addresses" 2>&1 | tee "$attempt_log"
+            statuses=("${PIPESTATUS[@]}")
+            set -e
+            printf 'adb_exit=%s\ntee_exit=%s\n' "${statuses[0]}" "${statuses[1]}" > "android-http-evidence/attempt-$attempt.exit"
+            test "${statuses[1]}" = 0
+            if [ "${statuses[0]}" = 0 ]; then
+              test "$(grep -c '^PASS:' "$attempt_log")" = 3
+              cp "$attempt_log" android-http-evidence/probe.log
+              success=1
+              break
+            fi
+            # Повторяется только сбой сети эмулятора, никогда отказ сертификата.
+            if grep -Eq 'certificate|UnknownIssuer|CaUsedAsEndEntity' "$attempt_log" || ! grep -Eq 'NetworkUnreachable|TimedOut|ConnectionReset|ConnectionRefused' "$attempt_log"; then
+              exit 1
+            fi
+            if [ "$attempt" != 6 ]; then sleep 10; fi
+          done
+          test "$success" = 1
+          (cd android-http-evidence && sha256sum receipt.txt Cargo.lock build.log probe.log device-api.txt device-abi.txt android_http_probe resolved-addresses.txt device-probe.sha256 readiness.log attempt-*.log attempt-*.exit > SHA256SUMS)
           SH
 
       # https://github.com/ReactiveCircus/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners
