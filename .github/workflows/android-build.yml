@@ -16,6 +16,7 @@ env:
 
 jobs:
   build:
+    if: ${{ !startsWith(github.ref, 'refs/heads/wip/android-host-') && !startsWith(github.ref, 'refs/heads/wip/android-checks-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -120,7 +121,7 @@ jobs:
           if-no-files-found: error
 
   host-http-check:
-    name: Linux HTTP helper tests and strict Clippy
+    name: Linux strict Clippy, full tests and HTTP helper tests
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -128,22 +129,25 @@ jobs:
         with:
           persist-credentials: false
       - uses: Swatinem/rust-cache@v2
-        with:
-          key: linux-http-helper-no-default
       - name: Check helper without changing Linux TLS behavior
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p host-http-evidence
-          cargo clippy --release --all-targets --no-default-features -- -D warnings 2>&1 | tee host-http-evidence/clippy.log
+          rustup target add wasm32-wasip2
+          (cd plugins-examples && cargo build --release --target wasm32-wasip2) 2>&1 | tee host-http-evidence/wasm.log
+          cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee host-http-evidence/clippy.log
+          cargo test --release --workspace 2>&1 | tee host-http-evidence/full-tests.log
           cargo test --release --no-default-features http::tests 2>&1 | tee host-http-evidence/tests.log
+          cargo build --release 2>&1 | tee host-http-evidence/build.log
           cp Cargo.lock host-http-evidence/Cargo.lock
           {
             echo "source=$GITHUB_SHA"
-            echo "scope=host Linux helper tests and no-default all-target Clippy"
+            echo "scope=host Linux default workspace full tests, no-default helper tests and default workspace all-target strict Clippy"
             rustc -Vv
+            sha256sum target/release/mcsheriffanya
           } > host-http-evidence/receipt.txt
-          (cd host-http-evidence && sha256sum clippy.log tests.log Cargo.lock receipt.txt > SHA256SUMS)
+          (cd host-http-evidence && sha256sum wasm.log clippy.log full-tests.log tests.log build.log Cargo.lock receipt.txt > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -152,6 +156,7 @@ jobs:
           if-no-files-found: error
 
   standalone-https:
+    if: ${{ !startsWith(github.ref, 'refs/heads/wip/android-host-') }}
     name: Android standalone HTTPS (x86_64 emulator)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -198,6 +203,7 @@ jobs:
           set -euo pipefail
           cargo build --release --no-default-features --example android_http_probe --target "$ANDROID_TARGET" 2>&1 | tee android-http-evidence/build.log
           cp Cargo.lock android-http-evidence/Cargo.lock
+          cp "target/$ANDROID_TARGET/release/examples/android_http_probe" android-http-evidence/android_http_probe
           sha256sum "target/$ANDROID_TARGET/release/examples/android_http_probe" >> android-http-evidence/receipt.txt
 
       - name: Prepare self-signed TLS endpoint and emulator acceleration
@@ -207,6 +213,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+          python3 - <<'PY'
+          import pathlib, socket
+          addresses = sorted({f'{entry[4][0]}:443' for entry in socket.getaddrinfo('example.com', 443, socket.AF_INET, socket.SOCK_STREAM)})
+          assert 0 < len(addresses) <= 16
+          pathlib.Path('android-http-evidence/resolved-addresses.txt').write_text(','.join(addresses) + '\n')
+          PY
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=android-http-probe -addext subjectAltName=IP:10.0.2.2 -keyout android-http-evidence/test-key.pem -out android-http-evidence/test-cert.pem
           cat > android-http-evidence/tls-server.py <<'PY'
           import http.server, ssl
@@ -227,9 +239,12 @@ jobs:
           test "$(tr -d '\r\n' < android-http-evidence/device-abi.txt)" = x86_64
           adb push target/x86_64-linux-android/release/examples/android_http_probe /data/local/tmp/mcsa-http-probe
           adb shell chmod 755 /data/local/tmp/mcsa-http-probe
-          adb shell /data/local/tmp/mcsa-http-probe https://10.0.2.2:38443/ 2>&1 | tee android-http-evidence/probe.log
+          adb shell sha256sum /data/local/tmp/mcsa-http-probe | tee android-http-evidence/device-probe.sha256
+          test "$(awk '{print $1}' android-http-evidence/device-probe.sha256)" = "$(sha256sum android-http-evidence/android_http_probe | awk '{print $1}')"
+          addresses="$(cat android-http-evidence/resolved-addresses.txt)"
+          adb shell /data/local/tmp/mcsa-http-probe https://10.0.2.2:38443/ "$addresses" 2>&1 | tee android-http-evidence/probe.log
           test "$(grep -c '^PASS:' android-http-evidence/probe.log)" = 3
-          (cd android-http-evidence && sha256sum receipt.txt Cargo.lock build.log probe.log device-api.txt device-abi.txt > SHA256SUMS)
+          (cd android-http-evidence && sha256sum receipt.txt Cargo.lock build.log probe.log device-api.txt device-abi.txt android_http_probe resolved-addresses.txt device-probe.sha256 > SHA256SUMS)
           SH
 
       # https://github.com/ReactiveCircus/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners
@@ -239,6 +254,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -dns-server 8.8.8.8
           script: bash android-http-evidence/run-probe.sh
 
       - name: Stop test TLS endpoint
