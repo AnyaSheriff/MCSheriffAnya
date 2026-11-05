@@ -59,15 +59,16 @@ jobs:
         id: pin
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id || '41963915495' }}
-          INPUT_BUILD_HEAD: ${{ inputs.build_head || 'bed8f062b3537214645dddaef838ccaa8fb1b625' }}
-          INPUT_RUNTIME_SHA256: ${{ inputs.runtime_sha256 || '39b18ee03b06983cfb0654ec098865cd895c963d6ede6407734b97ce3a6f757b' }}
+          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          INPUT_BUILD_HEAD: ${{ inputs.build_head }}
+          INPUT_RUNTIME_SHA256: ${{ inputs.runtime_sha256 }}
         run: |
           python - <<'PYCODE'
-          import os, pathlib, sys
+          import json, os, pathlib, sys
           sys.path.insert(0, 'tools/blackbox')
           from combat_ci import resolve_pin, preflight
-          pin=resolve_pin({}, os.environ['INPUT_BUILD_RUN_ID'], os.environ['INPUT_BUILD_HEAD'], os.environ['INPUT_RUNTIME_SHA256'])
+          saved=json.loads(pathlib.Path('tools/blackbox/ci/runtime-pin.json').read_text())
+          pin=resolve_pin(saved, os.environ['INPUT_BUILD_RUN_ID'], os.environ['INPUT_BUILD_HEAD'], os.environ['INPUT_RUNTIME_SHA256'])
           selected=preflight(pin, pathlib.Path(os.environ['RUNNER_TEMP'])/'gameplay-output')
           with open(os.environ['GITHUB_OUTPUT'],'a') as stream:
               stream.write(f'build_run_id={pin["build_run_id"]}\nartifact_name={selected["artifact_name"]}\n')
@@ -115,7 +116,7 @@ jobs:
           source={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(pathlib.Path('tools/protocol-bridge').glob('*.py'))}
           source['tools/protocol-bridge/candidate-sources-26.3.json']=hashlib.sha256(pathlib.Path('tools/protocol-bridge/candidate-sources-26.3.json').read_bytes()).hexdigest()
           source['.github/workflows/team-projectile-checks.yml']=hashlib.sha256(pathlib.Path('.github/workflows/team-projectile-checks.yml').read_bytes()).hexdigest()
-          for name in ['tools/blackbox/combat_ci.py','tools/blackbox/combat_process.py','tools/blackbox/ci/sources-777.json','tools/protocol-bridge/testdata/actual777-use-action-observations.json','tools/protocol-bridge/testdata/team-layout-777.json']:
+          for name in ['tools/blackbox/combat_ci.py','tools/blackbox/combat_process.py','tools/blackbox/ci/sources-777.json','tools/blackbox/ci/runtime-pin.json','tools/protocol-bridge/testdata/actual777-use-action-observations.json','tools/protocol-bridge/testdata/team-layout-777.json']:
               source[name]=hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
           receipt={'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'run_id':os.environ['GITHUB_RUN_ID'],'status':os.environ['JOB_STATUS'],'files':files,'sources':source}
           (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')

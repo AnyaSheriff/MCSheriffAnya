@@ -31,7 +31,7 @@ env:
 
 jobs:
   combat:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04-arm
     timeout-minutes: 35
     defaults:
       run:

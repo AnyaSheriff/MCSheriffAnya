@@ -1,6 +1,6 @@
 {
-  "build_run_id": "41206441067",
-  "head": "47987dad9edec135efc079b31582e6de1bfd988e",
-  "runtime_sha256": "05c31c6161e59fcbb79d79cfbe9697a443def6df43bfebbbc0e4e9e35a83e91a",
-  "note": "Verified full CI: 12 receipt hashes, 57 tracked regression tests in both Rust configurations, and 11 isolated TCP modes per configuration. Fresh native combat uses this exact runtime; gameplay parity is not inferred from unit tests."
+  "build_run_id": "41993792252",
+  "head": "de86f1cf02961127a906ec282b002518375afd99",
+  "runtime_sha256": "9e985f5fd03e117f32923d3f0b33b4578a50d447e9c8d792979981725ca3e47b",
+  "note": "Native GNU ARM64 full CI independently verified 536/536 checks: 152 common regression tests in both Rust configurations, six default-only tests, three integration tests in both configurations, strict Clippy, isolated startup/auth and ELF/package identity. Eight new Arrow::step tests cover team friendly fire; gameplay parity still requires fresh paired recordings."
 }
