@@ -77,6 +77,11 @@ pub struct Settings {
     /// TPS и время такта внизу списка игроков Java.
     pub tab_tps: bool,
 
+    /// Параллельная блочная часть измерений; сущности и команды идут по очереди.
+    pub parallel_dimension_ticks: bool,
+    /// Предел исполнителей блочной части, включая поток такта; 0 — автоматически.
+    pub dimension_tick_threads: usize,
+
     /// На сколько чанков дальше прорисовки мир складывается заранее, пока
     /// игрок ходит: к тому мгновению, как чанк войдёт в обзор, он уже готов.
     /// Эти чанки держатся в памяти. 0 — не складывать впрок.
@@ -134,6 +139,10 @@ impl Settings {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
                 "config/mcsa.properties: поддерживается только java-version=26.3. Для старого мира сохраните резервную копию, выполните mcsheriffanya --upgrade-world-26.3 world, затем укажите java-version=26.3"));
         }
+        if self.dimension_tick_threads > 3 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: dimension-tick-threads должен быть от 0 до 3"));
+        }
         if self.offline_license_mode == OfflineLicenseMode::Invalid {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
                 "config/mcsa.properties: offline-license-mode должен быть cosmetics или disabled"));
@@ -181,6 +190,8 @@ impl Default for Settings {
             debug: false,
             console_colors: crate::colors::ConsoleColors::Auto,
             tab_tps: true,
+            parallel_dimension_ticks: false,
+            dimension_tick_threads: 0,
             prefetch_chunks: 3,
             prefetch_at_once: 4,
             bedrock_port: 19132,
@@ -280,6 +291,8 @@ impl Settings {
             debug: take(&values, "debug", default.debug, path),
             console_colors: take(&values, "console-colors", default.console_colors, path),
             tab_tps: take(&values, "tab-tps", default.tab_tps, path),
+            parallel_dimension_ticks: take(&values, "parallel-dimension-ticks", default.parallel_dimension_ticks, path),
+            dimension_tick_threads: take(&values, "dimension-tick-threads", default.dimension_tick_threads, path),
             prefetch_chunks: take(&values, "prefetch-chunks", default.prefetch_chunks, path),
             prefetch_at_once: take(&values, "prefetch-at-once", default.prefetch_at_once, path),
             bedrock_port: take(&values, "bedrock-port", default.bedrock_port, path),
@@ -311,7 +324,7 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    pub(super) fn sections(&self) -> [(&'static str, String); 31] {
+    pub(super) fn sections(&self) -> [(&'static str, String); 33] {
         [
             ("monster-spawn-multiplier", format!("# Предел естественных монстров: множитель 0..16; 1 — обычный предел. Не влияет на спавнеры и команды.\nmonster-spawn-multiplier={}\n",self.monster_spawn_multiplier)),
             ("ore-retention-percent", format!("# Сколько процентов руды оставить в НОВЫХ чанках (0..100); 100 — обычная генерация.\nore-retention-percent={}\n",self.ore_retention_percent)),
@@ -329,6 +342,8 @@ impl Settings {
             ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
             ("offline-license-mode", format!("# Только для online-mode=false: cosmetics — проверять лицензию для скинов/плащей;\n# после неудачи можно войти повторно без лицензии. disabled — не проверять\n# лицензию и не искать профили/скины через Mojang. Парольная защита AuthMe независима.\n# Имеет приоритет над auth-premium; действует и при auth-enabled=false.\noffline-license-mode={}\n", self.offline_license_mode)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
+            ("parallel-dimension-ticks", format!("# Экспериментально: постепенно подключать потоки для блочной части измерений.\n# Сущности и команды идут по очереди; общий такт ждёт все измерения.\n# При загруженных командных блоках или активных плагинах — последовательный режим.\n# Изменение требует перезапуска сервера.\nparallel-dimension-ticks={}\n", self.parallel_dimension_ticks)),
+            ("dimension-tick-threads", format!("# Предел исполнителей блочной части вместе с потоком такта: 1..3.\n# 0 — автоматически, не больше доступных логических CPU и трёх измерений.\ndimension-tick-threads={}\n", self.dimension_tick_threads)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
 # с клиентом. Нужен только для поиска неполадок; в обычной игре — false.
@@ -507,6 +522,22 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn dimension_threads_are_opt_in_bounded_and_round_trip() {
+        let path = std::path::Path::new("mcsa.properties");
+        let defaults = super::Settings::parse("", path);
+        assert!(!defaults.parallel_dimension_ticks);
+        assert_eq!(defaults.dimension_tick_threads, 0);
+        for threads in 0..=3 {
+            let settings = super::Settings::parse(&format!("parallel-dimension-ticks=true\ndimension-tick-threads={threads}\n"), path);
+            assert!(settings.parallel_dimension_ticks);
+            assert!(settings.validate().is_ok());
+            assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        }
+        let invalid = super::Settings::parse("dimension-tick-threads=4\n", path);
+        assert!(invalid.validate().unwrap_err().to_string().contains("dimension-tick-threads"));
+    }
+
     #[test]
     fn viaproxy_heap_minimum_is_checked_before_startup() {
         let path = std::path::Path::new("mcsa.properties");

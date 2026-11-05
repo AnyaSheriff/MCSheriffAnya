@@ -10,6 +10,7 @@
 // пока её никто не трогает, проверять нечего.
 
 mod idle;
+mod parallel;
 mod tnt_diagnostics;
 
 use std::sync::Arc;
@@ -67,17 +68,18 @@ pub const PER_TICK: usize = 65_536;
 /// Запускает такт мира. Управление возвращается сразу, работа идёт до
 /// остановки сервера.
 ///
-/// Такт живёт в своём потоке и на своём ядре, отдельно от всего остального.
+/// По умолчанию такт живёт в своём потоке и на выделенном логическом CPU.
 /// Причина простая: такт обязан просыпаться каждые пятьдесят миллисекунд, и
 /// если его вытеснит разбор пакетов или складывание чанков, мир дёрнется.
 /// Остальная работа — сеть, генерация, скины — раскладывается по оставшимся
-/// ядрам и такту не мешает.
+/// ядрам и такту не мешает. При parallel-dimension-ticks ОС распределяет
+/// потоки сама: помощники не должны наследовать привязку к одному CPU.
 pub fn start(shared: Arc<Shared>) {
     let started = std::thread::Builder::new()
         .name("world tick".to_string())
         .spawn(move || {
             // Ядро для такта — последнее: первые обычно занимают прерывания.
-            if let Some(core) = tick_core() {
+            if !shared.settings.parallel_dimension_ticks && let Some(core) = tick_core() {
                 pin_to_core(core);
             }
 
@@ -96,7 +98,7 @@ pub fn start(shared: Arc<Shared>) {
     }
 }
 
-/// Сколько ядер у машины.
+/// Сколько логических CPU доступно процессу (с учётом ограничений ОС).
 pub fn cores() -> usize {
     std::thread::available_parallelism().map(|count| count.get()).unwrap_or(1)
 }
@@ -165,6 +167,11 @@ fn pin_to_core(core: usize) {
 }
 
 async fn run(shared: Arc<Shared>) {
+    let policy = parallel::Policy::new(cores(), shared.settings.dimension_tick_threads);
+    run_with_block_policy(shared, policy).await;
+}
+
+async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::Policy) {
     // Сетка тактов — по 50 мс от запуска. Задержался такт (запись мира,
     // складывание чанков) — пропущенные такты делаются подряд, пока мир не
     // догонит часы: так у оригинала (снято чёрным ящиком — с пропуском мир
@@ -181,11 +188,20 @@ async fn run(shared: Arc<Shared>) {
     // Ночь пропускается в начале этого такта (`morning`): спящих будят
     // концом прошлого.
     let mut morning_due = false;
+    let parallel_enabled = shared.settings.parallel_dimension_ticks;
+    let mut block_pool: parallel::Pool<(Dimension, PhaseStats, Duration)> = parallel::Pool::new();
+    let mut block_costs = [Duration::ZERO; 3];
+    let mut last_fallback = None;
+    let mut spawn_warning = false;
+    if parallel_enabled {
+        crate::log_info!("Параллельная блочная часть измерений включена: начинаем с 1 исполнителя; сущности и команды идут по очереди");
+    }
 
     loop {
         // Пауза пустого сервера сильнее freeze/step/sprint: их счётчики ждут
         // входа игрока; функции и плагины тоже не тикают в пустом мире.
         if let Some(paused) = idle::wait_tick(&shared, &mut presence, next).await {
+            block_policy.reset();
             next = tokio::time::Instant::now();
             shared.world_cmd.ticking.lock().expect("такт").resumed_after_idle(paused);
         }
@@ -242,12 +258,34 @@ async fn run(shared: Arc<Shared>) {
         shared.players.lock().expect("список игроков захвачен другим потоком").settle();
 
         // Работа такта — в своём блоке: замок мира отпускается до сигнала
-        // подключениям. Миры измерений идут по очереди, каждый со своими
-        // предметами; два мира разом не держатся.
+        // подключениям. Общие действия и сущности идут по очереди, каждый
+        // мир со своими предметами; один поток не держит два мира сразу.
         // Заморозка (`tick freeze`): мир не идёт — ни блоки, ни сущности,
         // ни время; игроки — идут (вики, Commands/tick).
         if plan.run_world {
             crate::commands_world::step_borders(&shared);
+        }
+
+        // Общие действия, сущности и публикация остаются на координаторе.
+        // Проверка метаданных не держит два мира сразу. Даже если командный
+        // блок появится после неё, вся подготовка закончится до рабочих заданий.
+        let fallback = if crate::plugins::active() { "активны плагины" } else { "есть командные блоки" };
+        let block_allowed = parallel_enabled && plan.run_world && !crate::plugins::active()
+            && !Dimension::ALL.into_iter().any(|d| shared.world_in(d).lock().expect("мир").has_command_blocks());
+        if parallel_enabled && plan.run_world && last_fallback != Some(!block_allowed) {
+            if !block_allowed { crate::log_info!("Блочная часть измерений идёт последовательно: {}", fallback); }
+            else if last_fallback.is_some() { crate::log_info!("Параллельная блочная часть снова доступна; начинаем с 1 исполнителя"); }
+            last_fallback = Some(!block_allowed);
+        }
+        if !block_allowed { block_policy.reset(); }
+        let parallel_blocks_done = block_allowed && block_policy.width > 1;
+        if parallel_blocks_done {
+            parallel_dimension_blocks(&shared, &mut block_pool, block_policy.width,
+                &mut morning_due, &mut phases, &mut block_costs);
+            if block_pool.spawn_failed() && !spawn_warning {
+                log_warn!("Не удалось создать помощника блочной части; задания выполнят доступные потоки");
+                spawn_warning = true;
+            }
         }
 
         // Не более одного снимка на измерение; вывод только после освобождения замков.
@@ -256,89 +294,16 @@ async fn run(shared: Arc<Shared>) {
             let diagnostic_due = tnt_diagnostics.as_ref().is_some_and(|diagnostics| diagnostics.due(ticks, dimension));
             let world_wait = diagnostic_due.then(std::time::Instant::now);
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-            world.plugin_events_enabled=crate::plugins::active();
-
             let world_wait_us = world_wait.map_or(0, |clock| clock.elapsed().as_micros().min(u64::MAX as u128) as u64);
-
-            // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
-            // с них.
+            if !parallel_blocks_done {
+                let (prepared, player_chunks) = prepare_dimension_blocks(&shared, dimension, world, &mut morning_due, &mut phases);
+                world = prepared;
+                let block_clock = std::time::Instant::now();
+                random_dimension_blocks(&mut world, &player_chunks, shared.properties.simulation_distance,
+                    crate::farming::random_tick_speed(), &mut phases);
+                block_costs[dimension.index()] = block_clock.elapsed();
+            }
             let mut clock = std::time::Instant::now();
-            let (present, mut player_chunks) = occupants(&shared, dimension);
-
-            // Удержанные чанки (`forceload`) тикают, как чанки у игрока.
-            player_chunks.extend(crate::commands_world::forced_chunks(&shared, dimension));
-            redstone::note_occupants(&mut world, present);
-            sculk_prepare(&shared, dimension, &mut world);
-
-            // Где вагонетки — для детекторных рельс: их такт проверяет, не
-            // уехала ли вагонетка (её могла увести команда в начале такта).
-            redstone::note_carts(&mut world, cart_marks(&shared, dimension));
-            redstone::note_frames(&mut world, frame_marks(&shared, dimension));
-
-            // Погода — в начале такта мира, до запланированных тактов
-            // (чёрный ящик, weather-rain: сила дождя меняется уже в такте
-            // команды).
-            if dimension == Dimension::Overworld && std::mem::take(&mut morning_due) {
-                morning(&shared, &mut world);
-                morning_gifts(&shared, &world);
-            }
-
-            world.fire_difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
-            world.tick_weather(shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed));
-
-            let due = world.advance(PER_TICK);
-
-            for ((x, y, z), kind) in due {
-                match kind {
-                    TickKind::Block => redstone::ticked(&mut world, (x, y, z)),
-                    TickKind::Fluid => flow(&mut world, x, y, z),
-                }
-
-                // Каждый запланированный такт разбирается до конца, прежде чем
-                // начнётся следующий: так в игре, и от этого зависит порядок
-                // срабатывания деталей внутри одного такта.
-                redstone::settle(&mut world);
-
-                // Командный блок дождался такта: его команду (и цепочку за
-                // ним) выполняет общий разбор команд, а он берёт замок мира
-                // сам — мир на это время отпускается (command_block.rs).
-                let runs = world.take_command_runs();
-
-                if !runs.is_empty() {
-                    drop(world);
-                    crate::command_block::run_queued(&shared, dimension, runs);
-                    world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
-                }
-            }
-
-            // Песок и гравий, чей такт падения пришёл, — в полёт сразу, в
-            // фазе запланированных тактов, как у оригинала: место пустеет в
-            // той же рассылке (сценарий sand-into-water).
-            start_falling(&shared, dimension, &mut world);
-            phases.add(0, &mut clock);
-
-            // Случайные такты — после запланированных, до рассылки (вики,
-            // Tick: фаза чанков). Из них у нас пока только горящая руда.
-            natural_lightning(&shared, dimension, &mut world, &player_chunks);
-            redstone::random_ticks(&mut world, &player_chunks, shared.properties.simulation_distance);
-            crate::farming::random_ticks(&mut world, &player_chunks, shared.properties.simulation_distance, crate::farming::random_tick_speed());
-            redstone::settle(&mut world);
-            phases.add(1, &mut clock);
-
-            // Изменения блоков уходят клиентам пачкой — здесь, до блочных
-            // событий, как у оригинала.
-            world.note_broadcast();
-
-            // Поршни трогаются отдельной фазой, после всех запланированных
-            // тактов: так в игре. Заведённое во время этой фазы ждёт следующего
-            // такта — иначе цепочка поршней срабатывала бы вся разом.
-            // События, заведённые по ходу этой фазы, исполняются в ней же.
-            while let Some((place, kind, param)) = world.take_block_event() {
-                redstone::block_event(&mut world, place, kind, param);
-                redstone::settle(&mut world);
-            }
-
-            phases.add(2, &mut clock);
 
             // Выброшенное выбрасывателями и раздатчиками — в мир; туда же
             // подожжённый динамит: в фазе сущностей этого же такта его запал
@@ -578,6 +543,12 @@ async fn run(shared: Arc<Shared>) {
             phases.add(5, &mut clock);
         }
 
+        let previous_width = block_policy.width;
+        block_policy.observe(block_costs, plan.period, block_allowed && !block_pool.spawn_failed());
+        if parallel_enabled && previous_width != block_policy.width {
+            crate::log_info!("Блочная часть измерений: исполнителей {} (вместе с потоком такта)", block_policy.width);
+        }
+
         if let Some(reports) = tnt_reports {
             for report in reports { report.log(); }
         }
@@ -642,6 +613,138 @@ pub(crate) fn publish_finished_tick(shared: &Shared, tick: u64) {
     }
     shared.players.lock().expect("игроки").publish_tick();
     shared.ticks.send_replace(tick);
+}
+
+fn parallel_dimension_blocks(shared: &Arc<Shared>, block_pool: &mut parallel::Pool<(Dimension, PhaseStats, Duration)>,
+    width: usize, morning_due: &mut bool, phases: &mut PhaseStats, block_costs: &mut [Duration; 3],
+) {
+    let mut jobs = Vec::new();
+    let mut dimensions = Dimension::ALL;
+    dimensions.sort_by_key(|d| std::cmp::Reverse(block_costs[d.index()]));
+    // Сначала вся подготовка по прежнему порядку измерений, включая
+    // команды; только потом запускаем независимые вычисления.
+    let mut chunks = Vec::new();
+    for dimension in Dimension::ALL {
+        let world = shared.world_in(dimension).lock().expect("мир");
+        let (world, player_chunks) = prepare_dimension_blocks(shared, dimension, world, morning_due, phases);
+        drop(world);
+        chunks.push(Some(player_chunks));
+    }
+    let random_tick_speed = crate::farming::random_tick_speed();
+    for dimension in dimensions {
+        let shared = shared.clone();
+        let player_chunks = chunks[dimension.index()].take().expect("одно задание измерения");
+        jobs.push(Box::new(move || {
+            let mut world = shared.world_in(dimension).lock().expect("мир");
+            let mut measured = PhaseStats::default();
+            let clock = std::time::Instant::now();
+            random_dimension_blocks(&mut world, &player_chunks, shared.properties.simulation_distance,
+                random_tick_speed, &mut measured);
+            (dimension, measured, clock.elapsed())
+        }) as parallel::Job<_>);
+    }
+    for (dimension, measured, elapsed) in block_pool.run(width, jobs) {
+        block_costs[dimension.index()] = elapsed;
+        for (spent, extra) in phases.spent.iter_mut().zip(measured.spent) { *spent += extra; }
+    }
+}
+
+/// Последовательная подготовка: здесь ещё могут исполняться межмировые команды.
+fn prepare_dimension_blocks<'a>(shared: &'a Shared, dimension: Dimension,
+    mut world: std::sync::MutexGuard<'a, World>, morning_due: &mut bool, phases: &mut PhaseStats,
+) -> (std::sync::MutexGuard<'a, World>, Vec<(i32, i32)>) {
+    world.plugin_events_enabled=crate::plugins::active();
+
+
+    // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
+    // с них.
+    let mut clock = std::time::Instant::now();
+    let (present, mut player_chunks) = occupants(shared, dimension);
+
+    // Удержанные чанки (`forceload`) тикают, как чанки у игрока.
+    player_chunks.extend(crate::commands_world::forced_chunks(shared, dimension));
+    redstone::note_occupants(&mut world, present);
+    sculk_prepare(shared, dimension, &mut world);
+
+    // Где вагонетки — для детекторных рельс: их такт проверяет, не
+    // уехала ли вагонетка (её могла увести команда в начале такта).
+    redstone::note_carts(&mut world, cart_marks(shared, dimension));
+    redstone::note_frames(&mut world, frame_marks(shared, dimension));
+
+    // Погода — в начале такта мира, до запланированных тактов
+    // (чёрный ящик, weather-rain: сила дождя меняется уже в такте
+    // команды).
+    if dimension == Dimension::Overworld && std::mem::take(morning_due) {
+        morning(shared, &mut world);
+        morning_gifts(shared, &world);
+    }
+
+    world.fire_difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+    world.tick_weather(shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed));
+
+    let due = world.advance(PER_TICK);
+
+    for ((x, y, z), kind) in due {
+        match kind {
+            TickKind::Block => redstone::ticked(&mut world, (x, y, z)),
+            TickKind::Fluid => flow(&mut world, x, y, z),
+        }
+
+        // Каждый запланированный такт разбирается до конца, прежде чем
+        // начнётся следующий: так в игре, и от этого зависит порядок
+        // срабатывания деталей внутри одного такта.
+        redstone::settle(&mut world);
+
+        // Командный блок дождался такта: его команду (и цепочку за
+        // ним) выполняет общий разбор команд, а он берёт замок мира
+        // сам — мир на это время отпускается (command_block.rs).
+        let runs = world.take_command_runs();
+
+        if !runs.is_empty() {
+            drop(world);
+            crate::command_block::run_queued(shared, dimension, runs);
+            world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+        }
+    }
+
+    // Песок и гравий, чей такт падения пришёл, — в полёт сразу, в
+    // фазе запланированных тактов, как у оригинала: место пустеет в
+    // той же рассылке (сценарий sand-into-water).
+    start_falling(shared, dimension, &mut world);
+    phases.add(0, &mut clock);
+
+    natural_lightning(shared, dimension, &mut world, &player_chunks);
+    phases.add(1, &mut clock);
+    (world, player_chunks)
+}
+
+/// Только собственный мир: никаких Shared, команд или вызовов плагинов.
+fn random_dimension_blocks(world: &mut World, player_chunks: &[(i32, i32)],
+    simulation_distance: i32, random_tick_speed: u32, phases: &mut PhaseStats,
+) {
+    let mut clock = std::time::Instant::now();
+    // Случайные такты — после запланированных, до рассылки (вики,
+    // Tick: фаза чанков). Из них у нас пока только горящая руда.
+    redstone::random_ticks(world, player_chunks, simulation_distance);
+    crate::farming::random_ticks(world, player_chunks, simulation_distance, random_tick_speed);
+    redstone::settle(world);
+    phases.add(1, &mut clock);
+
+    // Изменения блоков уходят клиентам пачкой — здесь, до блочных
+    // событий, как у оригинала.
+    world.note_broadcast();
+
+    // Поршни трогаются отдельной фазой, после всех запланированных
+    // тактов: так в игре. Заведённое во время этой фазы ждёт следующего
+    // такта — иначе цепочка поршней срабатывала бы вся разом.
+    // События, заведённые по ходу этой фазы, исполняются в ней же.
+    while let Some((place, kind, param)) = world.take_block_event() {
+        redstone::block_event(world, place, kind, param);
+        redstone::settle(world);
+    }
+
+    phases.add(2, &mut clock);
+
 }
 
 /// Раз во сколько тактов писать в лог (при `debug`), сколько времени ушло на
@@ -4206,3 +4309,7 @@ mod tests {
 #[cfg(test)]
 #[path = "tick/sculk_step_tests.rs"]
 mod sculk_step_tests;
+
+#[cfg(test)]
+#[path = "tick/parallel_world_tests.rs"]
+mod parallel_world_tests;

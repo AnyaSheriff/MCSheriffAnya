@@ -183,11 +183,12 @@ fn main() -> io::Result<()> {
     if !world_guard.has_exclusive_lock() {
         log_warn!("На этой платформе доступна только читающая проверка профиля мира; общий межпроцессный замок пока не реализован");
     }
-    // Такту отводится отдельное ядро, всё остальное делит оставшиеся: сеть,
+    // В последовательном режиме такту отводится отдельное ядро, остальное — сети,
     // складывание чанков, скины. Если ядро всего одно, делить нечего —
     // работаем как придётся.
     let cores = tick::cores();
     let others = cores.saturating_sub(1).max(1);
+    let reserve_tick_core = !settings.parallel_dimension_ticks;
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(others)
@@ -200,7 +201,7 @@ fn main() -> io::Result<()> {
         .enable_all()
         .on_thread_start(move || {
             // Рабочие потоки не залезают на ядро такта.
-            tick::keep_off_tick_core();
+            if reserve_tick_core { tick::keep_off_tick_core(); }
         })
         .build()?;
 
@@ -213,12 +214,13 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
     log_info!("Запуск сервера MCSheriffAnya");
 
-    match tick::tick_core() {
+    match tick::tick_core().filter(|_| !settings.parallel_dimension_ticks) {
         Some(core) => log_info!(
             "Ядер: {}. Такту отведено ядро {}, остальные — сети и складыванию мира",
             tick::cores(),
             core
         ),
+        None if settings.parallel_dimension_ticks => log_info!("Доступно логических CPU: {}. Распределением потоков управляет ОС", tick::cores()),
         None => log_info!("Ядро всего одно: такт и всё прочее делят его"),
     }
 

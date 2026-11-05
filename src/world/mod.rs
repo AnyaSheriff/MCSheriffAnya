@@ -2568,6 +2568,12 @@ impl World {
         self.command_runs.push((x, y, z));
     }
 
+    /// Проверка метаданных загруженных чанков, без чтения файлов мира.
+    /// Команды могут менять другое измерение: рядом с ними сохраняем старый порядок фаз.
+    pub fn has_command_blocks(&self) -> bool {
+        !self.command_runs.is_empty() || self.chunks.values().any(|chunk| !chunk.command_blocks.is_empty())
+    }
+
     /// Забирает командные блоки, ждущие выполнения.
     pub fn take_command_runs(&mut self) -> Vec<(i32, i32, i32)> {
         std::mem::take(&mut self.command_runs)
