@@ -27,13 +27,14 @@ from probe_use_actions_runtime import lpvec, use_slot
 from smoke import read_varint, varint
 
 JAR_SHA1 = '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'
-SCHEMA = 'team-projectiles-777-v2'
+SCHEMA = 'team-projectiles-777-v3'
 CASES = [weapon+'-'+mode for weapon in ('bow', 'trident')
          for mode in ('same-denied', 'same-allowed', 'different-denied')] + ['bow-self-denied','bow-self-allowed']
 CRITERIA = {'version':SCHEMA, 'cases':CASES,
             'forbidden':'same-denied: initial/min/final HP20; no own DamageEvent, nonzero velocity, fire or effects',
             'control':'same-allowed/different-denied/self-allowed: initial HP20, minimum HP<20 and own DamageEvent with direct=projectile+1/cause=shooter+1, exactly one matching projectile spawn',
-            'self':'self-denied has no presumed hit prohibition; input-v2 one authored tp under own arrow at first descending position 80<y<120, timeout10s; compare fresh official hit/health-reduced/sideeffects; self-allowed must genuinely hit',
+            'self':'self-denied has no presumed hit prohibition; input-v3 one authored tp within1s of observed spawn to forecast XZ/y65: position+=velocity, drag0.99/gravity0.05, descending crossing y66 within200ticks; observe10s; compare fresh official hit/health-reduced/sideeffects; self-allowed must genuinely hit',
+            'backstop':'input-v3 wall z2; shooter z-5.5 and target z0.5 unchanged; require observed projectile-past-target as before',
             'comparison':'same boolean hit/fire/effect/velocity outcomes and observed projectile-past-target; no exact damage, RNG or tick comparison',
             'limits':'two stationary survival players; ordinary bow arrows and unenchanted thrown trident; no Flame/tipped/multishot/Piercing/Bedrock'}
 NAMES = ('McsaArcher', 'McsaTarget')
@@ -291,12 +292,30 @@ def team_assert(state,case):
     assert NAMES[1] in (b if mode == 'different-denied' else a)['members'], 'wrong acknowledged membership'
 
 
-def self_aim_position(positions):
-    # Official41989796183: шаги снаряда раз в20тактов. Поздний y72
-    # доставлен за0.2сдоground; tp ack пришёл уже после ground. На y107
-    # остаётся больше1с, а измеренный остаток по обеим осям меньше0.3блока.
-    return next((position for previous,position in zip(positions,positions[1:])
-                 if position[1]<previous[1] and 80<position[1]<120),None)
+def predict_self_aim(position,velocity,*,max_ticks=200):
+    """Только авторский ввод TP, не доказательство попадания/физики сервера.
+
+    Wiki Arrow и собственный arrow.rs: drag0.99/gravity0.05. Начальные
+    величины берём из реального spawn, включая квантование lpVec3.
+    Paired41996104828: TP под текущий y107 дал оставшийся driftX0.318,
+    поэтому заранее целимся в расчётное пересечение тела на y66.
+    """
+    assert len(position)==len(velocity)==3
+    position,velocity=finite(position),finite(velocity)
+    assert type(max_ticks) is int and 1<=max_ticks<=200, 'invalid prediction budget'
+    assert 65<position[1]<68 and 2<velocity[1]<4, 'invalid self launch height/upward speed'
+    assert 2<math.sqrt(sum(v*v for v in velocity))<4, 'invalid self launch speed'
+    assert abs(velocity[0])<.25 and abs(velocity[2])<.25, 'invalid self launch horizontal speed'
+    for tick in range(1,max_ticks+1):
+        after=[p+v for p,v in zip(position,velocity)]
+        if velocity[1]<0 and position[1]>=66 and after[1]<=66:
+            fraction=(position[1]-66)/(position[1]-after[1])
+            crossing=[p+(q-p)*fraction for p,q in zip(position,after)]
+            assert -7<crossing[0]<7 and -15<crossing[2]<1.5, 'self aim outside authored clear floor'
+            return {'tick':tick,'crossing':crossing}
+        position=after
+        velocity=[velocity[0]*.99,velocity[1]*.99-.05,velocity[2]*.99]
+    raise AssertionError('self prediction exceeded200ticks')
 
 
 def world_setup_commands():
@@ -306,7 +325,7 @@ def world_setup_commands():
         'gamerule minecraft:spawn_mobs false','gamerule minecraft:natural_health_regeneration false',
         'difficulty normal','weather clear','time set noon',
         'fill -8 64 -16 8 64 32 stone','fill -8 65 -16 8 72 32 air',
-        'fill -8 65 24 8 69 24 stone','team add mcsa_a','team add mcsa_b']
+        'fill -8 65 2 8 69 2 stone','team add mcsa_a','team add mcsa_b']
 
 
 def case_setup_commands(case):
@@ -364,12 +383,22 @@ def summarize(report,row):
     if '-self-' in case:
         aim=row.get('self_aim')
         assert isinstance(aim,dict) and aim.get('projectile')==projectile, 'missing self aim evidence'
-        at=aim['observed_position']
-        assert at==self_aim_position(positions) and at is not None, 'self aim not first bounded descent observation'
+        forecast=predict_self_aim(spawns[0]['position'],spawns[0]['velocity'])
+        assert aim.get('forecast')==forecast, 'self aim forecast not derived from raw spawn'
+        at=forecast['crossing']
         target=aim['player_position']
         assert target==[at[0],65,at[2]], 'self aim player position differs'
         receipts=[event['position'] for event in shooter.events if event['name']=='teleport_confirm']
         assert len(receipts)==1 and all(abs(a-b)<1e-5 for a,b in zip(receipts[0],target+[0,-90])), 'missing exact self teleport acknowledgement'
+        start,stop=row['ranges']['shooter']
+        packets=report['sessions']['shooter']['packets'][start:stop]
+        spawn_packet=next(packet for packet in packets if packet['direction']=='in' and packet['name']=='spawn_entity'
+                          and uint(io.BytesIO(bytes.fromhex(packet['payload'])))==projectile)
+        teleport_packet=next(packet for packet in packets if packet['direction']=='out' and packet['name']=='teleport_confirm')
+        assert 0<=teleport_packet['time']-spawn_packet['time']<=1, 'self teleport was not early'
+        own_damage=[packet for packet in packets if packet['direction']=='in' and packet['name']=='damage_event'
+                    and uint(io.BytesIO(bytes.fromhex(packet['payload'])))==before[0].entity]
+        assert all(teleport_packet['time']<packet['time'] for packet in own_damage), 'self teleport must precede actual damage'
     health = [20] + [event['health'] for event in victim.events if event['name']=='update_health']
     damage_events = [event for event in victim.events if event['name']=='damage_event']
     assert all(event['direct']==projectile+1 and event['cause']==before[0].entity+1
@@ -541,14 +570,13 @@ def main():
                                     if event['name']=='spawn_entity' and event['kind']==kinds['arrow']]
                             assert len(spawns)<=1, 'duplicate self-shot spawn'
                             if not spawns: continue
-                            trajectory=[spawns[0]['position']]+[position for event in shooter.state.events[shot_events:]
-                                        if event.get('entity')==spawns[0]['entity'] for position in event.get('positions',[])]
-                            at=self_aim_position(trajectory)
-                            if not relocated and at is not None:
+                            if not relocated:
+                                forecast=predict_self_aim(spawns[0]['position'],spawns[0]['velocity'])
+                                at=forecast['crossing']
                                 command(f'tp {NAMES[0]} {at[0]:.6f} 65 {at[2]:.6f} 0 -90')
-                                row['self_aim']={'projectile':spawns[0]['entity'],'observed_position':list(at),'player_position':[at[0],65,at[2]]}
+                                row['self_aim']={'projectile':spawns[0]['entity'],'forecast':forecast,'player_position':[at[0],65,at[2]]}
                                 relocated=True
-                        assert relocated, 'self-shot descent not observed in bounded aim window'
+                        assert relocated, 'self-shot spawn not observed in bounded aim window'
                     else:
                         pump(3)
                     for role,client in clients.items(): row['ranges'][role][1]=len(client.wire)

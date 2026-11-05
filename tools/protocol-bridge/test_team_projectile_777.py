@@ -54,15 +54,18 @@ def fixture(target='official',self_denied_hit=True):
         shooter += [packet('use_item',b'\0\1'+struct.pack('>ff',0,-90 if '-self-' in case else 0),'out',stamp),
                     packet('block_dig',bytes([probe.RELEASE_USE])+b'\0'*9+b'\2','out',stamp+1.2)]
         kind=1 if case.startswith('bow-') else 2
-        spawn=varint(100+index)+bytes(16)+varint(kind)+struct.pack('>ddd',.5,66.5,-5.5)+b'\0'+bytes(3)+b'\3'
+        velocity=bytes.fromhex('4bf97f8bfddd') if '-self-' in case else b'\0'
+        spawn=varint(100+index)+bytes(16)+varint(kind)+struct.pack('>ddd',.5,66.5,-5.5)+velocity+bytes(3)+b'\3'
         shooter.append(packet('spawn_entity',spawn,time=stamp+1.21))
         victim.append(packet('tick_end',direction='out',time=stamp))
         if '-self-' in case:
             for height,offset in [(130,1.25),(107,1.3)]:
                 payload=varint(100+index)+b'\0'+struct.pack('>dddffB',.5,height,-5.5,0,0,0)
                 shooter.append(packet('sync_entity_position',payload,time=stamp+offset))
-            shooter.append(packet('teleport_confirm',b'\1'+struct.pack('>dddff',.5,65,-5.5,0,-90),'out',stamp+1.4))
-            row['self_aim']={'projectile':100+index,'observed_position':[.5,107.,-5.5],'player_position':[.5,65,-5.5]}
+            forecast=probe.predict_self_aim([.5,66.5,-5.5],probe.lpvec(io.BytesIO(velocity)))
+            x,_,z=forecast['crossing']
+            shooter.append(packet('teleport_confirm',b'\1'+struct.pack('>dddff',x,65,z,0,-90),'out',stamp+1.4))
+            row['self_aim']={'projectile':100+index,'forecast':forecast,'player_position':[x,65,z]}
         hit=not case.endswith('same-denied') and (not case.endswith('self-denied') or self_denied_hit)
         if hit:
             recipient=shooter if '-self-' in case else victim
@@ -102,22 +105,41 @@ class TeamProjectileTests(unittest.TestCase):
         self.assertEqual(state.health,19)
         self.assertEqual(state.events[0],{'name':'damage_event','source':22,'cause':0,'direct':0})
 
-    def test_self_aim_uses_early_sample_from_failed_native_trajectory(self):
-        # Свежий failed official41989796183, только авторские координаты:
-        # tracker раз в1с. Поздний y72 нельзя выбрать вместо раннего y107.
-        positions=[[.5,66.52000000327826,-5.5],
-                   [.30107313463590846,111.81257956445874,-4.927018978045748],
-                   [.13836944003341664,130.64839389828137,-4.458373734787939],
-                   [.005312799408416641,127.84492710140637,-4.075072953537939],
-                   [-.10355128483755745,107.3428349962047,-3.7615549118764235],
-                   [-.192575743535565,72.36463455795393,-3.5051324058949067],
-                   [-.156198790410565,65.04993729232893,-3.5156304527699067]]
-        aim=probe.self_aim_position(positions)
-        self.assertEqual(aim,positions[4])
-        self.assertLess(abs(positions[-1][0]-aim[0]),.3)
-        self.assertLess(abs(positions[-1][2]-aim[2]),.3)
-        self.assertIsNone(probe.self_aim_position(positions[:4]))
-        self.assertIsNone(probe.self_aim_position(positions[5:]))
+    def test_self_forecast_corrects_known_raw_input_miss(self):
+        # Core41996104828: actual lpVec3 spawn; старый TP под y107 дал
+        # driftX>.3. Прогноз используется ТОЛЬКО для ввода, hit требует raw.
+        velocity=probe.lpvec(io.BytesIO(bytes.fromhex('4bf97f8bfddd')))
+        forecast=probe.predict_self_aim([.5,66.52000000000001,-5.5],velocity)
+        self.assertEqual(forecast['tick'],103)
+        self.assertEqual(forecast['crossing'][1],66)
+        actual_landing=[-1.9852215107505236,65.05015343356142,-6.132422743192036]
+        old_aim=[-1.6674705809556611,65,-6.083469752516296]
+        self.assertGreater(abs(actual_landing[0]-old_aim[0]),.3)
+        for axis in (0,2): self.assertLess(abs(actual_landing[axis]-forecast['crossing'][axis]),.06)
+
+    def test_self_forecast_rejects_nonfinite_invalid_speed_and_budget(self):
+        position=[.5,66.52,-5.5]
+        for bad in ([float('nan'),3,0],[0,float('inf'),0],[0,-3,0],[0,0,0],[0,5,0],[.3,3,0],[0,3]):
+            with self.subTest(bad=bad),self.assertRaises(AssertionError):
+                probe.predict_self_aim(position,bad)
+        for budget in (0,201,True):
+            with self.assertRaisesRegex(AssertionError,'budget'):
+                probe.predict_self_aim(position,[0,3,0],max_ticks=budget)
+        with self.assertRaisesRegex(AssertionError,'exceeded'):
+            probe.predict_self_aim(position,[0,3,0],max_ticks=2)
+        with self.assertRaisesRegex(AssertionError,'floor'):
+            probe.predict_self_aim([100,66.52,-5.5],[0,3,0])
+        with self.assertRaisesRegex(AssertionError,'floor'):
+            probe.predict_self_aim([.5,66.52,2],[0,3,0])
+
+    def test_backstop_is_behind_target_and_within_relative_move_range(self):
+        self.assertIn('fill -8 65 2 8 69 2 stone',probe.world_setup_commands())
+        self.assertNotIn('fill -8 65 24 8 69 24 stone',probe.world_setup_commands())
+        self.assertLess(2-(-5.5),8)
+        self.assertGreater(2-(.5+.3),1)
+        for case in probe.CASES[:6]:
+            self.assertIn('tp McsaArcher 0.5 65 -5.5 0 0',probe.case_setup_commands(case))
+            self.assertIn('tp McsaTarget 0.5 65 0.5 180 0',probe.case_setup_commands(case))
 
     def test_existing_own_native_team_layout_evidence(self):
         evidence=json.loads(probe.TEAM_LAYOUT_FILE.read_text())
@@ -241,6 +263,49 @@ class TeamProjectileTests(unittest.TestCase):
         row=report['cases'][-1]
         row['self_aim']['player_position'][0]=5
         with self.assertRaisesRegex(AssertionError,'self aim'): probe.summarize(report,row)
+
+    def test_self_forecast_cannot_be_forged(self):
+        report=fixture()
+        row=report['cases'][-1]
+        row['self_aim']['forecast']['crossing'][0]+=1
+        with self.assertRaisesRegex(AssertionError,'forecast'): probe.summarize(report,row)
+
+    def test_self_aim_rejects_second_or_late_teleport(self):
+        for mode in ('second','late','after-hit'):
+            report=fixture()
+            row=report['cases'][-1]
+            start,stop=row['ranges']['shooter']
+            packets=report['sessions']['shooter']['packets']
+            selected=packets[start:stop]
+            teleport=next(p for p in selected if p['name']=='teleport_confirm')
+            if mode=='second':
+                # Вместо последнего tick_end: диапазон остаётся прежним.
+                end_time=selected[-1]['time']
+                selected[-1]=copy.deepcopy(teleport)
+                selected[-1]['time']=end_time
+            elif mode=='late':
+                spawn=next(p for p in selected if p['name']=='spawn_entity')
+                teleport['time']=spawn['time']+1.1
+            else:
+                for p in selected:
+                    if p['name'] in ('damage_event','update_health'): p['time']=teleport['time']-.01
+            selected.sort(key=lambda p:p['time'])
+            packets[start:stop]=selected
+            reason={'second':'exact self teleport','late':'not early','after-hit':'precede actual damage'}[mode]
+            with self.subTest(mode=mode),self.assertRaisesRegex(AssertionError,reason): probe.summarize(report,row)
+
+    def test_prediction_cannot_replace_a_real_positive_self_hit(self):
+        report=fixture()
+        row=report['cases'][-1]
+        start,stop=row['ranges']['shooter']
+        packets=report['sessions']['shooter']['packets']
+        for i in range(start,stop):
+            if packets[i]['name'] in ('damage_event','update_health'):
+                packets[i]=packet('tick_end',direction='out',time=packets[i]['time'])
+        row['summary']=probe.summarize(report,row)
+        self.assertFalse(row['summary']['hit'])
+        self.assertEqual(row['summary']['minimum_health'],20)
+        self.assertIn('bow-self-allowed: positive control did not genuinely hit',probe.behavior_failures(report))
 
     def test_legacy_release_status_cannot_count_as_777_shot(self):
         report=fixture()
