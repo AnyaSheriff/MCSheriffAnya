@@ -2,7 +2,7 @@ name: Android ARM64 build
 
 on:
   push:
-    branches: ["wip/arm64-*", "wip/android-*"]
+    branches: ["wip/arm64-*", "!wip/arm64-build-*", "wip/android-*"]
   workflow_dispatch:
 
 permissions:

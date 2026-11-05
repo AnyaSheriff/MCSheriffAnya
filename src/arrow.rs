@@ -534,6 +534,21 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         .map(|member| (member.entity_id, (member.position.x, member.position.y, member.position.z), member.sneaking, member.game_mode, member.uuid, member.name.clone(), member.held.map_or(0, |stack| stack.extras().level("looting"))))
         .collect();
 
+    // Свежая пара official/core41992322909: friendlyFire=false исключает
+    // союзника из столкновений, включая самого стрелка; снаряд летит дальше.
+    // Имя владельца остаётся и после выхода. Табло снимаем до items/arrows:
+    // чужие блокировки при полёте не держим. Берём все запрещённые команды:
+    // новый выстрел может появиться между первым и основным arrows lock.
+    let mut protected_teams = std::collections::HashMap::new();
+    if !members.is_empty() {
+        let board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
+        for (team_index, team) in board.teams.iter().enumerate().filter(|(_, team)| !team.friendly_fire) {
+            for name in &team.members {
+                protected_teams.insert(name.clone(), team_index);
+            }
+        }
+    }
+
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
     let mut arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком");
     arrows.retired.retain(|arrow| arrow.dimension != dimension);
@@ -691,8 +706,15 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         let mut best: Option<(f64, Target)> = None;
 
         // Игроки.
-        for (entity_id, at, sneaking, mode, _, _, _) in &members {
+        for (entity_id, at, sneaking, mode, _, name, _) in &members {
             if arrow.dealt || *mode == 3 || (*entity_id == arrow.owner && arrow.age <= OWNER_SAFE) || arrow.pierced.contains(entity_id) {
+                continue;
+            }
+
+            if !arrow.is_mob_shot() && arrow.owner != 0
+                && let Some(team) = protected_teams.get(&arrow.owner_name)
+                && protected_teams.get(name) == Some(team)
+            {
                 continue;
             }
 
@@ -1093,6 +1115,225 @@ fn ignite_block(world: &mut World, at: (i32,i32,i32)) -> bool {
     true
 }
 
+
+#[cfg(test)]
+mod team_projectile_tests {
+    use super::*;
+    use crate::world::WorldEvent;
+
+    fn setup() -> (Shared, World) {
+        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/team-projectiles/ops.json")), crate::skins::Settings::default());
+        let mut world = World::in_memory();
+        for x in 0..=1 { for y in 64..=67 { for z in 0..=12 { world.set_block_silently(x, y, z, crate::world::AIR); } } }
+        world.watch_events(91);
+        (shared, world)
+    }
+
+    fn player(shared: &Shared, entity_id: i32, name: &str, z: f64) {
+        shared.players.lock().unwrap().join(crate::players::Member {
+            uuid: [entity_id as u8; 16], name: name.into(), entity_id, game_mode: 0,
+            position: crate::players::Position { x: 0.5, y: 64.0, z, yaw: 0.0, pitch: 0.0, on_ground: true },
+            skin: None, skin_parts: 0x7f, main_hand: 1, held: None,
+            dimension: Dimension::Overworld, sneaking: false, swings: 0, shoved: ((0.0, 0.0, 0.0), 0), unsettled: 0,
+        }, entity_id).unwrap();
+    }
+
+    fn team(shared: &Shared, name: &str, friendly_fire: bool, members: &[&str]) {
+        shared.scoreboard.lock().unwrap().add_team(crate::scoreboard::Team {
+            name: name.into(), display: serde_json::json!({"text":name}), color: 21,
+            prefix: serde_json::json!({"text":""}), suffix: serde_json::json!({"text":""}),
+            friendly_fire, see_invisible: true, nametag: 0, death_messages: 0, collision: 0,
+            members: members.iter().map(|name| (*name).to_string()).collect(),
+        });
+    }
+
+    fn projectile(trident: bool) -> Arrow {
+        let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), 31, "skeleton");
+        arrow.fresh = false;
+        arrow.shooter = Shooter::Player;
+        arrow.owner_name = "Archer".into();
+        arrow.owner_uuid = [31; 16];
+        if trident { arrow.trident = Some(Stack::new(crate::blocks::item_named("trident").unwrap(), 1)); }
+        arrow
+    }
+
+    fn strikes(events: &[WorldEvent]) -> Vec<i32> {
+        events.iter().filter_map(|event| if let WorldEvent::PlayerStrike(strike) = event { Some(strike.victim) } else { None }).collect()
+    }
+
+    fn assert_no_hit(events: &[WorldEvent]) {
+        assert!(events.iter().all(|event| !matches!(event,
+            WorldEvent::PlayerStrike(_) | WorldEvent::MobHurt { .. } | WorldEvent::MobHitEffect { .. }
+            | WorldEvent::GameEvent { reason: 6, .. })), "запрещённая цель не должна получить событие попадания");
+        assert!(events.iter().all(|event| !matches!(event, WorldEvent::Sound(sound) if sound.name.contains(".hit"))),
+            "не должно быть звука попадания");
+    }
+
+    fn assert_passed(shared: &Shared, z: f64, pierce_left: i32) {
+        let arrows = shared.arrows.lock().unwrap();
+        assert!(arrows.retired.is_empty(), "пролёт не удаляет снаряд");
+        assert_eq!(arrows.list.len(), 1);
+        let arrow = &arrows.list[0];
+        assert!(arrow.z > z && arrow.vz > 0.0 && !arrow.dealt && !arrow.impulse && !arrow.in_ground);
+        assert!(arrow.pierced.is_empty());
+        assert_eq!(arrow.pierce_left, pierce_left, "пролёт не расходует пробивание");
+    }
+
+    #[test]
+    fn denied_bow_and_trident_pass_without_hits_side_effects_or_retirement() {
+        // Paired41992322909 проверял обычные bow/trident. Добавочные поля
+        // ниже — unit-защита общего collision пути, не новая paired-сверка.
+        for trident in [false, true] {
+            let (shared, mut world) = setup();
+            player(&shared, 32, "Ally", 2.5);
+            // Владелец вышел: запрет берётся из сохранённого owner_name.
+            team(&shared, "red", false, &["Archer", "Ally"]);
+            let mut arrow = projectile(trident);
+            arrow.flame = true;
+            arrow.punch = 2;
+            arrow.effects = tipped_effects(crate::survival::potion_number("poison"));
+            arrow.pierce_left = 2;
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            assert_no_hit(&world.events_since(0, 91).0);
+            assert_passed(&shared, 2.8, 2);
+        }
+    }
+
+    #[test]
+    fn allowed_different_and_missing_teams_still_produce_projectile_hits() {
+        for trident in [false, true] { for policy in 0..3 {
+            let (shared, mut world) = setup();
+            player(&shared, 32, "Target", 2.5);
+            match policy {
+                0 => team(&shared, "red", true, &["Archer", "Target"]),
+                1 => { team(&shared, "red", false, &["Archer"]); team(&shared, "blue", false, &["Target"]); }
+                _ => {}
+            }
+            shared.arrows.lock().unwrap().spawn(projectile(trident));
+            step(&shared, Dimension::Overworld, &mut world);
+            assert_eq!(strikes(&world.events_since(0, 91).0), vec![32]);
+            let arrows = shared.arrows.lock().unwrap();
+            if trident {
+                assert!(arrows.list[0].dealt && arrows.list[0].vz < 0.0);
+            } else {
+                assert!(arrows.list.is_empty());
+                assert_eq!(arrows.retired.len(), 1);
+            }
+        } }
+    }
+
+    #[test]
+    fn self_shot_obeys_friendly_fire_after_owner_safety_expires() {
+        for trident in [false, true] { for friendly_fire in [false, true] {
+            let (shared, mut world) = setup();
+            player(&shared, 31, "Archer", 2.5);
+            team(&shared, "red", friendly_fire, &["Archer"]);
+            let mut arrow = projectile(trident);
+            arrow.age = OWNER_SAFE + 1;
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            let events = world.events_since(0, 91).0;
+            if friendly_fire { assert_eq!(strikes(&events), vec![31]); }
+            else { assert_no_hit(&events); assert_passed(&shared, 2.8, 0); }
+        } }
+    }
+
+    #[test]
+    fn initial_owner_safety_and_unowned_projectiles_remain_unchanged() {
+        for trident in [false, true] {
+            let (shared, mut world) = setup();
+            player(&shared, 31, "Archer", 2.5);
+            team(&shared, "red", true, &["Archer"]);
+            shared.arrows.lock().unwrap().spawn(projectile(trident));
+            step(&shared, Dimension::Overworld, &mut world);
+            assert_no_hit(&world.events_since(0, 91).0);
+            assert_passed(&shared, 2.8, 0);
+
+            for unnamed in [false, true] {
+                let (shared, mut world) = setup();
+                player(&shared, 32, "Ally", 2.5);
+                team(&shared, "red", false, &["Archer", "Ally"]);
+                let mut arrow = projectile(trident);
+                if unnamed { arrow.owner_name.clear(); } else { arrow.owner = 0; }
+                shared.arrows.lock().unwrap().spawn(arrow);
+                step(&shared, Dimension::Overworld, &mut world);
+                assert_eq!(strikes(&world.events_since(0, 91).0), vec![32]);
+            }
+        }
+    }
+
+    #[test]
+    fn team_policy_is_refreshed_during_flight_in_both_directions() {
+        for trident in [false, true] { for initial in [false, true] {
+            let (shared, mut world) = setup();
+            player(&shared, 32, "Ally", 3.5);
+            team(&shared, "red", initial, &["Archer", "Ally"]);
+            let mut arrow = projectile(trident);
+            arrow.vz = 1.0;
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            let (_, cursor) = world.events_since(0, 91);
+            shared.scoreboard.lock().unwrap().modify_team("red", |team| team.friendly_fire = !initial);
+            shared.arrows.lock().unwrap().list[0].vz = 3.0;
+            step(&shared, Dimension::Overworld, &mut world);
+            let events = world.events_since(cursor, 91).0;
+            if initial { assert_no_hit(&events); assert_passed(&shared, 3.8, 0); }
+            else { assert_eq!(strikes(&events), vec![32]); }
+        } }
+    }
+
+    #[test]
+    fn denied_teammate_does_not_hide_an_enemy_behind_it() {
+        for trident in [false, true] {
+            let (shared, mut world) = setup();
+            player(&shared, 32, "Ally", 2.5);
+            player(&shared, 33, "Enemy", 4.5);
+            team(&shared, "red", false, &["Archer", "Ally"]);
+            let mut arrow = projectile(trident);
+            arrow.vz = 5.0;
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            assert_eq!(strikes(&world.events_since(0, 91).0), vec![33]);
+        }
+    }
+
+    #[test]
+    fn mob_shots_ignore_matching_player_team_names() {
+        for trident in [false, true] {
+            let (shared, mut world) = setup();
+            player(&shared, 32, "Ally", 2.5);
+            team(&shared, "red", false, &["Archer", "Ally"]);
+            let mut arrow = projectile(trident);
+            arrow.shooter = Shooter::Mob { killer: "skeleton" };
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            let events = world.events_since(0, 91).0;
+            assert!(events.iter().any(|event| matches!(event, WorldEvent::MobHurt { entity_id: 32, .. })));
+            assert!(strikes(&events).is_empty());
+        }
+    }
+
+    #[test]
+    fn player_team_policy_does_not_exclude_mob_targets() {
+        for trident in [false, true] {
+            let (shared, mut world) = setup();
+            team(&shared, "red", false, &["Archer"]);
+            let mut mob = crate::mob::Mob::new(30, crate::mob::Kind::Cow, (0.5, 64.0, 2.5));
+            mob.no_ai = true;
+            shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(mob);
+            shared.arrows.lock().unwrap().spawn(projectile(trident));
+            step(&shared, Dimension::Overworld, &mut world);
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            assert!(items.mobs().iter().find(|mob| mob.entity_id == 30).unwrap().vitals.health < 10.0);
+            drop(items);
+            assert!(strikes(&world.events_since(0, 91).0).is_empty());
+            let arrows = shared.arrows.lock().unwrap();
+            if trident { assert!(arrows.list[0].dealt); } else { assert!(arrows.list.is_empty()); }
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
