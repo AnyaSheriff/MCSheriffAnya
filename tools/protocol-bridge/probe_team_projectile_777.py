@@ -299,6 +299,34 @@ def self_aim_position(positions):
                  if position[1]<previous[1] and 80<position[1]<120),None)
 
 
+def world_setup_commands():
+    # core41990613917 появился на y63: будущий полy64 пересёк голову.
+    # Защита на время авторского строительства не меняет режим выстрелов.
+    return [f'gamemode creative {name}' for name in NAMES]+[
+        'gamerule minecraft:spawn_mobs false','gamerule minecraft:natural_health_regeneration false',
+        'difficulty normal','weather clear','time set noon',
+        'fill -8 64 -16 8 64 32 stone','fill -8 65 -16 8 72 32 air',
+        'fill -8 65 24 8 69 24 stone','team add mcsa_a','team add mcsa_b']
+
+
+def case_setup_commands(case):
+    weapon,mode=case.split('-',1)
+    # Сначала безопасное положение, затем лечение и выживание. В неудачной
+    # записи core41990613917 обратный порядок дал удушье внутри пола доTP.
+    return [f'gamemode creative {name}' for name in NAMES]+[
+        'kill @e[type=arrow]','kill @e[type=trident]','kill @e[type=item]',
+        f'clear {NAMES[0]}',f'clear {NAMES[1]}',
+        f'team join mcsa_a {NAMES[0]}',
+        f'team join {"mcsa_b" if mode=="different-denied" else "mcsa_a"} {NAMES[1]}',
+        f'team modify mcsa_a friendlyFire {str(mode.endswith("allowed")).lower()}',
+        f'tp {NAMES[0]} 0.5 65 -5.5 0 {"-90" if mode.startswith("self-") else "0"}',
+        f'tp {NAMES[1]} {"6.5" if mode.startswith("self-") else "0.5"} 65 0.5 180 0',
+        *[f'effect clear {name}' for name in NAMES],
+        *[f'effect give {name} instant_health 1 8 true' for name in NAMES],
+        *[f'gamemode survival {name}' for name in NAMES],
+        f'give {NAMES[0]} {weapon}', *([f'give {NAMES[0]} arrow 3'] if weapon=='bow' else [])]
+
+
 def summarize(report,row):
     case = row['case']
     kinds = report['entity_kinds']
@@ -488,22 +516,11 @@ def main():
                     clients[role]=client
                     report['sessions'][role]={'name':name,'uuid':uuid.hex(),'packets':client.wire}
                     wait(lambda:client.position is not None,'initial player position')
-                for cmd in ['gamerule minecraft:spawn_mobs false','gamerule minecraft:natural_health_regeneration false','difficulty normal',
-                            'weather clear','time set noon','fill -8 64 -16 8 64 32 stone','fill -8 65 -16 8 72 32 air',
-                            'fill -8 65 24 8 69 24 stone','team add mcsa_a','team add mcsa_b']:
+                for cmd in world_setup_commands():
                     command(cmd)
                 for index,case in enumerate(CASES):
                     weapon,mode=case.split('-',1)
-                    for cmd in ['kill @e[type=arrow]','kill @e[type=trident]','kill @e[type=item]',
-                                f'clear {NAMES[0]}',f'clear {NAMES[1]}',f'effect clear {NAMES[1]}',
-                                f'effect give {NAMES[1]} instant_health 1 8 true',f'effect give {NAMES[0]} instant_health 1 8 true',
-                                f'gamemode survival {NAMES[0]}',f'gamemode survival {NAMES[1]}',
-                                f'team join mcsa_a {NAMES[0]}',
-                                f'team join {"mcsa_b" if mode=="different-denied" else "mcsa_a"} {NAMES[1]}',
-                                f'team modify mcsa_a friendlyFire {str(mode.endswith("allowed")).lower()}',
-                                f'tp {NAMES[0]} 0.5 65 -5.5 0 {"-90" if mode.startswith("self-") else "0"}',
-                                f'tp {NAMES[1]} {"6.5" if mode.startswith("self-") else "0.5"} 65 0.5 180 0',
-                                f'give {NAMES[0]} {weapon}', *([f'give {NAMES[0]} arrow 3'] if weapon=='bow' else [])]:
+                    for cmd in case_setup_commands(case):
                         command(cmd)
                     shooter,victim=clients['shooter'],clients['victim']
                     for client in clients.values(): client.send('held_item_slot',struct.pack('>h',0))

@@ -77,6 +77,31 @@ def fixture(target='official',self_denied_hit=True):
 
 
 class TeamProjectileTests(unittest.TestCase):
+    def test_survival_starts_after_safe_teleport_and_healing(self):
+        setup=probe.world_setup_commands()
+        floor=next(i for i,cmd in enumerate(setup) if cmd.startswith('fill '))
+        for name in probe.NAMES:
+            self.assertLess(setup.index('gamemode creative '+name),floor)
+        for case in probe.CASES:
+            commands=probe.case_setup_commands(case)
+            for name in probe.NAMES:
+                creative=commands.index('gamemode creative '+name)
+                teleport=next(i for i,cmd in enumerate(commands) if cmd.startswith('tp '+name+' '))
+                heal=commands.index('effect give '+name+' instant_health 1 8 true')
+                survival=commands.index('gamemode survival '+name)
+                self.assertLess(creative,teleport)
+                self.assertLess(teleport,heal)
+                self.assertLess(heal,survival)
+
+    def test_native_pre_shot_damage_is_decoded_as_environmental(self):
+        # Failed core41990613917: ID1, type22, no cause/direct; HP19.
+        state=probe.State({})
+        state.entity=1
+        state.accept(packet('damage_event',bytes.fromhex('0116000000')))
+        state.accept(packet('update_health',bytes.fromhex('419800001440a00000')))
+        self.assertEqual(state.health,19)
+        self.assertEqual(state.events[0],{'name':'damage_event','source':22,'cause':0,'direct':0})
+
     def test_self_aim_uses_early_sample_from_failed_native_trajectory(self):
         # Свежий failed official41989796183, только авторские координаты:
         # tracker раз в1с. Поздний y72 нельзя выбрать вместо раннего y107.
