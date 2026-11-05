@@ -40,6 +40,8 @@ NAMES = ('McsaArcher', 'McsaTarget')
 # Собственная GUI-запись actual777-use-action-observations.json: release_use6.
 # Внутреннее старое ядро использует5, но это НЕ wire-значение Java777.
 RELEASE_USE = 6
+TEAM_LAYOUT_FILE = Path(__file__).with_name('testdata')/'team-layout-777.json'
+TEAM_LAYOUT_SHA256 = hashlib.sha256(TEAM_LAYOUT_FILE.read_bytes()).hexdigest()
 
 
 def uint(data):
@@ -144,10 +146,17 @@ class State:
             team, mode = string(data), exact(data,1)[0]
             assert mode <= 4
             if mode in (0,2):
-                nbt(data)
+                # Собственный team-layout-777.json/actions.rs: JSON оставил
+                # старый порядок775. Оригинал777: name/prefix/suffix,
+                # visibility/collision, optional color, flags.
+                nbt(data); nbt(data); nbt(data)
+                visibility,collision=uint(data),uint(data)
+                assert visibility<=3 and collision<=3
+                has_color=exact(data,1)
+                assert has_color in (b'\0',b'\1')
+                if has_color==b'\1': assert uint(data)<=15
                 flags = exact(data,1)[0]
-                uint(data); uint(data); uint(data)
-                nbt(data); nbt(data)
+                assert flags & ~3 == 0
                 if mode == 0:
                     assert team not in self.teams, 'duplicate team'
                     self.teams[team] = {'flags':flags,'members':[]}
@@ -361,6 +370,7 @@ def behavior_failures(report):
 def validate(report,target,require_pass=True):
     assert report.get('schema')==SCHEMA and report.get('criteria')==CRITERIA, 'wrong criteria'
     assert report.get('target')==target and report.get('protocol')==777
+    assert report.get('team_layout_sha256')==TEAM_LAYOUT_SHA256, 'missing pinned own team-layout evidence'
     assert report.get('server_exit')==0 and 'error' not in report, 'incomplete or crashed capture'
     assert len(report.get('server_log_sha256',''))==64
     assert len(report.get('target_sha256',''))==64
@@ -428,6 +438,7 @@ def main():
     report={'schema':SCHEMA,'criteria':CRITERIA,'protocol':777,'target':'official' if args.jar else 'core',
             'target_sha256':hashlib.sha256(executable.read_bytes()).hexdigest(),
             'jar_sha1':JAR_SHA1 if args.jar else None,'data_sha256':data_hashes,'entity_kinds':kinds,
+            'team_layout_sha256':TEAM_LAYOUT_SHA256,
             'status':'INCOMPLETE','sessions':{},'cases':[],'commands':[],'behavior_failures':[]}
     if args.expected: report['expected_sha256']=hashlib.sha256(args.expected.read_bytes()).hexdigest()
     # Критерии записаны до запуска сервера и не подстраиваются по результату.

@@ -115,7 +115,7 @@ jobs:
           source={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(pathlib.Path('tools/protocol-bridge').glob('*.py'))}
           source['tools/protocol-bridge/candidate-sources-26.3.json']=hashlib.sha256(pathlib.Path('tools/protocol-bridge/candidate-sources-26.3.json').read_bytes()).hexdigest()
           source['.github/workflows/team-projectile-checks.yml']=hashlib.sha256(pathlib.Path('.github/workflows/team-projectile-checks.yml').read_bytes()).hexdigest()
-          for name in ['tools/blackbox/combat_ci.py','tools/blackbox/combat_process.py','tools/blackbox/ci/sources-777.json','tools/protocol-bridge/testdata/actual777-use-action-observations.json']:
+          for name in ['tools/blackbox/combat_ci.py','tools/blackbox/combat_process.py','tools/blackbox/ci/sources-777.json','tools/protocol-bridge/testdata/actual777-use-action-observations.json','tools/protocol-bridge/testdata/team-layout-777.json']:
               source[name]=hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
           receipt={'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'run_id':os.environ['GITHUB_RUN_ID'],'status':os.environ['JOB_STATUS'],'files':files,'sources':source}
           (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')

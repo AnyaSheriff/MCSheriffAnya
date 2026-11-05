@@ -22,7 +22,7 @@ def text(value):
 
 def team(name,mode,flags=None,members=()):
     payload=text(name)+bytes([mode])
-    if mode in (0,2): payload+=b'\x08\0\x01t'+bytes([flags])+b'\0\0\x15'+b'\x08\0\0'*2
+    if mode in (0,2): payload+=b'\x08\0\x01t'+b'\x08\0\0'*2+b'\0\0\0'+bytes([flags])
     if mode in (0,3,4): payload+=varint(len(members))+b''.join(text(m) for m in members)
     return packet('teams',payload)
 
@@ -33,6 +33,7 @@ def health(value,time=0):
 
 def fixture(target='official',self_denied_hit=True):
     report={'schema':probe.SCHEMA,'criteria':copy.deepcopy(probe.CRITERIA),'target':target,'protocol':777,
+            'team_layout_sha256':probe.TEAM_LAYOUT_SHA256,
             'target_sha256':'a'*64,'jar_sha1':probe.JAR_SHA1 if target=='official' else None,
             'server_exit':0,'server_log_sha256':'b'*64,'entity_kinds':{'arrow':1,'trident':2},
             'status':'PASS','cases':[],'sessions':{},'behavior_failures':[]}
@@ -76,6 +77,26 @@ def fixture(target='official',self_denied_hit=True):
 
 
 class TeamProjectileTests(unittest.TestCase):
+    def test_existing_own_native_team_layout_evidence(self):
+        evidence=json.loads(probe.TEAM_LAYOUT_FILE.read_text())
+        state=probe.State({})
+        for row in evidence['cases']:
+            state.accept(packet('teams',bytes.fromhex(row['modern'])))
+        self.assertEqual(state.teams,{})
+
+    def test_actual_41989305234_native_team_add(self):
+        # Только искусственное имя команды; original raw сохранён в FAILED
+        # official41989305234. Никаких пользовательских данных в fixture.
+        payload=bytes.fromhex('066d6373615f61000800066d6373615f610800000800000000000300')
+        state=probe.State({})
+        state.accept(packet('teams',payload))
+        self.assertEqual(state.teams,{'mcsa_a':{'flags':3,'members':[]}})
+        for size in range(len(payload)):
+            with self.subTest(size=size),self.assertRaises((AssertionError,EOFError,IndexError,ValueError)):
+                probe.State({}).accept(packet('teams',payload[:size]))
+        with self.assertRaisesRegex(AssertionError,'trailing'):
+            probe.State({}).accept(packet('teams',payload+b'\0'))
+
     def test_release_enum_matches_own_actual_gui_observation(self):
         evidence=json.loads(Path(probe.__file__).with_name('testdata').joinpath('actual777-use-action-observations.json').read_text())
         self.assertEqual(evidence['protocol'],777)
