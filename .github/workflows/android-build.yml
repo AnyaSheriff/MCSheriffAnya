@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    if: ${{ !startsWith(github.ref, 'refs/heads/wip/android-host-') && !startsWith(github.ref, 'refs/heads/wip/android-checks-') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/wip/android-host-') && !startsWith(github.ref, 'refs/heads/wip/android-checks-') && !startsWith(github.ref, 'refs/heads/wip/android-emulator-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -121,6 +121,7 @@ jobs:
           if-no-files-found: error
 
   host-http-check:
+    if: ${{ !startsWith(github.ref, 'refs/heads/wip/android-emulator-') }}
     name: Linux strict Clippy, full tests and HTTP helper tests
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -219,7 +220,7 @@ jobs:
           assert 0 < len(addresses) <= 16
           pathlib.Path('android-http-evidence/resolved-addresses.txt').write_text(','.join(addresses) + '\n')
           PY
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=android-http-probe -addext subjectAltName=IP:10.0.2.2 -keyout android-http-evidence/test-key.pem -out android-http-evidence/test-cert.pem
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=android-http-probe -addext subjectAltName=IP:10.0.2.2 -addext basicConstraints=critical,CA:FALSE -addext keyUsage=critical,digitalSignature,keyEncipherment -addext extendedKeyUsage=serverAuth -keyout android-http-evidence/test-key.pem -out android-http-evidence/test-cert.pem
           cat > android-http-evidence/tls-server.py <<'PY'
           import http.server, ssl
           context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
