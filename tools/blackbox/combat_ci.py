@@ -127,9 +127,9 @@ def fetch(entry, target):
     temporary.replace(target)
 
 
-def helper_sources(root=ROOT):
+def helper_sources(root=ROOT, entries=()):
     directories = [root / 'tools/blackbox', root / 'tools/protocol-bridge', root / 'tools/measure']
-    pending = [directories[0] / name for name in ('record777.py', 'analyze777.py', 'combat_ci.py')]
+    pending = [directories[0] / name for name in ('record777.py', 'analyze777.py', 'combat_ci.py')] + list(entries)
     result = set()
     while pending:
         path = pending.pop()
@@ -152,8 +152,8 @@ def helper_sources(root=ROOT):
     return sorted(result)
 
 
-def snapshot_sources(output, scenarios):
-    files = helper_sources() + [ROOT / f'tools/blackbox/scenarios/{name}.json' for name in scenarios]
+def snapshot_sources(output, scenarios, extra_sources=()):
+    files = helper_sources(entries=[p for p in extra_sources if p.suffix == '.py']) + [ROOT / f'tools/blackbox/scenarios/{name}.json' for name in scenarios] + list(extra_sources)
     for path in files:
         checked_file(path)
         dest = output / 'source' / path.relative_to(ROOT)
@@ -296,8 +296,8 @@ def collect(output, results, data):
                                       'sha256': sha(p)} for p in paths if p.is_file() and p.name != 'files.json'])
 
 
-def execute(artifact, selection, work, output, java):
-    sources = json.loads(SOURCES.read_text())
+def execute(artifact, selection, work, output, java, sources_path=None, extra_sources=()):
+    sources = json.loads((sources_path or SOURCES).read_text())
     if work.exists() or (output / 'ci-receipt.json').exists():
         raise ValueError('fresh work/output required; selection and initial logs only')
     work.mkdir(parents=True)
@@ -311,7 +311,7 @@ def execute(artifact, selection, work, output, java):
         raise InterruptedError(f'CI interrupted: {sig}')
     previous = {sig: signal.signal(sig, interrupted) for sig in (signal.SIGTERM, signal.SIGINT)}
     try:
-        snapshot_sources(output, sources['scenarios'])
+        snapshot_sources(output, sources['scenarios'], extra_sources)
         runtime, build_receipt = verify_artifact(artifact, selection)
         shutil.copyfile(build_receipt, output / 'build-receipt.json')
         copied = work / 'mcsheriffanya'
