@@ -98,6 +98,8 @@ mod bow;
 mod bow_tests;
 #[cfg(test)]
 mod bow_landing_tests;
+#[cfg(test)]
+mod defense_runtime_tests;
 mod thrown;
 mod projectile;
 #[cfg(test)]

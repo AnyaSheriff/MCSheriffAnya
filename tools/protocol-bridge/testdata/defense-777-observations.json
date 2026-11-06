@@ -1,0 +1,18 @@
+{
+  "run": "42190823756",
+  "helper_head": "754291877e836e9f1512c035b7a23109fa803d16",
+  "rear_report_sha256": "185bb71157266aca89fd61644140dd907673b791314de033447789f583ae97b8",
+  "rear_animation_hex": "11c2b3ffff",
+  "rear_animation_fields_hex": "c2b3ffff",
+  "cooldowns_hex": [
+    "106d696e6563726166743a736869656c6464",
+    "106d696e6563726166743a736869656c6400"
+  ],
+  "cooldown_relative_ticks": [
+    12.512634,
+    111.50451
+  ],
+  "method": "Own opaque original raw network recording; no foreign source code",
+  "front_animation_hex": "1542b40001",
+  "front_animation_fields_hex": "42b40001"
+}

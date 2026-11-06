@@ -2363,7 +2363,7 @@ pub(super) async fn hit_by_breached(
     {
         // Угол приведён к [-180; 180): у оригинала игрок с рысканьем 180 видит 90, не −270.
         let toward = (from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw);
-        // Отражение шипов использует тот же диапазон [0;360), что PvP:
+        // Отражение шипов сохраняет отдельный диапазон [0;360):
         // enchant-mob-thorns-wear даёт yaw270, а не эквивалентное -90.
         let yaw = if source == Source::Thorns { toward.rem_euclid(360.0) }
             else { (toward + 180.0).rem_euclid(360.0) - 180.0 };
@@ -2561,6 +2561,13 @@ pub(super) async fn before_pearl_teleport(stream: &mut Outgoing<'_>, shared: &Sh
 pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     let entity = player.entity_id;
     let tick_now = player.publication.as_ref().map_or_else(|| *shared.ticks.borrow(), |p| p.tick);
+
+    // Fresh Java777 defense42190823756: после100→0 клиент получает
+    // отдельное завершение shield cooldown. Дедлайн обнуляется один раз.
+    if player.net.shield_disabled_until > 0 && tick_now >= player.net.shield_disabled_until {
+        send_cooldown(stream, "minecraft:shield", 0).await?;
+        player.net.shield_disabled_until = 0;
+    }
 
     tick_spin(shared, player, tick_now);
     super::spear::tick(shared, player);

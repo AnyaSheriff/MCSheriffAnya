@@ -18,7 +18,7 @@ from smoke import read_varint
 
 CONFIG = ci.ROOT / 'tools/blackbox/ci/defense-777.json'
 NAMES = ['pvp-shield-front-777', 'pvp-shield-rear-777', 'pvp-shield-recovery-777',
-         'pvp-shield', 'pvp-armor', 'pvp-protection']
+         'pvp-shield', 'pvp-armor-777', 'pvp-protection-777']
 
 
 def uint(data):
@@ -60,7 +60,7 @@ def inspect(raw, shield):
         assert any(a.get('use') and a.get('hand') == 1 for a in actions), 'no authored offhand use'
         assert any(a.get('attack') and a.get('bot') == 2 for a in actions), 'no authored player attack'
     victim, attacker = [x['entity'] for x in raw['initial']]
-    hp = [20.0]; damage = []; cooldowns = []; wear = []; active = []
+    hp = [20.0]; damage = []; cooldowns = []; cooldown_ticks = []; wear = []; active = []
     for i, client in enumerate(raw['clients']):
         for e in client['events']:
             data = io.BytesIO(bytes.fromhex(e['hex']))
@@ -78,7 +78,7 @@ def inspect(raw, shield):
                 damage.append((e['at'] - raw['start']) * 20)
             elif i == 0 and e['name'] == 'set_cooldown':
                 group = exact(data, uint(data)).decode(); ticks = uint(data); finished(data)
-                cooldowns.append([group, ticks])
+                cooldowns.append([group, ticks]); cooldown_ticks.append((e['at'] - raw['start']) * 20)
             elif e['name'] == 'entity_metadata' and uint(data) == victim:
                 _, fields = player_metadata(bytes.fromhex(e['hex']))
                 if 8 in fields:
@@ -87,7 +87,7 @@ def inspect(raw, shield):
             if i == 0 and name.startswith('pvp-shield'):
                 wear.extend(shield_damages(e, shield))
     result = {'health': hp, 'damage_ticks': damage, 'cooldowns': cooldowns,
-              'shield_damage': max(wear, default=0), 'active_ticks': active}
+              'shield_damage': max(wear, default=0), 'active_ticks': active, 'cooldown_ticks': cooldown_ticks}
     if name.startswith('pvp-shield'):
         assert active, 'no received active-hand metadata'
     if name == NAMES[0]:
@@ -98,7 +98,9 @@ def inspect(raw, shield):
         assert not cooldowns
     elif name == NAMES[2]:
         assert min(hp) == hp[-1] == 13 and len(damage) == 1 and 35 <= damage[0] < 100, 'only the during-cooldown sword may hurt'
-        assert cooldowns == [['minecraft:shield', 100]] and result['shield_damage'] == 18, 'axe cooldown/wear differs'
+        assert cooldowns == [['minecraft:shield', 100], ['minecraft:shield', 0]] and result['shield_damage'] == 18, 'axe cooldown/wear differs'
+        # Пакет принимается между границами; сравниваем целые такты20t/s.
+        assert 98 <= round(cooldown_ticks[1] - cooldown_ticks[0]) <= 100, 'cooldown ending outside observed99±1ticks'
         assert any(t >= 125 for t in active), 'shield never reactivated after cooldown'
     else:
         assert damage and min(hp) < 20, 'no genuine damaging positive control'
@@ -113,7 +115,14 @@ def semantics(results, data):
         for side in ('official', 'ours'):
             raw = json.loads(ci.checked_file(results / f'{name}-{side}.json').read_text())
             rows.append({'scenario': name, 'side': side, **inspect(raw, shield)})
-    return {'schema': 'defense-777-v1', 'cases': rows, 'status': 'verified-semantic-controls'}
+    return {'schema': 'defense-777-v2', 'cases': rows, 'status': 'verified-semantic-controls'}
+
+
+def apply_semantic_result(result, check):
+    if check['status'] == 'failed':
+        result['semantic_error'] = check['error']
+        if result['status'] == 'match':
+            result['status'] = 'mismatch-open'
 
 
 def main():
@@ -135,14 +144,15 @@ def main():
             return
         assert a.work and a.artifact
         extras = [CONFIG, Path(__file__), ci.ROOT/'tools/blackbox/test_defense_ci.py',
-                  ci.ROOT/'.github/workflows/defense-checks.yml', ci.ROOT/'docs/defense-26.3.md']
+                  ci.ROOT/'.github/workflows/defense-checks.yml', ci.ROOT/'docs/defense-26.3.md',
+                  ci.ROOT/'tools/protocol-bridge/testdata/defense-777-observations.json']
         result = ci.execute(a.artifact, json.loads((a.output/'build-selection.json').read_text()),
                             a.work.resolve(), a.output.resolve(), a.java, sources_path=CONFIG, extra_sources=extras)
         try:
             check = semantics(a.work/'recordings', a.work/'data')
         except Exception as e:
             check = {'status': 'failed', 'error': type(e).__name__+': '+str(e)}
-            result['status'] = 'mismatch-open'; result['semantic_error'] = check['error']
+        apply_semantic_result(result, check)
         ci.write_json(a.output/'defense-semantics.json', check)
         ci.write_json(a.output/'ci-receipt.json', result)
         ci.collect(a.output, a.work/'recordings', a.work/'data')

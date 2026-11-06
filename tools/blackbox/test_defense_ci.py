@@ -26,7 +26,9 @@ def fixture(name):
         events.append(packet('damage_event',b'\2\x22\4\4\0',45))
     if name in [d.NAMES[2],'pvp-shield']:
         group=b'minecraft:shield';events.append(packet('set_cooldown',varint(len(group))+group+varint(100),12))
-    if name==d.NAMES[2]:events.append(packet('entity_metadata',varint(2)+bytes([8,0,3,255]),130))
+    if name==d.NAMES[2]:
+        group=b'minecraft:shield';events.append(packet('set_cooldown',varint(len(group))+group+b'\0',111))
+        events.append(packet('entity_metadata',varint(2)+bytes([8,0,3,255]),130))
     return x
 
 
@@ -46,7 +48,7 @@ class SemanticTests(unittest.TestCase):
         for damage in [0,7,9]:
             r=fixture(d.NAMES[0]);r['clients'][0]['events'][1]['hex']=(varint(40)+b'\1'+varint(100)+b'\1\0\3'+varint(damage)).hex()
             with self.subTest(damage=damage),self.assertRaises(AssertionError):d.inspect(r,100)
-        r=fixture(d.NAMES[0]);r['clients'][0]['events'].append(fixture(d.NAMES[2])['clients'][0]['events'][-2])
+        r=fixture(d.NAMES[0]);r['clients'][0]['events'].append(fixture(d.NAMES[2])['clients'][0]['events'][-3])
         with self.assertRaises(AssertionError):d.inspect(r,100)
 
     def test_rear_needs_actual_damage_from_right_player(self):
@@ -56,7 +58,7 @@ class SemanticTests(unittest.TestCase):
 
     def test_recovery_rejects_damage_after_reactivation_wrong_cooldown_and_missing_reuse(self):
         for alter in [lambda es:es[3].update(at=17.3),lambda es:es.pop(),
-                      lambda es:es[-2].update(hex=(b'\x10minecraft:shield'+varint(99)).hex()),
+                      lambda es:es[-3].update(hex=(b'\x10minecraft:shield'+varint(99)).hex()),
                       lambda es:es.append(packet('damage_event',b'\2\x22\4\4\0',145))]:
             r=fixture(d.NAMES[2]);alter(r['clients'][0]['events'])
             with self.subTest(alter=alter),self.assertRaises((AssertionError,EOFError)):d.inspect(r,100)
@@ -77,6 +79,25 @@ class SemanticTests(unittest.TestCase):
         sources=d.ci.helper_sources(entries=[Path(d.__file__)])
         self.assertIn(d.ci.ROOT/'tools/protocol-bridge/probe_use_actions_runtime.py',sources)
         self.assertIn(d.ci.ROOT/'tools/protocol-bridge/probe_persistence_777.py',sources)
+
+    def test_all_authored_setup_is_supported_by_native_recorder(self):
+        import record777
+        for name in d.NAMES:
+            row=json.loads((d.ci.ROOT/f'tools/blackbox/scenarios/{name}.json').read_text())
+            record777.validate(row)
+            self.assertNotIn('!syncattrs',row['setup'])
+            self.assertEqual(row.get('native_phase','all'),'all')
+
+    def test_semantic_failure_never_hides_infrastructure_failure(self):
+        for before,after in [('match','mismatch-open'),('mismatch-open','mismatch-open'),('infrastructure-failed','infrastructure-failed')]:
+            result={'status':before};d.apply_semantic_result(result,{'status':'failed','error':'missing raw'})
+            self.assertEqual(result,{'status':after,'semantic_error':'missing raw'})
+
+    def test_expiry_is_checked_on_whole_observed_tick_grid(self):
+        r=fixture(d.NAMES[2]);r['clients'][0]['events'][-2]['at']=10+112.01*.05
+        d.inspect(r,100)
+        r['clients'][0]['events'][-2]['at']=10+113*.05
+        with self.assertRaises(AssertionError):d.inspect(r,100)
 
 
 if __name__=='__main__':unittest.main()

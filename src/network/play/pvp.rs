@@ -483,8 +483,17 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     let at = (player.x, player.y, player.z);
     let from = strike.from;
     // Анимация ушиба: откуда пришёл удар относительно взгляда жертвы.
-    let toward = (from.2 - at.2).atan2(from.0 - at.0).to_degrees() as f32;
-    let yaw = (toward - player.yaw).rem_euclid(360.0);
+    let direction = (from.2 - at.2).atan2(from.0 - at.0);
+    // Fresh Java777 defense42190823756: rear=-89.999992, front=90.000008.
+    // Float-коэффициент перевода в градусы внутри double сохраняет оба
+    // снятых f32. Signed remainder не теряет младшие биты через +180.
+    let yaw = if strike.source == Source::PlayerAttack {
+        let relative = direction * f64::from(180.0_f32 / std::f32::consts::PI) - f64::from(player.yaw);
+        let mut angle = relative % 360.0;
+        if angle >= 180.0 { angle -= 360.0; }
+        if angle < -180.0 { angle += 360.0; }
+        angle as f32
+    } else { (direction.to_degrees() as f32 - player.yaw).rem_euclid(360.0) };
     // Официальный777 pvp-bow: sourceCause — стрелок, sourceDirect — стрела.
     // Прежний основной сохраняет свой wire-result; кредит убийства не меняется.
     let direct = if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
