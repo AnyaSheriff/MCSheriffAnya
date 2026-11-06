@@ -51,7 +51,9 @@ def fixture(name):
         raw['sent'].append({'action':{'attack':True, 'bot':2}})
         events.extend([hp(13.7 if name == a.NAMES[6] else 13, 8), damage(tick=28), hp(7.4 if name == a.NAMES[6] else 6, 28)])
         if name == a.NAMES[6]: events.extend([chest(200, 1), chest(201, 8), chest(202, 28)])
-        else: events.extend([chest(239, 1), chest(None, 8), packet('entity_status', struct.pack('>iB', 2, 50), 8)])
+        else:
+            events.extend([chest(239, 1), chest(None, 8), packet('entity_status', struct.pack('>iB', 2, 50), 7.9)])
+            raw['clients'][1]['events'].append(packet('entity_status', struct.pack('>iB', 2, 50), 8))
     for client in raw['clients']: client['events'].sort(key=lambda e:e['at'])
     return raw
 
@@ -142,6 +144,21 @@ class Guards(unittest.TestCase):
             if wrong=='late':event['at']=11
             else:event['hex']='02'+event['hex'][2:]
             with self.subTest(wrong=wrong),self.assertRaises(AssertionError):a.inspect(raw,ITEMS)
+
+    def test_break_event_missing_or_duplicated_for_either_player_fails(self):
+        for side in [0,1]:
+            for kind in ['missing','duplicate']:
+                raw=fixture(a.NAMES[7]);events=raw['clients'][side]['events']
+                if kind=='missing':events[:]=[e for e in events if e['name']!='entity_status']
+                else:events.append(next(e for e in events if e['name']=='entity_status').copy())
+                with self.subTest(side=side,kind=kind),self.assertRaises(AssertionError):a.inspect(raw,ITEMS)
+
+    def test_owner_break_event_cannot_follow_first_damage(self):
+        for kind in ['timestamp','packet_order']:
+            raw=fixture(a.NAMES[7]);events=raw['clients'][0]['events'];event=next(e for e in events if e['name']=='entity_status')
+            if kind=='timestamp':event['at']+=.05
+            else:events.remove(event);events.append(event)
+            with self.subTest(kind=kind),self.assertRaises(AssertionError):a.inspect(raw,ITEMS)
 
 
 if __name__=='__main__':unittest.main()

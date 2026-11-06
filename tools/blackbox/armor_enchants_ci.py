@@ -63,8 +63,10 @@ def inspect(raw, items):
     victim, attacker = [r['entity'] for r in raw['initial']]
     health = [[20.0], [20.0]]
     damage, effects, removed, burning, chest, breaks = [], [], [], [], [], []
+    observer_breaks = [[], []]
+    observer_break_indices = [[], []]
     for side, client in enumerate(raw['clients']):
-        for event in client['events']:
+        for event_index, event in enumerate(client['events']):
             data = io.BytesIO(bytes.fromhex(event['hex']))
             tick = (event['at'] - raw['start']) * 20
             if event['name'] == 'update_health':
@@ -79,7 +81,7 @@ def inspect(raw, items):
                 finished(data)
                 if entity == (victim if side == 0 else attacker):
                     damage.append({'side': side, 'source': source, 'cause': cause,
-                                   'direct': direct, 'tick': tick})
+                                   'direct': direct, 'tick': tick, 'index': event_index})
             elif event['name'] == 'entity_effect':
                 entity, effect, amplifier, duration = [uint(data) for _ in range(4)]
                 flags = exact(data, 1)[0]; finished(data)
@@ -93,10 +95,13 @@ def inspect(raw, items):
             elif event['name'] == 'entity_metadata' and uint(data) == victim:
                 _, fields = player_metadata(bytes.fromhex(event['hex']))
                 if 0 in fields: burning.append({'side': side, 'burning': bool(fields[0] & 1), 'tick': tick})
-            elif side == 0 and event['name'] == 'entity_status':
+            elif event['name'] == 'entity_status':
                 entity = struct.unpack('>i', exact(data, 4))[0]
                 status = exact(data, 1)[0]; finished(data)
-                if entity == victim and status == 50: breaks.append(tick)
+                if entity == victim and status == 50:
+                    observer_breaks[side].append(tick)
+                    observer_break_indices[side].append(event_index)
+                    if side == 0: breaks.append(tick)
             if side == 0 and name in NAMES[-3:]:
                 slots = inventory_changes(event)
                 if 6 in slots: chest.append({'tick': tick, 'stack': slots[6]})
@@ -138,9 +143,11 @@ def inspect(raw, items):
             assert abs((20-health[0][1]) - (health[0][1]-health[0][2])) < 0.00001
         else:
             assert len(breaks) == 1 and any(c['stack'] is None and hits[0]['tick'] <= c['tick'] < hits[1]['tick'] for c in chest), 'chestplate did not break before second hit'
+            assert all(len(values) == 1 for values in observer_breaks), 'each player must receive exactly one break event'
+            assert breaks[0] <= hits[0]['tick'] and observer_break_indices[0][0] < hits[0]['index'], 'owner break event arrived after damage'
             assert health[0] == [20.0, 13.0, 6.0], 'breaking hit must already lose chestplate protection'
     return {'health': health, 'damage': damage, 'effects': effects, 'removed_effects': removed,
-            'burning': burning, 'chest': chest, 'break_ticks': breaks}
+            'burning': burning, 'chest': chest, 'break_ticks': breaks, 'observer_break_ticks': observer_breaks}
 
 
 def semantics(results, data):

@@ -1,6 +1,6 @@
 {
-  "build_run_id": "42197003218",
-  "head": "95cc96ede44ca351c24b614a72701c189a20e62d",
-  "runtime_sha256": "bfccaad288f826e4ee9e17be8e95fb7ebf02775b4380bcc12d6cf68d71cf5b84",
-  "note": "Native GNU ARM64 full CI independently verified584/584 report checks:176 selected common tests both Rust configurations,6default-only,3integrationboth,strictClippy,startup/auth/ELF/package identity. Fresh defense-v2 run42199690540 independently replayed6selected cases:115/0/0/0,12raw semantic controls and initial health receipts verified;106manifest/42source/43build hashes. Fresh combat15 run42199696266 independently replayed248/0/0/0,gaps/warnings0,29within-tick notes retained. Signed melee angles match recorded f32; shield completion100\u21920 restored. Cooldown packet interval rounds99ticks original/100core within predeclared99\u00b11; exact timing and full gameplay/PvP parity remain open."
+  "build_run_id": "42231558665",
+  "head": "c87d6237a7fb60203ea8e862dfd01b61e71c6319",
+  "runtime_sha256": "050ea3786f742aa3977f502047b948b4eef6b0f985c8e85ae671bccd167fa7c1",
+  "note": "Native GNU ARM64 full CI independently verified600/600 report checks:184selected common tests both Rust configurations(8new),6default-only,3integrationboth,strictClippy/workspace/no-default/build,startup/auth/ELF/package identity. Breaking ordinary777melee armor is worn before mitigation; owner break event is immediate without duplication; burning is published to other players; command equipment publishes promptly. Previous baseline42226930283 FAIL preserved. Fresh armor/enchant8, defense6 and combat15 on this exact runtime are still required. Full B06/B07/gameplay and exact other-player break timing remain open."
 }

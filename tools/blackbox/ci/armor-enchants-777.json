@@ -51,7 +51,7 @@
     "schema": "armor-enchants-777-v2",
     "initial": "both initial HP20 from actual update_health receipt before actions; actual attacks required and damaging player cause/direct checks",
     "effects": "Sharpness HP10; StrengthII HP7; WeaknessI HP17 and effect removal; ResistanceII two real hits; FireAspectI genuine melee then fire damage and burning/clear metadata; ThornsVII deterministic trigger with random damage1..5, actual return owner and chestplate wear3",
-    "armor": "authored iron chestplate damage200 or239 received before first hit; worn200->201->202 without break; break239->empty with exactly one status50, exact HP20->13->6: the breaking hit already loses armor; baseline v1 disproof is preserved",
+    "armor": "authored iron chestplate damage200 or239 received before first hit; worn200->201->202 without break; break239->empty with exactly one status50, exact HP20->13->6: the breaking hit already loses armor; baseline v1 disproof is preserved; both players receive exactly one break event, owner before first DamageEvent by wire order and time; other-player exact tick remains open",
     "comparison": "existing comparator and per-scenario original random allowances unchanged; no claim of full B06/B07 or exact network parity"
   }
 }
