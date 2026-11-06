@@ -4,6 +4,10 @@ on:
     branches: ['wip/team-projectile-observe-*']
   workflow_dispatch:
     inputs:
+      long_range:
+        description: Separate far-wall tracking input (z24, both observers)
+        type: boolean
+        default: false
       build_run_id:
         description: Exact successful migration-checks run (defaults to checked baseline)
         required: false
@@ -85,7 +89,7 @@ jobs:
           sudo unshare --net -- bash -c 'ip link set lo up; exec python3 "$@"' bash tools/protocol-bridge/probe_team_projectile_777.py \
             --jar "$RUNNER_TEMP/gameplay-input/server.jar" --java "$JAVA_HOME/bin/java" \
             --data "$RUNNER_TEMP/gameplay-input/data" --output "$RUNNER_TEMP/gameplay-output/official" \
-            --port 26178
+            --port 26178 ${{ (inputs.long_range == true || startsWith(github.ref, 'refs/heads/wip/team-projectile-observe-long-range-')) && '--long-range' || '' }}
       - name: Record verified core (strict checks)
         shell: bash
         run: |
@@ -103,7 +107,7 @@ jobs:
           PY
           sudo unshare --net -- bash -c 'ip link set lo up; exec python3 "$@"' bash tools/protocol-bridge/probe_team_projectile_777.py \
             --binary "$RUNNER_TEMP/gameplay-input/mcsheriffanya" \
-            --data "$RUNNER_TEMP/gameplay-input/data" --output "$RUNNER_TEMP/gameplay-output/ours" --port 26278 --expected "$RUNNER_TEMP/gameplay-output/official/result.json"
+            --data "$RUNNER_TEMP/gameplay-input/data" --output "$RUNNER_TEMP/gameplay-output/ours" --port 26278 ${{ (inputs.long_range == true || startsWith(github.ref, 'refs/heads/wip/team-projectile-observe-long-range-')) && '--long-range' || '' }} --expected "$RUNNER_TEMP/gameplay-output/official/result.json"
       - name: Save exact source and artifact hashes
         if: always()
         env:

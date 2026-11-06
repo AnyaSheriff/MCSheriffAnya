@@ -329,4 +329,118 @@ class TeamProjectileTests(unittest.TestCase):
             state.accept(packet('rel_entity_move',payload[:-1]))
 
 
+
+
+def long_fixture(target='official', *, coordinates=True, stops=True, grounded=True, victim_stop=True):
+    original=fixture(target)
+    report=copy.deepcopy(original)
+    report.update(schema=probe.LONG_SCHEMA,criteria=copy.deepcopy(probe.LONG_CRITERIA))
+    for session in report['sessions'].values(): session['packets']=[]
+    previous={role:0 for role in report['sessions']}
+    for index,row in enumerate(report['cases']):
+        for role,session in report['sessions'].items():
+            start,stop=original['cases'][index]['ranges'][role]
+            packets=original['sessions'][role]['packets']
+            session['packets'].extend(copy.deepcopy(packets[previous[role]:start]))
+            row['ranges'][role]=[len(session['packets']),None]
+            chunk=copy.deepcopy(packets[start:stop])
+            if row['case'].endswith('same-denied'):
+                entity=100+index;stamp=chunk[-1]['time']-1
+                additions=[]
+                if role=='victim':
+                    shot_start,shot_stop=original['cases'][index]['ranges']['shooter']
+                    additions.append(copy.deepcopy(next(p for p in original['sessions']['shooter']['packets'][shot_start:shot_stop] if p['name']=='spawn_entity')))
+                if coordinates:
+                    additions.append(packet('sync_entity_position',varint(entity)+b'\0'+struct.pack('>dddffB',.5,65.5,23.95,0,0,0),time=stamp))
+                if stops and (role!='victim' or victim_stop):
+                    additions.append(packet('entity_velocity',varint(entity)+b'\0',time=stamp+.1))
+                if grounded:
+                    additions.append(packet('entity_metadata',varint(entity)+bytes([10,8,1,255]),time=stamp+.2))
+                chunk[-1:-1]=additions
+            session['packets'].extend(chunk)
+            row['ranges'][role][1]=len(session['packets'])
+            previous[role]=stop
+        row['summary']=probe.summarize(report,row)
+    report['behavior_failures']=probe.behavior_failures(report)
+    return report
+
+
+class LongRangeTrackingTests(unittest.TestCase):
+    def test_far_input_is_separate_and_near_v3_keeps_original_wall(self):
+        self.assertIn('fill -8 65 2 8 69 2 stone',probe.world_setup_commands())
+        self.assertIn('fill -8 65 24 8 69 24 stone',probe.world_setup_commands(24))
+        self.assertNotEqual(probe.SCHEMA,probe.LONG_SCHEMA)
+        self.assertEqual(probe.CRITERIA['cases'],probe.LONG_CRITERIA['cases'])
+        with self.assertRaisesRegex(AssertionError,'unregistered'):
+            probe.world_setup_commands(12)
+
+    def test_complete_far_capture_is_replayed_for_both_observers(self):
+        official=long_fixture();core=long_fixture('core')
+        probe.validate(official,'official');probe.validate(core,'core')
+        self.assertEqual(probe.compare(official,core),[])
+        for role in ('shooter','victim'):
+            row=core['cases'][0]['summary']['tracking'][role]
+            self.assertEqual(row['spawns'],1)
+            self.assertTrue(row['zero_velocity'] and row['past_target'] and row['in_ground'])
+            self.assertGreater(row['coordinate_updates'],0)
+
+    def test_stop_cannot_invent_a_landing_position(self):
+        core=long_fixture('core',coordinates=False)
+        probe.validate(core,'core')
+        for role in ('shooter','victim'):
+            row=core['cases'][0]['summary']['tracking'][role]
+            self.assertTrue(row['zero_velocity'])
+            self.assertFalse(row['past_target'])
+            self.assertEqual(row['coordinate_updates'],0)
+            stops=[r for r in row['receipts'] if 'velocity' in r]
+            self.assertEqual(stops[-1]['last_received_position'],[.5,66.5,-5.5])
+        differences=probe.compare(long_fixture(),core)
+        self.assertTrue(any('shooter tracking past_target' in x for x in differences))
+        self.assertTrue(any('victim tracking past_target' in x for x in differences))
+
+    def test_absent_ground_metadata_is_a_comparison_difference(self):
+        core=long_fixture('core',grounded=False)
+        self.assertTrue(any('tracking in_ground' in x for x in probe.compare(long_fixture(),core)))
+
+    def test_missing_stop_control_in_either_observer_is_rejected(self):
+        for kwargs in ({'stops':False},{'victim_stop':False}):
+            with self.subTest(kwargs=kwargs),self.assertRaisesRegex(AssertionError,'spawn/stop control'):
+                probe.validate(long_fixture('core',**kwargs),'core')
+
+    def test_projectile_velocity_does_not_become_player_knockback(self):
+        core=long_fixture('core')
+        self.assertFalse(core['cases'][0]['summary']['velocity'])
+        self.assertTrue(core['cases'][0]['summary']['tracking']['shooter']['zero_velocity'])
+
+    def test_cross_profile_comparison_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError,'different input profiles'):
+            probe.compare(fixture(),long_fixture('core'))
+
+    def test_forged_tracking_summary_is_rejected(self):
+        report=long_fixture('core')
+        report['cases'][0]['summary']['tracking']['victim']['past_target']=False
+        with self.assertRaisesRegex(AssertionError,'not derived from raw'):
+            probe.validate(report,'core')
+
+    def test_projectile_velocity_truncation_and_trailing_bytes_are_rejected(self):
+        report=long_fixture('core');row=report['cases'][0]
+        for bad in (b'',b'\0\0'):
+            broken=copy.deepcopy(report)
+            packets=broken['sessions']['shooter']['packets']
+            start,stop=row['ranges']['shooter']
+            p=next(p for p in packets[start:stop] if p['name']=='entity_velocity')
+            p['payload']=(varint(100)+bad).hex()
+            with self.subTest(bad=bad),self.assertRaises((AssertionError,EOFError,IndexError,ValueError)):
+                probe.summarize(broken,broken['cases'][0])
+
+    def test_ground_metadata_must_have_boolean_serializer(self):
+        report=long_fixture('core');row=report['cases'][0]
+        packets=report['sessions']['shooter']['packets']
+        start,stop=row['ranges']['shooter']
+        p=next(p for p in packets[start:stop] if p['name']=='entity_metadata')
+        p['payload']=(varint(100)+bytes([10,0,1,255])).hex()
+        with self.assertRaisesRegex(AssertionError,'must be boolean'):
+            probe.summarize(report,row)
+
+
 if __name__=='__main__': unittest.main()

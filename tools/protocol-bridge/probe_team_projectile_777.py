@@ -37,6 +37,18 @@ CRITERIA = {'version':SCHEMA, 'cases':CASES,
             'backstop':'input-v3 wall z2; shooter z-5.5 and target z0.5 unchanged; require observed projectile-past-target as before',
             'comparison':'same boolean hit/fire/effect/velocity outcomes and observed projectile-past-target; no exact damage, RNG or tick comparison',
             'limits':'two stationary survival players; ordinary bow arrows and unenchanted thrown trident; no Flame/tipped/multishot/Piercing/Bedrock'}
+# Отдельный ввод для проверки дальнего слежения; прежний v3 неизменен.
+LONG_SCHEMA = 'team-projectiles-777-long-range-v1'
+LONG_CRITERIA = copy.deepcopy(CRITERIA)
+LONG_CRITERIA.update(version=LONG_SCHEMA,
+    backstop='input long-range-v1 wall z24; same floor, two survival players and eight real shots; no inferred projectile positions',
+    tracking='same-denied bow/trident: both observers must see exactly one matching spawn and a zero-velocity receipt; compare observed flight-past-target and in-ground metadata booleans for each observer; no guessed landing coordinates or exact RNG/tick/packet counts')
+
+
+def criteria_for(schema):
+    return {SCHEMA:CRITERIA, LONG_SCHEMA:LONG_CRITERIA}.get(schema)
+
+
 NAMES = ('McsaArcher', 'McsaTarget')
 # Собственная GUI-запись actual777-use-action-observations.json: release_use6.
 # Внутреннее старое ядро использует5, но это НЕ wire-значение Java777.
@@ -318,14 +330,15 @@ def predict_self_aim(position,velocity,*,max_ticks=200):
     raise AssertionError('self prediction exceeded200ticks')
 
 
-def world_setup_commands():
+def world_setup_commands(backstop=2):
+    assert type(backstop) is int and backstop in (2,24), 'unregistered backstop input'
     # core41990613917 появился на y63: будущий полy64 пересёк голову.
     # Защита на время авторского строительства не меняет режим выстрелов.
     return [f'gamemode creative {name}' for name in NAMES]+[
         'gamerule minecraft:spawn_mobs false','gamerule minecraft:natural_health_regeneration false',
         'difficulty normal','weather clear','time set noon',
         'fill -8 64 -16 8 64 32 stone','fill -8 65 -16 8 72 32 air',
-        'fill -8 65 2 8 69 2 stone','team add mcsa_a','team add mcsa_b']
+        f'fill -8 65 {backstop} 8 69 {backstop} stone','team add mcsa_a','team add mcsa_b']
 
 
 def case_setup_commands(case):
@@ -403,7 +416,7 @@ def summarize(report,row):
     damage_events = [event for event in victim.events if event['name']=='damage_event']
     assert all(event['direct']==projectile+1 and event['cause']==before[0].entity+1
                for event in damage_events), 'unrelated damage invalidates shot control'
-    return {'initial_health':20,'minimum_health':min(health),'final_health':victim.health,
+    value = {'initial_health':20,'minimum_health':min(health),'final_health':victim.health,
             # Закреплённый damage_event хранит cause/direct как ID+1;
             # постороннее повреждение не заменяет положительный выстрел.
             'hit':any(event['name']=='damage_event' and event['direct']==projectile+1
@@ -415,6 +428,57 @@ def summarize(report,row):
             'projectile':{'spawn':spawns[0], 'positions':positions,
                           'past_target':any(p[2]>1.0 for p in positions),
                           'destroyed':any(projectile in event.get('entities',[]) for event in shooter.events)}}
+
+
+    if report['schema'] == LONG_SCHEMA:
+        value['tracking'] = tracking_receipts(report, row, projectile)
+    return value
+
+
+def tracking_receipts(report, row, projectile):
+    """Только фактически полученные пакеты. Нулевая скорость не сообщает место."""
+    result = {}
+    for role in ('shooter','victim'):
+        packets=report['sessions'][role]['packets']
+        start,stop=row['ranges'][role]
+        state=replay(packets[:start],report['entity_kinds'])
+        receipts=[];spawns=0
+        for index in range(start,stop):
+            packet=packets[index];before=len(state.events)
+            state.accept(packet)
+            if packet['direction']!='in': continue
+            record={'packet_index':index,'time':packet['time'],'name':packet['name']}
+            data=io.BytesIO(bytes.fromhex(packet['payload']))
+            if packet['name']=='entity_velocity':
+                entity=uint(data)
+                if entity!=projectile: continue
+                record['velocity']=finite(lpvec(data));end(data)
+            elif packet['name']=='entity_metadata':
+                entity=uint(data)
+                if entity!=projectile: continue
+                _,fields=player_metadata(bytes.fromhex(packet['payload']))
+                if 10 not in fields: continue
+                assert type(fields[10]) is bool, 'arrow in-ground must be boolean'
+                record['in_ground']=fields[10]
+            else:
+                events=[event for event in state.events[before:] if event.get('entity')==projectile]
+                if not events: continue
+                event=events[-1]
+                if event['name']=='spawn_entity':
+                    spawns+=1;record['positions']=[event['position']]
+                elif 'positions' in event: record['positions']=event['positions']
+                else: continue
+            if projectile in state.positions:
+                record['last_received_position']=state.positions[projectile].copy()
+            receipts.append(record)
+        actual_positions=[p for receipt in receipts for p in receipt.get('positions',[])]
+        result[role]={'spawns':spawns,
+            'zero_velocity':any('velocity' in r and all(v==0 for v in r['velocity']) for r in receipts),
+            'in_ground':any(r.get('in_ground') is True for r in receipts),
+            'past_target':any(p[2]>1 for p in actual_positions),
+            'coordinate_updates':sum(r['name']!='spawn_entity' and 'positions' in r for r in receipts),
+            'receipts':receipts}
+    return result
 
 
 def behavior_failures(report):
@@ -432,7 +496,8 @@ def behavior_failures(report):
 
 
 def validate(report,target,require_pass=True):
-    assert report.get('schema')==SCHEMA and report.get('criteria')==CRITERIA, 'wrong criteria'
+    criteria=criteria_for(report.get('schema'))
+    assert criteria is not None and report.get('criteria')==criteria, 'wrong criteria'
     assert report.get('target')==target and report.get('protocol')==777
     assert report.get('team_layout_sha256')==TEAM_LAYOUT_SHA256, 'missing pinned own team-layout evidence'
     assert report.get('server_exit')==0 and 'error' not in report, 'incomplete or crashed capture'
@@ -449,6 +514,11 @@ def validate(report,target,require_pass=True):
             assert row['ranges'][role][0] >= previous[role], 'overlapping shot ranges'
             previous[role]=row['ranges'][role][1]
         assert row['summary']==summarize(report,row), 'summary not derived from raw'
+        if report['schema']==LONG_SCHEMA and row['case'].endswith('same-denied'):
+            for role in ('shooter','victim'):
+                tracking=row['summary']['tracking'][role]
+                assert tracking['spawns']==1 and tracking['zero_velocity'], 'missing observed projectile spawn/stop control'
+
     failures=behavior_failures(report)
     assert report.get('behavior_failures')==failures, 'forged semantic failures'
     if require_pass:
@@ -460,6 +530,7 @@ def validate(report,target,require_pass=True):
 def compare(official,actual):
     validate(official,'official')
     validate(actual,'core',False)
+    assert official['schema']==actual['schema'] and official['criteria']==actual['criteria'], 'cannot compare different input profiles'
     failures=[]
     for a,b in zip(official['cases'],actual['cases']):
         for key in ('hit','velocity','fire','effects'):
@@ -468,6 +539,12 @@ def compare(official,actual):
             failures.append(a['case']+': health-reduced differs')
         if a['summary']['projectile']['past_target'] != b['summary']['projectile']['past_target']:
             failures.append(a['case']+': observed flight past target differs')
+        if official['schema']==LONG_SCHEMA and a['case'].endswith('same-denied'):
+            for role in ('shooter','victim'):
+                for key in ('past_target','zero_velocity','in_ground'):
+                    if a['summary']['tracking'][role][key]!=b['summary']['tracking'][role][key]:
+                        failures.append(a['case']+': '+role+' tracking '+key+' differs')
+
     return failures
 
 
@@ -479,12 +556,17 @@ def main():
     parser.add_argument('--data',type=Path,required=True);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--port',type=int,required=True);parser.add_argument('--expected',type=Path)
     parser.add_argument('--observe-only',action='store_true')
+    parser.add_argument('--long-range',action='store_true',help='Отдельный закреплённый ввод: стенкаz24 и оба наблюдателя; default v3 z2')
     args=parser.parse_args()
     assert 26000 <= args.port <= 26299
     assert not args.observe_only or args.binary, 'observe-only is solely for preserved core baseline'
     assert args.jar or args.expected, 'core requires fresh official oracle'
     expected=json.loads(args.expected.read_text()) if args.expected else None
-    if expected: validate(expected,'official')
+    schema=LONG_SCHEMA if args.long_range else SCHEMA
+    criteria=criteria_for(schema)
+    if expected:
+        validate(expected,'official')
+        assert expected['schema']==schema, 'expected capture uses different input profile'
     manifest=json.loads(Path(__file__).with_name('candidate-sources-26.3.json').read_text())
     data_hashes={}
     for entry in manifest['files']:
@@ -499,14 +581,14 @@ def main():
     if args.jar: assert hashlib.sha1(executable.read_bytes()).hexdigest()==JAR_SHA1
     args.output.mkdir(parents=True,exist_ok=True)
     assert not (args.output/'result.json').exists(), 'refuse to overwrite existing evidence'
-    report={'schema':SCHEMA,'criteria':CRITERIA,'protocol':777,'target':'official' if args.jar else 'core',
+    report={'schema':schema,'criteria':criteria,'protocol':777,'target':'official' if args.jar else 'core',
             'target_sha256':hashlib.sha256(executable.read_bytes()).hexdigest(),
             'jar_sha1':JAR_SHA1 if args.jar else None,'data_sha256':data_hashes,'entity_kinds':kinds,
             'team_layout_sha256':TEAM_LAYOUT_SHA256,
             'status':'INCOMPLETE','sessions':{},'cases':[],'commands':[],'behavior_failures':[]}
     if args.expected: report['expected_sha256']=hashlib.sha256(args.expected.read_bytes()).hexdigest()
     # Критерии записаны до запуска сервера и не подстраиваются по результату.
-    (args.output/'criteria.json').write_text(json.dumps(CRITERIA,indent=2)+'\n')
+    (args.output/'criteria.json').write_text(json.dumps(criteria,indent=2)+'\n')
     with socket.socket() as check: check.bind(('127.0.0.1',args.port))
     with tempfile.TemporaryDirectory(prefix='mcsa-team-projectiles-777-') as directory:
         root=Path(directory)
@@ -545,7 +627,7 @@ def main():
                     clients[role]=client
                     report['sessions'][role]={'name':name,'uuid':uuid.hex(),'packets':client.wire}
                     wait(lambda:client.position is not None,'initial player position')
-                for cmd in world_setup_commands():
+                for cmd in world_setup_commands(24 if args.long_range else 2):
                     command(cmd)
                 for index,case in enumerate(CASES):
                     weapon,mode=case.split('-',1)
