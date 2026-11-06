@@ -1,0 +1,93 @@
+name: Armor and combat enchantments 26.3 (eight cases)
+
+on:
+  push:
+    branches: ['wip/armor-enchants-observe-*', 'wip/armor-enchants-validate-*']
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Exact successful migration-checks run; empty uses checked pin'
+        required: false
+        type: string
+      build_head:
+        description: 'Full source SHA of that build'
+        required: false
+        type: string
+      runtime_sha256:
+        description: 'Verified runtime SHA256'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: armor-enchants-checks-26.3
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  combat:
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Check orchestration without Minecraft
+        run: |
+          mkdir -p "$RUNNER_TEMP/armor-enchants-output"
+          node --test tools/blackbox/*.test.js 2>&1 | tee "$RUNNER_TEMP/armor-enchants-output/node-blackbox-tests.log"
+          python -m unittest discover -s tools/blackbox -p test_combat_ci.py -v 2>&1 | tee "$RUNNER_TEMP/armor-enchants-output/orchestration-tests.log"
+          python -m unittest discover -s tools/blackbox -p test_armor_enchants_ci.py -v 2>&1 | tee "$RUNNER_TEMP/armor-enchants-output/armor-enchants-guards.log"
+          python -m unittest discover -s tools/blackbox -p test_record777.py -v 2>&1 | tee "$RUNNER_TEMP/armor-enchants-output/recorder-tests.log"
+          node --check tools/blackbox/replay777.js 2>&1 | tee "$RUNNER_TEMP/armor-enchants-output/node-replay-syntax.log"
+          node --check tools/blackbox/compare.js 2>&1 | tee "$RUNNER_TEMP/armor-enchants-output/node-compare-syntax.log"
+      - name: Resolve and verify exact successful build
+        id: pin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          INPUT_BUILD_HEAD: ${{ inputs.build_head }}
+          INPUT_RUNTIME_SHA256: ${{ inputs.runtime_sha256 }}
+        run: |
+          python tools/blackbox/armor_enchants_ci.py pin --output "$RUNNER_TEMP/armor-enchants-output"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.pin.outputs.build_run_id }}
+          name: ${{ steps.pin.outputs.artifact_name }}
+          path: ${{ runner.temp }}/armor-enchants-build-artifact
+      - name: Record both sides and preserve existing comparison rules
+        timeout-minutes: 31
+        run: |
+          python tools/blackbox/armor_enchants_ci.py run \
+            --artifact "$RUNNER_TEMP/armor-enchants-build-artifact" \
+            --work "$RUNNER_TEMP/armor-enchants-work" \
+            --output "$RUNNER_TEMP/armor-enchants-output" \
+            --java "$JAVA_HOME/bin/java"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: armor-enchants-777-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/armor-enchants-output/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
