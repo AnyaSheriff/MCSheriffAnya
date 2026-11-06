@@ -235,7 +235,7 @@ pub(super) struct Net {
     sent_saturation_zero: bool,
     meta: Meta,
     /// Горит ли он для свойств: обновляется в начале такта сущности.
-    fire_flag: bool,
+    pub(super) fire_flag: bool,
     /// Общие ticks_frozen; замедление клиента Bedrock [Bedrock: потом].
     frozen: i32,
     /// Скорость, которую надо сообщить после удара.
@@ -2215,7 +2215,7 @@ pub(super) async fn hit_by(
     killer: Option<Killer<'_>>,
     hurt_yaw: Option<f32>,
 ) -> io::Result<Option<survival::Hit>> {
-    hit_by_breached(stream, shared, player, amount, source, direct, cause, killer, hurt_yaw, 1.0).await
+    hit_by_breached(stream, shared, player, amount, source, direct, cause, killer, hurt_yaw, 1.0, None).await
 }
 
 /// Вики, Difficulty/Arrow: урон снаряда игрока не является уроном моба.
@@ -2264,7 +2264,7 @@ fn plugin_damage_cause(source: Source) -> &'static str {
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn hit_by_breached(
     stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
-    source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32,
+    source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32, armor_wear: Option<f32>,
 ) -> io::Result<Option<survival::Hit>> {
     if crate::frost::protects(&player.inventory, source) { return Ok(None); }
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
@@ -2278,6 +2278,20 @@ pub(super) async fn hit_by_breached(
         amount = changed;
     }
 
+    let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
+    if let Some(wear) = armor_wear {
+        // Проверка принятия — без мутации живого Vitals/RNG. Отклонённый
+        // удар, иммунитет или отмена плагином не изнашивают броню.
+        let armor = player.attrs.value(crate::attributes::ARMOR) as f32;
+        let toughness = player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32;
+        let points = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot))
+            .map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
+        let before = crate::combat::mitigated_damage(amount, armor, toughness, points, source, breach);
+        if player.vit.clone().hurt(before, source, immune).is_some() {
+            super::pvp::wear_armor_before_strike(stream, shared, player, wear).await?;
+        }
+    }
+
     // Броня и защитные чары — разные слои: Feather Falling действует
     // на падение, Protection — на магию, Fire Protection — на горение.
     {
@@ -2287,7 +2301,6 @@ pub(super) async fn hit_by_breached(
         amount = crate::combat::mitigated_damage(amount, armor, toughness, points, source, breach);
     }
 
-    let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
     let announced = std::mem::take(&mut player.net.announced);
     // Взрыв во время неуязвимости снимает лишь разницу с прошлым ударом и
     // молча: без события урона (чёрный ящик, wither-skull-hit: череп — магия

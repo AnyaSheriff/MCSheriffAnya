@@ -138,7 +138,7 @@ def inspect(raw, items):
             assert abs((20-health[0][1]) - (health[0][1]-health[0][2])) < 0.00001
         else:
             assert len(breaks) == 1 and any(c['stack'] is None and hits[0]['tick'] <= c['tick'] < hits[1]['tick'] for c in chest), 'chestplate did not break before second hit'
-            assert health[0][1]-health[0][2] > 20-health[0][1], 'broken armor still protects'
+            assert health[0] == [20.0, 13.0, 6.0], 'breaking hit must already lose chestplate protection'
     return {'health': health, 'damage': damage, 'effects': effects, 'removed_effects': removed,
             'burning': burning, 'chest': chest, 'break_ticks': breaks}
 
@@ -161,7 +161,7 @@ def semantics(results, data):
             exact_health = first[0] == second[0] and (name == NAMES[5] or first[1] == second[1])
             if not exact_health:
                 pair[1].update(status='failed', error='actual f32 health differs from original')
-    return {'schema': 'armor-enchants-777-v1', 'cases': rows,
+    return {'schema': 'armor-enchants-777-v2', 'cases': rows,
             'status': 'failed' if any(r['status'] != 'pass' for r in rows) else 'verified-semantic-controls',
             'error': '; '.join(r['scenario']+'/'+r['side']+':'+r['error'] for r in rows if r['status'] != 'pass')}
 

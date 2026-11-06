@@ -100,6 +100,9 @@ mod bow_tests;
 mod bow_landing_tests;
 #[cfg(test)]
 mod defense_runtime_tests;
+
+#[cfg(test)]
+mod armor_enchants_runtime_tests;
 mod thrown;
 mod projectile;
 #[cfg(test)]
@@ -430,7 +433,9 @@ const PROPERTY_BYTE: i32 = 0;
 /// (minecraft.wiki, Java Edition protocol/Entity metadata).
 const FLAGS_PROPERTY: u8 = 0;
 const LIVING_FLAGS_PROPERTY_ID: u8 = 8;
+const FLAG_ON_FIRE: u8 = 0x01;
 const FLAG_CROUCHING: u8 = 0x02;
+const FLAG_SPRINTING: u8 = 0x08;
 
 /// Поза сущности (свойство 6): вид значения «поза» — 20 в 26.1
 /// (minecraft-data, протокол 26.1); 0 — стоит, 5 — присел.
@@ -636,6 +641,7 @@ struct Shown {
     speed_bits: u64,
     /// Бежит ли: остальным — флаг сущности и атрибут скорости.
     sprinting: bool,
+    burning: bool,
     living: u8,
     effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
     /// Здоровье (биты числа): остальным — свойством 9.
@@ -1163,6 +1169,7 @@ async fn enter_world(
                     worn: [None; 5],
                     speed_bits: 0,
                     sprinting: false,
+                    burning: false,
                     silent: false,
                     living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
@@ -3295,12 +3302,17 @@ async fn send_unload_chunk(stream: &mut Outgoing<'_>, chunk_x: i32, chunk_z: i32
 /// Без этого пакета клиент рисует чужого игрока в одном слое — сам скин у
 /// него уже есть, но второй слой, шапка и куртка, считается выключенным, —
 /// и любого игрока правшой.
-async fn send_look(
+async fn send_look(stream: &mut Outgoing<'_>, entity_id: i32, skin_parts: u8, main_hand: u8, sneaking: bool) -> io::Result<()> {
+    send_look_flags(stream, entity_id, skin_parts, main_hand, sneaking, 0).await
+}
+
+async fn send_look_flags(
     stream: &mut Outgoing<'_>,
     entity_id: i32,
     skin_parts: u8,
     main_hand: u8,
     sneaking: bool,
+    extra_flags: u8,
 ) -> io::Result<()> {
     let mut body = encode_varint(SET_ENTITY_DATA);
 
@@ -3311,7 +3323,7 @@ async fn send_look(
     // флагов сущности и позе «присел».
     body.push(FLAGS_PROPERTY);
     body.extend_from_slice(&encode_varint(PROPERTY_BYTE));
-    body.push(if sneaking { FLAG_CROUCHING } else { 0 });
+    body.push(extra_flags | if sneaking { FLAG_CROUCHING } else { 0 });
 
     body.push(POSE_PROPERTY);
     body.extend_from_slice(&encode_varint(PROPERTY_POSE));
@@ -3372,6 +3384,26 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
 /// Чёрный ящик 41111789931: /item меняет собственный Slot и чужой
 /// Equipment в одном такте. Публикация обязана предшествовать отпусканию
 /// барьера; Attributes и перезарядку здесь не пересчитываем. [проверить]
+async fn apply_command_slot(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, stack: Option<Stack>) -> io::Result<()> {
+    // Команда подменила надетую вещь той же вещью с другими
+    // данными (чёрный ящик, tails-armor-equip-command:
+    // damage=5 — снова звук надевания); износ от ударов
+    // молчит, там вещь меняется не командой.
+    if (5..=8).contains(&slot)
+        && let (Some(old), Some(new)) = (player.inventory.slot(slot), stack)
+        && old.item == new.item && old != new
+        && let Some(info) = crate::combat::info(new.item)
+        && !info.equip_sound.is_empty()
+    {
+        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x, player.y, player.z), info.equip_sound, 1.0, 1.0);
+    }
+    player.inventory.set(slot, stack);
+    send_container_slot(stream, player, slot).await?;
+    // Как CommandHold: экипировка и её звук доступны до следующего снимка.
+    publish_player(shared, player);
+    Ok(())
+}
+
 async fn apply_command_hold(
     stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState,
     stack: Option<Stack>, completion: Option<Arc<crate::shared::CommandEquipmentCompletion>>,
@@ -3535,6 +3567,7 @@ async fn send_other_moves(
                 worn: gear.worn,
                 speed_bits: u64::from(gear.speed_touch),
                 sprinting: gear.sprinting,
+                burning: gear.burning,
                 silent: gear.silent,
                 living: gear.living,
                 effect_colors: gear.effect_colors,
@@ -3558,7 +3591,7 @@ async fn send_other_moves(
         let Some(mut shown) = seen.get(&entity_id).copied() else {
             if let Some(member) = new {
                 send_add_entity(stream, &member).await?;
-                send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
+                send_look_flags(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking, if now.burning { FLAG_ON_FIRE } else { 0 } | if now.sprinting { FLAG_SPRINTING } else { 0 }).await?;
                 if now.silent {send_silent(stream,entity_id,true).await?;}
                 let mut slots = vec![(EQUIPMENT_MAIN_HAND, member.held)];
 
@@ -3588,6 +3621,7 @@ async fn send_other_moves(
             if phase == Phase::Swings {
                 only.swings = now.swings;
                 only.sprinting = now.sprinting;
+                only.burning = now.burning;
                 only.living = now.living;
                 only.effect_colors = now.effect_colors;
                 only.health_bits = now.health_bits;
@@ -3616,17 +3650,17 @@ async fn send_other_moves(
             }
 
             // Бег чужого игрока: флаг сущности и атрибут скорости шага.
-            if only.sprinting != shown.sprinting {
+            if only.sprinting != shown.sprinting || only.burning != shown.burning {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
                 data.push(FLAGS_PROPERTY);
                 data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
-                data.push(if only.sprinting { 0x08 } else { 0 } | if now.sneaking { FLAG_CROUCHING } else { 0 });
+                data.push(if only.sprinting { FLAG_SPRINTING } else { 0 } | if now.sneaking { FLAG_CROUCHING } else { 0 } | if only.burning { FLAG_ON_FIRE } else { 0 });
                 data.push(PROPERTIES_END);
                 write_body(stream, data).await?;
 
-                let movement = gear.movement_speed.clone();
+                let movement = (only.sprinting != shown.sprinting).then(|| gear.movement_speed.clone()).flatten();
 
                 if let Some(attribute) = movement {
                     let mut body = encode_varint(0x83);
@@ -3659,7 +3693,7 @@ async fn send_other_moves(
                 if (only.living ^ shown.living) & crate::players::GLIDE_BIT != 0 {
                     data.push(FLAGS_PROPERTY);
                     data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
-                    data.push(if only.living & crate::players::GLIDE_BIT != 0 { 0x80 } else { 0 } | if only.sprinting { 0x08 } else { 0 } | if now.sneaking { FLAG_CROUCHING } else { 0 });
+                    data.push(if only.living & crate::players::GLIDE_BIT != 0 { 0x80 } else { 0 } | if only.sprinting { 0x08 } else { 0 } | if now.sneaking { FLAG_CROUCHING } else { 0 } | if only.burning { FLAG_ON_FIRE } else { 0 });
                 }
 
                 if (only.living ^ shown.living) & POSE_BITS != 0 {
@@ -3756,14 +3790,14 @@ async fn send_other_moves(
             continue;
         }
 
-        (now.swings, now.held, now.worn, now.speed_bits, now.sprinting, now.living, now.effect_colors, now.health_bits, now.air) = (shown.swings, shown.held, shown.worn, shown.speed_bits, shown.sprinting, shown.living, shown.effect_colors, shown.health_bits, shown.air);
+        (now.swings, now.held, now.worn, now.speed_bits, now.sprinting, now.burning, now.living, now.effect_colors, now.health_bits, now.air) = (shown.swings, shown.held, shown.worn, shown.speed_bits, shown.sprinting, shown.burning, shown.living, shown.effect_colors, shown.health_bits, shown.air);
 
         if now == shown {
             continue;
         }
 
         if now.skin_parts != shown.skin_parts || now.main_hand != shown.main_hand || now.sneaking != shown.sneaking {
-            send_look(stream, entity_id, now.skin_parts, now.main_hand, now.sneaking).await?;
+            send_look_flags(stream, entity_id, now.skin_parts, now.main_hand, now.sneaking, if now.burning { FLAG_ON_FIRE } else { 0 } | if now.sprinting { FLAG_SPRINTING } else { 0 }).await?;
         }
 
         if now.position != shown.position {
@@ -5036,7 +5070,8 @@ async fn send_pending_world_events(
                     send_remove_entity(stream, *entity_id).await?;
                 }
             }
-            WorldEvent::EquipmentBreak { entity_id, status } => {
+            WorldEvent::EquipmentBreak { entity_id, status, except } => {
+                if *except == Some(player.entity_id) { continue; }
                 let mut body = encode_varint(0x22);
                 push_i32(&mut body, *entity_id);
                 body.push(*status);
@@ -5867,6 +5902,7 @@ async fn send_pending_player_changes(
                     worn: [None; 5],
                     speed_bits: 0,
                     sprinting: false,
+                    burning: false,
                     living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
@@ -5916,6 +5952,7 @@ async fn send_pending_player_changes(
                         worn: [None; 5],
                         speed_bits: 0,
                         sprinting: false,
+                    burning: false,
                         living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
@@ -7339,22 +7376,7 @@ async fn read_and_log_play_packets(
                     player.save_with_catalog(&shared.playerdata, shared.catalog());
                 }
 
-                Order::SetSlot { slot, stack } => {
-                    // Команда подменила надетую вещь той же вещью с другими
-                    // данными (чёрный ящик, tails-armor-equip-command:
-                    // damage=5 — снова звук надевания); износ от ударов
-                    // молчит, там вещь меняется не командой.
-                    if (5..=8).contains(&slot)
-                        && let (Some(old), Some(new)) = (player.inventory.slot(slot), stack)
-                        && old.item == new.item && old != new
-                        && let Some(info) = crate::combat::info(new.item)
-                        && !info.equip_sound.is_empty()
-                    {
-                        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x, player.y, player.z), info.equip_sound, 1.0, 1.0);
-                    }
-                    player.inventory.set(slot, stack);
-                    send_container_slot(stream, player, slot).await?;
-                }
+                Order::SetSlot { slot, stack } => apply_command_slot(stream, shared, player, slot, stack).await?,
 
                 Order::PluginOpen { chest } => {
                     let (title, slots, active) = { let gui = chest.lock().expect("сундук"); (gui.title.clone(), gui.slots.clone(), gui.active) };
@@ -12965,6 +12987,7 @@ impl PlayerState {
             effect_colors: self.vit.effect_colors(),
             health: self.net.announced_health.unwrap_or(self.vit.health),
             sprinting: self.vit.sprinting,
+            burning: self.net.fire_flag,
             movement_speed: self.attrs.get(crate::attributes::MOVEMENT_SPEED).cloned().map(|mut attribute| {
                 // Модификатор бега — по текущему флагу, а не по последней рассылке.
                 attribute.modifiers.retain(|modifier| modifier.id != "minecraft:sprinting");

@@ -152,6 +152,8 @@ pub struct Gear {
     pub air: i32,
     /// Бежит ли и его скорость шага: остальным они уходят флагом и атрибутом.
     pub sprinting: bool,
+    /// Горение для обоих наблюдателей (opaque777 armor/enchant42226930283).
+    pub burning: bool,
     pub movement_speed: Option<crate::attributes::Attribute>,
 }
 

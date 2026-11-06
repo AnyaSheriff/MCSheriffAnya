@@ -424,6 +424,11 @@ pub(super) fn wear_slot(shared: &Shared, player: &mut PlayerState, slot: i32, st
 
 /// Добавляет износ вещи в слоте; сломавшаяся пропадает.
 pub(super) fn replace_worn(shared: &Shared, player: &mut PlayerState, slot: i32, stack: Stack, worn: i32) {
+    let _ = replace_worn_except(shared, player, slot, stack, worn, None);
+}
+
+fn replace_worn_except(shared: &Shared, player: &mut PlayerState, slot: i32, stack: Stack, worn: i32, except: Option<i32>) -> Option<u8> {
+    let mut broken = None;
     match combat::add_damage(stack, worn) {
         Some(next) => {
             player.inventory.set(slot, Some(next));
@@ -431,17 +436,20 @@ pub(super) fn replace_worn(shared: &Shared, player: &mut PlayerState, slot: i32,
         None => {
             player.progress.broken(stack.item);
             player.inventory.set(slot, None);
+            let status = match slot { 5..=8 => (49 + slot - 5) as u8, inventory::OFFHAND => 48, _ => 47 };
+            broken = Some(status);
             shared
                 .world_in(player.dimension)
                 .lock()
                 .expect("мир захвачен другим потоком")
                 // Вики, Entity statuses: 47 — main hand, 48 — offhand,
                 // 49..52 — голова, грудь, ноги, ступни. [проверить] Порядок.
-                .note_equipment_break(player.entity_id, match slot { 5..=8 => (49 + slot - 5) as u8, inventory::OFFHAND => 48, _ => 47 });
+                .note_equipment_break_except(player.entity_id, status, except);
         }
     }
 
     player.net.slot_changed(slot);
+    broken
 }
 
 /// Жертва получает удар из журнала мира: щит, броня, зачарования, износ,
@@ -499,8 +507,13 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     let direct = if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
         strike.projectile.unwrap_or(strike.attacker)
     } else { strike.attacker };
+    // Opaque777 armor-break42226930283: damage239 ломается ДО защиты
+    // того же удара, HP20→13, а не13,7. Остальные источники сохраняют путь.
+    let early_armor_wear = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && strike.source == Source::PlayerAttack;
     let result = if mortal {
-        vitals::hit_by_breached(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale).await?
+        vitals::hit_by_breached(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale,
+            early_armor_wear.then_some(strike.damage)).await?
     } else {
         None
     };
@@ -521,7 +534,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
 
             // Износ надетой брони: каждой детали 1 за каждые 4 единицы урона.
-            if !combat::bypasses_armor(strike.source) {
+            if !early_armor_wear && !combat::bypasses_armor(strike.source) {
                 wear_armor(shared, player, strike.damage);
                 // Оригинал777 itemaudit4-shield: износ брони сообщается
                 // вместе с отложенными Metadata/скоростью, через такт после стрелы.
@@ -606,7 +619,12 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
 
 /// Изнашивает надетую броню от удара силы `damage`.
 pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32) {
+    let _ = wear_armor_except(shared, player, damage, None);
+}
+
+fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>) -> Vec<u8> {
     let wear = combat::armor_wear(damage);
+    let mut broken = Vec::new();
 
     for (slot, _) in combat::ARMOR_SLOTS {
         let Some(stack) = player.inventory.slot(slot) else { continue };
@@ -614,10 +632,17 @@ pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32)
         let mut roll = || vitals::world_random(shared, dimension);
         let worn = combat::wear(&stack, wear, true, &mut roll);
 
-        if worn > 0 {
-            replace_worn(shared, player, slot, stack, worn);
-        }
+        if worn > 0 && let Some(status) = replace_worn_except(shared, player, slot, stack, worn, except) { broken.push(status); }
     }
+    broken
+}
+
+pub(super) async fn wear_armor_before_strike(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, damage: f32) -> io::Result<()> {
+    // Себе — до DamageEvent; общий журнал не должен прислать дубликат.
+    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id));
+    vitals::update_equipment(player, *shared.ticks.borrow());
+    for status in broken { vitals::send_entity_event(stream, player.entity_id, status as i8).await?; }
+    Ok(())
 }
 
 /// Щит принял удар: событие «щит принял» всем, износ щита, отключение

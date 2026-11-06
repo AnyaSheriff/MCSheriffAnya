@@ -49,7 +49,7 @@ def fixture(name):
         raw['clients'][1]['events'].extend([damage(entity=3, source=43, cause=3), hp(17, 8)])
     else:
         raw['sent'].append({'action':{'attack':True, 'bot':2}})
-        events.extend([hp(13.7, 8), damage(tick=28), hp(7.4 if name == a.NAMES[6] else 6.7, 28)])
+        events.extend([hp(13.7 if name == a.NAMES[6] else 13, 8), damage(tick=28), hp(7.4 if name == a.NAMES[6] else 6, 28)])
         if name == a.NAMES[6]: events.extend([chest(200, 1), chest(201, 8), chest(202, 28)])
         else: events.extend([chest(239, 1), chest(None, 8), packet('entity_status', struct.pack('>iB', 2, 50), 8)])
     for client in raw['clients']: client['events'].sort(key=lambda e:e['at'])

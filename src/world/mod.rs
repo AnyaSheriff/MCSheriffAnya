@@ -341,7 +341,7 @@ pub enum WorldEvent {
     /// Тотем для второго представления: Java уже получил своё событие 35.
     Totem { entity_id: i32 },
     /// Поломка экипировки: клиент рисует частицы и играет звук.
-    EquipmentBreak { entity_id: i32, status: u8 },
+    EquipmentBreak { entity_id: i32, status: u8, except: Option<i32> },
     /// Звук от сущности (Entity Sound Effect).
     EntitySound { entity_id: i32, name: &'static str, volume: f32, pitch: f32 },
 
@@ -3062,7 +3062,11 @@ impl World {
     }
 
     pub fn note_equipment_break(&mut self, entity_id: i32, status: u8) {
-        self.events.push(WorldEvent::EquipmentBreak { entity_id, status });
+        self.note_equipment_break_except(entity_id, status, None);
+    }
+
+    pub fn note_equipment_break_except(&mut self, entity_id: i32, status: u8, except: Option<i32>) {
+        self.events.push(WorldEvent::EquipmentBreak { entity_id, status, except });
     }
 
     pub fn note_player_damaged(&mut self, entity_id: i32, type_id: i32, culprit: i32, direct: i32) {
