@@ -201,3 +201,18 @@ pin и штатная очистка серверов/портов. Критер
 исчезли, четыре порта освободились. Критерии и случайные допуски прежние.
 Отдельные6случаев щитов/брони описаны в [отчёте](defense-26.3.md);
 этот ограниченный результат не является проверкой всего боя или геймплея.
+
+## Поломка брони и флаг горения — 6 ноября
+
+Runtimec87d6237a7fb60203ea8e862dfd01b61e71c6319 / nativeCI42231558665 независимо
+проверен600/600 (184selectedcommonboth,6default-only,3integrationboth),
+SHA256 `050ea3786f742aa3977f502047b948b4eef6b0f985c8e85ae671bccd167fa7c1`.
+[Свежие combat15](https://github.com/AnyaSheriff/MCSheriffAnya/actions/runs/42234535382)
+на helper53e7aebe дали248/0/0/0,30raw/exactreplay,gaps/warnings0,19within-ticknotes.
+Проверены153manifest/37sourceGitSHA/43buildSHA и cleanup обеих сторон.
+[Новые armor/enchant8](https://github.com/AnyaSheriff/MCSheriffAnya/actions/runs/42234534620)
+дали160/0/0/0/all16wirecontrols;
+[прежние defense6](https://github.com/AnyaSheriff/MCSheriffAnya/actions/runs/42234535042)
+дали115/0/0/0. Доказательства и неудачный baseline — [armor-enchants-26.3.md](armor-enchants-26.3.md).
+Other-playerbreak остаётся+1tick, shieldexpiry99original/100core в прежнем99±1;
+naturalThornsIII, Unbreaking, все чары/полный PvP/gameplay ещё открыты.
