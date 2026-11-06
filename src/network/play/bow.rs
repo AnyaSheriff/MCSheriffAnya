@@ -673,7 +673,12 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             // [проверить: дальний полёт, skeleton-arrow на +17, — одна скорость].
             let landing = grid_of((arrow.x, arrow.y, arrow.z));
             let near = [landing.0 - shown.grid.0, landing.1 - shown.grid.1, landing.2 - shown.grid.2].iter().all(|value| i16::try_from(*value).is_ok());
-            let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some() || arrow.resync.is_some() || (arrow.in_ground && near);
+            // Fresh paired42167625247: дальняя стрела игрока при посадке
+            // присылает velocity→absolute position→metadata, затем нулевые
+            // относительные сдвиги. Дальность не должна терять эту связку.
+            // Для мобов/команд прежняя непроверенная дальняя ветка сохранена.
+            let player_shot = arrow.shooter == Shooter::Player && !arrow.summoned;
+            let full = player_shot || arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some() || arrow.resync.is_some() || (arrow.in_ground && near);
 
             if arrow.in_ground && full {
                 send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.facing()).await?;
@@ -683,6 +688,12 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(arrow.entity_id));
+                if arrow.flags() != shown.flags {
+                    data.push(ARROW_FLAGS);
+                    data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+                    data.push(arrow.flags());
+                    shown.flags = arrow.flags();
+                }
                 if arrow.in_ground && shown.piercing {
                     data.push(9);
                     data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
@@ -808,7 +819,9 @@ async fn send_move_to(stream: &mut Outgoing<'_>, arrow: &Arrow, shown: &mut Show
         body.push(0);
         write_body(stream, body).await?;
     } else {
-        write_body(stream, projectile::position_sync(arrow.entity_id, at, velocity, (yaw, pitch), arrow.in_ground)).await?;
+        // Paired42167625247: packet on_ground=0 у стрелы и трезубца даже
+        // при metadata10=true. Это разные флаги, их нельзя подменять.
+        write_body(stream, projectile::position_sync(arrow.entity_id, at, velocity, (yaw, pitch), false)).await?;
     }
 
     shown.grid = grid;

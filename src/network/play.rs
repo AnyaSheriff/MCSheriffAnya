@@ -96,6 +96,8 @@ mod motion_recording_tests;
 mod bow;
 #[cfg(test)]
 mod bow_tests;
+#[cfg(test)]
+mod bow_landing_tests;
 mod thrown;
 mod projectile;
 #[cfg(test)]

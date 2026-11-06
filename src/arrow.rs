@@ -1033,6 +1033,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             (arrow.vx, arrow.vy, arrow.vz) = (0.0, 0.0, 0.0);
             crate::redstone::game_event_from(world, (arrow.x, arrow.y, arrow.z), 2, Some(arrow.owner), true);
             arrow.in_ground = true;
+            // Fresh official42167625247: после попадания критическая стрела
+            // снимает metadata8 critical вместе с metadata10 in_ground.
+            arrow.crit = false;
             // enchant-pillager-crossbow-enchanted: при попадании в блок
             // Piercing сбрасывается (metadata9=0 вместе с10=true).
             arrow.pierce_left = 0;

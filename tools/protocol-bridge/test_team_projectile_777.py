@@ -331,7 +331,7 @@ class TeamProjectileTests(unittest.TestCase):
 
 
 
-def long_fixture(target='official', *, coordinates=True, stops=True, grounded=True, victim_stop=True):
+def long_fixture(target='official', *, coordinates=True, stops=True, grounded=True, victim_stop=True, packet_ground=False, followup=True, critical=False):
     original=fixture(target)
     report=copy.deepcopy(original)
     report.update(schema=probe.LONG_SCHEMA,criteria=copy.deepcopy(probe.LONG_CRITERIA))
@@ -351,11 +351,13 @@ def long_fixture(target='official', *, coordinates=True, stops=True, grounded=Tr
                     shot_start,shot_stop=original['cases'][index]['ranges']['shooter']
                     additions.append(copy.deepcopy(next(p for p in original['sessions']['shooter']['packets'][shot_start:shot_stop] if p['name']=='spawn_entity')))
                 if coordinates:
-                    additions.append(packet('sync_entity_position',varint(entity)+b'\0'+struct.pack('>dddffB',.5,65.5,23.95,0,0,0),time=stamp))
+                    additions.append(packet('sync_entity_position',varint(entity)+b'\0'+struct.pack('>dddffB',.5,65.5,23.95,0,0,packet_ground),time=stamp))
                 if stops and (role!='victim' or victim_stop):
                     additions.append(packet('entity_velocity',varint(entity)+b'\0',time=stamp+.1))
                 if grounded:
-                    additions.append(packet('entity_metadata',varint(entity)+bytes([10,8,1,255]),time=stamp+.2))
+                    additions.append(packet('entity_metadata',varint(entity)+(bytes([8,0,int(critical)]) if row['case'].startswith('bow-') else b'')+bytes([10,8,1,255]),time=stamp+.2))
+                if followup and coordinates:
+                    additions.append(packet('entity_move_look',varint(entity)+b'\0'+struct.pack('>hhhBB',0,0,0,0,0),time=stamp+.3))
                 chunk[-1:-1]=additions
             session['packets'].extend(chunk)
             row['ranges'][role][1]=len(session['packets'])
@@ -440,6 +442,39 @@ class LongRangeTrackingTests(unittest.TestCase):
         p=next(p for p in packets[start:stop] if p['name']=='entity_metadata')
         p['payload']=(varint(100)+bytes([10,0,1,255])).hex()
         with self.assertRaisesRegex(AssertionError,'must be boolean'):
+            probe.summarize(report,row)
+
+
+    def test_packet_ground_flag_is_separate_from_in_ground_metadata(self):
+        row=long_fixture()['cases'][0]['summary']['tracking']['shooter']
+        self.assertTrue(row['in_ground'])
+        self.assertFalse(row['absolute_ground_true'])
+        self.assertTrue(row['settled_followup'])
+
+    def test_changed_absolute_ground_bit_is_a_comparison_difference(self):
+        self.assertTrue(any('absolute_ground_true' in x for x in probe.compare(long_fixture(),long_fixture('core',packet_ground=True))))
+
+    def test_missing_settled_followup_is_a_comparison_difference(self):
+        self.assertTrue(any('settled_followup' in x for x in probe.compare(long_fixture(),long_fixture('core',followup=False))))
+
+    def test_invalid_absolute_ground_boolean_is_rejected(self):
+        report=long_fixture('core');row=report['cases'][0]
+        packets=report['sessions']['shooter']['packets']
+        start,stop=row['ranges']['shooter']
+        p=next(p for p in packets[start:stop] if p['name']=='sync_entity_position')
+        raw=bytes.fromhex(p['payload']);p['payload']=(raw[:-1]+b'\2').hex()
+        with self.assertRaises(AssertionError):probe.summarize(report,row)
+
+
+    def test_critical_reset_is_a_comparison_difference(self):
+        self.assertTrue(any('last_critical' in x for x in probe.compare(long_fixture(),long_fixture('core',critical=True))))
+
+    def test_critical_flag_metadata_requires_byte_serializer(self):
+        report=long_fixture('core');row=report['cases'][0]
+        packets=report['sessions']['shooter']['packets'];start,stop=row['ranges']['shooter']
+        p=next(p for p in packets[start:stop] if p['name']=='entity_metadata')
+        p['payload']=(varint(100)+bytes([8,8,0,10,8,1,255])).hex()
+        with self.assertRaisesRegex(AssertionError,'flags must be byte'):
             probe.summarize(report,row)
 
 

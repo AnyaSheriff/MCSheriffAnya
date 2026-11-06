@@ -1,0 +1,77 @@
+{
+  "source_run": "42167625247",
+  "helper_head": "d3dcd4e20218cdb2beb6d2126a128530fa542ee0",
+  "schema": "team-projectiles-777-long-range-v1",
+  "official_result_sha256": "18179dcae6be2c9b68dacaa8da03d60fe0ef8f8f4b9706e504e502c3583a4fa2",
+  "note": "Own network capture of opaque official Java26.3; no game code. Absolute packet fields omit only the captured entity VarInt. In-block metadata10 differs from packet on_ground.",
+  "cases": [
+    {
+      "case": "bow-same-denied",
+      "entity": 15,
+      "packet_index": 418,
+      "position": [
+        0.4674546110606784,
+        65.05000000074506,
+        19.349828120041824
+      ],
+      "rotation": [
+        0.04013794660568237,
+        -4.365217208862305
+      ],
+      "packet_on_ground": false,
+      "absolute_fields_hex": "003fddeac6beb7ae4e40504333333400004033598e55eecd013d2467b0c08bafdc00",
+      "spawn": {
+        "name": "spawn_entity",
+        "entity": 15,
+        "kind": 6,
+        "position": [
+          0.5,
+          66.52000000327826,
+          -5.5
+        ],
+        "velocity": [
+          0.0020142830983338467,
+          0.015198681560153693,
+          2.9701519868156017
+        ]
+      },
+      "metadata_payloads": [
+        "0f0800000a0801ff"
+      ]
+    },
+    {
+      "case": "trident-same-denied",
+      "entity": 23,
+      "packet_index": 1046,
+      "position": [
+        0.5327623692764095,
+        65.05000000074506,
+        14.193186057511506
+      ],
+      "rotation": [
+        0.24016332626342773,
+        -5.729187488555908
+      ],
+      "packet_on_ground": false,
+      "absolute_fields_hex": "003fe10c63ab129ce94050433333340000402c62e9486e1c353e75ed60c0b7558100",
+      "spawn": {
+        "name": "spawn_entity",
+        "entity": 23,
+        "kind": 139,
+        "position": [
+          0.5,
+          66.52000000327826,
+          -5.5
+        ],
+        "velocity": [
+          0.0104376487822746,
+          -0.00860648232924377,
+          2.493865592382347
+        ]
+      },
+      "metadata_payloads": [
+        "170a0801ff"
+      ]
+    }
+  ]
+}

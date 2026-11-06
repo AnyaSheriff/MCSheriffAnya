@@ -38,11 +38,11 @@ CRITERIA = {'version':SCHEMA, 'cases':CASES,
             'comparison':'same boolean hit/fire/effect/velocity outcomes and observed projectile-past-target; no exact damage, RNG or tick comparison',
             'limits':'two stationary survival players; ordinary bow arrows and unenchanted thrown trident; no Flame/tipped/multishot/Piercing/Bedrock'}
 # Отдельный ввод для проверки дальнего слежения; прежний v3 неизменен.
-LONG_SCHEMA = 'team-projectiles-777-long-range-v1'
+LONG_SCHEMA = 'team-projectiles-777-long-range-v2'
 LONG_CRITERIA = copy.deepcopy(CRITERIA)
 LONG_CRITERIA.update(version=LONG_SCHEMA,
-    backstop='input long-range-v1 wall z24; same floor, two survival players and eight real shots; no inferred projectile positions',
-    tracking='same-denied bow/trident: both observers must see exactly one matching spawn and a zero-velocity receipt; compare observed flight-past-target and in-ground metadata booleans for each observer; no guessed landing coordinates or exact RNG/tick/packet counts')
+    backstop='input long-range-v2 wall z24; same floor, two survival players and eight real shots; no inferred projectile positions',
+    tracking='same-denied bow/trident: both observers must see exactly one matching spawn and a zero-velocity receipt; compare observed flight-past-target, in-ground/critical metadata, absolute-packet ground flag and coordinate follow-up after in-ground; no guessed landing coordinates or exact RNG/tick/packet counts')
 
 
 def criteria_for(schema):
@@ -457,26 +457,38 @@ def tracking_receipts(report, row, projectile):
                 entity=uint(data)
                 if entity!=projectile: continue
                 _,fields=player_metadata(bytes.fromhex(packet['payload']))
-                if 10 not in fields: continue
-                assert type(fields[10]) is bool, 'arrow in-ground must be boolean'
-                record['in_ground']=fields[10]
+                if 10 not in fields and 8 not in fields: continue
+                if 10 in fields:
+                    assert type(fields[10]) is bool, 'arrow in-ground must be boolean'
+                    record['in_ground']=fields[10]
+                if 8 in fields:
+                    assert type(fields[8]) is int, 'arrow flags must be byte'
+                    record['critical']=bool(fields[8]&1)
             else:
                 events=[event for event in state.events[before:] if event.get('entity')==projectile]
                 if not events: continue
                 event=events[-1]
                 if event['name']=='spawn_entity':
                     spawns+=1;record['positions']=[event['position']]
-                elif 'positions' in event: record['positions']=event['positions']
+                elif 'positions' in event:
+                    record['positions']=event['positions']
+                    if event['name']=='sync_entity_position':
+                        record['packet_on_ground']=bytes.fromhex(packet['payload'])[-1]==1
                 else: continue
             if projectile in state.positions:
                 record['last_received_position']=state.positions[projectile].copy()
             receipts.append(record)
         actual_positions=[p for receipt in receipts for p in receipt.get('positions',[])]
+        landed=next((r['packet_index'] for r in receipts if r.get('in_ground') is True),None)
+        critical=[r['critical'] for r in receipts if 'critical' in r]
         result[role]={'spawns':spawns,
             'zero_velocity':any('velocity' in r and all(v==0 for v in r['velocity']) for r in receipts),
             'in_ground':any(r.get('in_ground') is True for r in receipts),
             'past_target':any(p[2]>1 for p in actual_positions),
             'coordinate_updates':sum(r['name']!='spawn_entity' and 'positions' in r for r in receipts),
+            'absolute_ground_true':any(r.get('packet_on_ground') is True for r in receipts),
+            'settled_followup':landed is not None and any(r['packet_index']>landed and 'positions' in r for r in receipts),
+            'last_critical':critical[-1] if critical else None,
             'receipts':receipts}
     return result
 
@@ -541,7 +553,7 @@ def compare(official,actual):
             failures.append(a['case']+': observed flight past target differs')
         if official['schema']==LONG_SCHEMA and a['case'].endswith('same-denied'):
             for role in ('shooter','victim'):
-                for key in ('past_target','zero_velocity','in_ground'):
+                for key in ('past_target','zero_velocity','in_ground','absolute_ground_true','settled_followup','last_critical'):
                     if a['summary']['tracking'][role][key]!=b['summary']['tracking'][role][key]:
                         failures.append(a['case']+': '+role+' tracking '+key+' differs')
 
