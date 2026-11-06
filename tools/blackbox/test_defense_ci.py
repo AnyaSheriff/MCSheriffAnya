@@ -87,6 +87,7 @@ class SemanticTests(unittest.TestCase):
             record777.validate(row)
             self.assertNotIn('!syncattrs',row['setup'])
             self.assertEqual(row.get('native_phase','all'),'all')
+            self.assertFalse(row.get('attr_phase',False), 'legacy bot marker is not native alignment')
 
     def test_semantic_failure_never_hides_infrastructure_failure(self):
         for before,after in [('match','mismatch-open'),('mismatch-open','mismatch-open'),('infrastructure-failed','infrastructure-failed')]:
