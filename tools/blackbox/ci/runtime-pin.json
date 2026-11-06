@@ -1,6 +1,6 @@
 {
-  "build_run_id": "42170130759",
-  "head": "01359adbcd91e084ac9c4ed4cfc4f8402c61916e",
-  "runtime_sha256": "7c1a695bf65b160fe5d35d9b5cff2221e555da29412c5f6a4d812813f21d83e5",
-  "note": "Native GNU ARM64 full CI independently verified 570/570 checks: 169 selected common regression tests in both Rust configurations, six default-only tests, three integration tests in both configurations, strict Clippy, isolated startup/auth and ELF/package identity. Seven added tests cover player projectile landing packets and critical reset. Fresh long-range-v2 run42171730901 independently replayed all eight cases per side with no criterion differences; both observers receive landing and subsequent updates. Fresh combat run42171735783 independently replayed fifteen selected cases:256/0/0/0, gaps/warnings0;27 within-tick notes retained. Exact packet counts/timing, ballistics and full PvP/gameplay parity are not claimed. Adaptive dimension block ticks remain opt-in; entities/TNT remain sequential."
+  "build_run_id": "42197003218",
+  "head": "95cc96ede44ca351c24b614a72701c189a20e62d",
+  "runtime_sha256": "bfccaad288f826e4ee9e17be8e95fb7ebf02775b4380bcc12d6cf68d71cf5b84",
+  "note": "Native GNU ARM64 full CI independently verified 584/584 report checks: 176 selected common regression tests in both Rust configurations, six default-only tests, three integration tests in both configurations, strict Clippy, isolated startup/auth and ELF/package identity. Seven added tests cover signed melee hurt angles and shield cooldown completion/reuse. Fresh six-case defense-v2 and fifteen-case combat comparisons for this exact binary are pending; full PvP/gameplay parity is not claimed."
 }
