@@ -54,6 +54,12 @@ def inspect(raw, shield):
     assert name in NAMES and raw['protocol'] == 777 and raw['isolate_vitals'] is True
     assert len(raw['initial']) == len(raw['clients']) == 2
     assert all(x.get('health') == 20 for x in raw['initial']), 'missing observed initial20HP'
+    for initial in raw['initial']:
+        receipt = initial.get('health_receipt')
+        assert isinstance(receipt,dict) and receipt['name']=='update_health' and receipt['at']<=raw['start'], 'missing initial health wire receipt'
+        data=io.BytesIO(bytes.fromhex(receipt['hex']))
+        hp=struct.unpack('>f',exact(data,4))[0];food=uint(data);sat=struct.unpack('>f',exact(data,4))[0];finished(data)
+        assert hp==initial['health']==20 and 0<=food<=20 and math.isfinite(sat), 'initial HP not derived from captured health packet'
     assert all(c['events'] and not c.get('failure') for c in raw['clients'])
     if name.startswith('pvp-shield'):
         actions = [row['action'] for row in raw['sent']]

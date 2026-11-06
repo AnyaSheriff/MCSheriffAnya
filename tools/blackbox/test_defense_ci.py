@@ -15,7 +15,7 @@ def packet(name, payload, tick=1):
 def fixture(name):
     active = packet('entity_metadata', varint(2)+bytes([8,0,3,255]))
     x={'scenario':name,'protocol':777,'isolate_vitals':True,'start':10,
-       'initial':[{'entity':2,'health':20},{'entity':3,'health':20}],
+       'initial':[{'entity':i,'health':20,'health_receipt':packet('update_health',struct.pack('>f',20)+b'\x14'+struct.pack('>f',5),-1)} for i in [2,3]],
        'sent':[{'action':{'use':True,'hand':1}},{'action':{'attack':True,'bot':2}}],
        'clients':[{'events':[active],'failure':None},{'events':[active],'failure':None}]}
     events=x['clients'][0]['events']
@@ -99,6 +99,12 @@ class SemanticTests(unittest.TestCase):
         d.inspect(r,100)
         r['clients'][0]['events'][-2]['at']=10+113*.05
         with self.assertRaises(AssertionError):d.inspect(r,100)
+
+    def test_initial_health_summary_requires_its_actual_wire_receipt(self):
+        for modify in [lambda x:x.pop('health_receipt'),lambda x:x['health_receipt'].update(at=11),
+                       lambda x:x['health_receipt'].update(hex=(struct.pack('>f',19)+b'\x14'+struct.pack('>f',5)).hex())]:
+            r=fixture(d.NAMES[0]);modify(r['initial'][0])
+            with self.subTest(modify=modify),self.assertRaises(AssertionError):d.inspect(r,100)
 
 
 if __name__=='__main__':unittest.main()

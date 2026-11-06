@@ -119,6 +119,7 @@ class Recorder(Client):
         self.failure = None
         self.respawns = 0
         self.health = None
+        self.health_receipt = None
         self.respawn_pending = False
         self.running = True
         self.lock = threading.RLock()
@@ -190,6 +191,7 @@ class Recorder(Client):
             self.respawns += 1
             self.send('player_loaded')
         elif name == 'update_health':
+            self.health_receipt = {'name':name,'hex':payload.hex(),'at':time.monotonic()}
             self.health = struct.unpack('>f', payload[:4])[0]
             if self.health > 0:
                 self.respawn_pending = False
@@ -580,7 +582,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                                         'reference_phase':phase,'current_origin_tick':current_tick,'reference_origin_tick':before_tick})
         start_tick=select_start_tick(phase_alignment,s.get('native_phase','all'),capture_side,current_tick,version=version)
         start=clock+start_tick*.05
-        initial=[{'entity':c.entity,'entities':c.entities.copy(),'position':c.position.copy(),'health':c.health} for c in clients]
+        initial=[{'entity':c.entity,'entities':c.entities.copy(),'position':c.position.copy(),'health':c.health,'health_receipt':c.health_receipt} for c in clients]
         for c in clients:c.recording=True;c.events=[];c.external_ticks=True
         sent=[]
         # Физика обоих клиентов идёт по одной сетке, независимо от частоты
