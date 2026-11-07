@@ -301,9 +301,18 @@ public class ServerAppTest {
         androidx.test.uiautomator.UiObject zip=ui.findObject(new androidx.test.uiautomator.UiSelector().text(backup.getName()));
         // Picker может сразу показать Downloads или наш экспорт в «Недавних»: выбираем готовый файл без лишнего перехода.
         if(!zip.waitForExists(2000)) pickerRoot(ui);
-        assertTrue("exported document missing",zip.waitForExists(10000));assertTrue(zip.click());
-        // Диалог имеет отдельное окно: проверяем и нажимаем настоящую кнопку через UI Automator.
-        androidx.test.uiautomator.UiObject2 confirm=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Восстановить")),10000);
+        assertTrue("exported document missing",zip.waitForExists(10000));
+        for(int attempt=0;attempt<3&&ui.getCurrentPackageName().endsWith("documentsui");attempt++) {
+            if(zip.exists()) assertTrue(zip.click());
+            androidx.test.uiautomator.UiObject open=ui.findObject(new androidx.test.uiautomator.UiSelector().textMatches("(?i)open").enabled(true).clickable(true));
+            if(ui.getCurrentPackageName().endsWith("documentsui")&&open.waitForExists(500)) assertTrue(open.click());
+            ui.wait(androidx.test.uiautomator.Until.gone(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*documentsui"))),2000);
+        }
+        await("system import picker dismissed",()->!ui.getCurrentPackageName().endsWith("documentsui"),15000);
+        // Диалог имеет отдельное окно; старые ОС могут отдавать текст кнопки в верхнем регистре.
+        java.util.regex.Pattern restoreText=java.util.regex.Pattern.compile("Восстановить",java.util.regex.Pattern.CASE_INSENSITIVE|java.util.regex.Pattern.UNICODE_CASE);
+        androidx.test.uiautomator.UiObject2 confirm=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(restoreText).clickable(true)),10000);
+        if(confirm==null) { screenshot("failure-screen");ui.dumpWindowHierarchy(new File(context().getFilesDir(),"failure-ui.xml")); }
         assertNotNull("restore confirmation missing",confirm);confirm.click();
         await("import service completed",()->{ synchronized(HostState.LOCK) { return HostState.idle()&&HostState.backupMessage.startsWith("Копия восстановлена."); } });
         assertEquals("retained\n",ServerSettings.read(marker));assertEquals("7",new ServerSettings(settings.root).server.get("max-players",""));
