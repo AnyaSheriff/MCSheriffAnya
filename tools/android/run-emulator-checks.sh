@@ -4,6 +4,11 @@ mkdir -p apk-device-evidence
 collect_debug() {
   adb logcat -d -v threadtime > apk-device-evidence/logcat.txt 2>&1 || true
   adb shell run-as ru.sheriffanya.mcsa cat files/instrument-native.log > apk-device-evidence/core.log 2>&1 || true
+  for name in device-test.json appearance-test.json appearance-light.png appearance-dark.png home-light.png home-dark.png appearance-system-dark.png appearance-system-light.png appearance-dynamic.png; do
+    if adb shell run-as ru.sheriffanya.mcsa test -f "files/$name"; then
+      adb exec-out run-as ru.sheriffanya.mcsa cat "files/$name" > "apk-device-evidence/$name" || true
+    fi
+  done
 }
 trap collect_debug EXIT
 adb shell getprop ro.build.version.sdk > apk-device-evidence/api.txt

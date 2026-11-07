@@ -38,7 +38,7 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.CompoundButton;
 import android.widget.TextView;
-import android.widget.Toast;
+import com.google.android.material.snackbar.Snackbar;
 import java.io.File;
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -204,7 +204,7 @@ public final class MainActivity extends AppCompatActivity {
             } else card.addView(editor);
         }
         save=button("Сохранить настройки",R.id.save_settings,()->{
-            try { settings.save(edited()); toast("Сохранено. Настройки применятся при следующем запуске."); draw(); }
+            try { settings.save(edited()); draw(); toast("Сохранено. Настройки применятся при следующем запуске."); }
             catch(IOException|IllegalArgumentException error) { alert(error.getMessage()); }
         }); page.addView(save);
     }
@@ -300,6 +300,6 @@ public final class MainActivity extends AppCompatActivity {
         } catch(Exception ignored) { }
         return null;
     }
-    private void toast(String text) { Toast.makeText(this,text,Toast.LENGTH_LONG).show(); }
+    private void toast(String text) { Snackbar.make(container,text,Snackbar.LENGTH_LONG).setAnchorView(container.getChildAt(container.getChildCount()-1)).show(); }
     private void alert(String text) { new MaterialAlertDialogBuilder(this).setMessage(text).setPositiveButton("Понятно",null).show(); }
 }

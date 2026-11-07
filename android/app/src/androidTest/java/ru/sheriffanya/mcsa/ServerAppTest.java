@@ -91,6 +91,14 @@ public class ServerAppTest {
         click(activity,R.id.tab_settings);
         activity.onActivity(a->{ Button b=buttonWithText(a.getWindow().getDecorView(),"Оформление  ›"); assertNotNull(b); assertTrue(b.performClick()); });
     }
+    private void toggleDynamic(ActivityScenario<MainActivity> activity) {
+        activity.onActivity(a->{
+            android.widget.CompoundButton toggle=a.findViewById(R.id.dynamic_colors);
+            assertNotNull(toggle); assertTrue(toggle.isEnabled()); boolean before=toggle.isChecked();
+            // CompoundButton без OnClickListener может вернуть false после настоящего изменения checked.
+            toggle.performClick(); assertEquals("switch did not change",!before,toggle.isChecked());
+        });
+    }
     private void themeReady(ActivityScenario<MainActivity> activity,boolean dark,int selected) throws Exception {
         await("theme recreation",()->{
             java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
@@ -105,8 +113,20 @@ public class ServerAppTest {
         finally { image.recycle(); }
     }
     private void systemNight(boolean dark) throws Exception {
-        try(android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cmd uimode night "+(dark?"yes":"no")); java.io.FileInputStream in=new java.io.FileInputStream(fd.getFileDescriptor())) {
-            byte[] bytes=new byte[512]; while(in.read(bytes)!=-1) { }
+        systemNight(dark?android.app.UiModeManager.MODE_NIGHT_YES:android.app.UiModeManager.MODE_NIGHT_NO);
+    }
+    private void systemNight(int mode) throws Exception {
+        android.app.UiModeManager manager=(android.app.UiModeManager)context().getSystemService(Context.UI_MODE_SERVICE);
+        if(Build.VERSION.SDK_INT<26) {
+            // На API24 нет shell-подкоманды uimode night; публичный API действует глобально начиная с API23.
+            manager.setNightMode(mode); assertEquals("system night API did not apply",mode,manager.getNightMode());
+        } else {
+            String value=mode==android.app.UiModeManager.MODE_NIGHT_YES?"yes":mode==android.app.UiModeManager.MODE_NIGHT_AUTO?"auto":"no";
+            android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cmd uimode night "+value);
+            try(java.io.InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd); ByteArrayOutputStream out=new ByteArrayOutputStream()) {
+                byte[] bytes=new byte[512]; int n; while((n=in.read(bytes))!=-1) out.write(bytes,0,n);
+                System.out.println("System night command: "+new String(out.toByteArray(),StandardCharsets.UTF_8));
+            }
         }
     }
     @Test public void appearancePersistsAndFollowsSystemWithoutChangingConfigs() throws Exception {
@@ -134,7 +154,7 @@ public class ServerAppTest {
             boolean available=com.google.android.material.color.DynamicColors.isDynamicColorAvailable();
             activity.onActivity(a->assertEquals(available,a.findViewById(R.id.dynamic_colors).isEnabled()));
             if(available) {
-                click(activity,R.id.dynamic_colors); themeReady(activity,true,R.id.theme_dark);
+                toggleDynamic(activity); themeReady(activity,true,R.id.theme_dark);
                 assertTrue(new AppPreferences(context()).dynamicColors());
                 activity.onActivity(a->{
                     android.view.ContextThemeWrapper expected=new android.view.ContextThemeWrapper(a,R.style.AppTheme);
@@ -142,7 +162,7 @@ public class ServerAppTest {
                     assertEquals(com.google.android.material.color.MaterialColors.getColor(expected,com.google.android.material.R.attr.colorPrimary,"expected"),com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorPrimary,"actual"));
                 });
                 screenshot("appearance-dynamic");
-                click(activity,R.id.dynamic_colors); themeReady(activity,true,R.id.theme_dark); assertFalse(new AppPreferences(context()).dynamicColors());
+                toggleDynamic(activity); themeReady(activity,true,R.id.theme_dark); assertFalse(new AppPreferences(context()).dynamicColors());
             }
             click(activity,R.id.theme_system); assertEquals("system",new AppPreferences(context()).theme());
             systemNight(true); themeReady(activity,true,R.id.theme_system); screenshot("appearance-system-dark");
@@ -157,7 +177,7 @@ public class ServerAppTest {
             ServerSettings.write(new File(context().getFilesDir(),"appearance-test.json"),evidence.toString()+"\n");
         } finally {
             // Эмулятор возвращаем к исходному системному режиму, не затрагивая пользовательский ПК.
-            try(android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cmd uimode night "+(originalSystem==android.app.UiModeManager.MODE_NIGHT_YES?"yes":originalSystem==android.app.UiModeManager.MODE_NIGHT_AUTO?"auto":"no")); java.io.FileInputStream in=new java.io.FileInputStream(fd.getFileDescriptor())) { byte[] bytes=new byte[512]; while(in.read(bytes)!=-1) { } }
+            systemNight(originalSystem);
             assertTrue(preferences.saveTheme(originalTheme)); assertTrue(preferences.saveDynamicColors(originalDynamic));
             InstrumentationRegistry.getInstrumentation().runOnMainSync(()->androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(AppPreferences.nightMode(originalTheme)));
         }
@@ -208,6 +228,11 @@ public class ServerAppTest {
             activity.recreate();
             activity.onActivity(a->assertEquals("7",((EditText)a.getWindow().getDecorView().findViewWithTag("max-players")).getText().toString()));
             click(activity,R.id.save_settings);
+            await("save feedback visible",()->{
+                java.util.concurrent.atomic.AtomicBoolean visible=new java.util.concurrent.atomic.AtomicBoolean();
+                activity.onActivity(a->{ android.widget.TextView feedback=a.findViewById(com.google.android.material.R.id.snackbar_text); visible.set(feedback!=null&&feedback.isShown()&&feedback.getText().toString().startsWith("Сохранено.")); });
+                return visible.get();
+            });
             assertEquals("7",new ServerSettings(s.root).server.get("max-players",""));
             click(activity,R.id.tab_home); click(activity,R.id.start_server); await("second native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject after=ping(); assertEquals(7,after.getJSONObject("players").getInt("max")); device.put("status_after",after); assertEquals("retained\n",ServerSettings.read(marker));
