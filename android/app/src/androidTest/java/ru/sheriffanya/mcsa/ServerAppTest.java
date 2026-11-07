@@ -336,13 +336,23 @@ public class ServerAppTest {
         // Picker может сразу показать Downloads или наш экспорт в «Недавних»: выбираем готовый файл без лишнего перехода.
         if(!zip.waitForExists(2000)) pickerRoot(ui);
         assertTrue("exported document missing",zip.waitForExists(10000));
+        // DocumentsUI может перестроить плитку после появления заголовка файла.
+        // В списке выбираем тот же реальный документ, без гонки с загрузкой preview.
+        androidx.test.uiautomator.UiObject listView=ui.findObject(new androidx.test.uiautomator.UiSelector().description("List view"));
+        if(listView.exists()) { assertTrue(listView.click());ui.waitForIdle(2000); }
+        assertTrue("exported document missing after layout",zip.waitForExists(10000));
+        ui.waitForIdle(2000);screenshot("backup-picker-open");
         if(Build.VERSION.SDK_INT<26) {
             // Android7 показывает ZIP как контейнер. Выбор долгим нажатием + menu_open возвращает сам архив.
             assertTrue(zip.longClick());
             androidx.test.uiautomator.UiObject choose=ui.findObject(new androidx.test.uiautomator.UiSelector().resourceIdMatches(".*:id/menu_open"));
             assertTrue("selected archive open action missing",choose.waitForExists(10000));assertTrue(choose.click());
         } else {
-            assertTrue(zip.click());
+            // Только пока открыт picker и тот же файл виден: завершённый импорт не повторяется.
+            for(int attempt=0;attempt<3&&ui.getCurrentPackageName().endsWith("documentsui");attempt++) {
+                if(zip.waitForExists(2000)) { ui.waitForIdle(2000);assertTrue(zip.click()); }
+                ui.wait(androidx.test.uiautomator.Until.gone(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*documentsui"))),2000);
+            }
         }
         await("system import picker dismissed",()->!ui.getCurrentPackageName().endsWith("documentsui"),15000);
         // Диалог имеет отдельное окно; старые ОС могут отдавать текст кнопки в верхнем регистре.

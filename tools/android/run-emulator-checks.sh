@@ -4,7 +4,7 @@ mkdir -p apk-device-evidence
 collect_debug() {
   adb logcat -d -v threadtime > apk-device-evidence/logcat.txt 2>&1 || true
   adb shell run-as ru.sheriffanya.mcsa cat files/instrument-native.log > apk-device-evidence/core.log 2>&1 || true
-  for name in launcher-icon.png launcher-monochrome.png dashboard-paused.png failure-screen.png failure-ui.xml failure-state.json backup-picker-save.png device-test.json appearance-test.json backup-test.json backups.png appearance-light.png appearance-dark.png home-light.png home-dark.png appearance-system-dark.png appearance-system-light.png appearance-dynamic.png; do
+  for name in launcher-icon.png launcher-monochrome.png dashboard-paused.png failure-screen.png failure-ui.xml failure-state.json backup-picker-save.png backup-picker-open.png device-test.json appearance-test.json backup-test.json backups.png appearance-light.png appearance-dark.png home-light.png home-dark.png appearance-system-dark.png appearance-system-light.png appearance-dynamic.png; do
     if adb exec-out run-as ru.sheriffanya.mcsa cat "files/$name" > "apk-device-evidence/.partial-$name" 2>/dev/null; then
       mv "apk-device-evidence/.partial-$name" "apk-device-evidence/$name"
     else
