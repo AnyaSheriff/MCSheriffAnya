@@ -70,8 +70,17 @@ public class ServerAppTest {
         while(System.currentTimeMillis()<deadline) { if(condition.done()) return; Thread.sleep(100); }
         fail(name+"\n"+HostState.logs());
     }
-    private void click(ActivityScenario<MainActivity> activity,int id) {
-        activity.onActivity(a->{ View view=a.findViewById(id); assertNotNull(view); assertTrue(view.isEnabled()); assertTrue(view.performClick()); });
+    private void click(ActivityScenario<MainActivity> activity,int id) throws Exception {
+        // Готовность процесса не равна уже нарисованному состоянию кнопки: UI обновляется раз в750мс.
+        long deadline=System.currentTimeMillis()+5000; java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+        while(System.currentTimeMillis()<deadline) {
+            activity.onActivity(a->{ View view=a.findViewById(id); ready.set(view!=null && view.isEnabled()); });
+            if(ready.get()) {
+                activity.onActivity(a->{ View view=a.findViewById(id); assertNotNull(view); assertTrue("button disabled: "+a.getResources().getResourceEntryName(id),view.isEnabled()); assertTrue("click not dispatched",view.performClick()); }); return;
+            }
+            Thread.sleep(50);
+        }
+        fail("button never enabled id="+id+"; native phase="+HostState.phase+"\n"+HostState.logs());
     }
     private Button buttonWithText(View view,String text) {
         if(view instanceof Button && text.equals(((Button)view).getText().toString())) return (Button)view;
@@ -87,9 +96,10 @@ public class ServerAppTest {
         try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)) {
             click(activity,R.id.start_server); await("first native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject status=ping(); assertEquals(777,status.getJSONObject("version").getInt("protocol")); assertEquals(10,status.getJSONObject("players").getInt("max"));
+            device.put("status_before",status);
             activity.moveToState(Lifecycle.State.CREATED);
             Thread.sleep(500);
-            assertEquals(777,ping().getJSONObject("version").getInt("protocol"));
+            JSONObject background=ping(); assertEquals(777,background.getJSONObject("version").getInt("protocol")); device.put("status_background",background);
             activity.moveToState(Lifecycle.State.RESUMED);
             click(activity,R.id.tab_console);
             activity.onActivity(a->((EditText)a.findViewById(R.id.console_input)).setText("say APK_NATIVE_OK")); click(activity,R.id.console_send);
@@ -105,12 +115,13 @@ public class ServerAppTest {
             click(activity,R.id.save_settings);
             assertEquals("7",new ServerSettings(s.root).server.get("max-players",""));
             click(activity,R.id.tab_home); click(activity,R.id.start_server); await("second native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
-            assertEquals(7,ping().getJSONObject("players").getInt("max")); assertEquals("retained\n",ServerSettings.read(marker));
+            JSONObject after=ping(); assertEquals(7,after.getJSONObject("players").getInt("max")); device.put("status_after",after); assertEquals("retained\n",ServerSettings.read(marker));
             click(activity,R.id.stop_server); await("second graceful stop",HostState::idle);
             assertFalse("listening socket remained after stop",listening());
             System.out.println("PASS: installed APK native exec, protocol777 status, console, graceful stop, config UI, rotation draft, real config effect, world folder retained, restart, socket closed");
         } finally {
-            if(!HostState.idle()) { context().startService(new Intent(context(),ServerService.class).setAction(ServerService.STOP)); await("cleanup",HostState::idle); }
+            try { if(!HostState.idle()) { context().startService(new Intent(context(),ServerService.class).setAction(ServerService.STOP)); await("cleanup",HostState::idle); } }
+            finally { ServerSettings.write(new File(context().getFilesDir(),"instrument-native.log"),HostState.logs()); ServerSettings.write(new File(context().getFilesDir(),"device-test.json"),device.toString()+"\n"); }
         }
     }
     private boolean listening() { try(Socket socket=new Socket()) { socket.connect(new InetSocketAddress("127.0.0.1",26184),500); return true; } catch(IOException expected) { return false; } }

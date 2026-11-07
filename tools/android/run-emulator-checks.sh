@@ -3,7 +3,7 @@ set -euo pipefail
 mkdir -p apk-device-evidence
 collect_debug() {
   adb logcat -d -v threadtime > apk-device-evidence/logcat.txt 2>&1 || true
-  adb shell run-as ru.sheriffanya.mcsa cat files/server/logs/latest.log > apk-device-evidence/core.log 2>&1 || true
+  adb shell run-as ru.sheriffanya.mcsa cat files/instrument-native.log > apk-device-evidence/core.log 2>&1 || true
 }
 trap collect_debug EXIT
 adb shell getprop ro.build.version.sdk > apk-device-evidence/api.txt

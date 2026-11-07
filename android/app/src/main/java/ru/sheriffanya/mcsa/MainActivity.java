@@ -129,9 +129,10 @@ public final class MainActivity extends Activity {
             String port=config.server.get("server-port","25565");
             address.addView(text("На этом телефоне: 127.0.0.1:"+port,16,INK));
             String ip=lanAddress();
-            if(ip!=null) { String value=ip+":"+port; TextView copy=text("В одной Wi-Fi сети: "+value+"  ⧉",16,GREEN); copy.setOnClickListener(v->{ ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Сервер",value)); toast("Адрес скопирован"); }); address.addView(copy); }
+            if(ip!=null) { String value=ip+":"+port; TextView copy=text("В одной Wi-Fi сети: "+value+"\nНажми, чтобы скопировать",16,GREEN); copy.setOnClickListener(v->{ ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Сервер",value)); toast("Адрес скопирован"); }); address.addView(copy); }
             else address.addView(text("Подключись к Wi-Fi, чтобы увидеть адрес для других устройств.",14,MUTED));
-            address.addView(text("Bedrock: UDP "+config.mcsa.get("bedrock-port","19132")+"; поддержка клиента частичная.\nАдрес Wi-Fi не является публичным адресом из интернета.",13,MUTED));
+            String bedrock=config.mcsa.get("bedrock-port","19132");
+            address.addView(text((bedrock.equals("0")?"Bedrock выключен.":"Bedrock: UDP "+bedrock+"; поддержка клиента частичная.")+"\nАдрес Wi-Fi не является публичным адресом из интернета.",13,MUTED));
             boolean reports=Boolean.parseBoolean(config.mcsa.get("send-error-reports","true"));
             LinearLayout privacy=card(); privacy.addView(text(reports?"Анонимные отчёты включены":"Анонимные отчёты выключены",16,INK));
             privacy.addView(text("Изменить можно в настройках → Дополнительно.",14,MUTED));
