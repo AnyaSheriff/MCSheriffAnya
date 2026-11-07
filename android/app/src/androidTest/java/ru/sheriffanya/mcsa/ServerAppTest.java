@@ -69,9 +69,17 @@ public class ServerAppTest {
     }
     private interface Condition { boolean done() throws Exception; }
     private void await(String name,Condition condition) throws Exception {
-        long deadline=System.currentTimeMillis()+120000;
+        await(name,condition,120000);
+    }
+    private void await(String name,Condition condition,long timeout) throws Exception {
+        long deadline=System.currentTimeMillis()+timeout;
         while(System.currentTimeMillis()<deadline) { if(condition.done()) return; Thread.sleep(100); }
-        fail(name+"\n"+HostState.logs());
+        try {
+            screenshot("failure-screen");
+            androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).dumpWindowHierarchy(new File(context().getFilesDir(),"failure-ui.xml"));
+            synchronized(HostState.LOCK) { ServerSettings.write(new File(context().getFilesDir(),"failure-state.json"),new JSONObject().put("waiting",name).put("phase",HostState.phase).put("operation",HostState.operation).put("backup_message",HostState.backupMessage).toString()+"\n"); }
+        } catch(Exception captureError) { System.out.println("Diagnostic capture failed: "+captureError); }
+        fail(name+"; backup="+HostState.backupMessage+"\n"+HostState.logs());
     }
     private void click(ActivityScenario<MainActivity> activity,int id) throws Exception {
         // Готовность процесса не равна уже нарисованному состоянию кнопки: UI обновляется раз в750мс.
@@ -255,7 +263,11 @@ public class ServerAppTest {
             assertNotNull("document picker drawer missing",drawer);drawer.click();
             root=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(BackupDocumentsProvider.TITLE)),10000);
         }
-        assertNotNull("test document provider missing",root);root.click();device.waitForIdle();
+        assertNotNull("test document provider missing",root);
+        // Текст может принадлежать AdapterView: координаты строки сохраняем даже без её собственного OnClickListener.
+        androidx.test.uiautomator.UiObject2 row=root.getParent();
+        if(row!=null&&row.isClickable()&&row.getVisibleBounds().height()<=root.getVisibleBounds().height()*4) row.click();else root.click();
+        device.waitForIdle();
     }
     private void backupThroughSystemPicker(ActivityScenario<MainActivity> activity,ServerSettings settings,File marker,JSONObject deviceEvidence) throws Exception {
         BackupStore store=new BackupStore(context().getFilesDir());assertTrue(store.list().isEmpty());
@@ -269,8 +281,10 @@ public class ServerAppTest {
         activity.onActivity(a->assertTrue(buttonWithText(a.getWindow().getDecorView(),"Сохранить в память телефона").performClick()));
         androidx.test.uiautomator.UiDevice ui=androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         pickerRoot(ui);
-        androidx.test.uiautomator.UiObject2 save=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("(?i)save"))),10000);
-        assertNotNull("system save button missing",save);save.click();
+        androidx.test.uiautomator.UiObject2 save=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("(?i)save")).enabled(true).clickable(true)),15000);
+        if(save==null) { screenshot("failure-screen");ui.dumpWindowHierarchy(new File(context().getFilesDir(),"failure-ui.xml")); }
+        assertNotNull("enabled system save button missing",save);assertTrue(save.isEnabled());save.click();
+        await("system save picker dismissed",()->!ui.hasObject(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*documentsui"))),15000);
         await("export document completed",()->{ synchronized(HostState.LOCK) { return HostState.idle()&&HostState.backupMessage.startsWith("Копия сохранена в выбранный"); } });
         android.net.Uri document=android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsProvider.AUTHORITY,backup.getName());
         java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
@@ -291,6 +305,10 @@ public class ServerAppTest {
         try(java.util.zip.ZipFile file=new java.util.zip.ZipFile(automatic);java.io.InputStream in=file.getInputStream(file.getEntry("server/world/apk-persistence-marker"));ByteArrayOutputStream out=new ByteArrayOutputStream()) {
             byte[] bytes=new byte[128];int n;while((n=in.read(bytes))!=-1) out.write(bytes,0,n);assertEquals("changed after backup\n",new String(out.toByteArray(),StandardCharsets.UTF_8));
         }
+        await("restore UI updated",()->{
+            java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+            activity.onActivity(a->{ android.widget.TextView status=a.findViewById(R.id.backup_status);ready.set(status!=null&&status.getText().toString().startsWith("Копия восстановлена.")); });return ready.get();
+        });
         screenshot("backups");
         JSONObject proof=new JSONObject().put("api",Build.VERSION.SDK_INT).put("internal_created",true).put("real_system_picker",true).put("external_zip_same_sha256",true).put("import_restored_marker",true).put("import_restored_settings",true).put("automatic_previous_copy",true).put("internal_backup_count",2);
         ServerSettings.write(new File(context().getFilesDir(),"backup-test.json"),proof.toString()+"\n");deviceEvidence.put("backup_saf_roundtrip",true);
