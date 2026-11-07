@@ -7,6 +7,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -78,7 +79,20 @@ public final class MainActivity extends Activity {
         TextView view=new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(color); view.setPadding(0,dp(5),0,dp(5)); return view;
     }
     private Button button(String label,int id,Runnable action) {
-        Button button=new Button(this); button.setText(label); if(id!=0) button.setId(id); button.setAllCaps(false); button.setTextColor(GREEN); button.setOnClickListener(v->action.run()); return button;
+        Button button=new Button(this); button.setText(label); if(id!=0) button.setId(id); button.setAllCaps(false);
+        button.setStateListAnimator(null);
+        tint(button,0xffe3ebe5,GREEN);
+        button.setOnClickListener(v->action.run()); return button;
+    }
+    private void tint(Button button,int background,int foreground) {
+        int[][] states=new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}};
+        button.setBackgroundTintList(new ColorStateList(states,new int[]{0xffecefed,background}));
+        button.setTextColor(new ColorStateList(states,new int[]{MUTED,foreground}));
+    }
+    private Button navButton(String label,int id,int selected) {
+        Button button=button(label,id,()->navigate(selected)); button.setTextSize(13); button.setMinWidth(0); button.setMinimumWidth(0);
+        button.setPadding(dp(2),dp(4),dp(2),dp(4)); button.setSingleLine(true);
+        tint(button,tab==selected?GREEN:BG,tab==selected?Color.WHITE:GREEN); return button;
     }
     private LinearLayout column() { LinearLayout view=new LinearLayout(this); view.setOrientation(LinearLayout.VERTICAL); return view; }
     private LinearLayout card() {
@@ -99,15 +113,15 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); page=column(); scroll.addView(page); container.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         if(tab==0) home(); else if(tab==1) console(); else preferences();
         LinearLayout nav=new LinearLayout(this);
-        nav.addView(button("Сервер",R.id.tab_home,()->navigate(0)),new LinearLayout.LayoutParams(0,-2,1));
-        nav.addView(button("Консоль",R.id.tab_console,()->navigate(1)),new LinearLayout.LayoutParams(0,-2,1));
-        nav.addView(button("Настройки",R.id.tab_settings,()->navigate(2)),new LinearLayout.LayoutParams(0,-2,1));
+        nav.addView(navButton("Сервер",R.id.tab_home,0),new LinearLayout.LayoutParams(0,-2,1));
+        nav.addView(navButton("Консоль",R.id.tab_console,1),new LinearLayout.LayoutParams(0,-2,1));
+        nav.addView(navButton("Настройки",R.id.tab_settings,2),new LinearLayout.LayoutParams(0,-2,1));
         container.addView(nav); setContentView(container); update();
     }
     private void home() {
         LinearLayout info=card(); info.addView(text("СЕРВЕР НА ТЕЛЕФОНЕ",12,GREEN)); status=text("",23,INK); info.addView(status);
         info.addView(text("Ядро работает прямо здесь. Termux и Java устанавливать не нужно.",15,MUTED));
-        start=button("Запустить сервер",R.id.start_server,this::askStart); info.addView(start);
+        start=button("Запустить сервер",R.id.start_server,this::askStart); tint(start,GREEN,Color.WHITE); info.addView(start);
         stop=button("Сохранить и остановить",R.id.stop_server,()->action(ServerService.STOP,null)); info.addView(stop);
         LinearLayout address=card(); address.addView(text("Подключение",19,INK));
         try {
