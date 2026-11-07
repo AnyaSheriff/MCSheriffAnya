@@ -1,0 +1,29 @@
+name: Android APK native runtimes
+on:
+  push:
+    branches: ['wip/apk-native-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: apk-native-api26-16k
+      - name: Build ARM64 server and emulator runtime sequentially
+        run: bash tools/android/build-native.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apk-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: apk-native/
+          retention-days: 7
+          if-no-files-found: error
