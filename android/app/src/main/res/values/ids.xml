@@ -8,4 +8,8 @@
     <item name="console_input" type="id" />
     <item name="console_send" type="id" />
     <item name="console_log" type="id" />
+    <item name="theme_system" type="id" />
+    <item name="theme_light" type="id" />
+    <item name="theme_dark" type="id" />
+    <item name="dynamic_colors" type="id" />
 </resources>

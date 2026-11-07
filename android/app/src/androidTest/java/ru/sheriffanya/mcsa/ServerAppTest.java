@@ -87,12 +87,102 @@ public class ServerAppTest {
         if(view instanceof ViewGroup) for(int i=0;i<((ViewGroup)view).getChildCount();i++) { Button found=buttonWithText(((ViewGroup)view).getChildAt(i),text); if(found!=null) return found; }
         return null;
     }
+    private void openAppearance(ActivityScenario<MainActivity> activity) throws Exception {
+        click(activity,R.id.tab_settings);
+        activity.onActivity(a->{ Button b=buttonWithText(a.getWindow().getDecorView(),"Оформление  ›"); assertNotNull(b); assertTrue(b.performClick()); });
+    }
+    private void themeReady(ActivityScenario<MainActivity> activity,boolean dark,int selected) throws Exception {
+        await("theme recreation",()->{
+            java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+            activity.onActivity(a->{ View b=a.findViewById(selected); ready.set(b!=null&&b.isSelected()&&((a.getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==(dark?android.content.res.Configuration.UI_MODE_NIGHT_YES:android.content.res.Configuration.UI_MODE_NIGHT_NO))); });
+            return ready.get();
+        });
+    }
+    private void screenshot(String name) throws Exception {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        android.graphics.Bitmap image=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot(); assertNotNull(image);
+        try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(context().getFilesDir(),name+".png"))) { assertTrue(image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out)); }
+        finally { image.recycle(); }
+    }
+    private void systemNight(boolean dark) throws Exception {
+        try(android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cmd uimode night "+(dark?"yes":"no")); java.io.FileInputStream in=new java.io.FileInputStream(fd.getFileDescriptor())) {
+            byte[] bytes=new byte[512]; while(in.read(bytes)!=-1) { }
+        }
+    }
+    @Test public void appearancePersistsAndFollowsSystemWithoutChangingConfigs() throws Exception {
+        AppPreferences preferences=new AppPreferences(context());
+        String originalTheme=preferences.theme(); boolean originalDynamic=preferences.dynamicColors();
+        android.app.UiModeManager manager=(android.app.UiModeManager)context().getSystemService(Context.UI_MODE_SERVICE);
+        int originalSystem=manager.getNightMode();
+        File root=new File(context().getFilesDir(),"server");
+        String beforeServer=ServerSettings.read(new File(root,"config/server.properties")),beforeMcsa=ServerSettings.read(new File(root,"config/mcsa.properties"));
+        JSONObject evidence=new JSONObject();
+        assertTrue(preferences.saveTheme("light")); assertTrue(preferences.saveDynamicColors(false));
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(()->androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(AppPreferences.nightMode("light")));
+        try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)) {
+            openAppearance(activity); themeReady(activity,false,R.id.theme_light); screenshot("appearance-light");
+            click(activity,R.id.tab_home); screenshot("home-light"); openAppearance(activity);
+            click(activity,R.id.theme_dark); themeReady(activity,true,R.id.theme_dark); assertEquals("dark",new AppPreferences(context()).theme());
+            activity.recreate(); themeReady(activity,true,R.id.theme_dark); screenshot("appearance-dark");
+            activity.onActivity(a->{
+                int foreground=com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorOnSurface,"test");
+                int surface=com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorSurface,"test");
+                assertTrue("dark text must be readable",androidx.core.graphics.ColorUtils.calculateContrast(foreground,surface)>=4.5);
+                assertEquals(0xff98d3ba,com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorPrimary,"test"));
+            });
+            click(activity,R.id.tab_home); screenshot("home-dark"); openAppearance(activity);
+            boolean available=com.google.android.material.color.DynamicColors.isDynamicColorAvailable();
+            activity.onActivity(a->assertEquals(available,a.findViewById(R.id.dynamic_colors).isEnabled()));
+            if(available) {
+                click(activity,R.id.dynamic_colors); themeReady(activity,true,R.id.theme_dark);
+                assertTrue(new AppPreferences(context()).dynamicColors());
+                activity.onActivity(a->{
+                    android.view.ContextThemeWrapper expected=new android.view.ContextThemeWrapper(a,R.style.AppTheme);
+                    expected.getTheme().applyStyle(com.google.android.material.R.style.ThemeOverlay_Material3_DynamicColors_DayNight,true);
+                    assertEquals(com.google.android.material.color.MaterialColors.getColor(expected,com.google.android.material.R.attr.colorPrimary,"expected"),com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorPrimary,"actual"));
+                });
+                screenshot("appearance-dynamic");
+                click(activity,R.id.dynamic_colors); themeReady(activity,true,R.id.theme_dark); assertFalse(new AppPreferences(context()).dynamicColors());
+            }
+            click(activity,R.id.theme_system); assertEquals("system",new AppPreferences(context()).theme());
+            systemNight(true); themeReady(activity,true,R.id.theme_system); screenshot("appearance-system-dark");
+            systemNight(false); themeReady(activity,false,R.id.theme_system); screenshot("appearance-system-light");
+            click(activity,R.id.theme_light); themeReady(activity,false,R.id.theme_light);
+            // Явно светлая тема не должна следовать последующему затемнению системы.
+            systemNight(true); themeReady(activity,false,R.id.theme_light);
+            activity.recreate(); themeReady(activity,false,R.id.theme_light);
+            assertEquals(beforeServer,ServerSettings.read(new File(root,"config/server.properties")));
+            assertEquals(beforeMcsa,ServerSettings.read(new File(root,"config/mcsa.properties")));
+            evidence.put("api",Build.VERSION.SDK_INT).put("light",true).put("dark",true).put("system_dark",true).put("system_light",true).put("explicit_ignores_system",true).put("persists_recreation",true).put("dynamic_available",available).put("dynamic_roundtrip",available).put("configs_unchanged",true);
+            ServerSettings.write(new File(context().getFilesDir(),"appearance-test.json"),evidence.toString()+"\n");
+        } finally {
+            // Эмулятор возвращаем к исходному системному режиму, не затрагивая пользовательский ПК.
+            try(android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cmd uimode night "+(originalSystem==android.app.UiModeManager.MODE_NIGHT_YES?"yes":originalSystem==android.app.UiModeManager.MODE_NIGHT_AUTO?"auto":"no")); java.io.FileInputStream in=new java.io.FileInputStream(fd.getFileDescriptor())) { byte[] bytes=new byte[512]; while(in.read(bytes)!=-1) { } }
+            assertTrue(preferences.saveTheme(originalTheme)); assertTrue(preferences.saveDynamicColors(originalDynamic));
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(()->androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(AppPreferences.nightMode(originalTheme)));
+        }
+    }
+    @Test public void expandedSettingsPersistAndRejectInvalidRanges() throws Exception {
+        ServerSettings s=fresh("expanded"); Map<String,String> values=s.values();
+        assertEquals(28,values.size());
+        values.put("auth-mode","chat"); values.put("prefetch-chunks","0"); values.put("prefetch-at-once","2"); values.put("network-compression-threshold","-1"); values.put("portal-delay","20"); values.put("tab-tps","false"); values.put("autumn-forests","false"); values.put("pink-cherry-groves","false"); values.put("prevent-proxy-connections","true"); values.put("text-info","false"); values.put("debug","true");
+        s.save(values); ServerSettings loaded=new ServerSettings(s.root);
+        assertEquals(values,loaded.values());
+        assertEquals("-1",loaded.server.get("network-compression-threshold","missing"));
+        assertEquals("chat",loaded.mcsa.get("auth-mode","missing"));
+        String sp=ServerSettings.read(new File(s.root,"config/server.properties")),mp=ServerSettings.read(new File(s.root,"config/mcsa.properties"));
+        for(String[] invalid:new String[][]{{"prefetch-chunks","17"},{"prefetch-at-once","0"},{"portal-delay","-1"},{"network-compression-threshold","-2"},{"auth-mode","bad"},{"view-distance","2"},{"debug","yes"}}) {
+            Map<String,String> changed=loaded.values(); changed.put(invalid[0],invalid[1]);
+            try { loaded.save(changed); fail("accepted "+invalid[0]); } catch(IllegalArgumentException expected) { }
+            assertEquals(sp,ServerSettings.read(new File(s.root,"config/server.properties"))); assertEquals(mp,ServerSettings.read(new File(s.root,"config/mcsa.properties")));
+        }
+    }
     @Test public void nativeServerStartsFromApkSavesSettingsAndRestarts() throws Exception {
         assertEquals("x86_64",BuildConfig.RUNTIME_ABI);
         JSONObject device=new JSONObject().put("api",Build.VERSION.SDK_INT).put("page_size",Os.sysconf(OsConstants._SC_PAGESIZE)).put("supported_abis",new JSONArray(java.util.Arrays.asList(Build.SUPPORTED_ABIS)));
         ServerSettings.write(new File(context().getFilesDir(),"device-test.json"),device.toString()+"\n");
         ServerSettings s=new ServerSettings(new File(context().getFilesDir(),"server")); Map<String,String> values=s.values();
-        values.put("server-port","26184"); values.put("bedrock-port","0"); values.put("online-mode","false"); values.put("offline-license-mode","disabled"); values.put("auth-enabled","false"); values.put("send-error-reports","false"); values.put("view-distance","2"); values.put("simulation-distance","2"); values.put("level-seed","1234"); s.save(values);
+        values.put("server-port","26184"); values.put("bedrock-port","0"); values.put("online-mode","false"); values.put("offline-license-mode","disabled"); values.put("auth-enabled","false"); values.put("send-error-reports","false"); values.put("view-distance","3"); values.put("simulation-distance","3"); values.put("level-seed","1234"); s.save(values);
         try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)) {
             click(activity,R.id.start_server); await("first native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject status=ping(); assertEquals(777,status.getJSONObject("version").getInt("protocol")); assertEquals(10,status.getJSONObject("players").getInt("max"));
@@ -101,6 +191,11 @@ public class ServerAppTest {
             Thread.sleep(500);
             JSONObject background=ping(); assertEquals(777,background.getJSONObject("version").getInt("protocol")); device.put("status_background",background);
             activity.moveToState(Lifecycle.State.RESUMED);
+            String sp=ServerSettings.read(new File(s.root,"config/server.properties")),mp=ServerSettings.read(new File(s.root,"config/mcsa.properties"));
+            openAppearance(activity); click(activity,R.id.theme_dark); themeReady(activity,true,R.id.theme_dark);
+            assertEquals(777,ping().getJSONObject("version").getInt("protocol"));
+            assertEquals(sp,ServerSettings.read(new File(s.root,"config/server.properties"))); assertEquals(mp,ServerSettings.read(new File(s.root,"config/mcsa.properties")));
+            device.put("live_theme_change_status",ping()).put("theme_change_configs_unchanged",true);
             click(activity,R.id.tab_console);
             activity.onActivity(a->((EditText)a.findViewById(R.id.console_input)).setText("say APK_NATIVE_OK")); click(activity,R.id.console_send);
             await("console command reached the native process",()->HostState.logs().contains("INFO]: [Server] APK_NATIVE_OK"));

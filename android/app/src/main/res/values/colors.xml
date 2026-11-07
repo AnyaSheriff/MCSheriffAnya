@@ -1,0 +1,13 @@
+<resources>
+    <color name="primary">#315F50</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#B4ECD4</color>
+    <color name="on_primary_container">#002117</color>
+    <color name="background">#F4F8F3</color>
+    <color name="surface">#FCFDF8</color>
+    <color name="on_surface">#17211C</color>
+    <color name="muted">#46554C</color>
+    <color name="surface_variant">#DCE6DD</color>
+    <color name="warning">#805600</color>
+    <bool name="light_bars">true</bool>
+</resources>

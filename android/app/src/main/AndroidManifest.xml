@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <application android:label="MCSheriffAnya" android:theme="@style/AppTheme"
+    <application android:name=".McsaApplication" android:label="MCSheriffAnya" android:theme="@style/AppTheme"
         android:icon="@drawable/ic_server" android:allowBackup="false" android:fullBackupContent="@xml/backup_rules" android:dataExtractionRules="@xml/data_extraction_rules"
         android:extractNativeLibs="true" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
