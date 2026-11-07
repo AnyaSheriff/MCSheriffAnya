@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: Swatinem/rust-cache@v2
         with:
-          key: apk-native-api26-16k
+          key: apk-native-api24-16k
       - name: Build ARM64 server and emulator runtime sequentially
         run: bash tools/android/build-native.sh
       - uses: actions/upload-artifact@v4

@@ -27,7 +27,7 @@ def inspect(binary, machine):
 
 
 def main(root):
-    result = {'source_head': (root / 'source-head.txt').read_text().strip(), 'api': 26, 'runtimes': {}}
+    result = {'source_head': (root / 'source-head.txt').read_text().strip(), 'api': 24, 'runtimes': {}}
     assert re.fullmatch('[0-9a-f]{40}', result['source_head'])
     for abi, machine in [('arm64-v8a', 183), ('x86_64', 62)]:
         result['runtimes'][abi] = inspect((root / abi / 'libmcsa.so').read_bytes(), machine)

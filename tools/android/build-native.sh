@@ -18,12 +18,12 @@ for abi in arm64-v8a x86_64; do
     features=(--no-default-features)
   fi
   rustup target add "$triple"
-  compiler="$ndk_tools/${triple}26-clang"
+  compiler="$ndk_tools/${triple}24-clang"
   test -x "$compiler"
   linker_var="CARGO_TARGET_$(printf '%s' "$triple" | tr '[:lower:]-' '[:upper:]_')_LINKER"
   export "$linker_var=$compiler"
   export "CC_${triple//-/_}=$compiler"
-  export "CXX_${triple//-/_}=$ndk_tools/${triple}26-clang++"
+  export "CXX_${triple//-/_}=$ndk_tools/${triple}24-clang++"
   export "AR_${triple//-/_}=$ndk_tools/llvm-ar"
   cargo build --release --target "$triple" "${features[@]}" 2>&1 | tee "apk-native/build-$abi.log"
   mkdir -p "apk-native/$abi"
