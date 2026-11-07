@@ -1,0 +1,93 @@
+name: Android APK build and device checks
+on:
+  push:
+    branches: ['wip/apk-checks-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Fetch exact verified native runtimes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/android/fetch-runtime.py
+      - name: Build each APK, unit tests and Lint
+        run: |
+          set -euo pipefail
+          mkdir -p apk-phone apk-test apk-build-evidence
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            (cd android && ./gradlew --no-daemon -PapkAbi="$abi" :app:clean :app:assembleDebug) 2>&1 | tee "apk-build-evidence/build-$abi.log"
+            if [ "$abi" = x86_64 ]; then out=apk-test; else out=apk-phone; fi
+            cp android/app/build/outputs/apk/debug/app-debug.apk "$out/app-$abi-debug.apk"
+          done
+          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:lintDebug) 2>&1 | tee apk-build-evidence/checks.log
+          cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apk-test/
+          cp -r android/app/build/test-results apk-build-evidence/
+          cp android/app/build/reports/lint-results-debug.* apk-build-evidence/
+          cp android/runtime/receipt.json android/runtime/selection.json android/runtime-pin.json apk-build-evidence/
+          git rev-parse HEAD > apk-build-evidence/source-head.txt
+          python3 tools/android/verify-apk.py apk-phone/app-armeabi-v7a-debug.apk armeabi-v7a
+          python3 tools/android/verify-apk.py apk-phone/app-arm64-v8a-debug.apk arm64-v8a
+          python3 tools/android/verify-apk.py apk-test/app-x86_64-debug.apk x86_64
+          for apk in apk-phone/*.apk apk-test/*.apk; do
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk" > "$apk.signature.txt"
+            "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$apk" > "$apk.alignment.txt"
+          done
+          (cd apk-phone && sha256sum *.apk > SHA256SUMS)
+          (cd apk-test && sha256sum *.apk > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apk-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apk-phone/
+            apk-test/
+            apk-build-evidence/
+          retention-days: 7
+  device:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [24, 36]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TEST_API: ${{ matrix.api }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk-build-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Allow emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/android/run-emulator-checks.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apk-device-api${{ matrix.api }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: apk-device-evidence/
+          retention-days: 7

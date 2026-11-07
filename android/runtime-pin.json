@@ -1,0 +1,48 @@
+{
+  "run_id": "42358039950",
+  "head": "c943cdc892278adf9b43c27a962f40a3b69ab651",
+  "artifact_name": "apk-native-42358039950-1",
+  "artifact_sha256": "5f74e0d4b7832c8990109cca93c9ae06c9105eed5c9ca499b94a29f16cf65d28",
+  "api": 24,
+  "runtimes": {
+    "armeabi-v7a": {
+      "bytes": 21595972,
+      "sha256": "dc1d3698b52e63ab2817feda33100e210c18e365ff3d89466b87588a73d34daf",
+      "bits": 32,
+      "machine": 40,
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "interpreter": "/system/bin/linker",
+      "features": "no-default, plugins disabled"
+    },
+    "arm64-v8a": {
+      "bytes": 42861200,
+      "sha256": "db73a66ce93d4111697a004712377b4d764a4a32a8aab4355f28dc785c1c1d41",
+      "bits": 64,
+      "machine": 183,
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "interpreter": "/system/bin/linker64",
+      "features": "default, plugins enabled"
+    },
+    "x86_64": {
+      "bytes": 32004784,
+      "sha256": "f8039f767e49ed649534fc4a7926449d8af954cbd99ccf95ea90c2467b7cde62",
+      "bits": 64,
+      "machine": 62,
+      "load_alignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "interpreter": "/system/bin/linker64",
+      "features": "no-default, plugins disabled"
+    }
+  }
+}

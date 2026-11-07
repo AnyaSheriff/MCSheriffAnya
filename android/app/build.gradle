@@ -1,0 +1,42 @@
+plugins { id 'com.android.application' }
+def selectedAbi = providers.gradleProperty('apkAbi').getOrElse('arm64-v8a')
+if (!(selectedAbi in ['armeabi-v7a', 'arm64-v8a', 'x86_64'])) throw new GradleException('Unknown APK ABI')
+android {
+    namespace 'ru.sheriffanya.mcsa'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ru.sheriffanya.mcsa'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-preview'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        ndk { abiFilters selectedAbi }
+        buildConfigField 'String', 'RUNTIME_ABI', '"' + selectedAbi + '"'
+        buildConfigField 'boolean', 'RUNTIME_PLUGINS', selectedAbi == 'arm64-v8a' ? 'true' : 'false'
+    }
+    buildFeatures { buildConfig true }
+    sourceSets { main { jniLibs.srcDirs = [providers.gradleProperty('runtimeDir').getOrElse('../runtime')] } }
+    packaging { jniLibs { useLegacyPackaging true; keepDebugSymbols += ['**/libmcsa.so'] } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    lint { abortOnError true }
+}
+tasks.register('checkRuntime') {
+    doLast {
+        def root = file(providers.gradleProperty('runtimeDir').getOrElse('../runtime'))
+        if (!new File(root, selectedAbi + '/libmcsa.so').isFile())
+            throw new GradleException('Verified native runtime missing: ' + root + '/' + selectedAbi + '/libmcsa.so')
+        def pin = new groovy.json.JsonSlurper().parse(rootProject.file('runtime-pin.json'))
+        def binary = new File(root, selectedAbi + '/libmcsa.so')
+        def digest = java.security.MessageDigest.getInstance('SHA-256').digest(binary.bytes).encodeHex().toString()
+        if (pin.api != 24 || digest != pin.runtimes[selectedAbi].sha256 || binary.length() != pin.runtimes[selectedAbi].bytes)
+            throw new GradleException('Native runtime differs from independently verified pin')
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'checkRuntime' }
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'junit:junit:4.13.2'
+}

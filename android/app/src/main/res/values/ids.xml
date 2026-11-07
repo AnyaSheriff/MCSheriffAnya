@@ -1,0 +1,11 @@
+<resources>
+    <item name="start_server" type="id" />
+    <item name="stop_server" type="id" />
+    <item name="tab_home" type="id" />
+    <item name="tab_console" type="id" />
+    <item name="tab_settings" type="id" />
+    <item name="save_settings" type="id" />
+    <item name="console_input" type="id" />
+    <item name="console_send" type="id" />
+    <item name="console_log" type="id" />
+</resources>
