@@ -291,14 +291,18 @@ public class ServerAppTest {
         try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(context().getFilesDir(),name+".png"))) { assertTrue(image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out)); } finally { image.recycle(); }
     }
     private void pickerRoot(androidx.test.uiautomator.UiDevice device) throws Exception {
+        // Breadcrumb уже выбранной папки не является пунктом навигационного меню.
+        androidx.test.uiautomator.UiObject current=device.findObject(new androidx.test.uiautomator.UiSelector().resourceIdMatches(".*:id/breadcrumb_text").text("Downloads"));
+        if(current.waitForExists(2000)) { device.waitForIdle(2000);return; }
         androidx.test.uiautomator.UiObject root=device.findObject(new androidx.test.uiautomator.UiSelector().text("Downloads"));
         if(!root.waitForExists(2000)) {
             androidx.test.uiautomator.UiObject drawer=device.findObject(new androidx.test.uiautomator.UiSelector().descriptionMatches("(?i)(Show roots|Show navigation drawer)"));
             assertTrue("document picker drawer missing",drawer.waitForExists(10000));assertTrue(drawer.click());
         }
-        assertTrue("test document provider missing",root.waitForExists(10000));
-        // UiObject повторно ищет узел перед нажатием: загрузка провайдера может заменить дерево окна.
-        assertTrue(root.click());device.waitForIdle();
+        assertTrue("Downloads root missing",root.waitForExists(10000));
+        if(current.exists()) { device.waitForIdle(2000);return; }
+        // При смене дерева важен выбранный Downloads, а не служебный флаг отправки касания.
+        assertTrue("could not select Downloads",root.click()||current.waitForExists(5000));device.waitForIdle(2000);
     }
     private void backupThroughSystemPicker(ActivityScenario<MainActivity> activity,ServerSettings settings,File marker,JSONObject deviceEvidence) throws Exception {
         BackupStore store=new BackupStore(context().getFilesDir());assertTrue(store.list().isEmpty());
