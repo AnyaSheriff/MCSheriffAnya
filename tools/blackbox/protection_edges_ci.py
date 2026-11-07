@@ -68,6 +68,7 @@ def inspect(raw,items):
             assert not any(x['observer_breaks'])
         else:
             assert x['health'][0]==[20.0,19.0]
+            assert not reflected and x['health'][1]==[20.0], 'broken Thorns piece still reflects'
             assert all(len(values)==1 for values in x['observer_breaks'])
             assert any(c['stack'] is None and c['tick']>=incoming[0]['tick'] for c in x['chest'])
     return {'health':x['health'],'initial_gear':first,'chest':x['chest'],
@@ -108,7 +109,7 @@ def semantics(results,data):
             except (AssertionError,EOFError,ValueError,KeyError,OSError,StopIteration) as error:
                 rows.append({'scenario':name,'side':side,'status':'failed','error':repr(error)})
     errors=cross_check(rows)+[r['scenario']+'/'+r['side']+':'+r['error'] for r in rows if r['status']!='pass']
-    return {'schema':'protection-edges-777-v1','cases':rows,'cross_errors':errors,
+    return {'schema':'protection-edges-777-v2','cases':rows,'cross_errors':errors,
             'status':'failed' if errors else 'verified-semantic-controls','error':'; '.join(errors)}
 
 

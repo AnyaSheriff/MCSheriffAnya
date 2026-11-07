@@ -103,6 +103,8 @@ mod defense_runtime_tests;
 
 #[cfg(test)]
 mod armor_enchants_runtime_tests;
+#[cfg(test)]
+mod protection_edges_runtime_tests;
 mod thrown;
 mod projectile;
 #[cfg(test)]

@@ -44,10 +44,10 @@
     "pvp-thorns-break-777"
   ],
   "criteria": {
-    "schema": "protection-edges-777-v1",
+    "schema": "protection-edges-777-v2",
     "positive": "initial HP20 each from actual before-start receipt; one authored bot2 melee; actual damage_event player_attack with correct cause/direct; diamond_chestplate observed before hit with exact damage/enchantment from captured registry",
     "fire": "plain chestplate vs FireProtectionIV with FireAspectI: same initial melee HP, final damage1 armor wear; genuine on_fire events with no cause/direct,3control vs1protected; both observers ignition and extinction, round receipt duration79±1control/31±1protected; protection reduces burn duration and per-fire-hit damage; exact f32 HP arrays agree original/core",
-    "thorns": "control ThornsVII returns exactly one real attributed damage1..5 and wears3; damage527 case actually breaks with one event per observer and HP19; reflection may be0or1 but must agree original/core, including correct owner and actual returned HP. No naturalThornsIII/probability claim",
+    "thorns": "control ThornsVII returns exactly one actual attributed damage1..5 and wears3; damage527 case breaks with one event each and victimHP19, no reflected damage and attackerHP20, as original baseline42352080533. Raw actual HP arrays, presence and owner controls remain mandatory; no comparator weakening.",
     "comparison": "existing comparator and inherited random rules unchanged. No new random masks; raw reflection count, primary exact HP and gear/fire controls are mandatory; any decode gaps/warnings remain failure"
   }
 }

@@ -252,7 +252,10 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     // Шипы жертвы (вики, Thorns): каждая деталь с «шипами» с шансом 15 % за
     // уровень ранит ударившего; урон приходит ему в этом же такте, со звуками
     // у него (чёрный ящик, pvp-thorns).
-    let thorns_slots = if lands { thorns_hits(shared, player, &gear.view, (victim.position.x, victim.position.y, victim.position.z), target) } else { Vec::new() };
+    let thorns_slots = if lands {
+        let view = thorns_after_armor_wear(shared.catalog().profile(), &gear, strike.damage, source);
+        thorns_hits(shared, player, &view, (victim.position.x, victim.position.y, victim.position.z), target)
+    } else { Vec::new() };
 
     // Рывок: звук отдачи звучит до удара и сверх обычного (чёрный ящик,
     // pvp-sprint-knockback).
@@ -827,6 +830,24 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
 
 /// Бросает шипы жертвы по её опубликованным уровням: сработавшим кладёт урон
 /// в очередь ударов нападающего; возвращает слоты сработавших.
+pub(super) fn thorns_after_armor_wear(profile: crate::gameplay_catalog::Profile, gear: &crate::players::Gear, damage: f32, source: Source) -> crate::players::CombatView {
+    let mut view = gear.view;
+    if profile != crate::gameplay_catalog::Profile::Preview26_3 || source != Source::PlayerAttack { return view; }
+    // Opaque777 CI42352080533: сломавшийся от самого удара нагрудник
+    // больше не отражает. Без Unbreaking исход известен без броска RNG.
+    // Вероятностную судьбу с Unbreaking здесь не предсказываем [проверить].
+    let wear = combat::armor_wear(damage);
+    for (level, stack) in view.thorns.iter_mut().zip(gear.worn.iter().skip(1)) {
+        if *level > 0 && let Some(stack) = stack
+            && stack.extras().level("unbreaking") <= 0
+            && combat::add_damage(*stack, wear).is_none()
+        {
+            *level = 0;
+        }
+    }
+    view
+}
+
 fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players::CombatView, victim_at: (f64, f64, f64), victim: i32) -> Vec<i32> {
     let mut slots = Vec::new();
     let dimension = player.dimension;

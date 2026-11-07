@@ -54,9 +54,9 @@ def rows():
 
 
 class Guards(unittest.TestCase):
-    def test_all_four_shapes_and_both_break_reflection_hypotheses(self):
+    def test_all_four_shapes_and_no_reflection_from_broken_piece(self):
         for name in p.NAMES:p.inspect(fixture(name),ITEMS)
-        p.inspect(fixture(p.NAMES[3],True),ITEMS)
+        with self.assertRaises(AssertionError):p.inspect(fixture(p.NAMES[3],True),ITEMS)
         self.assertEqual(p.cross_check(rows()),[])
 
     def test_hp_receipt_and_authored_attack_required(self):
@@ -110,7 +110,7 @@ class Guards(unittest.TestCase):
             with self.subTest(side=side),self.assertRaises(AssertionError):p.inspect(raw,ITEMS)
 
     def test_cross_side_reflection_difference_cannot_hide_behind_rng_mask(self):
-        x=rows();row=next(r for r in x if r['scenario']==p.NAMES[3] and r['side']=='ours');row['observed']=p.inspect(fixture(p.NAMES[3],True),ITEMS)
+        x=rows();row=next(r for r in x if r['scenario']==p.NAMES[3] and r['side']=='ours');row['observed']['reflected']=[{'side':1}];row['observed']['health'][1]=[20,17]
         self.assertTrue(p.cross_check(x))
 
     def test_exact_hp_and_relative_protection_have_independent_controls(self):
