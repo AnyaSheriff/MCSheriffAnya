@@ -65,8 +65,9 @@ final class BackupStore {
         String version=new ConfigDocument(ServerSettings.read(new File(candidate,"config/mcsa.properties"))).get("java-version","26.3");
         if(!version.equals("26.3")) throw new IOException("Копия использует другую основную версию игры: "+version);
     }
-    File create() throws IOException {
-        stopped(); validateServer(root);
+    File create() throws IOException { return create(true); }
+    private File create(boolean validate) throws IOException {
+        stopped();if(validate) validateServer(root);
         if(!backups.isDirectory()&&!backups.mkdirs()) throw new IOException("Не удалось создать папку копий.");
         if(!backups.getCanonicalFile().equals(backups.getAbsoluteFile())) throw new IOException("Папка копий не должна быть ссылкой.");
         String name="mcsa-"+new SimpleDateFormat("yyyyMMdd-HHmmss",Locale.ROOT).format(new Date())+"-"+UUID.randomUUID().toString().substring(0,8)+".zip";
@@ -115,7 +116,9 @@ final class BackupStore {
             unpack(archive);validateServer(stage);
             String automatic=null;
             if(root.exists()) {
-                automatic=create().getName();
+                // Восстановление нужно и после повреждения текущего мира: сохраняем все его байты,
+                // но пригодность заменяющей копии уже проверена отдельно в stage.
+                automatic=create(false).getName();
                 try(FileOutputStream mark=new FileOutputStream(transaction)) { mark.write(1);mark.getFD().sync(); }
                 if(!root.renameTo(previous)) throw new IOException("Не удалось отложить текущий мир. Он не заменён.");
             }

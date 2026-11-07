@@ -27,6 +27,12 @@ public final class BackupStoreTest {
         assertEquals("before\n",ServerSettings.read(new File(home,"server/world/marker")));
         assertEquals("changed\n",zipText(store.file(automatic),"server/world/marker"));assertEquals(2,store.list().size());
         assertFalse(new File(home,"server.importing").exists());assertFalse(new File(home,"server.previous").exists());
+        assertTrue(new File(home,"server/world/level.dat").delete());
+        ServerSettings.write(new File(home,"server/world/marker"),"damaged current world\n");
+        String damagedBackup;try(InputStream in=new FileInputStream(original)) { damagedBackup=store.restore(in); }
+        assertEquals("before\n",ServerSettings.read(new File(home,"server/world/marker")));
+        assertTrue(new File(home,"server/world/level.dat").length()>0);
+        assertEquals("damaged current world\n",zipText(store.file(damagedBackup),"server/world/marker"));
         assertTrue(new File(home,"server").renameTo(new File(home,"server.previous")));
         ServerSettings.write(new File(home,"server.importing/partial"),"incomplete\n");
         // Сбой после перемещения прежнего мира и появления неполной новой папки.

@@ -297,9 +297,11 @@ public class ServerAppTest {
         try(java.io.InputStream in=new java.io.FileInputStream(backup)) { byte[] bytes=new byte[32768];int n;while((n=in.read(bytes))!=-1) digest.update(bytes,0,n); }
         assertArrayEquals("exported ZIP differs",digest.digest(),external);
         ServerSettings.write(marker,"changed after backup\n");ServerSettings changed=new ServerSettings(settings.root);Map<String,String> values=changed.values();values.put("max-players","8");changed.save(values);
-        click(activity,R.id.backup_import);pickerRoot(ui);
-        androidx.test.uiautomator.UiObject2 zip=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(backup.getName())),10000);
-        assertNotNull("exported document missing",zip);zip.click();
+        click(activity,R.id.backup_import);
+        androidx.test.uiautomator.UiObject zip=ui.findObject(new androidx.test.uiautomator.UiSelector().text(backup.getName()));
+        // Picker может сразу показать Downloads или наш экспорт в «Недавних»: выбираем готовый файл без лишнего перехода.
+        if(!zip.waitForExists(2000)) pickerRoot(ui);
+        assertTrue("exported document missing",zip.waitForExists(10000));assertTrue(zip.click());
         // Диалог имеет отдельное окно: проверяем и нажимаем настоящую кнопку через UI Automator.
         androidx.test.uiautomator.UiObject2 confirm=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Восстановить")),10000);
         assertNotNull("restore confirmation missing",confirm);confirm.click();
