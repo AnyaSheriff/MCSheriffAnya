@@ -257,17 +257,14 @@ public class ServerAppTest {
         }
     }
     private void pickerRoot(androidx.test.uiautomator.UiDevice device) throws Exception {
-        androidx.test.uiautomator.UiObject2 root=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(BackupDocumentsProvider.TITLE)),2000);
-        if(root==null) {
-            androidx.test.uiautomator.UiObject2 drawer=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.desc(java.util.regex.Pattern.compile("(?i)(Show roots|Show navigation drawer)"))),10000);
-            assertNotNull("document picker drawer missing",drawer);drawer.click();
-            root=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(BackupDocumentsProvider.TITLE)),10000);
+        androidx.test.uiautomator.UiObject root=device.findObject(new androidx.test.uiautomator.UiSelector().text("Downloads"));
+        if(!root.waitForExists(2000)) {
+            androidx.test.uiautomator.UiObject drawer=device.findObject(new androidx.test.uiautomator.UiSelector().descriptionMatches("(?i)(Show roots|Show navigation drawer)"));
+            assertTrue("document picker drawer missing",drawer.waitForExists(10000));assertTrue(drawer.click());
         }
-        assertNotNull("test document provider missing",root);
-        // Текст может принадлежать AdapterView: координаты строки сохраняем даже без её собственного OnClickListener.
-        androidx.test.uiautomator.UiObject2 row=root.getParent();
-        if(row!=null&&row.isClickable()&&row.getVisibleBounds().height()<=root.getVisibleBounds().height()*4) row.click();else root.click();
-        device.waitForIdle();
+        assertTrue("test document provider missing",root.waitForExists(10000));
+        // UiObject повторно ищет узел перед нажатием: загрузка провайдера может заменить дерево окна.
+        assertTrue(root.click());device.waitForIdle();
     }
     private void backupThroughSystemPicker(ActivityScenario<MainActivity> activity,ServerSettings settings,File marker,JSONObject deviceEvidence) throws Exception {
         BackupStore store=new BackupStore(context().getFilesDir());assertTrue(store.list().isEmpty());
@@ -281,14 +278,21 @@ public class ServerAppTest {
         activity.onActivity(a->assertTrue(buttonWithText(a.getWindow().getDecorView(),"Сохранить в память телефона").performClick()));
         androidx.test.uiautomator.UiDevice ui=androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         pickerRoot(ui);
-        androidx.test.uiautomator.UiObject2 save=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("(?i)save")).enabled(true).clickable(true)),15000);
-        if(save==null) { screenshot("failure-screen");ui.dumpWindowHierarchy(new File(context().getFilesDir(),"failure-ui.xml")); }
-        assertNotNull("enabled system save button missing",save);assertTrue(save.isEnabled());save.click();
-        await("system save picker dismissed",()->!ui.hasObject(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*documentsui"))),15000);
+        if(ui.hasObject(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*inputmethod.*")))) ui.pressBack();
+        androidx.test.uiautomator.UiObject save=ui.findObject(new androidx.test.uiautomator.UiSelector().textMatches("(?i)save").enabled(true).clickable(true));
+        assertTrue("enabled system save button missing",save.waitForExists(15000));screenshot("backup-picker-save");
+        // Повторяем только ввод в ещё открытое системное окно; завершённую операцию не повторяем.
+        for(int attempt=0;attempt<3&&ui.getCurrentPackageName().endsWith("documentsui");attempt++) {
+            if(save.waitForExists(3000)) assertTrue(save.click());
+            ui.wait(androidx.test.uiautomator.Until.gone(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*documentsui"))),2000);
+        }
+        await("system save picker dismissed",()->!ui.getCurrentPackageName().endsWith("documentsui"),15000);
         await("export document completed",()->{ synchronized(HostState.LOCK) { return HostState.idle()&&HostState.backupMessage.startsWith("Копия сохранена в выбранный"); } });
-        android.net.Uri document=android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsProvider.AUTHORITY,backup.getName());
+        // Читаем только созданный нами ZIP из Downloads свежего эмулятора. У приложения нет all-files permission.
+        assertTrue(backup.getName().matches("mcsa-[A-Za-z0-9_.-]+\\.zip"));
         java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
-        try(java.io.InputStream in=context().getContentResolver().openInputStream(document)) { assertNotNull(in);byte[] bytes=new byte[32768];int n;while((n=in.read(bytes))!=-1) digest.update(bytes,0,n); }
+        android.os.ParcelFileDescriptor shared=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("cat /sdcard/Download/"+backup.getName());
+        try(java.io.InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(shared)) { byte[] bytes=new byte[32768];int n;while((n=in.read(bytes))!=-1) digest.update(bytes,0,n); }
         byte[] external=digest.digest();digest.reset();
         try(java.io.InputStream in=new java.io.FileInputStream(backup)) { byte[] bytes=new byte[32768];int n;while((n=in.read(bytes))!=-1) digest.update(bytes,0,n); }
         assertArrayEquals("exported ZIP differs",digest.digest(),external);
