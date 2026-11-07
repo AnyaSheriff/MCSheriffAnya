@@ -77,7 +77,7 @@ public class ServerAppTest {
         try {
             screenshot("failure-screen");
             androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).dumpWindowHierarchy(new File(context().getFilesDir(),"failure-ui.xml"));
-            synchronized(HostState.LOCK) { ServerSettings.write(new File(context().getFilesDir(),"failure-state.json"),new JSONObject().put("waiting",name).put("phase",HostState.phase).put("operation",HostState.operation).put("backup_message",HostState.backupMessage).toString()+"\n"); }
+            synchronized(HostState.LOCK) { ServerSettings.write(new File(context().getFilesDir(),"failure-state.json"),new JSONObject().put("waiting",name).put("phase",HostState.phase).put("dashboard_visible",HostState.dashboardVisible).put("api_error",HostState.statsError).put("api_socket_exists",CoreStatsClient.socket(context()).exists()).put("has_api_session",HostState.apiSession!=null).put("has_stats",HostState.stats!=null).put("operation",HostState.operation).put("backup_message",HostState.backupMessage).toString()+"\n"); }
         } catch(Exception captureError) { System.out.println("Diagnostic capture failed: "+captureError); }
         fail(name+"; backup="+HostState.backupMessage+"\n"+HostState.logs());
     }
@@ -218,12 +218,12 @@ public class ServerAppTest {
             click(activity,R.id.start_server); await("first native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject status=ping(); assertEquals(777,status.getJSONObject("version").getInt("protocol")); assertEquals(10,status.getJSONObject("players").getInt("max"));
             device.put("status_before",status);
-            await("real dashboard API data",()->{ synchronized(HostState.LOCK) { CoreStatsClient.Snapshot v=HostState.stats;return v!=null&&!Double.isNaN(v.cpuPercent)&&v.rssBytes>0; } });
+            await("real dashboard API data",()->{ synchronized(HostState.LOCK) { CoreStatsClient.Snapshot v=HostState.stats;return v!=null&&!Double.isNaN(v.cpuPercent)&&v.rssBytes>0; } },30000);
             synchronized(HostState.LOCK) {
                 CoreStatsClient.Snapshot v=HostState.stats;assertEquals(0,v.online);assertEquals(10,v.maxPlayers);assertTrue(v.cpuPercent>=0&&v.cpuPercent<=100);assertTrue(v.availableRam>0&&v.totalRam>=v.availableRam);assertTrue(v.availableDisk>0);
                 device.put("core_api",new JSONObject().put("online",v.online).put("max",v.maxPlayers).put("cpu_percent",v.cpuPercent).put("rss_bytes",v.rssBytes).put("logical_cpus",v.logicalCpus).put("available_ram",v.availableRam).put("total_ram",v.totalRam).put("available_disk",v.availableDisk));
             }
-            await("dashboard API sees real idle pause",()->{ synchronized(HostState.LOCK) { return HostState.stats!=null&&HostState.stats.paused&&HostState.stats.tps==0; } });
+            await("dashboard API sees real idle pause",()->{ synchronized(HostState.LOCK) { return HostState.stats!=null&&HostState.stats.paused&&HostState.stats.tps==0; } },30000);
             long pausedTick; synchronized(HostState.LOCK) { pausedTick=HostState.stats.tick; }
             Thread.sleep(2300);
             synchronized(HostState.LOCK) { assertTrue(HostState.stats.paused);assertEquals(pausedTick,HostState.stats.tick);assertEquals(0,HostState.stats.tps,0); }
@@ -263,7 +263,7 @@ public class ServerAppTest {
             assertEquals("7",new ServerSettings(s.root).server.get("max-players",""));
             click(activity,R.id.tab_home); click(activity,R.id.start_server); await("second native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject after=ping(); assertEquals(7,after.getJSONObject("players").getInt("max")); device.put("status_after",after);
-            await("restarted API uses saved player limit",()->{ synchronized(HostState.LOCK) { return HostState.stats!=null&&HostState.stats.maxPlayers==7; } });device.put("api_restart_max",7); assertEquals("retained\n",ServerSettings.read(marker));
+            await("restarted API uses saved player limit",()->{ synchronized(HostState.LOCK) { return HostState.stats!=null&&HostState.stats.maxPlayers==7; } },30000);device.put("api_restart_max",7); assertEquals("retained\n",ServerSettings.read(marker));
             click(activity,R.id.stop_server); await("second graceful stop",HostState::idle);
             assertFalse("listening socket remained after stop",listening());
             backupThroughSystemPicker(activity,s,marker,device);

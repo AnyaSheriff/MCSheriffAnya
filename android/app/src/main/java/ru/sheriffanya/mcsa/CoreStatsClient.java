@@ -32,15 +32,20 @@ final class CoreStatsClient implements AutoCloseable {
         try {
             JSONObject data;
             try(LocalSocket local=new LocalSocket()) {
-                connection=local;local.setSoTimeout(1200);local.connect(new LocalSocketAddress(socket.getPath(),LocalSocketAddress.Namespace.FILESYSTEM));
+                connection=local;
+                // LocalSocket создаёт файловый дескриптор в connect; setSoTimeout до него не работает.
+                local.connect(new LocalSocketAddress(socket.getPath(),LocalSocketAddress.Namespace.FILESYSTEM));local.setSoTimeout(1200);
                 local.getOutputStream().write("status\n".getBytes(StandardCharsets.UTF_8));local.getOutputStream().flush();
                 ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[1024];int n;
                 while((n=local.getInputStream().read(buffer))!=-1) { bytes.write(buffer,0,n);if(bytes.size()>8192) throw new IOException("Слишком большой ответ статистики"); }
                 data=new JSONObject(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
             } finally { connection=null; }
             Snapshot current=decode(context,data,session,previous);previous=current;
-            synchronized(HostState.LOCK) { if(!closed&&session.equals(HostState.apiSession)&&HostState.phase==HostState.Phase.RUNNING) HostState.stats=current; }
-        } catch(Exception unavailable) { /* Без лог-спама и выдуманных нулей: UI отмечает устаревшие данные. */ }
+            synchronized(HostState.LOCK) { if(!closed&&session.equals(HostState.apiSession)&&HostState.phase==HostState.Phase.RUNNING) { HostState.stats=current;HostState.statsError=null; } }
+        } catch(Exception unavailable) {
+            // Только последний сбой для диагностики; не засоряем консоль и не рисуем выдуманные нули.
+            synchronized(HostState.LOCK) { if(!closed&&session.equals(HostState.apiSession)) HostState.statsError=unavailable.getClass().getSimpleName()+": "+unavailable.getMessage(); }
+        }
     }
     static Snapshot decode(Context context,JSONObject data,String session,Snapshot previous) throws Exception {
         if(data.getInt("version")!=1||!session.equals(data.getString("session"))||data.getLong("pid")<=0) throw new IOException("Неверная сессия API");

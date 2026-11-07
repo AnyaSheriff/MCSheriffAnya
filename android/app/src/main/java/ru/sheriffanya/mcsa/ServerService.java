@@ -83,7 +83,7 @@ public final class ServerService extends Service {
             if(apiSocket.exists()&&!apiSocket.delete()) throw new IOException("Не удалось подготовить локальный API");
             String session=java.util.UUID.randomUUID().toString();
             builder.environment().put("MCSA_APP_API_SOCKET",apiSocket.getPath());builder.environment().put("MCSA_APP_API_SESSION",session);
-            synchronized(HostState.LOCK) { HostState.apiSession=session;HostState.stats=null; }
+            synchronized(HostState.LOCK) { HostState.apiSession=session;HostState.stats=null;HostState.statsError=null; }
             process=builder.start();monitor=new CoreStatsClient(this,apiSocket,session);monitor.start();
             input=new BufferedWriter(new OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
             if(stopRequested) writeLine("stop");
@@ -113,7 +113,7 @@ public final class ServerService extends Service {
             }
         } finally {
             if(monitor!=null) monitor.close();
-            synchronized(HostState.LOCK) { HostState.apiSession=null;HostState.stats=null; }
+            synchronized(HostState.LOCK) { HostState.apiSession=null;HostState.stats=null;HostState.statsError=null; }
             if(apiSocket.exists()) apiSocket.delete();
             input=null;
             release(); main.post(()->{

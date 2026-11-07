@@ -5,7 +5,7 @@ final class HostState {
     static final Object LOCK = new Object();
     enum Phase { STOPPED, STARTING, RUNNING, STOPPING }
     static Phase phase = Phase.STOPPED;
-    static String apiSession;
+    static String apiSession,statsError;
     static boolean dashboardVisible;
     static CoreStatsClient.Snapshot stats;
     static String operation;
