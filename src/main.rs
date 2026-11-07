@@ -124,6 +124,8 @@ mod plugins;
 mod auth;
 mod viaproxy;
 mod console;
+#[cfg(unix)]
+mod app_api;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -352,6 +354,8 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     // Остановка сервера: консоль сообщает о ней, а ждёт её вот этот приёмник.
     let (shutdown_sender, mut shutdown) = watch::channel(false);
 
+    #[cfg(unix)]
+    app_api::start(Arc::clone(&shared),shutdown.clone());
     console::start(Arc::clone(&shared), shutdown_sender);
 
     // Такт мира: без него жидкости стояли бы на месте.

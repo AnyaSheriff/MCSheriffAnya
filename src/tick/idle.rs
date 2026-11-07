@@ -52,7 +52,9 @@ pub(super) async fn wait(shared: &Shared, presence: &mut watch::Receiver<Presenc
     // повторяет неудачные записи: не блокируем вход ожиданием flush на диске.
     save(shared, true);
     crate::log_info!("Игроков нет {} с: мир поставлен на паузу до следующего входа", seconds);
+    shared.idle_paused.store(true,std::sync::atomic::Ordering::Release);
     wait_until_active(presence, seconds, || save(shared, false)).await;
+    shared.idle_paused.store(false,std::sync::atomic::Ordering::Release);
     let current = *presence.borrow();
     if current.online > 0 {
         crate::log_info!("Игрок вошёл: мир продолжает работу");
@@ -271,12 +273,14 @@ mod tests {
         tokio::time::advance(Duration::from_secs(600)).await;
         tokio::task::yield_now().await;
         assert_eq!(*shared.ticks.borrow(),before);
+        assert!(shared.idle_paused.load(std::sync::atomic::Ordering::Acquire));
         assert_eq!(*shared.tick_starts.borrow(),starts);
         assert_eq!(Dimension::ALL.map(|d| shared.world_in(d).lock().unwrap().clock()),clocks);
         shared.players.lock().unwrap().join(member("Java",1),1).unwrap();
         tokio::task::yield_now().await;
         tokio::task::yield_now().await;
         assert_eq!(*shared.ticks.borrow(),before+1);
+        assert!(!shared.idle_paused.load(std::sync::atomic::Ordering::Acquire));
         tokio::time::advance(Duration::from_millis(49)).await;
         tokio::task::yield_now().await;
         assert_eq!(*shared.ticks.borrow(),before+1);

@@ -88,6 +88,8 @@ pub struct Shared {
     /// Номер только что закончившегося такта: по нему подключения рассылают
     /// клиентам всё, что случилось за такт, — разом, как у оригинала.
     pub ticks: tokio::sync::watch::Sender<u64>,
+    /// Настоящее состояние паузы без игроков; чтение API не считается активностью.
+    pub idle_paused: std::sync::atomic::AtomicBool,
     /// Атомарная публикация связанных звуков и экипировки (арбалет).
     pub publication: Mutex<()>,
 
@@ -396,6 +398,7 @@ impl Shared {
             premium: crate::auth::premium::Detector::default(),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
+            idle_paused: std::sync::atomic::AtomicBool::new(false),
             publication: Mutex::new(()),
             tick_starts: tokio::sync::watch::channel(0).0,
             waiting_for_tick: Arc::new([std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0)]),
