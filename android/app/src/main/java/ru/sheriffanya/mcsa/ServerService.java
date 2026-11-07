@@ -74,13 +74,17 @@ public final class ServerService extends Service {
         }
     }
     private void run(File executable,File root) {
-        Process process=null;
+        Process process=null;CoreStatsClient monitor=null;File apiSocket=CoreStatsClient.socket(this);
         try {
             new BackupStore(getFilesDir()).cleanupRecovery();
             if(stopRequested) return;
             ProcessBuilder builder=new ProcessBuilder(executable.getAbsolutePath()).directory(root).redirectErrorStream(true);
             builder.environment().put("NO_COLOR","1"); builder.environment().put("TERM","dumb");
-            process=builder.start();
+            if(apiSocket.exists()&&!apiSocket.delete()) throw new IOException("Не удалось подготовить локальный API");
+            String session=java.util.UUID.randomUUID().toString();
+            builder.environment().put("MCSA_APP_API_SOCKET",apiSocket.getPath());builder.environment().put("MCSA_APP_API_SESSION",session);
+            synchronized(HostState.LOCK) { HostState.apiSession=session;HostState.stats=null; }
+            process=builder.start();monitor=new CoreStatsClient(this,apiSocket,session);monitor.start();
             input=new BufferedWriter(new OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
             if(stopRequested) writeLine("stop");
             try(InputStreamReader reader=new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8)) {
@@ -108,6 +112,9 @@ public final class ServerService extends Service {
                 catch(Exception ignored) { Thread.currentThread().interrupt(); }
             }
         } finally {
+            if(monitor!=null) monitor.close();
+            synchronized(HostState.LOCK) { HostState.apiSession=null;HostState.stats=null; }
+            if(apiSocket.exists()) apiSocket.delete();
             input=null;
             release(); main.post(()->{
                 runtimeFinished=true;
@@ -155,7 +162,7 @@ public final class ServerService extends Service {
         PendingIntent open=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop=PendingIntent.getService(this,1,new Intent(this,ServerService.class).setAction(STOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,CHANNEL):new Notification.Builder(this);
-        Notification notification=builder.setSmallIcon(R.drawable.ic_server).setContentTitle("MCSheriffAnya").setContentText(text).setContentIntent(open).setOngoing(true)
+        Notification notification=builder.setSmallIcon(R.drawable.project_logo_monochrome).setContentTitle("MCSheriffAnya").setContentText(text).setContentIntent(open).setOngoing(true)
                 .addAction(new Notification.Action.Builder(R.drawable.ic_server,"Остановить",stop).build()).build();
         if(Build.VERSION.SDK_INT>=34) startForeground(NOTIFICATION,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(NOTIFICATION,notification);

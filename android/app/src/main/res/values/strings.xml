@@ -1,0 +1,7 @@
+<resources>
+    <string name="dashboard_online_format">%1$d / %2$d</string>
+    <string name="dashboard_resources_format">Время такта: %1$s%2$s
+Доступно RAM телефона: %3$s / %4$s
+Свободно на накопителе: %5$s
+100%% CPU — все доступные ядру потоки. Обновление примерно раз в 2 секунды.</string>
+</resources>

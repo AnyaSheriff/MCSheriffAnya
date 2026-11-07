@@ -213,11 +213,27 @@ public class ServerAppTest {
         JSONObject device=new JSONObject().put("api",Build.VERSION.SDK_INT).put("page_size",Os.sysconf(OsConstants._SC_PAGESIZE)).put("supported_abis",new JSONArray(java.util.Arrays.asList(Build.SUPPORTED_ABIS)));
         ServerSettings.write(new File(context().getFilesDir(),"device-test.json"),device.toString()+"\n");
         ServerSettings s=new ServerSettings(new File(context().getFilesDir(),"server")); Map<String,String> values=s.values();
-        values.put("server-port","26184"); values.put("bedrock-port","0"); values.put("online-mode","false"); values.put("offline-license-mode","disabled"); values.put("auth-enabled","false"); values.put("send-error-reports","false"); values.put("view-distance","3"); values.put("simulation-distance","3"); values.put("level-seed","1234"); s.save(values);
+        values.put("server-port","26184"); values.put("bedrock-port","0"); values.put("online-mode","false"); values.put("offline-license-mode","disabled"); values.put("auth-enabled","false"); values.put("send-error-reports","false"); values.put("view-distance","3"); values.put("simulation-distance","3"); values.put("level-seed","1234"); values.put("pause-when-empty-seconds","4"); s.save(values);
         try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)) {
             click(activity,R.id.start_server); await("first native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject status=ping(); assertEquals(777,status.getJSONObject("version").getInt("protocol")); assertEquals(10,status.getJSONObject("players").getInt("max"));
             device.put("status_before",status);
+            await("real dashboard API data",()->{ synchronized(HostState.LOCK) { CoreStatsClient.Snapshot v=HostState.stats;return v!=null&&!Double.isNaN(v.cpuPercent)&&v.rssBytes>0; } });
+            synchronized(HostState.LOCK) {
+                CoreStatsClient.Snapshot v=HostState.stats;assertEquals(0,v.online);assertEquals(10,v.maxPlayers);assertTrue(v.cpuPercent>=0&&v.cpuPercent<=100);assertTrue(v.availableRam>0&&v.totalRam>=v.availableRam);assertTrue(v.availableDisk>0);
+                device.put("core_api",new JSONObject().put("online",v.online).put("max",v.maxPlayers).put("cpu_percent",v.cpuPercent).put("rss_bytes",v.rssBytes).put("logical_cpus",v.logicalCpus).put("available_ram",v.availableRam).put("total_ram",v.totalRam).put("available_disk",v.availableDisk));
+            }
+            await("dashboard API sees real idle pause",()->{ synchronized(HostState.LOCK) { return HostState.stats!=null&&HostState.stats.paused&&HostState.stats.tps==0; } });
+            long pausedTick; synchronized(HostState.LOCK) { pausedTick=HostState.stats.tick; }
+            Thread.sleep(2300);
+            synchronized(HostState.LOCK) { assertTrue(HostState.stats.paused);assertEquals(pausedTick,HostState.stats.tick);assertEquals(0,HostState.stats.tps,0); }
+            assertFalse("telemetry woke idle world via console",HostState.logs().contains("Команда из консоли: мир продолжает"));
+            device.put("api_does_not_wake_idle",true).put("idle_tick",pausedTick);
+            await("dashboard values visible",()->{
+                java.util.concurrent.atomic.AtomicBoolean visible=new java.util.concurrent.atomic.AtomicBoolean();
+                activity.onActivity(a->{ android.widget.TextView online=a.findViewById(R.id.stat_online),tps=a.findViewById(R.id.stat_tps);visible.set(online!=null&&online.getText().toString().equals("0 / 10")&&tps!=null&&tps.getText().toString().equals("Пауза")); });return visible.get();
+            });
+            screenshot("dashboard-paused");verifyLauncherLogo();device.put("launcher_logo_verified",true);
             activity.moveToState(Lifecycle.State.CREATED);
             Thread.sleep(500);
             JSONObject background=ping(); assertEquals(777,background.getJSONObject("version").getInt("protocol")); device.put("status_background",background);
@@ -246,7 +262,8 @@ public class ServerAppTest {
             });
             assertEquals("7",new ServerSettings(s.root).server.get("max-players",""));
             click(activity,R.id.tab_home); click(activity,R.id.start_server); await("second native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
-            JSONObject after=ping(); assertEquals(7,after.getJSONObject("players").getInt("max")); device.put("status_after",after); assertEquals("retained\n",ServerSettings.read(marker));
+            JSONObject after=ping(); assertEquals(7,after.getJSONObject("players").getInt("max")); device.put("status_after",after);
+            await("restarted API uses saved player limit",()->{ synchronized(HostState.LOCK) { return HostState.stats!=null&&HostState.stats.maxPlayers==7; } });device.put("api_restart_max",7); assertEquals("retained\n",ServerSettings.read(marker));
             click(activity,R.id.stop_server); await("second graceful stop",HostState::idle);
             assertFalse("listening socket remained after stop",listening());
             backupThroughSystemPicker(activity,s,marker,device);
@@ -255,6 +272,23 @@ public class ServerAppTest {
             try { if(!HostState.idle()) { context().startService(new Intent(context(),ServerService.class).setAction(ServerService.STOP)); await("cleanup",HostState::idle); } }
             finally { ServerSettings.write(new File(context().getFilesDir(),"instrument-native.log"),HostState.logs()); ServerSettings.write(new File(context().getFilesDir(),"device-test.json"),device.toString()+"\n"); }
         }
+    }
+    private void verifyLauncherLogo() throws Exception {
+        android.graphics.BitmapFactory.Options options=new android.graphics.BitmapFactory.Options();options.inScaled=false;options.inPreferredConfig=android.graphics.Bitmap.Config.ARGB_8888;
+        android.graphics.Bitmap logo=android.graphics.BitmapFactory.decodeResource(context().getResources(),R.drawable.project_logo,options);
+        assertNotNull(logo);assertEquals(512,logo.getWidth());assertEquals(512,logo.getHeight());int[] pixels=new int[512*512];logo.getPixels(pixels,0,512,0,0,512,512);byte[] rgba=new byte[pixels.length*4];
+        for(int i=0;i<pixels.length;i++) { rgba[i*4]=(byte)(pixels[i]>>16);rgba[i*4+1]=(byte)(pixels[i]>>8);rgba[i*4+2]=(byte)pixels[i];rgba[i*4+3]=(byte)(pixels[i]>>24); }
+        java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");byte[] hash=digest.digest(rgba);StringBuilder text=new StringBuilder();for(byte b:hash) text.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+        assertEquals("90062df58485161a5fc95945fadb2c247b66ea8fc655c80638c719f6fcff5b85",text.toString());logo.recycle();
+        android.graphics.drawable.Drawable icon=context().getPackageManager().getApplicationIcon(context().getPackageName());renderIcon(icon,"launcher-icon");
+        if(Build.VERSION.SDK_INT>=33) {
+            assertTrue(icon instanceof android.graphics.drawable.AdaptiveIconDrawable);
+            android.graphics.drawable.Drawable mono=((android.graphics.drawable.AdaptiveIconDrawable)icon).getMonochrome();assertNotNull(mono);renderIcon(mono,"launcher-monochrome");
+        }
+    }
+    private void renderIcon(android.graphics.drawable.Drawable icon,String name) throws Exception {
+        android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(192,192,android.graphics.Bitmap.Config.ARGB_8888);android.graphics.Canvas canvas=new android.graphics.Canvas(image);icon.setBounds(0,0,192,192);icon.draw(canvas);
+        try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(context().getFilesDir(),name+".png"))) { assertTrue(image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out)); } finally { image.recycle(); }
     }
     private void pickerRoot(androidx.test.uiautomator.UiDevice device) throws Exception {
         androidx.test.uiautomator.UiObject root=device.findObject(new androidx.test.uiautomator.UiSelector().text("Downloads"));
@@ -302,11 +336,13 @@ public class ServerAppTest {
         // Picker может сразу показать Downloads или наш экспорт в «Недавних»: выбираем готовый файл без лишнего перехода.
         if(!zip.waitForExists(2000)) pickerRoot(ui);
         assertTrue("exported document missing",zip.waitForExists(10000));
-        for(int attempt=0;attempt<3&&ui.getCurrentPackageName().endsWith("documentsui");attempt++) {
-            if(zip.exists()) assertTrue(zip.click());
-            androidx.test.uiautomator.UiObject open=ui.findObject(new androidx.test.uiautomator.UiSelector().textMatches("(?i)open").enabled(true).clickable(true));
-            if(ui.getCurrentPackageName().endsWith("documentsui")&&open.waitForExists(500)) assertTrue(open.click());
-            ui.wait(androidx.test.uiautomator.Until.gone(androidx.test.uiautomator.By.pkg(java.util.regex.Pattern.compile(".*documentsui"))),2000);
+        if(Build.VERSION.SDK_INT<26) {
+            // Android7 показывает ZIP как контейнер. Выбор долгим нажатием + menu_open возвращает сам архив.
+            assertTrue(zip.longClick());
+            androidx.test.uiautomator.UiObject choose=ui.findObject(new androidx.test.uiautomator.UiSelector().resourceIdMatches(".*:id/menu_open"));
+            assertTrue("selected archive open action missing",choose.waitForExists(10000));assertTrue(choose.click());
+        } else {
+            assertTrue(zip.click());
         }
         await("system import picker dismissed",()->!ui.getCurrentPackageName().endsWith("documentsui"),15000);
         // Диалог имеет отдельное окно; старые ОС могут отдавать текст кнопки в верхнем регистре.

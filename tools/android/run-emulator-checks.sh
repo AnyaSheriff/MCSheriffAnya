@@ -4,7 +4,7 @@ mkdir -p apk-device-evidence
 collect_debug() {
   adb logcat -d -v threadtime > apk-device-evidence/logcat.txt 2>&1 || true
   adb shell run-as ru.sheriffanya.mcsa cat files/instrument-native.log > apk-device-evidence/core.log 2>&1 || true
-  for name in failure-screen.png failure-ui.xml failure-state.json backup-picker-save.png device-test.json appearance-test.json backup-test.json backups.png appearance-light.png appearance-dark.png home-light.png home-dark.png appearance-system-dark.png appearance-system-light.png appearance-dynamic.png; do
+  for name in launcher-icon.png launcher-monochrome.png dashboard-paused.png failure-screen.png failure-ui.xml failure-state.json backup-picker-save.png device-test.json appearance-test.json backup-test.json backups.png appearance-light.png appearance-dark.png home-light.png home-dark.png appearance-system-dark.png appearance-system-light.png appearance-dynamic.png; do
     if adb exec-out run-as ru.sheriffanya.mcsa cat "files/$name" > "apk-device-evidence/.partial-$name" 2>/dev/null; then
       mv "apk-device-evidence/.partial-$name" "apk-device-evidence/$name"
     else
@@ -38,6 +38,8 @@ if [ "$TEST_API" -ge 31 ]; then
   adb exec-out run-as ru.sheriffanya.mcsa cat files/appearance-dynamic.png > apk-device-evidence/appearance-dynamic.png
 fi
 adb shell run-as ru.sheriffanya.mcsa cat files/backup-test.json > apk-device-evidence/backup-test.json
+for name in launcher-icon dashboard-paused; do adb exec-out run-as ru.sheriffanya.mcsa cat "files/$name.png" > "apk-device-evidence/$name.png"; done
+if [ "$TEST_API" -ge 33 ]; then adb exec-out run-as ru.sheriffanya.mcsa cat files/launcher-monochrome.png > apk-device-evidence/launcher-monochrome.png; fi
 adb exec-out run-as ru.sheriffanya.mcsa cat files/backups.png > apk-device-evidence/backups.png
 grep -q 'max-players=7'   apk-device-evidence/server.properties
 grep -q 'retained' apk-device-evidence/world-marker.txt
@@ -60,6 +62,9 @@ backup=json.loads((p/'backup-test.json').read_text())
 assert backup['api']==device['api'] and backup['internal_backup_count']==2
 assert all(backup[k] for k in ['internal_created','real_system_picker','external_zip_same_sha256','import_restored_marker','import_restored_settings','automatic_previous_copy'])
 assert device['backup_saf_roundtrip']
+assert device['api_does_not_wake_idle'] and device['api_restart_max']==7 and device['launcher_logo_verified']
+core=device['core_api'];assert core['online']==0 and core['max']==10 and core['rss_bytes']>0 and core['logical_cpus']>=1 and 0<=core['cpu_percent']<=100
+assert core['total_ram']>=core['available_ram']>0 and core['available_disk']>0
 result={'status':'passed','api':device['api'],'page_size':device['page_size'],'abi':'x86_64','instrumentation_tests':9,'scope':'actual installed native x86_64 core without plugins; UI/config/native lifecycle and background activity; not ARM device execution','files':{f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.iterdir()) if f.is_file()}}
 (p/'receipt.json').write_text(json.dumps(result,indent=2)+'\n')
 PY

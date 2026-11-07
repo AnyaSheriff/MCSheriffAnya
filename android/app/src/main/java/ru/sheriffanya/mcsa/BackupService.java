@@ -32,7 +32,7 @@ public final class BackupService extends Service {
         if(Build.VERSION.SDK_INT>=26) manager.createNotificationChannel(new NotificationChannel("backups","Резервные копии",NotificationManager.IMPORTANCE_LOW));
         Notification.Builder builder=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,"backups"):new Notification.Builder(this);
         PendingIntent open=PendingIntent.getActivity(this,2,new Intent(this,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification notification=builder.setSmallIcon(R.drawable.ic_server).setContentTitle("Резервная копия MCSheriffAnya").setContentText("Подготовка или восстановление данных…").setContentIntent(open).setOngoing(true).build();
+        Notification notification=builder.setSmallIcon(R.drawable.project_logo_monochrome).setContentTitle("Резервная копия MCSheriffAnya").setContentText("Подготовка или восстановление данных…").setContentIntent(open).setOngoing(true).build();
         if(Build.VERSION.SDK_INT>=34) startForeground(2,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(2,notification);
     }
     private void run(Intent intent) {

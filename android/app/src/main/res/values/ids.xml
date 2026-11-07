@@ -15,4 +15,8 @@
     <item name="backup_create" type="id" />
     <item name="backup_import" type="id" />
     <item name="backup_status" type="id" />
+    <item name="stat_online" type="id" />
+    <item name="stat_tps" type="id" />
+    <item name="stat_cpu" type="id" />
+    <item name="stat_ram" type="id" />
 </resources>

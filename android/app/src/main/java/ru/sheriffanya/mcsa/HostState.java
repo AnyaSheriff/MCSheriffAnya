@@ -5,6 +5,9 @@ final class HostState {
     static final Object LOCK = new Object();
     enum Phase { STOPPED, STARTING, RUNNING, STOPPING }
     static Phase phase = Phase.STOPPED;
+    static String apiSession;
+    static boolean dashboardVisible;
+    static CoreStatsClient.Snapshot stats;
     static String operation;
     static String backupMessage="Копии хранятся в приложении. Экспортируй важные копии в память телефона.";
     static long backupRevision;

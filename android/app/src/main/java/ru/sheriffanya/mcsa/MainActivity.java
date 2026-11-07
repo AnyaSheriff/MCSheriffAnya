@@ -55,7 +55,7 @@ public final class MainActivity extends AppCompatActivity {
     private LinearLayout page, container;
     private int tab;
     private String group;
-    private TextView status, log, backupStatus;
+    private TextView status, log, backupStatus, onlineValue,tpsValue,cpuValue,ramValue,resources;
     private final java.util.List<Button> backupButtons=new java.util.ArrayList<>();
     private long shownBackupRevision;
     private String exportName;
@@ -90,8 +90,8 @@ public final class MainActivity extends AppCompatActivity {
         }
         draw();
     }
-    @Override protected void onStart() { super.onStart(); handler.post(refresh); }
-    @Override protected void onStop() { handler.removeCallbacks(refresh); super.onStop(); }
+    @Override protected void onStart() { super.onStart(); synchronized(HostState.LOCK) { HostState.dashboardVisible=tab==0; } handler.post(refresh); }
+    @Override protected void onStop() { synchronized(HostState.LOCK) { HostState.dashboardVisible=false; } handler.removeCallbacks(refresh); super.onStop(); }
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putInt("tab",tab); state.putString("group",group); state.putString("export-name",exportName);
         if(settings!=null && !editors.isEmpty()) {
@@ -128,6 +128,8 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2); params.setMargins(0,dp(8),0,dp(8)); page.addView(shell,params); return view;
     }
     private void draw() {
+        onlineValue=null;tpsValue=null;cpuValue=null;ramValue=null;resources=null;
+        synchronized(HostState.LOCK) { HostState.dashboardVisible=tab==0&&getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED); }
         backupStatus=null; backupButtons.clear(); status=null; log=null; start=null; stop=null; save=null; send=null; editors.clear(); settings=null; shownRevision=-1;
         container=column(); container.setBackgroundColor(BG); container.setPadding(dp(18),dp(12),dp(18),dp(8));
         container.setOnApplyWindowInsetsListener((view,insets)->{
@@ -150,6 +152,7 @@ public final class MainActivity extends AppCompatActivity {
         info.addView(text("Ядро работает прямо здесь. Termux и Java устанавливать не нужно.",15,MUTED));
         start=button("Запустить сервер",R.id.start_server,this::askStart); tint(start,GREEN,ON_GREEN); info.addView(start);
         stop=button("Сохранить и остановить",R.id.stop_server,()->action(ServerService.STOP,null)); info.addView(stop);
+        dashboard();
         LinearLayout address=card(); address.addView(text("Подключение",19,INK));
         try {
             ServerSettings config=new ServerSettings(new File(getFilesDir(),"server"));
@@ -167,6 +170,31 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout version=card(); version.addView(text(BuildConfig.RUNTIME_ABI+" · Android 7.0+",14,INK));
         version.addView(text(BuildConfig.RUNTIME_PLUGINS?"WebAssembly-плагины включены.":"В этой сборке WebAssembly-плагины отключены.",14,MUTED));
         version.addView(text("Мир и конфиги сохраняются в данных приложения и переживают обычную остановку и обновление APK с той же подписью.",13,MUTED));
+    }
+    private TextView metric(LinearLayout row,String label,int id) {
+        LinearLayout item=column();item.addView(text(label,12,MUTED));TextView value=text("—",21,INK);value.setId(id);item.addView(value);
+        row.addView(item,new LinearLayout.LayoutParams(0,-2,1));return value;
+    }
+    private void dashboard() {
+        LinearLayout stats=card();stats.addView(text("Сейчас на сервере",19,INK));
+        LinearLayout first=new LinearLayout(this);onlineValue=metric(first,"Игроки онлайн",R.id.stat_online);tpsValue=metric(first,"TPS / время такта",R.id.stat_tps);stats.addView(first);
+        LinearLayout second=new LinearLayout(this);cpuValue=metric(second,"CPU ядра",R.id.stat_cpu);ramValue=metric(second,"RAM ядра",R.id.stat_ram);stats.addView(second);
+        resources=text("Показатели появятся после запуска сервера.",12,MUTED);stats.addView(resources);
+    }
+    private String bytes(long value) { return value<0?"—":android.text.format.Formatter.formatFileSize(this,value); }
+    private void updateDashboard(HostState.Phase phase) {
+        if(resources==null) return;CoreStatsClient.Snapshot data;
+        synchronized(HostState.LOCK) { data=HostState.stats; }
+        if(phase!=HostState.Phase.RUNNING||data==null||android.os.SystemClock.elapsedRealtime()-data.at>6500) {
+            onlineValue.setText("—");tpsValue.setText("—");cpuValue.setText("—");ramValue.setText("—");
+            resources.setText(phase==HostState.Phase.RUNNING?"Ожидаем свежую статистику ядра…":"Показатели появятся после запуска сервера.");return;
+        }
+        onlineValue.setText(getString(R.string.dashboard_online_format,data.online,data.maxPlayers));
+        tpsValue.setText(data.paused?"Пауза":Double.isNaN(data.tps)?"—":String.format(java.util.Locale.getDefault(),"%.1f",data.tps));
+        tpsValue.setTextColor(data.paused?MUTED:data.tps<10?ERROR:data.tps<18?WARNING:INK);
+        cpuValue.setText(Double.isNaN(data.cpuPercent)?"—":String.format(java.util.Locale.getDefault(),"%.1f%%",data.cpuPercent));ramValue.setText(bytes(data.rssBytes));
+        String timing=Double.isNaN(data.mspt)?"—":String.format(java.util.Locale.getDefault(),"%.2f мс",data.mspt);
+        resources.setText(getString(R.string.dashboard_resources_format,timing,data.frozen?" · мир заморожен":"",bytes(data.availableRam),bytes(data.totalRam),bytes(data.availableDisk)));
     }
     private void console() {
         page.addView(text("Консоль",23,INK)); page.addView(text("Например: list, tps, say Привет. Команда stop сохранит мир и остановит сервер.",14,MUTED));
@@ -255,6 +283,7 @@ public final class MainActivity extends AppCompatActivity {
         synchronized(HostState.LOCK) { shownBackupRevision=HostState.backupRevision;backupStatus=text(HostState.backupMessage,14,GREEN); }
         backupStatus.setId(R.id.backup_status);page.addView(backupStatus);
         page.addView(backupButton("Создать копию",R.id.backup_create,()->backupAction(BackupService.CREATE,null,null)));
+        page.addView(text("Если старый Android открывает ZIP как папку: удерживай файл, затем выбери «Открыть» в верхнем меню.",13,MUTED));
         page.addView(backupButton("Импортировать из памяти",R.id.backup_import,()->{
             Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("application/zip").addCategory(Intent.CATEGORY_OPENABLE);
             pick.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/zip","application/x-zip-compressed","application/octet-stream"});
@@ -329,6 +358,7 @@ public final class MainActivity extends AppCompatActivity {
         synchronized(HostState.LOCK) { phase=HostState.phase;message=HostState.message;revision=HostState.revision; }
         String operation,backupMessage;long backupRevision;
         synchronized(HostState.LOCK) { operation=HostState.operation;backupMessage=HostState.backupMessage;backupRevision=HostState.backupRevision; }
+        updateDashboard(phase);
         boolean idle=phase==HostState.Phase.STOPPED&&operation==null;
         if(backupStatus!=null) {
             if(operation==null&&shownBackupRevision!=backupRevision) { draw();return; }
