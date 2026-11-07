@@ -54,8 +54,9 @@ public final class ServerService extends Service {
     @SuppressLint("WakelockTimeout")
     private void start() {
         synchronized(HostState.LOCK) {
-            if(launched || HostState.phase!=HostState.Phase.STOPPED) return;
+            if(launched || !HostState.idle()) return;
             try {
+                new BackupStore(getFilesDir()).recoverForLaunch();
                 File root=new File(getFilesDir(),"server");
                 ServerSettings settings=new ServerSettings(root); settings.save(settings.values());
                 File executable=new File(getApplicationInfo().nativeLibraryDir,"libmcsa.so");
@@ -75,6 +76,7 @@ public final class ServerService extends Service {
     private void run(File executable,File root) {
         Process process=null;
         try {
+            new BackupStore(getFilesDir()).cleanupRecovery();
             if(stopRequested) return;
             ProcessBuilder builder=new ProcessBuilder(executable.getAbsolutePath()).directory(root).redirectErrorStream(true);
             builder.environment().put("NO_COLOR","1"); builder.environment().put("TERM","dumb");

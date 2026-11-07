@@ -55,7 +55,11 @@ public final class MainActivity extends AppCompatActivity {
     private LinearLayout page, container;
     private int tab;
     private String group;
-    private TextView status, log;
+    private TextView status, log, backupStatus;
+    private final java.util.List<Button> backupButtons=new java.util.ArrayList<>();
+    private long shownBackupRevision;
+    private String exportName;
+    private static final int EXPORT_BACKUP=21,IMPORT_BACKUP=22;
     private Button start, stop, save, send;
     private ScrollView logScroll;
     private long shownRevision=-1;
@@ -80,7 +84,7 @@ public final class MainActivity extends AppCompatActivity {
         WindowInsetsControllerCompat bars=new WindowInsetsControllerCompat(getWindow(),getWindow().getDecorView());
         bars.setAppearanceLightStatusBars(light); bars.setAppearanceLightNavigationBars(light);
         if(state!=null) {
-            tab=state.getInt("tab"); group=state.getString("group");
+            tab=state.getInt("tab"); group=state.getString("group"); exportName=state.getString("export-name");
             Bundle draft=state.getBundle("draft");
             if(draft!=null) { restoredDraft=new LinkedHashMap<>(); for(String key:draft.keySet()) restoredDraft.put(key,draft.getString(key)); }
         }
@@ -89,7 +93,7 @@ public final class MainActivity extends AppCompatActivity {
     @Override protected void onStart() { super.onStart(); handler.post(refresh); }
     @Override protected void onStop() { handler.removeCallbacks(refresh); super.onStop(); }
     @Override protected void onSaveInstanceState(Bundle state) {
-        state.putInt("tab",tab); state.putString("group",group);
+        state.putInt("tab",tab); state.putString("group",group); state.putString("export-name",exportName);
         if(settings!=null && !editors.isEmpty()) {
             Bundle draft=new Bundle(); for(Map.Entry<String,String> e:edited().entrySet()) draft.putString(e.getKey(),e.getValue()); state.putBundle("draft",draft);
         }
@@ -124,7 +128,7 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2); params.setMargins(0,dp(8),0,dp(8)); page.addView(shell,params); return view;
     }
     private void draw() {
-        status=null; log=null; start=null; stop=null; save=null; send=null; editors.clear(); settings=null; shownRevision=-1;
+        backupStatus=null; backupButtons.clear(); status=null; log=null; start=null; stop=null; save=null; send=null; editors.clear(); settings=null; shownRevision=-1;
         container=column(); container.setBackgroundColor(BG); container.setPadding(dp(18),dp(12),dp(18),dp(8));
         container.setOnApplyWindowInsetsListener((view,insets)->{
             // В Android15+ target35 рисуется до краёв экрана; элементы остаются за пределами системных панелей.
@@ -174,11 +178,12 @@ public final class MainActivity extends AppCompatActivity {
     private void preferences() {
         page.addView(text("Настройки",23,INK));
         if("Оформление".equals(group)) { appearance(); return; }
+        if("Резервные копии".equals(group)) { backups(); return; }
         page.addView(text("Настройки сервера применятся при следующем запуске. Оформление можно менять во время игры.",14,MUTED));
         try { settings=new ServerSettings(new File(getFilesDir(),"server")); }
         catch(IOException error) { page.addView(text(error.getMessage(),16,ERROR)); return; }
         if(group==null) {
-            for(String name:new String[]{"Оформление","Сервер","Мир","Вход","Производительность","Сеть","Дополнительно"}) {
+            for(String name:new String[]{"Оформление","Резервные копии","Сервер","Мир","Вход","Производительность","Сеть","Дополнительно"}) {
                 LinearLayout card=card(); card.addView(button(name+"  ›",0,()->{ group=name; draw(); }));
             }
             page.addView(text("Версия игры: 26.3. Комментарии и остальные параметры в конфиге сохраняются.",14,MUTED)); return;
@@ -241,6 +246,54 @@ public final class MainActivity extends AppCompatActivity {
         }); colors.addView(dynamic);
         page.addView(text("Material Design 3 · MCSheriffAnya "+BuildConfig.VERSION_NAME,13,MUTED));
     }
+    private Button backupButton(String text,int id,Runnable action) {
+        Button button=button(text,id,action);backupButtons.add(button);return button;
+    }
+    private void backups() {
+        page.addView(button("‹ Все разделы",0,()->{group=null;draw();}));page.addView(text("Резервные копии",20,INK));
+        page.addView(text("Мир, настройки, плагины и учётные записи сервера. Создание, экспорт и восстановление доступны при остановленном сервере.",14,MUTED));
+        synchronized(HostState.LOCK) { shownBackupRevision=HostState.backupRevision;backupStatus=text(HostState.backupMessage,14,GREEN); }
+        backupStatus.setId(R.id.backup_status);page.addView(backupStatus);
+        page.addView(backupButton("Создать копию",R.id.backup_create,()->backupAction(BackupService.CREATE,null,null)));
+        page.addView(backupButton("Импортировать из памяти",R.id.backup_import,()->{
+            Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("application/zip").addCategory(Intent.CATEGORY_OPENABLE);
+            pick.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/zip","application/x-zip-compressed","application/octet-stream"});
+            try { startActivityForResult(pick,IMPORT_BACKUP); } catch(RuntimeException error) { alert("Не удалось открыть выбор файла: "+error.getMessage()); }
+        }));
+        try {
+            java.util.List<File> copies=new BackupStore(getFilesDir()).list();
+            if(copies.isEmpty()) page.addView(text("Копий пока нет. Сохрани настройки или запусти и штатно останови сервер, затем создай первую копию.",14,MUTED));
+            for(File copy:copies) {
+                LinearLayout item=card();item.addView(text(copy.getName(),14,INK));item.addView(text(android.text.format.Formatter.formatFileSize(this,copy.length()),13,MUTED));
+                item.addView(backupButton("Сохранить в память телефона",0,()->{
+                    exportName=copy.getName();Intent pick=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/zip").putExtra(Intent.EXTRA_TITLE,exportName);
+                    try { startActivityForResult(pick,EXPORT_BACKUP); } catch(RuntimeException error) { alert("Не удалось выбрать место сохранения: "+error.getMessage()); }
+                }));
+                item.addView(backupButton("Восстановить эту копию",0,()->confirmRestore(()->backupAction(BackupService.RESTORE,copy.getName(),null))));
+            }
+        } catch(IOException error) { page.addView(text(error.getMessage(),14,ERROR)); }
+        page.addView(text("Внутренние копии удалятся вместе с приложением. Кнопка сохранения в память создаёт отдельный ZIP вне приложения. Поддерживаются ZIP-копии MCSheriffAnya для 26.3.",13,MUTED));
+    }
+    private void confirmRestore(Runnable restore) {
+        new MaterialAlertDialogBuilder(this).setTitle("Восстановить данные сервера?")
+            .setMessage("Текущий мир и настройки будут заменены данными из выбранной копии. Перед заменой приложение сохранит прежние данные отдельной копией.")
+            .setNegativeButton("Отмена",null).setPositiveButton("Восстановить",(d,w)->restore.run()).show();
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data) {
+        super.onActivityResult(request,result,data);
+        if(result!=RESULT_OK||data==null||data.getData()==null) return;
+        android.net.Uri uri=data.getData();
+        if(request==EXPORT_BACKUP&&exportName!=null) backupAction(BackupService.EXPORT,exportName,uri);
+        else if(request==IMPORT_BACKUP) confirmRestore(()->backupAction(BackupService.IMPORT,null,uri));
+    }
+    private void backupAction(String action,String name,android.net.Uri uri) {
+        if(!HostState.idle()) { alert("Останови сервер и дождись окончания текущей операции с копией.");return; }
+        Intent intent=new Intent(this,BackupService.class).setAction(action);
+        if(name!=null) intent.putExtra("name",name);
+        if(uri!=null) intent.setData(uri).addFlags(BackupService.IMPORT.equals(action)?Intent.FLAG_GRANT_READ_URI_PERMISSION:Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        try { if(Build.VERSION.SDK_INT>=26) startForegroundService(intent);else startService(intent); }
+        catch(RuntimeException error) { alert("Не удалось начать работу с копией: "+error.getMessage()); }
+    }
     private Map<String,String> edited() {
         Map<String,String> values=settings.values();
         for(ServerSettings.Field f:ServerSettings.FIELDS) {
@@ -274,10 +327,17 @@ public final class MainActivity extends AppCompatActivity {
     private void update() {
         HostState.Phase phase; String message; long revision;
         synchronized(HostState.LOCK) { phase=HostState.phase;message=HostState.message;revision=HostState.revision; }
-        boolean idle=phase==HostState.Phase.STOPPED;
-        if(status!=null) status.setText(message);
+        String operation,backupMessage;long backupRevision;
+        synchronized(HostState.LOCK) { operation=HostState.operation;backupMessage=HostState.backupMessage;backupRevision=HostState.backupRevision; }
+        boolean idle=phase==HostState.Phase.STOPPED&&operation==null;
+        if(backupStatus!=null) {
+            if(operation==null&&shownBackupRevision!=backupRevision) { draw();return; }
+            backupStatus.setText(operation==null?backupMessage:operation);
+        }
+        for(Button button:backupButtons) button.setEnabled(idle);
+        if(status!=null) status.setText(operation==null?message:operation);
         if(start!=null) start.setEnabled(idle);
-        if(stop!=null) stop.setEnabled(!idle && phase!=HostState.Phase.STOPPING);
+        if(stop!=null) stop.setEnabled(phase!=HostState.Phase.STOPPED && phase!=HostState.Phase.STOPPING);
         if(save!=null) save.setEnabled(idle);
         if(send!=null) send.setEnabled(phase==HostState.Phase.RUNNING);
         for(Map.Entry<String,View> e:editors.entrySet()) e.getValue().setEnabled(idle && (!e.getKey().equals("level-seed") || !new File(getFilesDir(),"server/world").exists()));

@@ -40,6 +40,9 @@ public class ServerAppTest {
         try { s.save(s.values()); fail(); } catch(IOException expected) { }
         finally { synchronized(HostState.LOCK) { HostState.phase=HostState.Phase.STOPPED; } }
         assertFalse(new File(s.root,"config/server.properties").exists());
+        synchronized(HostState.LOCK) { HostState.operation="test backup"; }
+        try { assertFalse(HostState.idle());s.save(s.values());fail("saved settings during backup"); } catch(IOException expected) { }
+        finally { synchronized(HostState.LOCK) { HostState.operation=null; } }
     }
     @Test public void staleReadCannotOverwriteAnExternalEdit() throws Exception {
         ServerSettings s=fresh("stale"); s.save(s.values()); s=new ServerSettings(s.root);
@@ -238,11 +241,59 @@ public class ServerAppTest {
             JSONObject after=ping(); assertEquals(7,after.getJSONObject("players").getInt("max")); device.put("status_after",after); assertEquals("retained\n",ServerSettings.read(marker));
             click(activity,R.id.stop_server); await("second graceful stop",HostState::idle);
             assertFalse("listening socket remained after stop",listening());
+            backupThroughSystemPicker(activity,s,marker,device);
             System.out.println("PASS: installed APK native exec, protocol777 status, console, graceful stop, config UI, rotation draft, real config effect, world folder retained, restart, socket closed");
         } finally {
             try { if(!HostState.idle()) { context().startService(new Intent(context(),ServerService.class).setAction(ServerService.STOP)); await("cleanup",HostState::idle); } }
             finally { ServerSettings.write(new File(context().getFilesDir(),"instrument-native.log"),HostState.logs()); ServerSettings.write(new File(context().getFilesDir(),"device-test.json"),device.toString()+"\n"); }
         }
+    }
+    private void pickerRoot(androidx.test.uiautomator.UiDevice device) throws Exception {
+        androidx.test.uiautomator.UiObject2 root=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(BackupDocumentsProvider.TITLE)),2000);
+        if(root==null) {
+            androidx.test.uiautomator.UiObject2 drawer=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.desc(java.util.regex.Pattern.compile("(?i)(Show roots|Show navigation drawer)"))),10000);
+            assertNotNull("document picker drawer missing",drawer);drawer.click();
+            root=device.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(BackupDocumentsProvider.TITLE)),10000);
+        }
+        assertNotNull("test document provider missing",root);root.click();device.waitForIdle();
+    }
+    private void backupThroughSystemPicker(ActivityScenario<MainActivity> activity,ServerSettings settings,File marker,JSONObject deviceEvidence) throws Exception {
+        BackupStore store=new BackupStore(context().getFilesDir());assertTrue(store.list().isEmpty());
+        click(activity,R.id.tab_settings);
+        activity.onActivity(a->{ Button b=buttonWithText(a.getWindow().getDecorView(),"Резервные копии  ›");assertNotNull(b);assertTrue(b.performClick()); });
+        click(activity,R.id.backup_create);await("create backup service",()->HostState.idle()&&store.list().size()==1);
+        File backup=store.list().get(0);
+        await("backup list refresh",()->{
+            java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();activity.onActivity(a->ready.set(buttonWithText(a.getWindow().getDecorView(),"Сохранить в память телефона")!=null));return ready.get();
+        });
+        activity.onActivity(a->assertTrue(buttonWithText(a.getWindow().getDecorView(),"Сохранить в память телефона").performClick()));
+        androidx.test.uiautomator.UiDevice ui=androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        pickerRoot(ui);
+        androidx.test.uiautomator.UiObject2 save=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(java.util.regex.Pattern.compile("(?i)save"))),10000);
+        assertNotNull("system save button missing",save);save.click();
+        await("export document completed",()->{ synchronized(HostState.LOCK) { return HostState.idle()&&HostState.backupMessage.startsWith("Копия сохранена в выбранный"); } });
+        android.net.Uri document=android.provider.DocumentsContract.buildDocumentUri(BackupDocumentsProvider.AUTHORITY,backup.getName());
+        java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
+        try(java.io.InputStream in=context().getContentResolver().openInputStream(document)) { assertNotNull(in);byte[] bytes=new byte[32768];int n;while((n=in.read(bytes))!=-1) digest.update(bytes,0,n); }
+        byte[] external=digest.digest();digest.reset();
+        try(java.io.InputStream in=new java.io.FileInputStream(backup)) { byte[] bytes=new byte[32768];int n;while((n=in.read(bytes))!=-1) digest.update(bytes,0,n); }
+        assertArrayEquals("exported ZIP differs",digest.digest(),external);
+        ServerSettings.write(marker,"changed after backup\n");ServerSettings changed=new ServerSettings(settings.root);Map<String,String> values=changed.values();values.put("max-players","8");changed.save(values);
+        click(activity,R.id.backup_import);pickerRoot(ui);
+        androidx.test.uiautomator.UiObject2 zip=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text(backup.getName())),10000);
+        assertNotNull("exported document missing",zip);zip.click();
+        // Диалог имеет отдельное окно: проверяем и нажимаем настоящую кнопку через UI Automator.
+        androidx.test.uiautomator.UiObject2 confirm=ui.wait(androidx.test.uiautomator.Until.findObject(androidx.test.uiautomator.By.text("Восстановить")),10000);
+        assertNotNull("restore confirmation missing",confirm);confirm.click();
+        await("import service completed",()->{ synchronized(HostState.LOCK) { return HostState.idle()&&HostState.backupMessage.startsWith("Копия восстановлена."); } });
+        assertEquals("retained\n",ServerSettings.read(marker));assertEquals("7",new ServerSettings(settings.root).server.get("max-players",""));
+        assertEquals(2,store.list().size());File automatic=null;for(File f:store.list()) if(!f.equals(backup)) automatic=f;assertNotNull(automatic);
+        try(java.util.zip.ZipFile file=new java.util.zip.ZipFile(automatic);java.io.InputStream in=file.getInputStream(file.getEntry("server/world/apk-persistence-marker"));ByteArrayOutputStream out=new ByteArrayOutputStream()) {
+            byte[] bytes=new byte[128];int n;while((n=in.read(bytes))!=-1) out.write(bytes,0,n);assertEquals("changed after backup\n",new String(out.toByteArray(),StandardCharsets.UTF_8));
+        }
+        screenshot("backups");
+        JSONObject proof=new JSONObject().put("api",Build.VERSION.SDK_INT).put("internal_created",true).put("real_system_picker",true).put("external_zip_same_sha256",true).put("import_restored_marker",true).put("import_restored_settings",true).put("automatic_previous_copy",true).put("internal_backup_count",2);
+        ServerSettings.write(new File(context().getFilesDir(),"backup-test.json"),proof.toString()+"\n");deviceEvidence.put("backup_saf_roundtrip",true);
     }
     private boolean listening() { try(Socket socket=new Socket()) { socket.connect(new InetSocketAddress("127.0.0.1",26184),500); return true; } catch(IOException expected) { return false; } }
     private void varint(OutputStream out,int value) throws IOException { do { int b=value&127;value>>>=7;out.write(value==0?b:b|128); } while(value!=0); }

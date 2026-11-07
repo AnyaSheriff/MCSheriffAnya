@@ -19,5 +19,10 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-started local Minecraft game server with a visible console and stop notification; active player connections must survive closing the activity." />
         </service>
+        <service android:name=".BackupService" android:exported="false"
+            android:foregroundServiceType="specialUse" android:stopWithTask="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-requested game-world backup or restore via Android document picker; file consistency and atomic world replacement must survive closing the activity." />
+        </service>
     </application>
 </manifest>

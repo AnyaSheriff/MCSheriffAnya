@@ -5,6 +5,9 @@ final class HostState {
     static final Object LOCK = new Object();
     enum Phase { STOPPED, STARTING, RUNNING, STOPPING }
     static Phase phase = Phase.STOPPED;
+    static String operation;
+    static String backupMessage="Копии хранятся в приложении. Экспортируй важные копии в память телефона.";
+    static long backupRevision;
     static String message = "Сервер выключен";
     private static final StringBuilder log = new StringBuilder();
     static long revision;
@@ -16,5 +19,5 @@ final class HostState {
         }
     }
     static String logs() { synchronized (LOCK) { return log.toString(); } }
-    static boolean idle() { synchronized (LOCK) { return phase == Phase.STOPPED; } }
+    static boolean idle() { synchronized (LOCK) { return phase == Phase.STOPPED && operation == null; } }
 }

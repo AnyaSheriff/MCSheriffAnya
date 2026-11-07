@@ -12,4 +12,7 @@
     <item name="theme_light" type="id" />
     <item name="theme_dark" type="id" />
     <item name="dynamic_colors" type="id" />
+    <item name="backup_create" type="id" />
+    <item name="backup_import" type="id" />
+    <item name="backup_status" type="id" />
 </resources>

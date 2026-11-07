@@ -102,7 +102,8 @@ final class ServerSettings {
     }
     void save(Map<String,String> values) throws IOException {
         synchronized(HostState.LOCK) {
-            if(HostState.phase!=HostState.Phase.STOPPED) throw new IOException("Сначала останови сервер: настройки применяются при запуске.");
+            if(!HostState.idle()) throw new IOException("Сначала останови сервер и дождись окончания работы с копией.");
+            if(root.getName().equals("server")&&new File(root.getParentFile(),"import.transaction").exists()) throw new IOException("Сначала заверши восстановление: перезапусти приложение. Прежний мир сохранён.");
             File sp=new File(root,"config/server.properties"), mp=new File(root,"config/mcsa.properties");
             if(!read(sp).equals(serverOriginal)||!read(mp).equals(mcsaOriginal)) throw new IOException("Конфиги изменились. Открой настройки заново, чтобы не потерять изменения.");
             Map<String,String> a=new LinkedHashMap<>(),b=new LinkedHashMap<>();
