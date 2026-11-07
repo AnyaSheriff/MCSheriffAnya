@@ -62,4 +62,8 @@ attackerHP20; остальные fire/gear/owner ипрежнийcomparator ос
 источники/старыйвнутренний профиль сохраняютпрежнийпуть. Новых RNGбросковнет.
 Полная проверка сочетанияUnbreaking+Thorns ещё открыта. Добавлены4теста:
 реальныйstrike_player→take_strike→tick в обоихwire-режимах дляbroken/control
-и границыUnbreaking/unbreakable/profile/source. FullnativeCI/freshещёнепройдены.
+и границыUnbreaking/unbreakable/profile/source. Полная nativeARM64CI42353137425 дляb613b967 независимо проверена608/608:
+188отобранныхобщихтестов в обоихрежимах,6default-only,3integrationboth,
+strictClippy/workspace/no-default/build/startup/auth/ELF/packagePASS. Runtime
+42640272bytes, SHA256`03385457a6ec20a8409c487617ad94e5eb409448b2d877b5082913aebd2b22d1`.
+Свежие pairedprotection4/armor8/defense6/combat15 пока ожидаются.
