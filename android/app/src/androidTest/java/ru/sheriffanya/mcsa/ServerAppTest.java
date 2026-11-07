@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.lifecycle.Lifecycle;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import java.io.ByteArrayOutputStream;
@@ -21,6 +22,10 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.json.JSONObject;
+import org.json.JSONArray;
+import android.os.Build;
+import android.system.Os;
+import android.system.OsConstants;
 
 public class ServerAppTest {
     private Context context() { return InstrumentationRegistry.getInstrumentation().getTargetContext(); }
@@ -75,11 +80,17 @@ public class ServerAppTest {
     }
     @Test public void nativeServerStartsFromApkSavesSettingsAndRestarts() throws Exception {
         assertEquals("x86_64",BuildConfig.RUNTIME_ABI);
+        JSONObject device=new JSONObject().put("api",Build.VERSION.SDK_INT).put("page_size",Os.sysconf(OsConstants._SC_PAGESIZE)).put("supported_abis",new JSONArray(java.util.Arrays.asList(Build.SUPPORTED_ABIS)));
+        ServerSettings.write(new File(context().getFilesDir(),"device-test.json"),device.toString()+"\n");
         ServerSettings s=new ServerSettings(new File(context().getFilesDir(),"server")); Map<String,String> values=s.values();
         values.put("server-port","26184"); values.put("bedrock-port","0"); values.put("online-mode","false"); values.put("offline-license-mode","disabled"); values.put("auth-enabled","false"); values.put("send-error-reports","false"); values.put("view-distance","2"); values.put("simulation-distance","2"); values.put("level-seed","1234"); s.save(values);
         try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)) {
             click(activity,R.id.start_server); await("first native startup",()->{ synchronized(HostState.LOCK) { return HostState.phase==HostState.Phase.RUNNING; } });
             JSONObject status=ping(); assertEquals(777,status.getJSONObject("version").getInt("protocol")); assertEquals(10,status.getJSONObject("players").getInt("max"));
+            activity.moveToState(Lifecycle.State.CREATED);
+            Thread.sleep(500);
+            assertEquals(777,ping().getJSONObject("version").getInt("protocol"));
+            activity.moveToState(Lifecycle.State.RESUMED);
             click(activity,R.id.tab_console);
             activity.onActivity(a->((EditText)a.findViewById(R.id.console_input)).setText("say APK_NATIVE_OK")); click(activity,R.id.console_send);
             await("console command reached the native process",()->HostState.logs().contains("INFO]: [Server] APK_NATIVE_OK"));
