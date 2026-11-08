@@ -215,7 +215,7 @@ pub(super) fn tick(shared: &Shared, player: &mut PlayerState) {
             kinetic: Some(combat::Kinetic { knockback:hit.knockback, dismount:hit.dismount }),
             victim:victim.entity_id,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
             from:at,yaw:player.yaw,damage,source:crate::survival::Source::Spear,extra_knockback:if hit.knockback {data.level("knockback") as f32}else{0.0},weapon:Some(stack),
-            disables_shield_ticks:0,breach_scale:1.0,fire_ticks:data.level("fire_aspect")*80,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new() });
+            disables_shield_ticks:0,breach_scale:1.0,fire_ticks:data.level("fire_aspect")*80,ignores_shield:false,thorns_slots:Vec::new(), armor_wear_plan: None,effects:Vec::new() });
         contacts.push((victim.entity_id,false,matches!(outcome,combat::Outcome::Taken(_))));
     }
     for (target,dismount,landed) in contacts {
@@ -335,7 +335,7 @@ mod tests {
             let strike=combat::PlayerStrike {kinetic:Some(combat::Kinetic {knockback,dismount}),projectile:None,
                 victim:72,attacker:73,attacker_uuid:[73;16],attacker_name:"Charger".into(),from:(0.5,64.0,-3.0),yaw:0.0,
                 damage,source:crate::survival::Source::Spear,extra_knockback:0.0,weapon:None,disables_shield_ticks:0,
-                breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new()};
+                breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(), armor_wear_plan: None,effects:Vec::new()};
             let mut out=Outgoing::capture();
             pvp::take_strike(&mut out,&shared,&mut player,&strike).await.unwrap();
             assert_eq!(player.vit.health,20.0-damage);

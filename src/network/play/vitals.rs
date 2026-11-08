@@ -2263,8 +2263,16 @@ fn plugin_damage_cause(source: Source) -> &'static str {
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn hit_by_breached(
-    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, amount: f32,
     source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32, armor_wear: Option<f32>,
+) -> io::Result<Option<survival::Hit>> {
+    hit_by_breached_with_armor_plan(stream, shared, player, amount, source, direct, cause, killer, hurt_yaw, breach, armor_wear, None).await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) async fn hit_by_breached_with_armor_plan(
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
+    source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32, armor_wear: Option<f32>, plan: Option<&crate::combat::ArmorWearPlan>,
 ) -> io::Result<Option<survival::Hit>> {
     if crate::frost::protects(&player.inventory, source) { return Ok(None); }
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
@@ -2288,7 +2296,7 @@ pub(super) async fn hit_by_breached(
             .map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
         let before = crate::combat::mitigated_damage(amount, armor, toughness, points, source, breach);
         if player.vit.clone().hurt(before, source, immune).is_some() {
-            super::pvp::wear_armor_before_strike(stream, shared, player, wear).await?;
+            super::pvp::wear_armor_before_strike_with_plan(stream, shared, player, wear, plan).await?;
         }
     }
 

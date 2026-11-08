@@ -74,6 +74,11 @@ pub fn outcome_breached(view: &CombatView, damage: f32, source: Source, now: u64
 #[derive(Clone, Copy, Debug)]
 pub struct Kinetic { pub knockback: bool, pub dismount: bool }
 
+/// Уже брошенный износ брони для отражения с возможной поломкой.
+/// Исход применяется только к той же стопке; второй бросок менял бы поломку.
+#[derive(Clone, Debug)]
+pub struct ArmorWearPlan { pub slots: Vec<(i32, Stack, i32)> }
+
 /// Удар по игроку, который нападающий отдаёт жертве через журнал мира
 /// (`WorldEvent::PlayerStrike`): щит, броню, отдачу и износ считает
 /// подключение жертвы — у него её инвентарь и состояние.
@@ -106,6 +111,7 @@ pub struct PlayerStrike {
     pub ignores_shield: bool,
     /// Слоты брони, чьи шипы сработали при этом ударе (бросок делает нападающий).
     pub thorns_slots: Vec<i32>,
+    pub armor_wear_plan: Option<ArmorWearPlan>,
     /// Эффекты наконечника — только после успешного попадания.
     pub effects: Vec<crate::survival::Effect>,
 }

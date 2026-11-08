@@ -234,7 +234,7 @@ impl Body {
                     from: at, yaw: 0.0, damage: amount, source, extra_knockback: 0.0, weapon: None,
                     disables_shield_ticks: if killer == "entity.minecraft.warden" { 100 } else { 0 }, breach_scale: 1.0,
                     fire_ticks: enchantments.fire_ticks, ignores_shield: enchantments.ignores_shield || !(matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()),
-                    thorns_slots: Vec::new(), effects: Vec::new() };
+                    thorns_slots: Vec::new(), armor_wear_plan: None, effects: Vec::new() };
                 struck(shared, p, &strike, now, &mut done);
                 p.net.mob_hit_landed = done.landed;
                 if done.landed {
@@ -659,7 +659,7 @@ mod bedrock_entity_tests {
                     let strike = PlayerStrike { kinetic: None, projectile: None, victim: 1, attacker: 2, attacker_uuid: [2; 16], attacker_name: "Лучник".into(),
                         from: (0.5, 0.0, 2.5), yaw: 180.0, damage: 4.0, source: Source::Arrow,
                         extra_knockback: level as f32 * 1.2, weapon: None, disables_shield_ticks: 0, breach_scale: 1.0,
-                        fire_ticks: 100, ignores_shield: false, thorns_slots: Vec::new(), effects: Vec::new() };
+                        fire_ticks: 100, ignores_shield: false, thorns_slots: Vec::new(), armor_wear_plan: None, effects: Vec::new() };
                     let act = if mob {
                         Act::MobHit { amount: 4.0, source: Source::Arrow, attacker: 2, killer: "entity.minecraft.skeleton",
                             push: Some((0.0, -1.0)), at: strike.from,
@@ -802,7 +802,7 @@ mod combat_tests {
         let strike = PlayerStrike { kinetic: None, projectile: None, victim: 1, attacker: 2, attacker_uuid: [2;16], attacker_name: "Java".into(),
             from: (0.0,64.0,2.0), yaw: 180.0, damage: 9.0, source: Source::PlayerAttack, extra_knockback: 0.0,
             weapon: None, disables_shield_ticks: 100, breach_scale: 1.0, fire_ticks: 0, ignores_shield: false,
-            thorns_slots: Vec::new(), effects: Vec::new() };
+            thorns_slots: Vec::new(), armor_wear_plan: None, effects: Vec::new() };
         let done = body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Struck(&strike));
         assert!(done.shield_blocked); assert!(done.damage.is_empty()); assert_eq!(done.cooldown, Some(("shield",100)));
         assert!(!body.blocking(205));
@@ -847,7 +847,7 @@ mod combat_tests {
         let strike = PlayerStrike { kinetic: None, projectile: None, victim:1,attacker:2,attacker_uuid:[2;16],attacker_name:"Archer".into(),
             from:(0.0,64.0,2.0),yaw:180.0,damage:10.0,source:Source::Arrow,extra_knockback:0.0,
             weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,
-            thorns_slots:Vec::new(),effects:vec![effect] };
+            thorns_slots:Vec::new(), armor_wear_plan: None,effects:vec![effect] };
         let done = body.act(&shared,&stance(),&mut inventory,&mut vit,&mut last,Act::Struck(&strike));
         assert!(vit.effects.is_empty());
         assert_eq!(done.damage,vec![(10.0,Source::Arrow,vec![effect])]);

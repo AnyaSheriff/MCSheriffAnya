@@ -171,6 +171,8 @@ def ci_run(output):
     work = Path(os.environ['RUNNER_TEMP'])/'mcsa-natural-thorns'
     work.mkdir(exist_ok=False)
     prepare(output)
+    from thorns_unbreaking_regression import prepare as prepare_unbreaking, analyze as analyze_unbreaking, NAME as UNBREAKING_NAME
+    unbreaking=output/'unbreaking';prepare_unbreaking(unbreaking)
     sources = json.loads((ROOT/'tools/blackbox/ci/protection-edges-777.json').read_text())
     data = work/'data';data.mkdir()
     combat_ci.fetch(sources['official_jar'], work/'server.jar')
@@ -183,7 +185,7 @@ def ci_run(output):
     manifest = {'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
                 'runtime_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
                 'sources_sha256': {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in
-                                   ['tools/blackbox/thorns_natural_sample.py', 'tools/blackbox/record777.py', 'tools/blackbox/combat_wire.py', 'tools/blackbox/test_thorns_natural_sample.py']},
+                                   ['tools/blackbox/thorns_natural_sample.py', 'tools/blackbox/record777.py', 'tools/blackbox/combat_wire.py', 'tools/blackbox/test_thorns_natural_sample.py', 'tools/blackbox/thorns_unbreaking_regression.py', 'tools/blackbox/test_thorns_unbreaking_regression.py']},
                 'pinned_inputs': sources, 'status': 'running'}
     (output/'run.json').write_text(json.dumps(manifest, indent=2)+'\n')
     command = [sys.executable, str(ROOT/'tools/blackbox/record777.py'), '--data', str(data),
@@ -196,6 +198,12 @@ def ci_run(output):
         analyze(output, work/'recordings', data)
         lifecycle = json.loads((work/'recordings/lifecycle.json').read_text())
         assert not lifecycle['cleanup_errors'] and all(lifecycle['ports_free'].values()), lifecycle
+        second=command.copy();second[second.index('--output')+1]=str(work/'unbreaking-recordings');second[-1]=UNBREAKING_NAME
+        with (unbreaking/'recorder.log').open('w') as log:
+            subprocess.run(second,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=960)
+        analyze_unbreaking(unbreaking,work/'unbreaking-recordings',data)
+        second_lifecycle=json.loads((work/'unbreaking-recordings/lifecycle.json').read_text())
+        assert not second_lifecycle['cleanup_errors'] and all(second_lifecycle['ports_free'].values()),second_lifecycle
         manifest['status'] = 'verified-declared-statistical-controls'
     finally:
         # Только свои сырые наблюдения и логи, не JAR/ресурсы/официальные чанки.
@@ -207,6 +215,12 @@ def ci_run(output):
                 shutil.copy2(source, output/(side+'-server.log'))
         for path in data.glob('*.json'):
             shutil.copy2(path, output/path.name)
+        for path in (work/'unbreaking-recordings').glob('*.json'):
+            shutil.copy2(path,unbreaking/path.name)
+        for side in ('official','ours'):
+            source=work/'unbreaking-recordings'/side/'server.log'
+            if source.exists():shutil.copy2(source,unbreaking/(side+'-server.log'))
+        if manifest['status']=='running':manifest['status']='failed'
         (output/'run.json').write_text(json.dumps(manifest, indent=2)+'\n')
 
 

@@ -80,7 +80,7 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
             world.note_player_strike(PlayerStrike { kinetic: None, projectile: None,
                 victim:attacker,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
                 from,yaw:player.yaw,damage,source:Source::Thorns,extra_knockback:0.0,weapon:None,
-                disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new(),
+                disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(), armor_wear_plan: None,effects:Vec::new(),
             });
         } else {
             let mut items=shared.items_in(player.dimension).lock().expect("мобы");
@@ -252,8 +252,14 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     // Шипы жертвы (вики, Thorns): каждая деталь с «шипами» с шансом 15 % за
     // уровень ранит ударившего; урон приходит ему в этом же такте, со звуками
     // у него (чёрный ящик, pvp-thorns).
+    let armor_wear_plan = (lands && !crate::plugins::active())
+        .then(|| plan_thorns_armor_wear(shared.catalog().profile(), &gear, strike.damage, source,
+            || vitals::world_random(shared, player.dimension))).flatten();
     let thorns_slots = if lands {
-        let view = thorns_after_armor_wear(shared.catalog().profile(), &gear, strike.damage, source);
+        let view = match &armor_wear_plan {
+            Some(plan) => thorns_after_planned_wear(&gear, plan),
+            None => thorns_after_armor_wear(shared.catalog().profile(), &gear, strike.damage, source),
+        };
         thorns_hits(shared, player, &view, (victim.position.x, victim.position.y, victim.position.z), target)
     } else { Vec::new() };
 
@@ -278,6 +284,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         breach_scale: breach,
         fire_ticks: fire * 80,
         thorns_slots,
+        armor_wear_plan,
         effects: Vec::new(),
         ignores_shield: false,
     });
@@ -515,8 +522,8 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     let early_armor_wear = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
         && strike.source == Source::PlayerAttack;
     let result = if mortal {
-        vitals::hit_by_breached(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale,
-            early_armor_wear.then_some(strike.damage)).await?
+        vitals::hit_by_breached_with_armor_plan(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale,
+            early_armor_wear.then_some(strike.damage), strike.armor_wear_plan.as_ref()).await?
     } else {
         None
     };
@@ -622,10 +629,10 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
 
 /// Изнашивает надетую броню от удара силы `damage`.
 pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32) {
-    let _ = wear_armor_except(shared, player, damage, None);
+    let _ = wear_armor_except(shared, player, damage, None, None);
 }
 
-fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>) -> Vec<u8> {
+fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>, plan: Option<&combat::ArmorWearPlan>) -> Vec<u8> {
     let wear = combat::armor_wear(damage);
     let mut broken = Vec::new();
 
@@ -633,16 +640,16 @@ fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, exc
         let Some(stack) = player.inventory.slot(slot) else { continue };
         let dimension = player.dimension;
         let mut roll = || vitals::world_random(shared, dimension);
-        let worn = combat::wear(&stack, wear, true, &mut roll);
+        let worn = planned_armor_wear(plan, slot, stack).unwrap_or_else(|| combat::wear(&stack, wear, true, &mut roll));
 
         if worn > 0 && let Some(status) = replace_worn_except(shared, player, slot, stack, worn, except) { broken.push(status); }
     }
     broken
 }
 
-pub(super) async fn wear_armor_before_strike(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, damage: f32) -> io::Result<()> {
+pub(super) async fn wear_armor_before_strike_with_plan(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, damage: f32, plan: Option<&combat::ArmorWearPlan>) -> io::Result<()> {
     // Себе — до DamageEvent; общий журнал не должен прислать дубликат.
-    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id));
+    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id), plan);
     vitals::update_equipment(player, *shared.ticks.borrow());
     for status in broken { vitals::send_entity_event(stream, player.entity_id, status as i8).await?; }
     Ok(())
@@ -755,7 +762,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
             disables_shield_ticks: 0,
             breach_scale: 1.0,
             fire_ticks: 0,
-            thorns_slots: Vec::new(),
+            thorns_slots: Vec::new(), armor_wear_plan: None,
             effects: Vec::new(),
             ignores_shield: false,
         });
@@ -830,6 +837,84 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
 
 /// Бросает шипы жертвы по её опубликованным уровням: сработавшим кладёт урон
 /// в очередь ударов нападающего; возвращает слоты сработавших.
+fn planned_armor_wear(plan: Option<&combat::ArmorWearPlan>, slot: i32, stack: Stack) -> Option<i32> {
+    plan?.slots.iter().find(|(number, original, _)| *number == slot && *original == stack).map(|(_, _, wear)| *wear)
+}
+
+fn plan_thorns_armor_wear(profile: crate::gameplay_catalog::Profile, gear: &crate::players::Gear, damage: f32, source: Source, mut roll: impl FnMut() -> f32) -> Option<combat::ArmorWearPlan> {
+    if profile != crate::gameplay_catalog::Profile::Preview26_3 || source != Source::PlayerAttack { return None; }
+    let wear = combat::armor_wear(damage);
+    let uncertain = gear.worn.iter().skip(1).flatten().any(|stack| {
+        let data = stack.extras();
+        data.level("thorns") > 0 && data.level("unbreaking") > 0 && !data.unbreakable
+            && combat::add_damage(*stack, wear).is_none()
+    });
+    if !uncertain { return None; }
+    // Opaque777 near-break/UnbreakingIII: броня, сломанная входящим ударом,
+    // не отражает его. Бросок износа общий для предсказания и жертвы.
+    let slots = combat::ARMOR_SLOTS.iter().zip(gear.worn.iter().skip(1))
+        .filter_map(|((slot, _), stack)| stack.map(|stack| (*slot, stack, combat::wear(&stack, wear, true, &mut roll))))
+        .collect();
+    Some(combat::ArmorWearPlan { slots })
+}
+
+fn thorns_after_planned_wear(gear: &crate::players::Gear, plan: &combat::ArmorWearPlan) -> crate::players::CombatView {
+    let mut view = gear.view;
+    for (((slot, _), stack), level) in combat::ARMOR_SLOTS.iter().zip(gear.worn.iter().skip(1)).zip(view.thorns.iter_mut()) {
+        if let Some(stack) = stack && planned_armor_wear(Some(plan), *slot, *stack)
+            .is_some_and(|wear| combat::add_damage(*stack, wear).is_none()) { *level = 0; }
+    }
+    view
+}
+
+#[cfg(test)]
+mod thorns_wear_plan_tests {
+    use super::*;
+    use crate::gameplay_catalog::Profile;
+
+    fn gear(damage: i32, unbreaking: i32) -> crate::players::Gear {
+        let mut data = crate::stackdata::Data { damage, ..Default::default() };
+        data.set_enchant(crate::stackdata::enchantment_number("thorns").unwrap(), 7);
+        if unbreaking > 0 { data.set_enchant(crate::stackdata::enchantment_number("unbreaking").unwrap(), unbreaking); }
+        let stack = Stack::new(crate::blocks::item_named("diamond_chestplate").unwrap(), 1).with_extras(data);
+        let mut gear = crate::players::Gear::default();gear.worn[2] = Some(stack);gear.view.thorns[1] = 7;gear
+    }
+
+    #[test]
+    fn same_armor_roll_controls_break_and_reflection() {
+        let gear = gear(527, 3);
+        for (roll, loss, level) in [(0., 1, 0), (0.99, 0, 7)] {
+            let mut calls = 0;
+            let plan = plan_thorns_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack, || { calls += 1;roll }).unwrap();
+            assert_eq!(calls, 1);
+            assert_eq!(thorns_after_planned_wear(&gear, &plan).thorns[1], level);
+            assert_eq!(planned_armor_wear(Some(&plan), 6, gear.worn[2].unwrap()), Some(loss));
+            assert_eq!(calls, 1);
+        }
+    }
+
+    #[test]
+    fn ordinary_and_unbreakable_armor_do_not_consume_new_rolls() {
+        for mut gear in [gear(0, 3), gear(527, 0), gear(527, 3)] {
+            if gear.worn[2].unwrap().extras().level("unbreaking") > 0 && gear.worn[2].unwrap().extras().damage == 527 {
+                let stack = gear.worn[2].unwrap();let mut data = stack.extras();data.unbreakable = true;gear.worn[2] = Some(stack.with_extras(data));
+            }
+            assert!(plan_thorns_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack, || panic!("unexpected new RNG")).is_none());
+        }
+        assert!(plan_thorns_armor_wear(Profile::Preview26_3, &gear(527, 3), 1., Source::Arrow, || panic!("unrelated source RNG")).is_none());
+    }
+
+    #[test]
+    fn changed_stack_or_slot_cannot_reuse_another_armor_roll() {
+        let gear = gear(527, 3);let stack = gear.worn[2].unwrap();
+        let plan = plan_thorns_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack, || 0.99).unwrap();
+        let mut data = stack.extras();data.damage = 526;
+        assert_eq!(planned_armor_wear(Some(&plan), 6, stack.with_extras(data)), None);
+        assert_eq!(planned_armor_wear(Some(&plan), 5, stack), None);
+        assert_eq!(planned_armor_wear(None, 6, stack), None);
+    }
+}
+
 pub(super) fn thorns_after_armor_wear(profile: crate::gameplay_catalog::Profile, gear: &crate::players::Gear, damage: f32, source: Source) -> crate::players::CombatView {
     let mut view = gear.view;
     if profile != crate::gameplay_catalog::Profile::Preview26_3 || source != Source::PlayerAttack { return view; }
@@ -1005,7 +1090,7 @@ mod combat_777_projectile_tests {
                 victim:71,attacker:2,projectile:Some(42),attacker_uuid:[2;16],attacker_name:"Archer".into(),
                 from:(0.5,65.0,-1.5),yaw:0.0,damage:5.0,source:Source::Arrow,extra_knockback:0.0,
                 weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,
-                thorns_slots:Vec::new(),effects:Vec::new(),
+                thorns_slots:Vec::new(), armor_wear_plan: None,effects:Vec::new(),
             };
             let mut out=Outgoing::capture();
             take_strike(&mut out,&shared,&mut player,&strike).await.unwrap();

@@ -23,7 +23,7 @@ jobs:
       - name: Build our exact source
         run: cargo build --release
       - name: Check statistical audit controls
-        run: python3 -m unittest discover -s tools/blackbox -p test_thorns_natural_sample.py -v
+        run: python3 -m unittest discover -s tools/blackbox -p 'test_thorns*.py' -v
       - name: Record genuine melee on original and our server
         run: python3 tools/blackbox/thorns_natural_sample.py ci --output thorns-evidence
       - uses: actions/upload-artifact@v4

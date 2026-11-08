@@ -953,7 +953,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     breach_scale: 1.0,
                     fire_ticks: 0,
                     ignores_shield: false,
-                    thorns_slots: Vec::new(),
+                    thorns_slots: Vec::new(), armor_wear_plan: None,
                     effects: Vec::new(),
                 }),
                 None => {}
@@ -1051,7 +1051,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     breach_scale: 1.0,
                     fire_ticks: 0,
                     ignores_shield: false,
-                    thorns_slots: Vec::new(),
+                    thorns_slots: Vec::new(), armor_wear_plan: None,
                     effects: Vec::new(),
                 }),
                 None => {}
@@ -1273,7 +1273,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     disables_shield_ticks: 0,
                     breach_scale: 1.0,
                     fire_ticks: 0,
-                    thorns_slots: Vec::new(),
+                    thorns_slots: Vec::new(), armor_wear_plan: None,
                     effects: Vec::new(),
                     ignores_shield: false,
                 }),
@@ -1530,7 +1530,7 @@ fn small_fireball_hit(shared: &Shared, world: &mut World, items: &mut crate::ite
                 disables_shield_ticks: 0,
                 breach_scale: 1.0,
                 fire_ticks: 100,
-                thorns_slots: Vec::new(),
+                thorns_slots: Vec::new(), armor_wear_plan: None,
                 effects: Vec::new(),
                 ignores_shield: false,
             });

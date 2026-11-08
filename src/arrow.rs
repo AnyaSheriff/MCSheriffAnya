@@ -826,7 +826,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         disables_shield_ticks: 0,
                         breach_scale: 1.0,
                         fire_ticks: if arrow.flame { 100 } else { 0 },
-                        thorns_slots: Vec::new(),
+                        thorns_slots: Vec::new(), armor_wear_plan: None,
                         effects: arrow.effects.clone(),
                         ignores_shield: arrow.pierce_left > 0 || !arrow.pierced.is_empty(),
                     });

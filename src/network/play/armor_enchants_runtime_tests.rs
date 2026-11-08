@@ -33,7 +33,7 @@ fn strike() -> crate::combat::PlayerStrike {
     crate::combat::PlayerStrike {kinetic:None,victim:81,attacker:82,projectile:None,attacker_uuid:[82;16],
         attacker_name:"Observer".into(),from:(0.5,64.0,1.5),yaw:0.0,damage:7.0,source:Source::PlayerAttack,
         extra_knockback:0.0,weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,
-        ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new()}
+        ignores_shield:false,thorns_slots:Vec::new(), armor_wear_plan: None,effects:Vec::new()}
 }
 fn packet_id(version: JavaVersion, value: i32) -> i32 {
     if version==wire::INTERNAL {value} else {ids::translate(ids::RegistryKind::PlayClientbound,wire::INTERNAL,version,value as u32).unwrap() as i32}
