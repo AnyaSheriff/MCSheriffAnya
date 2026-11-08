@@ -121,12 +121,16 @@ public class CoreUpdateTest {
         return new JSONObject().put("payload",Base64.encodeToString(raw,Base64.NO_WRAP)).put("signature",Base64.encodeToString(s.sign(),Base64.NO_WRAP)).toString().getBytes(StandardCharsets.UTF_8);
     }
     @Test public void rejectsTamperWrongSignerIncompatibleAndUnsafeMetadata() throws Exception {
-        try { CoreDownload.manifest("https://10.0.2.2:26447/test");fail("untrusted TLS certificate accepted"); }
+        // Порт fixture не443. Проверяем тот же системный HTTPS trust store напрямую;
+        // production downloader дополнительно запрещает нестандартные порты ещё до TLS.
+        javax.net.ssl.HttpsURLConnection untrusted=(javax.net.ssl.HttpsURLConnection)new URL("https://10.0.2.2:26447/test").openConnection();
+        untrusted.setConnectTimeout(5000);untrusted.setReadTimeout(5000);
+        try { untrusted.getInputStream().close();fail("untrusted TLS certificate accepted"); }
         catch(javax.net.ssl.SSLHandshakeException expected) {
             Throwable cause=expected;boolean trustFailure=false;
             while(cause!=null) { if(cause instanceof java.security.cert.CertPathValidatorException)trustFailure=true;cause=cause.getCause(); }
             assertTrue("TLS failed for another reason",trustFailure);
-        }
+        } finally { untrusted.disconnect(); }
         byte[] real=CoreDownload.manifest(BuildConfig.CORE_MANIFEST_URL);CoreUpdateStore store=new CoreUpdateStore(context());CoreManifest parsed=store.manifest(real);assertEquals(2,parsed.revision);
         JSONObject outer=new JSONObject(new String(real,StandardCharsets.UTF_8));JSONObject data=new JSONObject(new String(Base64.decode(outer.getString("payload"),Base64.DEFAULT),StandardCharsets.UTF_8));
         outer.put("payload",Base64.encodeToString(data.put("version","tampered").toString().getBytes(StandardCharsets.UTF_8),Base64.NO_WRAP));
