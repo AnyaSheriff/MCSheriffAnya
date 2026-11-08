@@ -7,7 +7,7 @@ import struct
 import sys
 
 
-def inspect(binary, machine):
+def inspect(binary, machine, *, library=False):
     bits = 32 if machine == 40 else 64
     assert binary[:6] == b'\x7fELF' + bytes([1 if bits == 32 else 2, 1]), 'wrong ELF class or endianness'
     assert struct.unpack_from('<H', binary, 16)[0] == 3, 'PIE required'
@@ -26,8 +26,9 @@ def inspect(binary, machine):
             loads.append(alignment)
         if kind == 3:
             interpreters.append(binary[start:start + filesz].rstrip(b'\0').decode())
-    assert loads and interpreters == ['/system/bin/linker' if bits == 32 else '/system/bin/linker64']
-    return {'bytes': len(binary), 'sha256': hashlib.sha256(binary).hexdigest(), 'bits': bits, 'machine': machine, 'load_alignments': loads, 'interpreter': interpreters[0]}
+    expected = [] if library else ['/system/bin/linker' if bits == 32 else '/system/bin/linker64']
+    assert loads and interpreters == expected
+    return {'bytes': len(binary), 'sha256': hashlib.sha256(binary).hexdigest(), 'bits': bits, 'machine': machine, 'load_alignments': loads, 'interpreter': None if library else interpreters[0]}
 
 
 def main(root):

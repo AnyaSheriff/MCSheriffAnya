@@ -1,0 +1,31 @@
+name: Android OTA core native builds
+on:
+  push:
+    branches: ['wip/apk-core-native-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-core-dylib-api24
+      - name: Check derived manifest rules
+        run: python3 -m unittest discover -s tools/android -p test_core_manifest.py -v
+      - name: Build stable hosts and two complete core revisions
+        run: bash tools/android/build-core-native.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-core-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: android-core-native/
+          retention-days: 7
+          if-no-files-found: error

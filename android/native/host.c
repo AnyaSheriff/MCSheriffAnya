@@ -31,5 +31,10 @@ int main(int argc, char **argv) {
         fputs("MCSheriffAnya: неподдерживаемый интерфейс ядра\n", stderr);
         return 126;
     }
+    const char *(*build_id)(void) = (const char *(*)(void))dlsym(handle, "mcsa_core_build_id_v1");
+    if (build_id) {
+        fprintf(stdout, "MCSA_CORE_BUILD=%s\n", build_id());
+        fflush(stdout);
+    }
     return run();
 }

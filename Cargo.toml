@@ -14,6 +14,8 @@ exclude = ["plugins-examples/**"]
 # cargo build --release --no-default-features (без /plugman и папок плагинов).
 default = ["plugins"]
 plugins = ["dep:wasmtime", "dep:wasmtime-wasi"]
+# Стабильный C-интерфейс отдельного Android-ядра; обычному бинарнику не нужен.
+android-core = []
 
 [dependencies]
 seedmap-core = { path = "tools/seedmap" }

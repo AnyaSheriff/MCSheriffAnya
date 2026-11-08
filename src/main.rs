@@ -13,6 +13,8 @@
 // в точке появления и всё, что построили игроки.
 
 mod network;
+#[cfg(feature = "android-core")]
+mod android_entry;
 mod http;
 mod colors;
 mod bedrock;
