@@ -3,6 +3,12 @@ on:
   push:
     branches: ['wip/apk-core-native-*']
   workflow_dispatch:
+    inputs:
+      core_revision:
+        description: 'First core revision (next revision is also built for OTA checks)'
+        required: true
+        default: '1'
+        type: string
 permissions:
   contents: read
 jobs:
@@ -11,6 +17,7 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_BUILD_JOBS: '4'
+      MCSA_ANDROID_CORE_REVISION: ${{ inputs.core_revision || '1' }}
     steps:
       - uses: actions/checkout@v4
         with:

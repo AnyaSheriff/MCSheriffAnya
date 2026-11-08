@@ -336,6 +336,9 @@ public class ServerAppTest {
         assertArrayEquals("exported ZIP differs",digest.digest(),external);
         ServerSettings.write(marker,"changed after backup\n");ServerSettings changed=new ServerSettings(settings.root);Map<String,String> values=changed.values();values.put("max-players","8");changed.save(values);
         click(activity,R.id.backup_import);
+        // startActivityForResult возвращает раньше появления окна другого приложения.
+        // Иначе цикл выбора может ни разу не выполниться, увидев ещё пакет MCSA.
+        await("system import picker opened",()->ui.getCurrentPackageName().endsWith("documentsui"),15000);
         androidx.test.uiautomator.UiObject zip=ui.findObject(new androidx.test.uiautomator.UiSelector().text(backup.getName()));
         // Picker может сразу показать Downloads или наш экспорт в «Недавних»: выбираем готовый файл без лишнего перехода.
         if(!zip.waitForExists(2000)) pickerRoot(ui);
@@ -343,7 +346,11 @@ public class ServerAppTest {
         // DocumentsUI может перестроить плитку после появления заголовка файла.
         // В списке выбираем тот же реальный документ, без гонки с загрузкой preview.
         androidx.test.uiautomator.UiObject listView=ui.findObject(new androidx.test.uiautomator.UiSelector().description("List view"));
-        if(listView.exists()) { assertTrue(listView.click());ui.waitForIdle(2000); }
+        if(listView.exists()) {
+            assertTrue(listView.click());
+            assertTrue("picker did not switch to list",ui.wait(androidx.test.uiautomator.Until.gone(androidx.test.uiautomator.By.desc("List view")),10000));
+            ui.waitForIdle(2000);
+        }
         assertTrue("exported document missing after layout",zip.waitForExists(10000));
         ui.waitForIdle(2000);screenshot("backup-picker-open");
         if(Build.VERSION.SDK_INT<26) {

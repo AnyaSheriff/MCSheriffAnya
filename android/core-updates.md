@@ -40,6 +40,8 @@ data_compat1 — обязательство сопровождающей про�
 
 1. Собрать собственный native workflow и независимо проверить source, успешный run,
    artifact digest, receipt, все ELF/SHA/ABI/API. Закрепить результат в runtime-pin.json.
+   При workflow_dispatch указать core_revision выше прошлой опубликованной ревизии
+   (строятся выбранная и следующая ревизия). Этот номер независим от версии APK.
 2. Локально выполнить `python3 tools/android/sign-core-update.py NATIVE OUTPUT --notes '…'`.
    Скрипт использует отдельный локальный ключ через OpenSSL, не читая его в Python
    и не копируя. Он проверяет соответствие открытого ключа и каждого файла пину.

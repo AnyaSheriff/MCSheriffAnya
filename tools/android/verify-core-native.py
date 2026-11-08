@@ -22,16 +22,19 @@ def main(root):
     original=tomllib.loads((root/'Cargo.original.toml').read_text());derived=tomllib.loads((root/'Cargo.core.toml').read_text())
     for section in ['dependencies','dev-dependencies','target','profile','workspace','features','lints']:assert original[section]==derived[section],section
     assert derived['lib']=={'name':'mcsa_android_core','path':'src/main.rs','crate-type':['cdylib']} and not derived['package']['autobins']
-    result={'format':2,'source_head':head,'api':24,'host_api':1,'core_revision':1,'runtimes':{},'updates':{'2':{'build_id':head+'-r2','runtimes':{}}}}
+    # Первый архив r1/r2 был собран до добавления явного номера в artifact.
+    versions=json.loads((root/'core-revisions.json').read_text()) if (root/'core-revisions.json').exists() else {'bundled':1,'update':2}
+    first,next_version=versions['bundled'],versions['update'];assert type(first) is int and 1<=first<=99999999 and next_version==first+1
+    result={'format':2,'source_head':head,'api':24,'host_api':1,'core_revision':first,'runtimes':{},'updates':{str(next_version):{'build_id':head+f'-r{next_version}','runtimes':{}}}}
     for abi,machine in [('armeabi-v7a',40),('arm64-v8a',183),('x86_64',62)]:
         host=native.inspect((root/abi/'libmcsa.so').read_bytes(),machine);validate_log(root/f'elf-host-{abi}.txt',False)
-        core=native.inspect((root/abi/'libmcsa_core.so').read_bytes(),machine,library=True);validate_log(root/f'elf-core-{abi}-r1.txt',True)
-        newer=native.inspect((root/'updates/2'/abi/'libmcsa_core.so').read_bytes(),machine,library=True);validate_log(root/f'elf-core-{abi}-r2.txt',True)
+        core=native.inspect((root/abi/'libmcsa_core.so').read_bytes(),machine,library=True);validate_log(root/f'elf-core-{abi}-r{first}.txt',True)
+        newer=native.inspect((root/'updates'/str(next_version)/abi/'libmcsa_core.so').read_bytes(),machine,library=True);validate_log(root/f'elf-core-{abi}-r{next_version}.txt',True)
         assert core['sha256']!=newer['sha256'],'Revisions must be distinct native builds, not renamed copies'
         assert host['bytes']<1_000_000 and core['bytes']>1_000_000 and newer['bytes']>1_000_000
         features='default, plugins enabled' if abi=='arm64-v8a' else 'no-default, plugins disabled'
-        result['runtimes'][abi]={'host':host,'core':core,'features':features,'build_id':head+'-r1'}
-        result['updates']['2']['runtimes'][abi]=newer
+        result['runtimes'][abi]={'host':host,'core':core,'features':features,'build_id':head+f'-r{first}'}
+        result['updates'][str(next_version)]['runtimes'][abi]=newer
     (root/'receipt.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))
 
 

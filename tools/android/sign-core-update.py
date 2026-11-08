@@ -15,11 +15,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('native', type=Path)
     parser.add_argument('output', type=Path)
-    parser.add_argument('--revision', type=int, default=2)
+    parser.add_argument('--revision', type=int, help='Defaults to the highest verified candidate in the pin')
     parser.add_argument('--tag', default='v0.2.9-alpha')
     parser.add_argument('--notes', required=True)
     args = parser.parse_args()
     pin = json.loads((ROOT / 'android/runtime-pin.json').read_text())
+    if args.revision is None:
+        args.revision = max(map(int, pin['updates']))
     receipt = json.loads((args.native / 'receipt.json').read_text())
     assert pin['format'] == receipt['format'] == 2
     assert receipt['source_head'] == pin['head']
