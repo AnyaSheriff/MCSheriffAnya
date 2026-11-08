@@ -1,6 +1,10 @@
 plugins { id 'com.android.application' }
 def selectedAbi = providers.gradleProperty('apkAbi').getOrElse('arm64-v8a')
 if (!(selectedAbi in ['armeabi-v7a', 'arm64-v8a', 'x86_64'])) throw new GradleException('Unknown APK ABI')
+def runtimePin = new groovy.json.JsonSlurper().parse(rootProject.file('runtime-pin.json'))
+def selectedRuntime = runtimePin.runtimes[selectedAbi]
+def sharedCore = runtimePin.format == 2
+def quoteConfig = { value -> groovy.json.JsonOutput.toJson(value.toString()) }
 android {
     namespace 'ru.sheriffanya.mcsa'
     compileSdk 35
@@ -8,16 +12,22 @@ android {
         applicationId 'ru.sheriffanya.mcsa'
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName '0.2.1-preview'
+        versionCode 4
+        versionName '0.2.2-preview'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters selectedAbi }
         buildConfigField 'String', 'RUNTIME_ABI', '"' + selectedAbi + '"'
         buildConfigField 'boolean', 'RUNTIME_PLUGINS', selectedAbi == 'arm64-v8a' ? 'true' : 'false'
+        buildConfigField 'int', 'CORE_HOST_API', sharedCore ? runtimePin.host_api.toString() : '0'
+        buildConfigField 'int', 'BUNDLED_CORE_REVISION', sharedCore ? runtimePin.core_revision.toString() : '1'
+        buildConfigField 'String', 'BUNDLED_CORE_SHA256', quoteConfig(sharedCore ? selectedRuntime.core.sha256 : selectedRuntime.sha256)
+        buildConfigField 'String', 'BUNDLED_CORE_BUILD_ID', quoteConfig(sharedCore ? selectedRuntime.build_id : 'legacy')
+        buildConfigField 'String', 'BUNDLED_CORE_VERSION', quoteConfig((runtimePin.version ?: '0.2.9-alpha') + ' · Android #' + (runtimePin.core_revision ?: 1))
+        buildConfigField 'String', 'CORE_MANIFEST_URL', quoteConfig('https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/android-updates/preview.json')
     }
     buildFeatures { buildConfig true }
     sourceSets { main { jniLibs.srcDirs = [providers.gradleProperty('runtimeDir').getOrElse('../runtime')] } }
-    packaging { jniLibs { useLegacyPackaging true; keepDebugSymbols += ['**/libmcsa.so'] } }
+    packaging { jniLibs { useLegacyPackaging true; keepDebugSymbols += ['**/libmcsa.so', '**/libmcsa_core.so'] } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     lint { abortOnError true }
 }
@@ -29,8 +39,15 @@ tasks.register('checkRuntime') {
         def pin = new groovy.json.JsonSlurper().parse(rootProject.file('runtime-pin.json'))
         def binary = new File(root, selectedAbi + '/libmcsa.so')
         def digest = java.security.MessageDigest.getInstance('SHA-256').digest(binary.bytes).encodeHex().toString()
-        if (pin.api != 24 || digest != pin.runtimes[selectedAbi].sha256 || binary.length() != pin.runtimes[selectedAbi].bytes)
+        def expectedHost = pin.format == 2 ? pin.runtimes[selectedAbi].host : pin.runtimes[selectedAbi]
+        if (pin.api != 24 || digest != expectedHost.sha256 || binary.length() != expectedHost.bytes)
             throw new GradleException('Native runtime differs from independently verified pin')
+        if (pin.format == 2) {
+            def core = new File(root, selectedAbi + '/libmcsa_core.so')
+            def expected = pin.runtimes[selectedAbi].core
+            if (!core.isFile() || core.length() != expected.bytes || java.security.MessageDigest.getInstance('SHA-256').digest(core.bytes).encodeHex().toString() != expected.sha256)
+                throw new GradleException('Core module differs from independently verified pin')
+        }
     }
 }
 tasks.named('preBuild').configure { dependsOn 'checkRuntime' }

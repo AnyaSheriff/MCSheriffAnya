@@ -13,11 +13,12 @@ def main(path, abi):
         names = archive.namelist()
         assert len(names) == len(set(names)) and 'AndroidManifest.xml' in names and 'classes.dex' in names
         native = [name for name in names if name.startswith('lib/') and not name.endswith('/')]
-        assert native == ['lib/' + abi + '/libmcsa.so'], native
-        binary = archive.read(native[0])
-        assert len(binary) == pin['runtimes'][abi]['bytes']
-        assert hashlib.sha256(binary).hexdigest() == pin['runtimes'][abi]['sha256']
-    result = {'apk': path.name, 'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'abi': abi, 'runtime_sha256': pin['runtimes'][abi]['sha256'], 'native_run': pin['run_id'], 'native_head': pin['head']}
+        expected={'libmcsa.so':pin['runtimes'][abi]['host'],'libmcsa_core.so':pin['runtimes'][abi]['core']} if pin.get('format')==2 else {'libmcsa.so':pin['runtimes'][abi]}
+        assert set(native)=={'lib/'+abi+'/'+name for name in expected},native
+        for name,info in expected.items():
+            binary=archive.read('lib/'+abi+'/'+name)
+            assert len(binary)==info['bytes'] and hashlib.sha256(binary).hexdigest()==info['sha256']
+    result = {'apk': path.name, 'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'abi': abi, 'runtime_hashes':{name:info['sha256'] for name,info in expected.items()}, 'native_run': pin['run_id'], 'native_head': pin['head']}
     path.with_suffix('.receipt.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result))
 

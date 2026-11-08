@@ -56,6 +56,10 @@ public final class MainActivity extends AppCompatActivity {
     private int tab;
     private String group;
     private TextView status, log, backupStatus, onlineValue,tpsValue,cpuValue,ramValue,resources;
+    private TextView coreStatus,coreSelected,coreDetails;
+    private Button coreCheck,coreApply,coreRollback;
+    private com.google.android.material.progressindicator.LinearProgressIndicator coreProgress;
+    private CoreUpdateStore coreViewStore;
     private final java.util.List<Button> backupButtons=new java.util.ArrayList<>();
     private long shownBackupRevision;
     private String exportName;
@@ -131,6 +135,7 @@ public final class MainActivity extends AppCompatActivity {
         onlineValue=null;tpsValue=null;cpuValue=null;ramValue=null;resources=null;
         synchronized(HostState.LOCK) { HostState.dashboardVisible=tab==0&&getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED); }
         backupStatus=null; backupButtons.clear(); status=null; log=null; start=null; stop=null; save=null; send=null; editors.clear(); settings=null; shownRevision=-1;
+        coreStatus=null;coreSelected=null;coreDetails=null;coreCheck=null;coreApply=null;coreRollback=null;coreProgress=null;coreViewStore=null;
         container=column(); container.setBackgroundColor(BG); container.setPadding(dp(18),dp(12),dp(18),dp(8));
         container.setOnApplyWindowInsetsListener((view,insets)->{
             // В Android15+ target35 рисуется до краёв экрана; элементы остаются за пределами системных панелей.
@@ -207,11 +212,12 @@ public final class MainActivity extends AppCompatActivity {
         page.addView(text("Настройки",23,INK));
         if("Оформление".equals(group)) { appearance(); return; }
         if("Резервные копии".equals(group)) { backups(); return; }
+        if("Обновления ядра".equals(group)) { coreUpdates(); return; }
         page.addView(text("Настройки сервера применятся при следующем запуске. Оформление можно менять во время игры.",14,MUTED));
         try { settings=new ServerSettings(new File(getFilesDir(),"server")); }
         catch(IOException error) { page.addView(text(error.getMessage(),16,ERROR)); return; }
         if(group==null) {
-            for(String name:new String[]{"Оформление","Резервные копии","Сервер","Мир","Вход","Производительность","Сеть","Дополнительно"}) {
+            for(String name:new String[]{"Оформление","Резервные копии","Обновления ядра","Сервер","Мир","Вход","Производительность","Сеть","Дополнительно"}) {
                 LinearLayout card=card(); card.addView(button(name+"  ›",0,()->{ group=name; draw(); }));
             }
             page.addView(text("Версия игры: 26.3. Комментарии и остальные параметры в конфиге сохраняются.",14,MUTED)); return;
@@ -273,6 +279,44 @@ public final class MainActivity extends AppCompatActivity {
             recreate();
         }); colors.addView(dynamic);
         page.addView(text("Material Design 3 · MCSheriffAnya "+BuildConfig.VERSION_NAME,13,MUTED));
+    }
+    private void coreUpdates() {
+        page.addView(button("‹ Все разделы",0,()->{group=null;draw();}));page.addView(text("Обновления ядра",20,INK));
+        page.addView(text("Ядро можно обновлять прямо здесь, без переустановки приложения. Перед применением останови сервер; мы сохраним копию мира. Затем запусти сервер снова.",14,MUTED));
+        try { coreViewStore=new CoreUpdateStore(this);synchronized(HostState.LOCK) { HostState.coreVersion=coreViewStore.version(); } }
+        catch(IOException error) { page.addView(text(error.getMessage(),15,ERROR));return; }
+        LinearLayout state=card();coreSelected=text("",17,INK);coreSelected.setId(R.id.core_selected_version);state.addView(coreSelected);
+        coreStatus=text("",14,MUTED);coreStatus.setId(R.id.core_update_status);state.addView(coreStatus);
+        coreProgress=new com.google.android.material.progressindicator.LinearProgressIndicator(this);coreProgress.setId(R.id.core_update_progress);coreProgress.setMax(100);state.addView(coreProgress,new LinearLayout.LayoutParams(-1,dp(8)));
+        coreCheck=button("Проверить обновления",R.id.core_check_updates,()->coreAction(CoreUpdateService.CHECK));state.addView(coreCheck);
+        LinearLayout available=card();coreDetails=text("",14,MUTED);available.addView(coreDetails);
+        coreApply=button("Скачать и обновить ядро",R.id.core_apply_update,()->{
+            CoreManifest manifest;synchronized(HostState.LOCK) { manifest=HostState.coreAvailable; }if(manifest==null) return;
+            new MaterialAlertDialogBuilder(this).setTitle("Обновить ядро?").setMessage("Загрузим "+android.text.format.Formatter.formatFileSize(this,manifest.bytes)+", сохраним резервную копию мира и выберем новое ядро. Обновление применится при следующем запуске сервера.")
+                .setNegativeButton("Отмена",null).setPositiveButton("Обновить",(d,w)->coreAction(CoreUpdateService.INSTALL)).show();
+        });tint(coreApply,GREEN,ON_GREEN);available.addView(coreApply);
+        coreRollback=button("Вернуть предыдущее ядро",R.id.core_rollback,()->new MaterialAlertDialogBuilder(this).setTitle("Вернуть предыдущее ядро?")
+            .setMessage("Сохраним копию текущего мира и выберем прежнюю версию ядра. Затем можно снова запустить сервер.").setNegativeButton("Отмена",null)
+            .setPositiveButton("Вернуть",(d,w)->coreAction(CoreUpdateService.ROLLBACK)).show());page.addView(coreRollback);
+        page.addView(text(getString(R.string.core_app_version_format,BuildConfig.VERSION_NAME),12,MUTED));
+        if(BuildConfig.CORE_HOST_API!=1) page.addView(text("В этой сборке загрузчик ещё не включён.",14,MUTED));
+    }
+    private void coreAction(String action) {
+        try { Intent intent=new Intent(this,CoreUpdateService.class).setAction(action);if(Build.VERSION.SDK_INT>=26) startForegroundService(intent);else startService(intent); }
+        catch(RuntimeException error) { alert("Не удалось начать обновление. Попробуй ещё раз."); }
+    }
+    private void updateCoreControls(HostState.Phase phase,String operation,boolean idle) {
+        if(coreStatus==null) return;
+        CoreManifest available;String version,message;long downloaded,total;
+        synchronized(HostState.LOCK) { available=HostState.coreAvailable;version=HostState.coreVersion;message=HostState.coreUpdateMessage;downloaded=HostState.coreDownloadBytes;total=HostState.coreDownloadTotal; }
+        coreSelected.setText(getString(R.string.core_selected_version_format,version));coreStatus.setText(message);
+        coreDetails.setText(available==null?"Проверим подпись и подберём файл ядра для твоего устройства.":getString(R.string.core_available_format,available.version,android.text.format.Formatter.formatFileSize(this,available.bytes),available.notes));
+        boolean enabled=BuildConfig.CORE_HOST_API==1;
+        coreCheck.setEnabled(enabled&&operation==null&&phase!=HostState.Phase.STARTING&&phase!=HostState.Phase.STOPPING);
+        coreApply.setEnabled(enabled&&idle&&available!=null);coreRollback.setEnabled(enabled&&idle&&coreViewStore!=null&&coreViewStore.hasPrevious());
+        boolean updating=operation!=null&&(operation.startsWith("Обновляем ядро")||operation.startsWith("Проверяем обновления ядра"));
+        coreProgress.setVisibility(updating?View.VISIBLE:View.GONE);coreProgress.setIndeterminate(total==0);
+        if(total>0) coreProgress.setProgressCompat((int)Math.min(100,downloaded*100/total),true);
     }
     private Button backupButton(String text,int id,Runnable action) {
         Button button=button(text,id,action);backupButtons.add(button);return button;
@@ -360,6 +404,7 @@ public final class MainActivity extends AppCompatActivity {
         synchronized(HostState.LOCK) { operation=HostState.operation;backupMessage=HostState.backupMessage;backupRevision=HostState.backupRevision; }
         updateDashboard(phase);
         boolean idle=phase==HostState.Phase.STOPPED&&operation==null;
+        updateCoreControls(phase,operation,idle);
         if(backupStatus!=null) {
             if(operation==null&&shownBackupRevision!=backupRevision) { draw();return; }
             backupStatus.setText(operation==null?backupMessage:operation);

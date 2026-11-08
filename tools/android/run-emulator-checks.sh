@@ -23,7 +23,7 @@ if [ "$TEST_API" -ge 33 ]; then
   adb shell pm grant ru.sheriffanya.mcsa android.permission.POST_NOTIFICATIONS
 fi
 # Только собственная свежая тестовая установка в отдельном эмуляторе.
-adb shell am instrument -w ru.sheriffanya.mcsa.test/androidx.test.runner.AndroidJUnitRunner | tee apk-device-evidence/instrumentation.txt
+adb shell am instrument -w -e class ru.sheriffanya.mcsa.ServerAppTest,ru.sheriffanya.mcsa.BackupStoreTest ru.sheriffanya.mcsa.test/androidx.test.runner.AndroidJUnitRunner | tee apk-device-evidence/instrumentation.txt
 grep -q 'OK (9 tests)' apk-device-evidence/instrumentation.txt
 ! grep -qE 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' apk-device-evidence/instrumentation.txt
 adb shell run-as ru.sheriffanya.mcsa cat files/server/config/server.properties > apk-device-evidence/server.properties

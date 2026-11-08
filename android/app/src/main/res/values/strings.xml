@@ -1,4 +1,7 @@
 <resources>
+    <string name="core_selected_version_format">Выбрано ядро: %1$s</string>
+    <string name="core_available_format">Доступно: %1$s\nРазмер загрузки: %2$s\n%3$s</string>
+    <string name="core_app_version_format">Версия приложения: %1$s</string>
     <string name="dashboard_online_format">%1$d / %2$d</string>
     <string name="dashboard_resources_format">Время такта: %1$s%2$s\nДоступно RAM телефона: %3$s / %4$s\nСвободно на накопителе: %5$s\n100%% CPU — все доступные ядру потоки. Обновление примерно раз в 2 секунды.</string>
 </resources>

@@ -24,5 +24,10 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-requested game-world backup or restore via Android document picker; file consistency and atomic world replacement must survive closing the activity." />
         </service>
+        <service android:name=".CoreUpdateService" android:exported="false"
+            android:foregroundServiceType="specialUse" android:stopWithTask="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-requested signed game-core update download, verification and backup; no installation or activation while the game server is running." />
+        </service>
     </application>
 </manifest>

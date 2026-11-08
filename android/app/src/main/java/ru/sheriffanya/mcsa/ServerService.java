@@ -37,6 +37,7 @@ public final class ServerService extends Service {
     private PowerManager.WakeLock wakeLock;
     private boolean launched;
     private boolean runtimeFinished, destroyed;
+    private CoreUpdateStore coreStore;private CoreUpdateStore.Core selectedCore;private boolean coreReady;private String actualCoreBuild;
 
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
@@ -78,7 +79,13 @@ public final class ServerService extends Service {
         try {
             new BackupStore(getFilesDir()).cleanupRecovery();
             if(stopRequested) return;
+            if(BuildConfig.CORE_HOST_API==1) {
+                coreStore=new CoreUpdateStore(this);selectedCore=coreStore.prepareLaunch();
+                synchronized(HostState.LOCK) { HostState.coreVersion=selectedCore.version;HostState.coreUpdateRevision++; }
+            }
+            if(stopRequested) return;
             ProcessBuilder builder=new ProcessBuilder(executable.getAbsolutePath()).directory(root).redirectErrorStream(true);
+            if(selectedCore!=null) builder.environment().put("MCSA_CORE_LIBRARY",selectedCore.library.getPath());
             builder.environment().put("NO_COLOR","1"); builder.environment().put("TERM","dumb");
             if(apiSocket.exists()&&!apiSocket.delete()) throw new IOException("Не удалось подготовить локальный API");
             String session=java.util.UUID.randomUUID().toString();
@@ -112,6 +119,9 @@ public final class ServerService extends Service {
                 catch(Exception ignored) { Thread.currentThread().interrupt(); }
             }
         } finally {
+            if(coreStore!=null&&selectedCore!=null&&!coreReady&&coreStore.failed(selectedCore,stopRequested)) {
+                synchronized(HostState.LOCK) { HostState.message="Новое ядро не запустилось. Прежняя версия возвращена."; }
+            }
             if(monitor!=null) monitor.close();
             synchronized(HostState.LOCK) { HostState.apiSession=null;HostState.stats=null;HostState.statsError=null; }
             if(apiSocket.exists()) apiSocket.delete();
@@ -125,7 +135,12 @@ public final class ServerService extends Service {
     }
     private void received(String line) {
         HostState.append(line+"\n");
+        if(line.startsWith("MCSA_CORE_BUILD=")) actualCoreBuild=line.substring("MCSA_CORE_BUILD=".length());
         if(line.contains("Готово (")) {
+            if(coreStore!=null&&selectedCore!=null) {
+                try { coreStore.ready(selectedCore,actualCoreBuild);coreReady=true; }
+                catch(Exception invalid) { HostState.append("Проверка запуска ядра не пройдена: "+invalid.getMessage()+"\n");send("stop");return; }
+            }
             synchronized(HostState.LOCK) {
                 if(HostState.phase==HostState.Phase.STARTING) { HostState.phase=HostState.Phase.RUNNING; HostState.message="Сервер работает"; }
             }

@@ -19,4 +19,10 @@
     <item name="stat_tps" type="id" />
     <item name="stat_cpu" type="id" />
     <item name="stat_ram" type="id" />
+    <item name="core_check_updates" type="id" />
+    <item name="core_apply_update" type="id" />
+    <item name="core_rollback" type="id" />
+    <item name="core_update_status" type="id" />
+    <item name="core_selected_version" type="id" />
+    <item name="core_update_progress" type="id" />
 </resources>

@@ -84,7 +84,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash tools/android/run-emulator-checks.sh
+          script: bash tools/android/run-emulator-checks.sh && bash tools/android/run-core-ota-checks.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

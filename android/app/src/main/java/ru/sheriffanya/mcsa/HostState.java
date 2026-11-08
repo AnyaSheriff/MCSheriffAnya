@@ -8,6 +8,10 @@ final class HostState {
     static String apiSession,statsError;
     static boolean dashboardVisible;
     static CoreStatsClient.Snapshot stats;
+    static CoreManifest coreAvailable;
+    static String coreVersion=BuildConfig.BUNDLED_CORE_VERSION;
+    static String coreUpdateMessage="Проверь, появилась ли новая версия ядра.";
+    static long coreUpdateRevision,coreDownloadBytes,coreDownloadTotal;
     static String operation;
     static String backupMessage="Копии хранятся в приложении. Экспортируй важные копии в память телефона.";
     static long backupRevision;
