@@ -43,6 +43,8 @@ jobs:
         api: [24, 36]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      TEST_API: ${{ matrix.api }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,18 +64,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: |
-            mkdir -p ota-probe-device
-            adb install -r ota-probe-apk/app.apk
-            adb install -r ota-probe-apk/test.apk
-            adb shell am instrument -w ru.sheriffanya.mcsa.otaprobe.test/androidx.test.runner.AndroidJUnitRunner | tee ota-probe-device/instrumentation.txt
-            grep -q 'OK (1 test)' ota-probe-device/instrumentation.txt
-            adb exec-out run-as ru.sheriffanya.mcsa.otaprobe cat files/probe-result.json > ota-probe-device/probe-result.json
-      - name: Collect logs
-        if: always()
-        run: |
-          mkdir -p ota-probe-device
-          adb logcat -d > ota-probe-device/logcat.txt 2>&1 || true
+          script: bash tools/android/run-ota-probe.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
