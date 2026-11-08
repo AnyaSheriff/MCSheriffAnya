@@ -14,6 +14,7 @@ final class CoreUpdateStore {
         final File library;final String slot,version,buildId;final int revision;
         Core(File library,String slot,int revision,String version,String buildId) { this.library=library;this.slot=slot;this.revision=revision;this.version=version;this.buildId=buildId; }
     }
+    private static final Object STATE_IO=new Object();
     private final Context context;private final File directory;private final byte[] key;
     CoreUpdateStore(Context context) throws IOException {
         this.context=context.getApplicationContext();directory=new File(context.getFilesDir().getCanonicalFile(),"core-updates");
@@ -30,9 +31,10 @@ final class CoreUpdateStore {
         }
         return new Core(file,"bundled",BuildConfig.BUNDLED_CORE_REVISION,BuildConfig.BUNDLED_CORE_VERSION,BuildConfig.BUNDLED_CORE_BUILD_ID);
     }
-    private String pointer(String name) throws IOException {
+    private String pointer(String name) throws IOException { synchronized(STATE_IO) {
         File file=new File(directory,name);if(!file.exists()&&!new File(file+".bak").exists()) return "bundled";
         try(InputStream in=new AtomicFile(file).openRead()) { String value=new String(read(in,128),StandardCharsets.UTF_8).trim();if(!"bundled".equals(value)&&!value.matches("core-[1-9][0-9]{0,9}-[0-9a-f]{16}")) throw new IOException("Неверный слот ядра");return value; }
+    }
     }
     private Core slot(String name,boolean verify) throws Exception {
         if("bundled".equals(name)) return bundled(verify);
@@ -59,11 +61,12 @@ final class CoreUpdateStore {
     boolean hasPrevious() { try { return !pointer("active").equals(pointer("previous")); } catch(IOException unavailable) { return false; } }
     private static String name(CoreManifest manifest) { return "core-"+manifest.revision+"-"+manifest.sha256.substring(0,16); }
     private File pendingFile() { return new File(directory,"pending.json"); }
-    private JSONObject pending() throws Exception {
+    private JSONObject pending() throws Exception { synchronized(STATE_IO) {
         File file=pendingFile();if(!file.exists()&&!new File(file+".bak").exists()) return null;
         try(InputStream in=new AtomicFile(file).openRead()) { return new JSONObject(new String(read(in,4096),StandardCharsets.UTF_8)); }
     }
-    private void removePending() { new AtomicFile(pendingFile()).delete(); }
+    }
+    private void removePending() { synchronized(STATE_IO) { new AtomicFile(pendingFile()).delete(); } }
     private void writePointer(String pointer,String value) throws IOException { write(new File(directory,pointer),(value+"\n").getBytes(StandardCharsets.UTF_8)); }
     private void writePending(JSONObject value) throws IOException { write(pendingFile(),(value+"\n").getBytes(StandardCharsets.UTF_8)); }
     Core prepareLaunch() throws Exception {
@@ -145,9 +148,10 @@ final class CoreUpdateStore {
         ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;
         while((n=input.read(buffer))!=-1) { if(out.size()+n>max) throw new IOException("Файл состояния обновления слишком велик");out.write(buffer,0,n); }return out.toByteArray();
     }
-    private static void write(File path,byte[] bytes) throws IOException {
+    private static void write(File path,byte[] bytes) throws IOException { synchronized(STATE_IO) {
         AtomicFile file=new AtomicFile(path);FileOutputStream out=null;
         try { out=file.startWrite();out.write(bytes);out.getFD().sync();file.finishWrite(out); }
         catch(IOException error) { if(out!=null) file.failWrite(out);throw error; }
+    }
     }
 }
