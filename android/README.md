@@ -166,30 +166,33 @@ CPU-время — сумма пользовательского и систем
 
 ## Сборка
 
-`tools/android/build-native.sh` последовательно собирает ARMv7, ARM64 и тестовый
-x86_64 Android ELF через NDK с API24 и выравниванием16КиБ. ARM32 имеет32-битный
-ELF и `/system/bin/linker`, остальные64-битные с `/system/bin/linker64`.
-Сборки и их зависимости проверяются, сохраняются точные SHA256/NDK/lock/логи.
-Workflow `android-apk-native.yml` не меняет релиз, теги или Docker.
+`tools/android/build-core-native.sh` и workflow `android-core-native.yml`
+последовательно собирают загрузчик и полное shared-ядро для ARMv7, ARM64 и тестового
+x86_64 через NDK с API24 и выравниванием16КиБ. Host — ELF PIE с системным Bionic
+загрузчиком; ядро — ET_DYN без PT_INTERP, с тремя экспортами ABI1.
+Для проверки OTA создаются две разные полные сборки, r1/r2 в первом архиве.
+Сохраняются точные SHA256/NDK/lock/исходный и производный manifest/логи.
+Сам native workflow не публикует файлы, теги или Docker.
 
-`runtime-pin.json` закрепляет конкретный успешный run/source/artifact/три binarySHA.
+`runtime-pin.json` закрепляет успешный run/source/artifact и SHA каждого host/core.
 В свежей копии репозитория с авторизованным gh:
 
 ```sh
 python3 tools/android/fetch-runtime.py
 cd android
-./gradlew -PapkAbi=arm64-v8a :app:assembleDebug
-./gradlew -PapkAbi=armeabi-v7a :app:assembleDebug
+./gradlew -PapkAbi=arm64-v8a :app:clean :app:assembleDebug
+# Скопировать готовый APK до следующего clean.
+./gradlew -PapkAbi=armeabi-v7a :app:clean :app:assembleDebug
 ```
 
 Нужны JDK17 и AndroidSDK35. Gradle8.11.1 закреплён с SHA256 официального архива,
 AGP8.9.2. `preBuild` сверяет каждый включаемый бинарник с pin по SHA256 и размеру.
 `verify-apk.py` проверяет именно наш APK и тождество включённых байтов runtime;
-apksigner/zipalign отдельно проверяют подпись и упаковку. Бинарник упакован как
-`lib/<ABI>/libmcsa.so` и извлекается Android из APK в read-only nativeLibraryDir;
-это ELF PIE с обычным main, запускаемый ProcessBuilder без shell и JNI, не файл
-из writable app home. Конфиги и мир находятся отдельно. Запускаемый файл не
-подменяется загрузкой из интернета.
+apksigner/zipalign отдельно проверяют подпись и упаковку. В APK включены
+`lib/<ABI>/libmcsa.so` (host) и `lib/<ABI>/libmcsa_core.so` (встроенное ядро).
+Android извлекает их в read-only nativeLibraryDir. ProcessBuilder запускает host
+без shell и JNI. Host выбирает проверенное встроенное или отдельно обновлённое
+shared-ядро; скачанный файл не запускается через execve. Конфиги и мир отдельно.
 
 Сейчас это debug APK для испытаний. Локальная debug-подпись сохраняет возможность
 обновления локальными сборками с тем же ключом. Ключ CI временный, поэтому
@@ -198,6 +201,25 @@ CI APK не следует использовать для постоянног�
 ключи не включаются в репозиторий или артефакты.
 
 ## Проверки и границы
+
+### Отдельные обновления ядра — 8 ноября, 0.2.2-preview
+
+[Native CI42485323623](https://github.com/AnyaSheriff/MCSheriffAnya/actions/runs/42485323623)
+на source`6fd7d4e` собрал три host/core пары и две разные полные ревизии r1/r2.
+Проверены точные SHA, Bionic/API24, ELF32/64, shared ABI1 и выравнивание16КиБ.
+[APK CI42489347265](https://github.com/AnyaSheriff/MCSheriffAnya/actions/runs/42489347265)
+на source`e8b0b6f7` полностью прошёл:10JUnit, Lint без замечаний,
+9обычных+2OTA instrumentation на каждом Android7/API24 и Android16/API36.
+Настоящий x86_64 сервер скачивал подписанную r2 по HTTPS через меню и запускался
+с прежним миром/config/status777/max7. SHA самого APK и время установки сохранялись.
+Проверены автоматический ZIP, возврат ядра, повреждённый модуль, незавершённый/неудачный
+старт, повтор старой ревизии, неверный указатель, подпись/ключ/ABI/метаданные и отказ
+TLS с недоверенным сертификатом. Скачанные артефакты независимо сверены:217/217.
+Все DEX, manifest, resources и обе native библиотеки телефонных APK совпали с CI;
+подпись пользовательских APK остаётся прежней локальной, code4/min24/target35.
+Новые ARM-сборки не запускались на физическом телефоне; x86_64 эмулятор этого не заменяет.
+
+### Предыдущая панель — 7–8 ноября, 0.2.1-preview
 
 [Native CI42407965644](https://github.com/AnyaSheriff/MCSheriffAnya/actions/runs/42407965644)
 на source`7fc46f3c` собрал ARMv7/ARM64/x86_64. Независимо сверены архив GitHub,
