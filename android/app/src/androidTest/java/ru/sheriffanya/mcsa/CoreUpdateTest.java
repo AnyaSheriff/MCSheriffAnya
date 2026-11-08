@@ -121,6 +121,12 @@ public class CoreUpdateTest {
         return new JSONObject().put("payload",Base64.encodeToString(raw,Base64.NO_WRAP)).put("signature",Base64.encodeToString(s.sign(),Base64.NO_WRAP)).toString().getBytes(StandardCharsets.UTF_8);
     }
     @Test public void rejectsTamperWrongSignerIncompatibleAndUnsafeMetadata() throws Exception {
+        try { CoreDownload.manifest("https://10.0.2.2:26447/test");fail("untrusted TLS certificate accepted"); }
+        catch(javax.net.ssl.SSLHandshakeException expected) {
+            Throwable cause=expected;boolean trustFailure=false;
+            while(cause!=null) { if(cause instanceof java.security.cert.CertPathValidatorException)trustFailure=true;cause=cause.getCause(); }
+            assertTrue("TLS failed for another reason",trustFailure);
+        }
         byte[] real=CoreDownload.manifest(BuildConfig.CORE_MANIFEST_URL);CoreUpdateStore store=new CoreUpdateStore(context());CoreManifest parsed=store.manifest(real);assertEquals(2,parsed.revision);
         JSONObject outer=new JSONObject(new String(real,StandardCharsets.UTF_8));JSONObject data=new JSONObject(new String(Base64.decode(outer.getString("payload"),Base64.DEFAULT),StandardCharsets.UTF_8));
         outer.put("payload",Base64.encodeToString(data.put("version","tampered").toString().getBytes(StandardCharsets.UTF_8),Base64.NO_WRAP));
@@ -141,7 +147,7 @@ public class CoreUpdateTest {
             try { CoreManifest.parse(envelope(changed,pair.getPrivate()),pair.getPublic().getEncoded(),"x86_64",4);fail("accepted invalid size"); }catch(IOException expected) { }
         }
         try { CoreManifest.parse(signed,pair.getPublic().getEncoded(),"wrong-abi",4);fail("accepted ABI"); }catch(IOException expected) { }
-        ServerSettings.write(new File(context().getFilesDir(),"ota-security.json"),new JSONObject().put("api",Build.VERSION.SDK_INT).put("tampered_signature_rejected",true).put("wrong_signer_rejected",true).put("incompatible_fields_rejected",9).put("unsafe_urls_rejected",5).put("invalid_sizes_rejected",2).put("wrong_abi_rejected",true).toString()+"\n");
+        ServerSettings.write(new File(context().getFilesDir(),"ota-security.json"),new JSONObject().put("api",Build.VERSION.SDK_INT).put("untrusted_tls_rejected",true).put("tampered_signature_rejected",true).put("wrong_signer_rejected",true).put("incompatible_fields_rejected",9).put("unsafe_urls_rejected",5).put("invalid_sizes_rejected",2).put("wrong_abi_rejected",true).toString()+"\n");
     }
     private static void varint(OutputStream out,int value) throws IOException { do { int b=value&127;value>>>=7;out.write(value==0?b:b|128); }while(value!=0); }
     private static int varint(DataInputStream in) throws IOException { int v=0;for(int n=0;n<5;n++) { int b=in.readUnsignedByte();v|=(b&127)<<(n*7);if((b&128)==0)return v; }throw new IOException("varint"); }

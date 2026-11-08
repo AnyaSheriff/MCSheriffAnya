@@ -20,6 +20,10 @@ ARMv7 и x86 без WASM, ARM64 с обычными плагинами.
   Проверяются версия схемы, игра26.3, data_compat1, hostAPI1, min_app, ABI,
   положительная ревизия, buildID/source, размер и SHA256. Старые ревизии не ставятся
   через обычную загрузку; ручной возврат предыдущего слота разрешён.
+- Для GitHub/githubusercontent приложение добавляет официальные публичные ISRG
+  RootX1/X2, отсутствующие в старом Android7. Остальные домены доверяют только
+  системным CA; пользовательские и произвольные самоподписанные CA не добавляются.
+  Это декларативный Network Security Config, без доверяющего всем TrustManager.
 - Файл создаётся read-only до записи через уже открытый дескриптор; fsync, проверка
   SHA/ELF, переименование временной папки. Метаданные сохраняются вместе с подписью.
   Перед каждым запуском повторно проверяются подпись, SHA, ABI и права файла.
@@ -58,3 +62,8 @@ CI APK нужны для эмуляторов, ими нельзя заменя�
 
 Официальное ограничение Android10 на execve файлов в writable app home:
 [behavior changes](https://developer.android.com/about/versions/10/behavior-changes-10).
+
+Публичные CA: [официальные сертификаты Let's Encrypt](https://letsencrypt.org/certificates/),
+[Android Network Security Config](https://developer.android.com/privacy-and-security/security-config).
+SHA256 DER: X1 `96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6`,
+X2 `69729b8e15a86efc177a57afb7171dfc64add28c2fca8cf1507e34453ccb1470`.
