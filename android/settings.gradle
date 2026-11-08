@@ -2,3 +2,5 @@ pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal()
 dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
 rootProject.name = 'MCSheriffAnya'
 include ':app'
+// Изолированная проверка загрузчика не входит в обычные APK.
+if (providers.gradleProperty('otaProbe').getOrElse('false') == 'true') include ':ota-probe'

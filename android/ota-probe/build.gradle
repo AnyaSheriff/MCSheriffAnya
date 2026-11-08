@@ -1,0 +1,23 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'ru.sheriffanya.mcsa.otaprobe'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ru.sheriffanya.mcsa.otaprobe'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        ndk { abiFilters 'x86_64' }
+    }
+    sourceSets { main { jniLibs.srcDirs = ['runtime'] } }
+    packaging { jniLibs { useLegacyPackaging true; keepDebugSymbols += ['**/*.so'] } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    lint { abortOnError true }
+}
+dependencies {
+    //noinspection GradleDependency — версия совпадает с проверенным основным APK.
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'junit:junit:4.13.2'
+}
