@@ -1,0 +1,35 @@
+name: Natural Thorns III paired observations
+on:
+  push:
+    branches: ['wip/thorns-natural-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+      - name: Build our exact source
+        run: cargo build --release
+      - name: Check statistical audit controls
+        run: python3 -m unittest discover -s tools/blackbox -p test_thorns_natural_sample.py -v
+      - name: Record genuine melee on original and our server
+        run: python3 tools/blackbox/thorns_natural_sample.py ci --output thorns-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: natural-thorns-${{ github.run_id }}-${{ github.run_attempt }}
+          path: thorns-evidence/
+          retention-days: 7
+          if-no-files-found: warn
