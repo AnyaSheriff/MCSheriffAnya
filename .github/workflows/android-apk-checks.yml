@@ -3,12 +3,20 @@ on:
   push:
     branches: ['wip/apk-checks-*']
   workflow_dispatch:
+    inputs:
+      test_manifest_url:
+        description: 'Signed candidate channel for the emulator build only; phone APKs keep the public channel'
+        required: false
+        default: ''
+        type: string
 permissions:
   contents: read
 jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      TEST_MANIFEST_URL: ${{ inputs.test_manifest_url || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,11 +35,13 @@ jobs:
           set -euo pipefail
           mkdir -p apk-phone apk-test apk-build-evidence
           for abi in armeabi-v7a arm64-v8a x86_64; do
-            (cd android && ./gradlew --no-daemon -PapkAbi="$abi" :app:clean :app:assembleDebug) 2>&1 | tee "apk-build-evidence/build-$abi.log"
+            extra=()
+            if [ "$abi" = x86_64 ] && [ -n "$TEST_MANIFEST_URL" ]; then extra+=("-PcoreManifestUrl=$TEST_MANIFEST_URL"); fi
+            (cd android && ./gradlew --no-daemon -PapkAbi="$abi" "${extra[@]}" :app:clean :app:assembleDebug) 2>&1 | tee "apk-build-evidence/build-$abi.log"
             if [ "$abi" = x86_64 ]; then out=apk-test; else out=apk-phone; fi
             cp android/app/build/outputs/apk/debug/app-debug.apk "$out/app-$abi-debug.apk"
           done
-          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:lintDebug) 2>&1 | tee apk-build-evidence/checks.log
+          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 "${extra[@]}" :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:lintDebug) 2>&1 | tee apk-build-evidence/checks.log
           cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apk-test/
           cp -r android/app/build/test-results apk-build-evidence/
           cp android/app/build/reports/lint-results-debug.* apk-build-evidence/

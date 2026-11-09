@@ -61,7 +61,7 @@ public class CoreUpdateTest {
     private void retained(File marker) throws Exception { assertEquals("retained\n",ServerSettings.read(marker));assertEquals("7",new ServerSettings(new File(context().getFilesDir(),"server")).server.get("max-players","")); }
     @Test public void fullCoreUpdatesOverHttpsWithoutReinstallAndCanRecover() throws Exception {
         assertEquals("x86_64",BuildConfig.RUNTIME_ABI);assertEquals(1,BuildConfig.CORE_HOST_API);assertTrue(HostState.idle());
-        CoreUpdateStore store=new CoreUpdateStore(context());assertEquals(1,store.revision());
+        CoreUpdateStore store=new CoreUpdateStore(context());assertEquals(BuildConfig.BUNDLED_CORE_REVISION,store.revision());
         File marker=new File(context().getFilesDir(),"server/world/apk-persistence-marker");retained(marker);
         android.content.pm.PackageInfo before=context().getPackageManager().getPackageInfo(context().getPackageName(),0);
         String apkSha=CoreDownload.sha256(new File(context().getApplicationInfo().sourceDir));
@@ -72,26 +72,26 @@ public class CoreUpdateTest {
             openUpdates(activity);click(activity,R.id.core_check_updates);
             await("real HTTPS signed manifest",()->{ synchronized(HostState.LOCK) { return HostState.operation==null&&HostState.coreAvailable!=null; } });
             CoreManifest manifest;synchronized(HostState.LOCK) { manifest=HostState.coreAvailable; }
-            assertEquals(2,manifest.revision);assertEquals(BuildConfig.BUNDLED_CORE_BUILD_ID.replace("-r1","-r2"),manifest.buildId);
+            assertEquals(BuildConfig.BUNDLED_CORE_REVISION+1,manifest.revision);assertEquals(BuildConfig.BUNDLED_CORE_BUILD_ID.replace("-r"+BuildConfig.BUNDLED_CORE_REVISION,"-r"+(BuildConfig.BUNDLED_CORE_REVISION+1)),manifest.buildId);
             activity.onActivity(a->{ assertFalse(a.findViewById(R.id.core_apply_update).isEnabled());assertFalse(a.findViewById(R.id.core_rollback).isEnabled()); });
-            context().startService(new Intent(context(),CoreUpdateService.class).setAction(CoreUpdateService.INSTALL));Thread.sleep(250);assertEquals(1,store.revision());assertEquals(copies,backups.list().size());
+            context().startService(new Intent(context(),CoreUpdateService.class).setAction(CoreUpdateService.INSTALL));Thread.sleep(250);assertEquals(BuildConfig.BUNDLED_CORE_REVISION,store.revision());assertEquals(copies,backups.list().size());
             stop(activity);openUpdates(activity);click(activity,R.id.core_apply_update);confirm("Обновить");
-            await("actual HTTPS module verified and activated",()->HostState.idle()&&store.revision()==2);
+            await("actual HTTPS module verified and activated",()->HostState.idle()&&store.revision()==BuildConfig.BUNDLED_CORE_REVISION+1);
             assertEquals(copies+1,backups.list().size());retained(marker);assertTrue(store.hasPrevious());
             CoreUpdateStore.Core selected=store.prepareLaunch();assertEquals(manifest.sha256,CoreDownload.sha256(selected.library));assertEquals(0,Os.stat(selected.library.getPath()).st_mode&0222);
             // prepareLaunch помечает попытку старта. Пользовательская отмена оставляет её повторяемой.
-            assertFalse(store.failed(selected,true));assertEquals(2,store.revision());
+            assertFalse(store.failed(selected,true));assertEquals(BuildConfig.BUNDLED_CORE_REVISION+1,store.revision());
             File copy=backups.list().get(0);
             try(ZipFile zip=new ZipFile(copy);InputStream in=zip.getInputStream(zip.getEntry("server/world/apk-persistence-marker"))) { byte[] bytes=new byte[9];assertEquals(9,in.read(bytes));assertEquals("retained\n",new String(bytes,StandardCharsets.UTF_8)); }
             screenshot("ota-ready");start(activity,manifest.buildId);retained(marker);proof.put("updated_status",ping());stop(activity);
             assertFalse(new File(context().getFilesDir(),"core-updates/pending.json").exists());
             openUpdates(activity);click(activity,R.id.core_rollback);confirm("Вернуть");
-            await("UI rollback",()->HostState.idle()&&store.revision()==1);assertEquals(copies+2,backups.list().size());retained(marker);
+            await("UI rollback",()->HostState.idle()&&store.revision()==BuildConfig.BUNDLED_CORE_REVISION);assertEquals(copies+2,backups.list().size());retained(marker);
             start(activity,BuildConfig.BUNDLED_CORE_BUILD_ID);stop(activity);
             // Повторное применение сохранённого подписанного слота, затем имитация прерванного старта.
             CoreUpdateStore.Core candidate=store.stage(manifest,(done,total)->{});store.activate(candidate,copy.getName());store.prepareLaunch();
-            assertEquals("bundled",new CoreUpdateStore(context()).prepareLaunch().slot);assertEquals(1,store.revision());retained(marker);
-            store.activate(candidate,copy.getName());CoreUpdateStore.Core attempted=store.prepareLaunch();assertTrue(store.failed(attempted,false));assertEquals(1,store.revision());
+            assertEquals("bundled",new CoreUpdateStore(context()).prepareLaunch().slot);assertEquals(BuildConfig.BUNDLED_CORE_REVISION,store.revision());retained(marker);
+            store.activate(candidate,copy.getName());CoreUpdateStore.Core attempted=store.prepareLaunch();assertTrue(store.failed(attempted,false));assertEquals(BuildConfig.BUNDLED_CORE_REVISION,store.revision());
             // Подмена уже скачанного файла: проверка до dlopen возвращает встроенный модуль.
             File saved=new File(context().getCacheDir(),"ota-core-original.so");copy(candidate.library,saved);
             store.activate(candidate,copy.getName());assertTrue(candidate.library.setWritable(true,true));
@@ -131,7 +131,7 @@ public class CoreUpdateTest {
             while(cause!=null) { if(cause instanceof java.security.cert.CertPathValidatorException)trustFailure=true;cause=cause.getCause(); }
             assertTrue("TLS failed for another reason",trustFailure);
         } finally { untrusted.disconnect(); }
-        byte[] real=CoreDownload.manifest(BuildConfig.CORE_MANIFEST_URL);CoreUpdateStore store=new CoreUpdateStore(context());CoreManifest parsed=store.manifest(real);assertEquals(2,parsed.revision);
+        byte[] real=CoreDownload.manifest(BuildConfig.CORE_MANIFEST_URL);CoreUpdateStore store=new CoreUpdateStore(context());CoreManifest parsed=store.manifest(real);assertEquals(BuildConfig.BUNDLED_CORE_REVISION+1,parsed.revision);
         JSONObject outer=new JSONObject(new String(real,StandardCharsets.UTF_8));JSONObject data=new JSONObject(new String(Base64.decode(outer.getString("payload"),Base64.DEFAULT),StandardCharsets.UTF_8));
         outer.put("payload",Base64.encodeToString(data.put("version","tampered").toString().getBytes(StandardCharsets.UTF_8),Base64.NO_WRAP));
         try { store.manifest(outer.toString().getBytes(StandardCharsets.UTF_8));fail("tampered signature accepted"); }catch(IOException expected) { }

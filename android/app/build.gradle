@@ -23,7 +23,7 @@ android {
         buildConfigField 'String', 'BUNDLED_CORE_SHA256', quoteConfig(sharedCore ? selectedRuntime.core.sha256 : selectedRuntime.sha256)
         buildConfigField 'String', 'BUNDLED_CORE_BUILD_ID', quoteConfig(sharedCore ? selectedRuntime.build_id : 'legacy')
         buildConfigField 'String', 'BUNDLED_CORE_VERSION', quoteConfig((runtimePin.version ?: '0.2.9-alpha') + ' · Android #' + (runtimePin.core_revision ?: 1))
-        buildConfigField 'String', 'CORE_MANIFEST_URL', quoteConfig('https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/android-updates/preview.json')
+        buildConfigField 'String', 'CORE_MANIFEST_URL', quoteConfig(providers.gradleProperty('coreManifestUrl').getOrElse('https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/android-updates/preview.json'))
     }
     buildFeatures { buildConfig true }
     sourceSets { main { jniLibs.srcDirs = [providers.gradleProperty('runtimeDir').getOrElse('../runtime')] } }

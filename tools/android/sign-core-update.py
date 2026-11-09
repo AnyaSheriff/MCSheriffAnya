@@ -16,10 +16,12 @@ def main():
     parser.add_argument('native', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--revision', type=int, help='Defaults to the highest verified candidate in the pin')
-    parser.add_argument('--tag', default='v0.2.9-alpha')
+    parser.add_argument('--tag', help='Defaults to v + the verified pin version')
     parser.add_argument('--notes', required=True)
     args = parser.parse_args()
     pin = json.loads((ROOT / 'android/runtime-pin.json').read_text())
+    if args.tag is None:
+        args.tag = 'v' + pin['version']
     if args.revision is None:
         args.revision = max(map(int, pin['updates']))
     receipt = json.loads((args.native / 'receipt.json').read_text())
