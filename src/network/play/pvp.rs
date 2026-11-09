@@ -1034,7 +1034,8 @@ mod multi_thorns_feedback_tests {
             let mut bytes=out.queued();let mut damage=0;let mut animation=0;
             while !bytes.is_empty() {
                 let packet=read_packet(&mut bytes).await.unwrap();
-                if packet.id==0x19 {damage+=1;} if packet.id==0x2a {animation+=1;}
+                if packet.id==0x19 {damage+=1;}
+                if packet.id==0x2a {animation+=1;}
             }
             assert_eq!(damage,1,"real self damage packets for {count} pieces");
             assert_eq!(animation,1,"real self hurt animation for {count} pieces");
