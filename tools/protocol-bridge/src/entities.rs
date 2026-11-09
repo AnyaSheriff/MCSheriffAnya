@@ -49,7 +49,7 @@ impl Tracker {
             // скорость отправлена непосредственно перед ним, второй motion777
             // не нужен: chicken-fall и villager-claim дают velocity→position.
             // Поздний sync сохраняет motion: клиент мог уже замедлиться.
-            if self.motion_777.as_ref()==Some(&(entity,speed)) {packets.truncate(1);}
+            if (context.stationary_position_only && speed==[0]) || self.motion_777.as_ref()==Some(&(entity,speed)) {packets.truncate(1);}
             self.motion_777=None;
             return Ok(packets.into_iter().map(Cow::Owned).collect());
         }
@@ -149,9 +149,18 @@ impl Tracker {
             _ => (),
         }
         context.clock_774=self.clock_774;
-        let translated = if probe_776 {
+        let mut translated = if probe_776 {
             wire::translate_inner(State::Play, Direction::Clientbound, from, to, body, context, true)?
         } else { wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context)? };
+        if name=="entity_status" && matches!((from,to),(JavaVersion::V26_1_2,JavaVersion::V26_3)|(JavaVersion::V26_3,JavaVersion::V26_1_2)) {
+            let id=i32::from_be_bytes(input.take(4)?.try_into().map_err(|_|wire::Error::Invalid)?);
+            let status=input.take(1)?[0];if input.remaining()!=0 {return Err(wire::Error::Invalid);}
+            let tnt=self.entities.get(&(id as u32)).and_then(|kind|entity_layouts::LAYOUTS.get(*kind as usize)).is_some_and(|row|row.0=="tnt_minecart");
+            // Opaque777 minecart-tnt-rail: поджог —70, у775 был10.
+            if tnt && ((to==JavaVersion::V26_3 && status==10) || (from==JavaVersion::V26_3 && status==70)) {
+                *translated.to_mut().last_mut().ok_or(wire::Error::Invalid)?=if to==JavaVersion::V26_3 {70}else{10};
+            }
+        }
         if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) && name=="block_change" {
             let mut view=Cursor::new(&translated);view.uint()?;
             let position:[u8;8]=view.take(8)?.try_into().map_err(|_|wire::Error::Invalid)?;let state=view.uint()?;

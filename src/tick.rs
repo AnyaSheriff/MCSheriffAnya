@@ -2577,6 +2577,11 @@ fn explode_carts(shared: &Shared, dimension: Dimension, world: &mut World) {
             let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
             let mut next_id = || shared.next_entity_id();
 
+            // Real-TNTcart777: прямой источник взрыва — сама вагонетка;
+            // владельца у запала от активирующей рельсы нет.
+            if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                world.blast_source = entity_id;
+            }
             tnt::explode(world, &mut items, &players, centre, power, true, &mut next_id);
             items.remove_carts(|cart| cart.entity_id == entity_id);
             prime_sounds(world, &mut items);

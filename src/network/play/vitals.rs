@@ -2200,7 +2200,10 @@ pub(super) async fn hit(
     source: Source,
     direct: i32,
 ) -> io::Result<Option<survival::Hit>> {
-    hit_by(stream, shared, player, amount, source, direct, 0, None, None).await
+    // Real-TNTcart777: износ и поломка идут до расчёта защиты того же взрыва.
+    let wear = (shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && matches!(source, Source::Explosion | Source::PlayerExplosion)).then_some(amount);
+    hit_by_breached(stream, shared, player, amount, source, direct, 0, None, None, 1.0, wear).await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2298,6 +2301,9 @@ async fn hit_by_breached_with_feedback(
 
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
     if let Some(wear) = armor_wear {
+        // Real-TNTcart Easy/Hard: броня теряет1/3, а не Normal2.
+        // Сначала сложность и плагин, потом износ, затем защита.
+        let wear = if matches!(source, Source::Explosion | Source::PlayerExplosion) { amount } else { wear };
         // Проверка принятия — без мутации живого Vitals/RNG. Отклонённый
         // удар, иммунитет или отмена плагином не изнашивают броню.
         let armor = player.attrs.value(crate::attributes::ARMOR) as f32;

@@ -2104,7 +2104,12 @@ async fn send_cart_moves(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
             let whole = Position { x: now.x, y: now.y, z: now.z, yaw: now.yaw, pitch: now.pitch, on_ground: now.on_ground };
 
             if teleports != shown.teleports || now.on_ground != shown.on_ground || !(fits(step.0) && fits(step.1) && fits(step.2)) {
-                send_teleport_with_speed(stream, entity_id, whole, speed).await?;
+                // Opaque777: неподвижная вагонетка меняет флаг земли без
+                // отдельной нулевой скорости. Настоящая остановка остаётся motion.
+                if shared.catalog().profile()==crate::gameplay_catalog::Profile::Preview26_3
+                    && speed==(0.,0.,0.) && shown.speed==(0.,0.,0.) {
+                    stream.send_stationary_entity_position(&teleport_with_speed_body(entity_id,whole,speed)).await?;
+                } else {send_teleport_with_speed(stream, entity_id, whole, speed).await?;}
                 (shown.place, shown.grid, shown.yaw, shown.pitch) = (place, grid, yaw, pitch);
                 shown.on_ground = now.on_ground;
                 shown.teleports = teleports;
@@ -3928,6 +3933,10 @@ async fn send_teleport_with_speed(
     to: Position,
     speed: (f64, f64, f64),
 ) -> io::Result<()> {
+    write_body(stream,teleport_with_speed_body(entity_id,to,speed)).await
+}
+
+fn teleport_with_speed_body(entity_id:i32,to:Position,speed:(f64,f64,f64))->Vec<u8> {
     let mut body = encode_varint(TELEPORT_ENTITY);
 
     body.extend_from_slice(&encode_varint(entity_id));
@@ -3946,7 +3955,7 @@ async fn send_teleport_with_speed(
 
     body.push(u8::from(to.on_ground));
 
-    write_body(stream, body).await
+    body
 }
 
 /// Отправляет System Chat Message — сообщение в чат.
