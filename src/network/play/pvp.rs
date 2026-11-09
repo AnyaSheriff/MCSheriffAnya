@@ -1210,7 +1210,9 @@ mod real_damage_armor_tests {
         let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
             Default::default(), Default::default(), Default::default(),
             crate::ops::Ops::open(Path::new("tmp/real-armor/ops.json")), crate::skins::Settings::default());
+        shared.difficulty.store(2,std::sync::atomic::Ordering::Relaxed);
         let mut player = PlayerState::new_for_catalog([71;16], "Armor".into(), None, None, 0, 71, (0.5,64.0,0.5), catalog);
+        player.entity_id = 71;
         player.game_mode = GAME_MODE_SURVIVAL;player.on_ground = true;
         let mut data = crate::stackdata::Data {damage, ..Default::default()};
         if let Some(enchant) = enchant { data.set_enchant(crate::stackdata::enchantment_number(enchant).unwrap(), 4); }
