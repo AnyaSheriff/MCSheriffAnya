@@ -107,6 +107,7 @@ class Recorder(Client):
         self.observing_sounds = False
         self.item_samples = []
         self.registry_names = {}
+        self.ready_teleports = []
         self.motion = [0., 0., 0.]
         self.floor = -59.
         self.flying = True
@@ -172,6 +173,7 @@ class Recorder(Client):
             self.send('teleport_confirm',varint(teleport))
         else:
             super().confirm_teleport(teleport, values)
+        self.ready_teleports.append({'at':time.monotonic(),'id':teleport,'pose':list(values)})
 
     def observe_packet(self, name, payload):
         data = io.BytesIO(payload)
@@ -376,16 +378,47 @@ def select_start_tick(evidence, policy='all', capture_side=None, current_origin_
     return final
 
 
-def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False, reference_sha256=None, capture_side=None):
+def record(port, protocol, s, rcon, output, version=777, sound_output=None, reference=None, tracking_kind=None, speed_attribute=None, entity_names=None, isolate_vitals=False, reference_sha256=None, capture_side=None, causal_menu_readiness=False):
     clients=[]; commands=[]
     phase_alignment={}
     origin=s.get('origin',[100,-59,100])
     def command(text, delay=True):
         text=expand(text,origin)
+        if causal_menu_readiness and text == 'kill @e[type=arrow]':
+            before = [{entity for entity, kind in client.entities if (entity_names or {}).get(kind) == 'arrow'} for client in clients]
+            issued = time.monotonic()
+            result = rcon.run(text)
+            for client in clients:client.send('tick_end',scheduled=True)
+            deadline = time.monotonic()+2
+            pending = before
+            while time.monotonic()<deadline:
+                pending = [old & {entity for entity, kind in client.entities} for old, client in zip(before, clients)]
+                if not any(pending):break
+                time.sleep(.01)
+            if any(pending):raise RuntimeError('UB readiness: old arrow IDs still tracked after isolated RCON global kill: '+repr(pending))
+            commands.append({'command':text,'via':'OWN isolated RCON','response':result,'issued_at':issued,
+                             'old_arrow_ids_before':[sorted(ids) for ids in before],
+                             'old_arrow_ids_still_tracked':[sorted(ids) for ids in pending],
+                             'all_old_ids_gone_at':time.monotonic()})
+            if delay:time.sleep(.1)
+            return
         encoded=text.encode()
+        target = (clients[0] if text.startswith('tp blackbox ') else clients[1] if text.startswith('tp blackboxb ') else None) if causal_menu_readiness else None
+        before_tp = len(target.ready_teleports) if target is not None else None
+        before_id = max((row['id'] for row in target.ready_teleports), default=-1) if target is not None else None
         clients[0].send('chat_command',varint(len(encoded))+encoded)
         result=f'{version} chat_command; responses retained in packet trace'
         commands.append({'command':text,'response':result})
+        if target is not None:
+            target.send('tick_end',scheduled=True)
+            deadline=time.monotonic()+2
+            while (len(target.ready_teleports)==before_tp or target.ready_teleports[-1]['id']<=before_id) and time.monotonic()<deadline:
+                time.sleep(.01)
+            if len(target.ready_teleports)==before_tp or target.ready_teleports[-1]['id']<=before_id:raise RuntimeError('UB readiness: fresh TP ACK missing')
+            receipt=target.ready_teleports[-1]
+            expected=list(map(float,text.split()[2:5]))
+            assert receipt['pose'][:3]==expected, ('unexpected TP pose',receipt,expected)
+            commands[-1]['fresh_tp_ack']=receipt
         if delay: time.sleep(.1)
     try:
         usernames=['blackbox','blackboxb'][:2 if s.get('second') else 1]
@@ -633,6 +666,21 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                     c.send('look',struct.pack('>ffB',*c.position[3:],int(c.position[1]<=c.floor+1e-7)))
                 c.send('block_place',b'\0'+pack_position(pos)+varint(action.get('face',1))+struct.pack('>fff',*action.get('cursor',[.5,.5,.5]))+b'\0\0'+varint(c.sequence))
                 c.send('arm_animation',b'\0')
+                if causal_menu_readiness:
+                    c.send('tick_end',scheduled=True)
+                    deadline=time.monotonic()+2
+                    received=None
+                    while time.monotonic()<deadline:
+                        if c.window is not None:
+                            for event in reversed(c.events[-200:]):
+                                if event['at']<at:break
+                                if event['name']=='window_items' and read_varint(io.BytesIO(bytes.fromhex(event['hex'])).read)==c.window:
+                                    received=event;break
+                        if received is not None:break
+                        time.sleep(.01)
+                    if received is None:raise RuntimeError('UB readiness: click did not produce actual full menu before close')
+                    commands.append({'readiness':'actual-open-window-and-full-items','action_after':action['after'],
+                                     'window':c.window,'received_at':received['at']})
             if action.get('close'):
                 window=0 if action.get('inventory') else c.window
                 if window is None:raise ValueError('close without open window')
@@ -648,6 +696,9 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         time.sleep(max(0,start+(s['record_ticks']+13)*.05-time.monotonic()))
         for c in clients:c.recording=False;c.external_ticks=False
         result={'scenario':s['name'],'protocol':version,'phase_alignment':phase_alignment,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
+        if causal_menu_readiness:
+            result['causal_menu_readiness'] = True
+            for value, client in zip(result['clients'], clients):value['wire_sent'] = client.wire_sent
         output.write_text(json.dumps(result,indent=1)+'\n')
         for text in s.get('cleanup',[]):
             special(text,clients) if text.startswith('!') else command(text)
@@ -760,7 +811,7 @@ def run_scenario_sides(args, scenario, servers, protocol, speed_attribute, previ
                         args.output/'sound-observations.json' if label=='official' and args.version==777 else None,
                         reference if label=='ours' and (not args.parallel or args.core_only) else None,
                         tracking_kind, speed_attribute, {row['id']:row['name'] for row in entities}, args.isolate_vitals,
-                        reference_sha256=reference_sha256 if label=='ours' and (not args.parallel or args.core_only) else None, capture_side=label)
+                        reference_sha256=reference_sha256 if label=='ours' and (not args.parallel or args.core_only) else None, capture_side=label, causal_menu_readiness=getattr(args,'causal_menu_readiness',False))
         if label=='official' and not args.parallel:
             # record уже завершил cleanup. Берём неизменный JSON, а не его
             # возвращённые живые списки, которые cleanup мог дополнить.
@@ -790,9 +841,12 @@ def main():
     p.add_argument('--resume',action='store_true');p.add_argument('--core-only',action='store_true')
     p.add_argument('--official-only',action='store_true')
     p.add_argument('--isolate-vitals',action='store_true')
+    p.add_argument('--causal-menu-readiness',action='store_true',help='isolated fresh paired probe: wait TP/ACK and full menu; global arrow cleanup through own RCON')
     p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
     a=p.parse_args()
+    if a.causal_menu_readiness and (a.version!=777 or a.resume or a.core_only or a.official_only):
+        p.error('--causal-menu-readiness requires a fresh paired777 recording')
     if a.skip_recorded_core:
         p.error('--skip-recorded-core disabled: re-record ours to verify runtime identity')
     assert a.binary.is_file(), 'verified binary required'
@@ -819,6 +873,7 @@ def main():
     a.output.mkdir(parents=True,exist_ok=a.resume)
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
     manifest={'isolate_vitals':a.isolate_vitals,'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'java':a.java,'max_seconds':a.max_seconds,'scenario_sha256':{name:hashlib.sha256((ROOT/'tools/blackbox/scenarios'/f'{name}.json').read_bytes()).hexdigest() for name in selected},'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
+    if a.causal_menu_readiness:manifest['causal_menu_readiness']=True
     manifest['comparison_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ('bot.js','compare.js','analyze777.py','replay777.js')}
     (a.output/f'run-{time.time_ns()}.json').write_text(json.dumps(manifest,indent=2)+'\n')
     servers=[]
