@@ -592,6 +592,9 @@ fn translated_bukkit_jars() {
     let mut host = Host::new(Arc::clone(&shared), root).unwrap();
     for name in ["java-command", "java-events", "java-scheduler"] { host.load(name).unwrap(); }
     let sender = wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(&[1;16])), name: "Первый".into() };
+    assert_eq!(host.run_command(sender.clone(), "javahello", &[]), Some((false, String::new())), "без Java-снимка игрок ещё не готов для Bukkit");
+    assert!(host.is_loaded("java-command"), "отсутствие готового игрока не должно выгружать компонент");
+    java_info(&shared);
     assert!(host.run_command(sender.clone(), "javahello", &[]).unwrap().0);
     assert_eq!(host.complete(sender.clone(), 4, "javahello", vec!["java-tab".into()]).unwrap(), vec!["java-tab-ok", "java-tab-two"]);
     host.player_join(&view());
@@ -625,6 +628,7 @@ fn translated_bukkit_listener_unregistration() {
         std::fs::copy(source.join(file), folder.join(file)).unwrap();
     }
     let shared = shared();
+    java_info(&shared);
     let mut host = Host::new(Arc::clone(&shared), root).unwrap();
     host.load("java-handlers").unwrap();
     let assert_messages = |expected: &[&str]| {
