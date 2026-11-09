@@ -1,0 +1,82 @@
+name: Private adjacent protocol codecs
+on:
+  push:
+    branches: ['feature/via-adjacent-20261109']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '4'
+jobs:
+  protocol:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: via-adjacent-protocol
+      - name: Check pinned sources and static table contracts
+        shell: bash
+        run: |
+          mkdir -p via-evidence
+          set -o pipefail
+          python3 -B -m unittest discover -s tools/protocol-bridge -p 'test_client_chain.py' -v 2>&1 | tee via-evidence/python.log
+      - name: Reproduce tables from allowed pinned JSON
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/generate_client_chain.py --cache "$RUNNER_TEMP/client-chain" --cache774 "$RUNNER_TEMP/client-chain/774" --fetch --check 2>&1 | tee via-evidence/generator.log
+      - name: Test the actual protocol package
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release -p mcsa-protocol 2>&1 | tee via-evidence/tests.log
+      - name: Strict Clippy for the actual protocol package
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --all-targets -p mcsa-protocol -- -D warnings 2>&1 | tee via-evidence/clippy.log
+      - name: Preserve compact source and verification receipt
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+          MCSA_RUN_ID: ${{ github.run_id }}
+          MCSA_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,shutil,subprocess,tarfile
+          from pathlib import Path
+          out=Path('via-evidence');out.mkdir(exist_ok=True)
+          selected=['.github/workflows/via-adjacent-checks.yml','Cargo.toml','tools/protocol-bridge/Cargo.toml',
+              'tools/protocol-bridge/src/lib.rs','tools/protocol-bridge/src/wire.rs','tools/protocol-bridge/src/items.rs',
+              'tools/protocol-bridge/src/player_position.rs','tools/protocol-bridge/src/player_info.rs',
+              'tools/protocol-bridge/src/slot_adjacent.rs','tools/protocol-bridge/src/generated_slot_adjacent.rs',
+              'tools/protocol-bridge/generate_client_chain.py','tools/protocol-bridge/client-chain-sources.json',
+              'tools/protocol-bridge/test_client_chain.py',
+              'tools/protocol-bridge/testdata/player-info-768-769-layouts.json',
+              'tools/protocol-bridge/testdata/slot-adjacent-layouts.json']
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          with tarfile.open(out/'selected-source.tar.gz','w:gz') as archive:
+              for name in selected:
+                  if Path(name).is_file():archive.add(name,arcname=name)
+          lock=Path('Cargo.lock')
+          if lock.is_file():shutil.copyfile(lock,out/'Cargo.lock')
+          sources={str(p):{'sha256':sha(p),'bytes':p.stat().st_size} for p in Path('tools/protocol-bridge/src').glob('*.rs')}
+          source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()
+          artifacts={p.name:{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.iterdir() if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':source,'tree':tree,'job_status':os.environ['MCSA_JOB_STATUS'],
+              'run_id':os.environ['MCSA_RUN_ID'],'run_attempt':os.environ['MCSA_RUN_ATTEMPT'],
+              'scope':'Protocol package only; no public admission, full client or gameplay claim',
+              'rust_sources':sources,'artifacts':artifacts},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: via-adjacent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: via-evidence/
+          retention-days: 7
+          if-no-files-found: warn
