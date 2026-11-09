@@ -116,7 +116,7 @@ def main():
     if stage == "prepare": prepare()
     elif stage == "compile": run("rust-compile", ["cargo","check","--release","--all-targets"])
     elif stage == "fixtures": fixtures()
-    elif stage == "test": run("rust-native-test", ["cargo","test","--release","--lib",TEST,"--","--ignored","--exact","--nocapture","--test-threads=1"])
+    elif stage == "test": run("rust-native-test", ["cargo","test","--release","--bin","mcsheriffanya",TEST,"--","--ignored","--exact","--nocapture","--test-threads=1"])
     elif stage == "verify": verify()
     elif stage == "finish": finish()
 
