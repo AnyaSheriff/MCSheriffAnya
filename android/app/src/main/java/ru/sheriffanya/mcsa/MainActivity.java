@@ -10,6 +10,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.color.DynamicColors;
+import com.google.android.material.color.DynamicColorsOptions;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputLayout;
@@ -75,6 +76,11 @@ public final class MainActivity extends AppCompatActivity {
     };
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        // После AppCompat: он уже выбрал светлую/тёмную тему и больше не затрёт палитру.
+        // Android DynamicColors docs: later overlays may override the dynamic colors.
+        DynamicColors.applyToActivityIfAvailable(this,new DynamicColorsOptions.Builder()
+            .setThemeOverlay(com.google.android.material.R.style.ThemeOverlay_Material3_DynamicColors_DayNight)
+            .setPrecondition((activity,theme)->new AppPreferences(activity).dynamicColors()).build());
         INK=color(com.google.android.material.R.attr.colorOnSurface);
         GREEN=color(com.google.android.material.R.attr.colorPrimary);
         MUTED=color(com.google.android.material.R.attr.colorOnSurfaceVariant);

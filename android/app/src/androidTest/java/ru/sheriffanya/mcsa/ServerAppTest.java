@@ -140,6 +140,26 @@ public class ServerAppTest {
             }
         }
     }
+    // Сравниваем с framework Android, а не с повторным применением того же overlay.
+    @androidx.annotation.RequiresApi(31)
+    private void assertSystemPalette(ActivityScenario<MainActivity> activity,boolean dark) {
+        activity.onActivity(a->{
+            int primary=a.getColor(Build.VERSION.SDK_INT>=34
+                ?(dark?android.R.color.system_primary_dark:android.R.color.system_primary_light)
+                :(dark?android.R.color.system_accent1_200:android.R.color.system_accent1_600));
+            int actual=com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorPrimary,"actual");
+            assertEquals("primary must equal the Android system palette",primary,actual);
+            Button selected=a.findViewById(dark?R.id.theme_dark:R.id.theme_light);
+            assertEquals("visible selected button must use system primary",primary,selected.getBackgroundTintList().getDefaultColor());
+            if(Build.VERSION.SDK_INT>=34) {
+                int background=a.getColor(dark?android.R.color.system_background_dark:android.R.color.system_background_light);
+                assertEquals(background,com.google.android.material.color.MaterialColors.getColor(a,android.R.attr.colorBackground,"actual"));
+                ViewGroup content=a.findViewById(android.R.id.content);
+                assertEquals("visible page background must use system palette",background,
+                    ((android.graphics.drawable.ColorDrawable)content.getChildAt(0).getBackground()).getColor());
+            }
+        });
+    }
     @Test public void appearancePersistsAndFollowsSystemWithoutChangingConfigs() throws Exception {
         AppPreferences preferences=new AppPreferences(context());
         String originalTheme=preferences.theme(); boolean originalDynamic=preferences.dynamicColors();
@@ -167,11 +187,13 @@ public class ServerAppTest {
             if(available) {
                 toggleDynamic(activity); themeReady(activity,true,R.id.theme_dark);
                 assertTrue(new AppPreferences(context()).dynamicColors());
-                activity.onActivity(a->{
-                    android.view.ContextThemeWrapper expected=new android.view.ContextThemeWrapper(a,R.style.AppTheme);
-                    expected.getTheme().applyStyle(com.google.android.material.R.style.ThemeOverlay_Material3_DynamicColors_DayNight,true);
-                    assertEquals(com.google.android.material.color.MaterialColors.getColor(expected,com.google.android.material.R.attr.colorPrimary,"expected"),com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorPrimary,"actual"));
-                });
+                assertSystemPalette(activity,true);
+                click(activity,R.id.theme_light); themeReady(activity,false,R.id.theme_light);
+                assertSystemPalette(activity,false);
+                activity.recreate(); themeReady(activity,false,R.id.theme_light);
+                assertSystemPalette(activity,false);
+                click(activity,R.id.theme_dark); themeReady(activity,true,R.id.theme_dark);
+                assertSystemPalette(activity,true);
                 screenshot("appearance-dynamic");
                 toggleDynamic(activity); themeReady(activity,true,R.id.theme_dark); assertFalse(new AppPreferences(context()).dynamicColors());
             }
@@ -184,7 +206,7 @@ public class ServerAppTest {
             activity.recreate(); themeReady(activity,false,R.id.theme_light);
             assertEquals(beforeServer,ServerSettings.read(new File(root,"config/server.properties")));
             assertEquals(beforeMcsa,ServerSettings.read(new File(root,"config/mcsa.properties")));
-            evidence.put("api",Build.VERSION.SDK_INT).put("light",true).put("dark",true).put("system_dark",true).put("system_light",true).put("explicit_ignores_system",true).put("persists_recreation",true).put("dynamic_available",available).put("dynamic_roundtrip",available).put("configs_unchanged",true);
+            evidence.put("api",Build.VERSION.SDK_INT).put("light",true).put("dark",true).put("system_dark",true).put("system_light",true).put("explicit_ignores_system",true).put("persists_recreation",true).put("dynamic_available",available).put("dynamic_roundtrip",available).put("dynamic_framework_palette",available).put("dynamic_light_dark_recreation",available).put("configs_unchanged",true);
             ServerSettings.write(new File(context().getFilesDir(),"appearance-test.json"),evidence.toString()+"\n");
         } finally {
             // Эмулятор возвращаем к исходному системному режиму, не затрагивая пользовательский ПК.
