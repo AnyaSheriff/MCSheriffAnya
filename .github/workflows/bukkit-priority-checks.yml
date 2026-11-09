@@ -41,5 +41,6 @@ jobs:
         with:
           name: bukkit-priority-${{ github.run_id }}-${{ github.run_attempt }}
           path: priority-evidence/
+          include-hidden-files: true
           retention-days: 7
           if-no-files-found: error
