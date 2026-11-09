@@ -4,11 +4,6 @@ on:
     branches: ['wip/apk-checks-*']
   workflow_dispatch:
     inputs:
-      github_ipv4:
-        description: 'Optional CI-only official GitHub IPv4 when a regional edge returns 5xx; HTTPS trust stays unchanged'
-        required: false
-        default: ''
-        type: string
       core_update_pin:
         description: 'Verified candidate native pin for OTA checks; bundled APK pin stays unchanged'
         required: false
@@ -88,7 +83,6 @@ jobs:
     timeout-minutes: 30
     env:
       TEST_API: ${{ matrix.api }}
-      GITHUB_DNS_IPV4: ${{ inputs.github_ipv4 || '' }}
       CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/runtime-pin.json' }}
     steps:
       - uses: actions/checkout@v4
@@ -97,9 +91,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: apk-build-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Select optional official GitHub test route
-        if: ${{ inputs.github_ipv4 != '' && inputs.github_ipv4 != null }}
-        run: bash tools/android/prepare-ci-github-route.sh
       - name: Allow emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -111,7 +102,7 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none ${{ inputs.github_ipv4 && '-dns-server 127.0.0.1' || '' }}
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash tools/android/run-emulator-checks.sh && bash tools/android/run-core-ota-checks.sh
       - uses: actions/upload-artifact@v4
         if: always()
