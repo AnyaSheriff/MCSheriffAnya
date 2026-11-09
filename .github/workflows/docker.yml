@@ -17,6 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare clean tagged source with the verified local lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/fetch-release-lock.py
+          mkdir "$RUNNER_TEMP/mcsa-docker"
+          git archive "$GITHUB_SHA" | tar -xf - -C "$RUNNER_TEMP/mcsa-docker"
+          cp Cargo.lock "$RUNNER_TEMP/mcsa-docker/Cargo.lock"
+          echo "MCSA_DOCKER_CONTEXT=$RUNNER_TEMP/mcsa-docker" >> "$GITHUB_ENV"
+
       - name: Validate panel scripts
         run: |
           bash -n docker/pterodactyl/entrypoint.sh
@@ -51,7 +61,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ${{ env.MCSA_DOCKER_CONTEXT }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -65,8 +75,8 @@ jobs:
       - name: Build and push panel image
         uses: docker/build-push-action@v7
         with:
-          context: .
-          file: docker/pterodactyl/Dockerfile
+          context: ${{ env.MCSA_DOCKER_CONTEXT }}
+          file: ${{ env.MCSA_DOCKER_CONTEXT }}/docker/pterodactyl/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
