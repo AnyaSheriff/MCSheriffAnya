@@ -49,6 +49,9 @@ pub const INTERNAL: JavaVersion = JavaVersion::V26_1_2;
 
 #[derive(Clone, Copy, Default)]
 pub struct Context {
+    /// Трекер уже сообщил нулевую скорость неподвижной сущности.
+    /// Линейная сверка777 не должна повторять этот нулевой motion.
+    pub stationary_position_only: bool,
     /// Последний подтверждённый wire772-вид статуи в той же точке.
     pub block_entity_view: Option<u32>,
     /// Часы снимка моба для абсолютной злости775 и оставшихся тактов773.

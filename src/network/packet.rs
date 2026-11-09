@@ -531,6 +531,11 @@ impl<'a> Outgoing<'a> {
         self.send_with_context(body, wire::Context { online_mode: Some(online_mode), ..wire::Context::default() }).await
     }
 
+    /// Только неподвижная сущность с уже известной клиенту нулевой скоростью.
+    pub async fn send_stationary_entity_position(&mut self, body:&[u8])->io::Result<()> {
+        self.send_with_context(body,wire::Context{stationary_position_only:true,..Default::default()}).await
+    }
+
     pub async fn send_entity_properties(&mut self, body:&[u8], clock:Option<i64>)->io::Result<()> {
         self.send_with_context(body,wire::Context{entity_clock:clock,..Default::default()}).await
     }

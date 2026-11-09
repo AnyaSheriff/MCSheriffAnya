@@ -609,7 +609,9 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                     let friction = if player.on_ground { 0.546 } else { 0.91 };
 
                     player.net.delayed_velocity = Some((now + 1, (velocity.0 * friction, (velocity.1 - 0.08) * 0.98, velocity.2 * friction)));
-                    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                    // Native777 bow: приземление не посылает неизменённый блок
+                    // опоры. Неверное движение исправляет обычный terrain guard.
+                    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 && strike.source!=Source::Arrow {
                         player.net.check_support = Some(now);
                     }
                     player.net.meta_hold = now + 1;
@@ -1232,6 +1234,7 @@ mod real_damage_armor_tests {
                 ignores_shield:false,thorns_slots:Vec::new(),armor_wear_plan:None,effects:Vec::new()};
             take_strike(&mut Outgoing::capture(),&shared,&mut player,&strike).await.unwrap();
             assert!(player.inventory.slot(6).is_none());assert_eq!(player.vit.health,15.);
+            assert!(player.net.check_support.is_none());
         }
     }
 

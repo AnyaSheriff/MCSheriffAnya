@@ -202,3 +202,28 @@ fn sulfur_cube_layout_and_ids_follow_the_observed_777_indices() {
     let packet=[0x63,2,9,3,0x41,0,0,0,18,1,2,255];
     assert_eq!(cb(&packet,OLD,NEW,context).unwrap()[1..],packet[1..]);
 }
+
+#[test]
+fn stationary_sync_omits_only_explicitly_redundant_zero_motion() {
+    let mut tracker=Tracker::default();
+    let known_still=wire::Context {stationary_position_only:true,..context()};
+    let zero=sync_with_speed([0.;3]);let moving=sync_with_speed([0.5,0.,0.]);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&zero,known_still).unwrap().len(),1);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&zero,context()).unwrap().len(),2);
+    assert_eq!(tracker.translate_packets(OLD,NEW,&moving,known_still).unwrap().len(),2);
+    assert_eq!(tracker.translate_packets(OLD,OLD,&zero,known_still).unwrap()[0].as_ref(),zero);
+}
+
+#[test]
+fn tnt_minecart_priming_event_maps_both_directions_without_changing_others() {
+    let mut tracker=Tracker::default();
+    let tnt=entity_layouts::LAYOUTS.iter().position(|row|row.0=="tnt_minecart").unwrap() as u32;
+    tracker.entities.insert(7,tnt);
+    let mut event=vec![0x22];event.extend(7i32.to_be_bytes());event.push(10);
+    let upgraded=tracker.translate(OLD,NEW,&event,context()).unwrap().into_owned();assert_eq!(upgraded.last(),Some(&70));
+    assert_eq!(tracker.translate(NEW,OLD,&upgraded,context()).unwrap().as_ref(),event);
+    tracker.entities.insert(7,entity_layouts::PLAYER);
+    assert_eq!(tracker.translate(OLD,NEW,&event,context()).unwrap().last(),Some(&10));
+    tracker.entities.remove(&7);
+    assert_eq!(tracker.translate(OLD,NEW,&event,context()).unwrap().last(),Some(&10));
+}
