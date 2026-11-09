@@ -19,4 +19,5 @@
         <item name="android:windowLightStatusBar">@bool/light_bars</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <style name="ThemeOverlay.Mcsa.TonalPalette" parent="" />
 </resources>

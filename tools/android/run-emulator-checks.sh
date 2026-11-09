@@ -57,6 +57,7 @@ appearance=json.loads((p/'appearance-test.json').read_text())
 assert appearance['api']==device['api']
 assert all(appearance[k] for k in ['light','dark','system_dark','system_light','explicit_ignores_system','persists_recreation','configs_unchanged'])
 assert appearance['dynamic_available']==(device['api']>=31) and appearance['dynamic_roundtrip']==appearance['dynamic_available']
+assert appearance['samsung_tonal_roles']==appearance['dynamic_available']
 assert appearance['dynamic_framework_palette']==appearance['dynamic_available'] and appearance['dynamic_light_dark_recreation']==appearance['dynamic_available']
 assert device['live_theme_change_status']['version']['protocol']==777 and device['theme_change_configs_unchanged']
 backup=json.loads((p/'backup-test.json').read_text())

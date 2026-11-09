@@ -81,6 +81,12 @@ public final class MainActivity extends AppCompatActivity {
         DynamicColors.applyToActivityIfAvailable(this,new DynamicColorsOptions.Builder()
             .setThemeOverlay(com.google.android.material.R.style.ThemeOverlay_Material3_DynamicColors_DayNight)
             .setPrecondition((activity,theme)->new AppPreferences(activity).dynamicColors()).build());
+        // На One UI новые system_primary_* могут оставаться голубыми (Material issue #3924).
+        // Берём те же выбранные пользователем 65 оттенков, не меняя палитру остальных ОС.
+        if(Build.VERSION.SDK_INT>=34&&"samsung".equalsIgnoreCase(Build.MANUFACTURER)
+                &&new AppPreferences(this).dynamicColors()) {
+            getTheme().applyStyle(R.style.ThemeOverlay_Mcsa_TonalPalette,true);
+        }
         INK=color(com.google.android.material.R.attr.colorOnSurface);
         GREEN=color(com.google.android.material.R.attr.colorPrimary);
         MUTED=color(com.google.android.material.R.attr.colorOnSurfaceVariant);

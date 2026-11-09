@@ -144,7 +144,8 @@ public class ServerAppTest {
     @androidx.annotation.RequiresApi(31)
     private void assertSystemPalette(ActivityScenario<MainActivity> activity,boolean dark) {
         activity.onActivity(a->{
-            int primary=a.getColor(Build.VERSION.SDK_INT>=34
+            boolean samsung="samsung".equalsIgnoreCase(Build.MANUFACTURER);
+            int primary=a.getColor(Build.VERSION.SDK_INT>=34&&!samsung
                 ?(dark?android.R.color.system_primary_dark:android.R.color.system_primary_light)
                 :(dark?android.R.color.system_accent1_200:android.R.color.system_accent1_600));
             int actual=com.google.android.material.color.MaterialColors.getColor(a,com.google.android.material.R.attr.colorPrimary,"actual");
@@ -152,12 +153,29 @@ public class ServerAppTest {
             Button selected=a.findViewById(dark?R.id.theme_dark:R.id.theme_light);
             assertEquals("visible selected button must use system primary",primary,selected.getBackgroundTintList().getDefaultColor());
             if(Build.VERSION.SDK_INT>=34) {
-                int background=a.getColor(dark?android.R.color.system_background_dark:android.R.color.system_background_light);
+                int background=a.getColor(samsung?(dark?android.R.color.system_neutral1_900:android.R.color.system_neutral1_10):(dark?android.R.color.system_background_dark:android.R.color.system_background_light));
                 assertEquals(background,com.google.android.material.color.MaterialColors.getColor(a,android.R.attr.colorBackground,"actual"));
                 ViewGroup content=a.findViewById(android.R.id.content);
                 assertEquals("visible page background must use system palette",background,
                     ((android.graphics.drawable.ColorDrawable)content.getChildAt(0).getBackground()).getColor());
             }
+        });
+    }
+    @androidx.annotation.RequiresApi(31)
+    private void assertSamsungTonalPalette(ActivityScenario<MainActivity> activity,boolean dark) {
+        activity.onActivity(a->{
+            android.view.ContextThemeWrapper themed=new android.view.ContextThemeWrapper(a,R.style.AppTheme);
+            // Overlay над заведомо чужим базовым цветом должен читать именно tonal ресурсы.
+            themed.getTheme().applyStyle(R.style.ThemeOverlay_Mcsa_TonalPalette,true);
+            int[] attrs={com.google.android.material.R.attr.colorPrimary,com.google.android.material.R.attr.colorOnPrimary,
+                com.google.android.material.R.attr.colorPrimaryContainer,android.R.attr.colorBackground,
+                com.google.android.material.R.attr.colorOnSurface};
+            int[] expected=dark?new int[]{android.R.color.system_accent1_200,android.R.color.system_accent1_800,
+                android.R.color.system_accent1_700,android.R.color.system_neutral1_900,android.R.color.system_neutral1_100}
+                :new int[]{android.R.color.system_accent1_600,android.R.color.system_accent1_0,
+                android.R.color.system_accent1_100,android.R.color.system_neutral1_10,android.R.color.system_neutral1_900};
+            for(int i=0;i<attrs.length;i++) assertEquals("Samsung tonal role "+attrs[i],a.getColor(expected[i]),
+                com.google.android.material.color.MaterialColors.getColor(themed,attrs[i],"tonal"));
         });
     }
     @Test public void appearancePersistsAndFollowsSystemWithoutChangingConfigs() throws Exception {
@@ -194,6 +212,10 @@ public class ServerAppTest {
                 assertSystemPalette(activity,false);
                 click(activity,R.id.theme_dark); themeReady(activity,true,R.id.theme_dark);
                 assertSystemPalette(activity,true);
+                assertSamsungTonalPalette(activity,true);
+                click(activity,R.id.theme_light); themeReady(activity,false,R.id.theme_light);
+                assertSamsungTonalPalette(activity,false);
+                click(activity,R.id.theme_dark); themeReady(activity,true,R.id.theme_dark);
                 screenshot("appearance-dynamic");
                 toggleDynamic(activity); themeReady(activity,true,R.id.theme_dark); assertFalse(new AppPreferences(context()).dynamicColors());
             }
@@ -206,7 +228,7 @@ public class ServerAppTest {
             activity.recreate(); themeReady(activity,false,R.id.theme_light);
             assertEquals(beforeServer,ServerSettings.read(new File(root,"config/server.properties")));
             assertEquals(beforeMcsa,ServerSettings.read(new File(root,"config/mcsa.properties")));
-            evidence.put("api",Build.VERSION.SDK_INT).put("light",true).put("dark",true).put("system_dark",true).put("system_light",true).put("explicit_ignores_system",true).put("persists_recreation",true).put("dynamic_available",available).put("dynamic_roundtrip",available).put("dynamic_framework_palette",available).put("dynamic_light_dark_recreation",available).put("configs_unchanged",true);
+            evidence.put("api",Build.VERSION.SDK_INT).put("light",true).put("dark",true).put("system_dark",true).put("system_light",true).put("explicit_ignores_system",true).put("persists_recreation",true).put("dynamic_available",available).put("dynamic_roundtrip",available).put("dynamic_framework_palette",available).put("samsung_tonal_roles",available).put("dynamic_light_dark_recreation",available).put("configs_unchanged",true);
             ServerSettings.write(new File(context().getFilesDir(),"appearance-test.json"),evidence.toString()+"\n");
         } finally {
             // Эмулятор возвращаем к исходному системному режиму, не затрагивая пользовательский ПК.
