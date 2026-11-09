@@ -1,0 +1,45 @@
+name: Native Bukkit legacy priority baseline
+on:
+  push:
+    branches: ['feature/bukkit-priority-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '4'
+jobs:
+  priority-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify exact baseline source and frozen expectations
+        run: python3 -B tools/plugin-translator/priority_baseline_ci.py prepare
+      - name: Compile all Rust test targets before translating fixtures
+        run: python3 -B tools/plugin-translator/priority_baseline_ci.py compile
+      - name: Compile inspect and translate two own Java fixtures through TeaVM
+        run: python3 -B tools/plugin-translator/priority_baseline_ci.py fixtures
+      - name: Execute the exact ignored Rust host baseline
+        run: python3 -B tools/plugin-translator/priority_baseline_ci.py test
+      - name: Verify actual raw messages and exact public contract mismatches
+        run: python3 -B tools/plugin-translator/priority_baseline_ci.py verify
+      - name: Preserve compact source SDK WASM and all logs even after failure
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/priority_baseline_ci.py finish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bukkit-priority-${{ github.run_id }}-${{ github.run_attempt }}
+          path: priority-evidence/
+          retention-days: 7
+          if-no-files-found: error
