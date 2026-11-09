@@ -1,0 +1,75 @@
+name: Recheck an existing verified Android APK on one device
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: 'Original successful APK build job run'
+        required: true
+        type: string
+      apk_head:
+        description: 'Exact source SHA of that APK'
+        required: true
+        type: string
+      api:
+        description: 'Device API to retry without rebuilding the APK'
+        required: true
+        default: '36'
+        type: choice
+        options: ['24', '36']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  device:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TEST_API: ${{ inputs.api }}
+      APK_BUILD_RUN: ${{ inputs.build_run }}
+      APK_SOURCE: ${{ inputs.apk_head }}
+      CORE_UPDATE_PIN: android/ota-pins/r6.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          name: apk-build-${{ inputs.build_run }}-1
+      - name: Verify successful build and unchanged APK test sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,os,re,subprocess
+          runid=os.environ['APK_BUILD_RUN'];head=os.environ['APK_SOURCE']
+          assert re.fullmatch('[0-9]+',runid) and re.fullmatch('[0-9a-f]{40}',head)
+          def api(path):return json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/'+path]))
+          run=api('actions/runs/'+runid);assert run['head_sha']==head
+          jobs=api('actions/runs/'+runid+'/jobs')['jobs'];assert next(j for j in jobs if j['name']=='build')['conclusion']=='success'
+          assert Path('apk-build-evidence/source-head.txt').read_text().strip()==head
+          assert subprocess.check_output(['git','diff',head,'HEAD','--','android/app','android/runtime-pin.json','android/ota-pins/r6.json','tools/android/run-emulator-checks.sh','tools/android/run-core-ota-checks.sh'])==b''
+          out=Path('apk-device-evidence');out.mkdir()
+          (out/'device-recheck-provenance.json').write_text(json.dumps({'apk_source':head,'apk_build_run':runid,'harness_source':os.environ['GITHUB_SHA'],'production_and_tests_identical':True,'network':'ordinary DNS and HTTPS'},indent=2)+'\n')
+          PY
+      - name: Allow emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ inputs.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/android/run-emulator-checks.sh && bash tools/android/run-core-ota-checks.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apk-device-recheck-api${{ inputs.api }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: apk-device-evidence/
+          retention-days: 7
