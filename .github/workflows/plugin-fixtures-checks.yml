@@ -1,0 +1,44 @@
+name: Recheck translated plugins with ready player fixtures
+on:
+  push:
+    branches: ['feature/plugin-fixtures-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+env:
+  CARGO_BUILD_JOBS: '4'
+jobs:
+  plugins:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify producer archives and reuse the exact five WASM components
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/blackbox/recheck_gameplay_inputs.py prepare --output recheck-evidence
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-wasip2
+      - run: cargo build --release --target wasm32-wasip2
+        working-directory: plugins-examples
+      - name: Execute all three real component tests and retain every result
+        run: python3 -B tools/blackbox/recheck_gameplay_inputs.py tests --output recheck-evidence
+      - name: Preserve compact source and runtime proof
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/blackbox/recheck_gameplay_inputs.py finish --output recheck-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-recheck-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            recheck-evidence/
+            !recheck-evidence/**/*.tar.gz
+            !recheck-evidence/**/*.zip
+          retention-days: 7
+          if-no-files-found: warn

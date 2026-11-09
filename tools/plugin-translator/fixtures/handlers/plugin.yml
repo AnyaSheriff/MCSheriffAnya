@@ -1,0 +1,7 @@
+name: java-handlers
+version: '1.0'
+main: fixtures.HandlersPlugin
+commands:
+  handlerprobe:
+    description: Проверка снятия и повторной регистрации обработчика
+    usage: /handlerprobe rearm

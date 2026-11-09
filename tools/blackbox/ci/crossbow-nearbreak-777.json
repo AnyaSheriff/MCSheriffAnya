@@ -1,0 +1,22 @@
+{
+  "schema": "crossbow-nearbreak-777-v1",
+  "source_pin": "tools/blackbox/ci/protection-edges-777.json",
+  "scope": "36 original and candidate rows: noUB survival defaultcount1/defaultdurability; main/offhand command-loaded3charges plus4 ordinaryMultishotI charge/release. No allcombat/rawpacketparity claim. Manual swapstatus55 auxiliary and stillmissing inbaseline.",
+  "probes": [
+    {
+      "label": "mainhand16",
+      "expected": "tools/protocol-bridge/testdata/crossbow-nearbreak-observations-777.json",
+      "expected_sha256": "005b75712a5fbedfb36c33b88cc4de4e4b1032fcb3319a303ea3ee8b3e065fe7",
+      "scenario_sha256": "979f7e79f3d0fabc70fe3bf507963cd0883439445001d8f30f276937c7676ca1",
+      "criteria_sha256": "3c48525c9ee6dafed3a0414d95e4cf485ed6faa69f91b546c05d09720fcc74ee"
+    },
+    {
+      "label": "hands-loading20",
+      "expected": "tools/protocol-bridge/testdata/crossbow-hands-loading-observations-777.json",
+      "expected_sha256": "b1f913d0ad18468e6806c4e2b69c432b105a27e2dc209f60250e438d836717c1",
+      "scenario_sha256": "6f2fe23963df926f59867da0fda21b3808987d96322e7d84f6a8681acd2e9763",
+      "criteria_sha256": "ddf11e58989ef1fe3ec329ce0f78a2e69a2e96b03d5288f55838e587bd9b4ca5"
+    }
+  ],
+  "prior_combat": "Root workflow must also run armor_sources_sample.ci_run once with same candidate. This entry intentionally reports only fresh crossbow36, not old combat regressions."
+}

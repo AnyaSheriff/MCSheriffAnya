@@ -1,0 +1,129 @@
+name: Gameplay and compatibility batch
+on:
+  push:
+    branches: ['feature/gameplay-compat-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '4'
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-wasip2
+      - run: cargo build --release --target wasm32-wasip2
+        working-directory: plugins-examples
+      - run: cargo clippy --release --all-targets --workspace -- -D warnings
+      - run: cargo test --release --workspace
+      - run: cargo test --release --no-default-features
+      - run: cargo build --release
+      - run: python3 -B -m unittest discover -s tools/blackbox -p 'test_armor_sources*.py' -v
+      - run: python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_nearbreak_ci.py' -v
+      - run: python3 -B -m unittest discover -s tools/protocol-bridge -p 'test_client_chain.py' -v
+      - name: Reproduce pinned client tables without opening admission
+        run: python3 -B tools/protocol-bridge/generate_client_chain.py --cache "$RUNNER_TEMP/client-chain" --cache774 "$RUNNER_TEMP/client-chain/774" --fetch --check
+  paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release
+      - run: python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_nearbreak_ci.py' -v
+      - name: Fresh crossbow original and candidate
+        run: python3 -B tools/blackbox/crossbow_nearbreak_ci.py --output crossbow-evidence
+      - name: Previous real armor and combat regressions
+        run: python3 -B tools/blackbox/armor_sources_sample.py ci --output armor-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-combat-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            crossbow-evidence/
+            armor-evidence/
+          retention-days: 7
+          if-no-files-found: warn
+  plugins:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-wasip2
+      - run: cargo build --release --target wasm32-wasip2
+        working-directory: plugins-examples
+      - name: Compile SDK and reject unsupported signatures
+        run: |
+          python3 -B tools/plugin-translator/test-inspector.py
+          python3 -B tools/plugin-translator/test-metadata-guards.py
+          python3 -B tools/plugin-translator/test-enchantment-removal.py
+      - name: Translate five own fixture JARs into actual WASM components
+        run: |
+          for fixture in command events scheduler handlers enchantments; do
+            python3 -B tools/plugin-translator/translate.py "tools/plugin-translator/target/$fixture.jar" --output tmp/java-test/plugins
+          done
+      - name: Execute old and new translated components through the Rust host
+        run: |
+          cargo test --release plugins::tests::translated_bukkit_jars -- --ignored --exact --nocapture --test-threads=1
+          cargo test --release plugins::tests::translated_bukkit_listener_unregistration -- --ignored --exact --nocapture --test-threads=1
+          cargo test --release plugins::tests::translated_bukkit_enchantment_removal_reaches_native_inventory -- --ignored --exact --nocapture --test-threads=1
+      - name: Preserve source and actual component receipts
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,shutil,subprocess
+          out=Path('plugin-evidence');out.mkdir()
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          subprocess.run(['git','archive','--format=tar.gz','--output='+str(out/'source.tar.gz'),'HEAD'],check=True)
+          source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          sdk=Path('tools/plugin-translator/target/mcsa-bukkit.jar')
+          if sdk.exists():shutil.copy2(sdk,out/sdk.name)
+          lock=Path('Cargo.lock')
+          if lock.exists():shutil.copy2(lock,out/lock.name)
+          parts={str(p):{'sha256':sha(p),'bytes':p.stat().st_size} for p in Path('tmp/java-test/plugins').glob('*/*') if p.is_file() and p.name in ['plugin.wasm','plugin.toml']}
+          own={str(p):sha(p) for folder in ['tools/plugin-translator/mcsa-bukkit/src/main/java','tools/plugin-translator/fixtures'] for p in Path(folder).rglob('*') if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':source,'status':os.environ['MCSA_JOB_STATUS'],'source_archive_sha256':sha(out/'source.tar.gz'),'sdk_sha256':sha(sdk) if sdk.exists() else None,'components':parts,'own_sources_sha256':own},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-plugins-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            plugin-evidence/
+            tmp/java-test/plugins/
+          retention-days: 7
+          if-no-files-found: warn
+  build-other:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release

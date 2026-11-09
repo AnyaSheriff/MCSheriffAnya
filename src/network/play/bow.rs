@@ -392,12 +392,23 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     let speed = if has_rocket { crate::firework::CROSSBOW_SPEED } else { combat::CROSSBOW_SPEED };
     let dimension = player.dimension;
     let mut wear = 0;
+    // Opaque777 crossbow-nearbreak: поломавшийся после стрелы/ракеты
+    // арбалет не выпускает оставшиеся заряды. Без Unbreaking каждый
+    // расход известен заранее; RNG и отмены плагинов здесь не предсказываем.
+    let salvo_budget = if !creative && shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && data.level("unbreaking") <= 0 && !crate::plugins::active()
+    {
+        combat::durability_left(&crossbow).filter(|left| *left > 0)
+    } else {
+        None
+    };
     player.progress.used(crossbow.item);
     player.progress.trigger("adventure/ol_betsy");
 
     // Оригиналы775/777: без «залпа» все заряды идут прямо. Ракета в
     // смешанном списке задаёт скорость1,6 также стрелам этого выстрела.
     for (index, projectile) in projectiles.iter().enumerate() {
+        if salvo_budget.is_some_and(|left| wear >= left) { break; }
         let offset = crossbow_offset(index, projectiles.len(), data.level("multishot") > 0);
         let pitch = if index == 0 { 1.0 } else { 1.0 / (vitals::world_random(shared, dimension) * 0.5 + 1.8) + if index % 2 == 1 { 0.63 } else { 0.43 } };
         let notified = crate::plugins::active();

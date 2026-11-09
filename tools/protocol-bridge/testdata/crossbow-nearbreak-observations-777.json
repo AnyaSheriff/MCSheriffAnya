@@ -1,0 +1,369 @@
+{
+  "scope": "26.3/777;mainhand;survival;count1;3 command-loaded projectiles;damage0/461/463/464;no enchants/plugins/custom-durability;ordinaryuse yaw0/pitch-20",
+  "schema": "crossbow-nearbreak-official-777-v1",
+  "scenario_sha256": "979f7e79f3d0fabc70fe3bf507963cd0883439445001d8f30f276937c7676ca1",
+  "official_raw_sha256": "2a3238f9bc356d35dc56be62776978ce0817997ca46f848414926d52f52a4a0f",
+  "rows": [
+    {
+      "trial": 0,
+      "projectiles": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ],
+      "initial_damage": 0,
+      "emitted": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ],
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ]
+    },
+    {
+      "trial": 1,
+      "projectiles": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ],
+      "initial_damage": 461,
+      "emitted": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ],
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ]
+    },
+    {
+      "trial": 2,
+      "projectiles": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ],
+      "initial_damage": 463,
+      "emitted": [
+        "arrow",
+        "arrow"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 3,
+      "projectiles": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ],
+      "initial_damage": 464,
+      "emitted": [
+        "arrow"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 4,
+      "projectiles": [
+        "firework_rocket",
+        "firework_rocket",
+        "firework_rocket"
+      ],
+      "initial_damage": 0,
+      "emitted": [
+        "firework_rocket",
+        "firework_rocket",
+        "firework_rocket"
+      ],
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 9
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ]
+    },
+    {
+      "trial": 5,
+      "projectiles": [
+        "firework_rocket",
+        "firework_rocket",
+        "firework_rocket"
+      ],
+      "initial_damage": 461,
+      "emitted": [
+        "firework_rocket",
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 6,
+      "projectiles": [
+        "firework_rocket",
+        "firework_rocket",
+        "firework_rocket"
+      ],
+      "initial_damage": 463,
+      "emitted": [
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 7,
+      "projectiles": [
+        "firework_rocket",
+        "firework_rocket",
+        "firework_rocket"
+      ],
+      "initial_damage": 464,
+      "emitted": [
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 8,
+      "projectiles": [
+        "arrow",
+        "firework_rocket",
+        "spectral_arrow"
+      ],
+      "initial_damage": 0,
+      "emitted": [
+        "arrow",
+        "firework_rocket",
+        "spectral_arrow"
+      ],
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 5
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ]
+    },
+    {
+      "trial": 9,
+      "projectiles": [
+        "arrow",
+        "firework_rocket",
+        "spectral_arrow"
+      ],
+      "initial_damage": 461,
+      "emitted": [
+        "arrow",
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 10,
+      "projectiles": [
+        "arrow",
+        "firework_rocket",
+        "spectral_arrow"
+      ],
+      "initial_damage": 463,
+      "emitted": [
+        "arrow",
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 11,
+      "projectiles": [
+        "arrow",
+        "firework_rocket",
+        "spectral_arrow"
+      ],
+      "initial_damage": 464,
+      "emitted": [
+        "arrow"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 12,
+      "projectiles": [
+        "firework_rocket",
+        "arrow",
+        "spectral_arrow"
+      ],
+      "initial_damage": 0,
+      "emitted": [
+        "firework_rocket",
+        "arrow",
+        "spectral_arrow"
+      ],
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 5
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ]
+    },
+    {
+      "trial": 13,
+      "projectiles": [
+        "firework_rocket",
+        "arrow",
+        "spectral_arrow"
+      ],
+      "initial_damage": 461,
+      "emitted": [
+        "firework_rocket",
+        "arrow"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 14,
+      "projectiles": [
+        "firework_rocket",
+        "arrow",
+        "spectral_arrow"
+      ],
+      "initial_damage": 463,
+      "emitted": [
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    },
+    {
+      "trial": 15,
+      "projectiles": [
+        "firework_rocket",
+        "arrow",
+        "spectral_arrow"
+      ],
+      "initial_damage": 464,
+      "emitted": [
+        "firework_rocket"
+      ],
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ]
+    }
+  ],
+  "open": [
+    "normal loading rather than command-loaded",
+    "offhand",
+    "Unbreaking/RNG",
+    "creative",
+    "plugins",
+    "custom max_damage/count components",
+    "other charge list sizes",
+    "other versions"
+  ]
+}

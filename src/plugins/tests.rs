@@ -592,6 +592,9 @@ fn translated_bukkit_jars() {
     let mut host = Host::new(Arc::clone(&shared), root).unwrap();
     for name in ["java-command", "java-events", "java-scheduler"] { host.load(name).unwrap(); }
     let sender = wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(&[1;16])), name: "Первый".into() };
+    assert_eq!(host.run_command(sender.clone(), "javahello", &[]), Some((false, String::new())), "без Java-снимка игрок ещё не готов для Bukkit");
+    assert!(host.is_loaded("java-command"), "отсутствие готового игрока не должно выгружать компонент");
+    java_info(&shared);
     assert!(host.run_command(sender.clone(), "javahello", &[]).unwrap().0);
     assert_eq!(host.complete(sender.clone(), 4, "javahello", vec!["java-tab".into()]).unwrap(), vec!["java-tab-ok", "java-tab-two"]);
     host.player_join(&view());
@@ -611,6 +614,54 @@ fn translated_bukkit_jars() {
     host.player_quit(&view());
     for name in ["java-command", "java-events", "java-scheduler"] { host.unload(name).unwrap(); }
     assert!(host.is_empty());
+}
+
+/// Отдельный настоящий Java-плагин, переведённый TeaVM в WASM; без ASM-заглушек.
+#[test]
+#[ignore = "нужен переведённый fixtures/handlers в tmp/java-test/plugins/java-handlers"]
+fn translated_bukkit_listener_unregistration() {
+    let root = server_root("java-handlers");
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-test/plugins/java-handlers");
+    let folder = root.join("plugins/java-handlers");
+    std::fs::create_dir_all(folder.join("data")).unwrap();
+    for file in ["plugin.toml", "plugin.wasm"] {
+        std::fs::copy(source.join(file), folder.join(file)).unwrap();
+    }
+    let shared = shared();
+    java_info(&shared);
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap();
+    host.load("java-handlers").unwrap();
+    let assert_messages = |expected: &[&str]| {
+        let mut actual: Vec<_> = shared.players.lock().unwrap().take_orders(&[1;16]).into_iter().filter_map(|order| {
+            if let crate::players::Order::Message { component } = order { Some(component) } else { None }
+        }).collect();
+        let mut expected: Vec<_> = expected.iter().map(|text| crate::network::nbt::text_component(text)).collect();
+        actual.sort();
+        expected.sort();
+        assert_eq!(actual, expected, "точные сообщения настоящего Java-компонента");
+    };
+    assert_messages(&[]);
+    host.player_join(&view());
+    assert!(host.is_loaded("java-handlers"));
+    assert_messages(&["Handler first 1", "Handler second 1"]);
+    host.player_join(&view());
+    assert!(host.is_loaded("java-handlers"));
+    assert_messages(&["Handler second 2"]);
+    let sender = wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(&[1;16])), name: "Первый".into() };
+    assert!(host.run_command(sender, "handlerprobe", &["rearm".into()]).unwrap().0);
+    assert!(host.is_loaded("java-handlers"));
+    assert_messages(&["Handler first rearmed"]);
+    host.player_join(&view());
+    assert!(host.is_loaded("java-handlers"));
+    assert_messages(&["Handler first 2", "Handler second 3"]);
+    host.player_join(&view());
+    assert!(host.is_loaded("java-handlers"));
+    assert_messages(&["Handler second 4"]);
+    host.unload("java-handlers").unwrap();
+    assert!(host.is_empty());
+    assert!(host.command_level("handlerprobe").is_none());
+    host.player_join(&view());
+    assert_messages(&[]);
 }
 
 #[test]
@@ -1009,4 +1060,77 @@ fn fourlegacy_queued_entity_events_discard_retired_sources() {
         assert!(host.native_event(kind,fields).is_some());assert!(host.is_loaded("fourlegacy"));
     }
     host.unload("fourlegacy").unwrap();
+}
+
+/// Реальный Java-компонент меняет native Stack через WIT и очередь SetSlot.
+#[test]
+#[ignore = "нужен переведённый fixtures/enchantments в tmp/java-test/plugins/java-enchantments"]
+fn translated_bukkit_enchantment_removal_reaches_native_inventory() {
+    let root = server_root("java-enchantments");
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-test/plugins/java-enchantments");
+    let folder = root.join("plugins/java-enchantments");
+    std::fs::create_dir_all(folder.join("data")).unwrap();
+    for file in ["plugin.toml", "plugin.wasm"] {
+        std::fs::copy(source.join(file), folder.join(file)).unwrap();
+    }
+    let shared = shared();
+    java_info(&shared);
+    let item = crate::blocks::item_named("diamond_sword").unwrap();
+    let mut data = crate::stackdata::Data {
+        damage: 9,
+        name: Some("Keep".into()),
+        unbreakable: true,
+        plugin_meta: Some(r#"{"name":{"text":"Keep"},"lore":[{"text":"Lore"}],"pdc":{"java-enchantments:probe":{"type":"string","value":"keep"}}}"#.into()),
+        ..Default::default()
+    };
+    data.set_enchant(crate::stackdata::enchantment_number("sharpness").unwrap(), 3);
+    data.set_enchant(crate::stackdata::enchantment_number("unbreaking").unwrap(), 2);
+    {
+        let mut players = shared.players.lock().unwrap();
+        let inventory = &mut players.ui.info.get_mut(&[1;16]).unwrap().inventory;
+        inventory.resize(46, None);
+        inventory[36] = Some(crate::inventory::Stack::new(item, 1).with_extras(data));
+    }
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap();
+    host.load("java-enchantments").unwrap();
+    assert!(shared.players.lock().unwrap().take_orders(&[1;16]).is_empty());
+    let assert_phase = |sharpness, unbreaking, message: &str, changed: bool| {
+        let mut players = shared.players.lock().unwrap();
+        let actual = players.ui.info[&[1;16]].inventory[36].unwrap();
+        assert_eq!((actual.item, actual.count), (item, 1));
+        let extras = actual.extras();
+        assert_eq!((extras.level("sharpness"), extras.level("unbreaking")), (sharpness, unbreaking));
+        assert_eq!(extras.damage, 9);
+        assert_eq!(extras.name.as_deref(), Some("Keep"));
+        assert!(extras.unbreakable, "неизвестный Java-метаданным native компонент сохранён");
+        let metadata: serde_json::Value = serde_json::from_str(extras.plugin_meta.as_deref().unwrap()).unwrap();
+        assert_eq!(metadata["name"], serde_json::json!({"text":"Keep"}));
+        assert_eq!(metadata["lore"], serde_json::json!([{"text":"Lore"}]));
+        assert_eq!(metadata["pdc"], serde_json::json!({"java-enchantments:probe":{"type":"string","value":"keep"}}));
+        if unbreaking == 0 { assert!(extras.enchants.is_empty() && metadata.get("enchants").is_none()); }
+        let orders = players.take_orders(&[1;16]);
+        let writes: Vec<_> = orders.iter().filter_map(|order| match order {
+            crate::players::Order::SetSlot { slot, stack } => Some((*slot, *stack)),
+            _ => None,
+        }).collect();
+        if changed { assert_eq!(writes, [(36, Some(actual))]); } else { assert!(writes.is_empty()); }
+        let messages: Vec<_> = orders.into_iter().filter_map(|order| match order {
+            crate::players::Order::Message { component } => Some(component),
+            _ => None,
+        }).collect();
+        assert_eq!(messages, [crate::network::nbt::text_component(message)]);
+    };
+    let sender = wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(&[1;16])), name: "Первый".into() };
+    for (phase, message, unbreaking, changed) in [
+        ("direct", "Removed stack 3; repeat 0", 2, true),
+        ("meta", "Removed meta true; repeat false", 0, true),
+        ("absent", "Absent enchantments unchanged", 0, false),
+    ] {
+        assert!(host.run_command(sender.clone(), "enchantprobe", &[phase.into()]).unwrap().0);
+        assert!(host.is_loaded("java-enchantments"));
+        assert_phase(0, unbreaking, message, changed);
+    }
+    host.unload("java-enchantments").unwrap();
+    assert!(host.is_empty());
+    assert!(host.command_level("enchantprobe").is_none());
 }
