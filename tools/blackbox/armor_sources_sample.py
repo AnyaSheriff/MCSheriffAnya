@@ -163,6 +163,8 @@ def ci_run(output):
   with (probe/'recorder.log').open('w') as f:subprocess.run(command+[name(k) for k in CASES],stdout=f,stderr=subprocess.STDOUT,check=True,timeout=760)
   analyze(probe,work/'recordings',data,strict=True)
   lifecycle=json.loads((work/'recordings/lifecycle.json').read_text());assert not lifecycle['cleanup_errors'] and all(lifecycle['ports_free'].values())
+  from armor_difficulty_sample import ci_run as difficulty_controls
+  difficulty_controls(output/'difficulty',work,data,binary,work/'server.jar')
   legacy=output/'legacy-bows';legacy.mkdir();oldnames=['pvp-bow','pvp-bow-power','pvp-bow-punch','minecart-tnt-rail']
   second=command.copy();second[second.index('--output')+1]=str(work/'legacy-recordings')
   with (legacy/'recorder.log').open('w') as f:subprocess.run(second+oldnames,stdout=f,stderr=subprocess.STDOUT,check=True,timeout=760)

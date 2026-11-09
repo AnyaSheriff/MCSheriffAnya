@@ -1,0 +1,552 @@
+{
+  "schema": "armor-difficulty777-v1",
+  "scope": "Real unowned TNTcart; same10cases per difficulty. Peaceful requires actual explosion/priming70/despawn and count1/preserved item echo plus HP20/no damage. Normal36 expected outcomes frozen separately before first gameplay edit. This extra matrix frozen before scaling wear fix.",
+  "expected": {
+    "peaceful": [
+      {
+        "trial": 0,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 1,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": "blast_protection",
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 2,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 3,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 4,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": "unbreaking",
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 5,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 6,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": "blast_protection",
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 7,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 8,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      },
+      {
+        "trial": 9,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": "unbreaking",
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 0.0,
+        "broken": [
+          0,
+          0
+        ],
+        "source": null,
+        "direct_roles": [
+          "no_damage",
+          "no_damage"
+        ]
+      }
+    ],
+    "easy": [
+      {
+        "trial": 0,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 1,
+        "victim_damage": 4.5465087890625,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 1,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": "blast_protection",
+        "initial_damage": 0,
+        "final_damage": 1,
+        "victim_damage": 3.091625213623047,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 2,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 5.8741455078125,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 3,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 5.8741455078125,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 4,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": "unbreaking",
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 5.8741455078125,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 5,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 1,
+        "victim_damage": 4.5465087890625,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 6,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": "blast_protection",
+        "initial_damage": 0,
+        "final_damage": 1,
+        "victim_damage": 3.091625213623047,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 7,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 5.8741455078125,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 8,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 5.8741455078125,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 9,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": "unbreaking",
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 5.8741455078125,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      }
+    ],
+    "hard": [
+      {
+        "trial": 0,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 3,
+        "victim_damage": 13.364307403564453,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 1,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": "blast_protection",
+        "initial_damage": 0,
+        "final_damage": 3,
+        "victim_damage": 9.087729454040527,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 2,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 14.6224365234375,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 3,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 14.6224365234375,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 4,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": "unbreaking",
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 14.6224365234375,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 5,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 3,
+        "victim_damage": 13.364307403564453,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 6,
+        "item": "diamond_chestplate",
+        "slot": 6,
+        "enchantment": "blast_protection",
+        "initial_damage": 0,
+        "final_damage": 3,
+        "victim_damage": 9.087729454040527,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 7,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 0,
+        "final_damage": 0,
+        "victim_damage": 14.6224365234375,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 8,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": null,
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 14.6224365234375,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      },
+      {
+        "trial": 9,
+        "item": "elytra",
+        "slot": 6,
+        "enchantment": "unbreaking",
+        "initial_damage": 431,
+        "final_damage": 431,
+        "victim_damage": 14.6224365234375,
+        "broken": [
+          0,
+          0
+        ],
+        "source": "minecraft:explosion",
+        "direct_roles": [
+          "minecart",
+          "minecart"
+        ]
+      }
+    ]
+  }
+}

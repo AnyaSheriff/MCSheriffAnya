@@ -2301,6 +2301,9 @@ async fn hit_by_breached_with_feedback(
 
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
     if let Some(wear) = armor_wear {
+        // Real-TNTcart Easy/Hard: броня теряет1/3, а не Normal2.
+        // Сначала сложность и плагин, потом износ, затем защита.
+        let wear = if matches!(source, Source::Explosion | Source::PlayerExplosion) { amount } else { wear };
         // Проверка принятия — без мутации живого Vitals/RNG. Отклонённый
         // удар, иммунитет или отмена плагином не изнашивают броню.
         let armor = player.attrs.value(crate::attributes::ARMOR) as f32;

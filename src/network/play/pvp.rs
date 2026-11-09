@@ -1252,6 +1252,19 @@ mod real_damage_armor_tests {
     }
 
     #[tokio::test]
+    async fn real_explosion_armor_wear_and_hp_follow_all_four_difficulties() {
+        // Ожидаемые f32 HP взяты из настоящих TNTcart записей обоих клиентов.
+        for (difficulty,wear,hp) in [(0,0,0x41a00000u32),(1,1,0x41774180u32),(2,2,0x413d9c73u32),(3,3,0x40d45798u32)] {
+            let (shared,mut player)=scene("diamond_chestplate",0,None);
+            shared.difficulty.store(difficulty,std::sync::atomic::Ordering::Relaxed);
+            let done=vitals::hit(&mut Outgoing::capture(),&shared,&mut player,9.748291,Source::Explosion,77).await.unwrap();
+            assert_eq!(done.is_some(),difficulty!=0);
+            assert_eq!(player.inventory.slot(6).unwrap().extras().damage,wear);
+            assert_eq!(player.vit.health.to_bits(),hp);
+        }
+    }
+
+    #[tokio::test]
     async fn immune_and_rejected_repeat_explosion_do_not_wear_armor() {
         let (shared,mut player) = scene("diamond_chestplate",0,None);
         player.game_mode=GAME_MODE_CREATIVE;
