@@ -4,6 +4,11 @@ on:
     branches: ['wip/apk-checks-*']
   workflow_dispatch:
     inputs:
+      core_update_pin:
+        description: 'Verified candidate native pin for OTA checks; bundled APK pin stays unchanged'
+        required: false
+        default: 'android/runtime-pin.json'
+        type: string
       test_manifest_url:
         description: 'Signed candidate channel for the emulator build only; phone APKs keep the public channel'
         required: false
@@ -17,6 +22,7 @@ jobs:
     timeout-minutes: 30
     env:
       TEST_MANIFEST_URL: ${{ inputs.test_manifest_url || '' }}
+      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/runtime-pin.json' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +42,7 @@ jobs:
           mkdir -p apk-phone apk-test apk-build-evidence
           for abi in armeabi-v7a arm64-v8a x86_64; do
             extra=()
+            if [ "$abi" = x86_64 ]; then extra+=("-PcoreUpdateTestPin=../$CORE_UPDATE_PIN"); fi
             if [ "$abi" = x86_64 ] && [ -n "$TEST_MANIFEST_URL" ]; then extra+=("-PcoreManifestUrl=$TEST_MANIFEST_URL"); fi
             (cd android && ./gradlew --no-daemon -PapkAbi="$abi" "${extra[@]}" :app:clean :app:assembleDebug) 2>&1 | tee "apk-build-evidence/build-$abi.log"
             if [ "$abi" = x86_64 ]; then out=apk-test; else out=apk-phone; fi
@@ -46,6 +53,7 @@ jobs:
           cp -r android/app/build/test-results apk-build-evidence/
           cp android/app/build/reports/lint-results-debug.* apk-build-evidence/
           cp android/runtime/receipt.json android/runtime/selection.json android/runtime-pin.json apk-build-evidence/
+          cp "$CORE_UPDATE_PIN" apk-build-evidence/core-update-test-pin.json
           git rev-parse HEAD > apk-build-evidence/source-head.txt
           python3 tools/android/verify-apk.py apk-phone/app-armeabi-v7a-debug.apk armeabi-v7a
           python3 tools/android/verify-apk.py apk-phone/app-arm64-v8a-debug.apk arm64-v8a
@@ -75,6 +83,7 @@ jobs:
     timeout-minutes: 30
     env:
       TEST_API: ${{ matrix.api }}
+      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/runtime-pin.json' }}
     steps:
       - uses: actions/checkout@v4
         with:

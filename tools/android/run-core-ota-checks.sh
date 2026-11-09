@@ -40,10 +40,10 @@ import hashlib,json,os
 root=Path('apk-device-evidence/ota');proof=json.loads((root/'ota-test.json').read_text());security=json.loads((root/'ota-security.json').read_text())
 assert proof['api']==security['api']==int(os.environ['TEST_API']) and proof['abi']=='x86_64'
 assert all(proof[k] for k in ['no_apk_reinstall','world_retained','settings_retained','automatic_backup','ui_rollback','corrupt_module_rejected','interrupted_start_recovered','failed_start_recovered','running_install_rejected','replay_rejected','corrupt_pointer_recovered','read_only'])
-pin=json.loads(Path('android/runtime-pin.json').read_text());revision=pin['core_revision']+1
-assert proof['bundled_build']==pin['runtimes']['x86_64']['build_id'] and proof['updated_build']==pin['updates'][str(revision)]['build_id']
+pin=json.loads(Path('android/runtime-pin.json').read_text());update_pin=json.loads(Path(os.environ.get('CORE_UPDATE_PIN','android/runtime-pin.json')).read_text());revision=max(map(int,update_pin['updates']))
+assert proof['bundled_build']==pin['runtimes']['x86_64']['build_id'] and proof['updated_build']==update_pin['updates'][str(revision)]['build_id']
 assert proof['updated_status']['version']['protocol']==777 and proof['updated_status']['players']['max']==7
-assert proof['updated_sha256']==pin['updates'][str(revision)]['runtimes']['x86_64']['sha256']
+assert proof['updated_sha256']==update_pin['updates'][str(revision)]['runtimes']['x86_64']['sha256']
 assert security['untrusted_tls_rejected'] and security['tampered_signature_rejected'] and security['wrong_signer_rejected'] and security['wrong_abi_rejected']
 assert security['incompatible_fields_rejected']==9 and security['unsafe_urls_rejected']==5 and security['invalid_sizes_rejected']==2
 log=(root/'ota-native.log').read_text();assert 'MCSA_CORE_BUILD='+proof['updated_build'] in log and 'Готово (' in log

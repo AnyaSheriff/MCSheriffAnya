@@ -15,11 +15,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('native', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--pin', type=Path, default=ROOT / 'android/runtime-pin.json', help='Verified native pin; may describe an OTA-only build')
     parser.add_argument('--revision', type=int, help='Defaults to the highest verified candidate in the pin')
     parser.add_argument('--tag', help='Defaults to v + the verified pin version')
     parser.add_argument('--notes', required=True)
     args = parser.parse_args()
-    pin = json.loads((ROOT / 'android/runtime-pin.json').read_text())
+    pin = json.loads(args.pin.read_text())
     if args.tag is None:
         args.tag = 'v' + pin['version']
     if args.revision is None:

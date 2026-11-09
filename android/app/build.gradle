@@ -5,6 +5,9 @@ def runtimePin = new groovy.json.JsonSlurper().parse(rootProject.file('runtime-p
 def selectedRuntime = runtimePin.runtimes[selectedAbi]
 def sharedCore = runtimePin.format == 2
 def quoteConfig = { value -> groovy.json.JsonOutput.toJson(value.toString()) }
+def testUpdatePinFile = rootProject.file(providers.gradleProperty('coreUpdateTestPin').getOrElse('runtime-pin.json'))
+def generatedUpdateAssets = layout.buildDirectory.dir('generated/core-update-test-assets')
+
 android {
     namespace 'ru.sheriffanya.mcsa'
     compileSdk 35
@@ -26,7 +29,7 @@ android {
         buildConfigField 'String', 'CORE_MANIFEST_URL', quoteConfig(providers.gradleProperty('coreManifestUrl').getOrElse('https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/android-updates/preview.json'))
     }
     buildFeatures { buildConfig true }
-    sourceSets { main { jniLibs.srcDirs = [providers.gradleProperty('runtimeDir').getOrElse('../runtime')] } }
+    sourceSets { androidTest { assets.srcDir generatedUpdateAssets }; main { jniLibs.srcDirs = [providers.gradleProperty('runtimeDir').getOrElse('../runtime')] } }
     packaging { jniLibs { useLegacyPackaging true; keepDebugSymbols += ['**/libmcsa.so', '**/libmcsa_core.so'] } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     lint { abortOnError true }
@@ -51,6 +54,21 @@ tasks.register('checkRuntime') {
     }
 }
 tasks.named('preBuild').configure { dependsOn 'checkRuntime' }
+tasks.register('generateCoreUpdateTestFixture') {
+    inputs.file testUpdatePinFile
+    outputs.dir generatedUpdateAssets
+    doLast {
+        def pin = new groovy.json.JsonSlurper().parse(testUpdatePinFile)
+        def revision = pin.updates.keySet().collect { it.toInteger() }.max()
+        def update = pin.updates[revision.toString()]
+        def folder = generatedUpdateAssets.get().asFile
+        folder.mkdirs()
+        new File(folder, 'core-update-expected.json').text = groovy.json.JsonOutput.toJson(
+            [revision: revision, build_id: update.build_id, runtimes: update.runtimes])
+    }
+}
+tasks.matching { it.name == 'preDebugAndroidTestBuild' }.configureEach { dependsOn 'generateCoreUpdateTestFixture' }
+
 dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.7.0'
