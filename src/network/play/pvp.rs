@@ -518,9 +518,10 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
         strike.projectile.unwrap_or(strike.attacker)
     } else { strike.attacker };
     // Opaque777 armor-break42226930283: damage239 ломается ДО защиты
-    // того же удара, HP20→13, а не13,7. Остальные источники сохраняют путь.
+    // того же удара, HP20→13, а не13,7. Real-arrow777 подтверждает тот же порядок
+    // для стрел: сломанный damage527/ProjectileProtectionIV даёт HP20→15.
     let early_armor_wear = shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
-        && strike.source == Source::PlayerAttack;
+        && matches!(strike.source, Source::PlayerAttack | Source::Arrow);
     let result = if mortal {
         vitals::hit_by_breached_with_armor_plan(stream, shared, player, damage, strike.source, direct, strike.attacker, Some(killer), Some(yaw), strike.breach_scale,
             early_armor_wear.then_some(strike.damage), strike.armor_wear_plan.as_ref()).await?
@@ -546,14 +547,14 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             // Износ надетой брони: каждой детали 1 за каждые 4 единицы урона.
             if !early_armor_wear && !combat::bypasses_armor(strike.source) {
                 wear_armor(shared, player, strike.damage);
-                // Оригинал777 itemaudit4-shield: износ брони сообщается
-                // вместе с отложенными Metadata/скоростью, через такт после стрелы.
-                if strike.source.is_projectile() && shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
-                    for (slot, _) in combat::ARMOR_SLOTS {
-                        if player.net.slots_dirty.contains(&slot) {
-                            player.net.slots_dirty.retain(|dirty| *dirty != slot);
-                            player.net.slot_changed_later(slot);
-                        }
+            }
+            // Износ стрелы считается до защиты, но сетевое обновление целой
+            // детали остаётся вместе с отложенными Metadata/скоростью.
+            if strike.source.is_projectile() && shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 {
+                for (slot, _) in combat::ARMOR_SLOTS {
+                    if player.net.slots_dirty.contains(&slot) {
+                        player.net.slots_dirty.retain(|dirty| *dirty != slot);
+                        player.net.slot_changed_later(slot);
                     }
                 }
             }
@@ -629,16 +630,16 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
 
 /// Изнашивает надетую броню от удара силы `damage`.
 pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32) {
-    let _ = wear_armor_except(shared, player, damage, None, None, false);
+    let _ = wear_armor_except(shared, player, damage, None, None);
 }
 
-fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>, plan: Option<&combat::ArmorWearPlan>, ordinary_melee: bool) -> Vec<u8> {
+fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>, plan: Option<&combat::ArmorWearPlan>) -> Vec<u8> {
     let wear = combat::armor_wear(damage);
     let mut broken = Vec::new();
 
     for (slot, _) in combat::ARMOR_SLOTS {
         let Some(stack) = player.inventory.slot(slot) else { continue };
-        if ordinary_melee && !receives_melee_armor_wear(stack) { continue; }
+        if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3 && !receives_armor_damage(stack) { continue; }
         let dimension = player.dimension;
         let mut roll = || vitals::world_random(shared, dimension);
         let worn = planned_armor_wear(plan, slot, stack).unwrap_or_else(|| combat::wear(&stack, wear, true, &mut roll));
@@ -650,7 +651,7 @@ fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, exc
 
 pub(super) async fn wear_armor_before_strike_with_plan(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, damage: f32, plan: Option<&combat::ArmorWearPlan>) -> io::Result<()> {
     // Себе — до DamageEvent; общий журнал не должен прислать дубликат.
-    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id), plan, true);
+    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id), plan);
     vitals::update_equipment(player, *shared.ticks.borrow());
     for status in broken { vitals::send_entity_event(stream, player.entity_id, status as i8).await?; }
     Ok(())
@@ -836,9 +837,9 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
     });
 }
 
-// Opaque777 elytra-melee: обычный удар не изнашивает элитры, включая damage431.
-// Только уже проверенный ранний путь player_attack26.3; полёт изнашивает отдельно.
-fn receives_melee_armor_wear(stack: Stack) -> bool {
+// Opaque777 melee/arrow/blast: элитры не получают износ брони, включая damage431.
+// Износ от полёта считается отдельно в glide, через wear_slot.
+fn receives_armor_damage(stack: Stack) -> bool {
     combat::item_name(stack.item) != Some("elytra")
 }
 
@@ -851,14 +852,14 @@ fn plan_thorns_armor_wear(profile: crate::gameplay_catalog::Profile, gear: &crat
     let wear = combat::armor_wear(damage);
     let uncertain = gear.worn.iter().skip(1).flatten().any(|stack| {
         let data = stack.extras();
-        receives_melee_armor_wear(*stack) && data.level("thorns") > 0 && data.level("unbreaking") > 0 && !data.unbreakable
+        receives_armor_damage(*stack) && data.level("thorns") > 0 && data.level("unbreaking") > 0 && !data.unbreakable
             && combat::add_damage(*stack, wear).is_none()
     });
     if !uncertain { return None; }
     // Opaque777 near-break/UnbreakingIII: броня, сломанная входящим ударом,
     // не отражает его. Бросок износа общий для предсказания и жертвы.
     let slots = combat::ARMOR_SLOTS.iter().zip(gear.worn.iter().skip(1))
-        .filter_map(|((slot, _), stack)| stack.filter(|stack| receives_melee_armor_wear(*stack)).map(|stack| (*slot, stack, combat::wear(&stack, wear, true, &mut roll))))
+        .filter_map(|((slot, _), stack)| stack.filter(|stack| receives_armor_damage(*stack)).map(|stack| (*slot, stack, combat::wear(&stack, wear, true, &mut roll))))
         .collect();
     Some(combat::ArmorWearPlan { slots })
 }
@@ -917,7 +918,7 @@ mod thorns_wear_plan_tests {
             if unbreaking > 0 { data.set_enchant(crate::stackdata::enchantment_number("unbreaking").unwrap(), unbreaking); }
             let stack = Stack::new(crate::blocks::item_named("elytra").unwrap(), 1).with_extras(data);
             let mut gear = crate::players::Gear::default();gear.worn[2] = Some(stack);gear.view.thorns[1] = 7;
-            assert!(!receives_melee_armor_wear(stack));
+            assert!(!receives_armor_damage(stack));
             assert!(plan_thorns_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack, || panic!("elytra must not consume armor RNG")).is_none());
             assert_eq!(thorns_after_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack).thorns[1], 7);
         }
@@ -943,7 +944,7 @@ pub(super) fn thorns_after_armor_wear(profile: crate::gameplay_catalog::Profile,
     let wear = combat::armor_wear(damage);
     for (level, stack) in view.thorns.iter_mut().zip(gear.worn.iter().skip(1)) {
         if *level > 0 && let Some(stack) = stack
-            && receives_melee_armor_wear(*stack)
+            && receives_armor_damage(*stack)
             && stack.extras().level("unbreaking") <= 0
             && combat::add_damage(*stack, wear).is_none()
         {
@@ -1197,5 +1198,64 @@ mod combat_777_projectile_tests {
             }
             assert_eq!(slot_ticks,vec![if profile==Profile::Preview26_3 {21}else{20}]);
         }
+    }
+}
+
+#[cfg(test)]
+mod real_damage_armor_tests {
+    use super::*;
+
+    fn scene(item: &str, damage: i32, enchant: Option<&str>) -> (Shared, PlayerState) {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+            Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/real-armor/ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new_for_catalog([71;16], "Armor".into(), None, None, 0, 71, (0.5,64.0,0.5), catalog);
+        player.game_mode = GAME_MODE_SURVIVAL;player.on_ground = true;
+        let mut data = crate::stackdata::Data {damage, ..Default::default()};
+        if let Some(enchant) = enchant { data.set_enchant(crate::stackdata::enchantment_number(enchant).unwrap(), 4); }
+        player.inventory.set(6, Some(Stack::new(blocks::item_named(item).unwrap(),1).with_extras(data)));
+        shared.players.lock().unwrap().join(player.member(),player.entity_id).unwrap();
+        vitals::update_equipment(&mut player,0);
+        (shared,player)
+    }
+
+    #[tokio::test]
+    async fn broken_projectile_protection_cannot_mitigate_the_same_arrow() {
+        for enchant in [None,Some("projectile_protection")] {
+            let (shared,mut player) = scene("diamond_chestplate",527,enchant);
+            let strike = PlayerStrike {kinetic:None,projectile:Some(77),victim:71,attacker:72,attacker_uuid:[72;16],
+                attacker_name:"Archer".into(),from:(0.5,64.0,-3.5),yaw:0.,damage:5.,source:Source::Arrow,
+                extra_knockback:0.,weapon:None,disables_shield_ticks:0,breach_scale:1.,fire_ticks:0,
+                ignores_shield:false,thorns_slots:Vec::new(),armor_wear_plan:None,effects:Vec::new()};
+            take_strike(&mut Outgoing::capture(),&shared,&mut player,&strike).await.unwrap();
+            assert!(player.inventory.slot(6).is_none());assert_eq!(player.vit.health,15.);
+        }
+    }
+
+    #[tokio::test]
+    async fn explosion_wears_armor_before_mitigation_and_preserves_elytra() {
+        for (item,initial,enchant) in [("diamond_chestplate",0,None),("diamond_chestplate",527,None),
+            ("diamond_chestplate",527,Some("blast_protection")),("elytra",431,None)] {
+            let (shared,mut player) = scene(item,initial,enchant);
+            vitals::hit(&mut Outgoing::capture(),&shared,&mut player,9.748291,Source::Explosion,77).await.unwrap();
+            if item=="elytra" {assert_eq!(player.inventory.slot(6).unwrap().extras().damage,431);}
+            else if initial==527 {assert!(player.inventory.slot(6).is_none());}
+            else {assert_eq!(player.inventory.slot(6).unwrap().extras().damage,2);}
+            if initial>0 {assert_eq!(player.vit.health,20.-9.748291);}
+        }
+    }
+
+    #[tokio::test]
+    async fn immune_and_rejected_repeat_explosion_do_not_wear_armor() {
+        let (shared,mut player) = scene("diamond_chestplate",0,None);
+        player.game_mode=GAME_MODE_CREATIVE;
+        assert!(vitals::hit(&mut Outgoing::capture(),&shared,&mut player,10.,Source::Explosion,77).await.unwrap().is_none());
+        assert_eq!(player.inventory.slot(6).unwrap().extras().damage,0);
+        player.game_mode=GAME_MODE_SURVIVAL;
+        assert!(vitals::hit(&mut Outgoing::capture(),&shared,&mut player,10.,Source::Explosion,77).await.unwrap().is_some());
+        let health=player.vit.health;let wear=player.inventory.slot(6).unwrap().extras().damage;
+        assert!(vitals::hit(&mut Outgoing::capture(),&shared,&mut player,10.,Source::Explosion,77).await.unwrap().is_none());
+        assert_eq!(player.vit.health,health);assert_eq!(player.inventory.slot(6).unwrap().extras().damage,wear);
     }
 }
