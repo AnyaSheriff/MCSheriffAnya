@@ -311,3 +311,112 @@ fn observed_heterogeneous_crossbows_fire_every_charge_with_individual_pickup() {
         }
     }
 }
+
+#[test]
+fn recorded_777_crossbow_salvos_stop_at_the_breaking_projectile() {
+    let fixture = serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/crossbow-nearbreak-observations-777.json")).unwrap();
+    verify_nearbreak_crossbow_fixture(&fixture);
+}
+
+#[test]
+fn recorded_777_offhand_and_normally_loaded_crossbows_stop_at_the_break() {
+    let fixture = serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/crossbow-hands-loading-observations-777.json")).unwrap();
+    verify_nearbreak_crossbow_fixture(&fixture);
+}
+
+fn verify_nearbreak_crossbow_fixture(fixture: &serde_json::Value) {
+    let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+    for case in fixture["rows"].as_array().unwrap() {
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+            Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/crossbow-nearbreak/unused.json")), Default::default());
+        let mut player = PlayerState::new_for_catalog([41;16], "Nearbreak".into(), None, None, 0x7f, 41, (0.5,64.0,0.5), catalog);
+        player.entity_id = 41;
+        player.game_mode = GAME_MODE_SURVIVAL;
+        let hand = case["hand"].as_i64().unwrap_or(0) as i32;
+        let loading = case["loading"].as_bool().unwrap_or(false);
+        let specification = if loading {
+            format!("crossbow[damage={},enchantments={{multishot:1}}]", case["initial_damage"])
+        } else {
+            let charges = case["projectiles"].as_array().unwrap().iter()
+                .map(|name| format!(r#"{{id:"minecraft:{}",count:1}}"#, name.as_str().unwrap())).collect::<Vec<_>>().join(",");
+            format!("crossbow[damage={},charged_projectiles=[{}]]", case["initial_damage"], charges)
+        };
+        let stack = crate::commands::stack_from_spec(&specification, 1).unwrap().unwrap();
+        let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+        player.inventory.set(slot, Some(stack));
+        if loading {
+            player.inventory.set(inventory::FIRST_MAIN, Some(Stack::new(blocks::item_named("arrow").unwrap(), 3)));
+            bow::crossbow_load(&mut player, hand);
+            assert_eq!(player.inventory.slot(inventory::FIRST_MAIN).unwrap().count, 2);
+            assert_eq!(stackdata::loaded_projectiles(&player.inventory.slot(slot).unwrap().extras()).len(), 3);
+        }
+        assert!(bow::crossbow_fire(&shared, &mut player, hand));
+        assert!(!bow::crossbow_fire(&shared, &mut player, hand));
+        let mut emitted = Vec::new();
+        for arrow in &shared.arrows.lock().unwrap().list {
+            emitted.push((arrow.entity_id, blocks::item_name(arrow.pickup_stack().item).unwrap()));
+        }
+        for rocket in &shared.thrown.lock().unwrap().rockets {
+            emitted.push((rocket.entity_id, "firework_rocket"));
+        }
+        emitted.sort_by_key(|(id, _)| *id);
+        let actual = emitted.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
+        let expected = case["emitted"].as_array().unwrap().iter().map(|name| name.as_str().unwrap()).collect::<Vec<_>>();
+        assert_eq!(actual, expected, "trial {}", case["trial"]);
+        if case["after"].is_null() {
+            assert!(player.inventory.slot(slot).is_none(), "trial {}", case["trial"]);
+        } else {
+            let after = player.inventory.slot(slot).unwrap();
+            assert_eq!(after.count, 1);
+            assert_eq!(after.extras().damage, case["after"]["damage"].as_i64().unwrap() as i32);
+            assert_eq!(after.extras().charged, 0);
+            assert!(stackdata::loaded_projectiles(&after.extras()).is_empty());
+            assert_eq!(after.extras().level("multishot"), if loading { 1 } else { 0 });
+        }
+    }
+}
+
+
+#[test]
+fn crossbow_break_budget_preserves_creative_unbreakable_and_existing_fallbacks() {
+    use crate::gameplay_catalog::{Catalog, Profile};
+    // Контракт сохранения прежних путей, а не новая paired-proof для RNG/creative.
+    for hand in [0, 1] {
+        for projectile in ["arrow", "firework_rocket"] {
+            for (profile, mode, unbreakable, unbreaking, expected) in [
+                (Profile::Preview26_3, GAME_MODE_SURVIVAL, false, 0, 1),
+                (Profile::Preview26_3, GAME_MODE_CREATIVE, false, 0, 3),
+                (Profile::Preview26_3, GAME_MODE_SURVIVAL, true, 0, 3),
+                (Profile::Preview26_3, GAME_MODE_CREATIVE, true, 0, 3),
+                (Profile::Preview26_3, GAME_MODE_SURVIVAL, false, 3, 3),
+                (Profile::Java26_1_2, GAME_MODE_SURVIVAL, false, 0, 3),
+            ] {
+                let catalog = Catalog::new(profile);
+                let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+                    Default::default(), Default::default(), Default::default(),
+                    crate::ops::Ops::open(std::path::Path::new("tmp/crossbow-budget-guards/unused.json")), Default::default());
+                let mut player = PlayerState::new_for_catalog([42;16], "BudgetGuards".into(), None, None, 0x7f, 42, (0.5,64.0,0.5), catalog);
+                player.entity_id = 42;
+                player.game_mode = mode;
+                let charge = format!(r#"{{id:"minecraft:{projectile}",count:1}}"#);
+                let specification = format!("crossbow[damage=464,charged_projectiles=[{charge},{charge},{charge}]]");
+                let stack = crate::commands::stack_from_spec(&specification, 1).unwrap().unwrap();
+                let mut data = stack.extras();
+                data.unbreakable = unbreakable;
+                if unbreaking > 0 { data.set_enchant(stackdata::enchantment_number("unbreaking").unwrap(), unbreaking); }
+                let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+                player.inventory.set(slot, Some(stack.with_extras(data)));
+                assert!(bow::crossbow_fire(&shared, &mut player, hand));
+                let emitted = shared.arrows.lock().unwrap().list.len() + shared.thrown.lock().unwrap().rockets.len();
+                assert_eq!(emitted, expected, "{profile:?}/{mode}/{hand}/{projectile}/unbreakable={unbreakable}/UB={unbreaking}");
+                if mode == GAME_MODE_CREATIVE || unbreakable {
+                    let after = player.inventory.slot(slot).unwrap();
+                    assert_eq!(after.extras().damage, 464);
+                    assert_eq!(after.extras().charged, 0);
+                    assert!(stackdata::loaded_projectiles(&after.extras()).is_empty());
+                }
+            }
+        }
+    }
+}
