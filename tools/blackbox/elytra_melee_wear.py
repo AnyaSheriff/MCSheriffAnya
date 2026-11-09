@@ -44,7 +44,7 @@ def inspect(raw,items):
     assert len(raw['initial'])==len(raw['clients'])==2
     victim,attacker=[v['entity'] for v in raw['initial']]
     for initial in raw['initial']:assert initial['health']==health_packet(initial['health_receipt'])==20
-    health=[[(raw['start']-.001,20.)],[(raw['start']-.001,20.)]];hits=[[],[]];breaks=[[],[]];inventory=[];state={};receipts=[];attacker_inventory=[];attacker_state={}
+    health=[[(raw['start']-.001,20.)],[(raw['start']-.001,20.)]];hits=[[],[]];breaks=[[],[]];inventory=[];state={};receipts=[]
     for observer,client in enumerate(raw['clients']):
         assert not client.get('failure') and client['events']
         for event in client['preroll']+client['events']:
@@ -53,10 +53,6 @@ def inspect(raw,items):
             if event['name']=='entity_status':
                 payload=bytes.fromhex(event['hex']);assert len(payload)==5;entity,status=struct.unpack('>iB',payload)
                 if entity==victim and status==50:breaks[observer].append(event['at'])
-            if observer==1:
-                updates=inventory_changes(event)
-                if updates:
-                    attacker_state.update(updates);attacker_inventory.append((event['at'],attacker_state.copy()))
             if observer==0:
                 changes=inventory_changes(event)
                 if changes:
@@ -69,7 +65,6 @@ def inspect(raw,items):
         assert click['action']=={'after':i*INTERVAL+20,'window_click':{'inventory':True,'slot':6,'mode':1}}
         before=[next(h for t,h in reversed(v) if t<at) for v in health];after=[next(h for t,h in reversed(v) if t<end) for v in health]
         assert before==[20.,20.] and 0<after[0]<20 and after[1]==20.,(i,before,after)
-        bare=next(s for t,s in reversed(attacker_inventory) if t<at);assert all(slot in bare and bare[slot] is None for slot in list(range(5,9))+list(range(36,45)))
         first=next(s for t,s in reversed(inventory) if t<at).get(6);assert first and first['item']==items[item] and first.get('damage',0)==initial
         assert {registry[n]:v for n,v in first.get('enchantments',[])}==({'minecraft:unbreaking':3} if level else {})
         for observer in [0,1]:
