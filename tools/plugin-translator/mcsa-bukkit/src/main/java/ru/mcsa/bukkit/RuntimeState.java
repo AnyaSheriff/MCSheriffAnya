@@ -9,6 +9,7 @@ public final class RuntimeState {
  public static String defaultConfig="";
  public static Dispatcher dispatcher;public static org.bukkit.plugin.java.JavaPlugin plugin;public static final Scheduler scheduler=new Scheduler();
  private static final java.util.List<Listener> listeners=new java.util.ArrayList<>();
- public static final org.bukkit.plugin.PluginManager manager=(l,p)->{if(!listeners.contains(l))listeners.add(l);};
+ public static final org.bukkit.plugin.PluginManager manager=(l,p)->{if(listeners.stream().noneMatch(registered->registered==l))listeners.add(l);};
+ public static void unregister(Listener listener){java.util.Objects.requireNonNull(listener,"Обработчик не должен быть null");listeners.removeIf(registered->registered==listener);}
  public static void fire(Event e){for(int priority=0;priority<6;priority++)for(Listener l:new java.util.ArrayList<>(listeners))dispatcher.dispatch(l,e,priority);}
 }

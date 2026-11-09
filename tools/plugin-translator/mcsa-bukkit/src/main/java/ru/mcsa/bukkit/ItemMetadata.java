@@ -7,6 +7,13 @@ public class ItemMetadata implements ItemMeta {
  private static final class Stored extends ItemMetadata implements EnchantmentStorageMeta {Stored(Material m){super(m);}public Map<Enchantment,Integer> getStoredEnchants(){return Collections.unmodifiableMap(new LinkedHashMap<>(stored));}}
  private static final class Potion extends ItemMetadata implements PotionMeta {Potion(Material m){super(m);}public org.bukkit.potion.PotionType getBasePotionType(){return potion;}public void setBasePotionType(org.bukkit.potion.PotionType type){potion=type;}}
  public static ItemMetadata create(Material material){return java.util.List.of(Material.POTION,Material.SPLASH_POTION,Material.LINGERING_POTION,Material.TIPPED_ARROW).contains(material)?new Potion(material):material==Material.ENCHANTED_BOOK?new Stored(material):material.getMaxDurability()>0?new Wear(material):new ItemMetadata(material);}
+ // По Javadoc ItemMeta: наличие имени и зачарований, а не видимый текст.
+ // https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/meta/ItemMeta.html
+ public boolean removeEnchant(Enchantment enchant){return enchants.remove(Objects.requireNonNull(enchant,"Зачарование не должно быть null"))!=null;}
+ public boolean hasDisplayName(){return name!=null;}
+ public boolean hasEnchants(){return !enchants.isEmpty();}
+ public boolean hasEnchant(Enchantment enchant){return enchants.containsKey(Objects.requireNonNull(enchant,"Зачарование не должно быть null"));}
+ public int getEnchantLevel(Enchantment enchant){return enchants.getOrDefault(Objects.requireNonNull(enchant,"Зачарование не должно быть null"),0);}
  public void displayName(Component value){name=value;}public Component displayName(){return name;}public void lore(List<? extends Component> value){lore=value==null?null:new ArrayList<>(value);}public List<Component> lore(){return lore==null?null:new ArrayList<>(lore);}
  public DataContainer getPersistentDataContainer(){return pdc;}
  public boolean addEnchant(Enchantment enchant,int level,boolean ignore){Objects.requireNonNull(enchant);if(level<1||(!ignore&&level>enchant.getMaxLevel()))return false;Integer old=enchants.put(enchant,level);return old==null||old!=level;}

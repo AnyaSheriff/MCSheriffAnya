@@ -1,0 +1,7 @@
+name: java-enchantments
+version: '1.0'
+main: fixtures.EnchantmentPlugin
+commands:
+  enchantprobe:
+    description: Проверка снятия зачарований с настоящего предмета
+    usage: /enchantprobe direct|meta|absent

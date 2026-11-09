@@ -16,6 +16,18 @@ guarded_run(['javac', '-proc:none', '--release', '11', '-encoding', 'UTF-8', '-c
 guarded_run(['java', '-cp', sdk_cp, 'ru.mcsa.translator.SdkContracts'], check=True)
 guarded_run(['javac', '-proc:none', '--release', '11', '-encoding', 'UTF-8', '-cp', sdk_cp, '-d', str(root / 'target/tool'), str(root / 'src/test/java/ru/mcsa/bukkit/concurrent/ExecutorContracts.java')], check=True)
 guarded_run(['java', '-cp', sdk_cp, 'ru.mcsa.bukkit.concurrent.ExecutorContracts'], check=True)
+guarded_run(['javac', '-proc:none', '--release', '11', '-encoding', 'UTF-8', '-cp', sdk_cp, '-d', str(root / 'target/tool'), str(root / 'src/test/java/ru/mcsa/translator/HandlerContracts.java')], check=True)
+guarded_run(['java', '-cp', sdk_cp, 'ru.mcsa.translator.HandlerContracts'], check=True)
+guarded_run(['javac', '-proc:none', '--release', '11', '-cp', cp, '-d', str(root / 'target/tool'), str(root / 'src/test/java/ru/mcsa/translator/HandlerFixtures.java')], check=True)
+with tempfile.TemporaryDirectory(dir=root / 'target') as handlers:
+    guarded_run(['java', '-cp', cp, 'ru.mcsa.translator.HandlerFixtures', handlers], check=True)
+    for name in ('listener', 'global', 'plugin'):
+        result = guarded_run(['java', '-cp', cp, 'ru.mcsa.translator.Inspect', str(Path(handlers) / (name + '.jar')), handlers + '/out', str(root / 'target/mcsa-bukkit.jar')], capture_output=True, text=True)
+        if name == 'listener':
+            assert result.returncode == 0, result.stderr
+        else:
+            assert result.returncode == 2 and 'не поддерживается org/bukkit/event/HandlerList.unregisterAll' in result.stderr, result.stderr
+    print('PASS: HandlerList listener принят; global и Plugin overload отклонены')
 with tempfile.TemporaryDirectory(dir=root / 'target') as records:
     guarded_run(['javac', '-proc:none', '--release', '17', '-encoding', 'UTF-8', '-d', records, str(root / 'src/test/java/ru/mcsa/translator/RecordFixture.java')], check=True)
     before=guarded_run(['java','-cp',records,'ru.mcsa.translator.RecordFixture'],check=True,capture_output=True,text=True).stdout

@@ -6,7 +6,7 @@ import shutil
 import sys
 root = Path(__file__).resolve().parent
 guarded_run([sys.executable, str(root / 'translate.py'), '--build-sdk'], check=True)
-for name in ('command', 'events', 'scheduler'):
+for name in ('command', 'events', 'scheduler', 'handlers', 'enchantments'):
     folder = root / 'fixtures' / name
     target = root / 'target/fixtures' / name
     shutil.rmtree(target, ignore_errors=True)

@@ -11,6 +11,9 @@ public class ItemStack implements Cloneable {
  public boolean editMeta(java.util.function.Consumer<? super ItemMeta> consumer){ItemMeta copy=getItemMeta();if(copy==null)return false;consumer.accept(copy);return setItemMeta(copy);}
  public io.papermc.paper.persistence.PersistentDataContainerView getPersistentDataContainer(){return meta.getPersistentDataContainer().clone();}
  public java.util.Map<Enchantment,Integer> getEnchantments(){return meta.getEnchants();}public void addUnsafeEnchantment(Enchantment enchant,int level){meta.addEnchant(enchant,level,true);changed();}public int getEnchantmentLevel(Enchantment enchant){return getEnchantments().getOrDefault(enchant,0);}public boolean containsEnchantment(Enchantment enchant){return getEnchantments().containsKey(enchant);}
+ // По Javadoc ItemStack: "Previous level, or 0"; запись нужна лишь при снятии.
+ // https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/ItemStack.html
+ public int removeEnchantment(Enchantment enchant){int previous=meta.getEnchantLevel(enchant);if(meta.removeEnchant(enchant))changed();return previous;}
  public boolean isSimilar(ItemStack other){return other!=null&&type==other.type&&meta.equals(other.meta);}@Override public boolean equals(Object other){return other instanceof ItemStack&&amount==((ItemStack)other).amount&&isSimilar((ItemStack)other);}@Override public int hashCode(){return java.util.Objects.hash(type,amount,meta);}
  public String metadata(){return meta.serialize();}public static ItemStack fromHost(Material type,int count,String metadata){ItemStack item=new ItemStack(type,count);item.meta=ItemMetadata.parse(type,metadata);return item;}
 }
